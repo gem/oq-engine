@@ -34,6 +34,149 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _get_anelastic_attenuation_term(sgn, C, rrup):
+    """
+    Returns the anelastic attenuation term, f_atn, defined in equation 25
+    """
+    Dc20 = _get_delta_c20(sgn, C)
+    f_atn = np.zeros(len(rrup))
+    idx = rrup > 80.0
+    f_atn[idx] = (C["c20"] + Dc20) * (rrup[idx] - 80.0)
+    return f_atn
+
+
+def _get_basin_response_term(SJ, C, z2pt5):
+    """
+    Returns the basin response term, f_sed, defined in equation 20
+
+    The deep basin response (z2.5 > 1km) is not included in this model
+    """
+    f_sed = np.zeros(len(z2pt5))
+    idx = z2pt5 < 1.0
+    f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
+    return f_sed
+
+
+def _get_delta_c20(sgn, C):
+    """
+    Retrieve regional-dependent coefficient accounting for differences in
+    anelastic attenuation in path scaling
+
+    This is to derive a reference/base-case c20 that includes
+    California, Taiwan, the Middle East, and other similar active tectonic
+    regions to represent a typical or average Q region.
+    """
+    if sgn == 0:
+        return 0.
+    elif sgn == 1:
+        return C['Dc20_CH']
+    elif sgn == -1:
+        return C['Dc20_JP']
+
+
+def _get_shallow_site_response_term(SJ, C, vs30):
+    """
+    Returns the shallow site response term, f_site, defined in
+    equations 17, 18, and 19
+
+    Note that the effects of nonlinear soil response for the vertical
+    component were not included in this model
+    """
+    vs_mod = vs30 / C["k1"]
+    # Get linear global site response term
+    f_site_g = C["c11"] * np.log(vs_mod)
+
+    # For Japan sites (SJ = 1) further scaling is needed (equation 19)
+    if SJ:
+        fsite_j = C["c13"] * np.log(vs_mod)
+        # additional term activated for soft sites (Vs30 <= 200m/s)
+        # in Japan data
+        idx = vs30 <= 200.0
+        add_soft = C["c12"] * (np.log(vs_mod) - np.log(200.0 / C["k1"]))
+        # combine terms
+        fsite_j[idx] += add_soft[idx]
+        return f_site_g + fsite_j
+    else:
+        return f_site_g
+
+
+def _get_stddevs(C, rup, sites, stddev_types):
+    """
+    Returns the inter-event, intra-event, and total standard deviations
+
+    Note that it is assumed here that the soil response of the vertical
+    component is linear (i.e. nonlinear site response effects not
+    included). Thus, the expressions for the aleatory std devs for the
+    vertical component is much simpler than in the horizontal component,
+    since the site response- and IMT-correlation functions are neglected.
+    """
+    num_sites = len(sites.vs30)
+    # Evaluate tau according to equation 27
+    tau = _get_taulny(C, rup.mag)
+    # Evaluate phi according to equation 28
+    phi = _get_philny(C, rup.mag)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
+                           np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau + np.zeros(num_sites))
+    # return std dev values for each stddev type in site collection
+    return stddevs
+
+
+def _get_style_of_faulting_term(C, rup):
+    """
+    Returns the style-of-faulting scaling term, f_flt, defined in
+    equations 4 to 6
+    """
+    if (rup.rake > 30.0) and (rup.rake < 150.):
+        frv = 1.0
+        fnm = 0.0
+    elif (rup.rake > -150.0) and (rup.rake < -30.0):
+        fnm = 1.0
+        frv = 0.0
+    else:
+        fnm = 0.0
+        frv = 0.0
+    # Re-defined this method to replace c8, which is now
+    # IMT-dependent in BC15
+    fflt_f = (C["c8"] * frv) + (C["c9"] * fnm)
+    if rup.mag <= 4.5:
+        fflt_m = 0.0
+    elif rup.mag > 5.5:
+        fflt_m = 1.0
+    else:
+        fflt_m = rup.mag - 4.5
+    return fflt_f * fflt_m
+
+
+def get_mean_values(SJ, sgn, C, sites, rup, dists):
+    """
+    Returns the mean values for a specific IMT
+    """
+    if isinstance(sites.z2pt5, np.ndarray):
+        # Site model defined
+        temp_z2pt5 = sites.z2pt5
+    else:
+        # Estimate unspecified sediment depth according to
+        # equations 33 and 34 of CB14
+        temp_z2pt5 = _select_basin_model(SJ, sites.vs30)
+
+    return (_get_magnitude_term(C, rup.mag) +
+            _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
+            _get_style_of_faulting_term(C, rup) +
+            _get_hanging_wall_term(C, rup, dists) +
+            _get_shallow_site_response_term(SJ, C, sites.vs30) +
+            _get_basin_response_term(SJ, C, temp_z2pt5) +
+            _get_hypocentral_depth_term(C, rup) +
+            _get_fault_dip_term(C, rup) +
+            _get_anelastic_attenuation_term(sgn, C, dists.rrup))
+
+
 class BozorgniaCampbell2016(GMPE):
     """
     Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
@@ -101,153 +244,16 @@ class BozorgniaCampbell2016(GMPE):
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
         # Get mean and standard deviations for IMT
-        mean = self.get_mean_values(self.SJ, self.sgn, C, sites, rup, dists)
+        mean = get_mean_values(self.SJ, self.sgn, C, sites, rup, dists)
         if imt.string[:2] == "SA" and imt.period < 0.25:
             # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
             # Get PGA on given sites
-            pga = self.get_mean_values(self.SJ, self.sgn,
-                                       C_PGA, sites, rup, dists)
+            pga = get_mean_values(self.SJ, self.sgn, C_PGA, sites, rup, dists)
             idx = mean < pga
             mean[idx] = pga[idx]
         # Get standard deviations
-        stddevs = self._get_stddevs(C, rup, sites, stddev_types)
+        stddevs = _get_stddevs(C, rup, sites, stddev_types)
         return mean, stddevs
-
-    def get_mean_values(self, SJ, sgn, C, sites, rup, dists):
-        """
-        Returns the mean values for a specific IMT
-        """
-        if isinstance(sites.z2pt5, np.ndarray):
-            # Site model defined
-            temp_z2pt5 = sites.z2pt5
-        else:
-            # Estimate unspecified sediment depth according to
-            # equations 33 and 34 of CB14
-            temp_z2pt5 = _select_basin_model(SJ, sites.vs30)
-
-        return (_get_magnitude_term(C, rup.mag) +
-                _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
-                self._get_style_of_faulting_term(C, rup) +
-                _get_hanging_wall_term(C, rup, dists) +
-                self._get_shallow_site_response_term(SJ, C, sites.vs30) +
-                self._get_basin_response_term(SJ, C, temp_z2pt5) +
-                _get_hypocentral_depth_term(C, rup) +
-                _get_fault_dip_term(C, rup) +
-                self._get_anelastic_attenuation_term(sgn, C, dists.rrup))
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the style-of-faulting scaling term, f_flt, defined in
-        equations 4 to 6
-        """
-        if (rup.rake > 30.0) and (rup.rake < 150.):
-            frv = 1.0
-            fnm = 0.0
-        elif (rup.rake > -150.0) and (rup.rake < -30.0):
-            fnm = 1.0
-            frv = 0.0
-        else:
-            fnm = 0.0
-            frv = 0.0
-        # Re-defined this method to replace c8, which is now
-        # IMT-dependent in BC15
-        fflt_f = (C["c8"] * frv) + (C["c9"] * fnm)
-        if rup.mag <= 4.5:
-            fflt_m = 0.0
-        elif rup.mag > 5.5:
-            fflt_m = 1.0
-        else:
-            fflt_m = rup.mag - 4.5
-        return fflt_f * fflt_m
-
-    def _get_shallow_site_response_term(self, SJ, C, vs30):
-        """
-        Returns the shallow site response term, f_site, defined in
-        equations 17, 18, and 19
-
-        Note that the effects of nonlinear soil response for the vertical
-        component were not included in this model
-        """
-        vs_mod = vs30 / C["k1"]
-        # Get linear global site response term
-        f_site_g = C["c11"] * np.log(vs_mod)
-
-        # For Japan sites (SJ = 1) further scaling is needed (equation 19)
-        if SJ:
-            fsite_j = C["c13"] * np.log(vs_mod)
-            # additional term activated for soft sites (Vs30 <= 200m/s)
-            # in Japan data
-            idx = vs30 <= 200.0
-            add_soft = C["c12"] * (np.log(vs_mod) - np.log(200.0 / C["k1"]))
-            # combine terms
-            fsite_j[idx] += add_soft[idx]
-            return f_site_g + fsite_j
-        else:
-            return f_site_g
-
-    def _get_basin_response_term(self, SJ, C, z2pt5):
-        """
-        Returns the basin response term, f_sed, defined in equation 20
-
-        The deep basin response (z2.5 > 1km) is not included in this model
-        """
-        f_sed = np.zeros(len(z2pt5))
-        idx = z2pt5 < 1.0
-        f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
-        return f_sed
-
-    def _get_anelastic_attenuation_term(self, sgn, C, rrup):
-        """
-        Returns the anelastic attenuation term, f_atn, defined in equation 25
-        """
-        Dc20 = self._get_delta_c20(sgn, C)
-        f_atn = np.zeros(len(rrup))
-        idx = rrup > 80.0
-        f_atn[idx] = (C["c20"] + Dc20) * (rrup[idx] - 80.0)
-        return f_atn
-
-    def _get_delta_c20(self, sgn, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation in path scaling
-
-        This is to derive a reference/base-case c20 that includes
-        California, Taiwan, the Middle East, and other similar active tectonic
-        regions to represent a typical or average Q region.
-        """
-        if sgn == 0:
-            return 0.
-        elif sgn == 1:
-            return C['Dc20_CH']
-        elif sgn == -1:
-            return C['Dc20_JP']
-
-    def _get_stddevs(self, C, rup, sites, stddev_types):
-        """
-        Returns the inter-event, intra-event, and total standard deviations
-
-        Note that it is assumed here that the soil response of the vertical
-        component is linear (i.e. nonlinear site response effects not
-        included). Thus, the expressions for the aleatory std devs for the
-        vertical component is much simpler than in the horizontal component,
-        since the site response- and IMT-correlation functions are neglected.
-        """
-        num_sites = len(sites.vs30)
-        # Evaluate tau according to equation 27
-        tau = _get_taulny(C, rup.mag)
-        # Evaluate phi according to equation 28
-        phi = _get_philny(C, rup.mag)
-        stddevs = []
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
-                               np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
-        # return std dev values for each stddev type in site collection
-        return stddevs
 
     #: Table of regression coefficients obtained from supplementary material
     #: published together with the EQS paper
