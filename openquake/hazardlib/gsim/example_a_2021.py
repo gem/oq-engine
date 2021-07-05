@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
+import numba
 from openquake.baselib.performance import jittable
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
@@ -68,7 +69,11 @@ class ExampleA2021(GMPE):
     def calc_all(self, ctx, imts, mean, sig, tau, phi):
         mag, rjb = ctx.mag, ctx.rjb
         for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
+            im: str = imt.string
+            C = self.COEFFS[im]
+            print(str(imt.string), C)
+            return
+            C = self.COEFFS[str(imt.string)]
             mean[m] = (C['c1'] + _compute_term1(C, mag) +
                        _compute_term2(C, mag, rjb))
             if imt.period == 3.0:

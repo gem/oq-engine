@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import math
+import numpy
 from openquake.baselib.general import RecordBuilder
 from openquake.hazardlib.imt import from_string
 
@@ -226,6 +227,19 @@ class CoeffsTable(object):
         self._coeffs[imt] = c = self.rb(*lst)
         return c
 
+    def to_record(self, imts):
+        """
+        :returns: a structured record with fields imt -> coeffs
+        """
+        for imt in imts:  # populate _coeffs
+            self[imt]
+        dtlist = []
+        for imt in self._coeffs:
+            dtlist.append((imt.string, self.rb.dtype))
+        rec = numpy.zeros(1, dtlist)[0]
+        for imt in self._coeffs:
+            rec[imt.string] = self[imt]
+        return rec
+
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, ' '.join(self.rb.names))
-

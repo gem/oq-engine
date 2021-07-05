@@ -139,27 +139,15 @@ def fake_gsim(gsim, imts):
     """
     :returns: a numba object emulating the gsim, or the gsim as is
     """
-    if not numba:
-        return gsim
+    #if not numba:
+    #    return gsim
     dic = {attr: getattr(gsim, attr) for attr in gsim.REQUIRES_ATTRIBUTES}
     for attr in dir(gsim):
         value = getattr(gsim, attr)
         if isinstance(value, CoeffsTable):
-            imt0 = imts[0]
-            ctable = getattr(gsim, attr)
-            td = numba.typed.Dict.empty(
-                key_type=numba.typeof(imt0),
-                value_type=numba.typeof(ctable[imt0]))
-            for imt in imts:  # populate td
-                td[imt] = ctable[imt]
-            dic[attr] = td
-    typedic = {a: numba.typeof(dic[a]) for a in dic}
-    cls = type(gsim.__class__.__name__, (), dict(__init__=lambda self: None))
-    jcls = numba.experimental.jitclass(typedic)(cls)
-    obj = jcls()
-    for a in dic:
-        setattr(obj, a, dic[a])
-    return obj
+            dic[attr] = getattr(gsim, attr).to_record(imts)
+    rb = RecordBuilder(**dic)
+    return rb().view(numpy.recarray)
 
 
 class ContextMaker(object):
