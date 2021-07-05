@@ -45,6 +45,20 @@ CONSTS = {
 }
 
 
+def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
+    """
+    Computes the magnitude scaling term given by equation (2)
+    corrected by a local adjustment factor
+    """
+    base = theta1 + theta4 * dc1
+    dmag = C1 + dc1
+    if mag > dmag:
+        f_mag = theta5 * (mag - dmag) + theta13 * (10. - mag) ** 2.
+    else:
+        f_mag = theta4 * (mag - dmag) + theta13 * (10. - mag) ** 2.
+    return base + f_mag
+
+
 def _get_stddevs(ergodic, C, stddev_types, num_sites):
     """
     Return standard deviations as defined in Table 3
@@ -168,17 +182,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the magnitude scaling term given by equation (2)
         """
-        base = C['theta1'] + (CONSTS['theta4'] * dc1)
-        dmag = CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = (CONSTS['theta5'] * (mag - dmag)) +\
-                C['theta13'] * ((10. - mag) ** 2.)
-
-        else:
-            f_mag = (CONSTS['theta4'] * (mag - dmag)) +\
-                C['theta13'] * ((10. - mag) ** 2.)
-
-        return base + f_mag
+        return _compute_magterm(CONSTS['C1'], C['theta1'], CONSTS['theta4'],
+                                CONSTS['theta5'], C['theta13'], dc1, mag)
 
     def _compute_distance_term(self, C, mag, dists):
         """

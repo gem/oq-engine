@@ -25,7 +25,8 @@ import numpy as np
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.abrahamson_2015 import (
-    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS, _get_stddevs)
+    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS,
+    _get_stddevs, _compute_magterm)
 from openquake.hazardlib.gsim.montalva_2017 import (MontalvaEtAl2017SInter,
                                                     MontalvaEtAl2017SSlab)
 
@@ -76,17 +77,8 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
         """
         Computes the magnitude scaling term given by equation (2)
         """
-        base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = (C['theta5'] * (mag - dmag)) +\
-                C['theta13'] * ((10. - mag) ** 2.)
-
-        else:
-            f_mag = (C['theta4'] * (mag - dmag)) +\
-                C['theta13'] * ((10. - mag) ** 2.)
-
-        return base + f_mag
+        return _compute_magterm(CONSTS["C1"], C['theta1'], C['theta4'],
+                                C['theta5'], C['theta13'], dc1, mag)
 
     def _compute_distance_term(self, C, mag, dists):
         """
@@ -168,17 +160,8 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
         Computes the magnitude scaling term given by equation (2)
         corrected by a local adjustment factor
         """
-        base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = (C['theta5'] * (mag - dmag)) +\
-                C['theta13'] * ((10. - mag) ** 2.)
-
-        else:
-            f_mag = (C['theta4'] * (mag - dmag)) +\
-                C['theta13'] * ((10. - mag) ** 2.)
-
-        return base + f_mag
+        return _compute_magterm(CONSTS['C1'], C['theta1'], C['theta4'],
+                                C['theta5'], C['theta13'], dc1, mag)
 
     def _compute_distance_term(self, C, mag, dists):
         """
