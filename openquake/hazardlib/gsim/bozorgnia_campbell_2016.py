@@ -101,18 +101,19 @@ class BozorgniaCampbell2016(GMPE):
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
         # Get mean and standard deviations for IMT
-        mean = self.get_mean_values(C, sites, rup, dists)
+        mean = self.get_mean_values(self.SJ, self.sgn, C, sites, rup, dists)
         if imt.string[:2] == "SA" and imt.period < 0.25:
             # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
             # Get PGA on given sites
-            pga = self.get_mean_values(C_PGA, sites, rup, dists)
+            pga = self.get_mean_values(self.SJ, self.sgn,
+                                       C_PGA, sites, rup, dists)
             idx = mean < pga
             mean[idx] = pga[idx]
         # Get standard deviations
         stddevs = self._get_stddevs(C, rup, sites, stddev_types)
         return mean, stddevs
 
-    def get_mean_values(self, C, sites, rup, dists):
+    def get_mean_values(self, SJ, sgn, C, sites, rup, dists):
         """
         Returns the mean values for a specific IMT
         """
@@ -122,17 +123,17 @@ class BozorgniaCampbell2016(GMPE):
         else:
             # Estimate unspecified sediment depth according to
             # equations 33 and 34 of CB14
-            temp_z2pt5 = _select_basin_model(self.SJ, sites.vs30)
+            temp_z2pt5 = _select_basin_model(SJ, sites.vs30)
 
         return (_get_magnitude_term(C, rup.mag) +
                 _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
                 self._get_style_of_faulting_term(C, rup) +
                 _get_hanging_wall_term(C, rup, dists) +
-                self._get_shallow_site_response_term(self.SJ, C, sites.vs30) +
-                self._get_basin_response_term(self.SJ, C, temp_z2pt5) +
+                self._get_shallow_site_response_term(SJ, C, sites.vs30) +
+                self._get_basin_response_term(SJ, C, temp_z2pt5) +
                 _get_hypocentral_depth_term(C, rup) +
                 _get_fault_dip_term(C, rup) +
-                self._get_anelastic_attenuation_term(C, dists.rrup))
+                self._get_anelastic_attenuation_term(sgn, C, dists.rrup))
 
     def _get_style_of_faulting_term(self, C, rup):
         """
@@ -195,17 +196,17 @@ class BozorgniaCampbell2016(GMPE):
         f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
         return f_sed
 
-    def _get_anelastic_attenuation_term(self, C, rrup):
+    def _get_anelastic_attenuation_term(self, sgn, C, rrup):
         """
         Returns the anelastic attenuation term, f_atn, defined in equation 25
         """
-        Dc20 = self._get_delta_c20(C)
+        Dc20 = self._get_delta_c20(sgn, C)
         f_atn = np.zeros(len(rrup))
         idx = rrup > 80.0
         f_atn[idx] = (C["c20"] + Dc20) * (rrup[idx] - 80.0)
         return f_atn
 
-    def _get_delta_c20(self, C):
+    def _get_delta_c20(self, sgn, C):
         """
         Retrieve regional-dependent coefficient accounting for differences in
         anelastic attenuation in path scaling
@@ -214,11 +215,11 @@ class BozorgniaCampbell2016(GMPE):
         California, Taiwan, the Middle East, and other similar active tectonic
         regions to represent a typical or average Q region.
         """
-        if self.sgn == 0:
+        if sgn == 0:
             return 0.
-        elif self.sgn == 1:
+        elif sgn == 1:
             return C['Dc20_CH']
-        elif self.sgn == -1:
+        elif sgn == -1:
             return C['Dc20_JP']
 
     def _get_stddevs(self, C, rup, sites, stddev_types):
