@@ -32,6 +32,18 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+# Period-Independent Coefficients (Table 2)
+CONSTS = {
+    'n': 1.18,
+    'c': 1.88,
+    'theta3': 0.1,
+    'theta4': 0.9,
+    'theta5': 0.0,
+    'theta9': 0.4,
+    'c4': 10.0,
+    'C1': 7.8
+}
+
 
 class AbrahamsonEtAl2015SInter(GMPE):
     """
@@ -54,21 +66,15 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see table 3, pages 12 - 13
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Site amplification is dependent upon Vs30
     #: For the Abrahamson et al (2013) GMPE a new term is introduced to
@@ -134,7 +140,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 self._compute_focal_depth_term(C, rup) +
                 self._compute_forearc_backarc_term(C, sites, dists))
         # Apply linear site term
-        site_response = ((C['theta12'] + C['b'] * self.CONSTS['n']) *
+        site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
                          np.log(1000. / C['vlin']))
         return mean + site_response
 
@@ -142,14 +148,14 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the magnitude scaling term given by equation (2)
         """
-        base = C['theta1'] + (self.CONSTS['theta4'] * dc1)
-        dmag = self.CONSTS["C1"] + dc1
+        base = C['theta1'] + (CONSTS['theta4'] * dc1)
+        dmag = CONSTS["C1"] + dc1
         if mag > dmag:
-            f_mag = (self.CONSTS['theta5'] * (mag - dmag)) +\
+            f_mag = (CONSTS['theta5'] * (mag - dmag)) +\
                 C['theta13'] * ((10. - mag) ** 2.)
 
         else:
-            f_mag = (self.CONSTS['theta4'] * (mag - dmag)) +\
+            f_mag = (CONSTS['theta4'] * (mag - dmag)) +\
                 C['theta13'] * ((10. - mag) ** 2.)
 
         return base + f_mag
@@ -158,9 +164,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return (C['theta2'] + self.CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
-                   self.CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
+        return (C['theta2'] + CONSTS['theta3'] * (mag - 7.8)) *\
+            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
+                   CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
 
     def _compute_focal_depth_term(self, C, rup):
         """
@@ -195,13 +201,13 @@ class AbrahamsonEtAl2015SInter(GMPE):
         site_resp_term = C["theta12"] * np.log(arg)
         # Get linear scaling term
         idx = sites.vs30 >= C["vlin"]
-        site_resp_term[idx] += (C["b"] * self.CONSTS["n"] * np.log(arg[idx]))
+        site_resp_term[idx] += (C["b"] * CONSTS["n"] * np.log(arg[idx]))
         # Get nonlinear scaling term
         idx = np.logical_not(idx)
         site_resp_term[idx] += (
-            -C["b"] * np.log(pga1000[idx] + self.CONSTS["c"]) +
-            C["b"] * np.log(pga1000[idx] + self.CONSTS["c"] *
-                            (arg[idx] ** self.CONSTS["n"])))
+            -C["b"] * np.log(pga1000[idx] + CONSTS["c"]) +
+            C["b"] * np.log(pga1000[idx] + CONSTS["c"] *
+                            (arg[idx] ** CONSTS["n"])))
         return site_resp_term
 
     def _get_stddevs(self, C, stddev_types, num_sites):
@@ -264,18 +270,6 @@ class AbrahamsonEtAl2015SInter(GMPE):
     3.00  -0.2
     10.0  -0.2
     """)
-
-    CONSTS = {
-        # Period-Independent Coefficients (Table 2)
-        'n': 1.18,
-        'c': 1.88,
-        'theta3': 0.1,
-        'theta4': 0.9,
-        'theta5': 0.0,
-        'theta9': 0.4,
-        'c4': 10.0,
-        'C1': 7.8
-        }
 
 
 class AbrahamsonEtAl2015SInterHigh(AbrahamsonEtAl2015SInter):
@@ -359,9 +353,9 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
         """
         Computes the distance scaling term, as contained within equation (1b)
         """
-        return ((C['theta2'] + C['theta14'] + self.CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
-                np.exp((mag - 6.) * self.CONSTS['theta9'])) +
+        return ((C['theta2'] + C['theta14'] + CONSTS['theta3'] *
+                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
+                np.exp((mag - 6.) * CONSTS['theta9'])) +
                 (C['theta6'] * dists.rhypo)) + C["theta10"]
 
     def _compute_forearc_backarc_term(self, C, sites, dists):

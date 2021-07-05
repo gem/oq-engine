@@ -24,8 +24,8 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SInter,
-                                                      AbrahamsonEtAl2015SSlab)
+from openquake.hazardlib.gsim.abrahamson_2015 import (
+    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS)
 from openquake.hazardlib.gsim.montalva_2017 import (MontalvaEtAl2017SInter,
                                                     MontalvaEtAl2017SSlab)
 
@@ -77,7 +77,7 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
         Computes the magnitude scaling term given by equation (2)
         """
         base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = self.CONSTS["C1"] + dc1
+        dmag = CONSTS["C1"] + dc1
         if mag > dmag:
             f_mag = (C['theta5'] * (mag - dmag)) +\
                 C['theta13'] * ((10. - mag) ** 2.)
@@ -93,8 +93,8 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
         Computes the distance scaling term, as contained within equation (1)
         """
         return (C['theta2'] + C['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
-                   self.CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
+            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
+                   CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt              DC1     vlin       b        theta1         theta2        theta3         theta4         theta5         theta6    theta7  theta8       theta10        theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_s2s
@@ -178,7 +178,7 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
         corrected by a local adjustment factor
         """
         base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = self.CONSTS["C1"] + dc1
+        dmag = CONSTS["C1"] + dc1
         if mag > dmag:
             f_mag = (C['theta5'] * (mag - dmag)) +\
                 C['theta13'] * ((10. - mag) ** 2.)
@@ -194,8 +194,8 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
         Computes the distance scaling term, as contained within equation (1b)
         """
         return ((C['theta2'] + C['theta14'] + C['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
-                np.exp((mag - 6.) * self.CONSTS['theta9'])) +
+                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
+                np.exp((mag - 6.) * CONSTS['theta9'])) +
                 (C['theta6'] * dists.rhypo)) + C["theta10"]
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
