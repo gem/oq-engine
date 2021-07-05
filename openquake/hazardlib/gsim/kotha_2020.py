@@ -137,6 +137,7 @@ class KothaEtAl2020(GMPE):
         apparent anelastic attenuation term, c3, as an imt-dependent
         dictionary
     """
+    kind = "base"
 
     #: Supported tectonic region type is 'active shallow crust'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -153,10 +154,7 @@ class KothaEtAl2020(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = set()
@@ -217,7 +215,7 @@ class KothaEtAl2020(GMPE):
         # GMPE originally in cm/s/s - convert to g
         if imt.string.startswith(('PGA', 'SA')):
             mean -= np.log(100.0 * g)
-        stddevs = self.get_stddevs(C, dists.rjb.shape, stddev_types,
+        stddevs = self.get_stddevs(self.kind, C, dists.rjb.shape, stddev_types,
                                    sites, imt, rup.mag)
         if self.dl2l:
             # The source-region parameter is specified explicity
@@ -311,17 +309,35 @@ class KothaEtAl2020(GMPE):
         """
         return 0.0
 
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
+    def get_stddevs(
+            self, kind, C, stddev_shape, stddev_types, sites, imt, mag):
         """
         Returns the homoskedastic standard deviation model
         """
         stddevs = []
-        tau = C["tau_event_0"]
-        phi = C["phi_0"]
+        if kind in {"ESHM20", "geology"}:
+            # Get the heteroskedastic tau and phi0
+            tau = get_tau(imt, mag)
+            phi = get_phi_ss(imt, mag)
+        else:
+            tau = C["tau_event_0"]
+            phi = C["phi_0"]
         if self.ergodic:
-            phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
+            if kind == 'ESHM20':
+                phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
+                phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
+                phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
+                phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+            elif kind == 'site':
+                phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
+            elif kind == 'slope':
+                phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
+            elif kind == 'geology':
+                phi_s2s = self.COEFFS_FIXED[imt]["phi_s2s"]
+                phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+            else:
+                phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
                                np.zeros(stddev_shape))
@@ -385,6 +401,8 @@ class KothaEtAl2020Site(KothaEtAl2020):
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = set(("vs30",))
 
+    kind = "site"
+
     def get_site_amplification(self, C, sites, imt):
         """
         Defines a second order polynomial site amplification model
@@ -393,27 +411,6 @@ class KothaEtAl2020Site(KothaEtAl2020):
         sref = np.log(sites.vs30 / 800.)
         return C["g0_vs30"] + C["g1_vs30"] * sref + C["g2_vs30"] * (sref ** 2.)
 
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the standard deviations
-        """
-        stddevs = []
-        # Adopts homoskedastic tau and phi0 values
-        tau = C["tau_event_0"]
-        phi = C["phi_0"]
-        if self.ergodic:
-            phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
-
 
 class KothaEtAl2020Slope(KothaEtAl2020):
     """
@@ -421,7 +418,9 @@ class KothaEtAl2020Slope(KothaEtAl2020):
     a polynomial site amplification function dependent on slope (m/m)
     """
     #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("slope",))
+    REQUIRES_SITES_PARAMETERS = {"slope"}
+
+    kind = "slope"
 
     def get_site_amplification(self, C, sites, imt):
         """
@@ -431,27 +430,6 @@ class KothaEtAl2020Slope(KothaEtAl2020):
         sref = np.log(sites.slope / 0.1)
         return C["g0_slope"] + C["g1_slope"] * sref +\
             C["g2_slope"] * (sref ** 2.)
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the standard deviations
-        """
-        stddevs = []
-        # Adopts homoskedastic tau and phi0 values
-        tau = C["tau_event_0"]
-        phi = C["phi_0"]
-        if self.ergodic:
-            phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
 
 
 # Defines the c3 distribution (expected and variance [tau]) for each of the
@@ -607,6 +585,8 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     #: Required site parameters are vs30, vs30measured and the eshm20_region
     REQUIRES_SITES_PARAMETERS = set(("region", "vs30", "vs30measured"))
 
+    kind = "ESHM20"
+
     def get_distance_coefficients(self, C, imt, sctx):
         """
         Returns the c3 term. If c3 was input directly into the GMPE then
@@ -654,32 +634,6 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
         ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
         return ampl
 
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the standard deviations, adopting different site-to-site
-        standard deviations depending on whether the site has a measured
-        or and inferred vs30. Relevant only in the ergodic case.
-        """
-        stddevs = []
-        # Get the heteroskedastic tau and phi0
-        tau = get_tau(imt, mag)
-        phi = get_phi_ss(imt, mag)
-        if self.ergodic:
-            phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
-            phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
-            phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
-            phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                   e1                 b1                  b2                  b3                  c1                   c2                   c3              tau_c3             phi_s2s         tau_event_0             tau_l2l               phi_0       d0_obs        d1_obs   phi_s2s_obs       d0_inf        d1_inf   phi_s2s_inf
     pgv     1.11912161648479   2.55771078860152   0.353267224391297   0.879839839344054   -1.41931258132547   0.2706807258213520   -0.304426142175370   0.178233997535235   0.560627759977840   0.422935885699239   0.258560350227890   0.446525247049620   3.30975201   -0.53326451    0.36257068   2.78401517   -0.43790954    0.42677529
@@ -718,7 +672,6 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     6.000   0.50685354955206   3.80040950285788   0.700805222359295   1.625591116375650   -1.22440411739130   0.2292764533844400   -0.113766839623945   0.141669390606605   0.538973145096788   0.439059204276786   0.190680023411634   0.384862538848542   2.50354874   -0.40714992    0.33854229   2.83412987   -0.44598168    0.44328149
     7.000   0.19675504234642   3.78431011962409   0.716569352050671   1.696310364814470   -1.28517895409644   0.2596896867469380   -0.070585399916418   0.146488759166368   0.523331606096182   0.434396029381517   0.208231539543981   0.385850838707000   2.39499327   -0.38989994    0.33074643   2.69365804   -0.42370171    0.43214765
     8.000  -0.08979569600589   3.74815514351616   0.726493405776986   1.695347146909250   -1.32882937608962   0.2849197966362740   -0.051296439369391   0.150981191615944   0.508537123776905   0.429104860654150   0.216201318346277   0.387633769846605   2.35979253   -0.38432385    0.32874669   2.64017872   -0.41521615    0.42722298
-
     """)
 
 
@@ -728,6 +681,7 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     defining site amplification based on with slope and geology rather than
     inferred/measured Vs30.
     """
+    kind = "geology"
 
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = set(("region", "slope", "geology"))
@@ -763,29 +717,6 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
                 v2 = C_AMP_FIXED["V2"]
             ampl[idx] = v1 + v2 * np.log(t_slope[idx])
         return ampl
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the ergodic standard deviation with phi_s2s_inf based on
-        that of the inferred Vs30
-        """
-        stddevs = []
-        # Uses the heteroskedastic tau and phi0 values
-        tau = get_tau(imt, mag)
-        phi = get_phi_ss(imt, mag)
-        if self.ergodic:
-            phi_s2s = self.COEFFS_FIXED[imt]["phi_s2s"]
-            phi = np.sqrt(phi  ** 2. + phi_s2s ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
 
     COEFFS_FIXED = CoeffsTable(sa_damping=5, table="""\
     imt               V1            V2      phi_s2s
