@@ -69,7 +69,8 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
                 self._compute_focal_depth_term(C, rup) +
                 self._compute_forearc_backarc_term(C, sites, dists) +
                 self._compute_site_response_term(C, sites, pga1000))
-        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
+        stddevs = self._get_stddevs(
+            self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
 
     def _compute_magnitude_term(self, C, dc1, mag):
@@ -125,7 +126,6 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
     """)
 
 
-
 class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
     """
     Adaptation of the Abrahamson et al. (2015) BC Hydro subduction in-slab
@@ -161,7 +161,8 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
                 self._compute_focal_depth_term(C, rup) +
                 self._compute_forearc_backarc_term(C, sites, dists) +
                 self._compute_site_response_term(C, sites, pga1000))
-        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
+        stddevs = self._get_stddevs(
+            self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
 
     def _compute_magnitude_term(self, C, dc1, mag):

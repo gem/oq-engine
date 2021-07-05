@@ -126,7 +126,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 self._compute_focal_depth_term(C, rup) +
                 self._compute_forearc_backarc_term(C, sites, dists) +
                 self._compute_site_response_term(C, sites, pga1000))
-        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
+        stddevs = self._get_stddevs(
+            self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
 
     def _compute_pga_rock(self, C, dc1, sites, rup, dists):
@@ -218,15 +219,14 @@ class AbrahamsonEtAl2015SInter(GMPE):
                             (arg[idx] ** CONSTS["n"])))
         return site_resp_term
 
-    def _get_stddevs(self, C, stddev_types, num_sites):
+    def _get_stddevs(self, ergodic, C, stddev_types, num_sites):
         """
         Return standard deviations as defined in Table 3
         """
         stddevs = []
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                sigma = C["sigma"] if self.ergodic else C["sigma_ss"]
+                sigma = C["sigma"] if ergodic else C["sigma_ss"]
                 stddevs.append(sigma + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(C['tau'] + np.zeros(num_sites))
