@@ -15,12 +15,52 @@ from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import \
     GhofraniAtkinson2014
 
 
+def _get_delta(dists):
+    """
+    Computes the additional delta to be used for the computation of the
+    upp and low models
+    """
+    delta = np.minimum((0.15-0.0007*dists.rrup), 0.35)
+    return delta
+
+
+def _get_mean(self, sites, rup, dists, imt, stddev_types):
+    """
+    See :meth:`superclass method
+    <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+    for spec of input and result values.
+    """
+    g = self.gsims
+
+    # Computing adjusted mean and stds
+    cff = self.COEFFS_SITE[imt]
+
+    # Zhao et al. 2006 - Vs30 + Rrup
+    mean_zh06, stds1 = ZhaoEtAl2006SInter.get_mean_and_stddevs(
+        self, sites, rup, dists, imt, stddev_types)
+    #
+    # Atkinson and Macias (2009) - Rrup
+    mean_am09, stds2 = g[0].get_mean_and_stddevs(
+        sites, rup, dists, imt, stddev_types)
+    #
+    # Abrahamson et al. (2015) - Rrup + vs30 + backarc
+    mean_ab15, stds3 = g[1].get_mean_and_stddevs(
+        sites, rup, dists, imt, stddev_types)
+    #
+    # Ghofrani and Atkinson (2014) - Rrup + vs30
+    mean_ga14, stds4 = g[2].get_mean_and_stddevs(
+        sites, rup, dists, imt,  stddev_types)
+    mean_adj = (np.log(np.exp(mean_zh06)*cff['mf'])*0.1 +
+                mean_am09*0.5 + mean_ab15*0.2 +
+                np.log(np.exp(mean_ga14)*cff['mf'])*0.2)
+    return mean_adj
+
+
 class SInterCan15Mid(ZhaoEtAl2006SInter):
     """
     Implements the Interface backbone model used for computing hazard for t
     the 2015 version of the Canada national hazard model developed by NRCan.
     """
-
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
@@ -35,18 +75,10 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     #: Supported standard deviations
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     gsims = [AtkinsonMacias2009(), AbrahamsonEtAl2015SInter(),
              GhofraniAtkinson2014()]  # underlying GSIMs
-
-    def _get_delta(self, dists):
-        """
-        Computes the additional delta to be used for the computation of the
-        upp and low models
-        """
-        delta = np.minimum((0.15-0.0007*dists.rrup), 0.35)
-        return delta
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -54,39 +86,9 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean = self._get_mean(sites, rup, dists, imt, stddev_types)
+        mean = _get_mean(self, sites, rup, dists, imt, stddev_types)
         stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         return mean, stddevs
-
-    def _get_mean(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        g = self.gsims
-
-        # Zhao et al. 2006 - Vs30 + Rrup
-        mean_zh06, stds1 = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                        stddev_types)
-        #
-        # Atkinson and Macias (2009) - Rrup
-        mean_am09, stds2 = g[0].get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-        #
-        # Abrahamson et al. (2015) - Rrup + vs30 + backarc
-        mean_ab15, stds3 = g[1].get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-        #
-        # Ghofrani and Atkinson (2014) - Rrup + vs30
-        mean_ga14, stds4 = g[2].get_mean_and_stddevs(
-            sites, rup, dists, imt,  stddev_types)
-        # Computing adjusted mean and stds
-        cff = self.COEFFS_SITE[imt]
-        mean_adj = (np.log(np.exp(mean_zh06)*cff['mf'])*0.1 +
-                    mean_am09*0.5 + mean_ab15*0.2 +
-                    np.log(np.exp(mean_ga14)*cff['mf'])*0.2)
-        return mean_adj
 
     COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     IMT        mf
@@ -108,8 +110,8 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
 class SInterCan15Low(SInterCan15Mid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean = self._get_mean(sites, rup, dists, imt, stddev_types)
-        mean -= self._get_delta(dists)
+        mean = _get_mean(self, sites, rup, dists, imt, stddev_types)
+        mean -= _get_delta(dists)
         stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         mean = np.squeeze(mean)
         return mean, stddevs
@@ -118,8 +120,8 @@ class SInterCan15Low(SInterCan15Mid):
 class SInterCan15Upp(SInterCan15Mid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean = self._get_mean(sites, rup, dists, imt, stddev_types)
-        mean += self._get_delta(dists)
+        mean = _get_mean(self, sites, rup, dists, imt, stddev_types)
+        mean += _get_delta(dists)
         stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         mean = np.squeeze(mean)
         return mean, stddevs
