@@ -37,6 +37,361 @@ CONSTS = {"c8": 0.0,
           "philnAF": 0.3}
 
 
+def _get_alpha(C, vs30, pga_rock):
+    """
+    Returns the alpha, the linearised functional relationship between the
+    site amplification and the PGA on rock. Equation 31.
+    """
+    alpha = np.zeros(len(pga_rock))
+    idx = vs30 < C["k1"]
+    if np.any(idx):
+        af1 = pga_rock[idx] +\
+            CONSTS["c"] * ((vs30[idx] / C["k1"]) ** CONSTS["n"])
+        af2 = pga_rock[idx] + CONSTS["c"]
+        alpha[idx] = C["k2"] * pga_rock[idx] * ((1.0 / af1) - (1.0 / af2))
+    return alpha
+
+
+def _get_anelastic_attenuation_term(C, rrup):
+    """
+    Returns the anelastic attenuation term defined in equation 25
+    """
+    f_atn = np.zeros(len(rrup))
+    idx = rrup >= 80.0
+    f_atn[idx] = (C["c20"] + C["Dc20"]) * (rrup[idx] - 80.0)
+    return f_atn
+
+
+def _get_basin_response_term(SJ, C, z2pt5):
+    """
+    Returns the basin response term defined in equation 20
+    """
+    f_sed = np.zeros(len(z2pt5))
+    idx = z2pt5 < 1.0
+    f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
+    idx = z2pt5 > 3.0
+    f_sed[idx] = C["c16"] * C["k3"] * exp(-0.75) *\
+        (1.0 - np.exp(-0.25 * (z2pt5[idx] - 3.0)))
+    return f_sed
+
+
+def _get_f1rx(C, r_x, r_1):
+    """
+    Defines the f1 scaling coefficient defined in equation 9
+    """
+    rxr1 = r_x / r_1
+    return C["h1"] + (C["h2"] * rxr1) + (C["h3"] * (rxr1 ** 2.))
+
+
+def _get_f2rx(C, r_x, r_1, r_2):
+    """
+    Defines the f2 scaling coefficient defined in equation 10
+    """
+    drx = (r_x - r_1) / (r_2 - r_1)
+    return CONSTS["h4"] + (C["h5"] * drx) + (C["h6"] * (drx ** 2.))
+
+
+def _get_fault_dip_term(C, rup):
+    """
+    Returns the fault dip term, defined in equation 24
+    """
+    if rup.mag < 4.5:
+        return C["c19"] * rup.dip
+    elif rup.mag > 5.5:
+        return 0.0
+    else:
+        return C["c19"] * (5.5 - rup.mag) * rup.dip
+
+
+def _get_geometric_attenuation_term(C, mag, rrup):
+    """
+    Returns the geometric attenuation term defined in equation 3
+    """
+    return (C["c5"] + C["c6"] * mag) * np.log(np.sqrt((rrup ** 2.) +
+                                                      (C["c7"] ** 2.)))
+
+
+def _get_hanging_wall_coeffs_dip(dip):
+    """
+    Returns the hanging wall dip term defined in equation 16
+    """
+    return (90.0 - dip) / 45.0
+
+
+def _get_hanging_wall_coeffs_mag(C, mag):
+    """
+    Returns the hanging wall magnitude term defined in equation 14
+    """
+    if mag < 5.5:
+        return 0.0
+    elif mag > 6.5:
+        return 1.0 + C["a2"] * (mag - 6.5)
+    else:
+        return (mag - 5.5) * (1.0 + C["a2"] * (mag - 6.5))
+
+
+def _get_hanging_wall_coeffs_rrup(dists):
+    """
+    Returns the hanging wall rrup term defined in equation 13
+    """
+    fhngrrup = np.ones(len(dists.rrup))
+    idx = dists.rrup > 0.0
+    fhngrrup[idx] = (dists.rrup[idx] - dists.rjb[idx]) / dists.rrup[idx]
+    return fhngrrup
+
+
+def _get_hanging_wall_coeffs_rx(C, rup, r_x):
+    """
+    Returns the hanging wall r-x caling term defined in equation 7 to 12
+    """
+    # Define coefficients R1 and R2
+    r_1 = rup.width * cos(radians(rup.dip))
+    r_2 = 62.0 * rup.mag - 350.0
+    fhngrx = np.zeros(len(r_x))
+    # Case when 0 <= Rx <= R1
+    idx = np.logical_and(r_x >= 0., r_x < r_1)
+    fhngrx[idx] = _get_f1rx(C, r_x[idx], r_1)
+    # Case when Rx > R1
+    idx = r_x >= r_1
+    f2rx = _get_f2rx(C, r_x[idx], r_1, r_2)
+    f2rx[f2rx < 0.0] = 0.0
+    fhngrx[idx] = f2rx
+    return fhngrx
+
+
+def _get_hanging_wall_coeffs_ztor(ztor):
+    """
+    Returns the hanging wall ztor term defined in equation 15
+    """
+    if ztor <= 16.66:
+        return 1.0 - 0.06 * ztor
+    else:
+        return 0.0
+
+
+def _get_hanging_wall_term(C, rup, dists):
+    """
+    Returns the hanging wall scaling term defined in equations 7 to 16
+    """
+    return (C["c10"] *
+            _get_hanging_wall_coeffs_rx(C, rup, dists.rx) *
+            _get_hanging_wall_coeffs_rrup(dists) *
+            _get_hanging_wall_coeffs_mag(C, rup.mag) *
+            _get_hanging_wall_coeffs_ztor(rup.ztor) *
+            _get_hanging_wall_coeffs_dip(rup.dip))
+
+
+def _get_hypocentral_depth_term(C, rup):
+    """
+    Returns the hypocentral depth scaling term defined in equations 21 - 23
+    """
+    if rup.hypo_depth <= 7.0:
+        fhyp_h = 0.0
+    elif rup.hypo_depth > 20.0:
+        fhyp_h = 13.0
+    else:
+        fhyp_h = rup.hypo_depth - 7.0
+
+    if rup.mag <= 5.5:
+        fhyp_m = C["c17"]
+    elif rup.mag > 6.5:
+        fhyp_m = C["c18"]
+    else:
+        fhyp_m = C["c17"] + ((C["c18"] - C["c17"]) * (rup.mag - 5.5))
+    return fhyp_h * fhyp_m
+
+
+def _get_magnitude_term(C, mag):
+    """
+    Returns the magnitude scaling term defined in equation 2
+    """
+    f_mag = C["c0"] + C["c1"] * mag
+    if (mag > 4.5) and (mag <= 5.5):
+        return f_mag + (C["c2"] * (mag - 4.5))
+    elif (mag > 5.5) and (mag <= 6.5):
+        return f_mag + (C["c2"] * (mag - 4.5)) + (C["c3"] * (mag - 5.5))
+    elif mag > 6.5:
+        return f_mag + (C["c2"] * (mag - 4.5)) + (C["c3"] * (mag - 5.5)) +\
+            (C["c4"] * (mag - 6.5))
+    else:
+        return f_mag
+
+
+def _get_philny(C, mag):
+    """
+    Returns the intra-event random effects coefficient (phi)
+    Equation 28.
+    """
+    if mag <= 4.5:
+        return C["phi1"]
+    elif mag >= 5.5:
+        return C["phi2"]
+    else:
+        return C["phi2"] + (C["phi1"] - C["phi2"]) * (5.5 - mag)
+
+
+def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
+    """
+    Returns the shallow site response term defined in equations 17, 18 and
+    19
+    """
+    vs_mod = vs30 / C["k1"]
+    # Get linear global site response term
+    f_site_g = C["c11"] * np.log(vs_mod)
+    idx = vs30 > C["k1"]
+    f_site_g[idx] = f_site_g[idx] + (C["k2"] * CONSTS["n"] *
+                                     np.log(vs_mod[idx]))
+
+    # Get nonlinear site response term
+    idx = np.logical_not(idx)
+    if np.any(idx):
+        f_site_g[idx] = f_site_g[idx] + C["k2"] * (
+            np.log(pga_rock[idx] +
+                   CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
+            np.log(pga_rock[idx] + CONSTS["c"])
+            )
+
+    # For Japan sites (SJ = 1) further scaling is needed (equation 19)
+    if SJ:
+        fsite_j = np.log(vs_mod)
+        idx = vs30 > 200.0
+        if np.any(idx):
+            fsite_j[idx] = (C["c13"] + C["k2"] * CONSTS["n"]) *\
+                fsite_j[idx]
+        idx = np.logical_not(idx)
+        if np.any(idx):
+            fsite_j[idx] = (C["c12"] + C["k2"] * CONSTS["n"]) *\
+                (fsite_j[idx] - np.log(200.0 / C["k1"]))
+
+        return f_site_g + fsite_j
+    else:
+        return f_site_g
+
+
+def _get_stddevs(C, C_PGA, rup, sites, pga1100, stddev_types):
+    """
+    Returns the inter- and intra-event and total standard deviations
+    """
+    # Get stddevs for PGA on basement rock
+    tau_lnpga_b, phi_lnpga_b = _get_stddevs_pga(C_PGA, rup)
+    num_sites = len(sites.vs30)
+    # Get tau_lny on the basement rock
+    tau_lnyb = _get_taulny(C, rup.mag)
+    # Get phi_lny on the basement rock
+    phi_lnyb = np.sqrt(_get_philny(C, rup.mag) ** 2. -
+                       CONSTS["philnAF"] ** 2.)
+    # Get site scaling term
+    alpha = _get_alpha(C, sites.vs30, pga1100)
+    # Evaluate tau according to equation 29
+    tau = np.sqrt(
+        (tau_lnyb ** 2.) +
+        ((alpha ** 2.) * (tau_lnpga_b ** 2.)) +
+        (2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b))
+
+    # Evaluate phi according to equation 30
+    phi = np.sqrt(
+        (phi_lnyb ** 2.) +
+        (CONSTS["philnAF"] ** 2.) +
+        ((alpha ** 2.) * (phi_lnpga_b ** 2.)) +
+        (2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b))
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
+                           np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau + np.zeros(num_sites))
+    return stddevs
+
+
+def _get_stddevs_pga(C, rup):
+    """
+    Returns the inter- and intra-event coefficients for PGA
+    """
+    tau_lnpga_b = _get_taulny(C, rup.mag)
+    phi_lnpga_b = np.sqrt(_get_philny(C, rup.mag) ** 2. -
+                          CONSTS["philnAF"] ** 2.)
+    return tau_lnpga_b, phi_lnpga_b
+
+
+def _get_style_of_faulting_term(C, rup):
+    """
+    Returns the style-of-faulting scaling term defined in equations 4 to 6
+    """
+    if (rup.rake > 30.0) and (rup.rake < 150.):
+        frv = 1.0
+        fnm = 0.0
+    elif (rup.rake > -150.0) and (rup.rake < -30.0):
+        fnm = 1.0
+        frv = 0.0
+    else:
+        fnm = 0.0
+        frv = 0.0
+
+    fflt_f = (CONSTS["c8"] * frv) + (C["c9"] * fnm)
+    if rup.mag <= 4.5:
+        fflt_m = 0.0
+    elif rup.mag > 5.5:
+        fflt_m = 1.0
+    else:
+        fflt_m = rup.mag - 4.5
+    return fflt_f * fflt_m
+
+
+def _get_taulny(C, mag):
+    """
+    Returns the inter-event random effects coefficient (tau)
+    Equation 28.
+    """
+    if mag <= 4.5:
+        return C["tau1"]
+    elif mag >= 5.5:
+        return C["tau2"]
+    else:
+        return C["tau2"] + (C["tau1"] - C["tau2"]) * (5.5 - mag)
+
+
+def _select_basin_model(SJ, vs30):
+    """
+    Select the preferred basin model (California or Japan) to scale
+    basin depth with respect to Vs30
+    """
+    if SJ:
+        # Japan Basin Model - Equation 34 of Campbell & Bozorgnia (2014)
+        return np.exp(5.359 - 1.102 * np.log(vs30))
+    else:
+        # California Basin Model - Equation 33 of
+        # Campbell & Bozorgnia (2014)
+        return np.exp(7.089 - 1.144 * np.log(vs30))
+
+
+def get_mean_values(SJ, C, sites, rup, dists, a1100=None):
+    """
+    Returns the mean values for a specific IMT
+    """
+    if isinstance(a1100, np.ndarray):
+        # Site model defined
+        temp_vs30 = sites.vs30
+        temp_z2pt5 = sites.z2pt5
+    else:
+        # Default site and basin model
+        temp_vs30 = 1100.0 * np.ones(len(sites.vs30))
+        temp_z2pt5 = _select_basin_model(SJ, 1100.0) * \
+            np.ones_like(temp_vs30)
+
+    return (_get_magnitude_term(C, rup.mag) +
+            _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
+            _get_style_of_faulting_term(C, rup) +
+            _get_hanging_wall_term(C, rup, dists) +
+            _get_shallow_site_response_term(SJ, C, temp_vs30, a1100) +
+            _get_basin_response_term(SJ, C, temp_z2pt5) +
+            _get_hypocentral_depth_term(C, rup) +
+            _get_fault_dip_term(C, rup) +
+            _get_anelastic_attenuation_term(C, dists.rrup))
+
+
 class CampbellBozorgnia2014(GMPE):
     """
     Implements NGA-West 2 GMPE developed by Kenneth W. Campbell and Yousef
@@ -87,358 +442,19 @@ class CampbellBozorgnia2014(GMPE):
         C_PGA = self.COEFFS[PGA()]
 
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
-        pga1100 = np.exp(self.get_mean_values(C_PGA, sites, rup, dists, None))
+        pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, sites, rup, dists))
         # Get mean and standard deviations for IMT
-        mean = self.get_mean_values(C, sites, rup, dists, pga1100)
+        mean = get_mean_values(self.SJ, C, sites, rup, dists, pga1100)
         if imt.string[:2] == "SA" and imt.period <= 0.25:
             # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
             # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
             # Get PGA on soil
-            pga = self.get_mean_values(C_PGA, sites, rup, dists, pga1100)
+            pga = get_mean_values(self.SJ, C_PGA, sites, rup, dists, pga1100)
             idx = mean <= pga
             mean[idx] = pga[idx]
         # Get standard deviations
-        stddevs = self._get_stddevs(C,
-                                    C_PGA,
-                                    rup,
-                                    sites,
-                                    pga1100,
-                                    stddev_types)
+        stddevs = _get_stddevs(C, C_PGA, rup, sites, pga1100, stddev_types)
         return mean, stddevs
-
-    def get_mean_values(self, C, sites, rup, dists, a1100):
-        """
-        Returns the mean values for a specific IMT
-        """
-        if isinstance(a1100, np.ndarray):
-            # Site model defined
-            temp_vs30 = sites.vs30
-            temp_z2pt5 = sites.z2pt5
-        else:
-            # Default site and basin model
-            temp_vs30 = 1100.0 * np.ones(len(sites.vs30))
-            temp_z2pt5 = self._select_basin_model(self.SJ, 1100.0) * \
-                np.ones_like(temp_vs30)
-
-        return (self._get_magnitude_term(C, rup.mag) +
-                self._get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
-                self._get_style_of_faulting_term(C, rup) +
-                self._get_hanging_wall_term(C, rup, dists) +
-                self._get_shallow_site_response_term(
-                    self.SJ, C, temp_vs30, a1100) +
-                self._get_basin_response_term(self.SJ, C, temp_z2pt5) +
-                self._get_hypocentral_depth_term(C, rup) +
-                self._get_fault_dip_term(C, rup) +
-                self._get_anelastic_attenuation_term(C, dists.rrup))
-
-    def _get_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term defined in equation 2
-        """
-        f_mag = C["c0"] + C["c1"] * mag
-        if (mag > 4.5) and (mag <= 5.5):
-            return f_mag + (C["c2"] * (mag - 4.5))
-        elif (mag > 5.5) and (mag <= 6.5):
-            return f_mag + (C["c2"] * (mag - 4.5)) + (C["c3"] * (mag - 5.5))
-        elif mag > 6.5:
-            return f_mag + (C["c2"] * (mag - 4.5)) + (C["c3"] * (mag - 5.5)) +\
-                (C["c4"] * (mag - 6.5))
-        else:
-            return f_mag
-
-    def _get_geometric_attenuation_term(self, C, mag, rrup):
-        """
-        Returns the geometric attenuation term defined in equation 3
-        """
-        return (C["c5"] + C["c6"] * mag) * np.log(np.sqrt((rrup ** 2.) +
-                                                          (C["c7"] ** 2.)))
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the style-of-faulting scaling term defined in equations 4 to 6
-        """
-        if (rup.rake > 30.0) and (rup.rake < 150.):
-            frv = 1.0
-            fnm = 0.0
-        elif (rup.rake > -150.0) and (rup.rake < -30.0):
-            fnm = 1.0
-            frv = 0.0
-        else:
-            fnm = 0.0
-            frv = 0.0
-
-        fflt_f = (CONSTS["c8"] * frv) + (C["c9"] * fnm)
-        if rup.mag <= 4.5:
-            fflt_m = 0.0
-        elif rup.mag > 5.5:
-            fflt_m = 1.0
-        else:
-            fflt_m = rup.mag - 4.5
-        return fflt_f * fflt_m
-
-    def _get_hanging_wall_term(self, C, rup, dists):
-        """
-        Returns the hanging wall scaling term defined in equations 7 to 16
-        """
-        return (C["c10"] *
-                self._get_hanging_wall_coeffs_rx(C, rup, dists.rx) *
-                self._get_hanging_wall_coeffs_rrup(dists) *
-                self._get_hanging_wall_coeffs_mag(C, rup.mag) *
-                self._get_hanging_wall_coeffs_ztor(rup.ztor) *
-                self._get_hanging_wall_coeffs_dip(rup.dip))
-
-    def _get_hanging_wall_coeffs_rx(self, C, rup, r_x):
-        """
-        Returns the hanging wall r-x caling term defined in equation 7 to 12
-        """
-        # Define coefficients R1 and R2
-        r_1 = rup.width * cos(radians(rup.dip))
-        r_2 = 62.0 * rup.mag - 350.0
-        fhngrx = np.zeros(len(r_x))
-        # Case when 0 <= Rx <= R1
-        idx = np.logical_and(r_x >= 0., r_x < r_1)
-        fhngrx[idx] = self._get_f1rx(C, r_x[idx], r_1)
-        # Case when Rx > R1
-        idx = r_x >= r_1
-        f2rx = self._get_f2rx(C, r_x[idx], r_1, r_2)
-        f2rx[f2rx < 0.0] = 0.0
-        fhngrx[idx] = f2rx
-        return fhngrx
-
-    def _get_f1rx(self, C, r_x, r_1):
-        """
-        Defines the f1 scaling coefficient defined in equation 9
-        """
-        rxr1 = r_x / r_1
-        return C["h1"] + (C["h2"] * rxr1) + (C["h3"] * (rxr1 ** 2.))
-
-    def _get_f2rx(self, C, r_x, r_1, r_2):
-        """
-        Defines the f2 scaling coefficient defined in equation 10
-        """
-        drx = (r_x - r_1) / (r_2 - r_1)
-        return CONSTS["h4"] + (C["h5"] * drx) + (C["h6"] * (drx ** 2.))
-
-    def _get_hanging_wall_coeffs_rrup(self, dists):
-        """
-        Returns the hanging wall rrup term defined in equation 13
-        """
-        fhngrrup = np.ones(len(dists.rrup))
-        idx = dists.rrup > 0.0
-        fhngrrup[idx] = (dists.rrup[idx] - dists.rjb[idx]) / dists.rrup[idx]
-        return fhngrrup
-
-    def _get_hanging_wall_coeffs_mag(self, C, mag):
-        """
-        Returns the hanging wall magnitude term defined in equation 14
-        """
-        if mag < 5.5:
-            return 0.0
-        elif mag > 6.5:
-            return 1.0 + C["a2"] * (mag - 6.5)
-        else:
-            return (mag - 5.5) * (1.0 + C["a2"] * (mag - 6.5))
-
-    def _get_hanging_wall_coeffs_ztor(self, ztor):
-        """
-        Returns the hanging wall ztor term defined in equation 15
-        """
-        if ztor <= 16.66:
-            return 1.0 - 0.06 * ztor
-        else:
-            return 0.0
-
-    def _get_hanging_wall_coeffs_dip(self, dip):
-        """
-        Returns the hanging wall dip term defined in equation 16
-        """
-        return (90.0 - dip) / 45.0
-
-    def _get_hypocentral_depth_term(self, C, rup):
-        """
-        Returns the hypocentral depth scaling term defined in equations 21 - 23
-        """
-        if rup.hypo_depth <= 7.0:
-            fhyp_h = 0.0
-        elif rup.hypo_depth > 20.0:
-            fhyp_h = 13.0
-        else:
-            fhyp_h = rup.hypo_depth - 7.0
-
-        if rup.mag <= 5.5:
-            fhyp_m = C["c17"]
-        elif rup.mag > 6.5:
-            fhyp_m = C["c18"]
-        else:
-            fhyp_m = C["c17"] + ((C["c18"] - C["c17"]) * (rup.mag - 5.5))
-        return fhyp_h * fhyp_m
-
-    def _get_fault_dip_term(self, C, rup):
-        """
-        Returns the fault dip term, defined in equation 24
-        """
-        if rup.mag < 4.5:
-            return C["c19"] * rup.dip
-        elif rup.mag > 5.5:
-            return 0.0
-        else:
-            return C["c19"] * (5.5 - rup.mag) * rup.dip
-
-    def _get_anelastic_attenuation_term(self, C, rrup):
-        """
-        Returns the anelastic attenuation term defined in equation 25
-        """
-        f_atn = np.zeros(len(rrup))
-        idx = rrup >= 80.0
-        f_atn[idx] = (C["c20"] + C["Dc20"]) * (rrup[idx] - 80.0)
-        return f_atn
-
-    def _select_basin_model(self, SJ, vs30):
-        """
-        Select the preferred basin model (California or Japan) to scale
-        basin depth with respect to Vs30
-        """
-        if SJ:
-            # Japan Basin Model - Equation 34 of Campbell & Bozorgnia (2014)
-            return np.exp(5.359 - 1.102 * np.log(vs30))
-        else:
-            # California Basin Model - Equation 33 of
-            # Campbell & Bozorgnia (2014)
-            return np.exp(7.089 - 1.144 * np.log(vs30))
-
-    def _get_basin_response_term(self, SJ, C, z2pt5):
-        """
-        Returns the basin response term defined in equation 20
-        """
-        f_sed = np.zeros(len(z2pt5))
-        idx = z2pt5 < 1.0
-        f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
-        idx = z2pt5 > 3.0
-        f_sed[idx] = C["c16"] * C["k3"] * exp(-0.75) *\
-            (1.0 - np.exp(-0.25 * (z2pt5[idx] - 3.0)))
-        return f_sed
-
-    def _get_shallow_site_response_term(self, SJ, C, vs30, pga_rock):
-        """
-        Returns the shallow site response term defined in equations 17, 18 and
-        19
-        """
-        vs_mod = vs30 / C["k1"]
-        # Get linear global site response term
-        f_site_g = C["c11"] * np.log(vs_mod)
-        idx = vs30 > C["k1"]
-        f_site_g[idx] = f_site_g[idx] + (C["k2"] * CONSTS["n"] *
-                                         np.log(vs_mod[idx]))
-
-        # Get nonlinear site response term
-        idx = np.logical_not(idx)
-        if np.any(idx):
-            f_site_g[idx] = f_site_g[idx] + C["k2"] * (
-                np.log(pga_rock[idx] +
-                       CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
-                np.log(pga_rock[idx] + CONSTS["c"])
-                )
-
-        # For Japan sites (SJ = 1) further scaling is needed (equation 19)
-        if SJ:
-            fsite_j = np.log(vs_mod)
-            idx = vs30 > 200.0
-            if np.any(idx):
-                fsite_j[idx] = (C["c13"] + C["k2"] * CONSTS["n"]) *\
-                    fsite_j[idx]
-            idx = np.logical_not(idx)
-            if np.any(idx):
-                fsite_j[idx] = (C["c12"] + C["k2"] * CONSTS["n"]) *\
-                    (fsite_j[idx] - np.log(200.0 / C["k1"]))
-
-            return f_site_g + fsite_j
-        else:
-            return f_site_g
-
-    def _get_stddevs(self, C, C_PGA, rup, sites, pga1100, stddev_types):
-        """
-        Returns the inter- and intra-event and total standard deviations
-        """
-        # Get stddevs for PGA on basement rock
-        tau_lnpga_b, phi_lnpga_b = self._get_stddevs_pga(C_PGA, rup)
-        num_sites = len(sites.vs30)
-        # Get tau_lny on the basement rock
-        tau_lnyb = self._get_taulny(C, rup.mag)
-        # Get phi_lny on the basement rock
-        phi_lnyb = np.sqrt(self._get_philny(C, rup.mag) ** 2. -
-                           CONSTS["philnAF"] ** 2.)
-        # Get site scaling term
-        alpha = self._get_alpha(C, sites.vs30, pga1100)
-        # Evaluate tau according to equation 29
-        tau = np.sqrt(
-            (tau_lnyb ** 2.) +
-            ((alpha ** 2.) * (tau_lnpga_b ** 2.)) +
-            (2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b))
-
-        # Evaluate phi according to equation 30
-        phi = np.sqrt(
-            (phi_lnyb ** 2.) +
-            (CONSTS["philnAF"] ** 2.) +
-            ((alpha ** 2.) * (phi_lnpga_b ** 2.)) +
-            (2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b))
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
-                               np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
-        return stddevs
-
-    def _get_stddevs_pga(self, C, rup):
-        """
-        Returns the inter- and intra-event coefficients for PGA
-        """
-        tau_lnpga_b = self._get_taulny(C, rup.mag)
-        phi_lnpga_b = np.sqrt(self._get_philny(C, rup.mag) ** 2. -
-                              CONSTS["philnAF"] ** 2.)
-        return tau_lnpga_b, phi_lnpga_b
-
-    def _get_taulny(self, C, mag):
-        """
-        Returns the inter-event random effects coefficient (tau)
-        Equation 28.
-        """
-        if mag <= 4.5:
-            return C["tau1"]
-        elif mag >= 5.5:
-            return C["tau2"]
-        else:
-            return C["tau2"] + (C["tau1"] - C["tau2"]) * (5.5 - mag)
-
-    def _get_philny(self, C, mag):
-        """
-        Returns the intra-event random effects coefficient (phi)
-        Equation 28.
-        """
-        if mag <= 4.5:
-            return C["phi1"]
-        elif mag >= 5.5:
-            return C["phi2"]
-        else:
-            return C["phi2"] + (C["phi1"] - C["phi2"]) * (5.5 - mag)
-
-    def _get_alpha(self, C, vs30, pga_rock):
-        """
-        Returns the alpha, the linearised functional relationship between the
-        site amplification and the PGA on rock. Equation 31.
-        """
-        alpha = np.zeros(len(pga_rock))
-        idx = vs30 < C["k1"]
-        if np.any(idx):
-            af1 = pga_rock[idx] +\
-                CONSTS["c"] * ((vs30[idx] / C["k1"]) ** CONSTS["n"])
-            af2 = pga_rock[idx] + CONSTS["c"]
-            alpha[idx] = C["k2"] * pga_rock[idx] * ((1.0 / af1) - (1.0 / af2))
-        return alpha
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0      c1       c2       c3       c4       c5      c6      c7       c9     c10      c11      c12     c13       c14      c15     c16       c17      c18       c19       c20     Dc20      a2      h1      h2       h3       h5       h6     k1       k2      k3    phi1    phi2    tau1    tau2    phiC   rholny
