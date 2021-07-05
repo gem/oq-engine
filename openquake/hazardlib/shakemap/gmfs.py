@@ -194,7 +194,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     for im, std in zip(imts, stddev):
         if std.sum() == 0:
             raise ValueError('Cannot decompose the spatial covariance '
-                             'because stddev==0 for IMT=%s' % im.name)
+                             'because stddev==0 for IMT=%s' % im.string)
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
 
     # Cholesky Decomposition
