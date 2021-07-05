@@ -73,10 +73,7 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
 
     gsims = [AtkinsonMacias2009(), AbrahamsonEtAl2015SInter(),
              GhofraniAtkinson2014()]  # underlying GSIMs
-
-    def __init__(self, sgn=0, **kwargs):
-        super().__init__(**kwargs)
-        self.sgn = sgn
+    sgn = 0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -108,5 +105,11 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     """)
 
 
-gsim_aliases['SInterCan15Low'] = '[SInterCan15Mid]\nsgn = -1'
-gsim_aliases['SInterCan15Upp'] = '[SInterCan15Mid]\nsgn = +1'
+# must be a class to avoid breaking NRCan15SiteTerm (test event_based/case_19)
+class SInterCan15Low(SInterCan15Mid):
+    sgn = -1
+
+
+# must be a class to avoid breaking NRCan15SiteTerm (test event_based/case_19)
+class SInterCan15Upp(SInterCan15Mid):
+    sgn = +1
