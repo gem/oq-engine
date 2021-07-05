@@ -160,7 +160,7 @@ class LanzanoLuzi2019shallow(GMPE):
         istddevs = _get_stddevs(C, stddev_types, sites.vs30.size)
 
         # Convert units to g, but only for PGA and SA (not PGV)
-        if imt.name in "SA PGA":
+        if imt.string.startswith(("SA", "PGA")):
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:  # PGV:
             mean = np.log(10.0 ** imean)

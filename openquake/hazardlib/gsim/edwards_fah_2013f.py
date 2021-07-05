@@ -91,7 +91,7 @@ class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
-        if imt.name in "SA PGA":
+        if imt.string.startswith(('PGA', 'SA')):
             mean = np.log(mean / (g*100.))
         else:
             # PGV:

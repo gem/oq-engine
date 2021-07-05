@@ -363,7 +363,7 @@ def _compute_v1_factor(imt):
     """
     Compute and return v1 factor, equation 6, page 77.
     """
-    if imt.name == "SA":
+    if imt.string[:2] == "SA":
         t = imt.period
         if t <= 0.50:
             v1 = 1500.0
@@ -373,7 +373,7 @@ def _compute_v1_factor(imt):
             v1 = np.exp(6.76 - 0.297 * np.log(t))
         else:
             v1 = 700.0
-    elif imt.name == "PGA":
+    elif imt.string == "PGA":
         v1 = 1500.0
     else:
         # this is for PGV
@@ -388,9 +388,9 @@ def _compute_e2_factor(imt, vs30):
     """
     e2 = np.zeros_like(vs30)
 
-    if imt.name == "PGV":
+    if imt.string == "PGV":
         period = 1
-    elif imt.name == "PGA":
+    elif imt.string == "PGA":
         period = 0
     else:
         period = imt.period
@@ -427,7 +427,7 @@ def _compute_a22_factor(imt):
     """
     Compute and return the a22 factor, equation 20, page 80.
     """
-    if imt.name == 'PGV':
+    if imt.string == 'PGV':
         return 0.0
     period = imt.period
     if period < 2.0:

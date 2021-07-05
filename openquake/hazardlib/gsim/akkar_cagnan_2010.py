@@ -168,7 +168,7 @@ class AkkarCagnan2010(BooreAtkinson2008):
 
         # compute full mean value by adding site amplification terms
         # (but avoiding recomputing mean on rock for PGA)
-        if imt.name == "PGA":
+        if imt.string == "PGA":
             mean = (np.log(pga4nl) +
                     _get_site_amplification_linear(sites.vs30, C_SR) +
                     _get_site_amplification_non_linear(sites.vs30, pga4nl,
@@ -181,7 +181,7 @@ class AkkarCagnan2010(BooreAtkinson2008):
                                                        C_SR))
 
         # convert from cm/s**2 to g for SA (PGA is already computed in g)
-        if imt.name == "SA":
+        if imt.string[:2] == "SA":
             mean = np.log(np.exp(mean) * 1e-2 / g)
 
         stddevs = _get_stddevs(C, stddev_types, num_sites=len(sites.vs30))

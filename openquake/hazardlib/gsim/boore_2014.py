@@ -329,7 +329,7 @@ class BooreEtAl2014(GMPE):
         # intensity measure type.
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
-        imt_per = 0 if imt.name == 'PGV' else imt.period
+        imt_per = 0 if imt.string == 'PGV' else imt.period
         pga_rock = _get_pga_on_rock(
             self.kind, self.region, self.sof, C_PGA, rup, dists)
         mean = (_get_magnitude_scaling_term(self.sof, C, rup) +

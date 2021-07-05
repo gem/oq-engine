@@ -210,9 +210,9 @@ class AmplificationTable(object):
             Number Levels]
         """
         # Levels by Distances
-        if imt.name in 'PGA PGV':
+        if imt.string in 'PGA PGV':
             interpolator = interp1d(self.magnitudes,
-                                    numpy.log10(self.mean[imt.name]), axis=2)
+                                    numpy.log10(self.mean[imt.string]), axis=2)
             output_table = 10.0 ** (
                 interpolator(rctx.mag).reshape(self.shape[0], self.shape[3]))
         else:
@@ -240,9 +240,9 @@ class AmplificationTable(object):
         output_tables = []
         for stddev_type in stddev_types:
             # For PGA and PGV only needs to apply magnitude interpolation
-            if imt.name in 'PGA PGV':
+            if imt.string in 'PGA PGV':
                 interpolator = interp1d(self.magnitudes,
-                                        self.sigma[stddev_type][imt.name],
+                                        self.sigma[stddev_type][imt.string],
                                         axis=2)
                 output_tables.append(
                     interpolator(rctx.mag).reshape(self.shape[0],
@@ -470,12 +470,12 @@ class GMPETable(GMPE):
         :param val_type:
             String indicating the type of data {"IMLs", "Total", "Inter" etc}
         """
-        if imt.name in 'PGA PGV':
+        if imt.string in 'PGA PGV':
             # Get scalar imt
             if val_type == "IMLs":
-                iml_table = self.imls[imt.name][:]
+                iml_table = self.imls[imt.string][:]
             else:
-                iml_table = self.stddevs[val_type][imt.name][:]
+                iml_table = self.stddevs[val_type][imt.string][:]
             n_d, n_s, n_m = iml_table.shape
             iml_table = iml_table.reshape([n_d, n_m])
         else:

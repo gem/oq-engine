@@ -78,7 +78,7 @@ def _ffpeak(C, imt, fpeak):
     """
     Fpeak factor.
     """
-    if not imt.name == "SA" or max(fpeak) <= 0:
+    if imt.string[:2] != "SA" or max(fpeak) <= 0:
         # pgv, pga or unknown fpeak
         return 0
 
@@ -304,7 +304,7 @@ class HassaniAtkinson2020SInter(GMPE):
         mean = 10 ** (fm + fdsigma + fz + fkappa + fgamma
                       + self.CONST_REGION['cc'] + clf + C['chf']
                       + C['amp_cr'] + fvs30 + fz2pt5 + ffpeak + fsnonlin)
-        if imt.name != "PGV":
+        if imt.string != "PGV":
             # pgv in cm/s
             # sa and psa in cm/s^2
             mean = mean / 981

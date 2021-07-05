@@ -191,14 +191,14 @@ class AkkarBommer2010(GMPE):
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
-        if imt.name in 'PGA SA':
+        if imt.string.startswith(("SA", "PGA")):
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             # PGV:
             mean = np.log(10.0 ** imean)
 
         # apply scaling factor for SA at 4 s
-        if imt.name == 'SA' and imt.period == 4.0:
+        if imt.string[:2] == 'SA' and imt.period == 4.0:
             mean /= 0.8
 
         istddevs = _get_stddevs(
