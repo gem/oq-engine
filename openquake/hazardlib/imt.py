@@ -38,9 +38,9 @@ def imt2tup(string):
     >>> imt2tup('PGA')
     ('PGA',)
     >>> imt2tup('SA(1.0)')
-    ('SA', 1.0)
+    ('SA(1.0)', 1.0)
     >>> imt2tup('SA(1)')
-    ('SA', 1.0)
+    ('SA(1.0)', 1.0)
     """
     s = string.strip()
     name, *rest = s.split('(')
