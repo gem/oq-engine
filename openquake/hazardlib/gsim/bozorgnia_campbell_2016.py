@@ -25,13 +25,11 @@ Module exports :class:`BozorgniaCampbell2016`
                :class:`BozorgniaCampbell2016LowQJapanSite`
 """
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
     _select_basin_model, _get_magnitude_term, _get_geometric_attenuation_term,
-    _get_hanging_wall_term, _get_hanging_wall_coeffs_rx,_get_fault_dip_term,
-    _get_hypocentral_depth_term,_get_f2rx, _get_hanging_wall_coeffs_rrup,
-    _get_hanging_wall_coeffs_mag, _get_hanging_wall_coeffs_ztor,
-    _get_hanging_wall_coeffs_dip, _get_taulny, _get_philny)
+    _get_hanging_wall_term, _get_fault_dip_term,
+    _get_hypocentral_depth_term, _get_taulny, _get_philny)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -88,7 +86,10 @@ class BozorgniaCampbell2016(GMPE):
     #: Required distance measures are Rrup, Rjb and Rx
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
-    SJ = 0  # 1 for Japan
+    def __init__(self, SJ=0, sgn=0, **kwargs):
+        super().__init__(**kwargs)
+        self.SJ = SJ
+        self.sgn = sgn
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -213,7 +214,12 @@ class BozorgniaCampbell2016(GMPE):
         California, Taiwan, the Middle East, and other similar active tectonic
         regions to represent a typical or average Q region.
         """
-        return 0.
+        if self.sgn == 0:
+            return 0.
+        elif self.sgn == 1:
+            return C['Dc20_CH']
+        elif self.sgn == -1:
+            return C['Dc20_JP']
 
     def _get_stddevs(self, C, rup, sites, stddev_types):
         """
@@ -272,84 +278,13 @@ class BozorgniaCampbell2016(GMPE):
     """)
 
 
-class BozorgniaCampbell2016HighQ(BozorgniaCampbell2016):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Applies regional corrections in path scaling term for regions with
-    low attenuation (high quality factor, Q) (e.g. eastern China)
-    """
-    def _get_delta_c20(self, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation
-        """
-        return C['Dc20_CH']
-
-
-class BozorgniaCampbell2016LowQ(BozorgniaCampbell2016):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Applies regional corrections in path scaling term for regions with
-    high attenuation (low quality factor, Q) (e.g. Japan and Italy)
-    """
-    def _get_delta_c20(self, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation
-        """
-        return C['Dc20_JP']
-
-
-class BozorgniaCampbell2016AveQJapanSite(BozorgniaCampbell2016):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Incorporates the difference in linear Vs30 scaling for sites in Japan by
-    activating the flag variable in shallow site reponse scaling
-
-    Applies the average attenuation case (Dc20=0)
-    """
-    SJ = 1
-
-
-class BozorgniaCampbell2016HighQJapanSite(BozorgniaCampbell2016AveQJapanSite):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Incorporates the difference in linear Vs30 scaling for sites in Japan by
-    activating the flag variable in shallow site reponse scaling
-
-    Applies regional corrections in path scaling term for regions with
-    low attenuation (high quality factor, Q)
-    """
-    def _get_delta_c20(self, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation
-        """
-        return C['Dc20_CH']
-
-
-class BozorgniaCampbell2016LowQJapanSite(BozorgniaCampbell2016AveQJapanSite):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Incorporates the difference in linear Vs30 scaling for sites in Japan by
-    activating the flag variable in shallow site reponse scaling
-
-    Applies regional corrections in path scaling term for regions with
-    high attenuation (low quality factor, Q)
-    """
-    def _get_delta_c20(self, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation
-        """
-        return C['Dc20_JP']
+gsim_aliases['BozorgniaCampbell2016HighQ'] = (
+    '[BozorgniaCampbell2016]\nsgn=1')
+gsim_aliases['BozorgniaCampbell2016LowQ'] = (
+    '[BozorgniaCampbell2016]\nsgn=-1')
+gsim_aliases['BozorgniaCampbell2016AveQJapanSite'] = (
+    '[BozorgniaCampbell2016]\nSJ=1')
+gsim_aliases['BozorgniaCampbell2016HighQJapanSite'] = (
+    '[BozorgniaCampbell2016]\nSJ=1, sgn=+1')
+gsim_aliases['BozorgniaCampbell2016LowQJapanSite'] = (
+    '[BozorgniaCampbell2016]\nSJ=1, sgn=-1')
