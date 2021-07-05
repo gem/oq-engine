@@ -211,7 +211,7 @@ class KothaEtAl2020(GMPE):
 
         mean = (self.get_magnitude_scaling(C, rup.mag) +
                 self.get_distance_term(C, rup, dists.rjb, imt, sites) +
-                self.get_site_amplification(C, sites, imt))
+                self.get_site_amplification(self.kind, C, sites, imt))
         # GMPE originally in cm/s/s - convert to g
         if imt.string.startswith(('PGA', 'SA')):
             mean -= np.log(100.0 * g)
@@ -303,11 +303,55 @@ class KothaEtAl2020(GMPE):
             # by tau_c3
             return C["c3"] + (self.c3_epsilon * C["tau_c3"])
 
-    def get_site_amplification(self, C, sites, imt):
+    def get_site_amplification(self, kind, C, sites, imt):
         """
-        In base model no site amplification is used
+        Apply the correct site amplification depending on the kind of GMPE
         """
-        return 0.0
+        if kind == "base":  # no site amplification
+            ampl = 0.
+        elif kind == "site":
+            # Render with respect to 800 m/s reference Vs30
+            sref = np.log(sites.vs30 / 800.)
+            ampl = (C["g0_vs30"] + C["g1_vs30"] * sref +
+                    C["g2_vs30"] * (sref ** 2.))
+        elif kind == "slope":
+            # Render with respect to 0.1 m/m reference slope
+            sref = np.log(sites.slope / 0.1)
+            ampl = (C["g0_slope"] + C["g1_slope"] * sref +
+                    C["g2_slope"] * (sref ** 2.))
+        elif kind == "ESHM20":
+            vs30 = np.copy(sites.vs30)
+            vs30[vs30 > 1100.] = 1100.
+            ampl = np.zeros(vs30.shape)
+            # For observed vs30 sites
+            ampl[sites.vs30measured] = (C["d0_obs"] + C["d1_obs"] *
+                                        np.log(vs30[sites.vs30measured]))
+            # For inferred Vs30 sites
+            idx = np.logical_not(sites.vs30measured)
+            ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
+        elif kind == "geology":
+            C_AMP_FIXED = self.COEFFS_FIXED[imt]
+            C_AMP_RAND_INT = self.COEFFS_RANDOM_INT[imt]
+            C_AMP_RAND_GRAD = self.COEFFS_RANDOM_GRAD[imt]
+            ampl = np.zeros(sites.slope.shape)
+            geol_units = np.unique(sites.geology)
+            t_slope = np.copy(sites.slope)
+            t_slope[t_slope > 0.3] = 0.3
+            # Slope lower than 0.0005 m/m takes value for 0.0005 m/m
+            t_slope[t_slope < 0.0005] = 0.0005
+            for geol_unit in geol_units:
+                idx = sites.geology == geol_unit
+                if geol_unit in self.GEOLOGICAL_UNITS:
+                    unit = geol_unit.decode()
+                    # Supported geological unit, use the random effects model
+                    v1 = C_AMP_FIXED["V1"] + C_AMP_RAND_INT[unit]
+                    v2 = C_AMP_FIXED["V2"] + C_AMP_RAND_GRAD[unit]
+                else:
+                    # Unrecognised geological unit, use the fixed effects model
+                    v1 = C_AMP_FIXED["V1"]
+                    v2 = C_AMP_FIXED["V2"]
+                ampl[idx] = v1 + v2 * np.log(t_slope[idx])
+        return ampl
 
     def get_stddevs(
             self, kind, C, stddev_shape, stddev_types, sites, imt, mag):
@@ -403,14 +447,6 @@ class KothaEtAl2020Site(KothaEtAl2020):
 
     kind = "site"
 
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Defines a second order polynomial site amplification model
-        """
-        # Render with respect to 800 m/s reference Vs30
-        sref = np.log(sites.vs30 / 800.)
-        return C["g0_vs30"] + C["g1_vs30"] * sref + C["g2_vs30"] * (sref ** 2.)
-
 
 class KothaEtAl2020Slope(KothaEtAl2020):
     """
@@ -421,15 +457,6 @@ class KothaEtAl2020Slope(KothaEtAl2020):
     REQUIRES_SITES_PARAMETERS = {"slope"}
 
     kind = "slope"
-
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Defines a second order polynomial site amplification model
-        """
-        # Render with respect to 0.1 m/m reference slope
-        sref = np.log(sites.slope / 0.1)
-        return C["g0_slope"] + C["g1_slope"] * sref +\
-            C["g2_slope"] * (sref ** 2.)
 
 
 # Defines the c3 distribution (expected and variance [tau]) for each of the
@@ -618,22 +645,6 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
             tau_c3[idx] = C3_R["tau_region_{:s}".format(str(i))]
         return c3 + self.c3_epsilon * tau_c3
 
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Returns the linear site amplification term depending on whether the
-        Vs30 is observed of inferred
-        """
-        vs30 = np.copy(sites.vs30)
-        vs30[vs30 > 1100.] = 1100.
-        ampl = np.zeros(vs30.shape)
-        # For observed vs30 sites
-        ampl[sites.vs30measured] = (C["d0_obs"] + C["d1_obs"] *
-                                    np.log(vs30[sites.vs30measured]))
-        # For inferred Vs30 sites
-        idx = np.logical_not(sites.vs30measured)
-        ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
-        return ampl
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                   e1                 b1                  b2                  b3                  c1                   c2                   c3              tau_c3             phi_s2s         tau_event_0             tau_l2l               phi_0       d0_obs        d1_obs   phi_s2s_obs       d0_inf        d1_inf   phi_s2s_inf
     pgv     1.11912161648479   2.55771078860152   0.353267224391297   0.879839839344054   -1.41931258132547   0.2706807258213520   -0.304426142175370   0.178233997535235   0.560627759977840   0.422935885699239   0.258560350227890   0.446525247049620   3.30975201   -0.53326451    0.36257068   2.78401517   -0.43790954    0.42677529
@@ -690,33 +701,6 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     GEOLOGICAL_UNITS = [b"CENOZOIC", b"HOLOCENE", b"JURASSIC-TRIASSIC",
                         b"CRETACEOUS", b"PALEOZOIC", b"PLEISTOCENE",
                         b"PRECAMBRIAN", b"UNKNOWN"]
-
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Returns the site amplification term depending on whether the Vs30
-        is observed of inferred
-        """
-        C_AMP_FIXED = self.COEFFS_FIXED[imt]
-        C_AMP_RAND_INT = self.COEFFS_RANDOM_INT[imt]
-        C_AMP_RAND_GRAD = self.COEFFS_RANDOM_GRAD[imt]
-        ampl = np.zeros(sites.slope.shape)
-        geol_units = np.unique(sites.geology)
-        t_slope = np.copy(sites.slope)
-        t_slope[t_slope > 0.3] = 0.3
-        # Slope lower than 0.0005 m/m takes value for 0.0005 m/m
-        t_slope[t_slope < 0.0005] = 0.0005
-        for geol_unit in geol_units:
-            idx = sites.geology == geol_unit
-            if geol_unit in self.GEOLOGICAL_UNITS:
-                # Supported geological unit - use the random effects model
-                v1 = C_AMP_FIXED["V1"] + C_AMP_RAND_INT[geol_unit.decode()]
-                v2 = C_AMP_FIXED["V2"] + C_AMP_RAND_GRAD[geol_unit.decode()]
-            else:
-                # Unrecognised geological unit - use the fixed effects model
-                v1 = C_AMP_FIXED["V1"]
-                v2 = C_AMP_FIXED["V2"]
-            ampl[idx] = v1 + v2 * np.log(t_slope[idx])
-        return ampl
 
     COEFFS_FIXED = CoeffsTable(sa_damping=5, table="""\
     imt               V1            V2      phi_s2s
