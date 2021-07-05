@@ -24,7 +24,8 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2015 import (
-    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS)
+    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS,
+    _compute_magterm)
 
 
 # Period-Independent Coefficients (Table 2 of BC Hydro)
@@ -53,15 +54,8 @@ class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
         Abrahamson et al (2015) implementation as theta4 and theta5 are now
         period-dependent, whilst theta13 is now zero
         """
-        base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = C['theta5'] * (mag - dmag)
-
-        else:
-            f_mag = C['theta4'] * (mag - dmag)
-
-        return base + f_mag
+        return _compute_magterm(CONSTS['C1'], C['theta1'], C['theta4'],
+                                C['theta5'], 0., dc1, mag)
 
     def _compute_distance_term(self, C, mag, dists):
         """
@@ -151,14 +145,8 @@ class MontalvaEtAl2017SSlab(AbrahamsonEtAl2015SSlab):
         corrected by a local adjustment factor - see documentation for
         interface version for changes
         """
-        base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = C['theta5'] * (mag - dmag)
-
-        else:
-            f_mag = C['theta4'] * (mag - dmag)
-        return base + f_mag
+        return _compute_magterm(CONSTS['C1'], C['theta1'], C['theta4'],
+                                C['theta5'], 0., dc1, mag)
 
     def _compute_distance_term(self, C, mag, dists):
         """
