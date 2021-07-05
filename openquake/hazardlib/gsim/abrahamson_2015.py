@@ -45,6 +45,27 @@ CONSTS = {
 }
 
 
+def _get_stddevs(ergodic, C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in Table 3
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            sigma = C["sigma"] if ergodic else C["sigma_ss"]
+            stddevs.append(sigma + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            if ergodic:
+                phi = C["phi"]
+            else:
+                # Get single station phi
+                phi = np.sqrt(C["sigma_ss"] ** 2. - C["tau"] ** 2.)
+            stddevs.append(phi + np.zeros(num_sites))
+    return stddevs
+
+
 class AbrahamsonEtAl2015SInter(GMPE):
     """
     Implements the Subduction GMPE developed by Norman Abrahamson, Nicholas
@@ -95,6 +116,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: Reference soil conditions (bottom of page 29)
     DEFINED_FOR_REFERENCE_VELOCITY = 1000
 
+    delta_c1 = None
+    kind = "base"
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ergodic = kwargs.get('ergodic', True)
@@ -108,9 +132,12 @@ class AbrahamsonEtAl2015SInter(GMPE):
         # extract dictionaries of coefficients specific to required
         # intensity measure type and for PGA
         C = self.COEFFS[imt]
-        dc1 = self._get_delta_c1(imt)
         C_PGA = self.COEFFS[PGA()]
-        dc1_pga = self._get_delta_c1(PGA())
+        if self.delta_c1 is None:
+            dc1 = self.COEFFS_MAG_SCALE[imt]["dc1"]
+            dc1_pga = self.COEFFS_MAG_SCALE[PGA()]["dc1"]
+        else:
+            dc1 = dc1_pga = self.delta_c1
         # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
         pga1000 = np.exp(
@@ -120,15 +147,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 self._compute_focal_depth_term(C, rup) +
                 self._compute_forearc_backarc_term(C, sites, dists) +
                 self._compute_site_response_term(C, sites, pga1000))
-        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
+        stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
-
-    def _get_delta_c1(self, imt):
-        """
-        Returns the magnitude scaling parameter deltaC1 for capturing scaling
-        for large events.
-        """
-        return self.COEFFS_MAG_SCALE[imt]["dc1"]
 
     def _compute_pga_rock(self, C, dc1, sites, rup, dists):
         """
@@ -172,9 +192,18 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the hypocentral depth scaling term - as indicated by
         equation (3)
-        For interface events F_EVENT = 0.. so no depth scaling is returned
+        For interface events F_EVENT = 0.. so no depth scaling is returned.
+        For SSlab events computes the hypocentral depth scaling term as
+        indicated by equation (3)
         """
-        return 0.
+        if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                const.TRT.SUBDUCTION_INTERFACE):
+            return 0.
+        if rup.hypo_depth > 120.0:
+            z_h = 120.0
+        else:
+            z_h = rup.hypo_depth
+        return C['theta11'] * (z_h - 60.)
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """
@@ -209,27 +238,6 @@ class AbrahamsonEtAl2015SInter(GMPE):
             C["b"] * np.log(pga1000[idx] + CONSTS["c"] *
                             (arg[idx] ** CONSTS["n"])))
         return site_resp_term
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in Table 3
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma = C["sigma"] if self.ergodic else C["sigma_ss"]
-                stddevs.append(sigma + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                if self.ergodic:
-                    phi = C["phi"]
-                else:
-                    # Get single station phi
-                    phi = np.sqrt(C["sigma_ss"] ** 2. - C["tau"] ** 2.)
-                stddevs.append(phi + np.zeros(num_sites))
-        return stddevs
 
     # Period-dependent coefficients (Table 3)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -331,23 +339,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     #: In-slab events require constraint of hypocentral depth and magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    def _get_delta_c1(self, imt):
-        """
-        Returns the magnitude scaling parameter deltaC1 which is fixed at -0.3
-        for the central branch of the in-slab model
-        """
-        return -0.3
-
-    def _compute_focal_depth_term(self, C, rup):
-        """
-        Computes the hypocentral depth scaling term - as indicated by
-        equation (3)
-        """
-        if rup.hypo_depth > 120.0:
-            z_h = 120.0
-        else:
-            z_h = rup.hypo_depth
-        return C['theta11'] * (z_h - 60.)
+    delta_c1 = -0.3
 
     def _compute_distance_term(self, C, mag, dists):
         """
@@ -377,13 +369,7 @@ class AbrahamsonEtAl2015SSlabHigh(AbrahamsonEtAl2015SSlab):
     values of the magnitude scaling for large slab earthquakes, as defined in
     table 8
     """
-
-    def _get_delta_c1(self, imt):
-        """
-        Returns them agnitude scaling parameter deltaC1 which is fixed at -0.1
-        for the upper branch of the in-slab model
-        """
-        return -0.1
+    delta_c1 = -0.1
 
 
 class AbrahamsonEtAl2015SSlabLow(AbrahamsonEtAl2015SSlab):
@@ -392,10 +378,4 @@ class AbrahamsonEtAl2015SSlabLow(AbrahamsonEtAl2015SSlab):
     values of the magnitude scaling for large slab earthquakes, as defined in
     table 8
     """
-
-    def _get_delta_c1(self, imt):
-        """
-        Returns them agnitude scaling parameter deltaC1 which is fixed at -0.5
-        for the lower branch of the in-slab model
-        """
-        return -0.5
+    delta_c1 = -0.5

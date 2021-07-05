@@ -265,7 +265,7 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     def __init__(self, **kwargs):
         super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
@@ -341,7 +341,7 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
     """
     experimental = True
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     def __init__(self, **kwargs):
         super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
@@ -418,7 +418,7 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     def __init__(self, **kwargs):
         super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
@@ -502,7 +502,7 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     def __init__(self, **kwargs):
         super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
@@ -580,7 +580,7 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     def __init__(self, **kwargs):
         super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
@@ -657,7 +657,7 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     def __init__(self, **kwargs):
         super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)

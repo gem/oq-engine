@@ -25,7 +25,7 @@ import numpy as np
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.abrahamson_2015 import (
-    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS)
+    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS, _get_stddevs)
 from openquake.hazardlib.gsim.montalva_2017 import (MontalvaEtAl2017SInter,
                                                     MontalvaEtAl2017SSlab)
 
@@ -48,7 +48,7 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
     hazard models using this implementation
     """
     superseded_by = MontalvaEtAl2017SInter
-    
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -69,7 +69,7 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
                 self._compute_focal_depth_term(C, rup) +
                 self._compute_forearc_backarc_term(C, sites, dists) +
                 self._compute_site_response_term(C, sites, pga1000))
-        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
+        stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
 
     def _compute_magnitude_term(self, C, dc1, mag):
@@ -124,15 +124,6 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
     10.00   -0.200000000    400.0   0.000   3.266979586   -1.707902316   0.068210457   -0.967817098    0.253077379    0.004736644   -0.4828    0.30   7.382937906    0.000738462   -0.423369635   -0.347713953   -1.409670235   0.3000    0.00   0.466924628   0.376696614   0.599932452   0.300789811
     """)
 
-    CONSTS = {
-        # Period-Independent Coefficients (Table 2)
-        'n': 1.18,
-        'c': 1.88,
-        'c4': 10.0,
-        'C1': 7.8,
-        'theta9': 0.4
-        }
-
 
 class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
     """
@@ -169,7 +160,7 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
                 self._compute_focal_depth_term(C, rup) +
                 self._compute_forearc_backarc_term(C, sites, dists) +
                 self._compute_site_response_term(C, sites, pga1000))
-        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
+        stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
 
     def _compute_magnitude_term(self, C, dc1, mag):
