@@ -128,8 +128,8 @@ class BozorgniaCampbell2016(GMPE):
                 _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
                 self._get_style_of_faulting_term(C, rup) +
                 _get_hanging_wall_term(C, rup, dists) +
-                self._get_shallow_site_response_term(C, sites.vs30) +
-                self._get_basin_response_term(C, temp_z2pt5) +
+                self._get_shallow_site_response_term(self.SJ, C, sites.vs30) +
+                self._get_basin_response_term(self.SJ, C, temp_z2pt5) +
                 _get_hypocentral_depth_term(C, rup) +
                 _get_fault_dip_term(C, rup) +
                 self._get_anelastic_attenuation_term(C, dists.rrup))
@@ -159,7 +159,7 @@ class BozorgniaCampbell2016(GMPE):
             fflt_m = rup.mag - 4.5
         return fflt_f * fflt_m
 
-    def _get_shallow_site_response_term(self, C, vs30):
+    def _get_shallow_site_response_term(self, SJ, C, vs30):
         """
         Returns the shallow site response term, f_site, defined in
         equations 17, 18, and 19
@@ -172,7 +172,7 @@ class BozorgniaCampbell2016(GMPE):
         f_site_g = C["c11"] * np.log(vs_mod)
 
         # For Japan sites (SJ = 1) further scaling is needed (equation 19)
-        if self.SJ:
+        if SJ:
             fsite_j = C["c13"] * np.log(vs_mod)
             # additional term activated for soft sites (Vs30 <= 200m/s)
             # in Japan data
@@ -184,7 +184,7 @@ class BozorgniaCampbell2016(GMPE):
         else:
             return f_site_g
 
-    def _get_basin_response_term(self, C, z2pt5):
+    def _get_basin_response_term(self, SJ, C, z2pt5):
         """
         Returns the basin response term, f_sed, defined in equation 20
 
@@ -192,7 +192,7 @@ class BozorgniaCampbell2016(GMPE):
         """
         f_sed = np.zeros(len(z2pt5))
         idx = z2pt5 < 1.0
-        f_sed[idx] = (C["c14"] + C["c15"] * self.SJ) * (z2pt5[idx] - 1.0)
+        f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
         return f_sed
 
     def _get_anelastic_attenuation_term(self, C, rrup):
