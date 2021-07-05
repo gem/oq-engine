@@ -138,15 +138,6 @@ class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
     10.00   -0.200000000
     """)
 
-    CONSTS = {
-        # Period-Independent Coefficients (Table 2 of BC Hydro)
-        'n': 1.18,
-        'c': 1.88,
-        'c4': 10.0,
-        'C1': 7.2,
-        'theta9': 0.4
-        }
-
 
 class MontalvaEtAl2017SSlab(AbrahamsonEtAl2015SSlab):
     """
