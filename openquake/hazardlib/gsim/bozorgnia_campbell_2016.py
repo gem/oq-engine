@@ -26,8 +26,12 @@ Module exports :class:`BozorgniaCampbell2016`
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
-                                          CampbellBozorgnia2014 as CB14
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
+    _select_basin_model, _get_magnitude_term, _get_geometric_attenuation_term,
+    _get_hanging_wall_term, _get_hanging_wall_coeffs_rx,_get_fault_dip_term,
+    _get_hypocentral_depth_term,_get_f2rx, _get_hanging_wall_coeffs_rrup,
+    _get_hanging_wall_coeffs_mag, _get_hanging_wall_coeffs_ztor,
+    _get_hanging_wall_coeffs_dip, _get_taulny, _get_philny)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -61,11 +65,7 @@ class BozorgniaCampbell2016(GMPE):
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground velocity and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the
     #: :attr:`~openquake.hazardlib.const.IMC.Vertical` direction component
@@ -73,11 +73,8 @@ class BozorgniaCampbell2016(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory Variability Model".
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30, Vs30 type (measured or inferred),
     #: and depth (km) to the 2.5 km/s shear wave velocity layer (z2pt5)
@@ -90,6 +87,8 @@ class BozorgniaCampbell2016(GMPE):
 
     #: Required distance measures are Rrup, Rjb and Rx
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
+
+    SJ = 0  # 1 for Japan
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -122,29 +121,17 @@ class BozorgniaCampbell2016(GMPE):
         else:
             # Estimate unspecified sediment depth according to
             # equations 33 and 34 of CB14
-            temp_z2pt5 = self._select_basin_model(sites.vs30)
+            temp_z2pt5 = _select_basin_model(self.SJ, sites.vs30)
 
-        return (self._get_magnitude_term(C, rup.mag) +
-                self._get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
+        return (_get_magnitude_term(C, rup.mag) +
+                _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
                 self._get_style_of_faulting_term(C, rup) +
-                self._get_hanging_wall_term(C, rup, dists) +
+                _get_hanging_wall_term(C, rup, dists) +
                 self._get_shallow_site_response_term(C, sites.vs30) +
                 self._get_basin_response_term(C, temp_z2pt5) +
-                self._get_hypocentral_depth_term(C, rup) +
-                self._get_fault_dip_term(C, rup) +
+                _get_hypocentral_depth_term(C, rup) +
+                _get_fault_dip_term(C, rup) +
                 self._get_anelastic_attenuation_term(C, dists.rrup))
-
-    def _get_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term, f_mag, defined in equation 2
-        """
-        return CB14._get_magnitude_term(self, C, mag)
-
-    def _get_geometric_attenuation_term(self, C, mag, rrup):
-        """
-        Returns the geometric attenuation term, f_dis, defined in equation 3
-        """
-        return CB14._get_geometric_attenuation_term(self, C, mag, rrup)
 
     def _get_style_of_faulting_term(self, C, rup):
         """
@@ -171,55 +158,6 @@ class BozorgniaCampbell2016(GMPE):
             fflt_m = rup.mag - 4.5
         return fflt_f * fflt_m
 
-    def _get_hanging_wall_term(self, C, rup, dists):
-        """
-        Returns the hanging wall scaling term, f_hng, defined in equation 7
-        """
-        return CB14._get_hanging_wall_term(self, C, rup, dists)
-
-    def _get_hanging_wall_coeffs_rx(self, C, rup, r_x):
-        """
-        Returns the hanging wall r-x scaling term, f_hng_Rx defined in
-        equation 8
-        """
-        return CB14._get_hanging_wall_coeffs_rx(self, C, rup, r_x)
-
-    def _get_f1rx(self, C, r_x, r_1):
-        """
-        Defines the f1 scaling coefficient defined in equation 9
-        """
-        return CB14._get_f1rx(self, C, r_x, r_1)
-
-    def _get_f2rx(self, C, r_x, r_1, r_2):
-        """
-        Defines the f2 scaling coefficient defined in equation 10
-        """
-        return CB14._get_f2rx(self, C, r_x, r_1, r_2)
-
-    def _get_hanging_wall_coeffs_rrup(self, dists):
-        """
-        Returns the hanging wall rrup term, f_hng_Rrup, defined in equation 13
-        """
-        return CB14._get_hanging_wall_coeffs_rrup(self, dists)
-
-    def _get_hanging_wall_coeffs_mag(self, C, mag):
-        """
-        Returns the hanging wall magnitude term, f_hng_M defined in equation 14
-        """
-        return CB14._get_hanging_wall_coeffs_mag(self, C, mag)
-
-    def _get_hanging_wall_coeffs_ztor(self, ztor):
-        """
-        Returns the hanging wall ztor term, f_hng_Z, defined in equation 15
-        """
-        return CB14._get_hanging_wall_coeffs_ztor(self, ztor)
-
-    def _get_hanging_wall_coeffs_dip(self, dip):
-        """
-        Returns the hanging wall dip term, f_hng_delta, defined in equation 16
-        """
-        return CB14._get_hanging_wall_coeffs_dip(self, dip)
-
     def _get_shallow_site_response_term(self, C, vs30):
         """
         Returns the shallow site response term, f_site, defined in
@@ -233,7 +171,7 @@ class BozorgniaCampbell2016(GMPE):
         f_site_g = C["c11"] * np.log(vs_mod)
 
         # For Japan sites (SJ = 1) further scaling is needed (equation 19)
-        if self.CONSTS["SJ"]:
+        if self.SJ:
             fsite_j = C["c13"] * np.log(vs_mod)
             # additional term activated for soft sites (Vs30 <= 200m/s)
             # in Japan data
@@ -245,13 +183,6 @@ class BozorgniaCampbell2016(GMPE):
         else:
             return f_site_g
 
-    def _select_basin_model(self, vs30):
-        """
-        Select the preferred basin model (California or Japan) to scale
-        basin depth with respect to Vs30
-        """
-        return CB14._select_basin_model(self, vs30)
-
     def _get_basin_response_term(self, C, z2pt5):
         """
         Returns the basin response term, f_sed, defined in equation 20
@@ -260,22 +191,8 @@ class BozorgniaCampbell2016(GMPE):
         """
         f_sed = np.zeros(len(z2pt5))
         idx = z2pt5 < 1.0
-        f_sed[idx] = (C["c14"] + C["c15"] * float(self.CONSTS["SJ"])) *\
-                     (z2pt5[idx] - 1.0)
+        f_sed[idx] = (C["c14"] + C["c15"] * self.SJ) * (z2pt5[idx] - 1.0)
         return f_sed
-
-    def _get_hypocentral_depth_term(self, C, rup):
-        """
-        Returns the hypocentral depth scaling term, f_hyp, defined in
-        equations 21 to 23
-        """
-        return CB14._get_hypocentral_depth_term(self, C, rup)
-
-    def _get_fault_dip_term(self, C, rup):
-        """
-        Returns the fault dip term, f_dip, defined in equation 24
-        """
-        return CB14._get_fault_dip_term(self, C, rup)
 
     def _get_anelastic_attenuation_term(self, C, rrup):
         """
@@ -310,12 +227,11 @@ class BozorgniaCampbell2016(GMPE):
         """
         num_sites = len(sites.vs30)
         # Evaluate tau according to equation 27
-        tau = self._get_taulny(C, rup.mag)
+        tau = _get_taulny(C, rup.mag)
         # Evaluate phi according to equation 28
-        phi = self._get_philny(C, rup.mag)
+        phi = _get_philny(C, rup.mag)
         stddevs = []
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
                                np.zeros(num_sites))
@@ -325,20 +241,6 @@ class BozorgniaCampbell2016(GMPE):
                 stddevs.append(tau + np.zeros(num_sites))
         # return std dev values for each stddev type in site collection
         return stddevs
-
-    def _get_taulny(self, C, mag):
-        """
-        Returns the inter-event random effects coefficient (tau) defined in
-        Equation 29.
-        """
-        return CB14._get_taulny(self, C, mag)
-
-    def _get_philny(self, C, mag):
-        """
-        Returns the intra-event random effects coefficient (phi) defined in
-        Equation 30.
-        """
-        return CB14._get_philny(self, C, mag)
 
     #: Table of regression coefficients obtained from supplementary material
     #: published together with the EQS paper
@@ -368,13 +270,6 @@ class BozorgniaCampbell2016(GMPE):
     7.5      -17.12864    2.223    0.169     -0.756    -1.077    -1.72135    0.125      5.77927     0.38692    0.38278    0        -0.3428     -1.13827    0.57479    0.16789    0.21872    -0.0308     0.0171      -0.00298    0          0          0          0.596    0.117    1.616    -0.733    -0.128    -0.756    400     0.386    0.527    0.6      0.379
     10       -17.65672    2.132    0.367     -0.8      -1.282    -1.948      0.163      4.13478     0.32216    0.33417    0        -0.19908    -0.32493    0.32431    0.16858    0.12681    0.00668     -0.00165    0.00092     0          0          0          0.596    0.117    1.616    -0.733    -0.128    -0.756    400     0.395    0.481    0.495    0.442
     """)
-
-    #: Equation constants (that are IMT-independent) for global model
-    CONSTS = {  # hanging-wall model coefficient
-                "h4": 1.0,
-                # flag variable for Japan site data
-                "SJ": 0
-              }
 
 
 class BozorgniaCampbell2016HighQ(BozorgniaCampbell2016):
@@ -419,12 +314,7 @@ class BozorgniaCampbell2016AveQJapanSite(BozorgniaCampbell2016):
 
     Applies the average attenuation case (Dc20=0)
     """
-    #: Equation constants (that are IMT-independent) for Japan sites
-    CONSTS = {  # hanging-wall model coefficient
-                "h4": 1.0,
-                # flag variable for Japan site data
-                "SJ": 1
-              }
+    SJ = 1
 
 
 class BozorgniaCampbell2016HighQJapanSite(BozorgniaCampbell2016AveQJapanSite):
