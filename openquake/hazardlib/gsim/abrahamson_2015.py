@@ -95,6 +95,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: Reference soil conditions (bottom of page 29)
     DEFINED_FOR_REFERENCE_VELOCITY = 1000
 
+    delta_c1 = None
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ergodic = kwargs.get('ergodic', True)
@@ -108,9 +110,12 @@ class AbrahamsonEtAl2015SInter(GMPE):
         # extract dictionaries of coefficients specific to required
         # intensity measure type and for PGA
         C = self.COEFFS[imt]
-        dc1 = self._get_delta_c1(imt)
         C_PGA = self.COEFFS[PGA()]
-        dc1_pga = self._get_delta_c1(PGA())
+        if self.delta_c1 is None:
+            dc1 = self.COEFFS_MAG_SCALE[imt]["dc1"]
+            dc1_pga = self.COEFFS_MAG_SCALE[PGA()]["dc1"]
+        else:
+            dc1 = dc1_pga = self.delta_c1
         # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
         pga1000 = np.exp(
@@ -122,13 +127,6 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 self._compute_site_response_term(C, sites, pga1000))
         stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
         return mean, stddevs
-
-    def _get_delta_c1(self, imt):
-        """
-        Returns the magnitude scaling parameter deltaC1 for capturing scaling
-        for large events.
-        """
-        return self.COEFFS_MAG_SCALE[imt]["dc1"]
 
     def _compute_pga_rock(self, C, dc1, sites, rup, dists):
         """
@@ -331,12 +329,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     #: In-slab events require constraint of hypocentral depth and magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    def _get_delta_c1(self, imt):
-        """
-        Returns the magnitude scaling parameter deltaC1 which is fixed at -0.3
-        for the central branch of the in-slab model
-        """
-        return -0.3
+    delta_c1 = -0.3
 
     def _compute_focal_depth_term(self, C, rup):
         """
@@ -377,13 +370,7 @@ class AbrahamsonEtAl2015SSlabHigh(AbrahamsonEtAl2015SSlab):
     values of the magnitude scaling for large slab earthquakes, as defined in
     table 8
     """
-
-    def _get_delta_c1(self, imt):
-        """
-        Returns them agnitude scaling parameter deltaC1 which is fixed at -0.1
-        for the upper branch of the in-slab model
-        """
-        return -0.1
+    delta_c1 = -0.1
 
 
 class AbrahamsonEtAl2015SSlabLow(AbrahamsonEtAl2015SSlab):
@@ -392,10 +379,4 @@ class AbrahamsonEtAl2015SSlabLow(AbrahamsonEtAl2015SSlab):
     values of the magnitude scaling for large slab earthquakes, as defined in
     table 8
     """
-
-    def _get_delta_c1(self, imt):
-        """
-        Returns them agnitude scaling parameter deltaC1 which is fixed at -0.5
-        for the lower branch of the in-slab model
-        """
-        return -0.5
+    delta_c1 = -0.5
