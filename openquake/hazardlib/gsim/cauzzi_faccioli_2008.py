@@ -28,6 +28,99 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _compute_faulting_style_term(C, rake):
+    """
+    Compute faulting style term as a function of rake angle value as given
+    in equation 5 page 465.
+    """
+    if rake > -120.0 and rake <= -60.0:
+        return C['aN']
+    elif rake > 30.0 and rake <= 150.0:
+        return C['aR']
+    else:
+        return C['aS']
+
+
+def _compute_mean(kind, C, mag, dists, vs30, rake, imt):
+    # For the 2008 version, compute mean value for PGV, PGA and Displacement
+    # responce spectrum,  as given in equation 2, page 462 with the addition
+    # of the faulting style term as given in equation 5, page 465. Converts
+    # also displacement responce spectrum values to SA.
+    # Forthe 2010 version, return mean value computed using equation 2,
+    # page 2, plus site term and faulting style term, equations 3 and 5, page 3
+    mean = (_compute_term_1_2(C, mag) +
+            _compute_term_3(kind, C, dists, mag) +
+            _compute_site_term(C, vs30) +
+            _compute_faulting_style_term(C, rake))
+
+    # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA (PGV
+    # is already in cm/s) and also convert from base 10 to base e.
+    if imt.string == "PGA":
+        mean = np.log((10 ** mean) / g)
+    elif imt.string[:2] == "SA":
+        mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
+                      1e-2 / g)
+    else:
+        mean = np.log(10 ** mean)
+
+    return mean
+
+
+def _compute_site_term(C, vs30):
+    """
+    Compute site term as a function of vs30: 4th, 5th and 6th terms in
+    equation 2 page 462.
+    """
+    # for rock values the site term is zero
+    site_term = np.zeros_like(vs30)
+
+    # hard soil
+    site_term[(vs30 >= 360) & (vs30 < 800)] = C['aB']
+
+    # medium soil
+    site_term[(vs30 >= 180) & (vs30 < 360)] = C['aC']
+
+    # soft soil
+    site_term[vs30 < 180] = C['aD']
+
+    return site_term
+
+
+def _compute_term_1_2(C, mag):
+    """
+    Compute terms 1 and 2 in equation 2 page 462.
+    """
+    return C['a1'] + C['a2'] * mag
+
+
+def _compute_term_3(kind, C, dists, mag):
+    """
+    Compute term 3 for the 2008 version or the 2010 version of the GMPE
+    """
+    if kind == "2008":
+        # see equation 2 page 462
+        # Distances are clipped at 15 km (as per Ezio Faccioli's personal
+        # communication.)
+        d = np.array(dists.rhypo)  # make a copy
+        d[d <= 15.0] = 15.0
+        return C['a3'] * np.log10(d)
+    elif kind == "2010":
+        # This computes the third term in equation 2, page 2.
+        log = np.log10(dists.rrup + C['a4'] * np.power(10, C['a5'] * mag))
+        return C['a3'] * log
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
+
+    return stddevs
+
+
 class CauzziFaccioli2008(GMPE):
     """
     Implements GMPE developed by Carlo Cauzzi and Ezio Faccioli and published
@@ -81,6 +174,8 @@ class CauzziFaccioli2008(GMPE):
     #: Required distance measure is Rhypo, see paragraph 'Distance', page 456.
     REQUIRES_DISTANCES = {'rhypo'}
 
+    kind = "2008"
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -91,92 +186,11 @@ class CauzziFaccioli2008(GMPE):
         # intensity measure type
         C = self.COEFFS[imt]
 
-        mean = self._compute_mean(C, rup.mag, dists, sites.vs30, rup.rake, imt)
-
-        stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
+        mean = _compute_mean(self.kind, C, rup.mag, dists, sites.vs30,
+                             rup.rake, imt)
+        stddevs = _get_stddevs(C, stddev_types, sites.vs30.shape[0])
 
         return mean, stddevs
-
-    def _compute_term_1_2(self, C, mag):
-        """
-        Compute terms 1 and 2 in equation 2 page 462.
-        """
-        return C['a1'] + C['a2'] * mag
-
-    def _compute_term_3(self, C, rhypo):
-        """
-        Compute term 3 in equation 2 page 462.
-        Distances are clipped at 15 km (as per Ezio Faccioli's personal
-        communication.)
-        """
-        d = np.array(rhypo)  # make a copy
-        d[d <= 15.0] = 15.0
-        return C['a3'] * np.log10(d)
-
-    def _compute_site_term(self, C, vs30):
-        """
-        Compute site term as a function of vs30: 4th, 5th and 6th terms in
-        equation 2 page 462.
-        """
-        # for rock values the site term is zero
-        site_term = np.zeros_like(vs30)
-
-        # hard soil
-        site_term[(vs30 >= 360) & (vs30 < 800)] = C['aB']
-
-        # medium soil
-        site_term[(vs30 >= 180) & (vs30 < 360)] = C['aC']
-
-        # soft soil
-        site_term[vs30 < 180] = C['aD']
-
-        return site_term
-
-    def _compute_faulting_style_term(self, C, rake):
-        """
-        Compute faulting style term as a function of rake angle value as given
-        in equation 5 page 465.
-        """
-        if rake > -120.0 and rake <= -60.0:
-            return C['aN']
-        elif rake > 30.0 and rake <= 150.0:
-            return C['aR']
-        else:
-            return C['aS']
-
-    def _compute_mean(self, C, mag, dists, vs30, rake, imt):
-        """
-        Compute mean value for PGV, PGA and Displacement responce spectrum,
-        as given in equation 2, page 462 with the addition of the faulting
-        style term as given in equation 5, page 465. Converts also
-        displacement responce spectrum values to SA.
-        """
-        mean = (self._compute_term_1_2(C, mag) +
-                self._compute_term_3(C, dists.rhypo) +
-                self._compute_site_term(C, vs30) +
-                self._compute_faulting_style_term(C, rake))
-
-        # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA (PGV
-        # is already in cm/s) and also convert from base 10 to base e.
-        if imt.string == "PGA":
-            mean = np.log((10 ** mean) / g)
-        elif imt.string[:2] == "SA":
-            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
-                          1e-2 / g)
-        else:
-            mean = np.log(10 ** mean)
-
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
-
-        return stddevs
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.
@@ -620,32 +634,7 @@ class FaccioliEtAl2010(CauzziFaccioli2008):
     #: Required distance measure is rrup, equation 2, page 2.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def _compute_mean(self, C, mag, dists, vs30, rake, imt):
-        """
-        Return mean value computed using equation 2, page 2, plus site
-        term and faulting style term, equations 3 and 5, page 3.
-        """
-        mean = (self._compute_term_1_2(C, mag) +
-                self._compute_term_3(C, dists.rrup, mag) +
-                self._compute_site_term(C, vs30) +
-                self._compute_faulting_style_term(C, rake))
-
-        # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA,
-        # and also convert from base 10 to base e.
-        if imt.string == "PGA":
-            mean = np.log((10 ** mean) / g)
-        elif imt.string[:2] == "SA":
-            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
-                          1e-2 / g)
-
-        return mean
-
-    def _compute_term_3(self, C, rrup, mag):
-        """
-        This computes the third term in equation 2, page 2.
-        """
-        return (C['a3'] *
-                np.log10(rrup + C['a4'] * np.power(10, C['a5'] * mag)))
+    kind = "2010"
 
     #: Coefficient table as from table 1 page 7
     COEFFS = CoeffsTable(sa_damping=5, table="""\
