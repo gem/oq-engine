@@ -25,11 +25,156 @@ Module exports :class:`BozorgniaCampbell2016`
                :class:`BozorgniaCampbell2016LowQJapanSite`
 """
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
-                                          CampbellBozorgnia2014 as CB14
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
+    _select_basin_model, _get_magnitude_term, _get_geometric_attenuation_term,
+    _get_hanging_wall_term, _get_fault_dip_term,
+    _get_hypocentral_depth_term, _get_taulny, _get_philny)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+
+def _get_anelastic_attenuation_term(sgn, C, rrup):
+    """
+    Returns the anelastic attenuation term, f_atn, defined in equation 25
+    """
+    Dc20 = _get_delta_c20(sgn, C)
+    f_atn = np.zeros(len(rrup))
+    idx = rrup > 80.0
+    f_atn[idx] = (C["c20"] + Dc20) * (rrup[idx] - 80.0)
+    return f_atn
+
+
+def _get_basin_response_term(SJ, C, z2pt5):
+    """
+    Returns the basin response term, f_sed, defined in equation 20
+
+    The deep basin response (z2.5 > 1km) is not included in this model
+    """
+    f_sed = np.zeros(len(z2pt5))
+    idx = z2pt5 < 1.0
+    f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
+    return f_sed
+
+
+def _get_delta_c20(sgn, C):
+    """
+    Retrieve regional-dependent coefficient accounting for differences in
+    anelastic attenuation in path scaling
+
+    This is to derive a reference/base-case c20 that includes
+    California, Taiwan, the Middle East, and other similar active tectonic
+    regions to represent a typical or average Q region.
+    """
+    if sgn == 0:
+        return 0.
+    elif sgn == 1:
+        return C['Dc20_CH']
+    elif sgn == -1:
+        return C['Dc20_JP']
+
+
+def _get_shallow_site_response_term(SJ, C, vs30):
+    """
+    Returns the shallow site response term, f_site, defined in
+    equations 17, 18, and 19
+
+    Note that the effects of nonlinear soil response for the vertical
+    component were not included in this model
+    """
+    vs_mod = vs30 / C["k1"]
+    # Get linear global site response term
+    f_site_g = C["c11"] * np.log(vs_mod)
+
+    # For Japan sites (SJ = 1) further scaling is needed (equation 19)
+    if SJ:
+        fsite_j = C["c13"] * np.log(vs_mod)
+        # additional term activated for soft sites (Vs30 <= 200m/s)
+        # in Japan data
+        idx = vs30 <= 200.0
+        add_soft = C["c12"] * (np.log(vs_mod) - np.log(200.0 / C["k1"]))
+        # combine terms
+        fsite_j[idx] += add_soft[idx]
+        return f_site_g + fsite_j
+    else:
+        return f_site_g
+
+
+def _get_stddevs(C, rup, sites, stddev_types):
+    """
+    Returns the inter-event, intra-event, and total standard deviations
+
+    Note that it is assumed here that the soil response of the vertical
+    component is linear (i.e. nonlinear site response effects not
+    included). Thus, the expressions for the aleatory std devs for the
+    vertical component is much simpler than in the horizontal component,
+    since the site response- and IMT-correlation functions are neglected.
+    """
+    num_sites = len(sites.vs30)
+    # Evaluate tau according to equation 27
+    tau = _get_taulny(C, rup.mag)
+    # Evaluate phi according to equation 28
+    phi = _get_philny(C, rup.mag)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
+                           np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau + np.zeros(num_sites))
+    # return std dev values for each stddev type in site collection
+    return stddevs
+
+
+def _get_style_of_faulting_term(C, rup):
+    """
+    Returns the style-of-faulting scaling term, f_flt, defined in
+    equations 4 to 6
+    """
+    if (rup.rake > 30.0) and (rup.rake < 150.):
+        frv = 1.0
+        fnm = 0.0
+    elif (rup.rake > -150.0) and (rup.rake < -30.0):
+        fnm = 1.0
+        frv = 0.0
+    else:
+        fnm = 0.0
+        frv = 0.0
+    # Re-defined this method to replace c8, which is now
+    # IMT-dependent in BC15
+    fflt_f = (C["c8"] * frv) + (C["c9"] * fnm)
+    if rup.mag <= 4.5:
+        fflt_m = 0.0
+    elif rup.mag > 5.5:
+        fflt_m = 1.0
+    else:
+        fflt_m = rup.mag - 4.5
+    return fflt_f * fflt_m
+
+
+def get_mean_values(SJ, sgn, C, sites, rup, dists):
+    """
+    Returns the mean values for a specific IMT
+    """
+    if isinstance(sites.z2pt5, np.ndarray):
+        # Site model defined
+        temp_z2pt5 = sites.z2pt5
+    else:
+        # Estimate unspecified sediment depth according to
+        # equations 33 and 34 of CB14
+        temp_z2pt5 = _select_basin_model(SJ, sites.vs30)
+
+    return (_get_magnitude_term(C, rup.mag) +
+            _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
+            _get_style_of_faulting_term(C, rup) +
+            _get_hanging_wall_term(C, rup, dists) +
+            _get_shallow_site_response_term(SJ, C, sites.vs30) +
+            _get_basin_response_term(SJ, C, temp_z2pt5) +
+            _get_hypocentral_depth_term(C, rup) +
+            _get_fault_dip_term(C, rup) +
+            _get_anelastic_attenuation_term(sgn, C, dists.rrup))
 
 
 class BozorgniaCampbell2016(GMPE):
@@ -61,11 +206,7 @@ class BozorgniaCampbell2016(GMPE):
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground velocity and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the
     #: :attr:`~openquake.hazardlib.const.IMC.Vertical` direction component
@@ -73,11 +214,8 @@ class BozorgniaCampbell2016(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory Variability Model".
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30, Vs30 type (measured or inferred),
     #: and depth (km) to the 2.5 km/s shear wave velocity layer (z2pt5)
@@ -91,6 +229,11 @@ class BozorgniaCampbell2016(GMPE):
     #: Required distance measures are Rrup, Rjb and Rx
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
+    def __init__(self, SJ=0, sgn=0, **kwargs):
+        super().__init__(**kwargs)
+        self.SJ = SJ
+        self.sgn = sgn
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -101,244 +244,16 @@ class BozorgniaCampbell2016(GMPE):
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
         # Get mean and standard deviations for IMT
-        mean = self.get_mean_values(C, sites, rup, dists)
+        mean = get_mean_values(self.SJ, self.sgn, C, sites, rup, dists)
         if imt.string[:2] == "SA" and imt.period < 0.25:
             # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
             # Get PGA on given sites
-            pga = self.get_mean_values(C_PGA, sites, rup, dists)
+            pga = get_mean_values(self.SJ, self.sgn, C_PGA, sites, rup, dists)
             idx = mean < pga
             mean[idx] = pga[idx]
         # Get standard deviations
-        stddevs = self._get_stddevs(C, rup, sites, stddev_types)
+        stddevs = _get_stddevs(C, rup, sites, stddev_types)
         return mean, stddevs
-
-    def get_mean_values(self, C, sites, rup, dists):
-        """
-        Returns the mean values for a specific IMT
-        """
-        if isinstance(sites.z2pt5, np.ndarray):
-            # Site model defined
-            temp_z2pt5 = sites.z2pt5
-        else:
-            # Estimate unspecified sediment depth according to
-            # equations 33 and 34 of CB14
-            temp_z2pt5 = self._select_basin_model(sites.vs30)
-
-        return (self._get_magnitude_term(C, rup.mag) +
-                self._get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
-                self._get_style_of_faulting_term(C, rup) +
-                self._get_hanging_wall_term(C, rup, dists) +
-                self._get_shallow_site_response_term(C, sites.vs30) +
-                self._get_basin_response_term(C, temp_z2pt5) +
-                self._get_hypocentral_depth_term(C, rup) +
-                self._get_fault_dip_term(C, rup) +
-                self._get_anelastic_attenuation_term(C, dists.rrup))
-
-    def _get_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term, f_mag, defined in equation 2
-        """
-        return CB14._get_magnitude_term(self, C, mag)
-
-    def _get_geometric_attenuation_term(self, C, mag, rrup):
-        """
-        Returns the geometric attenuation term, f_dis, defined in equation 3
-        """
-        return CB14._get_geometric_attenuation_term(self, C, mag, rrup)
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the style-of-faulting scaling term, f_flt, defined in
-        equations 4 to 6
-        """
-        if (rup.rake > 30.0) and (rup.rake < 150.):
-            frv = 1.0
-            fnm = 0.0
-        elif (rup.rake > -150.0) and (rup.rake < -30.0):
-            fnm = 1.0
-            frv = 0.0
-        else:
-            fnm = 0.0
-            frv = 0.0
-        # Re-defined this method to replace c8, which is now
-        # IMT-dependent in BC15
-        fflt_f = (C["c8"] * frv) + (C["c9"] * fnm)
-        if rup.mag <= 4.5:
-            fflt_m = 0.0
-        elif rup.mag > 5.5:
-            fflt_m = 1.0
-        else:
-            fflt_m = rup.mag - 4.5
-        return fflt_f * fflt_m
-
-    def _get_hanging_wall_term(self, C, rup, dists):
-        """
-        Returns the hanging wall scaling term, f_hng, defined in equation 7
-        """
-        return CB14._get_hanging_wall_term(self, C, rup, dists)
-
-    def _get_hanging_wall_coeffs_rx(self, C, rup, r_x):
-        """
-        Returns the hanging wall r-x scaling term, f_hng_Rx defined in
-        equation 8
-        """
-        return CB14._get_hanging_wall_coeffs_rx(self, C, rup, r_x)
-
-    def _get_f1rx(self, C, r_x, r_1):
-        """
-        Defines the f1 scaling coefficient defined in equation 9
-        """
-        return CB14._get_f1rx(self, C, r_x, r_1)
-
-    def _get_f2rx(self, C, r_x, r_1, r_2):
-        """
-        Defines the f2 scaling coefficient defined in equation 10
-        """
-        return CB14._get_f2rx(self, C, r_x, r_1, r_2)
-
-    def _get_hanging_wall_coeffs_rrup(self, dists):
-        """
-        Returns the hanging wall rrup term, f_hng_Rrup, defined in equation 13
-        """
-        return CB14._get_hanging_wall_coeffs_rrup(self, dists)
-
-    def _get_hanging_wall_coeffs_mag(self, C, mag):
-        """
-        Returns the hanging wall magnitude term, f_hng_M defined in equation 14
-        """
-        return CB14._get_hanging_wall_coeffs_mag(self, C, mag)
-
-    def _get_hanging_wall_coeffs_ztor(self, ztor):
-        """
-        Returns the hanging wall ztor term, f_hng_Z, defined in equation 15
-        """
-        return CB14._get_hanging_wall_coeffs_ztor(self, ztor)
-
-    def _get_hanging_wall_coeffs_dip(self, dip):
-        """
-        Returns the hanging wall dip term, f_hng_delta, defined in equation 16
-        """
-        return CB14._get_hanging_wall_coeffs_dip(self, dip)
-
-    def _get_shallow_site_response_term(self, C, vs30):
-        """
-        Returns the shallow site response term, f_site, defined in
-        equations 17, 18, and 19
-
-        Note that the effects of nonlinear soil response for the vertical
-        component were not included in this model
-        """
-        vs_mod = vs30 / C["k1"]
-        # Get linear global site response term
-        f_site_g = C["c11"] * np.log(vs_mod)
-
-        # For Japan sites (SJ = 1) further scaling is needed (equation 19)
-        if self.CONSTS["SJ"]:
-            fsite_j = C["c13"] * np.log(vs_mod)
-            # additional term activated for soft sites (Vs30 <= 200m/s)
-            # in Japan data
-            idx = vs30 <= 200.0
-            add_soft = C["c12"] * (np.log(vs_mod) - np.log(200.0 / C["k1"]))
-            # combine terms
-            fsite_j[idx] += add_soft[idx]
-            return f_site_g + fsite_j
-        else:
-            return f_site_g
-
-    def _select_basin_model(self, vs30):
-        """
-        Select the preferred basin model (California or Japan) to scale
-        basin depth with respect to Vs30
-        """
-        return CB14._select_basin_model(self, vs30)
-
-    def _get_basin_response_term(self, C, z2pt5):
-        """
-        Returns the basin response term, f_sed, defined in equation 20
-
-        The deep basin response (z2.5 > 1km) is not included in this model
-        """
-        f_sed = np.zeros(len(z2pt5))
-        idx = z2pt5 < 1.0
-        f_sed[idx] = (C["c14"] + C["c15"] * float(self.CONSTS["SJ"])) *\
-                     (z2pt5[idx] - 1.0)
-        return f_sed
-
-    def _get_hypocentral_depth_term(self, C, rup):
-        """
-        Returns the hypocentral depth scaling term, f_hyp, defined in
-        equations 21 to 23
-        """
-        return CB14._get_hypocentral_depth_term(self, C, rup)
-
-    def _get_fault_dip_term(self, C, rup):
-        """
-        Returns the fault dip term, f_dip, defined in equation 24
-        """
-        return CB14._get_fault_dip_term(self, C, rup)
-
-    def _get_anelastic_attenuation_term(self, C, rrup):
-        """
-        Returns the anelastic attenuation term, f_atn, defined in equation 25
-        """
-        Dc20 = self._get_delta_c20(C)
-        f_atn = np.zeros(len(rrup))
-        idx = rrup > 80.0
-        f_atn[idx] = (C["c20"] + Dc20) * (rrup[idx] - 80.0)
-        return f_atn
-
-    def _get_delta_c20(self, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation in path scaling
-
-        This is to derive a reference/base-case c20 that includes
-        California, Taiwan, the Middle East, and other similar active tectonic
-        regions to represent a typical or average Q region.
-        """
-        return 0.
-
-    def _get_stddevs(self, C, rup, sites, stddev_types):
-        """
-        Returns the inter-event, intra-event, and total standard deviations
-
-        Note that it is assumed here that the soil response of the vertical
-        component is linear (i.e. nonlinear site response effects not
-        included). Thus, the expressions for the aleatory std devs for the
-        vertical component is much simpler than in the horizontal component,
-        since the site response- and IMT-correlation functions are neglected.
-        """
-        num_sites = len(sites.vs30)
-        # Evaluate tau according to equation 27
-        tau = self._get_taulny(C, rup.mag)
-        # Evaluate phi according to equation 28
-        phi = self._get_philny(C, rup.mag)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
-                               np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
-        # return std dev values for each stddev type in site collection
-        return stddevs
-
-    def _get_taulny(self, C, mag):
-        """
-        Returns the inter-event random effects coefficient (tau) defined in
-        Equation 29.
-        """
-        return CB14._get_taulny(self, C, mag)
-
-    def _get_philny(self, C, mag):
-        """
-        Returns the intra-event random effects coefficient (phi) defined in
-        Equation 30.
-        """
-        return CB14._get_philny(self, C, mag)
 
     #: Table of regression coefficients obtained from supplementary material
     #: published together with the EQS paper
@@ -369,97 +284,14 @@ class BozorgniaCampbell2016(GMPE):
     10       -17.65672    2.132    0.367     -0.8      -1.282    -1.948      0.163      4.13478     0.32216    0.33417    0        -0.19908    -0.32493    0.32431    0.16858    0.12681    0.00668     -0.00165    0.00092     0          0          0          0.596    0.117    1.616    -0.733    -0.128    -0.756    400     0.395    0.481    0.495    0.442
     """)
 
-    #: Equation constants (that are IMT-independent) for global model
-    CONSTS = {  # hanging-wall model coefficient
-                "h4": 1.0,
-                # flag variable for Japan site data
-                "SJ": 0
-              }
 
-
-class BozorgniaCampbell2016HighQ(BozorgniaCampbell2016):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Applies regional corrections in path scaling term for regions with
-    low attenuation (high quality factor, Q) (e.g. eastern China)
-    """
-    def _get_delta_c20(self, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation
-        """
-        return C['Dc20_CH']
-
-
-class BozorgniaCampbell2016LowQ(BozorgniaCampbell2016):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Applies regional corrections in path scaling term for regions with
-    high attenuation (low quality factor, Q) (e.g. Japan and Italy)
-    """
-    def _get_delta_c20(self, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation
-        """
-        return C['Dc20_JP']
-
-
-class BozorgniaCampbell2016AveQJapanSite(BozorgniaCampbell2016):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Incorporates the difference in linear Vs30 scaling for sites in Japan by
-    activating the flag variable in shallow site reponse scaling
-
-    Applies the average attenuation case (Dc20=0)
-    """
-    #: Equation constants (that are IMT-independent) for Japan sites
-    CONSTS = {  # hanging-wall model coefficient
-                "h4": 1.0,
-                # flag variable for Japan site data
-                "SJ": 1
-              }
-
-
-class BozorgniaCampbell2016HighQJapanSite(BozorgniaCampbell2016AveQJapanSite):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Incorporates the difference in linear Vs30 scaling for sites in Japan by
-    activating the flag variable in shallow site reponse scaling
-
-    Applies regional corrections in path scaling term for regions with
-    low attenuation (high quality factor, Q)
-    """
-    def _get_delta_c20(self, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation
-        """
-        return C['Dc20_CH']
-
-
-class BozorgniaCampbell2016LowQJapanSite(BozorgniaCampbell2016AveQJapanSite):
-    """
-    Implements the BC15 GMPE by Bozorgnia & Campbell (2016) for
-    vertical-component ground motions from the PEER NGA-West2 Project
-
-    Incorporates the difference in linear Vs30 scaling for sites in Japan by
-    activating the flag variable in shallow site reponse scaling
-
-    Applies regional corrections in path scaling term for regions with
-    high attenuation (low quality factor, Q)
-    """
-    def _get_delta_c20(self, C):
-        """
-        Retrieve regional-dependent coefficient accounting for differences in
-        anelastic attenuation
-        """
-        return C['Dc20_JP']
+gsim_aliases['BozorgniaCampbell2016HighQ'] = (
+    '[BozorgniaCampbell2016]\nsgn=1')
+gsim_aliases['BozorgniaCampbell2016LowQ'] = (
+    '[BozorgniaCampbell2016]\nsgn=-1')
+gsim_aliases['BozorgniaCampbell2016AveQJapanSite'] = (
+    '[BozorgniaCampbell2016]\nSJ=1')
+gsim_aliases['BozorgniaCampbell2016HighQJapanSite'] = (
+    '[BozorgniaCampbell2016]\nSJ=1, sgn=+1')
+gsim_aliases['BozorgniaCampbell2016LowQJapanSite'] = (
+    '[BozorgniaCampbell2016]\nSJ=1, sgn=-1')

@@ -25,12 +25,16 @@ Module exports :class:`KothaEtAl2020`,
 """
 import numpy as np
 from scipy.constants import g
+
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
 from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile, ITPL,
                                                TAU_EXECUTION, TAU_SETUP)
 
+CONSTANTS = {"Mref": 4.5, "Rref": 30., "Mh": 5.7,
+             "h_D10": 4.0, "h_10D20": 8.0, "h_D20": 12.0}
 
 # The large-magnitude statistical standard deviation values are taken from data
 # supplied by Kotha et al. (2020)
@@ -73,6 +77,210 @@ SIGMA_MU_COEFFS = CoeffsTable(sa_damping=5, table="""\
     7.000                0.3453                     0.3417             0.3402                  0.2513                       0.2477               0.2461
     8.000                0.3428                     0.3392             0.3376                  0.2497                       0.2460               0.2444
     """)
+
+
+def _get_h(C, hypo_depth):
+    """
+    Returns the depth-specific coefficient
+    """
+    if hypo_depth <= 10.0:
+        return CONSTANTS["h_D10"]
+    elif hypo_depth > 20.0:
+        return CONSTANTS["h_D20"]
+    else:
+        return CONSTANTS["h_10D20"]
+
+
+get_distance_coefficients = CallableDict()
+
+
+@get_distance_coefficients.add("base", "site", "slope")
+def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
+    """
+    Returns either the directly specified c3 value or the c3 from the
+    existing tau_c3 distribution
+    """
+    if c3:
+        # Use the c3 that has been defined on input
+        return c3
+    else:
+        # Define the c3 as a number of standard deviation multiplied
+        # by tau_c3
+        return C["c3"] + (c3_epsilon * C["tau_c3"])
+
+
+@get_distance_coefficients.add("ESHM20", "geology")
+def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
+    """
+    Returns the c3 term. If c3 was input directly into the GMPE then
+    this over-rides the c3 regionalisation. Otherwise the c3 and tau_c3
+    are determined according to the region to which each site is assigned.
+
+    Note that no regionalisation is defined for PGV and hence the
+    default values from Kotha et al. (2020) are taken unless defined
+    otherwise in the input c3
+    """
+    if c3:
+        # If c3 is input then this over-rides the regionalisation
+        # assumed within this model
+        return c3[imt]["c3"] * np.ones(sctx.region.shape)
+
+    # Default c3 and tau values to the original GMPE c3 and tau
+    c3_ = C["c3"] + np.zeros(sctx.region.shape)
+    tau_c3 = C["tau_c3"] + np.zeros(sctx.region.shape)
+    if not np.any(sctx.region) or ("PGV" in str(imt)):
+        # No regionalisation - take the default C3 and multiply tau_c3
+        # by the original epsilon
+        return (c3_ + c3_epsilon * tau_c3) + np.zeros(sctx.region.shape)
+    # Some sites belong to the calibrated regions - loop through them
+    C3_R = C3_REGIONS[imt]
+    for i in range(1, 6):
+        idx = sctx.region == i
+        c3_[idx] = C3_R["region_{:s}".format(str(i))]
+        tau_c3[idx] = C3_R["tau_region_{:s}".format(str(i))]
+    return c3_ + c3_epsilon * tau_c3
+
+
+def get_distance_term(kind, c3, c3_epsilon, C, rup, rjb, imt, sites):
+    """
+    Returns the distance attenuation factor
+    """
+    h = _get_h(C, rup.hypo_depth)
+    rval = np.sqrt(rjb ** 2. + h ** 2.)
+    rref_val = np.sqrt(CONSTANTS["Rref"] ** 2. + h ** 2.)
+    c3 = get_distance_coefficients(kind, c3, c3_epsilon, C, imt, sites)
+    f_r = (C["c1"] + C["c2"] * (rup.mag - CONSTANTS["Mref"])) *\
+        np.log(rval / rref_val) + (c3 * (rval - rref_val) / 100.)
+    return f_r
+
+
+def get_magnitude_scaling(C, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    d_m = mag - CONSTANTS["Mh"]
+    if mag <= CONSTANTS["Mh"]:
+        return C["e1"] + C["b1"] * d_m + C["b2"] * (d_m ** 2.0)
+    else:
+        return C["e1"] + C["b3"] * d_m
+
+
+def get_sigma_mu_adjustment(C, imt, rup):
+    """
+    Returns the sigma_mu adjusment factor, which is taken as the
+    maximum of tau_L2L and the sigma_mu. For M < 7.4
+    the sigma statistical does not exceed tau_L2L at any period or
+    distance. For M > 7.4, sigma_mu is approximately linear up to M 8.0
+    so we interpolate between the two values and cap sigma statistical
+    at M 8.0
+    """
+    if rup.mag < 7.4:
+        # Below M 7.4 tau_L2L is always larger than sigma mu
+        return C["tau_l2l"]
+
+    C_SIG_MU = SIGMA_MU_COEFFS[imt]
+    if rup.hypo_depth < 10.0:
+        uf, lf = C_SIG_MU["sigma_mu_m8_shallow"],\
+            C_SIG_MU["sigma_mu_m7p4_shallow"]
+    elif rup.hypo_depth >= 20.0:
+        uf, lf = C_SIG_MU["sigma_mu_m8_deep"],\
+            C_SIG_MU["sigma_mu_m7p4_deep"]
+    else:
+        uf, lf = C_SIG_MU["sigma_mu_m8_intermediate"],\
+            C_SIG_MU["sigma_mu_m7p4_intermediate"]
+    if rup.mag >= 8.0:
+        # Cap the sigma mu as the value for M 8.0
+        return max(C["tau_l2l"], uf)
+    return max(C["tau_l2l"], ITPL(rup.mag, uf, lf, 7.4, 0.6))
+
+
+def get_site_amplification(kind, extra, C, sites, imt):
+    """
+    Apply the correct site amplification depending on the kind of GMPE
+    """
+    if kind == "base":  # no site amplification
+        ampl = 0.
+    elif kind == "site":
+        # Render with respect to 800 m/s reference Vs30
+        sref = np.log(sites.vs30 / 800.)
+        ampl = (C["g0_vs30"] + C["g1_vs30"] * sref +
+                C["g2_vs30"] * (sref ** 2.))
+    elif kind == "slope":
+        # Render with respect to 0.1 m/m reference slope
+        sref = np.log(sites.slope / 0.1)
+        ampl = (C["g0_slope"] + C["g1_slope"] * sref +
+                C["g2_slope"] * (sref ** 2.))
+    elif kind == "ESHM20":
+        vs30 = np.copy(sites.vs30)
+        vs30[vs30 > 1100.] = 1100.
+        ampl = np.zeros(vs30.shape)
+        # For observed vs30 sites
+        ampl[sites.vs30measured] = (C["d0_obs"] + C["d1_obs"] *
+                                    np.log(vs30[sites.vs30measured]))
+        # For inferred Vs30 sites
+        idx = np.logical_not(sites.vs30measured)
+        ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
+    elif kind == "geology":
+        C_AMP_FIXED = extra['COEFFS_FIXED'][imt]
+        C_AMP_RAND_INT = extra['COEFFS_RANDOM_INT'][imt]
+        C_AMP_RAND_GRAD = extra['COEFFS_RANDOM_GRAD'][imt]
+        ampl = np.zeros(sites.slope.shape)
+        geol_units = np.unique(sites.geology)
+        t_slope = np.copy(sites.slope)
+        t_slope[t_slope > 0.3] = 0.3
+        # Slope lower than 0.0005 m/m takes value for 0.0005 m/m
+        t_slope[t_slope < 0.0005] = 0.0005
+        for geol_unit in geol_units:
+            idx = sites.geology == geol_unit
+            if geol_unit in extra['GEOLOGICAL_UNITS']:
+                unit = geol_unit.decode()
+                # Supported geological unit, use the random effects model
+                v1 = C_AMP_FIXED["V1"] + C_AMP_RAND_INT[unit]
+                v2 = C_AMP_FIXED["V2"] + C_AMP_RAND_GRAD[unit]
+            else:
+                # Unrecognised geological unit, use the fixed effects model
+                v1 = C_AMP_FIXED["V1"]
+                v2 = C_AMP_FIXED["V2"]
+            ampl[idx] = v1 + v2 * np.log(t_slope[idx])
+    return ampl
+
+
+def get_stddevs(kind, ergodic, phi_s2s, C, stddev_shape, stddev_types,
+                sites, imt, mag):
+    """
+    Returns the homoskedastic standard deviation model
+    """
+    stddevs = []
+    if kind in {"ESHM20", "geology"}:
+        # Get the heteroskedastic tau and phi0
+        tau = get_tau(imt, mag)
+        phi = get_phi_ss(imt, mag)
+    else:
+        tau = C["tau_event_0"]
+        phi = C["phi_0"]
+    if ergodic:
+        if kind == 'ESHM20':
+            phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
+            phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
+            phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
+            phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+        elif kind == 'site':
+            phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
+        elif kind == 'slope':
+            phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
+        elif kind == 'geology':
+            phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+        else:
+            phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
+                           np.zeros(stddev_shape))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi + np.zeros(stddev_shape))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau + np.zeros(stddev_shape))
+    return stddevs
 
 
 class KothaEtAl2020(GMPE):
@@ -137,6 +345,7 @@ class KothaEtAl2020(GMPE):
         apparent anelastic attenuation term, c3, as an imt-dependent
         dictionary
     """
+    kind = "base"
 
     #: Supported tectonic region type is 'active shallow crust'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -153,10 +362,7 @@ class KothaEtAl2020(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = set()
@@ -210,15 +416,30 @@ class KothaEtAl2020(GMPE):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
+        extra = {}
+        if self.kind == 'ESHM20':
+            phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
+            phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
+            phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
+        elif self.kind == 'geology':
+            phi_s2s = self.COEFFS_FIXED[imt]["phi_s2s"]
+            extra['COEFFS_FIXED'] = self.COEFFS_FIXED
+            extra['COEFFS_RANDOM_INT'] = self.COEFFS_RANDOM_INT
+            extra['COEFFS_RANDOM_GRAD'] = self.COEFFS_RANDOM_GRAD
+            extra['GEOLOGICAL_UNITS'] = self.GEOLOGICAL_UNITS
+        else:
+            phi_s2s = None
 
-        mean = (self.get_magnitude_scaling(C, rup.mag) +
-                self.get_distance_term(C, rup, dists.rjb, imt, sites) +
-                self.get_site_amplification(C, sites, imt))
+        mean = (get_magnitude_scaling(C, rup.mag) +
+                get_distance_term(self.kind, self.c3, self.c3_epsilon,
+                                  C, rup, dists.rjb, imt, sites) +
+                get_site_amplification(self.kind, extra, C, sites, imt))
         # GMPE originally in cm/s/s - convert to g
         if imt.string.startswith(('PGA', 'SA')):
             mean -= np.log(100.0 * g)
-        stddevs = self.get_stddevs(C, dists.rjb.shape, stddev_types,
-                                   sites, imt, rup.mag)
+        stddevs = get_stddevs(self.kind, self.ergodic, phi_s2s,
+                              C, dists.rjb.shape, stddev_types,
+                              sites, imt, rup.mag)
         if self.dl2l:
             # The source-region parameter is specified explicity
             return mean + self.dl2l[imt]["dl2l"], stddevs
@@ -226,110 +447,9 @@ class KothaEtAl2020(GMPE):
         if self.sigma_mu_epsilon:
             # Apply the epistemic uncertainty factor (sigma_mu) multiplied by
             # the number of standard deviations
-            sigma_mu = self.get_sigma_mu_adjustment(C, imt, rup)
+            sigma_mu = get_sigma_mu_adjustment(C, imt, rup)
             mean += (self.sigma_mu_epsilon * sigma_mu)
         return mean, stddevs
-
-    @staticmethod
-    def get_sigma_mu_adjustment(C, imt, rup):
-        """
-        Returns the sigma_mu adjusment factor, which is taken as the
-        maximum of tau_L2L and the sigma_mu. For M < 7.4
-        the sigma statistical does not exceed tau_L2L at any period or
-        distance. For M > 7.4, sigma_mu is approximately linear up to M 8.0
-        so we interpolate between the two values and cap sigma statistical
-        at M 8.0
-        """
-        if rup.mag < 7.4:
-            # Below M 7.4 tau_L2L is always larger than sigma mu
-            return C["tau_l2l"]
-
-        C_SIG_MU = SIGMA_MU_COEFFS[imt]
-        if rup.hypo_depth < 10.0:
-            uf, lf = C_SIG_MU["sigma_mu_m8_shallow"],\
-                C_SIG_MU["sigma_mu_m7p4_shallow"]
-        elif rup.hypo_depth >= 20.0:
-            uf, lf = C_SIG_MU["sigma_mu_m8_deep"],\
-                C_SIG_MU["sigma_mu_m7p4_deep"]
-        else:
-            uf, lf = C_SIG_MU["sigma_mu_m8_intermediate"],\
-                C_SIG_MU["sigma_mu_m7p4_intermediate"]
-        if rup.mag >= 8.0:
-            # Cap the sigma mu as the value for M 8.0
-            return max(C["tau_l2l"], uf)
-        return max(C["tau_l2l"], ITPL(rup.mag, uf, lf, 7.4, 0.6))
-
-    def get_magnitude_scaling(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        d_m = mag - self.CONSTANTS["Mh"]
-        if mag <= self.CONSTANTS["Mh"]:
-            return C["e1"] + C["b1"] * d_m + C["b2"] * (d_m ** 2.0)
-        else:
-            return C["e1"] + C["b3"] * d_m
-
-    def get_distance_term(self, C, rup, rjb, imt, sites):
-        """
-        Returns the distance attenuation factor
-        """
-        h = self._get_h(C, rup.hypo_depth)
-        rval = np.sqrt(rjb ** 2. + h ** 2.)
-        rref_val = np.sqrt(self.CONSTANTS["Rref"] ** 2. + h ** 2.)
-        c3 = self.get_distance_coefficients(C, imt, sites)
-        f_r = (C["c1"] + C["c2"] * (rup.mag - self.CONSTANTS["Mref"])) *\
-            np.log(rval / rref_val) + (c3 * (rval - rref_val) / 100.)
-        return f_r
-
-    def _get_h(self, C, hypo_depth):
-        """
-        Returns the depth-specific coefficient
-        """
-        if hypo_depth <= 10.0:
-            return self.CONSTANTS["h_D10"]
-        elif hypo_depth > 20.0:
-            return self.CONSTANTS["h_D20"]
-        else:
-            return self.CONSTANTS["h_10D20"]
-
-    def get_distance_coefficients(self, C, imt, sctx):
-        """
-        Returns either the directly specified c3 value or the c3 from the
-        existing tau_c3 distribution
-        """
-        if self.c3:
-            # Use the c3 that has been defined on input
-            return self.c3
-        else:
-            # Define the c3 as a number of standard deviation multiplied
-            # by tau_c3
-            return C["c3"] + (self.c3_epsilon * C["tau_c3"])
-
-    def get_site_amplification(self, C, sites, imt):
-        """
-        In base model no site amplification is used
-        """
-        return 0.0
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the homoskedastic standard deviation model
-        """
-        stddevs = []
-        tau = C["tau_event_0"]
-        phi = C["phi_0"]
-        if self.ergodic:
-            phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
 
     # Coefficients obtained direclty from the regression outputs of
     # Kotha et al. (2020)
@@ -373,9 +493,6 @@ class KothaEtAl2020(GMPE):
     8.000  -0.08979569600589   3.74815514351616   0.726493405776986   1.695347146909250   -1.32882937608962   0.2849197966362740   -0.051296439369391   0.150981191615944   0.508537123776905   0.429104860654150   0.216201318346277   0.387633769846605   -0.193908824182191   -0.148759113452472    0.2094261301289650    0.337650861518699   -0.0507933301386227   -0.1365792860813190   -0.00532310915144333   0.411101516213337
     """)
 
-    CONSTANTS = {"Mref": 4.5, "Rref": 30., "Mh": 5.7,
-                 "h_D10": 4.0, "h_10D20": 8.0, "h_D20": 12.0}
-
 
 class KothaEtAl2020Site(KothaEtAl2020):
     """
@@ -385,34 +502,7 @@ class KothaEtAl2020Site(KothaEtAl2020):
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = set(("vs30",))
 
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Defines a second order polynomial site amplification model
-        """
-        # Render with respect to 800 m/s reference Vs30
-        sref = np.log(sites.vs30 / 800.)
-        return C["g0_vs30"] + C["g1_vs30"] * sref + C["g2_vs30"] * (sref ** 2.)
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the standard deviations
-        """
-        stddevs = []
-        # Adopts homoskedastic tau and phi0 values
-        tau = C["tau_event_0"]
-        phi = C["phi_0"]
-        if self.ergodic:
-            phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
+    kind = "site"
 
 
 class KothaEtAl2020Slope(KothaEtAl2020):
@@ -421,37 +511,9 @@ class KothaEtAl2020Slope(KothaEtAl2020):
     a polynomial site amplification function dependent on slope (m/m)
     """
     #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("slope",))
+    REQUIRES_SITES_PARAMETERS = {"slope"}
 
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Defines a second order polynomial site amplification model
-        """
-        # Render with respect to 0.1 m/m reference slope
-        sref = np.log(sites.slope / 0.1)
-        return C["g0_slope"] + C["g1_slope"] * sref +\
-            C["g2_slope"] * (sref ** 2.)
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the standard deviations
-        """
-        stddevs = []
-        # Adopts homoskedastic tau and phi0 values
-        tau = C["tau_event_0"]
-        phi = C["phi_0"]
-        if self.ergodic:
-            phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
+    kind = "slope"
 
 
 # Defines the c3 distribution (expected and variance [tau]) for each of the
@@ -607,78 +669,7 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     #: Required site parameters are vs30, vs30measured and the eshm20_region
     REQUIRES_SITES_PARAMETERS = set(("region", "vs30", "vs30measured"))
 
-    def get_distance_coefficients(self, C, imt, sctx):
-        """
-        Returns the c3 term. If c3 was input directly into the GMPE then
-        this over-rides the c3 regionalisation. Otherwise the c3 and tau_c3
-        are determined according to the region to which each site is assigned.
-
-        Note that no regionalisation is defined for PGV and hence the
-        default values from Kotha et al. (2020) are taken unless defined
-        otherwise in the input c3
-        """
-        if self.c3:
-            # If c3 is input then this over-rides the regionalisation
-            # assumed within this model
-            return self.c3[imt]["c3"] * np.ones(sctx.region.shape)
-
-        # Default c3 and tau values to the original GMPE c3 and tau
-        c3 = C["c3"] + np.zeros(sctx.region.shape)
-        tau_c3 = C["tau_c3"] + np.zeros(sctx.region.shape)
-        if not np.any(sctx.region) or ("PGV" in str(imt)):
-            # No regionalisation - take the default C3 and multiply tau_c3
-            # by the original epsilon
-            return (c3 + self.c3_epsilon * tau_c3) +\
-                np.zeros(sctx.region.shape)
-        # Some sites belong to the calibrated regions - loop through them
-        C3_R = C3_REGIONS[imt]
-        for i in range(1, 6):
-            idx = sctx.region == i
-            c3[idx] = C3_R["region_{:s}".format(str(i))]
-            tau_c3[idx] = C3_R["tau_region_{:s}".format(str(i))]
-        return c3 + self.c3_epsilon * tau_c3
-
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Returns the linear site amplification term depending on whether the
-        Vs30 is observed of inferred
-        """
-        vs30 = np.copy(sites.vs30)
-        vs30[vs30 > 1100.] = 1100.
-        ampl = np.zeros(vs30.shape)
-        # For observed vs30 sites
-        ampl[sites.vs30measured] = (C["d0_obs"] + C["d1_obs"] *
-                                    np.log(vs30[sites.vs30measured]))
-        # For inferred Vs30 sites
-        idx = np.logical_not(sites.vs30measured)
-        ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
-        return ampl
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the standard deviations, adopting different site-to-site
-        standard deviations depending on whether the site has a measured
-        or and inferred vs30. Relevant only in the ergodic case.
-        """
-        stddevs = []
-        # Get the heteroskedastic tau and phi0
-        tau = get_tau(imt, mag)
-        phi = get_phi_ss(imt, mag)
-        if self.ergodic:
-            phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
-            phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
-            phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
-            phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
+    kind = "ESHM20"
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                   e1                 b1                  b2                  b3                  c1                   c2                   c3              tau_c3             phi_s2s         tau_event_0             tau_l2l               phi_0       d0_obs        d1_obs   phi_s2s_obs       d0_inf        d1_inf   phi_s2s_inf
@@ -718,7 +709,6 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     6.000   0.50685354955206   3.80040950285788   0.700805222359295   1.625591116375650   -1.22440411739130   0.2292764533844400   -0.113766839623945   0.141669390606605   0.538973145096788   0.439059204276786   0.190680023411634   0.384862538848542   2.50354874   -0.40714992    0.33854229   2.83412987   -0.44598168    0.44328149
     7.000   0.19675504234642   3.78431011962409   0.716569352050671   1.696310364814470   -1.28517895409644   0.2596896867469380   -0.070585399916418   0.146488759166368   0.523331606096182   0.434396029381517   0.208231539543981   0.385850838707000   2.39499327   -0.38989994    0.33074643   2.69365804   -0.42370171    0.43214765
     8.000  -0.08979569600589   3.74815514351616   0.726493405776986   1.695347146909250   -1.32882937608962   0.2849197966362740   -0.051296439369391   0.150981191615944   0.508537123776905   0.429104860654150   0.216201318346277   0.387633769846605   2.35979253   -0.38432385    0.32874669   2.64017872   -0.41521615    0.42722298
-
     """)
 
 
@@ -728,6 +718,7 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     defining site amplification based on with slope and geology rather than
     inferred/measured Vs30.
     """
+    kind = "geology"
 
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = set(("region", "slope", "geology"))
@@ -736,56 +727,6 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     GEOLOGICAL_UNITS = [b"CENOZOIC", b"HOLOCENE", b"JURASSIC-TRIASSIC",
                         b"CRETACEOUS", b"PALEOZOIC", b"PLEISTOCENE",
                         b"PRECAMBRIAN", b"UNKNOWN"]
-
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Returns the site amplification term depending on whether the Vs30
-        is observed of inferred
-        """
-        C_AMP_FIXED = self.COEFFS_FIXED[imt]
-        C_AMP_RAND_INT = self.COEFFS_RANDOM_INT[imt]
-        C_AMP_RAND_GRAD = self.COEFFS_RANDOM_GRAD[imt]
-        ampl = np.zeros(sites.slope.shape)
-        geol_units = np.unique(sites.geology)
-        t_slope = np.copy(sites.slope)
-        t_slope[t_slope > 0.3] = 0.3
-        # Slope lower than 0.0005 m/m takes value for 0.0005 m/m
-        t_slope[t_slope < 0.0005] = 0.0005
-        for geol_unit in geol_units:
-            idx = sites.geology == geol_unit
-            if geol_unit in self.GEOLOGICAL_UNITS:
-                # Supported geological unit - use the random effects model
-                v1 = C_AMP_FIXED["V1"] + C_AMP_RAND_INT[geol_unit.decode()]
-                v2 = C_AMP_FIXED["V2"] + C_AMP_RAND_GRAD[geol_unit.decode()]
-            else:
-                # Unrecognised geological unit - use the fixed effects model
-                v1 = C_AMP_FIXED["V1"]
-                v2 = C_AMP_FIXED["V2"]
-            ampl[idx] = v1 + v2 * np.log(t_slope[idx])
-        return ampl
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the ergodic standard deviation with phi_s2s_inf based on
-        that of the inferred Vs30
-        """
-        stddevs = []
-        # Uses the heteroskedastic tau and phi0 values
-        tau = get_tau(imt, mag)
-        phi = get_phi_ss(imt, mag)
-        if self.ergodic:
-            phi_s2s = self.COEFFS_FIXED[imt]["phi_s2s"]
-            phi = np.sqrt(phi  ** 2. + phi_s2s ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
 
     COEFFS_FIXED = CoeffsTable(sa_damping=5, table="""\
     imt               V1            V2      phi_s2s
