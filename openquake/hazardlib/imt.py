@@ -77,6 +77,10 @@ def repr(self):
 
 IMT = collections.namedtuple('IMT', 'string period damping')
 IMT.__new__.__defaults__ = (0., 5.0)
+IMT.__lt__ = lambda self, other: self[1] < other[1]
+IMT.__gt__ = lambda self, other: self[1] > other[1]
+IMT.__le__ = lambda self, other: self[1] <= other[1]
+IMT.__ge__ = lambda self, other: self[1] >= other[1]
 IMT.__repr__ = repr
 
 
