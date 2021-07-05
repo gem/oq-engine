@@ -96,6 +96,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 1000
 
     delta_c1 = None
+    kind = "base"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -170,9 +171,18 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the hypocentral depth scaling term - as indicated by
         equation (3)
-        For interface events F_EVENT = 0.. so no depth scaling is returned
+        For interface events F_EVENT = 0.. so no depth scaling is returned.
+        For SSlab events computes the hypocentral depth scaling term as
+        indicated by equation (3)
         """
-        return 0.
+        if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                const.TRT.SUBDUCTION_INTERFACE):
+            return 0.
+        if rup.hypo_depth > 120.0:
+            z_h = 120.0
+        else:
+            z_h = rup.hypo_depth
+        return C['theta11'] * (z_h - 60.)
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """
@@ -330,17 +340,6 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     delta_c1 = -0.3
-
-    def _compute_focal_depth_term(self, C, rup):
-        """
-        Computes the hypocentral depth scaling term - as indicated by
-        equation (3)
-        """
-        if rup.hypo_depth > 120.0:
-            z_h = 120.0
-        else:
-            z_h = rup.hypo_depth
-        return C['theta11'] * (z_h - 60.)
 
     def _compute_distance_term(self, C, mag, dists):
         """
