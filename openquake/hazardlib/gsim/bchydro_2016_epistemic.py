@@ -22,7 +22,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SInterLow,
     AbrahamsonEtAl2015SInterHigh, AbrahamsonEtAl2015SSlab,
-    AbrahamsonEtAl2015SSlabLow, AbrahamsonEtAl2015SSlabHigh)
+    AbrahamsonEtAl2015SSlabLow, AbrahamsonEtAl2015SSlabHigh, CONSTS)
 
 
 # Total epistemic uncertainty factors from Abrahamson et al. (2018)
@@ -191,7 +191,8 @@ class FABATaperSigmoid(FABATaperStep):
 
 
 # Get Gaussian cdf of a standard normal distribution
-phix = lambda x: 0.5 * (1.0 + erf(x / np.sqrt(2.)))
+def phix(x):
+    return 0.5 * (1.0 + erf(x / np.sqrt(2.)))
 
 
 class FABATaperGaussian(FABATaperStep):
@@ -236,7 +237,7 @@ FABA_ALL_MODELS = {
     "Linear": FABATaperLinear,
     "SFunc": FABATaperSFunc,
     "Sigmoid": FABATaperSigmoid,
-    "Gaussian": FABATaperGaussian
+    "Gaussian": FABATaperGaussian,
 }
 
 
@@ -290,9 +291,9 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return (C['theta2'] + self.CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
-                   self.CONSTS['theta9'])) +\
+        return (C['theta2'] + CONSTS['theta3'] * (mag - 7.8)) *\
+            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
+                   CONSTS['theta9'])) +\
             ((self.theta6_adj + C['theta6']) * dists.rrup)
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
@@ -366,9 +367,9 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return (C['theta2'] + self.CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
-                   self.CONSTS['theta9'])) +\
+        return (C['theta2'] + CONSTS['theta3'] * (mag - 7.8)) *\
+            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
+                   CONSTS['theta9'])) +\
             ((self.theta6_adj + C['theta6']) * dists.rrup)
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
@@ -414,7 +415,6 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
     with theta6 calibrated to Mediterranean data, for the high
     magnitude scaling branch.
     """
-
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
@@ -444,9 +444,9 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return (C['theta2'] + self.CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
-                   self.CONSTS['theta9'])) +\
+        return (C['theta2'] + CONSTS['theta3'] * (mag - 7.8)) *\
+            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
+                   CONSTS['theta9'])) +\
             ((self.theta6_adj + C['theta6']) * dists.rrup)
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
@@ -499,7 +499,6 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     sigma_mu_epsilon - number of standard deviations above or below the mean
     to apply the statistical uncertainty sigma_mu term.
     """
-
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
@@ -529,9 +528,9 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return ((C['theta2'] + C['theta14'] + self.CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
-                np.exp((mag - 6.) * self.CONSTS['theta9'])) +
+        return ((C['theta2'] + C['theta14'] + CONSTS['theta3'] *
+                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
+                np.exp((mag - 6.) * CONSTS['theta9'])) +
                 ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
@@ -607,9 +606,9 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return ((C['theta2'] + C['theta14'] + self.CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
-                np.exp((mag - 6.) * self.CONSTS['theta9'])) +
+        return ((C['theta2'] + C['theta14'] + CONSTS['theta3'] *
+                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
+                np.exp((mag - 6.) * CONSTS['theta9'])) +
                 ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
@@ -655,7 +654,6 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     with theta6 calibrated to Mediterranean data, for the high magnitude
     scaling branch.
     """
-
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
@@ -685,9 +683,9 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return ((C['theta2'] + C['theta14'] + self.CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
-                np.exp((mag - 6.) * self.CONSTS['theta9'])) +
+        return ((C['theta2'] + C['theta14'] + CONSTS['theta3'] *
+                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
+                np.exp((mag - 6.) * CONSTS['theta9'])) +
                 ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
