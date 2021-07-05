@@ -30,19 +30,11 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
-NON_JAPAN_CONSTS = {"c8": 0.0,
-                    "h4": 1.0,
-                    "c": 1.88,
-                    "n": 1.18,
-                    "philnAF": 0.3,
-                    "SJ": 0}
-
-JAPAN_CONSTS = {"c8": 0.0,
-                "h4": 1.0,
-                "c": 1.88,
-                "n": 1.18,
-                "philnAF": 0.3,
-                "SJ": 1}
+CONSTS = {"c8": 0.0,
+          "h4": 1.0,
+          "c": 1.88,
+          "n": 1.18,
+          "philnAF": 0.3}
 
 
 class CampbellBozorgnia2014(GMPE):
@@ -58,11 +50,7 @@ class CampbellBozorgnia2014(GMPE):
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground velocity and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: average horizontal :attr:`~openquake.hazardlib.const.IMC.GMRotI50`
@@ -70,11 +58,8 @@ class CampbellBozorgnia2014(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see section "Aleatory Variability Model", page 1094.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30, Vs30 type (measured or inferred),
     #: and depth (km) to the 2.5 km/s shear wave velocity layer (z2pt5)
@@ -87,6 +72,8 @@ class CampbellBozorgnia2014(GMPE):
 
     #: Required distance measures are Rrup, Rjb and Rx
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
+
+    SJ = 0  # 1 for Japan
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -130,15 +117,16 @@ class CampbellBozorgnia2014(GMPE):
         else:
             # Default site and basin model
             temp_vs30 = 1100.0 * np.ones(len(sites.vs30))
-            temp_z2pt5 = self._select_basin_model(1100.0) *\
+            temp_z2pt5 = self._select_basin_model(self.SJ, 1100.0) * \
                 np.ones_like(temp_vs30)
 
         return (self._get_magnitude_term(C, rup.mag) +
                 self._get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
                 self._get_style_of_faulting_term(C, rup) +
                 self._get_hanging_wall_term(C, rup, dists) +
-                self._get_shallow_site_response_term(C, temp_vs30, a1100) +
-                self._get_basin_response_term(C, temp_z2pt5) +
+                self._get_shallow_site_response_term(
+                    self.SJ, C, temp_vs30, a1100) +
+                self._get_basin_response_term(self.SJ, C, temp_z2pt5) +
                 self._get_hypocentral_depth_term(C, rup) +
                 self._get_fault_dip_term(C, rup) +
                 self._get_anelastic_attenuation_term(C, dists.rrup))
@@ -179,7 +167,7 @@ class CampbellBozorgnia2014(GMPE):
             fnm = 0.0
             frv = 0.0
 
-        fflt_f = (self.CONSTS["c8"] * frv) + (C["c9"] * fnm)
+        fflt_f = (CONSTS["c8"] * frv) + (C["c9"] * fnm)
         if rup.mag <= 4.5:
             fflt_m = 0.0
         elif rup.mag > 5.5:
@@ -229,7 +217,7 @@ class CampbellBozorgnia2014(GMPE):
         Defines the f2 scaling coefficient defined in equation 10
         """
         drx = (r_x - r_1) / (r_2 - r_1)
-        return self.CONSTS["h4"] + (C["h5"] * drx) + (C["h6"] * (drx ** 2.))
+        return CONSTS["h4"] + (C["h5"] * drx) + (C["h6"] * (drx ** 2.))
 
     def _get_hanging_wall_coeffs_rrup(self, dists):
         """
@@ -305,12 +293,12 @@ class CampbellBozorgnia2014(GMPE):
         f_atn[idx] = (C["c20"] + C["Dc20"]) * (rrup[idx] - 80.0)
         return f_atn
 
-    def _select_basin_model(self, vs30):
+    def _select_basin_model(self, SJ, vs30):
         """
         Select the preferred basin model (California or Japan) to scale
         basin depth with respect to Vs30
         """
-        if self.CONSTS["SJ"]:
+        if SJ:
             # Japan Basin Model - Equation 34 of Campbell & Bozorgnia (2014)
             return np.exp(5.359 - 1.102 * np.log(vs30))
         else:
@@ -318,20 +306,19 @@ class CampbellBozorgnia2014(GMPE):
             # Campbell & Bozorgnia (2014)
             return np.exp(7.089 - 1.144 * np.log(vs30))
 
-    def _get_basin_response_term(self, C, z2pt5):
+    def _get_basin_response_term(self, SJ, C, z2pt5):
         """
         Returns the basin response term defined in equation 20
         """
         f_sed = np.zeros(len(z2pt5))
         idx = z2pt5 < 1.0
-        f_sed[idx] = (C["c14"] + C["c15"] * float(self.CONSTS["SJ"])) *\
-            (z2pt5[idx] - 1.0)
+        f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
         idx = z2pt5 > 3.0
         f_sed[idx] = C["c16"] * C["k3"] * exp(-0.75) *\
             (1.0 - np.exp(-0.25 * (z2pt5[idx] - 3.0)))
         return f_sed
 
-    def _get_shallow_site_response_term(self, C, vs30, pga_rock):
+    def _get_shallow_site_response_term(self, SJ, C, vs30, pga_rock):
         """
         Returns the shallow site response term defined in equations 17, 18 and
         19
@@ -340,7 +327,7 @@ class CampbellBozorgnia2014(GMPE):
         # Get linear global site response term
         f_site_g = C["c11"] * np.log(vs_mod)
         idx = vs30 > C["k1"]
-        f_site_g[idx] = f_site_g[idx] + (C["k2"] * self.CONSTS["n"] *
+        f_site_g[idx] = f_site_g[idx] + (C["k2"] * CONSTS["n"] *
                                          np.log(vs_mod[idx]))
 
         # Get nonlinear site response term
@@ -348,20 +335,20 @@ class CampbellBozorgnia2014(GMPE):
         if np.any(idx):
             f_site_g[idx] = f_site_g[idx] + C["k2"] * (
                 np.log(pga_rock[idx] +
-                       self.CONSTS["c"] * (vs_mod[idx] ** self.CONSTS["n"])) -
-                np.log(pga_rock[idx] + self.CONSTS["c"])
+                       CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
+                np.log(pga_rock[idx] + CONSTS["c"])
                 )
 
         # For Japan sites (SJ = 1) further scaling is needed (equation 19)
-        if self.CONSTS["SJ"]:
+        if SJ:
             fsite_j = np.log(vs_mod)
             idx = vs30 > 200.0
             if np.any(idx):
-                fsite_j[idx] = (C["c13"] + C["k2"] * self.CONSTS["n"]) *\
+                fsite_j[idx] = (C["c13"] + C["k2"] * CONSTS["n"]) *\
                     fsite_j[idx]
             idx = np.logical_not(idx)
             if np.any(idx):
-                fsite_j[idx] = (C["c12"] + C["k2"] * self.CONSTS["n"]) *\
+                fsite_j[idx] = (C["c12"] + C["k2"] * CONSTS["n"]) *\
                     (fsite_j[idx] - np.log(200.0 / C["k1"]))
 
             return f_site_g + fsite_j
@@ -379,7 +366,7 @@ class CampbellBozorgnia2014(GMPE):
         tau_lnyb = self._get_taulny(C, rup.mag)
         # Get phi_lny on the basement rock
         phi_lnyb = np.sqrt(self._get_philny(C, rup.mag) ** 2. -
-                           self.CONSTS["philnAF"] ** 2.)
+                           CONSTS["philnAF"] ** 2.)
         # Get site scaling term
         alpha = self._get_alpha(C, sites.vs30, pga1100)
         # Evaluate tau according to equation 29
@@ -391,7 +378,7 @@ class CampbellBozorgnia2014(GMPE):
         # Evaluate phi according to equation 30
         phi = np.sqrt(
             (phi_lnyb ** 2.) +
-            (self.CONSTS["philnAF"] ** 2.) +
+            (CONSTS["philnAF"] ** 2.) +
             ((alpha ** 2.) * (phi_lnpga_b ** 2.)) +
             (2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b))
         stddevs = []
@@ -412,7 +399,7 @@ class CampbellBozorgnia2014(GMPE):
         """
         tau_lnpga_b = self._get_taulny(C, rup.mag)
         phi_lnpga_b = np.sqrt(self._get_philny(C, rup.mag) ** 2. -
-                              self.CONSTS["philnAF"] ** 2.)
+                              CONSTS["philnAF"] ** 2.)
         return tau_lnpga_b, phi_lnpga_b
 
     def _get_taulny(self, C, mag):
@@ -448,8 +435,8 @@ class CampbellBozorgnia2014(GMPE):
         idx = vs30 < C["k1"]
         if np.any(idx):
             af1 = pga_rock[idx] +\
-                self.CONSTS["c"] * ((vs30[idx] / C["k1"]) ** self.CONSTS["n"])
-            af2 = pga_rock[idx] + self.CONSTS["c"]
+                CONSTS["c"] * ((vs30[idx] / C["k1"]) ** CONSTS["n"])
+            af2 = pga_rock[idx] + CONSTS["c"]
             alpha[idx] = C["k2"] * pga_rock[idx] * ((1.0 / af1) - (1.0 / af2))
         return alpha
 
@@ -479,8 +466,6 @@ class CampbellBozorgnia2014(GMPE):
     7.50   -15.509   2.223    0.169   -0.756   -1.077   -2.179   0.165   8.468    0.000   0.000   -0.664    0.075   0.374    0.3754    0.321   0.757   -0.0205   0.0050   0.00280    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.517   0.457   0.546   0.523   0.438   0.271    0.176
     10.0   -15.975   2.132    0.367   -0.800   -1.282   -2.244   0.180   6.564    0.000   0.000   -0.576   -0.027   0.297    0.3506    0.174   0.621    0.0009   0.0099   0.00458    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.744   0.441   0.543   0.466   0.438   0.290    0.154
     """)
-
-    CONSTS = NON_JAPAN_CONSTS
 
 
 class CampbellBozorgnia2014HighQ(CampbellBozorgnia2014):
@@ -554,7 +539,7 @@ class CampbellBozorgnia2014JapanSite(CampbellBozorgnia2014):
     Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE for the case in
     which the "Japan" shallow site response term is activited
     """
-    CONSTS = JAPAN_CONSTS
+    SJ = 1
 
 
 class CampbellBozorgnia2014HighQJapanSite(CampbellBozorgnia2014HighQ):
@@ -563,7 +548,7 @@ class CampbellBozorgnia2014HighQJapanSite(CampbellBozorgnia2014HighQ):
     attenuation (high quality factor) coefficients, for the case in which
     the "Japan" shallow site response term is activited
     """
-    CONSTS = JAPAN_CONSTS
+    SJ = 1
 
 
 class CampbellBozorgnia2014LowQJapanSite(CampbellBozorgnia2014LowQ):
@@ -572,4 +557,4 @@ class CampbellBozorgnia2014LowQJapanSite(CampbellBozorgnia2014LowQ):
     attenuation (low quality factor) coefficients, for the case in which
     the "Japan" shallow site response term is activited
     """
-    CONSTS = JAPAN_CONSTS
+    SJ = 1
