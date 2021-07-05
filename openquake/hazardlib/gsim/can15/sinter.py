@@ -6,6 +6,7 @@
 import numpy as np
 
 from openquake.hazardlib import const
+from openquake.hazardlib.gsim.base import gsim_aliases
 from openquake.hazardlib.gsim.can15.western import get_sigma
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SInter
@@ -13,15 +14,6 @@ from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
 from openquake.hazardlib.gsim.abrahamson_2015 import AbrahamsonEtAl2015SInter
 from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import \
     GhofraniAtkinson2014
-
-
-def _get_delta(dists):
-    """
-    Computes the additional delta to be used for the computation of the
-    upp and low models
-    """
-    delta = np.minimum((0.15-0.0007*dists.rrup), 0.35)
-    return delta
 
 
 def _get_mean(self, sites, rup, dists, imt, stddev_types):
@@ -77,8 +69,14 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     #: Supported standard deviations
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
+    REQUIRES_ATTRIBUTES = {'sgn'}
+
     gsims = [AtkinsonMacias2009(), AbrahamsonEtAl2015SInter(),
              GhofraniAtkinson2014()]  # underlying GSIMs
+
+    def __init__(self, sgn=0, **kwargs):
+        super().__init__(**kwargs)
+        self.sgn = sgn
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -87,6 +85,9 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         for spec of input and result values.
         """
         mean = _get_mean(self, sites, rup, dists, imt, stddev_types)
+        if self.sgn:
+            delta = np.minimum((0.15-0.0007*dists.rrup), 0.35)
+            mean += self.sgn * delta
         stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         return mean, stddevs
 
@@ -107,21 +108,5 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     """)
 
 
-class SInterCan15Low(SInterCan15Mid):
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean = _get_mean(self, sites, rup, dists, imt, stddev_types)
-        mean -= _get_delta(dists)
-        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        mean = np.squeeze(mean)
-        return mean, stddevs
-
-
-class SInterCan15Upp(SInterCan15Mid):
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean = _get_mean(self, sites, rup, dists, imt, stddev_types)
-        mean += _get_delta(dists)
-        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        mean = np.squeeze(mean)
-        return mean, stddevs
+gsim_aliases['SInterCan15Low'] = '[SInterCan15Mid]\nsgn = -1'
+gsim_aliases['SInterCan15Upp'] = '[SInterCan15Mid]\nsgn = +1'
