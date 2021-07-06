@@ -262,6 +262,25 @@ class AmplificationTable(object):
         return output_tables
 
 
+def _setup_amplification(self, fle):
+    """
+    If amplification data is specified then reads into memory and updates
+    the required rupture and site parameters
+    """
+    self.amplification = AmplificationTable(fle["Amplification"],
+                                            self.m_w,
+                                            self.distances)
+    if self.amplification.element == "Sites":
+        self.REQUIRES_SITES_PARAMETERS = set(
+            [self.amplification.parameter])
+    elif self.amplification.element == "Rupture":
+        # set the site and rupture parameters on the instance
+        self.REQUIRES_SITES_PARAMETERS = set()
+        self.REQUIRES_RUPTURE_PARAMETERS = (
+            self.REQUIRES_RUPTURE_PARAMETERS |
+            {self.amplification.parameter})
+
+
 class GMPETable(GMPE):
     """
     Implements ground motion prediction equations in the form of a table from
@@ -320,8 +339,20 @@ class GMPETable(GMPE):
             self.distances = fle["Distances"][:]
             # Load intensity measure types and levels
             self.imls = hdf_arrays_to_dict(fle["IMLs"])
-            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(
-                self._supported_imts())
+            # Update the list of supported IMTs from the tables
+            imt_list = []  # this is a list of factories, like PGA, SA, etc
+            for key in self.imls:
+                if "SA" in key:
+                    imt_list.append(imt_module.SA)
+                elif key == "T":
+                    continue
+                else:
+                    try:
+                        factory = getattr(imt_module, key)
+                    except Exception:
+                        continue
+                    imt_list.append(factory)
+            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(imt_list)
             if "SA" in self.imls and "T" not in self.imls:
                 raise ValueError("Spectral Acceleration must be accompanied by"
                                  " periods")
@@ -342,25 +373,7 @@ class GMPETable(GMPE):
                     self.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(stddev_type)
 
             if "Amplification" in fle:
-                self._setup_amplification(fle)
-
-    def _setup_amplification(self, fle):
-        """
-        If amplification data is specified then reads into memory and updates
-        the required rupture and site parameters
-        """
-        self.amplification = AmplificationTable(fle["Amplification"],
-                                                self.m_w,
-                                                self.distances)
-        if self.amplification.element == "Sites":
-            self.REQUIRES_SITES_PARAMETERS = set(
-                [self.amplification.parameter])
-        elif self.amplification.element == "Rupture":
-            # set the site and rupture parameters on the instance
-            self.REQUIRES_SITES_PARAMETERS = set()
-            self.REQUIRES_RUPTURE_PARAMETERS = (
-                self.REQUIRES_RUPTURE_PARAMETERS |
-                {self.amplification.parameter})
+                _setup_amplification(self, fle)
 
     def _supported_imts(self):
         """
