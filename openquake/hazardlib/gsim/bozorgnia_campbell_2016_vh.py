@@ -25,10 +25,83 @@ Module exports :class:`BozorgniaCampbell2016VH`
                :class:`BozorgniaCampbell2016LowQJapanSiteVH`
 """
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, registry
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+import openquake.hazardlib.gsim.bozorgnia_campbell_2016 as BC15
+import openquake.hazardlib.gsim.campbell_bozorgnia_2014 as CB14
 
+
+def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
+    """
+    Returns the inter-event, intra-event, and total standard deviations
+
+    Note that it is assumed here that the soil response of the vertical
+    component is linear (i.e. nonlinear site response effects not
+    included). Thus, the expressions for the aleatory std devs for the
+    vertical component is much simpler than in the horizontal component,
+    since the site response- and IMT-correlation functions are neglected.
+    """
+    num_sites = len(sites.vs30)
+    tau_v = cls.VGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
+                                           [const.StdDev.INTER_EVENT])[1]
+    tau_h = cls.HGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
+                                           [const.StdDev.INTER_EVENT])[1]
+    phi_v = cls.VGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
+                                           [const.StdDev.INTRA_EVENT])[1]
+    phi_h = cls.HGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
+                                           [const.StdDev.INTRA_EVENT])[1]
+    tau = _get_tau_vh(C, rup.mag, tau_v, tau_h)
+    phi = _get_phi_vh(C, rup.mag, phi_v, phi_h)
+
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
+                            np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau + np.zeros(num_sites))
+    # return std dev values for each stddev type in site collection
+    return stddevs
+
+def _get_tau_vh(C, mag, stddev_v, stddev_h):
+    """
+    Returns the inter-event random effects coefficient (tau) defined in
+    Equation 10.
+    """
+    rhob1 = C['rhob1']
+    rhob2 = C['rhob2']
+
+    if mag <= 4.5:
+        rhob = rhob1
+    elif 4.5 < mag < 5.5:
+        rhob = rhob2 + (rhob1 - rhob2)*(5.5 - mag)
+    else:
+        rhob = rhob2
+
+    tau_v = np.array(stddev_v)
+    tau_h = np.array(stddev_h)
+    return np.sqrt(tau_v ** 2 + tau_h ** 2 - 2 * rhob * tau_v * tau_h)
+
+def _get_phi_vh(C, mag, stddev_v, stddev_h):
+    """
+    Returns the intra-event random effects coefficient (phi) defined in
+    Equation 11.
+    """
+    rhow1 = C['rhow1']
+    rhow2 = C['rhow2']
+
+    if mag <= 4.5:
+        rhow = rhow1
+    elif 4.5 < mag < 5.5:
+        rhow = rhow2 + (rhow1 - rhow2)*(5.5 - mag)
+    else:
+        rhow = rhow2
+    phi_v = np.array(stddev_v)
+    phi_h = np.array(stddev_h)
+    return np.sqrt(phi_v ** 2 + phi_h ** 2 - 2 * rhow * phi_v * phi_h)
 
 class BozorgniaCampbell2016VH(GMPE):
     """
@@ -51,8 +124,9 @@ class BozorgniaCampbell2016VH(GMPE):
 
     Applies the average attenuation case (Dc20=0)
     """
-    VGMPE = registry['BozorgniaCampbell2016']()
-    HGMPE = registry['CampbellBozorgnia2014']()
+    VGMPE = BC15.BozorgniaCampbell2016()
+    HGMPE = CB14.CampbellBozorgnia2014()
+
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
@@ -65,9 +139,8 @@ class BozorgniaCampbell2016VH(GMPE):
     ])
 
     #: Supported intensity measure component is the
-    #: :attr:`~openquake.hazardlib.const.IMC.VERTICAL_TO_HORIZONTAL_RATIO`
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
-                                        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO
+    #: :attr:`~openquake.hazardlib.const.IMC.Vertical` direction component
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VERTICAL
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory Variability Model".
@@ -112,80 +185,8 @@ class BozorgniaCampbell2016VH(GMPE):
         # Equation 6
         mean = mean_v - mean_h
         # Get standard deviations
-        stddevs = self._get_stddevs(C, sites, rup, dists, imt, stddev_types)
+        stddevs = _get_stddevs(self, C, sites, rup, dists, imt, stddev_types)
         return mean, stddevs
-
-    def _get_stddevs(self, C, sites, rup, dists, imt, stddev_types):
-        """
-        Returns the inter-event, intra-event, and total standard deviations
-
-        Note that it is assumed here that the soil response of the vertical
-        component is linear (i.e. nonlinear site response effects not
-        included). Thus, the expressions for the aleatory std devs for the
-        vertical component is much simpler than in the horizontal component,
-        since the site response- and IMT-correlation functions are neglected.
-        """
-        num_sites = len(sites.vs30)
-        tau_v = self.VGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                [const.StdDev.INTER_EVENT])[1]
-        tau_h = self.HGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                [const.StdDev.INTER_EVENT])[1]
-        phi_v = self.VGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                [const.StdDev.INTRA_EVENT])[1]
-        phi_h = self.HGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                [const.StdDev.INTRA_EVENT])[1]
-        tau = self._get_tau_vh(C, rup.mag, tau_v, tau_h)
-        phi = self._get_phi_vh(C, rup.mag, phi_v, phi_h)
-
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
-                               np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
-        # return std dev values for each stddev type in site collection
-        return stddevs
-
-    def _get_tau_vh(self, C, mag, stddev_v, stddev_h):
-        """
-        Returns the inter-event random effects coefficient (tau) defined in
-        Equation 10.
-        """
-        rhob1 = C['rhob1']
-        rhob2 = C['rhob2']
-
-        if mag <= 4.5:
-            rhob = rhob1
-        elif 4.5 < mag < 5.5:
-            rhob = rhob2 + (rhob1 - rhob2)*(5.5 - mag)
-        else:
-            rhob = rhob2
-
-        tau_v = np.array(stddev_v)
-        tau_h = np.array(stddev_h)
-        return np.sqrt(tau_v ** 2 + tau_h ** 2 - 2 * rhob * tau_v * tau_h)
-
-    def _get_phi_vh(self, C, mag, stddev_v, stddev_h):
-        """
-        Returns the intra-event random effects coefficient (phi) defined in
-        Equation 11.
-        """
-        rhow1 = C['rhow1']
-        rhow2 = C['rhow2']
-
-        if mag <= 4.5:
-            rhow = rhow1
-        elif 4.5 < mag < 5.5:
-            rhow = rhow2 + (rhow1 - rhow2)*(5.5 - mag)
-        else:
-            rhow = rhow2
-        phi_v = np.array(stddev_v)
-        phi_h = np.array(stddev_h)
-        return np.sqrt(phi_v ** 2 + phi_h ** 2 - 2 * rhow * phi_v * phi_h)
 
     #: Table of regression coefficients obtained from supplementary material
     #: published together with the EQS paper
@@ -225,8 +226,8 @@ class BozorgniaCampbell2016HighQVH(BozorgniaCampbell2016VH):
     Applies regional corrections in path scaling term for regions with
     low attenuation (high quality factor, Q) (e.g. eastern China)
     """
-    VGMPE = registry['BozorgniaCampbell2016HighQ']()
-    HGMPE = registry['CampbellBozorgnia2014HighQ']()
+    VGMPE = BC15.BozorgniaCampbell2016(sgn=+1)
+    HGMPE = CB14.CampbellBozorgnia2014HighQ()
 
 
 class BozorgniaCampbell2016LowQVH(BozorgniaCampbell2016VH):
@@ -237,8 +238,8 @@ class BozorgniaCampbell2016LowQVH(BozorgniaCampbell2016VH):
     Applies regional corrections in path scaling term for regions with
     high attenuation (low quality factor, Q) (e.g. Japan and Italy)
     """
-    VGMPE = registry['BozorgniaCampbell2016LowQ']()
-    HGMPE = registry['CampbellBozorgnia2014LowQ']()
+    VGMPE = BC15.BozorgniaCampbell2016(sgn=-1)
+    HGMPE = CB14.CampbellBozorgnia2014LowQ()
 
 
 class BozorgniaCampbell2016AveQJapanSiteVH(BozorgniaCampbell2016VH):
@@ -251,12 +252,12 @@ class BozorgniaCampbell2016AveQJapanSiteVH(BozorgniaCampbell2016VH):
 
     Applies the average attenuation case (Dc20=0)
     """
-    VGMPE = registry['BozorgniaCampbell2016AveQJapanSite']()
-    HGMPE = registry['CampbellBozorgnia2014JapanSite']()
+    VGMPE = BC15.BozorgniaCampbell2016(SJ=1)
+    HGMPE = CB14.CampbellBozorgnia2014JapanSite()
 
 
 class BozorgniaCampbell2016HighQJapanSiteVH(
-        BozorgniaCampbell2016AveQJapanSiteVH):
+                                        BozorgniaCampbell2016AveQJapanSiteVH):
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
@@ -267,12 +268,12 @@ class BozorgniaCampbell2016HighQJapanSiteVH(
     Applies regional corrections in path scaling term for regions with
     low attenuation (high quality factor, Q)
     """
-    VGMPE = registry['BozorgniaCampbell2016HighQJapanSite']()
-    HGMPE = registry['CampbellBozorgnia2014HighQJapanSite']()
+    VGMPE = BC15.BozorgniaCampbell2016(SJ=1, sgn=+1)
+    HGMPE = CB14.CampbellBozorgnia2014HighQJapanSite()
 
 
 class BozorgniaCampbell2016LowQJapanSiteVH(
-    BozorgniaCampbell2016AveQJapanSiteVH):
+                                        BozorgniaCampbell2016AveQJapanSiteVH):
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
@@ -283,5 +284,5 @@ class BozorgniaCampbell2016LowQJapanSiteVH(
     Applies regional corrections in path scaling term for regions with
     high attenuation (low quality factor, Q)
     """
-    VGMPE = registry['BozorgniaCampbell2016LowQJapanSite']()
-    HGMPE = registry['CampbellBozorgnia2014LowQJapanSite']()
+    VGMPE = BC15.BozorgniaCampbell2016(SJ=1, sgn=-1)
+    HGMPE = CB14.CampbellBozorgnia2014LowQJapanSite()
