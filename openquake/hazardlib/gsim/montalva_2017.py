@@ -20,16 +20,9 @@
 Module exports :class:`MontalvaEtAl2017SInter`
                :class:`MontalvaEtAl2017SSlab`
 """
-import numpy as np
-
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2015 import (
-    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS)
-
-
-# Period-Independent Coefficients (Table 2 of BC Hydro)
-CONSTS = CONSTS.copy()
-CONSTS["C1"] = 7.2
+    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab)
 
 
 class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
@@ -45,33 +38,7 @@ class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
     implementation, as coefficients and model changed at the point of
     publication
     """
-
-    def _compute_magnitude_term(self, C, dc1, mag):
-        """
-        Computes the magnitude scaling term given by equations (2) and (3)
-        corrected by a local adjustment factor. Modified from original
-        Abrahamson et al (2015) implementation as theta4 and theta5 are now
-        period-dependent, whilst theta13 is now zero
-        """
-        base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = C['theta5'] * (mag - dmag)
-
-        else:
-            f_mag = C['theta4'] * (mag - dmag)
-
-        return base + f_mag
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (4).
-        Note this is overwriting the Abrahamson et al (2016) version as
-        theta3 is now period dependent
-        """
-        return (C['theta2'] + C['theta3'] * (mag - CONSTS["C1"])) *\
-            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
-                   CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
+    kind = "montalva17"
 
     # Coefficients table taken from electronic supplement to Montalva et al.
     # (2017)
@@ -144,31 +111,7 @@ class MontalvaEtAl2017SSlab(AbrahamsonEtAl2015SSlab):
     Adaptation of the Abrahamson et al. (2015) BC Hydro subduction in-slab
     GMPE, calibrated to Chilean strong motion data
     """
-
-    def _compute_magnitude_term(self, C, dc1, mag):
-        """
-        Computes the magnitude scaling term given by equations (2) and (3),
-        corrected by a local adjustment factor - see documentation for
-        interface version for changes
-        """
-        base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = C['theta5'] * (mag - dmag)
-
-        else:
-            f_mag = C['theta4'] * (mag - dmag)
-        return base + f_mag
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (4)
-        """
-        return ((C['theta2'] + C['theta14'] + C['theta3'] *
-                (mag - CONSTS["C1"])) *
-                np.log(dists.rhypo + CONSTS['c4'] *
-                np.exp((mag - 6.) * CONSTS['theta9'])) +
-                (C['theta6'] * dists.rhypo)) + C["theta10"]
+    kind = "montalva17"
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt       vlin       b        theta1         theta2        theta3         theta4         theta5         theta6   theta7  theta8      theta10      theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_S2S

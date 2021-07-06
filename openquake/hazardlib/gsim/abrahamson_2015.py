@@ -44,6 +44,63 @@ CONSTS = {
     'C1': 7.8
 }
 
+C1 = 7.2  # for Montalva2017
+
+
+def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
+    """
+    Computes the magnitude scaling term given by equation (2)
+    corrected by a local adjustment factor
+    """
+    base = theta1 + theta4 * dc1
+    dmag = C1 + dc1
+    if mag > dmag:
+        f_mag = theta5 * (mag - dmag) + theta13 * (10. - mag) ** 2.
+    else:
+        f_mag = theta4 * (mag - dmag) + theta13 * (10. - mag) ** 2.
+    return base + f_mag
+
+
+# theta6_adj used in BCHydro
+def _compute_disterm(trt, C1, theta2, theta14, theta3, mag, dists, c4, theta9,
+                     theta6_adj, theta6, theta10):
+    if trt == const.TRT.SUBDUCTION_INTERFACE:
+        dists = dists.rrup
+        assert theta10 == 0., theta10
+    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
+        dists = dists.rhypo
+    else:
+        raise NotImplementedError(trt)
+    return ((theta2 + theta14 + theta3 * (mag - C1)) * np.log(
+        dists + c4 * np.exp((mag - 6.) * theta9)) +
+            ((theta6_adj + theta6) * dists)) + theta10
+
+
+def _compute_forearc_backarc_term(trt, faba_model, C, sites, dists):
+    if trt == const.TRT.SUBDUCTION_INTERFACE:
+        dists = dists.rrup
+        a, b = C['theta15'], C['theta16']
+        min_dist = 100.
+    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
+        dists = dists.rhypo
+        a, b = C['theta7'], C['theta8']
+        min_dist = 85.
+    else:
+        raise NotImplementedError(trt)
+    if faba_model is None:
+        f_faba = np.zeros_like(dists)
+        # Term only applies to backarc sites (F_FABA = 0. for forearc)
+        fixed_dists = dists[sites.backarc]
+        fixed_dists[fixed_dists < min_dist] = min_dist
+        f_faba[sites.backarc] = a + b * np.log(fixed_dists / 40.)
+        return f_faba
+
+    # in BCHydro subclasses
+    fixed_dists = np.copy(dists)
+    fixed_dists[fixed_dists < min_dist] = min_dist
+    f_faba = a + b * np.log(fixed_dists / 40.)
+    return f_faba * faba_model(-sites.xvf)
+
 
 def _get_stddevs(ergodic, C, stddev_types, num_sites):
     """
@@ -66,6 +123,102 @@ def _get_stddevs(ergodic, C, stddev_types, num_sites):
     return stddevs
 
 
+def _compute_distance_term(kind, trt, theta6_adj, C, mag, dists):
+    """
+    Computes the distance scaling term, as contained within equation (1)
+    """
+    if kind.startswith("montalva"):
+        theta3 = C['theta3']
+    else:
+        theta3 = CONSTS['theta3']
+    if kind == "montalva17":
+        C1 = 7.2
+    else:
+        C1 = 7.8
+    if trt == const.TRT.SUBDUCTION_INTERFACE:
+        return _compute_disterm(
+            trt, C1, C['theta2'], 0., theta3, mag, dists, CONSTS['c4'],
+            CONSTS['theta9'], theta6_adj, C['theta6'], theta10=0.)
+    else:  # sslab
+        return _compute_disterm(
+            trt, C1, C['theta2'], C['theta14'], theta3, mag, dists,
+            CONSTS['c4'], CONSTS['theta9'], theta6_adj, C['theta6'],
+            C["theta10"])
+
+
+def _compute_focal_depth_term(trt, C, rup):
+    """
+    Computes the hypocentral depth scaling term - as indicated by
+    equation (3)
+    For interface events F_EVENT = 0.. so no depth scaling is returned.
+    For SSlab events computes the hypocentral depth scaling term as
+    indicated by equation (3)
+    """
+    if trt == const.TRT.SUBDUCTION_INTERFACE:
+        return 0.
+    if rup.hypo_depth > 120.0:
+        z_h = 120.0
+    else:
+        z_h = rup.hypo_depth
+    return C['theta11'] * (z_h - 60.)
+
+
+def _compute_magnitude_term(kind, C, dc1, mag):
+    """
+    Computes the magnitude scaling term given by equation (2)
+    """
+    if kind == "base":
+        return _compute_magterm(
+            CONSTS['C1'], C['theta1'], CONSTS['theta4'],
+            CONSTS['theta5'], C['theta13'], dc1, mag)
+    elif kind == "montalva16":
+        return _compute_magterm(
+            CONSTS['C1'], C['theta1'], C['theta4'],
+            C['theta5'], C['theta13'], dc1, mag)
+    elif kind == "montalva17":
+        return _compute_magterm(C1, C['theta1'], C['theta4'],
+                                C['theta5'], 0., dc1, mag)
+
+
+def _compute_pga_rock(kind, trt, theta6_adj, faba_model,
+                      C, dc1, sites, rup, dists):
+    """
+    Compute and return mean imt value for rock conditions
+    (vs30 = 1000 m/s)
+    """
+    mean = (_compute_magnitude_term(kind, C, dc1, rup.mag) +
+            _compute_distance_term(kind, trt, theta6_adj, C, rup.mag, dists) +
+            _compute_focal_depth_term(trt, C, rup) +
+            _compute_forearc_backarc_term(trt, faba_model, C, sites, dists))
+    # Apply linear site term
+    site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
+                     np.log(1000. / C['vlin']))
+    return mean + site_response
+
+
+def _compute_site_response_term(C, sites, pga1000):
+    """
+    Compute and return site response model term
+    This GMPE adopts the same site response scaling model of
+    Walling et al (2008) as implemented in the Abrahamson & Silva (2008)
+    GMPE. The functional form is retained here.
+    """
+    vs_star = sites.vs30.copy()
+    vs_star[vs_star > 1000.0] = 1000.
+    arg = vs_star / C["vlin"]
+    site_resp_term = C["theta12"] * np.log(arg)
+    # Get linear scaling term
+    idx = sites.vs30 >= C["vlin"]
+    site_resp_term[idx] += (C["b"] * CONSTS["n"] * np.log(arg[idx]))
+    # Get nonlinear scaling term
+    idx = np.logical_not(idx)
+    site_resp_term[idx] += (
+        -C["b"] * np.log(pga1000[idx] + CONSTS["c"]) +
+        C["b"] * np.log(pga1000[idx] + CONSTS["c"] *
+                        (arg[idx] ** CONSTS["n"])))
+    return site_resp_term
+
+
 class AbrahamsonEtAl2015SInter(GMPE):
     """
     Implements the Subduction GMPE developed by Norman Abrahamson, Nicholas
@@ -81,9 +234,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
     model. The current class implements the 'central' model, whilst additional
     classes will implement the 'upper' and 'lower' alternatives.
     """
-
     #: Supported tectonic region type is subduction interface
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+    DEFINED_FOR_TECTONIC_REGION_TYPE = trt = const.TRT.SUBDUCTION_INTERFACE
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
@@ -118,6 +270,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     delta_c1 = None
     kind = "base"
+    theta6_adj = 0.
+    faba_model = None  # overridden in BCHydro
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -140,104 +294,18 @@ class AbrahamsonEtAl2015SInter(GMPE):
             dc1 = dc1_pga = self.delta_c1
         # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
-        pga1000 = np.exp(
-            self._compute_pga_rock(C_PGA, dc1_pga, sites, rup, dists))
-        mean = (self._compute_magnitude_term(C, dc1, rup.mag) +
-                self._compute_distance_term(C, rup.mag, dists) +
-                self._compute_focal_depth_term(C, rup) +
-                self._compute_forearc_backarc_term(C, sites, dists) +
-                self._compute_site_response_term(C, sites, pga1000))
+        pga1000 = np.exp(_compute_pga_rock(
+            self.kind, self.trt, self.theta6_adj, self.faba_model,
+            C_PGA, dc1_pga, sites, rup, dists))
+        mean = (_compute_magnitude_term(self.kind, C, dc1, rup.mag) +
+                _compute_distance_term(self.kind, self.trt, self.theta6_adj,
+                                       C, rup.mag, dists) +
+                _compute_focal_depth_term(self.trt, C, rup) +
+                _compute_forearc_backarc_term(self.trt, self.faba_model,
+                                              C, sites, dists) +
+                _compute_site_response_term(C, sites, pga1000))
         stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
-
-    def _compute_pga_rock(self, C, dc1, sites, rup, dists):
-        """
-        Compute and return mean imt value for rock conditions
-        (vs30 = 1000 m/s)
-        """
-        mean = (self._compute_magnitude_term(C, dc1, rup.mag) +
-                self._compute_distance_term(C, rup.mag, dists) +
-                self._compute_focal_depth_term(C, rup) +
-                self._compute_forearc_backarc_term(C, sites, dists))
-        # Apply linear site term
-        site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
-                         np.log(1000. / C['vlin']))
-        return mean + site_response
-
-    def _compute_magnitude_term(self, C, dc1, mag):
-        """
-        Computes the magnitude scaling term given by equation (2)
-        """
-        base = C['theta1'] + (CONSTS['theta4'] * dc1)
-        dmag = CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = (CONSTS['theta5'] * (mag - dmag)) +\
-                C['theta13'] * ((10. - mag) ** 2.)
-
-        else:
-            f_mag = (CONSTS['theta4'] * (mag - dmag)) +\
-                C['theta13'] * ((10. - mag) ** 2.)
-
-        return base + f_mag
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return (C['theta2'] + CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
-                   CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
-
-    def _compute_focal_depth_term(self, C, rup):
-        """
-        Computes the hypocentral depth scaling term - as indicated by
-        equation (3)
-        For interface events F_EVENT = 0.. so no depth scaling is returned.
-        For SSlab events computes the hypocentral depth scaling term as
-        indicated by equation (3)
-        """
-        if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
-                const.TRT.SUBDUCTION_INTERFACE):
-            return 0.
-        if rup.hypo_depth > 120.0:
-            z_h = 120.0
-        else:
-            z_h = rup.hypo_depth
-        return C['theta11'] * (z_h - 60.)
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4)
-        """
-        f_faba = np.zeros_like(dists.rrup)
-        # Term only applies to backarc sites (F_FABA = 0. for forearc)
-        max_dist = dists.rrup[sites.backarc]
-        max_dist[max_dist < 100.0] = 100.0
-        f_faba[sites.backarc] = C['theta15'] + \
-            (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba
-
-    def _compute_site_response_term(self, C, sites, pga1000):
-        """
-        Compute and return site response model term
-        This GMPE adopts the same site response scaling model of
-        Walling et al (2008) as implemented in the Abrahamson & Silva (2008)
-        GMPE. The functional form is retained here.
-        """
-        vs_star = sites.vs30.copy()
-        vs_star[vs_star > 1000.0] = 1000.
-        arg = vs_star / C["vlin"]
-        site_resp_term = C["theta12"] * np.log(arg)
-        # Get linear scaling term
-        idx = sites.vs30 >= C["vlin"]
-        site_resp_term[idx] += (C["b"] * CONSTS["n"] * np.log(arg[idx]))
-        # Get nonlinear scaling term
-        idx = np.logical_not(idx)
-        site_resp_term[idx] += (
-            -C["b"] * np.log(pga1000[idx] + CONSTS["c"]) +
-            C["b"] * np.log(pga1000[idx] + CONSTS["c"] *
-                            (arg[idx] ** CONSTS["n"])))
-        return site_resp_term
 
     # Period-dependent coefficients (Table 3)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -331,7 +399,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     and the hypocentral depth is used to scale the ground motion by depth
     """
     #: Supported tectonic region type is subduction in-slab
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+    DEFINED_FOR_TECTONIC_REGION_TYPE = trt = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Required distance measure is hypocentral for in-slab events
     REQUIRES_DISTANCES = {'rhypo'}
@@ -340,27 +408,6 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     delta_c1 = -0.3
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1b)
-        """
-        return ((C['theta2'] + C['theta14'] + CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
-                np.exp((mag - 6.) * CONSTS['theta9'])) +
-                (C['theta6'] * dists.rhypo)) + C["theta10"]
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4).
-        """
-        f_faba = np.zeros_like(dists.rhypo)
-        # Term only applies to backarc sites (F_FABA = 0. for forearc)
-        max_dist = dists.rhypo[sites.backarc]
-        max_dist[max_dist < 85.0] = 85.0
-        f_faba[sites.backarc] = C['theta7'] +\
-            (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba
 
 
 class AbrahamsonEtAl2015SSlabHigh(AbrahamsonEtAl2015SSlab):
