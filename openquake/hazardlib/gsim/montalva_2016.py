@@ -20,15 +20,11 @@
 Module exports :class:`MontalvaEtAl2016SInter`
                :class:`MontalvaEtAl2016SSlab`
 """
-import numpy as np
-
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.abrahamson_2015 import (
-    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS,
-    _get_stddevs, _compute_magterm, _compute_disterm)
-from openquake.hazardlib.gsim.montalva_2017 import (MontalvaEtAl2017SInter,
-                                                    MontalvaEtAl2017SSlab)
+    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab)
+from openquake.hazardlib.gsim.montalva_2017 import (
+    MontalvaEtAl2017SInter, MontalvaEtAl2017SSlab)
 
 
 class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
@@ -50,29 +46,6 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
     """
     superseded_by = MontalvaEtAl2017SInter
     kind = "montalva16"
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
-        C_PGA = self.COEFFS[PGA()]
-        dc1_pga = C_PGA["DC1"]
-        # compute median pga on rock (vs30=1000), needed for site response
-        # term calculation
-        pga1000 = np.exp(
-            self._compute_pga_rock(C_PGA, dc1_pga, sites, rup, dists))
-        mean = (self._compute_magnitude_term(C, C["DC1"], rup.mag) +
-                self._compute_distance_term(C, rup.mag, dists) +
-                self._compute_focal_depth_term(C, rup) +
-                self._compute_forearc_backarc_term(C, sites, dists) +
-                self._compute_site_response_term(C, sites, pga1000))
-        stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
-        return mean, stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt              DC1     vlin       b        theta1         theta2        theta3         theta4         theta5         theta6    theta7  theta8       theta10        theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_s2s
@@ -116,31 +89,8 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
     hazard models using this implementation
     """
     superseded_by = MontalvaEtAl2017SSlab
-    kind = "montalva16"
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
-        # For inslab GMPEs the correction term is fixed at -0.3
-        dc1 = -0.3
-        C_PGA = self.COEFFS[PGA()]
-        # compute median pga on rock (vs30=1000), needed for site response
-        # term calculation
-        pga1000 = np.exp(
-            self._compute_pga_rock(C_PGA, dc1, sites, rup, dists))
-        mean = (self._compute_magnitude_term(C, dc1, rup.mag) +
-                self._compute_distance_term(C, rup.mag, dists) +
-                self._compute_focal_depth_term(C, rup) +
-                self._compute_forearc_backarc_term(C, sites, dists) +
-                self._compute_site_response_term(C, sites, pga1000))
-        stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
-        return mean, stddevs
+    kind = "montalva16"
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt              DC1    vlin        b        theta1         theta2        theta3         theta4         theta5         theta6    theta7  theta8       theta10        theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_s2s

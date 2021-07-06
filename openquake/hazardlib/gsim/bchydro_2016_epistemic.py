@@ -504,7 +504,6 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
-
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
