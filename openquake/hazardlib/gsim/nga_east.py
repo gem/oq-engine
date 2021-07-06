@@ -531,12 +531,12 @@ def get_stddevs(self, mag, imt, stddev_types, num_sites):
     if self.__class__.__name__.endswith('TotalSigma'):
         for stddev_type in stddev_types:
             if stddev_type == const.StdDev.TOTAL:
-                sigma = self._get_total_sigma(imt, mag)
+                sigma = _get_total_sigma(self, imt, mag)
                 stddevs.append(sigma + np.zeros(num_sites))
         return stddevs
     # else compute all stddevs
-    tau = self._get_tau(imt, mag)
-    phi = self._get_phi(imt, mag)
+    tau = _get_tau(self, imt, mag)
+    phi = _get_phi(self, imt, mag)
     sigma = np.sqrt(tau ** 2. + phi ** 2.)
     for stddev_type in stddev_types:
         if stddev_type == const.StdDev.TOTAL:
@@ -646,6 +646,8 @@ class NGAEastGMPE(GMPETable):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
     # Requires Vs30 only - common to all models
     REQUIRES_SITES_PARAMETERS = {'vs30'}
+
+    kind = "nga_east"
 
     def __init__(self, **kwargs):
         """
@@ -853,8 +855,8 @@ def _get_sigma_at_quantile(self, sigma_quantile):
     else:
         imt_list = list(phi_std)
     phi_std = CoeffsTable.fromdict(phi_std)
-    tau_bar, tau_std = self._get_tau_vector(self.TAU, tau_std, imt_list)
-    phi_bar, phi_std = self._get_phi_vector(self.PHI_SS, phi_std, imt_list)
+    tau_bar, tau_std = _get_tau_vector(self, self.TAU, tau_std, imt_list)
+    phi_bar, phi_std = _get_phi_vector(self, self.PHI_SS, phi_std, imt_list)
     sigma = {}
     # Calculate the total standard deviation
     for imt in imt_list:

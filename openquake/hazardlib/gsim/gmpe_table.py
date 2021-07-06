@@ -41,7 +41,7 @@ from openquake.baselib.python3compat import round
 _get_mean = CallableDict()
 
 
-@_get_mean.add("base")
+@_get_mean.add("base", "nga_east")
 def _get_mean_base(kind, distance_type, data, dctx, dists):
     """
     Returns the mean intensity measure level from the tables
@@ -481,7 +481,7 @@ class GMPETable(GMPE):
 
             # Load in standard deviations
             self.stddevs = {}
-            if self.kind == "usgs":
+            if self.kind in "nga_east usgs":
                 # there are no stddevs in the hdf5 file
                 return
             self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
