@@ -904,7 +904,6 @@ def _get_phi_vector(self, phi_mean, phi_std, imt_list):
     """
     p_bar = {}
     p_std = {}
-
     for imt in imt_list:
         p_bar[imt] = []
         p_std[imt] = []

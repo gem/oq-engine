@@ -478,12 +478,12 @@ class GMPETable(GMPE):
             if "SA" in self.imls and "T" not in self.imls:
                 raise ValueError("Spectral Acceleration must be accompanied by"
                                  " periods")
-            if self.kind == "usgs":
-                # there are no stddevs in the hdf5 file
-                return
 
             # Load in standard deviations
             self.stddevs = {}
+            if self.kind == "usgs":
+                # there are no stddevs in the hdf5 file
+                return
             self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
