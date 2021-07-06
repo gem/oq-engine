@@ -48,16 +48,6 @@ class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
     """
     kind = "montalva17"
 
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (4).
-        Note this is overwriting the Abrahamson et al (2016) version as
-        theta3 is now period dependent
-        """
-        return (C['theta2'] + C['theta3'] * (mag - CONSTS["C1"])) *\
-            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
-                   CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
-
     # Coefficients table taken from electronic supplement to Montalva et al.
     # (2017)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -130,16 +120,6 @@ class MontalvaEtAl2017SSlab(AbrahamsonEtAl2015SSlab):
     GMPE, calibrated to Chilean strong motion data
     """
     kind = "montalva17"
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (4)
-        """
-        return ((C['theta2'] + C['theta14'] + C['theta3'] *
-                (mag - CONSTS["C1"])) *
-                np.log(dists.rhypo + CONSTS['c4'] *
-                np.exp((mag - 6.) * CONSTS['theta9'])) +
-                (C['theta6'] * dists.rhypo)) + C["theta10"]
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt       vlin       b        theta1         theta2        theta3         theta4         theta5         theta6   theta7  theta8      theta10      theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_S2S

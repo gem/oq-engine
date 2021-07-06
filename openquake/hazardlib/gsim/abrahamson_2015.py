@@ -218,16 +218,18 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         if self.kind == "montalva17":
             C1 = 7.2
+            theta3 = C['theta3']
         else:
             C1 = 7.8
+            theta3 = CONSTS['theta3']
         if self.trt == const.TRT.SUBDUCTION_INTERFACE:
             return _compute_disterm(
-                self.trt, C1, C['theta2'], 0., CONSTS['theta3'], mag, dists,
+                self.trt, C1, C['theta2'], 0., theta3, mag, dists,
                 CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
                 C['theta6'], theta10=0.)
         else:  # sslab
             return _compute_disterm(
-                self.trt, C1, C['theta2'], C['theta14'], CONSTS['theta3'], mag,
+                self.trt, C1, C['theta2'], C['theta14'], theta3, mag,
                 dists, CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
                 C['theta6'], C["theta10"])
 
