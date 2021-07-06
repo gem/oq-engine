@@ -23,10 +23,39 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
-
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+
+def _get_distance_term(C, rrup, mag):
+    """
+    Returns the distance scaling given in Equation (4), page 1569,
+    with distance adjusted by the magnitude-dependent depth scaling
+    factor given in Equation (6)
+    """
+    r_adj = np.sqrt(rrup ** 2.0 + (mag ** 2.0 - 3.1 * mag - 14.55) ** 2.)
+    return C["c1"] * np.log10(r_adj) + C["c2"] * r_adj
+
+
+def _get_magnitude_term(C, mag):
+    """
+    Returns the magnitude scaling term provided in Equation (5)
+    """
+    dmag = mag - 8.0
+    return C["c0"] + C["c3"] * dmag + C["c4"] * (dmag ** 2.)
+
+
+def _get_stddevs(C, num_sites, stddev_types):
+    """
+    Returns the total standard deviation, converting from log10 to log
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(
+                np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
+    return stddevs
 
 
 class AtkinsonMacias2009(GMPE):
@@ -69,41 +98,13 @@ class AtkinsonMacias2009(GMPE):
         """
         C = self.COEFFS[imt]
 
-        imean = (self._get_magnitude_term(C, rup.mag) +
-                 self._get_distance_term(C, dists.rrup, rup.mag))
+        imean = (_get_magnitude_term(C, rup.mag) +
+                 _get_distance_term(C, dists.rrup, rup.mag))
         # Convert mean from cm/s and cm/s/s and from common logarithm to
         # natural logarithm
         mean = np.log((10.0 ** (imean - 2.0)) / g)
-        stddevs = self._get_stddevs(C, len(dists.rrup), stddev_types)
+        stddevs = _get_stddevs(C, len(dists.rrup), stddev_types)
         return mean, stddevs
-
-    def _get_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term provided in Equation (5)
-        """
-        dmag = mag - 8.0
-        return C["c0"] + C["c3"] * dmag + C["c4"] * (dmag ** 2.)
-
-    def _get_distance_term(self, C, rrup, mag):
-        """
-        Returns the distance scaling given in Equation (4), page 1569,
-        with distance adjusted by the magnitude-dependent depth scaling
-        factor given in Equation (6)
-        """
-        r_adj = np.sqrt(rrup ** 2.0 + (mag ** 2.0 - 3.1 * mag - 14.55) ** 2.)
-        return C["c1"] * np.log10(r_adj) + C["c2"] * r_adj
-
-    def _get_stddevs(self, C, num_sites, stddev_types):
-        """
-        Returns the total standard deviation, converting from log10 to log
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(
-                    np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-        return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT            c0        c1          c2       c3        c4  sigma

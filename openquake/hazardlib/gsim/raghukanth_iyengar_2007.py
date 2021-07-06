@@ -32,6 +32,103 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
+CONSTS = {'ref_mag': 6., 'vs_bedrock': 3600.}
+
+
+def _compute_distance_terms(dists, coeffs):
+    """
+    Fourth and fifth terms of equation (8) on p. 203:
+
+    ``- ln(R) - c4*R``
+    """
+    return - np.log(dists.rhypo) - coeffs['c4']*dists.rhypo
+
+
+def _compute_magnitude_terms(rup, coeffs):
+    """
+    First three terms of equation (8) on p. 203:
+
+    ``c1 + c2*(M - 6) + c3*(M - 6)**2``
+    """
+    adj_mag = rup.mag - CONSTS['ref_mag']
+    return coeffs['c1'] + coeffs['c2']*adj_mag + coeffs['c3']*adj_mag**2
+
+
+def _compute_site_amplification(ln_mean_bedrock, coeffs):
+    """
+    Equation (9) on p. 207 gives the site amplification factor:
+
+    ``ln(F_s) = a1*y_br + a2 + ln(δ_site)``
+    """
+    return coeffs['a1']*np.exp(ln_mean_bedrock) + coeffs['a2']
+
+
+def _get_site_coeffs(NEHRP, NEHRP_UPPER, sites, imt):
+    """
+    Extracts correct coefficients for each site from Table 5 on p. 208
+    for each site.
+
+    :raises UserWarning:
+        If vs30 is below limit for site class D, since "E- and F-type
+        sites [...] are susceptible for liquefaction and failure." p. 205.
+    """
+
+    site_classes = get_nehrp_classes(NEHRP_UPPER, sites)
+    is_rock = is_bedrock(sites)
+
+    if 'E' in site_classes:
+        warnings.warn('Site class E and F not supported', UserWarning)
+
+    a_1 = np.nan*np.ones_like(sites.vs30)
+    a_2 = np.nan*np.ones_like(sites.vs30)
+    sigma = np.nan*np.ones_like(sites.vs30)
+    for key in NEHRP:
+        indices = (site_classes == key) & ~is_rock
+        a_1[indices] = NEHRP[key][imt]['a1']
+        a_2[indices] = NEHRP[key][imt]['a2']
+        sigma[indices] = NEHRP[key][imt]['sigma']
+
+    a_1[is_rock] = 0.
+    a_2[is_rock] = 0.
+    sigma[is_rock] = 0.
+
+    return (a_1, a_2, sigma)
+
+
+def _get_stddevs(coeffs, stddev_types):
+    """
+    Equation (11) on p. 207 for total standard error at a given site:
+
+    ``σ{ln(ε_site)} = sqrt(σ{ln(ε_br)}**2 + σ{ln(δ_site)}**2)``
+    """
+    return np.sqrt(coeffs['sigma_bedrock']**2 + coeffs['sigma_site']**2)
+
+
+def get_nehrp_classes(NEHRP_VS30_UPPER_BOUNDS, sites):
+    """
+    Site classification threshholds from Section 4 "Site correction
+    coefficients" p. 205. Note that site classes E and F are not
+    supported.
+    """
+
+    classes = sorted(NEHRP_VS30_UPPER_BOUNDS)
+    bounds = [NEHRP_VS30_UPPER_BOUNDS[item] for item in classes]
+    bounds = np.reshape(np.array(bounds), (-1, 1))
+    vs30s = np.reshape(sites.vs30, (1, -1))
+    site_classes = np.choose((vs30s < bounds).sum(axis=0) - 1, classes)
+
+    return site_classes.astype('object')
+
+
+def is_bedrock(sites):
+    """
+    A threshhold is not explicitly defined but the intention can be
+    inferred from the statement that "The above results are valid at the
+    bedrock level, with Vs nearly equal to 3.6 km/s." p. 203
+    """
+
+    return sites.vs30 > CONSTS['vs_bedrock']
+
 
 class RaghukanthIyengar2007(GMPE):
     """
@@ -143,7 +240,8 @@ class RaghukanthIyengar2007(GMPE):
 
         """
         # obtain site-class specific coefficients
-        a_1, a_2, sigma_site = self._get_site_coeffs(sites, imt)
+        a_1, a_2, sigma_site = _get_site_coeffs(
+            self.COEFFS_NEHRP, self.NEHRP_VS30_UPPER_BOUNDS, sites, imt)
         coeffs = {'a1': a_1, 'a2': a_2, 'sigma_site': sigma_site}
 
         # obtain coefficients for required intensity measure type
@@ -152,112 +250,16 @@ class RaghukanthIyengar2007(GMPE):
             coeffs[n] = c[n]
 
         # compute bedrock motion, equation (8)
-        ln_mean = (self._compute_magnitude_terms(rup, coeffs) +
-                   self._compute_distance_terms(dists, coeffs))
+        ln_mean = (_compute_magnitude_terms(rup, coeffs) +
+                   _compute_distance_terms(dists, coeffs))
 
         # adjust for site class, equation (10)
-        ln_mean += self._compute_site_amplification(ln_mean, coeffs)
+        ln_mean += _compute_site_amplification(ln_mean, coeffs)
         # No need to convert to g since "In [equation (8)], y_br = (SA/g)"
 
-        ln_stddevs = self._get_stddevs(coeffs, stddev_types)
+        ln_stddevs = _get_stddevs(coeffs, stddev_types)
 
         return ln_mean, [ln_stddevs]
-
-    def _compute_magnitude_terms(self, rup, coeffs):
-        """
-        First three terms of equation (8) on p. 203:
-
-        ``c1 + c2*(M - 6) + c3*(M - 6)**2``
-        """
-
-        adj_mag = rup.mag - self.CONSTS['ref_mag']
-        return coeffs['c1'] + coeffs['c2']*adj_mag + coeffs['c3']*adj_mag**2
-
-    @classmethod
-    def _compute_distance_terms(cls, dists, coeffs):
-        """
-        Fourth and fifth terms of equation (8) on p. 203:
-
-        ``- ln(R) - c4*R``
-        """
-        return - np.log(dists.rhypo) - coeffs['c4']*dists.rhypo
-
-    @classmethod
-    def _compute_site_amplification(cls, ln_mean_bedrock, coeffs):
-        """
-        Equation (9) on p. 207 gives the site amplification factor:
-
-        ``ln(F_s) = a1*y_br + a2 + ln(δ_site)``
-        """
-        return coeffs['a1']*np.exp(ln_mean_bedrock) + coeffs['a2']
-
-    def _get_stddevs(self, coeffs, stddev_types):
-        """
-        Equation (11) on p. 207 for total standard error at a given site:
-
-        ``σ{ln(ε_site)} = sqrt(σ{ln(ε_br)}**2 + σ{ln(δ_site)}**2)``
-        """
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-
-        return np.sqrt(coeffs['sigma_bedrock']**2 + coeffs['sigma_site']**2)
-
-    def _get_site_coeffs(self, sites, imt):
-        """
-        Extracts correct coefficients for each site from Table 5 on p. 208
-        for each site.
-
-        :raises UserWarning:
-            If vs30 is below limit for site class D, since "E- and F-type
-            sites [...] are susceptible for liquefaction and failure." p. 205.
-        """
-
-        site_classes = self.get_nehrp_classes(sites)
-        is_bedrock = self.is_bedrock(sites)
-
-        if 'E' in site_classes:
-            msg = ('Site class E and F not supported by %s'
-                   % type(self).__name__)
-            warnings.warn(msg, UserWarning)
-
-        a_1 = np.nan*np.ones_like(sites.vs30)
-        a_2 = np.nan*np.ones_like(sites.vs30)
-        sigma = np.nan*np.ones_like(sites.vs30)
-        for key in self.COEFFS_NEHRP.keys():
-            indices = (site_classes == key) & ~is_bedrock
-            a_1[indices] = self.COEFFS_NEHRP[key][imt]['a1']
-            a_2[indices] = self.COEFFS_NEHRP[key][imt]['a2']
-            sigma[indices] = self.COEFFS_NEHRP[key][imt]['sigma']
-
-        a_1[is_bedrock] = 0.
-        a_2[is_bedrock] = 0.
-        sigma[is_bedrock] = 0.
-
-        return (a_1, a_2, sigma)
-
-    def is_bedrock(self, sites):
-        """
-        A threshhold is not explicitly defined but the intention can be
-        inferred from the statement that "The above results are valid at the
-        bedrock level, with Vs nearly equal to 3.6 km/s." p. 203
-        """
-
-        return sites.vs30 > self.CONSTS['vs_bedrock']
-
-    def get_nehrp_classes(self, sites):
-        """
-        Site classification threshholds from Section 4 "Site correction
-        coefficients" p. 205. Note that site classes E and F are not
-        supported.
-        """
-
-        classes = sorted(self.NEHRP_VS30_UPPER_BOUNDS.keys())
-        bounds = [self.NEHRP_VS30_UPPER_BOUNDS[item] for item in classes]
-        bounds = np.reshape(np.array(bounds), (-1, 1))
-        vs30s = np.reshape(sites.vs30, (1, -1))
-        site_classes = np.choose((vs30s < bounds).sum(axis=0) - 1, classes)
-
-        return site_classes.astype('object')
 
     #: Coefficients taken from Table 3, p. 205.
     COEFFS_BEDROCK = CoeffsTable(sa_damping=5., table="""\
@@ -291,11 +293,6 @@ class RaghukanthIyengar2007(GMPE):
     3.000 -1.4468  2.1632 -0.2737  0.0011  0.3493
     4.000 -2.0090  2.2644 -0.2350  0.0011  0.3182
     """)
-
-    CONSTS = {
-        'ref_mag': 6.,
-        'vs_bedrock': 3600.,
-    }
 
     #: Site class coefficients taken from Table 5, p. 208.
     COEFFS_NEHRP = {

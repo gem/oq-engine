@@ -23,12 +23,10 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.base import (RuptureContext,
                                            SitesContext,
                                            DistancesContext)
-from openquake.hazardlib.gsim.tromans_2019 import (TromansEtAl2019,
-                                                   TromansEtAl2019SigmaMu,
-                                                   HOMOSKEDASTIC_PHI,
-                                                   HOMOSKEDASTIC_TAU,
-                                                   HETEROSKEDASTIC_PHI,
-                                                   HETEROSKEDASTIC_TAU)
+from openquake.hazardlib.gsim.tromans_2019 import (
+    TromansEtAl2019, TromansEtAl2019SigmaMu, HOMOSKEDASTIC_PHI,
+    HOMOSKEDASTIC_TAU, HETEROSKEDASTIC_PHI, HETEROSKEDASTIC_TAU,
+    get_alatik_youngs_sigma_mu)
 
 
 class SigmaFunctionsTestCase(unittest.TestCase):
@@ -211,19 +209,19 @@ class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
 
     def test_alatik_youngs_factors(self):
         self.assertAlmostEqual(
-            self.gsim.get_alatik_youngs_sigma_mu(5.0, -90., PGA()),
+            get_alatik_youngs_sigma_mu(5.0, -90., PGA()),
             0.121)
         self.assertAlmostEqual(
-            self.gsim.get_alatik_youngs_sigma_mu(5.0, -90., SA(0.5)),
+            get_alatik_youngs_sigma_mu(5.0, -90., SA(0.5)),
             0.121)
         self.assertAlmostEqual(
-            self.gsim.get_alatik_youngs_sigma_mu(7.5, -90., SA(0.5)),
+            get_alatik_youngs_sigma_mu(7.5, -90., SA(0.5)),
             0.149)
         self.assertAlmostEqual(
-            self.gsim.get_alatik_youngs_sigma_mu(5.0, -90., SA(np.exp(1))),
+            get_alatik_youngs_sigma_mu(5.0, -90., SA(np.exp(1))),
             0.1381)
         self.assertAlmostEqual(
-            self.gsim.get_alatik_youngs_sigma_mu(5.0, 90., SA(0.2)),
+            get_alatik_youngs_sigma_mu(5.0, 90., SA(0.2)),
             0.083)
 
     def test_sigma_mu_scaling(self):

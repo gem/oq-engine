@@ -1089,7 +1089,10 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
-        imts = set(from_string(imt).name for imt in self.imtls)
+        imts = set()
+        for imt in self.imtls:
+            im = from_string(imt)
+            imts.add("SA" if imt.startswith("SA") else im.string)
         for gsim in gsims:
             if hasattr(gsim, 'weight'):  # disable the check
                 continue

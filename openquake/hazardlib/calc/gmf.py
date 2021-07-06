@@ -233,6 +233,7 @@ class GmfComputer(object):
         num_sids = len(self.sids)
         num_outs = len(mean_stds)
         if num_outs == 1:
+            # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')

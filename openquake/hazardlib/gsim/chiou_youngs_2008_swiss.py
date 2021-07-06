@@ -27,8 +27,27 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS01, COEFFS_FS_ROCK_SWISS06, COEFFS_FS_ROCK_SWISS04)
-from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
+from openquake.hazardlib.gsim.chiou_youngs_2008 import (
+    ChiouYoungs2008, _get_ln_y_ref)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
+
+
+def get_nl(C, ln_y_ref, exp1, exp2):
+    # b and c coeffs from eq. 10
+    b = C['phi2'] * (exp1 - exp2)
+    c = C['phi4']
+
+    y_ref = np.exp(ln_y_ref)
+    # eq. 20
+    NL = b * y_ref / (y_ref + c)
+    return NL
+
+
+def get_tau(C, rup):
+    # eq. 19 to calculate inter-event standard error
+    mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
+    tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
+    return tau
 
 
 class ChiouYoungs2008SWISS01(ChiouYoungs2008):
@@ -69,17 +88,16 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
             sites, rup, dists, imt, stddev_types)
 
         log_phi_ss = 1
-        tau = self.get_tau(ChiouYoungs2008.COEFFS[imt], rup)
+        tau = get_tau(ChiouYoungs2008.COEFFS[imt], rup)
 
-        ln_y_ref = super()._get_ln_y_ref(
-            rup, dists, ChiouYoungs2008.COEFFS[imt])
+        ln_y_ref = _get_ln_y_ref(rup, dists, ChiouYoungs2008.COEFFS[imt])
 
         exp1 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] *
                       (sites.vs30.clip(-np.inf, 1130) - 360))
 
         exp2 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] * (1130 - 360))
 
-        nl = self.get_nl(ChiouYoungs2008.COEFFS[imt], ln_y_ref, exp1, exp2)
+        nl = get_nl(ChiouYoungs2008.COEFFS[imt], ln_y_ref, exp1, exp2)
 
         mean, stddevs = _apply_adjustments(
             ChiouYoungs2008.COEFFS, self.COEFFS_FS_ROCK[imt], 1,
@@ -88,42 +106,22 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
         return mean, stddevs
 
-    def get_tau(self, C, rup):
-        # eq. 19 to calculate inter-event standard error
-        mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
-        tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
-        return tau
-
-    def get_nl(self, C, ln_y_ref, exp1, exp2):
-        # b and c coeffs from eq. 10
-        b = C['phi2'] * (exp1 - exp2)
-        c = C['phi4']
-
-        y_ref = np.exp(ln_y_ref)
-        # eq. 20
-        NL = b * y_ref / (y_ref + c)
-        return NL
-
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
 
 class ChiouYoungs2008SWISS06(ChiouYoungs2008SWISS01):
-
     """
     This class extends :class:ChiouYoungs2008,following same strategy
     as for :class:ChiouYoungs2008SWISS01 to be used for the
     Swiss Hazard Model [2014].
     """
-
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS06
 
 
 class ChiouYoungs2008SWISS04(ChiouYoungs2008SWISS01):
-
     """
     This class extends :class:ChiouYoungs2008,following same strategy
     as for :class:ChiouYoungs2008SWISS01 to be used for the
     Swiss Hazard Model [2014].
     """
-
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04

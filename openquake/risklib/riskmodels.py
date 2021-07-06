@@ -782,7 +782,12 @@ class CompositeRiskModel(collections.abc.Mapping):
                 rf = rm.risk_functions[lt, 'vulnerability']
                 out = rf.interpolate(gmf_df, alias.get(imt, imt))
                 outs.append(out)
-            dic[lt] = stats.average_df(outs, weights)
+            if len(outs) > 1:
+                dic[lt] = stats.average_df(outs, weights)
+                # ARGHH! doing the average on the eid field produces floats!
+                dic[lt].eid = U32(numpy.round(dic[lt].eid))
+            else:
+                dic[lt] = outs[0]
         return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):

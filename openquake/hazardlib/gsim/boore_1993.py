@@ -28,6 +28,14 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = [np.zeros(num_sites) + C['sigma'] for _ in stddev_types]
+    return stddevs
+
+
 class BooreEtAl1993GSCBest(GMPE):
     """
     Implement equation used by the Geological Survey of Canada (GSC) for
@@ -45,19 +53,14 @@ class BooreEtAl1993GSCBest(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is random horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.RANDOM_HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RANDOM_HORIZONTAL
 
     #: Supported standard deviation type is total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: site params are not required
     REQUIRES_SITES_PARAMETERS = set()
@@ -93,18 +96,9 @@ class BooreEtAl1993GSCBest(GMPE):
         # convert from log10 to ln and from cm/s**2 to g
         mean = np.log((10.0 ** (mean - 2.0)) / g)
 
-        stddevs = self._get_stddevs(C, stddev_types,  dists.rjb.shape[0])
+        stddevs = _get_stddevs(C, stddev_types,  dists.rjb.shape[0])
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        stddevs = [np.zeros(num_sites) + C['sigma'] for _ in stddev_types]
-        return stddevs
 
     #: coefficient table provided by GSC
     COEFFS = CoeffsTable(sa_damping=5, table="""\

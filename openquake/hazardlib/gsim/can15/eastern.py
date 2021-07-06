@@ -15,10 +15,86 @@ from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.pezeshk_2011 import PezeshkEtAl2011
 from openquake.hazardlib.gsim.boore_atkinson_2011 import Atkinson2008prime
-from openquake.hazardlib.gsim.atkinson_boore_2006 import \
+from openquake.hazardlib.gsim.boore_atkinson_2008 import \
     AtkinsonBoore2006Modified2011
 from openquake.hazardlib.gsim.silva_2002 import (
-    SilvaEtAl2002DoubleCornerSaturation, SilvaEtAl2002SingleCornerSaturation)
+    SilvaEtAl2002SingleCornerSaturation)
+
+
+def _get_delta(stds, dists):
+    """
+    Computes the additional delta to be used for the computation of the
+    upp and low models
+    """
+    delta = np.maximum((0.1-0.001*dists.repi), np.zeros_like(dists.repi))
+    return delta
+
+
+def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    """
+    Returns only the mean values.
+
+    See documentation for method `GroundShakingIntensityModel` in
+    :class:~`openquake.hazardlib.gsim.base.GSIM`
+    """
+    g = self.gsims
+    cff = self.COEFFS_SITE[imt]
+
+    # distances
+    distsl = copy.copy(dists)
+    distsl.rjb, distsl.rrup = utils.get_equivalent_distances_east(
+        rup.mag, dists.repi)
+
+    # Pezeshk et al. 2011 - Rrup
+    mean1, stds1 = PezeshkEtAl2011.get_mean_and_stddevs(
+        self, sites, rup, distsl, imt, stddev_types)
+    mean1 = apply_correction_to_BC(cff, mean1, imt, distsl)
+    #
+    # Atkinson 2008 - Rjb
+    mean2, stds2 = g[0].get_mean_and_stddevs(sites, rup, distsl, imt,
+                                             stddev_types)
+    #
+    # Silva et al. 2002 - Rjb
+    gmpe = SilvaEtAl2002SingleCornerSaturation()
+    mean4, stds4 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
+                                             stddev_types)
+    mean4 = apply_correction_to_BC(cff, mean4, imt, distsl)
+    #
+    # Silva et al. 2002 - Rjb
+    mean5, stds5 = g[1].get_mean_and_stddevs(sites, rup, distsl, imt,
+                                             stddev_types)
+    mean5 = apply_correction_to_BC(cff, mean5, imt, distsl)
+    #
+    # distances
+    distsl.rjb, distsl.rrup = utils.get_equivalent_distances_east(
+        rup.mag, dists.repi, ab06=True)
+    #
+    # Atkinson and Boore 2006 - Rrup
+    mean3, stds3 = g[2].get_mean_and_stddevs(sites, rup, distsl, imt,
+                                             stddev_types)
+    # Computing adjusted mean and stds
+    mean_adj = mean1*0.2 + mean2*0.2 + mean3*0.2 + mean4*0.2 + mean5*0.2
+
+    # Note that in this case we do not apply a triangular smoothing on
+    # distance as explained at page 996 of Atkinson and Adams (2013)
+    # for the calculation of the standard deviation
+    stds_adj = np.log(np.exp(stds1)*0.2 + np.exp(stds2)*0.2 +
+                      np.exp(stds3)*0.2 + np.exp(stds4)*0.2 +
+                      np.exp(stds5)*0.2)
+
+    return mean_adj, stds_adj
+
+
+def apply_correction_to_BC(cff, mean, imt, dists):
+    """
+    """
+    if imt.period:
+        tmp = cff['mf']
+    elif imt in [PGA()]:
+        tmp = -0.3+0.15*np.log10(dists.repi)
+    else:
+        raise ValueError('Unsupported IMT', str(imt))
+    return mean + np.log(10**tmp)
 
 
 class EasternCan15Mid(PezeshkEtAl2011):
@@ -69,90 +145,17 @@ class EasternCan15Mid(PezeshkEtAl2011):
     gsims = [Atkinson2008prime(), SilvaEtAl2002SingleCornerSaturation(),
              AtkinsonBoore2006Modified2011()]
 
-    def apply_correction_to_BC(self, mean, imt, dists):
-        """
-        """
-        if imt.period:
-            cff = self.SITE_COEFFS[imt]
-            tmp = cff['mf']
-        elif imt in [PGA()]:
-            tmp = -0.3+0.15*np.log10(dists.repi)
-        else:
-            raise ValueError('Unsupported IMT', str(imt))
-        return mean + np.log(10**tmp)
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See documentation for method `GroundShakingIntensityModel` in
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
-        mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
-                                                stddev_types)
-        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
+        mean, stds = _get_mean_and_stddevs(
+            self, sites, rup, dists, imt, stddev_types)
+        stddevs = [np.ones(len(dists.repi)) * get_sigma(imt)]
         return mean, stddevs
 
-    def _get_delta(self, stds, dists):
-        """
-        Computes the additional delta to be used for the computation of the
-        upp and low models
-        """
-        delta = np.maximum((0.1-0.001*dists.repi), np.zeros_like(dists.repi))
-        return delta
-
-    def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns only the mean values.
-
-        See documentation for method `GroundShakingIntensityModel` in
-        :class:~`openquake.hazardlib.gsim.base.GSIM`
-        """
-        g = self.gsims
-
-        # distances
-        distsl = copy.copy(dists)
-        distsl.rjb, distsl.rrup = \
-            utils.get_equivalent_distances_east(rup.mag, dists.repi)
-        #
-        # Pezeshk et al. 2011 - Rrup
-        mean1, stds1 = super().get_mean_and_stddevs(sites, rup, distsl, imt,
-                                                    stddev_types)
-        mean1 = self.apply_correction_to_BC(mean1, imt, distsl)
-        #
-        # Atkinson 2008 - Rjb
-        mean2, stds2 = g[0].get_mean_and_stddevs(sites, rup, distsl, imt,
-                                                 stddev_types)
-        #
-        # Silva et al. 2002 - Rjb
-        gmpe = SilvaEtAl2002SingleCornerSaturation()
-        mean4, stds4 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
-                                                 stddev_types)
-        mean4 = self.apply_correction_to_BC(mean4, imt, distsl)
-        #
-        # Silva et al. 2002 - Rjb
-        mean5, stds5 = g[1].get_mean_and_stddevs(sites, rup, distsl, imt,
-                                                 stddev_types)
-        mean5 = self.apply_correction_to_BC(mean5, imt, distsl)
-        #
-        # distances
-        distsl.rjb, distsl.rrup = \
-            utils.get_equivalent_distances_east(rup.mag, dists.repi, ab06=True)
-        #
-        # Atkinson and Boore 2006 - Rrup
-        mean3, stds3 = g[2].get_mean_and_stddevs(sites, rup, distsl, imt,
-                                                 stddev_types)
-        # Computing adjusted mean and stds
-        mean_adj = mean1*0.2 + mean2*0.2 + mean3*0.2 + mean4*0.2 + mean5*0.2
-
-        # Note that in this case we do not apply a triangular smoothing on
-        # distance as explained at page 996 of Atkinson and Adams (2013)
-        # for the calculation of the standard deviation
-        stds_adj = np.log(np.exp(stds1)*0.2 + np.exp(stds2)*0.2 +
-                          np.exp(stds3)*0.2 + np.exp(stds4)*0.2 +
-                          np.exp(stds5)*0.2)
-        #
-        return mean_adj, stds_adj
-
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     IMT        mf
     0.05    -0.10
     0.10     0.03
@@ -175,10 +178,10 @@ class EasternCan15Low(EasternCan15Mid):
         # This is just used for testing purposes
         if len(stddev_types) == 0:
             stddev_types = [StdDev.TOTAL]
-        mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
-                                                stddev_types)
-        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
-        delta = self._get_delta(stds, dists)
+        mean, stds = _get_mean_and_stddevs(
+            self, sites, rup, dists, imt, stddev_types)
+        stddevs = [np.ones(len(dists.repi)) * get_sigma(imt)]
+        delta = _get_delta(stds, dists)
         mean = mean - stds - delta
         mean = np.squeeze(mean)
         return mean, stddevs
@@ -194,10 +197,10 @@ class EasternCan15Upp(EasternCan15Mid):
         # This is just used for testing purposes
         if len(stddev_types) == 0:
             stddev_types = [StdDev.TOTAL]
-        mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
-                                                stddev_types)
-        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
-        delta = self._get_delta(stds, dists)
+        mean, stds = _get_mean_and_stddevs(
+            self, sites, rup, dists, imt, stddev_types)
+        stddevs = [np.ones(len(dists.repi)) * get_sigma(imt)]
+        delta = _get_delta(stds, dists)
         mean = mean + stds + delta
         mean = np.squeeze(mean)
         return mean, stddevs
