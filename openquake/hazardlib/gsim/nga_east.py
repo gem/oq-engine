@@ -689,12 +689,18 @@ class NGAEastGMPE(GMPETable):
         Returns the standard deviations for either the ergodic or
         non-ergodic models
         """
+        stddevs = []
+        if self.__class__.__name__.endswith('TotalSigma'):
+            for stddev_type in stddev_types:
+                if stddev_type == const.StdDev.TOTAL:
+                    sigma = self._get_total_sigma(imt, mag)
+                    stddevs.append(sigma + np.zeros(num_sites))
+            return stddevs
+        # else compute all stddevs
         tau = self._get_tau(imt, mag)
         phi = self._get_phi(imt, mag)
         sigma = np.sqrt(tau ** 2. + phi ** 2.)
-        stddevs = []
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(sigma + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
@@ -866,18 +872,6 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
         self.magnitude_limits = []
         self.tau_keys = []
         self._get_sigma_at_quantile(kwargs.get('sigma_quantile'))
-
-    def get_stddevs(self, mag, imt, stddev_types, num_sites):
-        """
-        Returns the total standard deviation
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma = self._get_total_sigma(imt, mag)
-                stddevs.append(sigma + np.zeros(num_sites))
-        return stddevs
 
     def _get_sigma_at_quantile(self, sigma_quantile):
         """
