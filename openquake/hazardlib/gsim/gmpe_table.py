@@ -281,6 +281,70 @@ def _setup_amplification(self, fle):
             {self.amplification.parameter})
 
 
+def _return_tables(self, mag, imt, val_type):
+    """
+    Returns the vector of ground motions or standard deviations
+    corresponding to the specific magnitude and intensity measure type.
+
+    :param val_type:
+        String indicating the type of data {"IMLs", "Total", "Inter" etc}
+    """
+    if imt.string in 'PGA PGV':
+        # Get scalar imt
+        if val_type == "IMLs":
+            iml_table = self.imls[imt.string][:]
+        else:
+            iml_table = self.stddevs[val_type][imt.string][:]
+        n_d, n_s, n_m = iml_table.shape
+        iml_table = iml_table.reshape([n_d, n_m])
+    else:
+        if val_type == "IMLs":
+            periods = self.imls["T"][:]
+            iml_table = self.imls["SA"][:]
+        else:
+            periods = self.stddevs[val_type]["T"][:]
+            iml_table = self.stddevs[val_type]["SA"][:]
+
+        low_period = round(periods[0], 7)
+        high_period = round(periods[-1], 7)
+        if (round(imt.period, 7) < low_period) or (
+                round(imt.period, 7) > high_period):
+            raise ValueError("Spectral period %.3f outside of valid range "
+                             "(%.3f to %.3f)" % (imt.period, periods[0],
+                                                 periods[-1]))
+        # Apply log-log interpolation for spectral period
+        interpolator = interp1d(numpy.log10(periods),
+                                numpy.log10(iml_table),
+                                axis=1)
+        iml_table = 10. ** interpolator(numpy.log10(imt.period))
+    return apply_magnitude_interpolation(self, mag, iml_table)
+
+
+def apply_magnitude_interpolation(self, mag, iml_table):
+    """
+    Interpolates the tables to the required magnitude level
+
+    :param float mag:
+        Magnitude
+    :param iml_table:
+        Intensity measure level table
+    """
+    # do not allow "mag" to exceed maximum table magnitude
+    if mag > self.m_w[-1]:
+        mag = self.m_w[-1]
+
+    # Get magnitude values
+    if mag < self.m_w[0] or mag > self.m_w[-1]:
+        raise ValueError("Magnitude %.2f outside of supported range "
+                         "(%.2f to %.2f)" % (mag,
+                                             self.m_w[0],
+                                             self.m_w[-1]))
+    # It is assumed that log10 of the spectral acceleration scales
+    # linearly (or approximately linearly) with magnitude
+    m_interpolator = interp1d(self.m_w, numpy.log10(iml_table), axis=1)
+    return 10.0 ** m_interpolator(mag)
+
+
 class GMPETable(GMPE):
     """
     Implements ground motion prediction equations in the form of a table from
@@ -375,30 +439,12 @@ class GMPETable(GMPE):
             if "Amplification" in fle:
                 _setup_amplification(self, fle)
 
-    def _supported_imts(self):
-        """
-        Updates the list of supported IMTs from the tables
-        """
-        imt_list = []
-        for key in self.imls:
-            if "SA" in key:
-                imt_list.append(imt_module.SA)
-            elif key == "T":
-                continue
-            else:
-                try:
-                    factory = getattr(imt_module, key)
-                except Exception:
-                    continue
-                imt_list.append(factory)
-        return imt_list
-
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         Returns the mean and standard deviations
         """
         # Return Distance Tables
-        imls = self._return_tables(rctx.mag, imt, "IMLs")
+        imls = _return_tables(self, rctx.mag, imt, "IMLs")
         # Get distance vector for the given magnitude
         idx = numpy.searchsorted(self.m_w, rctx.mag)
         dists = self.distances[:, 0, idx - 1]
@@ -463,72 +509,10 @@ class GMPETable(GMPE):
         """
         stddevs = []
         for stddev_type in stddev_types:
-            sigma = self._return_tables(mag, imt, stddev_type)
+            sigma = _return_tables(self, mag, imt, stddev_type)
             interpolator_std = interp1d(dists, sigma, bounds_error=False)
             stddev = interpolator_std(getattr(dctx, self.distance_type))
             stddev[getattr(dctx, self.distance_type) < dists[0]] = sigma[0]
             stddev[getattr(dctx, self.distance_type) > dists[-1]] = sigma[-1]
             stddevs.append(stddev)
         return stddevs
-
-    def _return_tables(self, mag, imt, val_type):
-        """
-        Returns the vector of ground motions or standard deviations
-        corresponding to the specific magnitude and intensity measure type.
-
-        :param val_type:
-            String indicating the type of data {"IMLs", "Total", "Inter" etc}
-        """
-        if imt.string in 'PGA PGV':
-            # Get scalar imt
-            if val_type == "IMLs":
-                iml_table = self.imls[imt.string][:]
-            else:
-                iml_table = self.stddevs[val_type][imt.string][:]
-            n_d, n_s, n_m = iml_table.shape
-            iml_table = iml_table.reshape([n_d, n_m])
-        else:
-            if val_type == "IMLs":
-                periods = self.imls["T"][:]
-                iml_table = self.imls["SA"][:]
-            else:
-                periods = self.stddevs[val_type]["T"][:]
-                iml_table = self.stddevs[val_type]["SA"][:]
-
-            low_period = round(periods[0], 7)
-            high_period = round(periods[-1], 7)
-            if (round(imt.period, 7) < low_period) or (
-                    round(imt.period, 7) > high_period):
-                raise ValueError("Spectral period %.3f outside of valid range "
-                                 "(%.3f to %.3f)" % (imt.period, periods[0],
-                                                     periods[-1]))
-            # Apply log-log interpolation for spectral period
-            interpolator = interp1d(numpy.log10(periods),
-                                    numpy.log10(iml_table),
-                                    axis=1)
-            iml_table = 10. ** interpolator(numpy.log10(imt.period))
-        return self.apply_magnitude_interpolation(mag, iml_table)
-
-    def apply_magnitude_interpolation(self, mag, iml_table):
-        """
-        Interpolates the tables to the required magnitude level
-
-        :param float mag:
-            Magnitude
-        :param iml_table:
-            Intensity measure level table
-        """
-        # do not allow "mag" to exceed maximum table magnitude
-        if mag > self.m_w[-1]:
-            mag = self.m_w[-1]
-
-        # Get magnitude values
-        if mag < self.m_w[0] or mag > self.m_w[-1]:
-            raise ValueError("Magnitude %.2f outside of supported range "
-                             "(%.2f to %.2f)" % (mag,
-                                                 self.m_w[0],
-                                                 self.m_w[-1]))
-        # It is assumed that log10 of the spectral acceleration scales
-        # linearly (or approximately linearly) with magnitude
-        m_interpolator = interp1d(self.m_w, numpy.log10(iml_table), axis=1)
-        return 10.0 ** m_interpolator(mag)

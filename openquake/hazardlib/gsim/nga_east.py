@@ -24,7 +24,7 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
+from openquake.hazardlib.gsim.gmpe_table import GMPETable, _return_tables
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -625,7 +625,7 @@ class NGAEastGMPE(GMPETable):
         rock condition (Vs30 = 3000 m/s)
         """
         # Return Distance Tables
-        imls = self._return_tables(rctx.mag, imt, "IMLs")
+        imls = _return_tables(self, rctx.mag, imt, "IMLs")
         # Get distance vector for the given magnitude
         idx = np.searchsorted(self.m_w, rctx.mag)
         dists = self.distances[:, 0, idx - 1]
