@@ -61,7 +61,8 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     return base + f_mag
 
 
-def _compute_disterm(trt, theta2, theta14, theta3, mag, dists, c4, theta9,
+# theta6_adj used in BCHydro
+def _compute_disterm(trt, C1, theta2, theta14, theta3, mag, dists, c4, theta9,
                      theta6_adj, theta6, theta10):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         dists = dists.rrup
@@ -70,7 +71,7 @@ def _compute_disterm(trt, theta2, theta14, theta3, mag, dists, c4, theta9,
         dists = dists.rhypo
     else:
         raise NotImplementedError(trt)
-    return ((theta2 + theta14 + theta3 * (mag - 7.8)) * np.log(
+    return ((theta2 + theta14 + theta3 * (mag - C1)) * np.log(
         dists + c4 * np.exp((mag - 6.) * theta9)) +
             ((theta6_adj + theta6) * dists)) + theta10
 
@@ -215,14 +216,18 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
+        if self.kind == "montalva17":
+            C1 = 7.2
+        else:
+            C1 = 7.8
         if self.trt == const.TRT.SUBDUCTION_INTERFACE:
             return _compute_disterm(
-                self.trt, C['theta2'], 0., CONSTS['theta3'], mag, dists,
+                self.trt, C1, C['theta2'], 0., CONSTS['theta3'], mag, dists,
                 CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
                 C['theta6'], theta10=0.)
         else:  # sslab
             return _compute_disterm(
-                self.trt, C['theta2'], C['theta14'], CONSTS['theta3'], mag,
+                self.trt, C1, C['theta2'], C['theta14'], CONSTS['theta3'], mag,
                 dists, CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
                 C['theta6'], C["theta10"])
 

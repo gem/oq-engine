@@ -79,7 +79,7 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
         Computes the distance scaling term, as contained within equation (1)
         """
         return _compute_disterm(
-            self.trt, C['theta2'], 0., C['theta3'], mag, dists,
+            self.trt, CONSTS['C1'], C['theta2'], 0., C['theta3'], mag, dists,
             CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
             C['theta6'], theta10=0)
 
@@ -156,8 +156,8 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
         Computes the distance scaling term, as contained within equation (1b)
         """
         return _compute_disterm(
-            self.trt, C['theta2'], C['theta14'], C['theta3'], mag, dists,
-            CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
+            self.trt, CONSTS['C1'], C['theta2'], C['theta14'], C['theta3'],
+            mag, dists, CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
             C['theta6'], C['theta10'])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
