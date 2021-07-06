@@ -35,12 +35,6 @@ import openquake.hazardlib.gsim.campbell_bozorgnia_2014 as CB14
 def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
     """
     Returns the inter-event, intra-event, and total standard deviations
-
-    Note that it is assumed here that the soil response of the vertical
-    component is linear (i.e. nonlinear site response effects not
-    included). Thus, the expressions for the aleatory std devs for the
-    vertical component is much simpler than in the horizontal component,
-    since the site response- and IMT-correlation functions are neglected.
     """
     num_sites = len(sites.vs30)
     tau_v = cls.VGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
@@ -139,8 +133,9 @@ class BozorgniaCampbell2016VH(GMPE):
     ])
 
     #: Supported intensity measure component is the
-    #: :attr:`~openquake.hazardlib.const.IMC.Vertical` direction component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VERTICAL
+    #: :attr:`~openquake.hazardlib.const.IMC.VERTICAL_TO_HORIZONTAL_RATIO`
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
+                                        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory Variability Model".
