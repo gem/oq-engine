@@ -24,7 +24,9 @@ from scipy.interpolate import interp1d
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
-from openquake.hazardlib.gsim.nga_east import ITPL, NGAEastGMPE
+from openquake.hazardlib.gsim.nga_east import (
+    ITPL, NGAEastGMPE, get_hard_rock_mean, get_site_amplification,
+    get_site_amplification_sigma)
 from openquake.hazardlib.gsim.gmpe_table import _get_mean
 
 # Coefficients for EPRI sigma model taken from Table 5.5 of Goulet et al.
@@ -261,13 +263,13 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             rock_imt = PGA()
         else:
             rock_imt = SA(0.01)
-        pga_r = self.get_hard_rock_mean(rctx, dctx, rock_imt, stddev_types)
+        pga_r = get_hard_rock_mean(self, rctx, dctx, rock_imt, stddev_types)
 
         # Get the desired spectral acceleration on rock
         if not str(imt) == "PGA":
             # Calculate the ground motion at required spectral period for
             # the reference rock
-            imean = self.get_hard_rock_mean(rctx, dctx, imt, stddev_types)
+            imean = get_hard_rock_mean(self, rctx, dctx, imt, stddev_types)
         else:
             # Avoid re-calculating PGA if that was already done!
             imean = np.copy(pga_r)
@@ -277,14 +279,14 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         C_F760 = self.COEFFS_F760[imt]
         C_NL = self.COEFFS_NONLINEAR[imt]
 
-        site_amp = self.get_site_amplification(imt, np.exp(pga_r), sctx)
+        site_amp = get_site_amplification(self, imt, np.exp(pga_r), sctx)
 
         # Get collapsed amplification model for -sigma, 0, +sigma with weights
         # of 0.185, 0.63, 0.185 respectively
         if self.epistemic_site:
             f_rk = np.log((np.exp(pga_r) + C_NL["f3"]) / C_NL["f3"])
-            site_amp_sigma = self.get_site_amplification_sigma(
-                sctx, f_rk, C_LIN, C_F760, C_NL)
+            site_amp_sigma = get_site_amplification_sigma(
+                self, sctx, f_rk, C_LIN, C_F760, C_NL)
             mean = np.log(
                 0.185 * (np.exp(imean + (site_amp - site_amp_sigma))) +
                 0.63 * (np.exp(imean + site_amp)) +

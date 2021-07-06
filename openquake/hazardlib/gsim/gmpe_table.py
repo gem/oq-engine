@@ -512,10 +512,7 @@ class GMPETable(GMPE):
         if self.amplification:
             # Apply amplification
             mean_amp, sigma_amp = self.amplification.get_amplification_factors(
-                imt,
-                sctx,
-                rctx,
-                getattr(dctx, self.distance_type),
+                imt, sctx, rctx, getattr(dctx, self.distance_type),
                 stddev_types)
             mean = numpy.log(mean) + numpy.log(mean_amp)
             for iloc in range(len(stddev_types)):
