@@ -571,7 +571,20 @@ class NGAEastGMPE(GMPETable):
         self.tau_quantile = kwargs.get('tau_quantile')
         self.phi_ss_quantile = kwargs.get('phi_ss_quantile')
         self.phi_s2ss_quantile = kwargs.get('phi_s2ss_quantile')
-        self._setup_standard_deviations(fle=None)
+        if 'USGS' not in self.__class__.__name__:
+            # setup tau
+            self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
+                                           TAU_SETUP[self.tau_model]["STD"],
+                                           self.tau_quantile)
+            # setup phi
+            self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
+                                                 self.phi_ss_quantile)
+            # if required setup phis2ss
+            if self.ergodic:
+                self.PHI_S2SS = get_phi_s2ss_at_quantile(
+                    PHI_S2SS_MODEL[self.phi_s2ss_model],
+                    self.phi_s2ss_quantile)
+
         self.site_epsilon = kwargs.get('site_epsilon')
         fname = kwargs['gmpe_table']
         if not isinstance(fname, io.BytesIO):  # real path name
@@ -579,20 +592,6 @@ class NGAEastGMPE(GMPETable):
                 self.PATH, os.path.basename(fname))
             assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
         super().__init__(**kwargs)
-
-    def _setup_standard_deviations(self, fle):
-        # setup tau
-        self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
-                                       TAU_SETUP[self.tau_model]["STD"],
-                                       self.tau_quantile)
-        # setup phi
-        self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
-                                             self.phi_ss_quantile)
-        # if required setup phis2ss
-        if self.ergodic:
-            self.PHI_S2SS = get_phi_s2ss_at_quantile(
-                PHI_S2SS_MODEL[self.phi_s2ss_model],
-                self.phi_s2ss_quantile)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """

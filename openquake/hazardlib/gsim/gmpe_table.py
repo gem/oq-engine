@@ -323,30 +323,24 @@ class GMPETable(GMPE):
             if "SA" in self.imls and "T" not in self.imls:
                 raise ValueError("Spectral Acceleration must be accompanied by"
                                  " periods")
-            # Get the standard deviations
-            self._setup_standard_deviations(fle)
+            if 'USGS' in self.__class__.__name__:
+                # there are no stddevs in the hdf5 file
+                return
+
+            # Load in standard deviations
+            self.stddevs = {}
+            self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
+            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
+                self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
+            for stddev_type in [const.StdDev.INTER_EVENT,
+                                const.StdDev.INTRA_EVENT]:
+                if stddev_type.value in fle:
+                    self.stddevs[stddev_type] = hdf_arrays_to_dict(
+                        fle[stddev_type.value])
+                    self.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(stddev_type)
+
             if "Amplification" in fle:
                 self._setup_amplification(fle)
-
-    def _setup_standard_deviations(self, fle):
-        """
-        Reads the standard deviation tables from hdf5 and stores them in
-        memory
-        :param fle:
-            HDF5 Tables as instance of :class:`h5py.File`
-        """
-        # Load in total standard deviation
-        self.stddevs = {}
-        self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
-        # If other standard deviations
-        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
-            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-        for stddev_type in [const.StdDev.INTER_EVENT,
-                            const.StdDev.INTRA_EVENT]:
-            if stddev_type.value in fle:
-                self.stddevs[stddev_type] = hdf_arrays_to_dict(
-                    fle[stddev_type.value])
-                self.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(stddev_type)
 
     def _setup_amplification(self, fle):
         """
