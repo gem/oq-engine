@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS,
-    _get_stddevs, _compute_magterm)
+    _get_stddevs, _compute_magterm, _compute_disterm)
 from openquake.hazardlib.gsim.montalva_2017 import (MontalvaEtAl2017SInter,
                                                     MontalvaEtAl2017SSlab)
 
@@ -78,9 +78,10 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return (C['theta2'] + C['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
-                   CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
+        return _compute_disterm(
+            self.trt, C['theta2'], 0., C['theta3'], mag, dists,
+            CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
+            C['theta6'], theta10=0)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt              DC1     vlin       b        theta1         theta2        theta3         theta4         theta5         theta6    theta7  theta8       theta10        theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_s2s
