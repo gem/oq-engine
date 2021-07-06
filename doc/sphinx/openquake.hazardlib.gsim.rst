@@ -728,6 +728,14 @@ lanzano_2019
     :members:
     :undoc-members:
     :show-inheritance:
+    
+lanzano_2020
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 lanzano_luzi_2019
 ----------------------------------------
