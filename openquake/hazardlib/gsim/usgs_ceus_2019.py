@@ -173,10 +173,6 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
                 set((const.StdDev.TOTAL,))
         super().__init__(**kwargs)
 
-    def _setup_standard_deviations(self, fle):
-        # Not needed here
-        pass
-
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         Returns the mean and standard deviations
