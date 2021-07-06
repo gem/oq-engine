@@ -72,9 +72,8 @@ def _get_tau(tau_model, TAU, imt, mag):
     return TAU_EXECUTION[tau_model](imt, mag, TAU)
 
 
-def extrapolate_in_PSA(sites, rup, dists, imt_high,
+def extrapolate_in_PSA(gmpe, sites, rup, dists, imt_high,
                        set_imt, stds_types, imt):
-
     extrap_mean = []
     t_log10 = np.log10([im for im in set_imt])
     for d in np.arange(0, len(dists.rjb)):
@@ -85,8 +84,8 @@ def extrapolate_in_PSA(sites, rup, dists, imt_high,
             dist.rrup = np.array([dists.rrup[d]])
         means_log10 = []
         for im in set_imt:
-            mean_ln, _ = self.gmpe.get_mean_and_stddevs(
-                               sites, rup, dist, SA(im), stds_types)
+            mean_ln, _ = gmpe.get_mean_and_stddevs(
+                sites, rup, dist, SA(im), stds_types)
             mean = np.exp(mean_ln[0])
             means_log10.append(np.log10(mean))
 
@@ -310,7 +309,7 @@ class AlAtikSigmaModel(GMPE):
         self.set_parameters()
 
         if self.kappa_file:
-            with self.open(self.kappa_file) as myfile:
+            with open(self.kappa_file, r'rb') as myfile:
                 data = myfile.read().decode('utf-8')
             self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
@@ -345,10 +344,10 @@ class AlAtikSigmaModel(GMPE):
         # highets but below corner
         elif extr and cornerp > hp and hp <= imt.period < cornerp:
             mean = extrapolate_in_PSA(
-                sites, rup, dists, hp, sp, stds_types, imt.period)
+                self.gmpe, sites, rup, dists, hp, sp, stds_types, imt.period)
         elif extr and cornerp > hp and imt.period > cornerp:
             mean = extrapolate_in_PSA(
-                sites, rup, dists, hp, sp, stds_types, cornerp)
+                self.gmpe, sites, rup, dists, hp, sp, stds_types, cornerp)
             disp = get_disp_from_acc(mean, cornerp)
             mean = get_acc_from_disp(disp, imt.period)
 
