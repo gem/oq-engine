@@ -281,6 +281,14 @@ boore_2014
     :undoc-members:
     :show-inheritance:
 
+boore_2020
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.boore_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 boore_atkinson_2008
 ---------------------------------------------------
 
@@ -625,6 +633,14 @@ gmpe_table
     :undoc-members:
     :show-inheritance:
 
+gulerce_abrahamson_2011
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.gulerce_abrahamson_2011
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 gulerce_2017
 --------------------------------------------
 
@@ -717,6 +733,14 @@ lanzano_2019
 ----------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.lanzano_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+lanzano_2020
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2020
     :members:
     :undoc-members:
     :show-inheritance:
