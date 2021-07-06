@@ -141,6 +141,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     delta_c1 = None
     kind = "base"
+    theta6_adj = 0.
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -209,7 +210,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         return _compute_disterm(
             C['theta2'], 0., CONSTS['theta3'], mag, dists.rrup,
-            CONSTS['c4'], CONSTS['theta9'], 0., C['theta6'], 0.)
+            CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
+            C['theta6'], theta10=0.)
 
     def _compute_focal_depth_term(self, C, rup):
         """
@@ -368,10 +370,10 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
         """
         Computes the distance scaling term, as contained within equation (1b)
         """
-        return ((C['theta2'] + C['theta14'] + CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
-                np.exp((mag - 6.) * CONSTS['theta9'])) +
-                (C['theta6'] * dists.rhypo)) + C["theta10"]
+        return _compute_disterm(
+            C['theta2'], C['theta14'], CONSTS['theta3'], mag, dists.rhypo,
+            CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
+            C['theta6'], C["theta10"])
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """
