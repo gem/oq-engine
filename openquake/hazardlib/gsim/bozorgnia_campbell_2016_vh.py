@@ -65,8 +65,9 @@ class BozorgniaCampbell2016VH(GMPE):
     ])
 
     #: Supported intensity measure component is the
-    #: :attr:`~openquake.hazardlib.const.IMC.Vertical` direction component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VERTICAL
+    #: :attr:`~openquake.hazardlib.const.IMC.VERTICAL_TO_HORIZONTAL_RATIO`
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
+                                        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory Variability Model".
