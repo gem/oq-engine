@@ -155,10 +155,10 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
         """
         Computes the distance scaling term, as contained within equation (1b)
         """
-        return ((C['theta2'] + C['theta14'] + C['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
-                np.exp((mag - 6.) * CONSTS['theta9'])) +
-                (C['theta6'] * dists.rhypo)) + C["theta10"]
+        return _compute_disterm(
+            self.trt, C['theta2'], C['theta14'], C['theta3'], mag, dists,
+            CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
+            C['theta6'], C['theta10'])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt              DC1    vlin        b        theta1         theta2        theta3         theta4         theta5         theta6    theta7  theta8       theta10        theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_s2s
