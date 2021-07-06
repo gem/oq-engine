@@ -191,6 +191,9 @@ class MetaGSIM(abc.ABCMeta):
         if len(bases) > 1:
             raise TypeError('Multiple inheritance is forbidden: %s(%s)' % (
                 name, ', '.join(b.__name__ for b in bases)))
+        if 'get_mean_and_stddevs' in dic and 'compute' in dic:
+            raise TypeError('You cannot define both get_mean_and_stddevs '
+                            'and compute in %s' % name)
         for k, v in dic.items():
             if isinstance(v, set):
                 dic[k] = frozenset(v)
@@ -512,6 +515,26 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        :returns: mean and stddevs by calling the underlying .compute method
+        """
+        N = len(sites)
+        mean = numpy.zeros((N, 1))
+        sig = numpy.zeros((N, 1))
+        tau = numpy.zeros((N, 1))
+        phi = numpy.zeros((N, 1))
+        self.compute(rup, [imt], mean, sig, tau, phi)
+        stddevs = []
+        for stddev_type in stddev_types:
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(sig)
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(tau)
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi)
+        return mean, stddevs
+
     def set_parameters(self):
         """
         Combines the parameters of the GMPE provided at the construction level
