@@ -27,7 +27,143 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE, registry
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+#: equation constants (that are IMT independent)
+CONSTS = {
+    # Coefficients in Table 2, page 1028
+    'c1': 6.75,
+    'c4': 10.,
+    'a3': 0.0147,
+    'a4': 0.0334,
+    'a5': -0.034,
+    'n': 1.18,
+    'c': 1.88}
 
+def _compute_base_term(C, rup, dists):
+    """
+    Compute and return base model term, that is the first term, f1, in 
+    Equation 6, page 1028. The calculation of this term is described in
+    Equation 1, page 1027.
+    """
+    c1 = CONSTS['c1']
+    R = np.sqrt(dists.rrup ** 2 + CONSTS['c4'] ** 2)
+
+    base_term = (C['a1'] +
+                    C['a8'] * ((8.5 - rup.mag) ** 2) +
+                    (C['a2'] + CONSTS['a3'] * (rup.mag - c1)) *
+                    np.log(R))
+
+    if rup.mag <= c1:
+        return base_term + CONSTS['a4'] * (rup.mag - c1)
+    else:
+        return base_term + CONSTS['a5'] * (rup.mag - c1)
+
+def _compute_faulting_style_term(C, rup):
+    """
+    Compute and return faulting style term, that is the sum of the second
+    and third terms in Equation 6, page 1028.
+    """
+    # ranges of rake values for each faulting mechanism are specified in
+    # section "Functional Form of the Model", page 1029
+    frv = float(30 < rup.rake < 150)
+    fnm = float(-120 < rup.rake < -60)
+    return C['a6'] * frv + C['a7'] * fnm
+
+def _compute_site_response_term(C, imt, sites, pga1100):
+    """
+    Compute and return site response model term, that is the fourth term
+    f5 in Equation 6, page 1028. Note the change in sign for the piecewise
+    term from the adopted equation in AS08.
+    """
+    site_resp_term = np.zeros_like(sites.vs30)
+
+    vs30_star, _ = _compute_vs30_star_factor(imt, sites.vs30)
+    vlin, c, n = C['VLIN'], CONSTS['c'], CONSTS['n']
+    a10, b = C['a10'], C['b']
+
+    idx = vs30_star < vlin
+    arg = vs30_star[idx] / vlin
+    site_resp_term[idx] = (a10 * np.log(arg) +
+                            b * np.log(pga1100[idx] + c) -
+                            b * np.log(pga1100[idx] + c * (arg ** n)))
+
+    idx = ~idx
+    site_resp_term[idx] = (a10 - b * n) * np.log(vs30_star[idx] / vlin)
+
+    return site_resp_term
+
+def _get_stddevs(C, rup, stddev_types):
+    """
+    Return standard deviations as described in Equations 7 to 9, page 1029
+    """
+    std_intra = _compute_intra_event_std(C, rup.mag)
+    std_inter = _compute_inter_event_std(C, rup.mag)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(std_intra ** 2 + std_inter ** 2))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(std_intra)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(std_inter)
+    return stddevs
+
+def _compute_intra_event_std(C, mag):
+    """
+    Equation 7, page 1029.
+    """
+    if mag < 5:
+        sigma_0 = C['s1']
+    elif 5 <= mag <= 7:
+        sigma_0 = C['s1'] + (C['s2'] - C['s1']) * (mag - 5) / 2
+    else:
+        sigma_0 = C['s2']
+
+    return sigma_0
+
+def _compute_inter_event_std(C, mag):
+    """
+    Equation 8, page 1029.
+    """
+    if mag < 5:
+        tau_0 = C['s3']
+    elif 5 <= mag <= 7:
+        tau_0 = C['s3'] + (C['s4'] - C['s3']) * (mag - 5) / 2
+    else:
+        tau_0 = C['s4']
+
+    return tau_0
+
+def _compute_vs30_star_factor(imt, vs30):
+    """
+    Compute and return vs30 star factor, Equation 4, page 1028.
+    """
+    v1 = _compute_v1_factor(imt)
+    vs30_star = vs30.copy()
+    vs30_star[vs30_star >= v1] = v1
+
+    return vs30_star, v1
+
+def _compute_v1_factor(imt):
+    """
+    Compute and return v1 factor, Equation 5, page 1028.
+    """
+    if imt.string[:2] == "SA":
+        t = imt.period
+        if t <= 0.50:
+            v1 = 1500.0
+        elif 0.5 < t <= 1.0:
+            v1 = np.exp(8.0 - 0.795 * np.log(t / 0.21))
+        elif 1.0 < t < 2.0:
+            v1 = np.exp(6.76 - 0.297 * np.log(t))
+        else:
+            v1 = 700.0
+    elif imt.string == "PGA":
+        v1 = 1500.0
+    else:
+        # this is for PGV
+        v1 = 862.0
+
+    return v1
 class GulerceAbrahamson2011(GMPE):
     """
     Implements the GMPE by Gulerce & Abrahamson (2011) for the
@@ -104,7 +240,8 @@ class GulerceAbrahamson2011(GMPE):
             msg = 'PGA intensity measure type is not defined for {:s}'
             raise AttributeError(msg.format(str(self.gmpe)))
         self.REQUIRES_SITES_PARAMETERS |= self.gmpe.REQUIRES_SITES_PARAMETERS
-        self.REQUIRES_RUPTURE_PARAMETERS |= self.gmpe.REQUIRES_RUPTURE_PARAMETERS
+        self.REQUIRES_RUPTURE_PARAMETERS |= (
+                                        self.gmpe.REQUIRES_RUPTURE_PARAMETERS)
         self.REQUIRES_DISTANCES |= self.gmpe.REQUIRES_DISTANCES
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -121,141 +258,14 @@ class GulerceAbrahamson2011(GMPE):
         sites_rock.vs30 = np.full_like(sites_rock.vs30, 1100, dtype=np.double)
         pga1100 = np.exp(self.gmpe.get_mean_and_stddevs(
             sites_rock, rup, dists, PGA(), stddev_types)[0])
-        mean = (self._compute_base_term(C, rup, dists) +
-                self._compute_faulting_style_term(C, rup) +
-                self._compute_site_response_term(C, imt, sites, pga1100))
+        mean = (_compute_base_term(C, rup, dists) +
+                _compute_faulting_style_term(C, rup) +
+                _compute_site_response_term(C, imt, sites, pga1100))
 
-        stddevs = self._get_stddevs(C, rup, stddev_types)
+        stddevs = _get_stddevs(C, rup, stddev_types)
 
         return mean, stddevs
 
-    def _compute_base_term(self, C, rup, dists):
-        """
-        Compute and return base model term, that is the first term, f1, in 
-        Equation 6, page 1028. The calculation of this term is described in
-        Equation 1, page 1027.
-        """
-        c1 = self.CONSTS['c1']
-        R = np.sqrt(dists.rrup ** 2 + self.CONSTS['c4'] ** 2)
-
-        base_term = (C['a1'] +
-                     C['a8'] * ((8.5 - rup.mag) ** 2) +
-                     (C['a2'] + self.CONSTS['a3'] * (rup.mag - c1)) *
-                     np.log(R))
-
-        if rup.mag <= c1:
-            return base_term + self.CONSTS['a4'] * (rup.mag - c1)
-        else:
-            return base_term + self.CONSTS['a5'] * (rup.mag - c1)
-
-    def _compute_faulting_style_term(self, C, rup):
-        """
-        Compute and return faulting style term, that is the sum of the second
-        and third terms in Equation 6, page 1028.
-        """
-        # ranges of rake values for each faulting mechanism are specified in
-        # section "Functional Form of the Model", page 1029
-        frv = float(30 < rup.rake < 150)
-        fnm = float(-120 < rup.rake < -60)
-        return C['a6'] * frv + C['a7'] * fnm
-
-    def _compute_site_response_term(self, C, imt, sites, pga1100):
-        """
-        Compute and return site response model term, that is the fourth term
-        f5 in Equation 6, page 1028. Note the change in sign for the piecewise
-        term from the adopted equation in AS08.
-        """
-        site_resp_term = np.zeros_like(sites.vs30)
-
-        vs30_star, _ = self._compute_vs30_star_factor(imt, sites.vs30)
-        vlin, c, n = C['VLIN'], self.CONSTS['c'], self.CONSTS['n']
-        a10, b = C['a10'], C['b']
-
-        idx = vs30_star < vlin
-        arg = vs30_star[idx] / vlin
-        site_resp_term[idx] = (a10 * np.log(arg) +
-                               b * np.log(pga1100[idx] + c) -
-                               b * np.log(pga1100[idx] + c * (arg ** n)))
-
-        idx = ~idx
-        site_resp_term[idx] = (a10 - b * n) * np.log(vs30_star[idx] / vlin)
-
-        return site_resp_term
-
-    def _get_stddevs(self, C, rup, stddev_types):
-        """
-        Return standard deviations as described in Equations 7 to 9, page 1029
-        """
-        std_intra = self._compute_intra_event_std(C, rup.mag)
-        std_inter = self._compute_inter_event_std(C, rup.mag)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(std_intra ** 2 + std_inter ** 2))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(std_intra)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(std_inter)
-        return stddevs
-
-    def _compute_intra_event_std(self, C, mag):
-        """
-        Equation 7, page 1029.
-        """
-        if mag < 5:
-            sigma_0 = C['s1']
-        elif 5 <= mag <= 7:
-            sigma_0 = C['s1'] + (C['s2'] - C['s1']) * (mag - 5) / 2
-        else:
-            sigma_0 = C['s2']
-
-        return sigma_0
-
-    def _compute_inter_event_std(self, C, mag):
-        """
-        Equation 8, page 1029.
-        """
-        if mag < 5:
-            tau_0 = C['s3']
-        elif 5 <= mag <= 7:
-            tau_0 = C['s3'] + (C['s4'] - C['s3']) * (mag - 5) / 2
-        else:
-            tau_0 = C['s4']
-
-        return tau_0
-
-    def _compute_vs30_star_factor(self, imt, vs30):
-        """
-        Compute and return vs30 star factor, Equation 4, page 1028.
-        """
-        v1 = self._compute_v1_factor(imt)
-        vs30_star = vs30.copy()
-        vs30_star[vs30_star >= v1] = v1
-
-        return vs30_star, v1
-
-    def _compute_v1_factor(self, imt):
-        """
-        Compute and return v1 factor, Equation 5, page 1028.
-        """
-        if imt.name == "SA":
-            t = imt.period
-            if t <= 0.50:
-                v1 = 1500.0
-            elif 0.5 < t <= 1.0:
-                v1 = np.exp(8.0 - 0.795 * np.log(t / 0.21))
-            elif 1.0 < t < 2.0:
-                v1 = np.exp(6.76 - 0.297 * np.log(t))
-            else:
-                v1 = 700.0
-        elif imt.name == "PGA":
-            v1 = 1500.0
-        else:
-            # this is for PGV
-            v1 = 862.0
-
-        return v1
 
     #: Coefficients obtained from Table 3, page 1030
     #: Note the atypical periods 0.029 s and 0.260 s used.
@@ -286,15 +296,3 @@ class GulerceAbrahamson2011(GMPE):
     7.500   400.0   0.000  -1.000   0.090   0.100   0.150   0.022   0.460   0.700   0.520   0.471   0.355
     10.00   400.0   0.000  -1.000   0.090   0.100   0.150   0.022   0.460   0.700   0.520   0.500   0.400
     """)
-
-    #: equation constants (that are IMT independent)
-    CONSTS = {
-        # Coefficients in Table 2, page 1028
-        'c1': 6.75,
-        'c4': 10.,
-        'a3': 0.0147,
-        'a4': 0.0334,
-        'a5': -0.034,
-        'n': 1.18,
-        'c': 1.88,
-    }
