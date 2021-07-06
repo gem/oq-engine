@@ -830,8 +830,125 @@ MAG_LIMS_KEYS = {
     "cena": {"mag": [5.0, 5.5, 6.5], "keys": ["tau1", "tau2", "tau3"]},
     "cena_constant": {"mag": [np.inf], "keys": ["tau"]},
     "global": {"mag": [4.5, 5.0, 5.5, 6.5],
-               "keys": ["tau1", "tau2", "tau3", "tau4"]}
-}
+               "keys": ["tau1", "tau2", "tau3", "tau4"]}}
+
+
+def _get_sigma_at_quantile(self, sigma_quantile):
+    """
+    Calculates the total standard deviation at the specified quantile
+    """
+    # Mean mean is found in self.TAU. Get the variance in tau
+    tau_std = TAU_SETUP[self.tau_model]["STD"]
+    # Mean phiss is found in self.PHI_SS. Get the variance in phi
+    phi_std = deepcopy(self.PHI_SS.sa_coeffs)
+    phi_std.update(self.PHI_SS.non_sa_coeffs)
+    for key in phi_std:
+        phi_std[key] = {"a": PHI_SETUP[self.phi_model][key]["var_a"],
+                        "b": PHI_SETUP[self.phi_model][key]["var_b"]}
+    if self.ergodic:
+        # IMT list should be taken from the PHI_S2SS_MODEL
+        imt_list = list(
+            PHI_S2SS_MODEL[self.phi_s2ss_model].non_sa_coeffs)
+        imt_list += list(PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs)
+    else:
+        imt_list = list(phi_std)
+    phi_std = CoeffsTable.fromdict(phi_std)
+    tau_bar, tau_std = self._get_tau_vector(self.TAU, tau_std, imt_list)
+    phi_bar, phi_std = self._get_phi_vector(self.PHI_SS, phi_std, imt_list)
+    sigma = {}
+    # Calculate the total standard deviation
+    for imt in imt_list:
+        sigma[imt] = {}
+        for i, key in enumerate(self.tau_keys):
+            # Calculates the expected standard deviation
+            sigma_bar = np.sqrt(tau_bar[imt][i] ** 2. +
+                                phi_bar[imt][i] ** 2.)
+            # Calculated the variance in the standard deviation
+            sigma_std = np.sqrt(tau_std[imt][i] ** 2. +
+                                phi_std[imt][i] ** 2.)
+            # The keys swap from tau to sigma
+            new_key = key.replace("tau", "sigma")
+            if sigma_quantile is not None:
+                sigma[imt][new_key] = _at_percentile(
+                    sigma_bar, sigma_std, sigma_quantile)
+            else:
+                sigma[imt][new_key] = sigma_bar
+            self.tau_keys[i] = new_key
+    self.SIGMA = CoeffsTable.fromdict(sigma)
+
+
+def _get_tau_vector(self, tau_mean, tau_std, imt_list):
+    """
+    Gets the vector of mean and variance of tau values corresponding to
+    the specific model and returns them as dictionaries
+    """
+    self.magnitude_limits = MAG_LIMS_KEYS[self.tau_model]["mag"]
+    self.tau_keys = MAG_LIMS_KEYS[self.tau_model]["keys"]
+    t_bar = {}
+    t_std = {}
+    for imt in imt_list:
+        t_bar[imt] = []
+        t_std[imt] = []
+        for mag, key in zip(self.magnitude_limits, self.tau_keys):
+            t_bar[imt].append(
+                TAU_EXECUTION[self.tau_model](imt, mag, tau_mean))
+            t_std[imt].append(
+                TAU_EXECUTION[self.tau_model](imt, mag, tau_std))
+    return t_bar, t_std
+
+
+def _get_phi_vector(self, phi_mean, phi_std, imt_list):
+    """
+    Gets the vector of mean and variance of phi values corresponding to
+    the specific model and returns them as dictionaries
+    """
+    p_bar = {}
+    p_std = {}
+
+    for imt in imt_list:
+        p_bar[imt] = []
+        p_std[imt] = []
+        for mag in self.magnitude_limits:
+            phi_ss_mean = get_phi_ss(imt, mag, phi_mean)
+            phi_ss_std = get_phi_ss(imt, mag, phi_std)
+            if self.ergodic:
+                # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
+                # of Al Atik (2015)
+                phi_ss_mean = np.sqrt(
+                    phi_ss_mean ** 2. +
+                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.
+                    )
+                phi_ss_std = np.sqrt(
+                    phi_ss_std ** 2. +
+                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.
+                    )
+            p_bar[imt].append(phi_ss_mean)
+            p_std[imt].append(phi_ss_std)
+    return p_bar, p_std
+
+
+def _get_total_sigma(self, imt, mag):
+    """
+    Returns the estimated total standard deviation for a given intensity
+    measure type and magnitude
+    """
+    C = self.SIGMA[imt]
+    if mag <= self.magnitude_limits[0]:
+        # The CENA constant model is always returned here
+        return C[self.tau_keys[0]]
+    elif mag > self.magnitude_limits[-1]:
+        return C[self.tau_keys[-1]]
+    else:
+        # Needs interpolation
+        for i in range(len(self.tau_keys) - 1):
+            l_m = self.magnitude_limits[i]
+            u_m = self.magnitude_limits[i + 1]
+            if mag > l_m and mag <= u_m:
+                return ITPL(mag,
+                            C[self.tau_keys[i + 1]],
+                            C[self.tau_keys[i]],
+                            l_m,
+                            u_m - l_m)
 
 
 class NGAEastGMPETotalSigma(NGAEastGMPE):
@@ -876,121 +993,7 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
         self.SIGMA = None
         self.magnitude_limits = []
         self.tau_keys = []
-        self._get_sigma_at_quantile(kwargs.get('sigma_quantile'))
-
-    def _get_sigma_at_quantile(self, sigma_quantile):
-        """
-        Calculates the total standard deviation at the specified quantile
-        """
-        # Mean mean is found in self.TAU. Get the variance in tau
-        tau_std = TAU_SETUP[self.tau_model]["STD"]
-        # Mean phiss is found in self.PHI_SS. Get the variance in phi
-        phi_std = deepcopy(self.PHI_SS.sa_coeffs)
-        phi_std.update(self.PHI_SS.non_sa_coeffs)
-        for key in phi_std:
-            phi_std[key] = {"a": PHI_SETUP[self.phi_model][key]["var_a"],
-                            "b": PHI_SETUP[self.phi_model][key]["var_b"]}
-        if self.ergodic:
-            # IMT list should be taken from the PHI_S2SS_MODEL
-            imt_list = list(
-                PHI_S2SS_MODEL[self.phi_s2ss_model].non_sa_coeffs)
-            imt_list += list(PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs)
-        else:
-            imt_list = list(phi_std)
-        phi_std = CoeffsTable.fromdict(phi_std)
-        tau_bar, tau_std = self._get_tau_vector(self.TAU, tau_std, imt_list)
-        phi_bar, phi_std = self._get_phi_vector(self.PHI_SS, phi_std, imt_list)
-        sigma = {}
-        # Calculate the total standard deviation
-        for imt in imt_list:
-            sigma[imt] = {}
-            for i, key in enumerate(self.tau_keys):
-                # Calculates the expected standard deviation
-                sigma_bar = np.sqrt(tau_bar[imt][i] ** 2. +
-                                    phi_bar[imt][i] ** 2.)
-                # Calculated the variance in the standard deviation
-                sigma_std = np.sqrt(tau_std[imt][i] ** 2. +
-                                    phi_std[imt][i] ** 2.)
-                # The keys swap from tau to sigma
-                new_key = key.replace("tau", "sigma")
-                if sigma_quantile is not None:
-                    sigma[imt][new_key] = _at_percentile(
-                        sigma_bar, sigma_std, sigma_quantile)
-                else:
-                    sigma[imt][new_key] = sigma_bar
-                self.tau_keys[i] = new_key
-        self.SIGMA = CoeffsTable.fromdict(sigma)
-
-    def _get_tau_vector(self, tau_mean, tau_std, imt_list):
-        """
-        Gets the vector of mean and variance of tau values corresponding to
-        the specific model and returns them as dictionaries
-        """
-        self.magnitude_limits = MAG_LIMS_KEYS[self.tau_model]["mag"]
-        self.tau_keys = MAG_LIMS_KEYS[self.tau_model]["keys"]
-        t_bar = {}
-        t_std = {}
-        for imt in imt_list:
-            t_bar[imt] = []
-            t_std[imt] = []
-            for mag, key in zip(self.magnitude_limits, self.tau_keys):
-                t_bar[imt].append(
-                    TAU_EXECUTION[self.tau_model](imt, mag, tau_mean))
-                t_std[imt].append(
-                    TAU_EXECUTION[self.tau_model](imt, mag, tau_std))
-        return t_bar, t_std
-
-    def _get_phi_vector(self, phi_mean, phi_std, imt_list):
-        """
-        Gets the vector of mean and variance of phi values corresponding to
-        the specific model and returns them as dictionaries
-        """
-        p_bar = {}
-        p_std = {}
-
-        for imt in imt_list:
-            p_bar[imt] = []
-            p_std[imt] = []
-            for mag in self.magnitude_limits:
-                phi_ss_mean = get_phi_ss(imt, mag, phi_mean)
-                phi_ss_std = get_phi_ss(imt, mag, phi_std)
-                if self.ergodic:
-                    # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
-                    # of Al Atik (2015)
-                    phi_ss_mean = np.sqrt(
-                        phi_ss_mean ** 2. +
-                        PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.
-                        )
-                    phi_ss_std = np.sqrt(
-                        phi_ss_std ** 2. +
-                        PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.
-                        )
-                p_bar[imt].append(phi_ss_mean)
-                p_std[imt].append(phi_ss_std)
-        return p_bar, p_std
-
-    def _get_total_sigma(self, imt, mag):
-        """
-        Returns the estimated total standard deviation for a given intensity
-        measure type and magnitude
-        """
-        C = self.SIGMA[imt]
-        if mag <= self.magnitude_limits[0]:
-            # The CENA constant model is always returned here
-            return C[self.tau_keys[0]]
-        elif mag > self.magnitude_limits[-1]:
-            return C[self.tau_keys[-1]]
-        else:
-            # Needs interpolation
-            for i in range(len(self.tau_keys) - 1):
-                l_m = self.magnitude_limits[i]
-                u_m = self.magnitude_limits[i + 1]
-                if mag > l_m and mag <= u_m:
-                    return ITPL(mag,
-                                C[self.tau_keys[i + 1]],
-                                C[self.tau_keys[i]],
-                                l_m,
-                                u_m - l_m)
+        _get_sigma_at_quantile(self, kwargs.get('sigma_quantile'))
 
 
 # populate gsim_aliases for the NGA East GMPEs
