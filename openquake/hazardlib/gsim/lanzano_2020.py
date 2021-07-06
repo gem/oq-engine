@@ -22,9 +22,140 @@ Module :mod:`openquake.hazardlib.gsim.lanzano_2020` implements
 
 import numpy as np
 from scipy.constants import g as gravity_acc
+
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+
+CONSTS = {'Mh': 5.0,
+          'Rref': 1.0,
+          'PseudoDepth': 6.0}
+
+
+def _get_distance_term(C, mag, dists):
+    term1 = C['c1']*(mag-C['Mref']) + C['c2']
+    tmp = np.sqrt(dists.rjb ** 2 + CONSTS['PseudoDepth'] ** 2)
+    term2 = np.log10(tmp / CONSTS['Rref'])
+    term3 = C['c3'] * (tmp-CONSTS['Rref'])
+    return term1 * term2 + term3
+
+
+def _get_magnitude_term(C, mag):
+    if mag <= CONSTS['Mh']:
+        return C['b1'] * (mag-CONSTS['Mh'])
+    else:
+        return C['b2'] * (mag-CONSTS['Mh'])
+
+
+_get_site_correction = CallableDict()
+
+
+@_get_site_correction.add("ref")
+def _get_site_correction_1(kind, sites, C):
+    """
+    Compute the fourth term of the equation 1 described on paragraph :
+    The functional form Fs in Eq. (1) represents the site amplification and
+    it is given by FS = sj Cj , for j = 1,...,3, where sj are the
+    coefficients to be determined through the regression analysis,
+    while Cj are dummy variables used to denote two different
+    site classes
+    """
+    s_others = np.zeros(len(sites.siteclass))
+    list_sites = [x.decode('utf-8') for x in sites.siteclass]
+    idx = [index for index, value in enumerate(list_sites) if value != 'A']
+    s_others[idx] = 1.0
+    return (C['s_other'] * s_others)
+
+
+@_get_site_correction.add("ec8")
+def _get_site_correction_2(kind, sites, C):
+    ssb, ssc, ssd, sse = _get_site_type_dummy_variables(kind, sites)
+    return ((C['sB'] * ssb) + (C['sC'] * ssc) +
+            (C['sD'] * ssd) + (C['sE'] * sse))
+
+
+@_get_site_correction.add("cluster")
+def _get_site_correction_3(kind, sites, C):
+    cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9 = _get_site_type_dummy_variables(
+        kind, sites)
+    return ((C['s2'] * cl2) + (C['s3'] * cl3) + (C['s4'] * cl4) +
+            (C['s5'] * cl5) + (C['s6'] * cl6) + (C['s7'] * cl7) +
+            (C['s8'] * cl8) + (C['s9'] * cl9))
+
+
+_get_site_type_dummy_variables = CallableDict()
+
+
+@_get_site_type_dummy_variables.add("ec8")
+def _get_site_type_dummy_variables_1(kind, sites):
+    """
+    Get site type dummy variables for five different EC8 site classes
+    """
+    ssb = np.zeros(len(sites.siteclass))
+    ssc = np.zeros(len(sites.siteclass))
+    ssd = np.zeros(len(sites.siteclass))
+    sse = np.zeros(len(sites.siteclass))
+
+    list_sites = [x.decode('utf-8') for x in sites.siteclass]
+    idx = [index for index, value in enumerate(list_sites) if value == 'B']
+    ssb[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == 'C']
+    ssc[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == 'D']
+    ssd[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == 'E']
+    sse[idx] = 1.0
+    return ssb, ssc, ssd, sse
+
+
+@_get_site_type_dummy_variables.add("cluster")
+def _get_site_type_dummy_variables_2(kind, sites):
+    """
+    Get site type dummy variables.
+    The recording sites are classified into 9 different clusters.
+    """
+    cl2 = np.zeros(len(sites.siteclass))
+    cl3 = np.zeros(len(sites.siteclass))
+    cl4 = np.zeros(len(sites.siteclass))
+    cl5 = np.zeros(len(sites.siteclass))
+    cl6 = np.zeros(len(sites.siteclass))
+    cl7 = np.zeros(len(sites.siteclass))
+    cl8 = np.zeros(len(sites.siteclass))
+    cl9 = np.zeros(len(sites.siteclass))
+
+    list_sites = [x.decode('utf-8') for x in sites.siteclass]
+    idx = [index for index, value in enumerate(list_sites) if value == '2']
+    cl2[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == '3']
+    cl3[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == '4']
+    cl4[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == '5']
+    cl5[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == '6']
+    cl6[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == '7']
+    cl7[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == '8']
+    cl8[idx] = 1.0
+    idx = [index for index, value in enumerate(list_sites) if value == '9']
+    cl9[idx] = 1.0
+    return cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 +
+                                   C['phi_0'] ** 2) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2) +
+                           np.zeros(num_sites))
+    return stddevs
 
 
 class LanzanoEtAl2020_ref(GMPE):
@@ -37,6 +168,7 @@ class LanzanoEtAl2020_ref(GMPE):
     The site term for Reference Rock Sites is zero,
     whereas for other sites, the site term is provided.
     """
+    kind = "ref"
 
     #: Supported tectonic region type is 'active shallow crust'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -44,10 +176,7 @@ class LanzanoEtAl2020_ref(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
-        PGA,
-        SA
-    }
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -56,10 +185,7 @@ class LanzanoEtAl2020_ref(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = {'siteclass'}
@@ -75,58 +201,17 @@ class LanzanoEtAl2020_ref(GMPE):
         # Ergodic coeffs
         C = self.COEFFS[imt]
         # Get mean
-        mean = (C['a'] + self._get_magnitude_term(C, rup.mag) +
-                self._get_distance_term(C, rup.mag, dists) +
-                self._get_site_correction(sites, C))
+        mean = (C['a'] + _get_magnitude_term(C, rup.mag) +
+                _get_distance_term(C, rup.mag, dists) +
+                _get_site_correction(self.kind, sites, C))
         # To natural logarithm and fraction of g
-        mean = np.log(10.0**mean/(gravity_acc*100))
+        mean = np.log(10.0**mean / (gravity_acc * 100))
         # Get stds
-        istddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.siteclass))
+        istddevs = _get_stddevs(
+            C, stddev_types, num_sites=len(sites.siteclass))
         stds = np.log(10.0 ** np.array(istddevs))
-        # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
+        # mean_LogNatural = np.log((10 ** mean) * 1e-2 / g)
         return mean, stds
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 +
-                                       C['phi_0'] ** 2) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2) +
-                               np.zeros(num_sites))
-        return stddevs
-
-    def _get_site_correction(self, sites, C):
-        """
-        Compute the fourth term of the equation 1 described on paragraph :
-        The functional form Fs in Eq. (1) represents the site amplification and
-        it is given by FS = sj Cj , for j = 1,...,3, where sj are the
-        coefficients to be determined through the regression analysis,
-        while Cj are dummy variables used to denote two different
-        site classes
-        """
-        s_others = np.zeros(len(sites.siteclass))
-        list_sites = [x.decode('utf-8') for x in sites.siteclass]
-        idx = [index for index, value in enumerate(list_sites) if value != 'A']
-        s_others[idx] = 1.0
-        return (C['s_other'] * s_others)
-
-    def _get_magnitude_term(self, C, mag):
-        if mag <= self.consts['Mh']:
-            return C['b1']*(mag-self.consts['Mh'])
-        else:
-            return C['b2']*(mag-self.consts['Mh'])
-
-    def _get_distance_term(self, C, mag, dists):
-        term1 = C['c1']*(mag-C['Mref']) + C['c2']
-        tmp = np.sqrt(dists.rjb ** 2 + self.consts['PseudoDepth'] ** 2)
-        term2 = np.log10(tmp/self.consts['Rref'])
-        term3 = C['c3']*(tmp-self.consts['Rref'])
-        return term1 * term2 + term3
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
 IMT                 a                   b1                  b2                  c1                  c2                  c3                      s_other             Mref                tau                 phi_S2S             phi_0               sigma
@@ -202,36 +287,9 @@ pga                 2.88013426131621    0.569253138264182   0.214397115956832   
 2                   1.94393949985108    0.713681634778468   0.492595644795684   0.243560419093234   -1.24194587668475   0                       0.149386127461626   5.26896508895249    0.136974047294487   0.202213143668361   0.194681443923737   0.312334611775104
     """)
 
-    consts = {'Mh': 5.0,
-              'Rref': 1.0,
-              'PseudoDepth': 6.0}
-
 
 class LanzanoEtAl2020_EC8(LanzanoEtAl2020_ref):
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables for five different EC8 site classes
-        """
-        ssb = np.zeros(len(sites.siteclass))
-        ssc = np.zeros(len(sites.siteclass))
-        ssd = np.zeros(len(sites.siteclass))
-        sse = np.zeros(len(sites.siteclass))
-
-        list_sites = [x.decode('utf-8') for x in sites.siteclass]
-        idx = [index for index, value in enumerate(list_sites) if value == 'B']
-        ssb[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == 'C']
-        ssc[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == 'D']
-        ssd[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == 'E']
-        sse[idx] = 1.0
-        return ssb, ssc, ssd, sse
-
-    def _get_site_correction(self, sites, C):
-        ssb, ssc, ssd, sse = self._get_site_type_dummy_variables(sites)
-        return (C['sB'] * ssb) + (C['sC'] * ssc) + (C['sD'] * ssd) + (C['sE'] * sse)
+    kind = "ec8"
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
 IMT                 a                   b1                  b2                  c1                  c2                  c3                      sB                  sC                  sD                  sE                  Mref                tau                 phi_S2S             phi_0               sigma
@@ -309,43 +367,7 @@ pga                 3.09622481409268    0.569215009619483   0.214024666583574   
 
 
 class LanzanoEtAl2020_Cluster(LanzanoEtAl2020_ref):
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables.
-        The recording sites are classified into 9 different clusters.
-        """
-        cl2 = np.zeros(len(sites.siteclass))
-        cl3 = np.zeros(len(sites.siteclass))
-        cl4 = np.zeros(len(sites.siteclass))
-        cl5 = np.zeros(len(sites.siteclass))
-        cl6 = np.zeros(len(sites.siteclass))
-        cl7 = np.zeros(len(sites.siteclass))
-        cl8 = np.zeros(len(sites.siteclass))
-        cl9 = np.zeros(len(sites.siteclass))
-
-        list_sites = [x.decode('utf-8') for x in sites.siteclass]
-        idx = [index for index, value in enumerate(list_sites) if value == '2']
-        cl2[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == '3']
-        cl3[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == '4']
-        cl4[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == '5']
-        cl5[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == '6']
-        cl6[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == '7']
-        cl7[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == '8']
-        cl8[idx] = 1.0
-        idx = [index for index, value in enumerate(list_sites) if value == '9']
-        cl9[idx] = 1.0
-        return cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9
-
-    def _get_site_correction(self, sites, C):
-        cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9 = self._get_site_type_dummy_variables(sites)
-        return (C['s2'] * cl2) + (C['s3'] * cl3) + (C['s4'] * cl4) + (C['s5'] * cl5) + (C['s6'] * cl6) + (C['s7'] * cl7) + (C['s8'] * cl8) + (C['s9'] * cl9)
+    kind = "cluster"
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
 IMT     a       b1      b2      c1      c2      c3          s2      s3      s4      s5      s6      s7      s8      s9      Mref    tau     phi_S2S phi_0   sigma
