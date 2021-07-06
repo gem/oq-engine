@@ -76,11 +76,15 @@ def _compute_disterm(trt, C1, theta2, theta14, theta3, mag, dists, c4, theta9,
             ((theta6_adj + theta6) * dists)) + theta10
 
 
-def _compute_fb_term(trt, sites, dists, min_dist, a, b, faba_model=None):
+def _compute_fb_term(trt, sites, dists, C, faba_model=None):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         dists = dists.rrup
+        a, b = C['theta15'], C['theta16']
+        min_dist = 100.
     elif trt == const.TRT.SUBDUCTION_INTRASLAB:
         dists = dists.rhypo
+        a, b = C['theta7'], C['theta8']
+        min_dist = 85.
     else:
         raise NotImplementedError(trt)
     if faba_model is None:
@@ -278,8 +282,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the forearc/backarc scaling term given by equation (4)
         """
-        return _compute_fb_term(self.trt, sites, dists, 100., C['theta15'],
-                                C['theta16'])
+        return _compute_fb_term(self.trt, sites, dists, C)
 
     def _compute_site_response_term(self, C, sites, pga1000):
         """
@@ -404,13 +407,6 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     delta_c1 = -0.3
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4).
-        """
-        return _compute_fb_term(self.trt, sites, dists, 85., C['theta7'],
-                                C['theta8'])
 
 
 class AbrahamsonEtAl2015SSlabHigh(AbrahamsonEtAl2015SSlab):
