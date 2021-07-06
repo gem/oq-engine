@@ -221,7 +221,7 @@ class ContextMaker(object):
                     self.loglevels[imt] = numpy.log(imls)
 
         self.init_monitoring(monitor)
-        self.newapi = any(hasattr(gs, 'calc_all') for gs in self.gsims)
+        self.newapi = any(hasattr(gs, 'compute') for gs in self.gsims)
         self.compile()
 
     def init_monitoring(self, monitor):
@@ -241,13 +241,13 @@ class ContextMaker(object):
         out = numpy.zeros((G, 4, M, 1))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
-            if hasattr(gsim, 'calc_all'):
+            if hasattr(gsim, 'compute'):
                 self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
                 if numba:
                     ctx = numpy.ones(1, gsim.ctx_builder.dtype)
                 else:
                     ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
-                gsim.__class__.calc_all(fake, ctx, self.imts, *out[g])
+                gsim.__class__.compute(fake, ctx, self.imts, *out[g])
 
     def gen_triples(self, gsim, ctxs):
         """
@@ -560,7 +560,7 @@ class ContextMaker(object):
             S = len(stypes)
             arr = numpy.zeros((1 + S, N, M))
             gcls = gsim.__class__
-            calc_ms = getattr(gcls, 'calc_all', None)
+            calc_ms = getattr(gcls, 'compute', None)
             if calc_ms:  # fast lane
                 if all(len(ctx) == 1 for ctx in ctxs):
                     # single-site-optimization
