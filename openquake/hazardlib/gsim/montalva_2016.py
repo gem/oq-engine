@@ -49,6 +49,7 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
     hazard models using this implementation
     """
     superseded_by = MontalvaEtAl2017SInter
+    kind = "montalva16"
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -72,13 +73,6 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
                 self._compute_site_response_term(C, sites, pga1000))
         stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
-
-    def _compute_magnitude_term(self, C, dc1, mag):
-        """
-        Computes the magnitude scaling term given by equation (2)
-        """
-        return _compute_magterm(CONSTS["C1"], C['theta1'], C['theta4'],
-                                C['theta5'], C['theta13'], dc1, mag)
 
     def _compute_distance_term(self, C, mag, dists):
         """
@@ -130,6 +124,7 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
     hazard models using this implementation
     """
     superseded_by = MontalvaEtAl2017SSlab
+    kind = "montalva16"
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -154,14 +149,6 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
                 self._compute_site_response_term(C, sites, pga1000))
         stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
-
-    def _compute_magnitude_term(self, C, dc1, mag):
-        """
-        Computes the magnitude scaling term given by equation (2)
-        corrected by a local adjustment factor
-        """
-        return _compute_magterm(CONSTS['C1'], C['theta1'], C['theta4'],
-                                C['theta5'], C['theta13'], dc1, mag)
 
     def _compute_distance_term(self, C, mag, dists):
         """

@@ -46,16 +46,7 @@ class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
     implementation, as coefficients and model changed at the point of
     publication
     """
-
-    def _compute_magnitude_term(self, C, dc1, mag):
-        """
-        Computes the magnitude scaling term given by equations (2) and (3)
-        corrected by a local adjustment factor. Modified from original
-        Abrahamson et al (2015) implementation as theta4 and theta5 are now
-        period-dependent, whilst theta13 is now zero
-        """
-        return _compute_magterm(CONSTS['C1'], C['theta1'], C['theta4'],
-                                C['theta5'], 0., dc1, mag)
+    kind = "montalva17"
 
     def _compute_distance_term(self, C, mag, dists):
         """
@@ -138,15 +129,7 @@ class MontalvaEtAl2017SSlab(AbrahamsonEtAl2015SSlab):
     Adaptation of the Abrahamson et al. (2015) BC Hydro subduction in-slab
     GMPE, calibrated to Chilean strong motion data
     """
-
-    def _compute_magnitude_term(self, C, dc1, mag):
-        """
-        Computes the magnitude scaling term given by equations (2) and (3),
-        corrected by a local adjustment factor - see documentation for
-        interface version for changes
-        """
-        return _compute_magterm(CONSTS['C1'], C['theta1'], C['theta4'],
-                                C['theta5'], 0., dc1, mag)
+    kind = "montalva17"
 
     def _compute_distance_term(self, C, mag, dists):
         """

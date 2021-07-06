@@ -44,6 +44,8 @@ CONSTS = {
     'C1': 7.8
 }
 
+C1 = 7.2  # for Montalva2017
+
 
 def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     """
@@ -182,8 +184,17 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the magnitude scaling term given by equation (2)
         """
-        return _compute_magterm(CONSTS['C1'], C['theta1'], CONSTS['theta4'],
-                                CONSTS['theta5'], C['theta13'], dc1, mag)
+        if self.kind == "base":
+            return _compute_magterm(
+                CONSTS['C1'], C['theta1'], CONSTS['theta4'],
+                CONSTS['theta5'], C['theta13'], dc1, mag)
+        elif self.kind == "montalva16":
+            return _compute_magterm(
+                CONSTS['C1'], C['theta1'], C['theta4'],
+                C['theta5'], C['theta13'], dc1, mag)
+        elif self.kind == "montalva17":
+            return _compute_magterm(C1, C['theta1'], C['theta4'],
+                                    C['theta5'], 0., dc1, mag)
 
     def _compute_distance_term(self, C, mag, dists):
         """
