@@ -183,6 +183,49 @@ def _get_mean(kind, distance_type, data, dctx, dists):
     return mean
 
 
+def _get_stddevs(sigma_model, mag, vs30, imt, stddev_types, num_sites):
+    """
+    Returns the standard deviations according to the choice of aleatory
+    uncertainty model. Note that for compatibility with the US NSHMP
+    code a weighted sum of the two aleatory uncertainty models is used,
+    with the EPRI model assigned a weight of 0.8 and the PANEL model 0.2.
+    """
+    if sigma_model in ("EPRI", "COLLAPSED"):
+        # EPRI recommended aleatory uncertainty model
+        tau_epri, phi_epri = get_epri_tau_phi(imt, mag)
+        tau_epri += np.zeros(num_sites)
+        phi_epri += np.zeros(num_sites)
+    if sigma_model in ("PANEL", "COLLAPSED"):
+        # Panel recommended model
+        tau_panel, phi0_panel = get_panel_tau_phi(imt, mag)
+        tau_panel += np.zeros(num_sites)
+        phis2s = get_stewart_2019_phis2s(imt, vs30)
+        phi_panel = np.sqrt(phi0_panel ** 2. + phis2s ** 2.)
+
+    if sigma_model == "EPRI":
+        tau = tau_epri
+        phi = phi_epri
+        sigma = np.sqrt(tau ** 2. + phi ** 2.)
+    elif sigma_model == "PANEL":
+        tau = tau_panel
+        phi = phi_panel
+        sigma = np.sqrt(tau ** 2. + phi ** 2.)
+    else:
+        # Get the weighted sum of the two models
+        sigma_epri = np.sqrt(tau_epri ** 2. + phi_epri ** 2.)
+        sigma_panel = np.sqrt(tau_panel ** 2. + phi_panel ** 2.)
+        sigma = 0.8 * sigma_epri + 0.2 * sigma_panel
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(sigma)
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau)
+    return stddevs
+
+
 class NGAEastUSGSGMPE(NGAEastGMPE):
     """
     For the "core" NGA East set the table is provided in the code in a
@@ -251,52 +294,9 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
 
         # Get standard deviation model
         nsites = getattr(dctx, self.distance_type).shape
-        stddevs = self.get_stddevs(rctx.mag, sctx.vs30, imt,
-                                   stddev_types, nsites)
+        stddevs = _get_stddevs(self.sigma_model, rctx.mag, sctx.vs30, imt,
+                               stddev_types, nsites)
         return mean, stddevs
-
-    def get_stddevs(self, mag, vs30, imt, stddev_types, num_sites):
-        """
-        Returns the standard deviations according to the choice of aleatory
-        uncertainty model. Note that for compatibility with the US NSHMP
-        code a weighted sum of the two aleatory uncertainty models is used,
-        with the EPRI model assigned a weight of 0.8 and the PANEL model 0.2.
-        """
-        if self.sigma_model in ("EPRI", "COLLAPSED"):
-            # EPRI recommended aleatory uncertainty model
-            tau_epri, phi_epri = get_epri_tau_phi(imt, mag)
-            tau_epri += np.zeros(num_sites)
-            phi_epri += np.zeros(num_sites)
-        if self.sigma_model in ("PANEL", "COLLAPSED"):
-            # Panel recommended model
-            tau_panel, phi0_panel = get_panel_tau_phi(imt, mag)
-            tau_panel += np.zeros(num_sites)
-            phis2s = get_stewart_2019_phis2s(imt, vs30)
-            phi_panel = np.sqrt(phi0_panel ** 2. + phis2s ** 2.)
-
-        if self.sigma_model == "EPRI":
-            tau = tau_epri
-            phi = phi_epri
-            sigma = np.sqrt(tau ** 2. + phi ** 2.)
-        elif self.sigma_model == "PANEL":
-            tau = tau_panel
-            phi = phi_panel
-            sigma = np.sqrt(tau ** 2. + phi ** 2.)
-        else:
-            # Get the weighted sum of the two models
-            sigma_epri = np.sqrt(tau_epri ** 2. + phi_epri ** 2.)
-            sigma_panel = np.sqrt(tau_panel ** 2. + phi_panel ** 2.)
-            sigma = 0.8 * sigma_epri + 0.2 * sigma_panel
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sigma)
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs
 
 
 lines = '''\
