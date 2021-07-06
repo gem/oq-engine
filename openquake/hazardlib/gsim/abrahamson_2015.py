@@ -61,6 +61,13 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     return base + f_mag
 
 
+def _compute_disterm(theta2, theta14, theta3, mag, dists, c4, theta9,
+                     theta6_adj, theta6, theta10):
+    return ((theta2 + theta14 + theta3 * (mag - 7.8)) * np.log(
+        dists + c4 * np.exp((mag - 6.) * theta9)) +
+            ((theta6_adj + theta6) * dists)) + theta10
+
+
 def _get_stddevs(ergodic, C, stddev_types, num_sites):
     """
     Return standard deviations as defined in Table 3
@@ -200,9 +207,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return (C['theta2'] + CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
-                   CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
+        return _compute_disterm(
+            C['theta2'], 0., CONSTS['theta3'], mag, dists.rrup,
+            CONSTS['c4'], CONSTS['theta9'], 0., C['theta6'], 0.)
 
     def _compute_focal_depth_term(self, C, rup):
         """
