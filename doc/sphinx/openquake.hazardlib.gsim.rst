@@ -281,6 +281,14 @@ boore_2014
     :undoc-members:
     :show-inheritance:
 
+boore_2020
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.boore_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 boore_atkinson_2008
 ---------------------------------------------------
 
