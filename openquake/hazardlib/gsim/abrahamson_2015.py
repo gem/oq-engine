@@ -76,19 +76,26 @@ def _compute_disterm(trt, C1, theta2, theta14, theta3, mag, dists, c4, theta9,
             ((theta6_adj + theta6) * dists)) + theta10
 
 
-def _compute_fb1term(trt, sites, dists, min_dist, a, b):
+def _compute_fb_term(trt, sites, dists, min_dist, a, b, faba_model=None):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         dists = dists.rrup
     elif trt == const.TRT.SUBDUCTION_INTRASLAB:
         dists = dists.rhypo
     else:
         raise NotImplementedError(trt)
-    f_faba = np.zeros_like(dists)
-    # Term only applies to backarc sites (F_FABA = 0. for forearc)
-    max_dist = dists[sites.backarc]
-    max_dist[max_dist < min_dist] = min_dist
-    f_faba[sites.backarc] = a + b * np.log(max_dist / 40.)
-    return f_faba
+    if faba_model is None:
+        f_faba = np.zeros_like(dists)
+        # Term only applies to backarc sites (F_FABA = 0. for forearc)
+        fixed_dists = dists[sites.backarc]
+        fixed_dists[fixed_dists < min_dist] = min_dist
+        f_faba[sites.backarc] = a + b * np.log(fixed_dists / 40.)
+        return f_faba
+
+    # in BCHydro subclasses
+    fixed_dists = np.copy(dists)
+    fixed_dists[fixed_dists < min_dist] = min_dist
+    f_faba = a + b * np.log(fixed_dists / 40.)
+    return f_faba * faba_model(-sites.xvf)
 
 
 def _get_stddevs(ergodic, C, stddev_types, num_sites):
@@ -165,6 +172,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
     delta_c1 = None
     kind = "base"
     theta6_adj = 0.
+    faba_model = None  # overridden in BCHydro
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -270,7 +278,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the forearc/backarc scaling term given by equation (4)
         """
-        return _compute_fb1term(self.trt, sites, dists, 100., C['theta15'],
+        return _compute_fb_term(self.trt, sites, dists, 100., C['theta15'],
                                 C['theta16'])
 
     def _compute_site_response_term(self, C, sites, pga1000):
@@ -401,7 +409,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
         """
         Computes the forearc/backarc scaling term given by equation (4).
         """
-        return _compute_fb1term(self.trt, sites, dists, 85., C['theta7'],
+        return _compute_fb_term(self.trt, sites, dists, 85., C['theta7'],
                                 C['theta8'])
 
 
