@@ -524,15 +524,6 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
         else:
             return mean, stddevs
 
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return ((C['theta2'] + C['theta14'] + CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
-                np.exp((mag - 6.) * CONSTS['theta9'])) +
-                ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
-
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """
         Computes the forearc/backarc scaling term given by equation (4).
@@ -602,15 +593,6 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
         else:
             return mean, stddevs
 
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return ((C['theta2'] + C['theta14'] + CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
-                np.exp((mag - 6.) * CONSTS['theta9'])) +
-                ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
-
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """
         Computes the forearc/backarc scaling term given by equation (4).
@@ -678,15 +660,6 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return ((C['theta2'] + C['theta14'] + CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + CONSTS['c4'] *
-                np.exp((mag - 6.) * CONSTS['theta9'])) +
-                ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """

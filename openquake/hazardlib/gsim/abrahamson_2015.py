@@ -65,6 +65,7 @@ def _compute_disterm(trt, theta2, theta14, theta3, mag, dists, c4, theta9,
                      theta6_adj, theta6, theta10):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         dists = dists.rrup
+        assert theta10 == 0., theta10
     elif trt == const.TRT.SUBDUCTION_INTRASLAB:
         dists = dists.rhypo
     else:
