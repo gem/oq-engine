@@ -25,6 +25,49 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const
 
 
+def _get_stddvs(between_absolute, within_absolute, total, stds_types):
+    """
+    This computes the between and within event std given the total std.
+
+    :param total:
+        A 1D :class:`numpy.ndarray` with the total standard deviation
+        values.
+    :param stds_types:
+        A list with the type of std requested.
+    :return:
+        A list of 1D :class:`numpy.ndarray`
+    """
+    # Compute missing standard deviations
+    new_stds = {'total': total}
+    if np.isscalar(between_absolute):
+        between = np.ones_like(total) * between_absolute
+        if np.any(total - between < 0):
+            raise ValueError('Between event std larger than total')
+        within = np.sqrt(total**2 - between**2)
+        new_stds['between'] = between
+        new_stds['within'] = within
+    elif np.isscalar(within_absolute):
+        within = np.ones_like(total) * within_absolute
+        if np.any(total - within < 0):
+            raise ValueError('Within event std larger than total')
+        between = np.sqrt(total**2 - within**2)
+        new_stds['between'] = between
+        new_stds['within'] = within
+    else:
+        pass
+    stds = []
+    for key in stds_types:
+        if key == const.StdDev.TOTAL:
+            stds.append(new_stds['total'])
+        elif key == const.StdDev.INTER_EVENT:
+            stds.append(new_stds['between'])
+        elif key == const.StdDev.INTRA_EVENT:
+            stds.append(new_stds['within'])
+        else:
+            raise ValueError('Unsupported std type')
+    return stds
+
+
 class SplitSigmaGMPE(GMPE):
     """
     This modified GMPE adds within event and between event stds to GMPE that
@@ -74,47 +117,6 @@ class SplitSigmaGMPE(GMPE):
         stds_total_type = [const.StdDev.TOTAL]
         mean, std_total = self.gmpe.get_mean_and_stddevs(
             sites, rup, dists, imt, stds_total_type)
-        stddvs = self._get_stddvs(np.array(std_total[0]), stds_types)
+        stddvs = _get_stddvs(self.between_absolute, self.within_absolute,
+                             np.array(std_total[0]), stds_types)
         return mean, stddvs
-
-    def _get_stddvs(self, total, stds_types):
-        """
-        This computes the between and within event std given the total std.
-
-        :param total:
-            A 1D :class:`numpy.ndarray` with the total standard deviation
-            values.
-        :param stds_types:
-            A list with the type of std requested.
-        :return:
-            A list of 1D :class:`numpy.ndarray`
-        """
-        # Compute missing standard deviations
-        new_stds = {'total': total}
-        if np.isscalar(self.between_absolute):
-            between = np.ones_like(total) * self.between_absolute
-            if np.any(total - between < 0):
-                raise ValueError('Between event std larger than total')
-            within = np.sqrt(total**2 - between**2)
-            new_stds['between'] = between
-            new_stds['within'] = within
-        elif np.isscalar(self.within_absolute):
-            within = np.ones_like(total) * self.within_absolute
-            if np.any(total - within < 0):
-                raise ValueError('Within event std larger than total')
-            between = np.sqrt(total**2 - within**2)
-            new_stds['between'] = between
-            new_stds['within'] = within
-        else:
-            pass
-        stds = []
-        for key in stds_types:
-            if key == const.StdDev.TOTAL:
-                stds.append(new_stds['total'])
-            elif key == const.StdDev.INTER_EVENT:
-                stds.append(new_stds['between'])
-            elif key == const.StdDev.INTRA_EVENT:
-                stds.append(new_stds['within'])
-            else:
-                raise ValueError('Unsupported std type')
-        return stds

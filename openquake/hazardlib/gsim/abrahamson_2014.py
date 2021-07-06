@@ -342,7 +342,7 @@ def _get_vs30star(vs30, imt):
     This computes equations 8 and 9 at page 1034
     """
     # compute the v1 value (see eq. 9, page 1034)
-    if imt.name == "SA":
+    if imt.string[:2] == "SA":
         t = imt.period
         if t <= 0.50:
             v1 = 1500.0
@@ -350,7 +350,7 @@ def _get_vs30star(vs30, imt):
             v1 = np.exp(-0.35 * np.log(t / 0.5) + np.log(1500.))
         else:
             v1 = 800.0
-    elif imt.name == "PGA":
+    elif imt.string == "PGA":
         v1 = 1500.0
     else:
         # This covers the PGV case

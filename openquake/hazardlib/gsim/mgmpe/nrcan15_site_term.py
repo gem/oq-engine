@@ -185,7 +185,7 @@ class NRCan15SiteTerm(GMPE):
         # compute mean and standard deviation
         mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
                                                       imt, stds_types)
-        if imt.name != 'PGA':
+        if imt.string != 'PGA':
             # compute mean and standard deviation on rock
             mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(
                 sites_rock, rup, dists, imt, stds_types)

@@ -207,7 +207,7 @@ class ZhaoEtAl2006Asc(GMPE):
         mean = np.log(np.exp(mean) * 1e-2 / g)
 
         stddevs = _get_stddevs(C['sigma'], C['tauC'], stddev_types,
-                                    num_sites=len(sites.vs30))
+                               num_sites=len(sites.vs30))
 
         return mean, stddevs
 

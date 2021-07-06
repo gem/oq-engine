@@ -11,7 +11,9 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import gsim_aliases
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+    BooreAtkinson2008, _get_site_amplification_non_linear,
+    _get_site_amplification_linear)
 
 dirname = os.path.dirname(__file__)
 BASE_PATH_AA13 = os.path.join(dirname, 'nbcc2015_tables')
@@ -39,6 +41,8 @@ REQUIRES_DISTANCES = ["{dist}"]
 DEFINED_FOR_TECTONIC_REGION_TYPE = "{trt}"
 gmpe_table = "{hdf5}.hdf5"
 ''' % kind
+
+BA08 = BooreAtkinson2008
 
 
 class NBCC2015_AA13(GMPETable):
@@ -71,7 +75,6 @@ class NBCC2015_AA13(GMPETable):
     REQUIRES_SITES_PARAMETERS = {'vs30'}
     REQUIRES_DISTANCES = ""
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-    BA08 = BooreAtkinson2008()
 
     def __init__(self, **kwargs):
         # kwargs must contain the keys REQUIRES_DISTANCES,
@@ -154,11 +157,11 @@ class NBCC2015_AA13(GMPETable):
                                          np.log10([1.0, C['c']])))
         F[vs30 >= 760.] = 1./F[vs30 >= 760.]
 
-        C2 = self.BA08.COEFFS_SOIL_RESPONSE[imt]
-        nl = self.BA08._get_site_amplification_non_linear(vs30[vs30 < 760.],
-                                                          PGA760[vs30 < 760.],
-                                                          C2)
-        lin = self.BA08._get_site_amplification_linear(vs30[vs30 < 760.], C2)
+        C2 = BA08.COEFFS_SOIL_RESPONSE[imt]
+        nl = _get_site_amplification_non_linear(vs30[vs30 < 760.],
+                                                PGA760[vs30 < 760.],
+                                                C2)
+        lin = _get_site_amplification_linear(vs30[vs30 < 760.], C2)
         F[vs30 < 760.] = np.exp(nl+lin)
 
         return F
