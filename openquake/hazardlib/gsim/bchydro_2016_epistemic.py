@@ -22,7 +22,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SInterLow,
     AbrahamsonEtAl2015SInterHigh, AbrahamsonEtAl2015SSlab,
-    AbrahamsonEtAl2015SSlabLow, AbrahamsonEtAl2015SSlabHigh, CONSTS)
+    AbrahamsonEtAl2015SSlabLow, AbrahamsonEtAl2015SSlabHigh)
 
 
 # Total epistemic uncertainty factors from Abrahamson et al. (2018)

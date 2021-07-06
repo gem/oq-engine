@@ -20,17 +20,9 @@
 Module exports :class:`MontalvaEtAl2017SInter`
                :class:`MontalvaEtAl2017SSlab`
 """
-import numpy as np
-
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2015 import (
-    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab, CONSTS,
-    _compute_magterm)
-
-
-# Period-Independent Coefficients (Table 2 of BC Hydro)
-CONSTS = CONSTS.copy()
-CONSTS["C1"] = 7.2
+    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab)
 
 
 class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
