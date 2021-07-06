@@ -572,7 +572,7 @@ class NGAEastGMPE(GMPETable):
         self.tau_quantile = kwargs.get('tau_quantile')
         self.phi_ss_quantile = kwargs.get('phi_ss_quantile')
         self.phi_s2ss_quantile = kwargs.get('phi_s2ss_quantile')
-        if 'USGS' not in self.__class__.__name__:
+        if self.kind != 'usgs':
             # setup tau
             self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
                                            TAU_SETUP[self.tau_model]["STD"],

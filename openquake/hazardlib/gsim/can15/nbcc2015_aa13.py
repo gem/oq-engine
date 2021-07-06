@@ -45,6 +45,62 @@ gmpe_table = "{hdf5}.hdf5"
 BA08 = BooreAtkinson2008
 
 
+def AB06_BA08(C, vs30, imt, PGA760):
+
+    F = np.zeros_like(vs30)
+
+    F[vs30 >= 760.] = 10**(np.interp(np.log10(vs30[vs30 >= 760.]),
+                                     np.log10([760.0, 2000.0]),
+                                     np.log10([1.0, C['c']])))
+    F[vs30 >= 760.] = 1./F[vs30 >= 760.]
+
+    C2 = BA08.COEFFS_SOIL_RESPONSE[imt]
+    nl = _get_site_amplification_non_linear(vs30[vs30 < 760.],
+                                            PGA760[vs30 < 760.],
+                                            C2)
+    lin = _get_site_amplification_linear(vs30[vs30 < 760.], C2)
+    F[vs30 < 760.] = np.exp(nl+lin)
+
+    return F
+
+
+def site_term(self, sctx, rctx, dctx, dists, imt, stddev_types):
+    """
+    Site term as used to calculate site coefficients for NBCC2015:
+
+    For Vs30 > 760 m/s use log-log interpolation of the 760-to-2000
+    factor of AA13.
+
+    For Vs30 < 760 m/s use the site term of Boore and Atkinson 2008.
+
+    Original site term is relative to Vs30 = 760m/s so needs to be made
+    relative to Vs30 = 450 m/s by dividing by the site term at Vs30 = 450.
+    Assume PGA_760 = 0.1g for Vs30 > 450 m/s. Also need to correct PGA at
+    site class C to 760 m/s. Cap PGA_450 at 0.1 - 0.5g.
+    """
+    imls_pga = _return_tables(rctx.mag, PGA(), "IMLs")
+    PGA450 = self._get_mean(imls_pga, dctx, dists)
+    imls_SA02 = _return_tables(rctx.mag, SA(0.2), "IMLs")
+    SA02 = self._get_mean(imls_SA02, dctx, dists)
+
+    PGA450[SA02 / PGA450 < 2.0] = PGA450[SA02 / PGA450 < 2.0] * 0.8
+
+    pgas = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+    pga_cors = np.array([0.083, 0.165, 0.248, 0.331, 0.414])
+    PGA760 = np.interp(PGA450, pgas, pga_cors)
+    PGA760_ref = np.copy(PGA760)
+    PGA760_ref[sctx.vs30 > 450.] = 0.1
+
+    vs30ref = np.zeros_like(sctx.vs30)
+    vs30ref += 450.0
+
+    C = self.COEFFS_2000_to_BC[imt]
+    site_term = (AB06_BA08(C, sctx.vs30, imt, PGA760_ref) /
+                 AB06_BA08(C, vs30ref, imt, PGA760_ref))
+
+    return np.log(site_term)
+
+
 class NBCC2015_AA13(GMPETable):
     """
     Implements the GMMs of the 5th Generation seismic hazard model of Canada
@@ -104,67 +160,10 @@ class NBCC2015_AA13(GMPETable):
         # Get mean and standard deviations
         mean = np.log(self._get_mean(imls, dctx, dists))
         stddevs = self._get_stddevs(dists, rctx.mag, dctx, imt, stddev_types)
-        amplification = self.site_term(sctx, rctx, dctx, dists, imt,
-                                       stddev_types)
+        amplification = site_term(self, sctx, rctx, dctx, dists, imt,
+                                  stddev_types)
         mean += amplification
         return mean, stddevs
-
-    def site_term(self, sctx, rctx, dctx, dists, imt, stddev_types):
-        """
-        Site term as used to calculate site coefficients for NBCC2015:
-
-        For Vs30 > 760 m/s use log-log interpolation of the 760-to-2000
-        factor of AA13.
-
-        For Vs30 < 760 m/s use the site term of Boore and Atkinson 2008.
-
-        Original site term is relative to Vs30 = 760m/s so needs to be made
-        relative to Vs30 = 450 m/s by dividing by the site term at Vs30 = 450.
-        Assume PGA_760 = 0.1g for Vs30 > 450 m/s. Also need to correct PGA at
-        site class C to 760 m/s. Cap PGA_450 at 0.1 - 0.5g.
-
-        """
-
-        imls_pga = _return_tables(self, rctx.mag, PGA(), "IMLs")
-        PGA450 = self._get_mean(imls_pga, dctx, dists)
-        imls_SA02 = _return_tables(self, rctx.mag, SA(0.2), "IMLs")
-        SA02 = self._get_mean(imls_SA02, dctx, dists)
-
-        PGA450[SA02 / PGA450 < 2.0] = PGA450[SA02 / PGA450 < 2.0] * 0.8
-
-        pgas = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
-        pga_cors = np.array([0.083, 0.165, 0.248, 0.331, 0.414])
-        PGA760 = np.interp(PGA450, pgas, pga_cors)
-        PGA760_ref = np.copy(PGA760)
-        PGA760_ref[sctx.vs30 > 450.] = 0.1
-
-        vs30ref = np.zeros_like(sctx.vs30)
-        vs30ref += 450.0
-
-        site_term = (self.AB06_BA08(sctx.vs30, imt, PGA760_ref) /
-                     self.AB06_BA08(vs30ref, imt, PGA760_ref))
-
-        return np.log(site_term)
-
-    def AB06_BA08(self, vs30, imt, PGA760):
-
-        C = self.COEFFS_2000_to_BC[imt]
-
-        F = np.zeros_like(vs30)
-
-        F[vs30 >= 760.] = 10**(np.interp(np.log10(vs30[vs30 >= 760.]),
-                                         np.log10([760.0, 2000.0]),
-                                         np.log10([1.0, C['c']])))
-        F[vs30 >= 760.] = 1./F[vs30 >= 760.]
-
-        C2 = BA08.COEFFS_SOIL_RESPONSE[imt]
-        nl = _get_site_amplification_non_linear(vs30[vs30 < 760.],
-                                                PGA760[vs30 < 760.],
-                                                C2)
-        lin = _get_site_amplification_linear(vs30[vs30 < 760.], C2)
-        F[vs30 < 760.] = np.exp(nl+lin)
-
-        return F
 
     COEFFS_2000_to_BC = CoeffsTable(sa_damping=5, table="""\
     IMT     c
