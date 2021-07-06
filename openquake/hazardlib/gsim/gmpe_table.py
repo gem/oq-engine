@@ -378,6 +378,31 @@ def apply_magnitude_interpolation(self, mag, iml_table):
     return 10.0 ** m_interpolator(mag)
 
 
+def _get_stddevs(self, dists, mag, dctx, imt, stddev_types):
+    """
+    Returns the total standard deviation of the intensity measure level
+    from the tables.
+
+    :param fle:
+        HDF5 data stream as instance of :class:`h5py.File`
+    :param distances:
+        The distance vector for the given magnitude and IMT
+    :param key:
+        The distance type
+    :param mag:
+        The rupture magnitude
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        sigma = _return_tables(self, mag, imt, stddev_type)
+        interpolator_std = interp1d(dists, sigma, bounds_error=False)
+        stddev = interpolator_std(getattr(dctx, self.distance_type))
+        stddev[getattr(dctx, self.distance_type) < dists[0]] = sigma[0]
+        stddev[getattr(dctx, self.distance_type) > dists[-1]] = sigma[-1]
+        stddevs.append(stddev)
+    return stddevs
+
+
 class GMPETable(GMPE):
     """
     Implements ground motion prediction equations in the form of a table from
@@ -483,7 +508,7 @@ class GMPETable(GMPE):
         dists = self.distances[:, 0, idx - 1]
         # Get mean and standard deviations
         mean = _get_mean(self.kind, self.distance_type, imls, dctx, dists)
-        stddevs = self._get_stddevs(dists, rctx.mag, dctx, imt, stddev_types)
+        stddevs = _get_stddevs(self, dists, rctx.mag, dctx, imt, stddev_types)
         if self.amplification:
             # Apply amplification
             mean_amp, sigma_amp = self.amplification.get_amplification_factors(
@@ -498,27 +523,3 @@ class GMPETable(GMPE):
             return mean, stddevs
         else:
             return numpy.log(mean), stddevs
-
-    def _get_stddevs(self, dists, mag, dctx, imt, stddev_types):
-        """
-        Returns the total standard deviation of the intensity measure level
-        from the tables.
-
-        :param fle:
-            HDF5 data stream as instance of :class:`h5py.File`
-        :param distances:
-            The distance vector for the given magnitude and IMT
-        :param key:
-            The distance type
-        :param mag:
-            The rupture magnitude
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            sigma = _return_tables(self, mag, imt, stddev_type)
-            interpolator_std = interp1d(dists, sigma, bounds_error=False)
-            stddev = interpolator_std(getattr(dctx, self.distance_type))
-            stddev[getattr(dctx, self.distance_type) < dists[0]] = sigma[0]
-            stddev[getattr(dctx, self.distance_type) > dists[-1]] = sigma[-1]
-            stddevs.append(stddev)
-        return stddevs
