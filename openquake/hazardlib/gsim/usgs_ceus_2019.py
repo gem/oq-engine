@@ -159,6 +159,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
                                                 const.StdDev.INTRA_EVENT))
     gmpe_table = ""
     PATH = os.path.join(os.path.dirname(__file__), "usgs_nga_east_tables")
+    kind = "usgs"
 
     def __init__(self, **kwargs):
         self.sigma_model = kwargs.get("sigma_model", "COLLAPSED")

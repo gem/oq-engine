@@ -302,6 +302,8 @@ class GMPETable(GMPE):
 
     amplification = None
 
+    kind = "base"
+
     def __init__(self, **kwargs):
         """
         Executes the preprocessing steps at the instantiation stage to read in
@@ -323,7 +325,7 @@ class GMPETable(GMPE):
             if "SA" in self.imls and "T" not in self.imls:
                 raise ValueError("Spectral Acceleration must be accompanied by"
                                  " periods")
-            if 'USGS' in self.__class__.__name__:
+            if self.kind == "usgs":
                 # there are no stddevs in the hdf5 file
                 return
 
