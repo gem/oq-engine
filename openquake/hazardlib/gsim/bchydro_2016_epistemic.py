@@ -287,15 +287,6 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
         else:
             return mean, stddevs
 
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4)
-        """
-        max_dist = np.copy(dists.rrup)
-        max_dist[max_dist < 100.0] = 100.0
-        f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
     pga      865.1000  -1.1860   4.2203   -1.3500   -0.00721467    1.0988   -1.4200   3.1200   0.0130    0.9800   -0.0135   -0.4000   0.9969   -1.0000   0.6000  0.4300  0.7400    0.6000
@@ -353,15 +344,6 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4)
-        """
-        max_dist = np.copy(dists.rrup)
-        max_dist[max_dist < 100.0] = 100.0
-        f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -421,15 +403,6 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4)
-        """
-        max_dist = np.copy(dists.rrup)
-        max_dist[max_dist < 100.0] = 100.0
-        f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -497,15 +470,6 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
         else:
             return mean, stddevs
 
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4).
-        """
-        max_dist = np.copy(dists.rhypo)
-        max_dist[max_dist < 85.0] = 85.0
-        f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
     pga      865.1000  -1.1860   4.2203   -1.3500   -0.00278801    1.0988   -1.4200   3.1200   0.0130    0.9800   -0.0135   -0.4000   0.9969   -1.0000   0.6000  0.4300  0.7400    0.6000
@@ -566,15 +530,6 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
         else:
             return mean, stddevs
 
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4).
-        """
-        max_dist = np.copy(dists.rhypo)
-        max_dist[max_dist < 85.0] = 85.0
-        f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
     pga      865.1000  -1.1860   4.2203   -1.3500   -0.00278801    1.0988   -1.4200   3.1200   0.0130    0.9800   -0.0135   -0.4000   0.9969   -1.0000   0.6000  0.4300  0.7400    0.6000
@@ -633,15 +588,6 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4).
-        """
-        max_dist = np.copy(dists.rhypo)
-        max_dist[max_dist < 85.0] = 85.0
-        f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss

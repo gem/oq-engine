@@ -282,7 +282,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the forearc/backarc scaling term given by equation (4)
         """
-        return _compute_fb_term(self.trt, sites, dists, C)
+        return _compute_fb_term(self.trt, sites, dists, C, self.faba_model)
 
     def _compute_site_response_term(self, C, sites, pga1000):
         """
