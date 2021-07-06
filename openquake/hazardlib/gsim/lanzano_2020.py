@@ -44,10 +44,7 @@ class LanzanoEtAl2020_ref(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
-        PGA,
-        SA
-    }
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -56,10 +53,7 @@ class LanzanoEtAl2020_ref(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = {'siteclass'}
@@ -81,7 +75,8 @@ class LanzanoEtAl2020_ref(GMPE):
         # To natural logarithm and fraction of g
         mean = np.log(10.0**mean/(gravity_acc*100))
         # Get stds
-        istddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.siteclass))
+        istddevs = self._get_stddevs(
+            C, stddev_types, num_sites=len(sites.siteclass))
         stds = np.log(10.0 ** np.array(istddevs))
         # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
         return mean, stds
