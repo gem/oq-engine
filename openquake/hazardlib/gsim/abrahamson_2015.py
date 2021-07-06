@@ -216,12 +216,14 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        if self.kind == "montalva17":
-            C1 = 7.2
+        if self.kind.startswith("montalva"):
             theta3 = C['theta3']
         else:
-            C1 = 7.8
             theta3 = CONSTS['theta3']
+        if self.kind == "montalva17":
+            C1 = 7.2
+        else:
+            C1 = 7.8
         if self.trt == const.TRT.SUBDUCTION_INTERFACE:
             return _compute_disterm(
                 self.trt, C1, C['theta2'], 0., theta3, mag, dists,

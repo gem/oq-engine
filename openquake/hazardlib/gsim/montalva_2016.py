@@ -74,15 +74,6 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
         stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
 
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return _compute_disterm(
-            self.trt, CONSTS['C1'], C['theta2'], 0., C['theta3'], mag, dists,
-            CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
-            C['theta6'], theta10=0)
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt              DC1     vlin       b        theta1         theta2        theta3         theta4         theta5         theta6    theta7  theta8       theta10        theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_s2s
     pga      0.200000000    865.1  -1.186   4.935754758   -1.319716122   0.156954813   -1.038307042   -0.200134154   -0.002064757    1.0988   -1.42   4.559632568    0.004375202    0.914271114   -0.203185487   -0.694459960   0.9969   -1.00   0.676804137   0.436356919   0.805277096   0.547434071
@@ -150,15 +141,6 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
                 self._compute_site_response_term(C, sites, pga1000))
         stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1b)
-        """
-        return _compute_disterm(
-            self.trt, CONSTS['C1'], C['theta2'], C['theta14'], C['theta3'],
-            mag, dists, CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
-            C['theta6'], C['theta10'])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt              DC1    vlin        b        theta1         theta2        theta3         theta4         theta5         theta6    theta7  theta8       theta10        theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_s2s
