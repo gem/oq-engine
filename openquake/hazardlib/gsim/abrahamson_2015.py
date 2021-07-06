@@ -215,10 +215,16 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        return _compute_disterm(
-            self.trt, C['theta2'], 0., CONSTS['theta3'], mag, dists,
-            CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
-            C['theta6'], theta10=0.)
+        if self.trt == const.TRT.SUBDUCTION_INTERFACE:
+            return _compute_disterm(
+                self.trt, C['theta2'], 0., CONSTS['theta3'], mag, dists,
+                CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
+                C['theta6'], theta10=0.)
+        else:  # sslab
+            return _compute_disterm(
+                self.trt, C['theta2'], C['theta14'], CONSTS['theta3'], mag,
+                dists, CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
+                C['theta6'], C["theta10"])
 
     def _compute_focal_depth_term(self, C, rup):
         """
@@ -371,15 +377,6 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     delta_c1 = -0.3
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1b)
-        """
-        return _compute_disterm(
-            self.trt, C['theta2'], C['theta14'], CONSTS['theta3'], mag, dists,
-            CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
-            C['theta6'], C["theta10"])
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """
