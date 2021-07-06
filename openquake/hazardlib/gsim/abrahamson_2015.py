@@ -61,8 +61,14 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     return base + f_mag
 
 
-def _compute_disterm(theta2, theta14, theta3, mag, dists, c4, theta9,
+def _compute_disterm(trt, theta2, theta14, theta3, mag, dists, c4, theta9,
                      theta6_adj, theta6, theta10):
+    if trt == const.TRT.SUBDUCTION_INTERFACE:
+        dists = dists.rrup
+    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
+        dists = dists.rhypo
+    else:
+        raise NotImplementedError(trt)
     return ((theta2 + theta14 + theta3 * (mag - 7.8)) * np.log(
         dists + c4 * np.exp((mag - 6.) * theta9)) +
             ((theta6_adj + theta6) * dists)) + theta10
@@ -106,7 +112,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
     """
 
     #: Supported tectonic region type is subduction interface
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+    DEFINED_FOR_TECTONIC_REGION_TYPE = trt = const.TRT.SUBDUCTION_INTERFACE
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
@@ -209,7 +215,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         Computes the distance scaling term, as contained within equation (1)
         """
         return _compute_disterm(
-            C['theta2'], 0., CONSTS['theta3'], mag, dists.rrup,
+            self.trt, C['theta2'], 0., CONSTS['theta3'], mag, dists,
             CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
             C['theta6'], theta10=0.)
 
@@ -221,8 +227,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         For SSlab events computes the hypocentral depth scaling term as
         indicated by equation (3)
         """
-        if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
-                const.TRT.SUBDUCTION_INTERFACE):
+        if self.trt == const.TRT.SUBDUCTION_INTERFACE:
             return 0.
         if rup.hypo_depth > 120.0:
             z_h = 120.0
@@ -356,7 +361,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     and the hypocentral depth is used to scale the ground motion by depth
     """
     #: Supported tectonic region type is subduction in-slab
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+    DEFINED_FOR_TECTONIC_REGION_TYPE = trt = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Required distance measure is hypocentral for in-slab events
     REQUIRES_DISTANCES = {'rhypo'}
@@ -371,7 +376,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
         Computes the distance scaling term, as contained within equation (1b)
         """
         return _compute_disterm(
-            C['theta2'], C['theta14'], CONSTS['theta3'], mag, dists.rhypo,
+            self.trt, C['theta2'], C['theta14'], CONSTS['theta3'], mag, dists,
             CONSTS['c4'], CONSTS['theta9'], self.theta6_adj,
             C['theta6'], C["theta10"])
 
