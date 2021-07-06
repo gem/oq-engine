@@ -25,6 +25,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
 from openquake.hazardlib.gsim.nga_east import ITPL, NGAEastGMPE
+from openquake.hazardlib.gsim.gmpe_table import _get_mean
 
 # Coefficients for EPRI sigma model taken from Table 5.5 of Goulet et al.
 # (2017)
@@ -148,6 +149,40 @@ def get_stewart_2019_phis2s(imt, vs30):
     return phis2s
 
 
+@_get_mean.add("usgs")
+def _get_mean(kind, distance_type, data, dctx, dists):
+    """
+    Returns the mean intensity measure level from the tables applying
+    log-log interpolation of the IML with distance (contrast with the
+    linear interpolation applied in usual GMPE tables)
+    :param data:
+        The intensity measure level vector for the given magnitude and IMT
+    :param key:
+        The distance type
+    :param distances:
+        The distance vector for the given magnitude and IMT
+    """
+    # For values outside of the interpolation range use -999. to ensure
+    # value is identifiable and outside of potential real values
+    # For extremely short distance (rrup = 0) use an arbitrarily small
+    # distance measure (1.0E-5 used by US NSHMP code)
+    dists[dists < 1.0E-5] = 1.0E-5
+    interpolator_mean = interp1d(np.log10(dists), np.log(data),
+                                 bounds_error=False,
+                                 fill_value=-999.)
+    mean = np.exp(interpolator_mean(np.log10(getattr(dctx, distance_type))))
+    # For those distances less than or equal to the shortest distance
+    # extrapolate the shortest distance value
+    mean[getattr(dctx, distance_type) <= dists[0]] = data[0]
+    # For those distances significantly greater than the furthest distance
+    # set to 1E-20.
+    mean[getattr(dctx, distance_type) > (dists[-1] + 1.0E-3)] = 1E-20
+    # If any distance is between the final distance and a margin of 0.001
+    # km then assign to smallest distance
+    mean[mean < -1.] = data[-1]
+    return mean
+
+
 class NGAEastUSGSGMPE(NGAEastGMPE):
     """
     For the "core" NGA East set the table is provided in the code in a
@@ -219,39 +254,6 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         stddevs = self.get_stddevs(rctx.mag, sctx.vs30, imt,
                                    stddev_types, nsites)
         return mean, stddevs
-
-    def _get_mean(self, data, dctx, dists):
-        """
-        Returns the mean intensity measure level from the tables applying
-        log-log interpolation of the IML with distance (contrast with the
-        linear interpolation applied in usual GMPE tables)
-        :param data:
-            The intensity measure level vector for the given magnitude and IMT
-        :param key:
-            The distance type
-        :param distances:
-            The distance vector for the given magnitude and IMT
-        """
-        # For values outside of the interpolation range use -999. to ensure
-        # value is identifiable and outside of potential real values
-        # For extremely short distance (rrup = 0) use an arbitrarily small
-        # distance measure (1.0E-5 used by US NSHMP code)
-        dists[dists < 1.0E-5] = 1.0E-5
-        interpolator_mean = interp1d(np.log10(dists), np.log(data),
-                                     bounds_error=False,
-                                     fill_value=-999.)
-        mean = np.exp(interpolator_mean(np.log10(getattr(dctx,
-                                                         self.distance_type))))
-        # For those distances less than or equal to the shortest distance
-        # extrapolate the shortest distance value
-        mean[getattr(dctx, self.distance_type) <= dists[0]] = data[0]
-        # For those distances significantly greater than the furthest distance
-        # set to 1E-20.
-        mean[getattr(dctx, self.distance_type) > (dists[-1] + 1.0E-3)] = 1E-20
-        # If any distance is between the final distance and a margin of 0.001
-        # km then assign to smallest distance
-        mean[mean < -1.] = data[-1]
-        return mean
 
     def get_stddevs(self, mag, vs30, imt, stddev_types, num_sites):
         """

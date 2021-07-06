@@ -24,7 +24,8 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
-from openquake.hazardlib.gsim.gmpe_table import GMPETable, _return_tables
+from openquake.hazardlib.gsim.gmpe_table import (
+    GMPETable, _return_tables, _get_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -630,7 +631,7 @@ class NGAEastGMPE(GMPETable):
         idx = np.searchsorted(self.m_w, rctx.mag)
         dists = self.distances[:, 0, idx - 1]
         # Get mean and standard deviations
-        mean = self._get_mean(imls, dctx, dists)
+        mean = _get_mean(self.kind, self.distance_type, imls, dctx, dists)
         return np.log(mean)
 
     def get_site_amplification(self, imt, pga_r, sites):

@@ -29,12 +29,45 @@ import h5py
 from scipy.interpolate import interp1d
 import numpy
 
+from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import const, site
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.baselib.python3compat import round
+
+
+_get_mean = CallableDict()
+
+
+@_get_mean.add("base")
+def _get_mean_base(kind, distance_type, data, dctx, dists):
+    """
+    Returns the mean intensity measure level from the tables
+    :param data:
+        The intensity measure level vector for the given magnitude and IMT
+    :param key:
+        The distance type
+    :param distances:
+        The distance vector for the given magnitude and IMT
+    """
+    # For values outside of the interpolation range use -999. to ensure
+    # value is identifiable and outside of potential real values
+    interpolator_mean = interp1d(dists, data,
+                                 bounds_error=False,
+                                 fill_value=-999.)
+    mean = interpolator_mean(getattr(dctx, distance_type))
+    # For those distances less than or equal to the shortest distance
+    # extrapolate the shortest distance value
+    mean[getattr(dctx, distance_type) < (dists[0] + 1.0E-3)] = data[0]
+    # For those distances significantly greater than the furthest distance
+    # set to 1E-20.
+    mean[getattr(dctx, distance_type) > (dists[-1] + 1.0E-3)] = 1E-20
+    # If any distance is between the final distance and a margin of 0.001
+    # km then assign to smallest distance
+    mean[mean < -1.] = data[-1]
+    return mean
 
 
 def hdf_arrays_to_dict(hdfgroup):
@@ -449,7 +482,7 @@ class GMPETable(GMPE):
         idx = numpy.searchsorted(self.m_w, rctx.mag)
         dists = self.distances[:, 0, idx - 1]
         # Get mean and standard deviations
-        mean = self._get_mean(imls, dctx, dists)
+        mean = _get_mean(self.kind, self.distance_type, imls, dctx, dists)
         stddevs = self._get_stddevs(dists, rctx.mag, dctx, imt, stddev_types)
         if self.amplification:
             # Apply amplification
@@ -465,33 +498,6 @@ class GMPETable(GMPE):
             return mean, stddevs
         else:
             return numpy.log(mean), stddevs
-
-    def _get_mean(self, data, dctx, dists):
-        """
-        Returns the mean intensity measure level from the tables
-        :param data:
-            The intensity measure level vector for the given magnitude and IMT
-        :param key:
-            The distance type
-        :param distances:
-            The distance vector for the given magnitude and IMT
-        """
-        # For values outside of the interpolation range use -999. to ensure
-        # value is identifiable and outside of potential real values
-        interpolator_mean = interp1d(dists, data,
-                                     bounds_error=False,
-                                     fill_value=-999.)
-        mean = interpolator_mean(getattr(dctx, self.distance_type))
-        # For those distances less than or equal to the shortest distance
-        # extrapolate the shortest distance value
-        mean[getattr(dctx, self.distance_type) < (dists[0] + 1.0E-3)] = data[0]
-        # For those distances significantly greater than the furthest distance
-        # set to 1E-20.
-        mean[getattr(dctx, self.distance_type) > (dists[-1] + 1.0E-3)] = 1E-20
-        # If any distance is between the final distance and a margin of 0.001
-        # km then assign to smallest distance
-        mean[mean < -1.] = data[-1]
-        return mean
 
     def _get_stddevs(self, dists, mag, dctx, imt, stddev_types):
         """
