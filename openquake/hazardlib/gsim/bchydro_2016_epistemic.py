@@ -440,15 +440,6 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
         else:
             return mean, stddevs
 
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return (C['theta2'] + CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + CONSTS['c4'] * np.exp((mag - 6.) *
-                   CONSTS['theta9'])) +\
-            ((self.theta6_adj + C['theta6']) * dists.rrup)
-
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """
         Computes the forearc/backarc scaling term given by equation (4)
