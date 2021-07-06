@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -33,6 +33,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         [group] = nrml.to_python(source_model)
         for i, src in enumerate(group):
             src.id = i
+            src.grp_id = 0
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
@@ -40,7 +41,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
                      gsims=[SiMidorikawa1999SInter()])
         sf = calc.filters.SourceFilter(None, {})
         dic = sum(sample_ruptures(group, sf, param), {})
-        self.assertEqual(len(dic['rup_array']), 7)
+        self.assertEqual(len(dic['rup_array']), 8)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
         # test no filtering 1
@@ -49,4 +50,4 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
         # test no filtering 2
         ruptures = sum(sample_ruptures(group, sf, param), {})['rup_array']
-        self.assertEqual(len(ruptures), 7)
+        self.assertEqual(len(ruptures), 8)

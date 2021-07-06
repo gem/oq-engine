@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -124,7 +124,6 @@ def gsim(value, basedir=''):
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))
-    minimum_distance = float(kwargs.pop('minimum_distance', 0))
     if gsim_name == 'FromFile':
         return FromFile()
     try:
@@ -137,7 +136,6 @@ def gsim(value, basedir=''):
         gs = object.__new__(gsim_class)
         gs.kwargs = kwargs
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
-    gs.minimum_distance = minimum_distance
     return gs
 
 
@@ -233,7 +231,7 @@ class Choices(Choice):
         return tuple(values)
 
 
-export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
+export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz', 'hdf5')
 
 
 class Regex(object):
@@ -702,7 +700,7 @@ def intensity_measure_types(value):
       ...
     ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
     >>> intensity_measure_types('PGV, SA(1), PGA')
-    ['PGA', 'PGV', 'SA(1.0)']
+    ['PGV', 'PGA', 'SA(1.0)']
     """
     if not value:
         return []
@@ -1129,7 +1127,7 @@ class MetaParamSet(type):
 
 
 # used in commonlib.oqvalidation
-class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
+class ParamSet(metaclass=MetaParamSet):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:
@@ -1257,6 +1255,11 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     def __iter__(self):
         for item in sorted(vars(self).items()):
             yield item
+
+    def __repr__(self):
+        names = sorted(n for n in vars(self) if not n.startswith('_'))
+        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
+        return '<%s %s>' % (self.__class__.__name__, nameval)
 
 
 class RjbEquivalent(object):

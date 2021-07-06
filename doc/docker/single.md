@@ -68,7 +68,6 @@ You can print the list of containers and images using `$ docker ps -a` and `$ do
 ### Docker
 
 - [Introduction](../installing/docker.md)
-- [Cluster deployment](cluster.md)
 - [Advanced options](advanced.md)
 
 ***

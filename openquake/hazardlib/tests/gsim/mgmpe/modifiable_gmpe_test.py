@@ -22,7 +22,8 @@ from openquake.hazardlib.imt import PGA, SA, MMI
 from openquake.hazardlib.gsim.base import registry, CoeffsTable
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
-from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
+from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
+    ModifiableGMPE, _dict_to_coeffs_table)
 
 
 class ModifiableGMPETest(unittest.TestCase):
@@ -75,8 +76,7 @@ class ModifiableGMPETest(unittest.TestCase):
     def test_coefficients_as_dictionary(self):
         """Check the parsing of the coefficients to a dictionary"""
         input_coeffs = {"PGA": 1.0, "SA(0.2)": 2.0, "SA(3.0)": 3.0}
-        output_coeffs = ModifiableGMPE._dict_to_coeffs_table(input_coeffs,
-                                                             "XYZ")
+        output_coeffs = _dict_to_coeffs_table(input_coeffs, "XYZ")
         self.assertListEqual(list(output_coeffs), ["XYZ"])
         self.assertIsInstance(output_coeffs["XYZ"], CoeffsTable)
         self.assertAlmostEqual(output_coeffs["XYZ"][PGA()]["XYZ"], 1.0)

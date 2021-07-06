@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ import shutil
 import numpy
 from openquake.hazardlib import valid, nrml
 from openquake.baselib.python3compat import encode
-from openquake.baselib import sap, general
+from openquake.baselib import general
 from openquake.commonlib import logictree
 
 
@@ -56,8 +56,7 @@ def reduce_source_model(fname, reduction_factor):
     save_bak(fname, node, num_nodes, total)
 
 
-@sap.script
-def sample(fname, reduction_factor):
+def main(fname, reduction_factor: valid.probability):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.
     Supports source models, site models and exposure models. As a special
@@ -111,6 +110,5 @@ def sample(fname, reduction_factor):
     save_bak(fname, node, num_nodes, total)
 
 
-sample.arg('fname', 'path to the model file')
-sample.arg('reduction_factor', 'reduction factor in the range 0..1',
-           type=valid.probability)
+main.fname = 'path to the model file'
+main.reduction_factor = 'reduction factor in the range 0..1'

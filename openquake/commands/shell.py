@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2020 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,13 +19,11 @@ import sys
 import runpy
 from functools import partial
 import numpy
-from openquake.baselib import sap
 from openquake.hazardlib import nrml
-from openquake.baselib.datastore import read
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.contexts import Timer
-from openquake.commonlib import readinput, calc, logs
-from openquake.calculators.base import get_calc
+from openquake.commonlib import readinput, calc, logs, datastore
+from openquake.calculators.base import calculators
 from openquake.calculators.extract import extract, WebExtractor
 
 
@@ -43,18 +41,22 @@ class OpenQuake(object):
             pass
         self.lookfor = partial(numpy.lookfor, module='openquake')
         self.extract = extract
-        self.read = read
+        self.read = datastore.read
         self.nrml = nrml
         self.get__exposure = readinput.get_exposure
         self.get_oqparam = readinput.get_oqparam
         self.get_site_collection = readinput.get_site_collection
         self.get_composite_source_model = readinput.get_composite_source_model
         self.get_exposure = readinput.get_exposure
-        self.get_calc = lambda job_ini: get_calc(job_ini, logs.init())
         self.make_hmap = calc.make_hmap
         self.geodetic_distance = geodetic_distance
         self.Timer = Timer
         # TODO: more utilities will be added when deemed useful
+
+    def get_calc(self, job_ini):
+        log = logs.init("job", job_ini)
+        log.__enter__()
+        return calculators(log.get_oqparam(), log.calc_id)
 
     def webex(self, calc_id, what):
         """Extract data from a remote calculation"""
@@ -73,16 +75,35 @@ class OpenQuake(object):
             ex.close()
 
     def read_ruptures(self, calc_id, field):
-        dstore = read(calc_id)
+        dstore = datastore.read(calc_id)
         lst = []
         for name, dset in dstore.items():
             if name.startswith('rup_'):
                 lst.append(dset[field][:])
         return numpy.concatenate(lst)
 
+    def fix_latin1(self, fname):
+        "Try to convert from latin1 to utf8"
+        with open(fname, encoding='latin1') as f:
+            data = f.read()
+        with open(fname, 'w', encoding='utf-8-sig', newline='') as f:
+            f.write(data)
+        print('Converted %s: WARNING: it may still be wrong' % fname)
 
-@sap.script
-def shell(script=None, args=()):
+    def poe2period(self, poe):
+        """
+        Converts probabilities into return periods
+        """
+        return -1/numpy.log(1-poe)
+
+    def period2poe(self, t):
+        """
+        Converts return periods into probabilities
+        """
+        return 1-numpy.exp(-1/t)
+
+
+def main(script=None, args=()):
     """
     Start an embedded (i)python instance with a global object "o" or
     run a Python script in the engine environment.
@@ -101,5 +122,5 @@ def shell(script=None, args=()):
                       local=dict(o=o))
 
 
-shell.arg('script', 'python script to run (if any)')
-shell.arg('args', 'arguments to pass to the script', nargs='*')
+main.script = 'python script to run (if any)'
+main.args = dict(help='arguments to pass to the script', nargs='*')

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2020 GEM Foundation
+# Copyright (C) 2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,10 +20,11 @@ import glob
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # This is needed
 from openquake.hazardlib.geo import Point, Line
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteSurface
+
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
@@ -39,6 +40,7 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
     :param smsh:
         The kite surface
     """
+    from mpl_toolkits.mplot3d import Axes3D  # this is needed
 
     # Scaling factor on the z-axis
     scl = 0.1
@@ -63,10 +65,81 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
         for i in range(smsh.mesh.lons.shape[1]):
             ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
                     smsh.mesh.depths[:, i]*scl, '-r', lw=0.5)
-
     plt.title(title)
     ax.invert_zaxis()
     plt.show()
+
+
+class KiteSurfaceWithNaNs(unittest.TestCase):
+
+    def setUp(self):
+        path = os.path.join(BASE_DATA_PATH, 'profiles07')
+        self.prf, _ = _read_profiles(path)
+        hsmpl = 4
+        vsmpl = 2
+        idl = False
+        alg = False
+        self.srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+
+        coo = []
+        step = 0.025
+        for lo in np.arange(9.9, 10.4, step):
+            for la in np.arange(44.6, 45.3, step):
+                coo.append([lo, la])
+        coo = np.array(coo)
+        self.mesh = Mesh(lons=coo[:, 0], lats=coo[:, 1])
+
+    def test_rjb_calculation(self):
+        dst = self.srfc.get_joyner_boore_distance(self.mesh)
+
+        if PLOTTING:
+            _ = plt.figure()
+            plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
+                        edgecolors='none', s=15)
+            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
+                     color='red')
+            plt.title('Rjb')
+            plt.show()
+
+        if PLOTTING:
+            title = 'Test mesh with NaNs'
+            ppp(self.prf, self.srfc, title)
+
+    def test_rrup_calculation(self):
+        dst = self.srfc.get_min_distance(self.mesh)
+
+        if PLOTTING:
+            _ = plt.figure()
+            plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
+                        edgecolors='none', s=15)
+            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
+                     color='red')
+            plt.title('Rrup')
+            plt.show()
+
+    def test_rx_calculation(self):
+        dst = self.srfc.get_rx_distance(self.mesh)
+
+        if PLOTTING:
+            _ = plt.figure()
+            plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
+                        edgecolors='none', s=15)
+            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
+                     color='red')
+            plt.title('Rx')
+            plt.show()
+
+    def test_ry0_calculation(self):
+        dst = self.srfc.get_ry0_distance(self.mesh)
+
+        if PLOTTING:
+            _ = plt.figure()
+            plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
+                        edgecolors='none', s=15)
+            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
+                     color='red')
+            plt.title('Ry0')
+            plt.show()
 
 
 class KiteSurfaceSimpleTests(unittest.TestCase):
@@ -76,7 +149,7 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         self.prf, _ = _read_profiles(path)
 
     def test_mesh_creation(self):
-        """ Create the mesh: two parallel profiles - no top alignment """
+        # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 4
         vsmpl = 2
         idl = False
@@ -86,6 +159,40 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         if PLOTTING:
             title = 'Test mesh creation'
             ppp(self.prf, srfc, title)
+
+    def test_ztor(self):
+        # Create the mesh: two parallel profiles - no top alignment
+        hsmpl = 4
+        vsmpl = 2
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+        ztor = srfc.get_top_edge_depth()
+        self.assertAlmostEqual(20.0, ztor)
+
+    def test_compute_joyner_boore_distance(self):
+        # Create the mesh: two parallel profiles - no top alignment
+        hsmpl = 2
+        vsmpl = 2
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+
+        plons = np.array([10.0, 10.15])
+        plats = np.array([45.0, 45.15])
+        mesh = Mesh(lons=plons, lats=plats)
+        dsts = srfc.get_joyner_boore_distance(mesh)
+
+        if PLOTTING:
+            _ = plt.figure()
+            plt.plot(srfc.mesh.lons, srfc.mesh.lats, '.', color='gray')
+            plt.plot(plons, plats, 'o')
+            plt.show()
+
+        # Distance computed here:
+        # https://www.movable-type.co.uk/scripts/latlong.html
+        expected = np.array([13.61, 0.0])
+        np.testing.assert_almost_equal(np.array(dsts), expected, decimal=2)
 
 
 class KiteSurfaceTestCase(unittest.TestCase):
@@ -122,7 +229,7 @@ class KiteSurfaceTestCase(unittest.TestCase):
         self.profiles2.append(Line(tmp))
 
     def test_build_mesh_01(self):
-        """ Trivial case - Fault dipping at about 45 degrees """
+        # Trivial case - Fault dipping at about 45 degrees
 
         # Build the fault surface
         p_sd = 2.0
@@ -154,7 +261,7 @@ class KiteSurfaceTestCase(unittest.TestCase):
             ppp(self.profiles1, msh, title)
 
     def test_build_mesh_02(self):
-        """ Trivial case - Vertical fault """
+        # Trivial case - Vertical fault
 
         # Build the fault surface
         p_sd = 2.5
@@ -168,6 +275,7 @@ class KiteSurfaceTestCase(unittest.TestCase):
         # we get exactly 7 edges.
         msh = srfc.mesh
         np.testing.assert_equal(msh.lons.shape, (7, 12))
+
         # Note that this mesh is flipped at the construction level
         self.assertTrue(np.all(np.abs(msh.depths[0, :]) < 1e-3))
         self.assertTrue(np.all(np.abs(msh.depths[6, :]-15.) < 1e-3))
@@ -179,8 +287,9 @@ class KiteSurfaceTestCase(unittest.TestCase):
         self.assertTrue(abs(dip-90) < 0.5, msg)
 
         strike = srfc.get_strike()
-        msg = "The value of strike computed is wrong: {:.3f}".format(strike)
-        self.assertTrue(abs(strike) < 0.01, msg)
+        msg = "The value of strike computed is wrong.\n"
+        msg += "computed: {:.3f} expected:".format(strike)
+        self.assertTrue(abs(strike-270) < 0.01, msg)
 
         if PLOTTING:
             title = 'Trivial case - Vertical fault'
@@ -199,7 +308,7 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         self.prf, _ = _read_profiles(path)
 
     def test_mesh_creation(self):
-        """ Create the mesh: two parallel profiles - no top alignment """
+        # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 4
         vsmpl = 4
         idl = False
@@ -229,8 +338,9 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
             tmp = []
             k = i + 1
             for j in range(0, smsh.lons.shape[1]):
-                dst = distance(smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i,j],
-                               smsh.lons[k, j], smsh.lats[k, j], smsh.depths[k,j])
+                dst = distance(
+                    smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
+                    smsh.lons[k, j], smsh.lats[k, j], smsh.depths[k, j])
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
@@ -256,10 +366,10 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         idl = False
         alg = False
         self.smsh = KiteSurface.from_profiles(self.profiles, self.v_sampl,
-                                             self.h_sampl, idl, alg)
+                                              self.h_sampl, idl, alg)
 
     def test_h_spacing(self):
-        """ Check v-spacing: two misaligned profiles - no top alignment """
+        # Check v-spacing: two misaligned profiles - no top alignment
         srfc = self.smsh
         smsh = srfc.mesh
         #
@@ -269,8 +379,9 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
             tmp = []
             for j in range(0, smsh.lons.shape[1]-1):
                 k = j + 1
-                dst = distance(smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
-                               smsh.lons[i, k], smsh.lats[i, k], smsh.depths[i, k])
+                dst = distance(
+                    smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
+                    smsh.lons[i, k], smsh.lats[i, k], smsh.depths[i, k])
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
@@ -283,7 +394,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
             ppp(self.profiles, srfc, title)
 
     def test__spacing(self):
-        """ Check v-spacing: two misaligned profiles - no top alignment """
+        # Check v-spacing: two misaligned profiles - no top alignment
         srfc = self.smsh
         smsh = srfc.mesh
         computed = []
@@ -291,8 +402,9 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
             tmp = []
             k = i + 1
             for j in range(0, smsh.lons.shape[1]):
-                dst = distance(smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
-                               smsh.lons[k, j], smsh.lats[k, j], smsh.depths[k, j])
+                dst = distance(
+                    smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
+                    smsh.lons[k, j], smsh.lats[k, j], smsh.depths[k, j])
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
@@ -307,7 +419,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         self.profiles, _ = _read_profiles(path)
 
     def test_mesh_creation(self):
-        """ Test construction of the mesh """
+        # Test construction of the mesh
         h_sampl = 5
         v_sampl = 5
         idl = False
@@ -323,7 +435,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
             ppp(self.profiles, srfc, title)
 
     def test_mesh_creation_with_alignment(self):
-        """ Test construction of the mesh """
+        # Test construction of the mesh
         h_sampl = 2.5
         v_sampl = 2.5
         idl = False
@@ -338,7 +450,6 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
             ppp(self.profiles, srfc, title)
 
     def test_get_surface_projection(self):
-        """ """
         h_sampl = 2.5
         v_sampl = 2.5
         idl = False
@@ -346,8 +457,9 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
         lons, lats = srfc.surface_projection
+
     def test_get_width(self):
-        """ Test the calculation of the width """
+        # Test the calculation of the width
         h_sampl = 2.5
         v_sampl = 2.5
         idl = False
@@ -365,7 +477,7 @@ class IdealizedATest(unittest.TestCase):
         self.profiles, _ = _read_profiles(path)
 
     def test_mesh_creation_no_alignment(self):
-        """ Test construction of the mesh """
+        # Test construction of the mesh
         h_sampl = 4
         v_sampl = 4
         idl = False
@@ -379,7 +491,7 @@ class IdealizedATest(unittest.TestCase):
             ppp(self.profiles, smsh, title)
 
     def test_mesh_creation_with_alignment(self):
-        """ Test construction of the mesh """
+        # Test construction of the mesh
         h_sampl = 4
         v_sampl = 4
         idl = False
@@ -400,7 +512,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         self.profiles, _ = _read_profiles(path)
 
     def test_mesh_creation(self):
-        """ Create mesh from profiles for SA """
+        # Create mesh from profiles for SA
         sampling = 40
         idl = False
         alg = False

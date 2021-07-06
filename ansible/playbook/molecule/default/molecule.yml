@@ -4,14 +4,18 @@ dependency:
 driver:
   name: docker
 platforms:
-  - name: instance
-    image: "geerlingguy/docker-${MOLECULE_DISTRO:-centos8}-ansible:latest"
+  - name: master
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu1804}-ansible:latest"
     command: /sbin/init 
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
 provisioner:
   name: ansible
+  config_options:
+    defaults:
+      stdout_callback: yaml
+      ansible_verbosity: 1
   lint:
     ansible-lint
 scenario:
@@ -25,3 +29,4 @@ scenario:
     - destroy
 verifier:
   name: ansible
+

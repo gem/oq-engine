@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
 from openquake.hazardlib.gsim.atkinson_2015 import Atkinson2015
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -22,24 +21,22 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class Atkinson2015TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Atkinson2015
 
-    # Tables generated from current implementation - CIRCULAR TEST!
+    # Tables generated from the implemtation by Jack Baker and Emily Mangold
+    # from the Baker Research Group
+    # https://github.com/bakerjw/GMMs/blob/master/gmms/a_2015_active.m
 
     def test_mean(self):
-        raise unittest.SkipTest('Please update the expected CSV!')
         self.check('ATKINSON2015/ATKINSON2015_MEAN.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_intra(self):
-        raise unittest.SkipTest('Please update the expected CSV!')
         self.check('ATKINSON2015/ATKINSON2015_STD_INTRA.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_inter(self):
-        raise unittest.SkipTest('Please update the expected CSV!')
         self.check('ATKINSON2015/ATKINSON2015_STD_INTER.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        raise unittest.SkipTest('Please update the expected CSV!')
         self.check('ATKINSON2015/ATKINSON2015_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)

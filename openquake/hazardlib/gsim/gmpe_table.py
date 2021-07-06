@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -129,7 +129,7 @@ class AmplificationTable(object):
         for stddev_type in [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
                             const.StdDev.INTRA_EVENT]:
             level = next(iter(amplification_group))
-            if stddev_type in amplification_group[level]:
+            if stddev_type.value in amplification_group[level]:
                 self.sigma[stddev_type] = deepcopy(self.mean)
 
         for iloc, (level, amp_model) in enumerate(amplification_group.items()):
@@ -145,7 +145,7 @@ class AmplificationTable(object):
                     for stddev_type in self.sigma:
                         self.sigma[stddev_type][imt][
                             :, :, :, self.argrp_id[iloc]] = \
-                            amp_model["/".join([stddev_type, imt])][:]
+                            amp_model["/".join([stddev_type.value, imt])][:]
         self.shape = (n_d, n_p, n_m, n_levels)
 
     def get_set(self):
@@ -210,9 +210,9 @@ class AmplificationTable(object):
             Number Levels]
         """
         # Levels by Distances
-        if imt.name in 'PGA PGV':
+        if imt.string in 'PGA PGV':
             interpolator = interp1d(self.magnitudes,
-                                    numpy.log10(self.mean[imt.name]), axis=2)
+                                    numpy.log10(self.mean[imt.string]), axis=2)
             output_table = 10.0 ** (
                 interpolator(rctx.mag).reshape(self.shape[0], self.shape[3]))
         else:
@@ -240,9 +240,9 @@ class AmplificationTable(object):
         output_tables = []
         for stddev_type in stddev_types:
             # For PGA and PGV only needs to apply magnitude interpolation
-            if imt.name in 'PGA PGV':
+            if imt.string in 'PGA PGV':
                 interpolator = interp1d(self.magnitudes,
-                                        self.sigma[stddev_type][imt.name],
+                                        self.sigma[stddev_type][imt.string],
                                         axis=2)
                 output_tables.append(
                     interpolator(rctx.mag).reshape(self.shape[0],
@@ -343,9 +343,9 @@ class GMPETable(GMPE):
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
         for stddev_type in [const.StdDev.INTER_EVENT,
                             const.StdDev.INTRA_EVENT]:
-            if stddev_type in fle:
+            if stddev_type.value in fle:
                 self.stddevs[stddev_type] = hdf_arrays_to_dict(
-                    fle[stddev_type])
+                    fle[stddev_type.value])
                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(stddev_type)
 
     def _setup_amplification(self, fle):
@@ -454,12 +454,8 @@ class GMPETable(GMPE):
         """
         stddevs = []
         for stddev_type in stddev_types:
-            if stddev_type not in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
-                raise ValueError("Standard Deviation type %s not supported"
-                                 % stddev_type)
             sigma = self._return_tables(mag, imt, stddev_type)
-            interpolator_std = interp1d(dists, sigma,
-                                        bounds_error=False)
+            interpolator_std = interp1d(dists, sigma, bounds_error=False)
             stddev = interpolator_std(getattr(dctx, self.distance_type))
             stddev[getattr(dctx, self.distance_type) < dists[0]] = sigma[0]
             stddev[getattr(dctx, self.distance_type) > dists[-1]] = sigma[-1]
@@ -474,12 +470,12 @@ class GMPETable(GMPE):
         :param val_type:
             String indicating the type of data {"IMLs", "Total", "Inter" etc}
         """
-        if imt.name in 'PGA PGV':
+        if imt.string in 'PGA PGV':
             # Get scalar imt
             if val_type == "IMLs":
-                iml_table = self.imls[imt.name][:]
+                iml_table = self.imls[imt.string][:]
             else:
-                iml_table = self.stddevs[val_type][imt.name][:]
+                iml_table = self.stddevs[val_type][imt.string][:]
             n_d, n_s, n_m = iml_table.shape
             iml_table = iml_table.reshape([n_d, n_m])
         else:

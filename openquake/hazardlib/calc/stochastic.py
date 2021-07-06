@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -86,11 +86,11 @@ def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('id', U32), ('seed', U32), ('source_id', '<S16'), ('et_id', U16),
+    ('id', U32), ('seed', U32), ('source_id', '<S16'), ('trt_smr', U16),
     ('code', U8), ('n_occ', U32), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
-    ('hypo', (F32, 3)), ('geom_id', U32), ('e0', U32), ('e1', U32)])
+    ('hypo', (F32, 3)), ('geom_id', U32), ('e0', U32)])
 
 
 # this is really fast
@@ -106,7 +106,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
     geoms = []
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
-        arrays = surface_to_arrays(rup.surface)
+        arrays = surface_to_arrays(rup.surface)  # one array per surface
         points = []
         shapes = []
         for array in arrays:
@@ -128,19 +128,19 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         n = len(points) // 3
         lons = points[0:n]
         lats = points[n:2*n]
-        rec['minlon'] = minlon = lons.min()
-        rec['minlat'] = minlat = lats.min()
-        rec['maxlon'] = maxlon = lons.max()
-        rec['maxlat'] = maxlat = lats.max()
+        rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
+        rec['minlat'] = minlat = numpy.nanmin(lats)
+        rec['maxlon'] = maxlon = numpy.nanmax(lons)
+        rec['maxlat'] = maxlat = numpy.nanmax(lats)
         rec['mag'] = rup.mag
         rec['hypo'] = hypo
         if srcfilter.integration_distance and len(
                 srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.et_id,
+        tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.trt_smr,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat, hypo, 0, 0, 0)
+               minlon, minlat, maxlon, maxlat, hypo, 0, 0)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are
@@ -174,7 +174,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     eb_ruptures = []
     ses_seed = param['ses_seed']
     numpy.random.seed(sources[0].serial(ses_seed))
-    [et_id] = set(src.et_id for src in sources)
+    [trt_smr] = set(src.trt_smr for src in sources)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Set the parameters required to compute the number of occurrences
@@ -211,7 +211,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_data[src.id] = {}
                 if rup.idx not in rup_counter[src.id]:
                     rup_counter[src.id][rup.idx] = 1
-                    rup_data[src.id][rup.idx] = [rup, src.id, et_id]
+                    rup_data[src.id][rup.idx] = [rup, src.id, trt_smr]
                 else:
                     rup_counter[src.id][rup.idx] += 1
                 # Store info
@@ -223,9 +223,9 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     # Create event based ruptures
     for src_key in rup_data:
         for rup_key in rup_data[src_key]:
-            rup, source_id, et_id = rup_data[src_key][rup_key]
+            rup, source_id, trt_smr = rup_data[src_key][rup_key]
             cnt = rup_counter[src_key][rup_key]
-            ebr = EBRupture(rup, source_id, et_id, cnt)
+            ebr = EBRupture(rup, source_id, trt_smr, cnt)
             eb_ruptures.append(ebr)
 
     return eb_ruptures, calc_times
@@ -250,7 +250,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
     num_ses = param['ses_per_logic_tree_path']
-    trt = sources[0].tectonic_region_type
+    grp_id = sources[0].grp_id
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
     if (getattr(sources, 'atomic', False) and
@@ -259,9 +259,9 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
             sources, srcfilter, num_ses, param)
 
         # Yield ruptures
+        er = sum(src.num_ruptures for src, _ in srcfilter.filter(sources))
         yield AccumDict(dict(rup_array=get_rup_array(eb_ruptures, srcfilter),
-                             calc_times=calc_times,
-                             eff_ruptures={trt: len(eb_ruptures)}))
+                             calc_times=calc_times, eff_ruptures={grp_id: er}))
     else:
         eb_ruptures = []
         eff_ruptures = 0
@@ -278,12 +278,12 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                                      calc_times={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
-            for rup, et_id, n_occ in src.sample_ruptures(
+            for rup, trt_smr, n_occ in src.sample_ruptures(
                     samples * num_ses, param['ses_seed']):
-                ebr = EBRupture(rup, src.source_id, et_id, n_occ)
+                ebr = EBRupture(rup, src.source_id, trt_smr, n_occ)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
             calc_times[src.id] += numpy.array([nr, src.nsites, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(dict(rup_array=rup_array, calc_times=calc_times,
-                             eff_ruptures={trt: eff_ruptures}))
+                             eff_ruptures={grp_id: eff_ruptures}))

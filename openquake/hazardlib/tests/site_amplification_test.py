@@ -16,7 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import re
 import unittest
+import pandas as pd
 import numpy
 from openquake.hazardlib.const import TRT
 from openquake.baselib import InvalidFile
@@ -24,6 +27,7 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
+from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 aac = numpy.testing.assert_allclose
@@ -116,22 +120,18 @@ class AmplifierTestCase(unittest.TestCase):
                           0.15, 0.35, 0.75, 1.1])
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985, 0.98, 0.97, 0.94, 0.89, 0.79, 0.69],
-            atol=1E-6)
+            poes, [0.981272, 0.975965, 0.96634, 0.937876, 0.886351, 0.790249,
+                   0.63041], atol=1E-6)
         poes = a.amplify_one(b'A', 'SA(0.2)', self.hcurve[2]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985, 0.98, 0.97, 0.94, 0.89, 0.79, 0.69],
-            atol=1E-6)
+            poes, [0.981272, 0.975965, 0.96634, 0.937876, 0.886351, 0.790249,
+                   0.63041], atol=1E-6)
         poes = a.amplify_one(b'A', 'SA(0.5)', self.hcurve[3]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985, 0.98, 0.97, 0.94, 0.89, 0.79, 0.69],
-            atol=1E-6)
+            poes, [0.981272, 0.975965, 0.96634, 0.937876, 0.886351, 0.790249,
+                   0.63041], atol=1E-6)
 
     def test_simple(self):
-        #
-        # MP: checked using hand calculations some values of the poes computed
-        # considering uncertainty
-        #
         fname = gettemp(simple_ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
@@ -139,18 +139,18 @@ class AmplifierTestCase(unittest.TestCase):
         # a.check(self.vs30, vs30_tolerance=1)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985008, 0.980001, 0.970019, 0.94006, 0.890007, 0.790198,
-                   0.690201], atol=1E-6)
+            poes, [0.981141, 0.975771, 0.964955, 0.935616, 0.882413, 0.785659,
+                   0.636667], atol=1e-6)
 
         poes = a.amplify_one(b'A', 'SA(0.2)', self.hcurve[2]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985008, 0.980001, 0.970019, 0.94006, 0.890007, 0.790198,
-                   0.690201], atol=1E-6)
+            poes, [0.981141, 0.975771, 0.964955, 0.935616, 0.882413, 0.785659,
+                   0.636667], atol=1e-6)
 
         poes = a.amplify_one(b'A', 'SA(0.5)', self.hcurve[3]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985109, 0.980022, 0.970272, 0.940816, 0.890224, 0.792719,
-                   0.692719], atol=1E-6)
+            poes, [0.981681, 0.976563, 0.967238, 0.940109, 0.890456, 0.799286,
+                   0.686047], atol=1e-6)
 
         # Amplify GMFs with sigmas
         numpy.random.seed(42)
@@ -166,15 +166,21 @@ class AmplifierTestCase(unittest.TestCase):
         a = Amplifier(self.imtls, df, self.soil_levels)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
+            poes, [0.985122, 0.979701, 0.975965, 0.96634, 0.922497, 0.886351,
+                   0.790249], atol=1E-6)
+        #    poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
 
         poes = a.amplify_one(b'A', 'SA(0.2)', self.hcurve[2]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
+            poes, [0.985122, 0.979701, 0.975965, 0.96634, 0.922497, 0.886351,
+                   0.790249], atol=1E-6)
+        #    poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
 
         poes = a.amplify_one(b'A', 'SA(0.5)', self.hcurve[3]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
+            poes, [0.985122, 0.979701, 0.975965, 0.96634, 0.922497, 0.886351,
+                   0.790249], atol=1E-6)
+        #    poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
 
         # amplify GMFs without sigmas
         gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
@@ -185,7 +191,7 @@ class AmplifierTestCase(unittest.TestCase):
         with self.assertRaises(InvalidFile) as ctx:
             read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                      index='ampcode')
-        self.assertIn("line 3: ampcode='long_code' has length 9 > 4",
+        self.assertIn("ampcode='long_code' has length 9 > 4",
                       str(ctx.exception))
 
     def test_dupl(self):
@@ -195,6 +201,42 @@ class AmplifierTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             Amplifier(self.imtls, df, self.soil_levels)
         self.assertEqual(str(ctx.exception), "Found duplicates for b'A'")
+
+    def test_resampling(self):
+        path = os.path.dirname(os.path.abspath(__file__))
+
+        # Read AF
+        f_af = os.path.join(path, 'data', 'convolution', 'amplification.csv')
+        df_af = read_csv(f_af, {'ampcode': ampcode_dt, None: numpy.float64},
+                         index='ampcode')
+
+        # Read hc
+        f_hc = os.path.join(path, 'data', 'convolution', 'hazard_curve.csv')
+        df_hc = pd.read_csv(f_hc, skiprows=1)
+
+        # Get imls from the hc
+        imls = []
+        pattern = 'poe-(\\d*\\.\\d*)'
+        for k in df_hc.columns:
+            m = re.match(pattern, k)
+            if m:
+                imls.append(float(m.group(1)))
+        imtls = DictArray({'PGA': imls})
+
+        # Create a list with one ProbabilityCurve instance
+        poes = numpy.squeeze(df_hc.iloc[0, 3:].to_numpy())
+        tmp = numpy.expand_dims(poes, 1)
+        pcurve = ProbabilityCurve(tmp)
+
+        soil_levels = numpy.array(list(numpy.geomspace(0.001, 2, 50)))
+        a = Amplifier(imtls, df_af, soil_levels)
+        res = a.amplify(b'MQ15', pcurve)
+
+        tmp = 'hazard_curve_expected.csv'
+        fname_expected = os.path.join(path, 'data', 'convolution', tmp)
+        expected = numpy.loadtxt(fname_expected)
+
+        numpy.testing.assert_allclose(numpy.squeeze(res.array), expected)
 
     def test_gmf_with_uncertainty(self):
         fname = gettemp(gmf_ampl_func)

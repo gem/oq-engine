@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,52 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 
 
+def get_fault_term(rake):
+    """
+    Returns coefficient for faulting style (pg 156)
+    """
+    rake = rake + 360 if rake < 0 else rake
+
+    if (rake >= 45) & (rake <= 135):
+        f = 1.
+    elif (rake >= 225) & (rake <= 315):
+        f = 0.5
+    else:
+        f = 0.
+    return f
+
+
+def get_Ssr_term(vs30):
+    """
+    Returns site term for soft rock (pg 157)
+    """
+    return (vs30 >= 760) & (vs30 < 1500)
+
+
+def get_Shr_term(vs30):
+    """
+    Returns site term for hard rock (pg 157)
+    """
+    return vs30 >= 1500
+
+
+def get_stddevs(mean, stddev_types):
+    """
+    Returns the standard deviations from mean (pg 164; more robust than
+    estimate using magnitude)
+    """
+    mean = np.exp(mean)
+    sigma = 0.39 + np.zeros(mean.shape)
+    sigma[mean < 0.068] = 0.55
+    idx = np.logical_and(mean >= 0.068, mean <= 0.21)
+    sigma[idx] = 0.173 - 0.140 * np.log(mean[idx])
+    stddevs = []
+    for stddev in stddev_types:
+        if stddev == const.StdDev.TOTAL:
+            stddevs.append(sigma)
+    return stddevs
+
+
 class Campbell1997(GMPE):
     """
     Implements GMPE (PGA) by Campbell, Kenneth W. "Empirical near-source
@@ -38,17 +84,13 @@ class Campbell1997(GMPE):
 
     #: Supported intensity measure types are PGA, PGV, PSA, but we only define
     #: PGA because this is the only IMT used by an implemented model (09/18)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
 
     #: Supported intensity measure component is the horizontal component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total, see equation 4, pg 164
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Requires vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -59,7 +101,7 @@ class Campbell1997(GMPE):
     #: Required distance measure is closest distance to rupture. In the
     #: publication, Rseis is used. We assume Rrup=Rseis, justified by
     #: our calculations matching the verification tables
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Verification of the mean value was done by digitizing Figs. 9 and 10
     #: using Engauge Digitizer. The tests check varied magnitude, distance,
@@ -77,10 +119,10 @@ class Campbell1997(GMPE):
         R = dists.rrup
         M = rup.mag
         # get constants
-        Ssr = self.get_Ssr_term(sites.vs30)
-        Shr = self.get_Shr_term(sites.vs30)
+        Ssr = get_Ssr_term(sites.vs30)
+        Shr = get_Shr_term(sites.vs30)
         rake = rup.rake
-        F = self.get_fault_term(rake)
+        F = get_fault_term(rake)
 
         # compute mean
         mean = -3.512 + (0.904 * M) - (
@@ -88,47 +130,5 @@ class Campbell1997(GMPE):
             + (1.125 - 0.112 * np.log(R) - 0.0957 * M) * F \
             + (0.440 - 0.171 * np.log(R)) * Ssr \
             + (0.405 - 0.222 * np.log(R)) * Shr
-        stddevs = self.get_stddevs(mean, stddev_types)
+        stddevs = get_stddevs(mean, stddev_types)
         return mean, stddevs
-
-    def get_fault_term(self, rake):
-        """
-        Returns coefficient for faulting style (pg 156)
-        """
-        rake = rake + 360 if rake < 0 else rake
-
-        if (rake >= 45) & (rake <= 135):
-            f = 1.
-        elif (rake >= 225) & (rake <= 315):
-            f = 0.5
-        else:
-            f = 0.
-        return f
-
-    def get_Ssr_term(self, vs30):
-        """
-        Returns site term for soft rock (pg 157)
-        """
-        return (vs30 >= 760) & (vs30 < 1500)
-
-    def get_Shr_term(self, vs30):
-        """
-        Returns site term for hard rock (pg 157)
-        """
-        return vs30 >= 1500
-
-    def get_stddevs(self, mean, stddev_types):
-        """
-        Returns the standard deviations from mean (pg 164; more robust than
-        estimate using magnitude)
-        """
-        mean = np.exp(mean)
-        sigma = 0.39 + np.zeros(mean.shape)
-        sigma[mean < 0.068] = 0.55
-        idx = np.logical_and(mean >= 0.068, mean <= 0.21)
-        sigma[idx] = 0.173 - 0.140 * np.log(mean[idx])
-        stddevs = []
-        for stddev in stddev_types:
-            if stddev == const.StdDev.TOTAL:
-                stddevs.append(sigma)
-        return stddevs

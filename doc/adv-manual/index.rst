@@ -22,6 +22,7 @@ Contents:
    sampling
    rupture-sampling
    event-based-with-large-logic-tree
+   mean-ground-motion-field
    site-specific
    extract-api
    pandas
@@ -29,6 +30,7 @@ Contents:
    multipoint
    parallelization
    special-features
+   point-source-gridding
    asset-site-association
    risk-features
    developing

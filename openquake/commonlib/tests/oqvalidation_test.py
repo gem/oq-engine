@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -235,13 +235,13 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_missing_levels_event_based(self):
         with self.assertRaises(ValueError) as ctx:
-            OqParam(
+            oq = OqParam(
                 calculation_mode='event_based', inputs=fakeinputs,
                 sites='0.1 0.2',
                 maximum_distance='400',
                 intensity_measure_types='PGA',
-                hazard_curves_from_gmfs='true',
-            ).validate()
+                hazard_curves_from_gmfs='true')
+            oq.validate()
         self.assertIn('`intensity_measure_types_and_levels`',
                       str(ctx.exception))
 
@@ -350,7 +350,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2',
                 poes='0.2',
                 maximum_distance='400',
-                iml_disagg="{'PGV': [0.1, 0.2, 0.3]}",
+                iml_disagg="{'PGV': 0.1}",
                 poes_disagg="0.1",
                 uniform_hazard_spectra='1')
         self.assertIn("poes_disagg != poes: [0.1]!=[0.2] in job.ini",

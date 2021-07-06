@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.scalerel.leonard2014` implements
 :class:`Leonard2010_SCR`
 :class:`Leonard2010_SCR_M0`
+:class:`Leonard2010_SCR_MX`
 """
 from numpy import power, log10
 from openquake.hazardlib.scalerel.base import BaseMSRSigma, BaseASRSigma
@@ -83,3 +84,24 @@ class Leonard2010_SCR_M0(Leonard2010_SCR):
         """
         #based on table 6 relationship for SCR with modification
         return log10(area) + 4.22
+
+
+class Leonard2010_SCR_MX(Leonard2010_SCR):
+    """
+    Modified for specific individual use. NOT RECOMMENDED!
+    """
+    def get_median_area(self, mag, rake):
+        """
+        Calculates median fault area from magnitude.
+        """
+        #based on table 6 relationship for SCR with modification
+        return power(10.0, (mag - 4.00))
+
+    def get_median_mag(self, area, rake):
+        """
+        Returns magnitude for a given fault area
+        """
+        #based on table 6 relationship for SCR with modification
+        return log10(area) + 4.00
+
+

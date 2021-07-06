@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,8 +24,8 @@ Module exports :class:`SiMidorikawa1999Asc`, :class:`SiMidorikawa1999SInter`,
 :class:`SiMidorikawa1999SSlabSouthWestCorrection`.
 """
 import numpy as np
-
 from scipy.constants import g
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, PGA
@@ -115,7 +115,7 @@ def _apply_subduction_trench_correction(mean, x_tr, H, rrup, imt):
     equation 3.5.2-1, page 3-148 of "Technical Reports on National Seismic
     Hazard Maps for Japan"
     """
-    if imt.name == 'PGV':
+    if imt.string == 'PGV':
         V1 = 10 ** ((-4.021e-5 * x_tr + 9.905e-3) * (H - 30))
         V2 = np.maximum(1., (10 ** (-0.012)) * ((rrup / 300.) ** 2.064))
         corr = V2
@@ -137,7 +137,7 @@ def _apply_volcanic_front_correction(mean, x_vf, H, imt):
     Hazard Maps for Japan"
     """
     V1 = np.zeros_like(x_vf)
-    if imt.name == 'PGV':
+    if imt.string == 'PGV':
         idx = x_vf <= 75
         V1[idx] = 4.28e-5 * x_vf[idx] * (H - 30)
         idx = x_vf > 75
@@ -150,6 +150,92 @@ def _apply_volcanic_front_correction(mean, x_vf, H, imt):
         V1[idx] = 5.30e-3 * (H - 30)
         V1 = 10 ** V1
     return np.log(np.exp(mean) * V1)
+
+
+def _apply_amplification_factor(AMP_F, mean, vs30):
+    """
+    Apply amplification factor to scale PGV value from 600 to 400 m/s vs30
+    and convert mean from base 10 to base e.
+
+    The scaling factor from 600 m/s to 400 m/s was defined by NIED.
+
+    The scaling factor from 600 m/s to 800m/s is valid just for the elastic
+    case as no adjustment for kappa was considered.
+    """
+    assert np.all(vs30 == vs30[0])
+    if abs(vs30[0]-600.) < 1e-10:
+        return mean * np.log(10)
+    elif abs(vs30[0]-400.) < 1e-10:
+        return mean * np.log(10) + np.log(AMP_F)
+    elif abs(vs30[0]-800.) < 1e-10:
+        return mean * np.log(10) - np.log(1.25)
+    else:
+        raise ValueError(
+            'Si and Midorikawa 1999 do not support this Vs30 value')
+
+
+def _get_mean(imt, mag, hypo_depth, rrup, d):
+    """
+    Return mean value as defined in equation 3.5.1-1 page 148
+    """
+    # clip magnitude at 8.3 as per note at page 3-36 in table Table 3.3.2-6
+    # in "Technical Reports on National Seismic Hazard Maps for Japan"
+    mag = min(mag, 8.3)
+    if imt.string == 'PGV':
+        mean = (
+            0.58 * mag +
+            0.0038 * hypo_depth +
+            d -
+            1.29 -
+            np.log10(rrup + 0.0028 * 10 ** (0.5 * mag)) -
+            0.002 * rrup
+        )
+    else:
+        mean = (
+            0.50 * mag +
+            0.0043 * hypo_depth +
+            d +
+            0.61 -
+            np.log10(rrup + 0.0055 * 10 ** (0.5 * mag)) -
+            0.003 * rrup
+        )
+        mean = np.log10(10**(mean)/(g*100))
+
+    return mean
+
+
+_get_stddevs = CallableDict()
+
+
+@_get_stddevs.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def _get_stddevs_asc(trt, stddev_types, rrup):
+    """
+    Return standard deviations as defined in equation 3.5.5-2 page 151
+    """
+    std = np.zeros_like(rrup)
+    std[rrup <= 20] = 0.23
+    idx = (rrup > 20) & (rrup <= 30)
+    std[idx] = 0.23 - 0.03 * np.log10(rrup[idx] / 20) / np.log10(30. / 20.)
+    std[rrup > 30] = 0.20
+    # convert from log10 to ln
+    std = np.log(10 ** std)
+    return [std for stddev_type in stddev_types]
+
+
+@_get_stddevs.add(const.TRT.SUBDUCTION_INTERFACE,
+                  const.TRT.SUBDUCTION_INTRASLAB)
+def _get_stddevs_sub(trt, stddev_types, pgv):
+    """
+    Return standard deviations as defined in equation 3.5.5-1 page 151
+    """
+    std = np.zeros_like(pgv)
+    std[pgv <= 25] = 0.20
+    idx = (pgv > 25) & (pgv <= 50)
+    std[idx] = 0.20 - 0.05 * (pgv[idx] - 25) / 25
+    std[pgv > 50] = 0.15
+    # convert from log10 to ln
+    std = np.log(10 ** std)
+    return [std for stddev_type in stddev_types]
 
 
 class SiMidorikawa1999Asc(GMPE):
@@ -165,7 +251,7 @@ class SiMidorikawa1999Asc(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure type is PGV
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGV, PGA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV, PGA}
 
     #: Supported intensity measure component is greater of
     #: of two horizontal components :
@@ -174,9 +260,7 @@ class SiMidorikawa1999Asc(GMPE):
         const.IMC.GREATER_OF_TWO_HORIZONTAL
 
     #: Supported standard deviation type is total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No sites parameters are required
     # REQUIRES_SITES_PARAMETERS = set()
@@ -201,74 +285,11 @@ class SiMidorikawa1999Asc(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d=0)
-        stddevs = self._get_stddevs(stddev_types, dists.rrup)
-        mean = self._apply_amplification_factor(mean, sites.vs30)
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+        mean = _get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d=0)
+        stddevs = _get_stddevs(trt, stddev_types, dists.rrup)
+        mean = _apply_amplification_factor(self.AMP_F, mean, sites.vs30)
         return mean, stddevs
-
-    def _get_mean(self, imt, mag, hypo_depth, rrup, d):
-        """
-        Return mean value as defined in equation 3.5.1-1 page 148
-        """
-        # clip magnitude at 8.3 as per note at page 3-36 in table Table 3.3.2-6
-        # in "Technical Reports on National Seismic Hazard Maps for Japan"
-        mag = min(mag, 8.3)
-        if imt.name == 'PGV':
-            mean = (
-                0.58 * mag +
-                0.0038 * hypo_depth +
-                d -
-                1.29 -
-                np.log10(rrup + 0.0028 * 10 ** (0.5 * mag)) -
-                0.002 * rrup
-            )
-        else:
-            mean = (
-                0.50 * mag +
-                0.0043 * hypo_depth +
-                d +
-                0.61 -
-                np.log10(rrup + 0.0055 * 10 ** (0.5 * mag)) -
-                0.003 * rrup
-            )
-            mean = np.log10(10**(mean)/(g*100))
-
-        return mean
-
-    def _get_stddevs(self, stddev_types, rrup):
-        """
-        Return standard deviations as defined in equation 3.5.5-2 page 151
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        std = np.zeros_like(rrup)
-        std[rrup <= 20] = 0.23
-        idx = (rrup > 20) & (rrup <= 30)
-        std[idx] = 0.23 - 0.03 * np.log10(rrup[idx] / 20) / np.log10(30. / 20.)
-        std[rrup > 30] = 0.20
-        # convert from log10 to ln
-        std = np.log(10 ** std)
-        return [std for stddev_type in stddev_types]
-
-    def _apply_amplification_factor(self, mean, vs30):
-        """
-        Apply amplification factor to scale PGV value from 600 to 400 m/s vs30
-        and convert mean from base 10 to base e.
-
-        The scaling factor from 600 m/s to 400 m/s was defined by NIED.
-
-        The scaling factor from 600 m/s to 800m/s is valid just for the elastic
-        case as no adjustment for kappa was considered.
-        """
-        assert np.all(vs30 == vs30[0])
-        if abs(vs30[0]-600.) < 1e-10:
-            return mean * np.log(10)
-        elif abs(vs30[0]-400.) < 1e-10:
-            return mean * np.log(10) + np.log(self.AMP_F)
-        elif abs(vs30[0]-800.) < 1e-10:
-            return mean * np.log(10) - np.log(1.25)
-        else:
-            raise ValueError('Si and Midorikawa 1999 do not support this Vs30 value')
 
 
 class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
@@ -292,30 +313,15 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        if imt.name == 'PGV':
+        if imt.string == 'PGV':
             d = -0.02
         else:
             d = 0.01
-        # 
-        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d)
-        stddevs = self._get_stddevs(stddev_types, 10 ** mean)
-        mean = self._apply_amplification_factor(mean, sites.vs30)
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+        mean = _get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d)
+        stddevs = _get_stddevs(trt, stddev_types, 10 ** mean)
+        mean = _apply_amplification_factor(self.AMP_F, mean, sites.vs30)
         return mean, stddevs
-
-    def _get_stddevs(self, stddev_types, pgv):
-        """
-        Return standard deviations as defined in equation 3.5.5-1 page 151
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        std = np.zeros_like(pgv)
-        std[pgv <= 25] = 0.20
-        idx = (pgv > 25) & (pgv <= 50)
-        std[idx] = 0.20 - 0.05 * (pgv[idx] - 25) / 25
-        std[pgv > 50] = 0.15
-        # convert from log10 to ln
-        std = np.log(10 ** std)
-        return [std for stddev_type in stddev_types]
 
 
 class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
@@ -361,7 +367,8 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
         x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
-        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth, imt)
+        mean = _apply_volcanic_front_correction(
+            mean, x_vf, rup.hypo_depth, imt)
         return mean, stddevs
 
 
@@ -386,13 +393,14 @@ class SiMidorikawa1999SSlab(SiMidorikawa1999SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        if imt.name == 'PGV':
+        if imt.string == 'PGV':
             d = 0.12
         else:
             d = 0.22
-        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d)
-        stddevs = self._get_stddevs(stddev_types, 10 ** mean)
-        mean = self._apply_amplification_factor(mean, sites.vs30)
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+        mean = _get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d)
+        stddevs = _get_stddevs(trt, stddev_types, 10 ** mean)
+        mean = _apply_amplification_factor(self.AMP_F, mean, sites.vs30)
         return mean, stddevs
 
 
@@ -439,5 +447,6 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
         x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
-        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth, imt)
+        mean = _apply_volcanic_front_correction(
+            mean, x_vf, rup.hypo_depth, imt)
         return mean, stddevs

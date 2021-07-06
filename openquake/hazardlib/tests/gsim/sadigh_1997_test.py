@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,12 +30,12 @@ import numpy
 
 class SadighEtAl1997TestCase(BaseGSIMTestCase):
     GSIM_CLASS = SadighEtAl1997
-
     # test data was generated using opensha implementation of GMPE.
+    # NB: the deep_soil methods are untested!
 
     def test_mean_rock(self):
         self.check('SADIGH97/SADIGH1997_ROCK_MEAN.csv',
-                    max_discrep_percentage=0.4)
+                   max_discrep_percentage=0.4)
 
     def test_total_stddev_rock(self):
         self.check('SADIGH97/SADIGH1997_ROCK_STD_TOTAL.csv',
@@ -43,7 +43,7 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
 
     def test_mean_soil(self):
         self.check('SADIGH97/SADIGH1997_SOIL_MEAN.csv',
-                    max_discrep_percentage=0.5)
+                   max_discrep_percentage=0.5)
 
     def test_total_stddev_soil(self):
         self.check('SADIGH97/SADIGH1997_SOIL_STD_TOTAL.csv',
@@ -56,27 +56,23 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
         rctx = RuptureContext()
         dctx = DistancesContext()
 
-        rctx.rake =  0.0
+        rctx.rake = 0.0
         dctx.rrup = numpy.array([0., 1.])
         sctx.vs30 = numpy.array([800., 800.])
 
         rctx.mag = 9.0
         mean_rock_9, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL]
-        )
+            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         rctx.mag = 8.5
         mean_rock_8pt5, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL]
-        )
+            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_allclose(mean_rock_9, mean_rock_8pt5)
 
         sctx.vs30 = numpy.array([300., 300.])
         rctx.mag = 9.0
         mean_soil_9, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL]
-        )
+            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         rctx.mag = 8.5
         mean_soil_8pt5, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL]
-        )
+            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_allclose(mean_soil_9, mean_soil_8pt5)

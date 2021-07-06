@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,8 +22,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.base import (RuptureContext, DistancesContext,
                                            SitesContext)
-from openquake.hazardlib.gsim.germany_2018 import (CauzziEtAl2014RhypoGermany,
-                                                   DerrasEtAl2014RhypoGermany)
+from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014RhypoGermany
+from openquake.hazardlib.gsim.derras_2014 import DerrasEtAl2014RhypoGermany
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRhyp2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rhyp
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rhypo

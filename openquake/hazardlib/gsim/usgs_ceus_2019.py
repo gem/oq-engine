@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -198,9 +198,9 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             imean = np.copy(pga_r)
 
         # Get the coefficients for the IMT
-        C_LIN = self.LINEAR_COEFFS[imt]
-        C_F760 = self.F760[imt]
-        C_NL = self.NONLINEAR_COEFFS[imt]
+        C_LIN = self.COEFFS_LINEAR[imt]
+        C_F760 = self.COEFFS_F760[imt]
+        C_NL = self.COEFFS_NONLINEAR[imt]
 
         site_amp = self.get_site_amplification(imt, np.exp(pga_r), sctx)
 

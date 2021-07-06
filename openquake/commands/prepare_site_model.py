@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2020 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,11 +18,11 @@
 import os
 import logging
 import numpy
-from openquake.baselib import sap, performance, datastore
+from openquake.baselib import performance, writers
 from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
-from openquake.commonlib.writers import write_csv
+from openquake.commonlib import datastore
 
 SQRT2 = 1.414
 vs30_dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
@@ -82,10 +82,17 @@ def check_fname(fname, kind, forbidden):
                         % (kind, forbidden))
 
 
-@sap.script
-def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
-                       z1pt0, z2pt5, vs30measured, grid_spacing=0,
-                       assoc_distance=5, output='site_model.csv'):
+def main(
+        vs30_csv,
+        z1pt0=False,
+        z2pt5=False,
+        vs30measured=False,
+        *,
+        exposure_xml=None,
+        sites_csv=None,
+        grid_spacing: float = 0,
+        assoc_distance: float = 5,
+        output='site_model.csv'):
     """
     Prepare a site_model.csv file from exposure xml files/site csv files,
     vs30 csv files and a grid spacing which can be 0 (meaning no grid).
@@ -160,21 +167,18 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
         if z2pt5:
             haz_sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
         hdf5['sitecol'] = haz_sitecol
-        write_csv(output, haz_sitecol.array[fields])
+        writers.write_csv(output, haz_sitecol.array[fields])
     logging.info('Saved %d rows in %s' % (len(haz_sitecol), output))
     logging.info(mon)
     return haz_sitecol
 
 
-prepare_site_model.opt('exposure_xml', 'exposure(s) in XML format', nargs='*')
-prepare_site_model.opt('sites_csv', 'sites in CSV format', nargs='*')
-prepare_site_model.arg('vs30_csv', 'files with lon,lat,vs30 and no header',
-                       nargs='+')
-prepare_site_model.flg('z1pt0', 'build the z1pt0', '-1')
-prepare_site_model.flg('z2pt5', 'build the z2pt5', '-2')
-prepare_site_model.flg('vs30measured', 'build the vs30measured', '-3')
-prepare_site_model.opt('grid_spacing', 'grid spacing in km '
-                       '(the default 0 means no grid)', type=float)
-prepare_site_model.opt('assoc_distance',
-                       'sites over this distance are discarded', type=float)
-prepare_site_model.opt('output', 'output file')
+main.vs30_csv = dict(help='files with lon,lat,vs30 and no header', nargs='+')
+main.z1pt0 = dict(help='build the z1pt0', abbrev='-1')
+main.z2pt5 = dict(help='build the z2pt5', abbrev='-2')
+main.vs30measured = dict(help='build the vs30measured', abbrev='-3')
+main.exposure_xml = dict(help='exposure(s) in XML format', nargs='*')
+main.sites_csv = dict(help='sites in CSV format', nargs='*')
+main.grid_spacing = 'grid spacing in km (the default 0 means no grid)'
+main.assoc_distance = 'sites over this distance are discarded'
+main.output = 'output file'

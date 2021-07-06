@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,9 +24,7 @@ from openquake.hazardlib.gsim.mcverry_2006 import (
     McVerry2006AscSC,
     McVerry2006SInterSC,
     McVerry2006SSlabSC,
-    McVerry2006VolcSC
-)
-
+    McVerry2006VolcSC)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from MS Excel implementation from G. McVerry

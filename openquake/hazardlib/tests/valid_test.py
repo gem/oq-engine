@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -109,10 +109,10 @@ class ValidationTestCase(unittest.TestCase):
             valid.probability('-0.1')
 
     def test_IMTstr(self):
-        self.assertEqual(imt.from_string('SA(1)'), ('SA', 1, 5))
-        self.assertEqual(imt.from_string('SA(1.)'), ('SA', 1, 5))
-        self.assertEqual(imt.from_string('SA(0.5)'), ('SA', 0.5, 5))
-        self.assertEqual(imt.from_string('PGV'), ('PGV',))
+        self.assertEqual(imt.from_string('SA(1)'), ('SA(1.0)', 1, 5))
+        self.assertEqual(imt.from_string('SA(1.)'), ('SA(1.0)', 1, 5))
+        self.assertEqual(imt.from_string('SA(0.5)'), ('SA(0.5)', 0.5, 5))
+        self.assertEqual(imt.from_string('PGV'), ('PGV', 0., 5))
         with self.assertRaises(KeyError):
             imt.from_string('S(1)')
 
@@ -149,6 +149,5 @@ class ValidationTestCase(unittest.TestCase):
         try:
             gsim = valid.gsim('[FakeGsim]\narg=0.1', '/fake/dir')
             self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
-            self.assertEqual(gsim.minimum_distance, 0)
         finally:
             del registry['FakeGsim']

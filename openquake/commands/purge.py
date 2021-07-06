@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,8 +18,7 @@
 import os
 import re
 import getpass
-from openquake.baselib import sap, datastore
-from openquake.commonlib.logs import dbcmd
+from openquake.commonlib import logs, datastore
 
 datadir = datastore.get_datadir()
 
@@ -28,7 +27,7 @@ def purge_one(calc_id, user, force):
     """
     Remove one calculation ID from the database and remove its datastore
     """
-    dbcmd('del_calc', calc_id, user, force)
+    logs.dbcmd('del_calc', calc_id, user, force)
     f1 = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     f2 = os.path.join(datadir, 'calc_%s_tmp.hdf5' % calc_id)
     for f in [f1, f2]:
@@ -53,8 +52,7 @@ def purge_all(user=None):
                 purge_one(calc_id, user, force=True)
 
 
-@sap.script
-def purge(calc_id, force=False):
+def main(calc_id: int, force=False):
     """
     Remove the given calculation. If you want to remove all calculations,
     use oq reset.
@@ -68,5 +66,5 @@ def purge(calc_id, force=False):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-purge.arg('calc_id', 'calculation ID', type=int)
-purge.flg('force', 'ignore dependent calculations')
+main.calc_id = 'calculation ID'
+main.force = 'ignore dependent calculations'

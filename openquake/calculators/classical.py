@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,19 +26,20 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, hdf5, config
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg)
 from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
+from openquake.hazardlib.source.base import EPS
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.contexts import ContextMaker, get_effect
+from openquake.hazardlib.contexts import ContextMaker, get_effect, read_cmakers
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util, readinput
+from openquake.commonlib import calc, readinput, datastore
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -47,14 +48,13 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-EPS = .01  # used for src.nsites outside the maximum_distance
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
-                             ('extreme_poe', F32)])
+grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
+                              ('extreme_poe', F32), ('smrs', hdf5.vuint16)])
 
 
 def get_source_id(src):  # used in submit_tasks
@@ -138,7 +138,6 @@ def store_ctxs(dstore, rupdata, grp_id):
     Store contexts with the same magnitude in the datastore
     """
     nr = len(rupdata['mag'])
-    rupdata['nsites'] = numpy.array([len(s) for s in rupdata['sids_']])
     rupdata['grp_id'] = numpy.repeat(grp_id, nr)
     nans = numpy.repeat(numpy.nan, nr)
     for par in dstore['rup']:
@@ -161,7 +160,7 @@ def preclassical(srcs, srcfilter, params, monitor):
 
     NB: srcfilter can be on a reduced site collection for performance reasons
     """
-    # nrups, nsites, time, task_no
+    # src.id -> nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     sources = []
     grp_id = srcs[0].grp_id
@@ -212,12 +211,67 @@ def preclassical(srcs, srcfilter, params, monitor):
     return dic
 
 
-def classical(srcs, rlzs_by_gsim, params, monitor):
+def classical(srcs, cmaker, monitor):
     """
     Read the SourceFilter and call the classical calculator in hazardlib
     """
     srcfilter = monitor.read('srcfilter')
-    return hazclassical(srcs, srcfilter, rlzs_by_gsim, params, monitor)
+    cmaker.init_monitoring(monitor)
+    return hazclassical(srcs, srcfilter, cmaker)
+
+
+class Hazard:
+    """
+    Helper class for storing the PoEs
+    """
+    def __init__(self, dstore, full_lt, pgetter, srcidx):
+        self.datastore = dstore
+        self.full_lt = full_lt
+        self.cmakers = read_cmakers(dstore, full_lt)
+        self.get_hcurves = pgetter.get_hcurves
+        self.imtls = pgetter.imtls
+        self.sids = pgetter.sids
+        self.srcidx = srcidx
+        extreme = []
+        n = len(full_lt.sm_rlzs)
+        for grp_id, indices in enumerate(dstore['trt_smrs']):
+            trti, smrs = numpy.divmod(indices, n)
+            trt = full_lt.trts[trti[0]]
+            extreme.append((grp_id, trt, 0, smrs))
+        self.extreme = numpy.array(extreme, grp_extreme_dt)
+
+    def init(self, pmaps, grp_id):
+        """
+        Initialize the pmaps dictionary with zeros, if needed
+        """
+        if grp_id not in pmaps:
+            L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
+            pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
+
+    def store_poes(self, grp_id, pmap):
+        """
+        Store the pmap of the given group inside the _poes dataset
+        """
+        cmaker = self.cmakers[grp_id]
+        base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
+        arr = numpy.array([pmap[sid].array for sid in pmap]).transpose(2, 0, 1)
+        self.datastore['_poes'][cmaker.slc] = arr  # shape GNL
+        extreme = max(
+            get_extreme_poe(pmap[sid].array, self.imtls)
+            for sid in pmap)
+        self.extreme[grp_id]['extreme_poe'] = extreme
+
+    def store_disagg(self, pmaps=None):
+        """
+        Store data inside disagg_by_grp (optionally disagg_by_src)
+        """
+        self.datastore['disagg_by_grp'] = self.extreme
+        if pmaps:  # called inside a loop
+            for key, pmap in pmaps.items():
+                # contains only string keys in case of disaggregation
+                rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
+                self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
+                    self.get_hcurves(pmap, rlzs_by_gsim))
 
 
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
@@ -253,38 +307,43 @@ class ClassicalCalculator(base.HazardCalculator):
                 eff_sites += rec[1] / rec[0]
         self.by_task[extra['task_no']] = (
             eff_rups, eff_sites, sorted(srcids))
-        acc.eff_ruptures[extra.pop('trt')] += eff_rups
-        if not pmap:
-            return acc
-        grp_id = extra['grp_id']
+        grp_id = extra.pop('grp_id')
+        self.rel_ruptures[grp_id] += eff_rups
+        self.counts[grp_id] -= 1
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
             pmap.grp_id = grp_id
             acc[extra['source_id'].split(':')[0]] = pmap
+
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
             if pmap:
+                self.haz.init(acc, grp_id)
                 acc[grp_id] |= pmap
-            # store rup_data if there are few sites
-            if self.few_sites:
+
+        # store rup_data if there are few sites
+        if self.few_sites and len(dic['rup_data']['src_id']):
+            with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
+        if self.counts[grp_id] == 0:
+            with self.monitor('saving probability maps'):
+                if grp_id in acc:
+                    self.haz.store_poes(grp_id, acc.pop(grp_id))
         return acc
 
-    def acc0(self):
+    def create_dsets(self):
         """
-        Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
+        Store some empty datasets in the datastore
         """
-        zd = AccumDict()  # populated in get_args
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
-                  'nsites', 'probs_occur_', 'sids_', 'src_id'}
+                  'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
-            cm = ContextMaker(trt, gsims)
+            cm = ContextMaker(trt, gsims, dict(imtls=self.oqparam.imtls))
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             for dparam in cm.REQUIRES_DISTANCES:
                 params.add(dparam + '_')
-        zd.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
         mags = set()
         for trt, dset in self.datastore['source_mags'].items():
             mags.update(dset[:])
@@ -300,24 +359,26 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = hdf5.vfloat32
                 elif param == 'src_id':
                     dt = U32
-                elif param in {'nsites', 'grp_id'}:
+                elif param == 'grp_id':
                     dt = U16
                 else:
                     dt = F32
                 descr.append((param, dt))
-            self.datastore.create_dframe('rup', descr, 'gzip')
+            self.datastore.create_df('rup', descr, 'gzip')
         self.by_task = {}  # task_no => src_ids
         self.maxradius = 0
         self.Ns = len(self.csm.source_info)
+        self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
+        # NB: the relevant ruptures are less than the effective ruptures,
+        # which are a preclassical concept
         if self.oqparam.disagg_by_src:
             sources = self.get_source_ids()
             self.datastore.create_dset(
                 'disagg_by_src', F32,
                 (self.N, self.R, self.M, self.L1, self.Ns))
-            self.datastore.set_shape_attrs(
+            self.datastore.set_shape_descr(
                 'disagg_by_src', site_id=self.N, rlz_id=self.R,
                 imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
-        return zd
 
     def get_source_ids(self):
         """
@@ -325,7 +386,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         self.M = len(oq.imtls)
-        self.L1 = len(oq.imtls.array) // self.M
+        self.L1 = oq.imtls.size // self.M
         sources = encode([src_id for src_id in self.csm.source_info])
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
@@ -345,26 +406,37 @@ class ClassicalCalculator(base.HazardCalculator):
         super().init()
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
-            et_ids = self.datastore.parent['et_ids'][:]
+            trt_smrs = self.datastore.parent['trt_smrs'][:]
         else:
             full_lt = self.csm.full_lt
-            et_ids = self.csm.get_et_ids()
-        self.grp_ids = numpy.arange(len(et_ids))
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(et_ids)
+            trt_smrs = self.csm.get_trt_smrs()
+        self.grp_ids = numpy.arange(len(trt_smrs))
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
         rlzs_by_g = []
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
-        poes_shape = (self.N, len(self.oqparam.imtls.array), len(rlzs_by_g))
+        nlevels = self.oqparam.imtls.size
+        poes_shape = (len(rlzs_by_g), self.N, nlevels)  # GNL
         size = numpy.prod(poes_shape) * 8
-        logging.info('Requiring %s for ProbabilityMap of shape %s',
+        bytes_per_grp = size / len(self.grp_ids)
+        avail = min(psutil.virtual_memory().available, config.memory.limit)
+        logging.info('Requiring %s for full ProbabilityMap of shape %s',
                      humansize(size), poes_shape)
-        avail = psutil.virtual_memory().available
-        if avail < 1.25 * size:
+        maxlen = max(len(rbs) for rbs in rlzs_by_gsim_list)
+        maxsize = maxlen * self.N * self.oqparam.imtls.size * 8
+        logging.info('Requiring %s for max ProbabilityMap of shape %s',
+                     humansize(maxsize), (maxlen, self.N, nlevels))
+        if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
+        elif avail < size:
+            logging.warning('You have only %s of free RAM' % humansize(avail))
+        self.ct = (self.oqparam.concurrent_tasks or 1) * 2.5
+        # NB: it is CRITICAL for performance to have shape GNL and not NLG
+        # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
         self.datastore.create_dset('_poes', F64, poes_shape)
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
@@ -377,9 +449,9 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         if oq.hazard_calculation_id and not oq.compare_with_classical:
-            with util.read(self.oqparam.hazard_calculation_id) as parent:
+            with datastore.read(self.oqparam.hazard_calculation_id) as parent:
                 self.full_lt = parent['full_lt']
-            self.calc_stats()  # post-processing
+            self.store_stats()  # post-processing
             return {}
 
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
@@ -396,34 +468,51 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
-        smap = parallel.Starmap(classical, self.get_args(acc0),
-                                h5=self.datastore.hdf5)
+        self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
+        grp_ids = numpy.arange(len(self.csm.src_groups))
+        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        weights = [rlz.weight for rlz in self.realizations]
+        pgetter = getters.PmapGetter(
+            self.datastore, weights, self.sitecol.sids, oq.imtls)
+        srcidx = {
+            rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
+        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
+        args = self.get_args(grp_ids, self.haz.cmakers)
+        logging.info('Sending %d tasks', len(args))
+        smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
-        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        try:
-            acc = smap.reduce(self.agg_dicts, acc0)
-            self.store_rlz_info(acc.eff_ruptures)
-        finally:
-            source_ids = self.store_source_info(self.calc_times)
-            if self.by_task:
-                logging.info('Storing by_task information')
-                num_tasks = max(self.by_task) + 1,
-                er = self.datastore.create_dset('by_task/eff_ruptures',
-                                                U32, num_tasks)
-                es = self.datastore.create_dset('by_task/eff_sites',
-                                                U32, num_tasks)
-                si = self.datastore.create_dset('by_task/srcids',
-                                                hdf5.vstr, num_tasks,
-                                                fillvalue=None)
-                for task_no, rec in self.by_task.items():
-                    effrups, effsites, srcids = rec
-                    er[task_no] = effrups
-                    es[task_no] = effsites
-                    si[task_no] = ' '.join(source_ids[s] for s in srcids)
-                self.by_task.clear()
+        pmaps = smap.reduce(self.agg_dicts)
+        logging.debug("busy time: %s", smap.busytime)
+        self.haz.store_disagg(pmaps)
+        if not oq.hazard_calculation_id:
+            self.haz.store_disagg()
+        self.store_info(psd)
+        return True
+
+    def store_info(self, psd):
+        """
+        Store full_lt, source_info and by_task
+        """
+        self.store_rlz_info(self.rel_ruptures)
+        source_ids = self.store_source_info(self.calc_times)
+        if self.by_task:
+            logging.info('Storing by_task information')
+            num_tasks = max(self.by_task) + 1,
+            er = self.datastore.create_dset('by_task/eff_ruptures',
+                                            U32, num_tasks)
+            es = self.datastore.create_dset('by_task/eff_sites',
+                                            U32, num_tasks)
+            si = self.datastore.create_dset('by_task/srcids',
+                                            hdf5.vstr, num_tasks,
+                                            fillvalue=None)
+            for task_no, rec in self.by_task.items():
+                effrups, effsites, srcids = rec
+                er[task_no] = effrups
+                es[task_no] = effsites
+                si[task_no] = ' '.join(source_ids[s] for s in srcids)
+            self.by_task.clear()
         if self.calc_times:  # can be empty in case of errors
             self.numctxs = sum(arr[0] for arr in self.calc_times.values())
             numsites = sum(arr[1] for arr in self.calc_times.values())
@@ -438,7 +527,6 @@ class ClassicalCalculator(base.HazardCalculator):
                                 'small compared to a maxradius of %d km',
                                 psdist, self.maxradius)
         self.calc_times.clear()  # save a bit of memory
-        return acc
 
     def set_psd(self):
         """
@@ -464,8 +552,8 @@ class ClassicalCalculator(base.HazardCalculator):
         imts_with_period = [imt for imt in oq.imtls
                             if imt == 'PGA' or imt.startswith('SA')]
         imts_ok = len(imts_with_period) == len(oq.imtls)
-        if (imts_ok and psd and psd.suggested()) or (
-                imts_ok and oq.minimum_intensity):
+        if imts_ok and oq.minimum_intensity:
+            # NB: side-effect on oq.maximum_distance
             aw = get_effect(mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
             if psd:
                 dic = {trt: [(float(mag), int(dst))
@@ -478,34 +566,29 @@ class ClassicalCalculator(base.HazardCalculator):
             self.N / oq.max_sites_per_tile)
         self.params = dict(
             truncation_level=oq.truncation_level,
+            investigation_time=oq.investigation_time,
             imtls=oq.imtls, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo,
             min_weight=oq.min_weight,
-            collapse_level=oq.collapse_level, hint=hint,
+            collapse_level=int(oq.collapse_level), hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def get_args(self, acc0):
+    def get_args(self, grp_ids, cmakers):
         """
-        :returns: the outputs to pass to the Starmap, ordered by weight
+        :returns: a list of Starmap arguments
         """
         oq = self.oqparam
-        L = len(oq.imtls.array)
-        sids = self.sitecol.complete.sids
         allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
-        et_ids = self.datastore['et_ids'][:]
-        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
-        grp_id = 0
-        for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
-            acc0[grp_id] = ProbabilityMap.build(L, len(rlzs_by_gsim), sids)
-            grp_id += 1
+        for grp_id in grp_ids:
+            gsims = cmakers[grp_id].gsims
+            sg = src_groups[grp_id]
             for src in sg:
-                src.ngsims = len(rlzs_by_gsim)
+                src.ngsims = len(gsims)
                 tot_weight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
@@ -513,35 +596,27 @@ class ClassicalCalculator(base.HazardCalculator):
                     spc = oq.complex_fault_mesh_spacing
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        C = oq.concurrent_tasks or 1
-        max_weight = max(tot_weight / (2.5 * C), oq.min_weight)
+        max_weight = max(tot_weight / self.ct, oq.min_weight)
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
-        for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
-            nb = 0
+        self.counts = AccumDict(accum=0)
+        for grp_id in grp_ids:
+            sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
-                nb += 1
-                allargs.append((sg, rlzs_by_gsim, self.params))
+                self.counts[grp_id] += 1
+                allargs.append((sg, cmakers[grp_id]))
             else:  # regroup the sources in blocks
-                blks = (groupby(sg, get_source_id).values() if oq.disagg_by_src
-                        else block_splitter(
-                                sg, max_weight, get_weight, sort=True))
+                blks = (groupby(sg, get_source_id).values()
+                        if oq.disagg_by_src else
+                        block_splitter(sg, max_weight, get_weight, sort=True))
                 blocks = list(blks)
-                nb += len(blocks)
+                self.counts[grp_id] += len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
-                    allargs.append((block, rlzs_by_gsim, self.params))
-
-            w = sum(src.weight for src in sg)
-            it = sorted(oq.maximum_distance.ddic[sg.trt].items())
-            md = '%s->%d ... %s->%d' % (it[0] + it[-1])
-            logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.
-                         format(md, len(rlzs_by_gsim), int(w), nb))
-        allargs.sort(key=lambda args: sum(src.weight for src in args[0]),
-                     reverse=True)
+                    allargs.append((block, cmakers[grp_id]))
         return allargs
 
     def save_hazard(self, acc, pmap_by_kind):
@@ -550,103 +625,81 @@ class ClassicalCalculator(base.HazardCalculator):
 
         :param acc: ignored
         :param pmap_by_kind: a dictionary of ProbabilityMaps
-
-        kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
-        with self.monitor('saving statistics'):
-            for kind in pmap_by_kind:  # i.e. kind == 'hcurves-stats'
+        with self.monitor('collecting hazard'):
+            for kind in pmap_by_kind:  # hmaps-XXX, hcurves-XXX
                 pmaps = pmap_by_kind[kind]
-                if kind in ('hmaps-rlzs', 'hmaps-stats'):
-                    # pmaps is a list of R pmaps
+                if kind in self.hazard:
+                    array = self.hazard[kind]
+                else:
                     dset = self.datastore.getitem(kind)
-                    for r, pmap in enumerate(pmaps):
-                        for s in pmap:
-                            dset[s, r] = pmap[s].array  # shape (M, P)
-                elif kind in ('hcurves-rlzs', 'hcurves-stats'):
-                    dset = self.datastore.getitem(kind)
-                    for r, pmap in enumerate(pmaps):
-                        for s in pmap:
-                            dset[s, r] = pmap[s].array.reshape(self.M, self.L1)
-            self.datastore.flush()
+                    array = self.hazard[kind] = numpy.zeros(
+                        dset.shape, dset.dtype)
+                for r, pmap in enumerate(pmaps):
+                    for s in pmap:
+                        if kind.startswith('hmaps'):
+                            array[s, r] = pmap[s].array  # shape (M, P)
+                        else:
+                            array[s, r] = pmap[s].array.reshape(-1, self.L1)
 
-    def post_execute(self, pmap_by_key):
+    def post_execute(self, dummy):
         """
-        Collect the hazard curves by realization and export them.
-
-        :param pmap_by_key:
-            a dictionary key -> hazard curves
+        Compute the statistical hazard curves
         """
+        task_info = self.datastore.read_df('task_info', 'taskname')
+        try:
+            dur = task_info.loc[b'classical'].duration
+        except KeyError:  # no data
+            pass
+        else:
+            slow_tasks = len(dur[dur > 3 * dur.mean()])
+            if slow_tasks:
+                logging.info('There were %d slow tasks', slow_tasks)
         nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
               if name.startswith('rup_')}
         if nr:  # few sites, log the number of ruptures per magnitude
             logging.info('%s', nr)
-        oq = self.oqparam
-        et_ids = self.datastore['et_ids'][:]
-        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
-        slice_by_g = getters.get_slice_by_g(rlzs_by_gsim_list)
-        data = []
-        weights = [rlz.weight for rlz in self.realizations]
-        pgetter = getters.PmapGetter(
-            self.datastore, weights, self.sitecol.sids, oq.imtls)
-        logging.info('Saving _poes')
-        enum = enumerate(self.datastore['source_info']['source_id'])
-        srcid = {source_id: i for i, source_id in enum}
-        with self.monitor('saving probability maps'):
-            for key, pmap in pmap_by_key.items():
-                if isinstance(key, str):  # disagg_by_src
-                    rlzs_by_gsim = rlzs_by_gsim_list[pmap.grp_id]
-                    self.datastore['disagg_by_src'][..., srcid[key]] = (
-                        pgetter.get_hcurves(pmap, rlzs_by_gsim))
-                else:
-                    # key is the group ID
-                    trt = self.full_lt.trt_by_et[et_ids[key][0]]
-                    # avoid saving PoEs == 1
-                    base.fix_ones(pmap)
-                    arr = numpy.array([pmap[sid].array for sid in pmap])
-                    self.datastore['_poes'][:, :, slice_by_g[key]] = arr
-                    extreme = max(
-                        get_extreme_poe(pmap[sid].array, oq.imtls)
-                        for sid in pmap)
-                    data.append((key, trt, extreme))
-        if oq.hazard_calculation_id is None and '_poes' in self.datastore:
-            self.datastore['disagg_by_grp'] = numpy.array(
-                sorted(data), grp_extreme_dt)
+        if (self.oqparam.hazard_calculation_id is None
+                and '_poes' in self.datastore):
             self.datastore.swmr_on()  # needed
-            self.calc_stats()
+            self.store_stats()
 
-    def calc_stats(self):
+    def store_stats(self):
         oq = self.oqparam
+        N = len(self.sitecol.complete)
+        R = len(self.realizations)
+        if oq.individual_curves is None:  # not specified in the job.ini
+            individual_curves = (N == 1) * (R > 1)
+        else:
+            individual_curves = oq.individual_curves
         hstats = oq.hazard_stats()
         # initialize datasets
-        imls = oq.imtls.array
-        N = len(self.sitecol.complete)
         P = len(oq.poes)
         M = self.M = len(oq.imtls)
         imts = list(oq.imtls)
         if oq.soil_intensities is not None:
             L = M * len(oq.soil_intensities)
         else:
-            L = len(imls)
+            L = oq.imtls.size
         L1 = self.L1 = L // M
-        R = len(self.realizations)
         S = len(hstats)
-        if R > 1 and oq.individual_curves or not hstats:
+        if R > 1 and individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-            self.datastore.set_shape_attrs(
+            self.datastore.set_shape_descr(
                 'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hmaps-rlzs', site_id=N, rlz_id=R,
                     imt=list(oq.imtls), poe=oq.poes)
         if hstats:
             self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-            self.datastore.set_shape_attrs(
+            self.datastore.set_shape_descr(
                 'hcurves-stats', site_id=N, stat=list(hstats),
                 imt=imts, lvl=numpy.arange(L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
@@ -657,7 +710,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(
                 dstore, self.weights, t.sids, oq.imtls, oq.poes),
-             N, hstats, oq.individual_curves, oq.max_sites_disagg,
+             N, hstats, individual_curves, oq.max_sites_disagg,
              self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
         if self.few_sites:
@@ -666,18 +719,13 @@ class ClassicalCalculator(base.HazardCalculator):
             dist = None  # parallelize as usual
         if oq.hazard_calculation_id is None:  # essential before Starmap
             self.datastore.swmr_on()
+        self.hazard = {}  # kind -> array
         parallel.Starmap(
             build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
-        task_info = self.datastore.read_df('task_info', 'taskname')
-        try:
-            dur = task_info.loc[b'classical'].duration
-        except KeyError:  # no data
-            pass
-        else:
-            slow_tasks = len(dur[dur > 3 * dur.mean()])
-            if slow_tasks:
-                logging.info('There were %d slow tasks', slow_tasks)
+        for kind in sorted(self.hazard):
+            logging.info('Saving %s', kind)
+            self.datastore[kind][:] = self.hazard.pop(kind)
         if 'hmaps-stats' in self.datastore:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
             maxhaz = hmaps.max(axis=(0, 1, 3))
@@ -749,7 +797,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     poes, weights = pgetter.poes, pgetter.weights
     M = len(imtls)
     P = len(poes)
-    L = len(imtls.array)
+    L = imtls.size
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}
@@ -767,26 +815,25 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     compute_mon = monitor('compute stats', measuremem=False)
     for sid in pgetter.sids:
         with combine_mon:
-            pcurves = pgetter.get_pcurves(sid)
+            pc = pgetter.get_pcurve(sid)  # shape (L, R)
             if amplifier:
-                pcurves = amplifier.amplify(ampcode[sid], pcurves)
-                # NB: the pcurves have soil levels != IMT levels
-        if sum(pc.array.sum() for pc in pcurves) == 0:  # no data
+                pc = amplifier.amplify(ampcode[sid], pc)
+                # NB: the pcurve have soil levels != IMT levels
+        if pc.array.sum() == 0:  # no data
             continue
         with compute_mon:
             if hstats:
-                arr = numpy.array([pc.array for pc in pcurves])
                 for s, (statname, stat) in enumerate(hstats.items()):
-                    pc = getters.build_stat_curve(arr, imtls, stat, weights)
-                    pmap_by_kind['hcurves-stats'][s][sid] = pc
+                    sc = getters.build_stat_curve(pc, imtls, stat, weights)
+                    pmap_by_kind['hcurves-stats'][s][sid] = sc
                     if poes:
-                        hmap = calc.make_hmap(pc, imtls, poes, sid)
+                        hmap = calc.make_hmap(sc, imtls, poes, sid)
                         pmap_by_kind['hmaps-stats'][s].update(hmap)
             if R > 1 and individual_curves or not hstats:
-                for pmap, pc in zip(pmap_by_kind['hcurves-rlzs'], pcurves):
-                    pmap[sid] = pc
+                for r, pmap in enumerate(pmap_by_kind['hcurves-rlzs']):
+                    pmap[sid] = pc.extract(r)
                 if poes:
-                    for r, pc in enumerate(pcurves):
-                        hmap = calc.make_hmap(pc, imtls, poes, sid)
+                    for r in range(R):
+                        hmap = calc.make_hmap(pc.extract(r), imtls, poes, sid)
                         pmap_by_kind['hmaps-rlzs'][r].update(hmap)
     return pmap_by_kind

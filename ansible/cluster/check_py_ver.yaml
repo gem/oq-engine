@@ -1,0 +1,117 @@
+---
+- hosts: all
+  become: yes
+  vars:
+  pre_tasks:
+
+  - name: Gather the package facts
+    package_facts:
+      manager: auto
+
+  - name: Check whether package python 3.8 is installed from repository for Ubuntu and is not focal
+    debug:
+      msg: "{{ ansible_facts.packages['python3.8'][0].version  }} versions of python3.8 are installed!"
+    when: "'python3.8' in ansible_facts.packages and ansible_distribution == 'Ubuntu' and ansible_distribution_release != 'focal' "
+
+  - meta: end_host
+    when: "'python3.8' in ansible_facts.packages and ansible_distribution == 'Ubuntu' and ansible_distribution_release != 'focal' "
+
+  - name: Check whether package python 3.8 is installed from repository for CentOS
+    debug:
+      msg: "{{ ansible_facts.packages['python38'][0].version  }} versions of python3.8 are installed!"
+    when: "'python38' in ansible_facts.packages and ansible_distribution == 'CentOS'"
+
+  - meta: end_host
+    when: "'python38' in ansible_facts.packages and ansible_distribution == 'CentOS'"
+
+  - name: Check whether package oqengine is installed from repository
+    debug:
+      msg: "{{ ansible_facts.packages['python3-oq-engine'][0].version  }} versions of python3-oq-engine are installed!"
+    when: "'python3-oq-engine' in ansible_facts.packages"
+
+  - meta: end_play
+    when: "'python3-oq-engine' in ansible_facts.packages"
+
+  - name: check if python3 interpreter exists
+    stat: 
+      path: /usr/bin/python3 
+    register: python3_ver
+
+  - block:
+      - name: Check python version on host if exist interpreter
+        script: files/py_ver.py
+        ignore_errors: true
+        changed_when: false
+        register: python3_version
+
+      - name: Python 3.8 already on the system
+        meta: end_play
+        when: ' python3_version.stdout.find("3.8") != -1 and ansible_distribution_release != "focal" '
+
+    when: python3_ver.stat.exists == true
+
+  tasks:
+# Ubuntu 
+  - name: Install python 3.8 from universe on Ubuntu
+    block:
+      - name: Enable universe repository on Ubuntu
+        apt_repository:
+          repo: "{{ item }}"
+        loop:
+          - "deb http://archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release|lower }} universe"
+          - "deb http://archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release|lower }}-updates universe"
+          - "deb http://security.ubuntu.com/ubuntu/ {{ ansible_distribution_release|lower }}-security universe"
+
+      - name: Install python 3.8 on Ubuntu plus venv
+        apt:
+          name: "{{ item }}"
+          state: present 
+          update_cache: yes
+        loop: ['python3.8','python3.8-venv', 'python3-venv']
+    when: ansible_distribution == 'Ubuntu'
+
+#Centos 
+  - name: Python 3.8 from PowerTools on Centos 8
+    block:
+      - name: Enable EPEL Repository on CentOS 8
+        dnf:
+          name: epel-release
+          state: latest
+          update_cache: yes
+
+      - name: Enable dnf-plugins-core on CentOS 8
+        dnf:
+          name: dnf-command(config-manager)
+          state: latest
+
+      - name: Enable PowerTools on CentOS 8
+        command: dnf config-manager --set-enabled PowerTools
+        args:
+          warn: false
+
+      - name: Install python 3.8 on CentOS 8
+        dnf:
+          name: python3.8
+          state: present 
+    when: ansible_distribution == "CentOS" and ansible_distribution_major_version == '8'
+
+  - name: Python 3.8 CentOS SCLo RH repository  on CentOS 7
+    block:
+      - name: Enable CentOS SCLo RH repository on CentOS 7
+        yum:
+          name: centos-release-scl
+          state: present
+          update_cache: yes
+
+      - name: Install python 3.8 on CentOS 7
+        yum:
+          name: rh-python38-python
+          state: present 
+
+      - name: Symlink to /usr/sbin
+        file:
+          src: /opt/rh/rh-python38/root/bin/python3.8
+          dest: /usr/bin/python3.8
+          state: link
+
+    when: ansible_distribution == "CentOS" and ansible_distribution_major_version == '7'

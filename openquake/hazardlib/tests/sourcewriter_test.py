@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -46,6 +46,9 @@ MUTEX = os.path.join(os.path.dirname(__file__),
 MULTIPOINT = os.path.join(os.path.dirname(__file__),
                           'source_model/multi-point-source.xml')
 
+MULTIFAULT = os.path.join(os.path.dirname(__file__),
+                          'source_model/multi-fault-source.xml')
+
 GRIDDED = os.path.join(os.path.dirname(__file__),
                        'source_model/gridded.xml')
 
@@ -77,6 +80,9 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_nonparam_kite(self):
         self.check_round_trip(NONPARAM_KITE)
+
+    def test_multi_fault(self):
+        self.check_round_trip(MULTIFAULT)
 
     def test_nonparam(self):
         [[src]] = self.check_round_trip(NONPARAM)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2017-2020 GEM Foundation
+# Copyright (c) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -109,14 +109,14 @@ xmlns:gml="http://www.opengis.net/gml"
 
 class SplitSourcesTestCase(unittest.TestCase):
     def test(self):
-        # make sure the et_id is transferred also for single split
+        # make sure the trt_smr is transferred also for single split
         # sources, since this caused hard to track bugs
         fname = gettemp(characteric_source)
         [[char]] = nrml.to_python(fname)
         char.id = 1
-        char.et_id = 1
+        char.trt_smr = 1
         os.remove(fname)
         [src] = split_source(char)
         self.assertEqual(char.id, src.id)
         self.assertEqual(char.source_id, src.source_id)
-        self.assertEqual(char.et_id, src.et_id)
+        self.assertEqual(char.trt_smr, src.trt_smr)

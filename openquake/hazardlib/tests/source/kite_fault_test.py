@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,19 +17,17 @@
 import numpy
 import unittest
 import matplotlib.pyplot as plt
-
 from matplotlib import animation
-from mpl_toolkits.mplot3d import Axes3D  # this is needed
+
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tests import assert_pickleable
-from openquake.hazardlib.scalerel import PeerMSR, WC1994
+from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
 from openquake.hazardlib.mfd import TruncatedGRMFD
-
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 
 # Movies are in /tmp
@@ -159,19 +157,19 @@ class FromSimpleFaultDataTestCase(unittest.TestCase):
         floating_x_step = 10.0
         floating_y_step = 5.0
         dip = 90.0
-        src = KiteFaultSource.as_simple_fault(source_id, name,
-                trt, mfd, rupture_mesh_spacing,
-                magnitude_scaling_relationship, rupture_aspect_ratio,
-                tom, upper_seismogenic_depth,
-                lower_seismogenic_depth, fault_trace, dip, rake,
-                floating_x_step, floating_y_step)
+        src = KiteFaultSource.as_simple_fault(
+            source_id, name, trt, mfd, rupture_mesh_spacing,
+            magnitude_scaling_relationship, rupture_aspect_ratio,
+            tom, upper_seismogenic_depth,
+            lower_seismogenic_depth, fault_trace, dip, rake,
+            floating_x_step, floating_y_step)
 
         sfs = SimpleFaultSurface.from_fault_data(fault_trace,
                                                  upper_seismogenic_depth,
                                                  lower_seismogenic_depth,
                                                  dip, rupture_mesh_spacing)
 
-        msh = Mesh(lons=numpy.array([0.02]), lats=numpy.array([0.03]), 
+        msh = Mesh(lons=numpy.array([0.02]), lats=numpy.array([0.03]),
                    depths=numpy.array([0.0]))
 
         rrup_sf = sfs.get_min_distance(msh)

@@ -117,14 +117,15 @@ and all of the three things could happen unpredictably at any moment, depending
 on the machine where the calculation was running, the load on the machine, and
 any kind of environmental circumstances.
 
-Also, while in theory with the newest HDF5 libraries it should be
-possible to use a SWMR architecture (Single Writer Multiple Reader) we
-were not able to get this working in the engine. Instead, we are using
-a two files approach which is simple and works very well: we read from
-one file (with multiple readers) and we write on the other file
-(with a single writer), instead of reading/writing
-on the same file. This bypasses all the limitations of the SWMR mode
-in HDF5 and did not require a large refactoring of our existing code.
+Also, while with the newest HDF5 libraries it is possible to use a
+Single Writer Multiple Reader architecture (SWMR), and we are actually
+using it - even if it is sometimes tricky to use it correctly - the
+performance is not always good. So, when it matters, we are using a
+two files approach which is simple and very effective: we read from
+one file (with multiple readers) and we write on the other file (with
+a single writer). This approach bypasses all the limitations of the
+SWMR mode in HDF5 and did not require a large refactoring of our
+existing code.
 
 Another tricky point in cluster situations is that rabbitmq is not good
 at transferring gigabytes of data: it was meant to manage lots of small
@@ -158,7 +159,7 @@ Suppose you want to code a character-counting algorithm, which is a textbook
 exercise in parallel computing and suppose that you want to store information
 about the performance of the algorithm. Then you should use the OpenQuake
 ``Monitor`` class, as well as the utility
-``openquake.baselib.datastore.hdf5new`` that build an empty datastore
+``openquake.baselib.commonlib.hdf5new`` that build an empty datastore
 for you. Having done that, the ``openquake.baselib.parallel.Starmap``
 class can take care of the parallelization for you as in the following
 example:

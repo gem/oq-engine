@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 import zipfile
 import logging
 from openquake.baselib.general import CallableDict
-from openquake.commonlib.writers import write_csv
+from openquake.baselib.writers import write_csv
 
 
 class MissingExporter(Exception):
@@ -50,12 +50,12 @@ def keyfunc(ekey):
     """
     Extract the name before the slash:
 
-    >>> keyfunc(('agg_loss_table', 'csv'))
-    ('agg_loss_table', 'csv')
-    >>> keyfunc(('agg_loss_table/1', 'csv'))
-    ('agg_loss_table', 'csv')
-    >>> keyfunc(('agg_loss_table/1/0', 'csv'))
-    ('agg_loss_table', 'csv')
+    >>> keyfunc(('risk_by_event', 'csv'))
+    ('risk_by_event', 'csv')
+    >>> keyfunc(('risk_by_event/1', 'csv'))
+    ('risk_by_event', 'csv')
+    >>> keyfunc(('risk_by_event/1/0', 'csv'))
+    ('risk_by_event', 'csv')
     """
     fullname, ext = ekey
     return (fullname.split('/', 1)[0], ext)

@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import numpy
 import pandas as pd
 
+from openquake.baselib import hdf5
 from openquake.hazardlib.stats import norm_cdf
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
@@ -57,13 +57,8 @@ class AmplFunction():
             A :class:`openquake.hazardlib.site_amplification.AmplFunction`
             instance
         """
-        # Get IMTs
-        imts = []
-        # example of df.keys():
-        # ampcode  from_mag  from_rrup  level  PGA sigma_PGA
-        for key in df.keys():
-            if re.search('^SA', key) or re.search('^PGA', key):
-                imts.append(key)
+        # Get IMTs for keys ampcode, from_mag, from_rrup, level, PGA, sigma_PGA
+        imts = [key for key in df.keys() if key.startswith(('PGA', 'SA'))]
 
         # Create the temporary list of lists
         out = []
@@ -78,6 +73,17 @@ class AmplFunction():
                   'median': float, 'std': float}
         df = pd.DataFrame(out, columns=dtypes).astype(dtypes)
         return AmplFunction(df, soil)  # requires reset_index
+
+    @classmethod
+    def read_df(cls, csvfname):
+        """
+        :param csvfname: CSV file name
+        :returns: a pandas DataFrame
+        """
+        df = hdf5.read_csv(csvfname, {'ampcode': ampcode_dt, None: float},
+                           index='ampcode')
+        df.fname = csvfname
+        return df
 
     def get_mean_std(self, site, imt, iml, mags, dsts):
         """
@@ -277,8 +283,16 @@ class Amplifier(object):
         if ampl_code == b'' and len(self.ampcodes) == 1:
             ampl_code = self.ampcodes[0]
 
-        ialphas = self.ialphas[ampl_code, imt]
-        isigmas = self.isigmas[ampl_code, imt]
+        min_gm = numpy.amin(self.imtls[imt])
+        max_gm = numpy.amax(self.imtls[imt])
+
+        min_ratio = numpy.amin(numpy.array(self.amplevels[1:]) /
+                               numpy.array(self.amplevels[:-1]))*0.9
+        min_ratio = min(max(min_ratio, 1.05), 1.1)
+        allimls = [min_gm]
+        while allimls[-1] < max_gm:
+            allimls.append(allimls[-1]*min_ratio)
+        allimls = numpy.array(allimls)
 
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
@@ -287,8 +301,21 @@ class Amplifier(object):
         for g in range(G):
 
             # Compute the probability of occurrence of GM within a number of
-            # intervals
-            p_occ = -numpy.diff(poes[:, g])
+            # intervals by interpolating the hazard curve
+            idx = numpy.nonzero(poes[:, g].flatten() > 1e-100)
+            simls = allimls[allimls <= numpy.amax(self.imtls[imt][idx])]
+            ipoes = numpy.interp(numpy.log10(simls),
+                                 numpy.log10(self.imtls[imt][idx]),
+                                 numpy.log10(poes[:, g].flatten()[idx]))
+            ipoes = 10.0**ipoes
+            p_occ = -numpy.diff(ipoes)
+
+            # Calculate the amplification factor and sigma for the selected
+            # IMLs
+            self.levels = simls
+            self._set_alpha_sigma(mag=None, dst=None)
+            ialphas = self.ialphas[ampl_code, imt]
+            isigmas = self.isigmas[ampl_code, imt]
 
             for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 #
@@ -310,21 +337,15 @@ class Amplifier(object):
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
-    def amplify(self, ampl_code, pcurves):
+    def amplify(self, ampl_code, pcurve):
         """
         :param ampl_code: 2-letter code for the amplification function
-        :param pcurves: a list of ProbabilityCurves containing PoEs
-        :returns: amplified ProbabilityCurves
+        :param pcurve: a ProbabilityCurve of shape (L*M, R)
+        :returns: amplified ProbabilityCurve of shape (A*M, R)
         """
-        out = []
-        for pcurve in pcurves:
-            lst = []
-            for imt in self.imtls:
-                slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
-                lst.append(new)
-            out.append(ProbabilityCurve(numpy.concatenate(lst)))
-        return out
+        new = [self.amplify_one(ampl_code, imt, pcurve.array[self.imtls(imt)])
+               for imt in self.imtls]
+        return ProbabilityCurve(numpy.concatenate(new))
 
     def _interp(self, ampl_code, imt_str, imls, coeff=None):
         # returns ialpha, isigma for the given levels

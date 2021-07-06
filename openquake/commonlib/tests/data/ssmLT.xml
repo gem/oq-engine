@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel"
+                                branchSetID="bs1">
+
+                <logicTreeBranch branchID="b0">
+                        <uncertaintyModel>
+                                ./ssm/nwHswRneHseH_0.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.24</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                                ./ssm/nwHswRneHseR_1_area.xml
+                                ./ssm/nwHswRneHseR_1_complex.xml
+                                ./ssm/nwHswRneHseR_1_simple.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.12</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>
+                                ./ssm/nwHswRneHseY_2.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.24</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b3">
+                        <uncertaintyModel>
+                                ./ssm/nwHswRneRseH_3_area.xml
+                                ./ssm/nwHswRneRseH_3_complex.xml
+                                ./ssm/nwHswRneRseH_3_simple.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.16</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b4">
+                        <uncertaintyModel>
+                                ./ssm/nwHswRneRseR_4.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.08</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b5">
+                        <uncertaintyModel>
+                                ./ssm/nwHswRneRseY_5_area.xml
+                                ./ssm/nwHswRneRseY_5_complex.xml
+                                ./ssm/nwHswRneRseY_5_simple.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.16</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

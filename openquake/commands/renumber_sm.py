@@ -1,7 +1,7 @@
 import logging
 import operator
 import collections
-from openquake.baselib import sap, parallel, general
+from openquake.baselib import parallel, general
 from openquake.commonlib import logictree
 from openquake.hazardlib import nrml
 
@@ -21,8 +21,7 @@ def read_sm(fname):
     return root, fname, sources
 
 
-@sap.Script
-def renumber_sm(smlt_file):
+def main(smlt_file):
     """
     Renumber the sources belonging to the same source model, even if split
     in multiple files, to avoid duplicated source IDs. NB: it changes the
@@ -48,7 +47,4 @@ def renumber_sm(smlt_file):
             nrml.write(root, f, xmlns=root['xmlns'])
 
 
-renumber_sm.arg('smlt_file', 'source model logic tree file')
-
-if __name__ == '__main__':
-    renumber_sm.callfunc()
+main.smlt_file = 'source model logic tree file'

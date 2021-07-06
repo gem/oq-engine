@@ -108,6 +108,13 @@ allen_2012_ipe
     :undoc-members:
     :show-inheritance:
 
+ameri_2014
+---------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.ameri_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ameri_2017
 ---------------------------------------------------
 .. automodule:: openquake.hazardlib.gsim.ameri_2017
@@ -270,6 +277,14 @@ boore_2014
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.boore_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+boore_2020
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.boore_2020
     :members:
     :undoc-members:
     :show-inheritance:
@@ -442,6 +457,14 @@ climent_1994
     :undoc-members:
     :show-inheritance:
 
+coeffs_table
+------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.base
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 convertito_2012
 -----------------------------------------------
 
@@ -594,14 +617,6 @@ geomatrix_1993
     :undoc-members:
     :show-inheritance:
 
-germany_2018
-----------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.germany_2018
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ghofrani_atkinson_2014
 ------------------------------------------------------
 
@@ -650,6 +665,14 @@ hong_goda_2007
     :undoc-members:
     :show-inheritance:
 
+idini_2017
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.idini_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
 idriss_2014
 -------------------------------------------
 
@@ -999,6 +1022,14 @@ tavakoli_pezeshk_2005
 -----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.tavakoli_pezeshk_2005
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+example_a_2021
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.example_a_2021
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -664,10 +664,10 @@ class AccumDict(dict):
                     # specialized for speed
                     self[k].extend(v)
                 else:
-                    self[k] = self[k] + v
+                    self[k] += v
         else:  # add other to all elements
             for k in self:
-                self[k] = self[k] + other
+                self[k] += other
         return self
 
     def __add__(self, other):
@@ -681,12 +681,12 @@ class AccumDict(dict):
         if hasattr(other, 'items'):
             for k, v in other.items():
                 try:
-                    self[k] = self[k] - v
+                    self[k] -= self[k]
                 except KeyError:
                     self[k] = v
         else:  # subtract other to all elements
             for k in self:
-                self[k] = self[k] - other
+                self[k] -= other
         return self
 
     def __sub__(self, other):
@@ -758,83 +758,36 @@ def copyobj(obj, **kwargs):
     return new
 
 
-# return a dict imt -> slice and the total number of levels
-def _slicedict_n(imt_dt):
-    n = 0
-    slicedic = {}
-    for imt in imt_dt.names:
-        shp = imt_dt[imt].shape
-        n1 = n + (shp[0] if shp else 1)
-        slicedic[imt] = slice(n, n1)
-        n = n1
-    return slicedic, n
-
-
 class DictArray(Mapping):
     """
-    A small wrapper over a dictionary of arrays serializable to HDF5:
-
-    >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-    >>> from openquake.baselib import hdf5
-    >>> with hdf5.File('/tmp/x.h5', 'w') as f:
-    ...      f['d'] = d
-    ...      f['d']
-    <DictArray
-    PGA: [0.01 0.02 0.04]
-    PGV: [0.1 0.2]>
-
-    The DictArray maintains the lexicographic order of the keys.
+    A small wrapper over a dictionary of arrays with the same lenghts.
+    Ordered by the lexicographic order of the keys.
     """
     def __init__(self, imtls):
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64,
-              (len(imls),) if hasattr(imls, '__len__') else (1,))
-             for imt, imls in sorted(imtls.items())])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        self.array = numpy.zeros(num_levels, F64)
-        lenset = set()
-        for imt, imls in imtls.items():
-            self[imt] = imls
-            try:
-                lenset.add(len(imls))
-            except TypeError:
-                lenset.add(1)
-        if len(lenset) == 1:
-            self.L1 = lenset.pop()
-        else:
-            self.L1 = None
-
-    def isnan(self):
-        """
-        :returns: true if all the underlying values are NaNs
-        """
-        return numpy.isnan(self.array).all()
-
-    def new(self, array):
-        """
-        Convert an array of compatible length into a DictArray:
-
-        >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-        >>> d.new(numpy.arange(0, 5, 1))  # array of lenght 5 = 3 + 2
-        <DictArray
-        PGA: [0 1 2]
-        PGV: [3 4]>
-        """
-        assert len(self.array) == len(array)
-        arr = object.__new__(self.__class__)
-        arr.dt = self.dt
-        arr.slicedic = self.slicedic
-        arr.array = array
-        return arr
+        levels = imtls[next(iter(imtls))]
+        self.L1 = len(levels)
+        self.size = len(imtls) * self.L1
+        self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
+                               for imt, imls in sorted(imtls.items())])
+        self.array = numpy.zeros(self.size, F64)
+        self.slicedic = {}
+        n = 0
+        for imt, imls in sorted(imtls.items()):
+            if len(imls) != self.L1:
+                raise ValueError('imt=%s has %d levels, expected %d' %
+                                 (imt, len(imls), self.L1))
+            self.slicedic[imt] = slc = slice(n, n + self.L1)
+            self.array[slc] = imls
+            n += self.L1
 
     def __call__(self, imt):
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self.array[self.slicedic[imt]]
+        return self.array[self(imt)]
 
     def __setitem__(self, imt, array):
-        self.array[self.slicedic[imt]] = array
+        self.array[self(imt)] = array
 
     def __iter__(self):
         for imt in self.dt.names:
@@ -842,21 +795,6 @@ class DictArray(Mapping):
 
     def __len__(self):
         return len(self.dt.names)
-
-    def __toh5__(self):
-        carray = numpy.zeros(1, self.dt)
-        for imt in self:
-            carray[imt] = self[imt]
-        return carray, {}
-
-    def __fromh5__(self, carray, attrs):
-        self.array = carray[:].view(F64)
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64, len(carray[0][imt]))
-             for imt in carray.dtype.names])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        for imt in carray.dtype.names:
-            self[imt] = carray[0][imt]
 
     def __eq__(self, other):
         arr = self.array == other.array
@@ -1001,10 +939,18 @@ def group_array(array, *kfields):
 
 def multi_index(shape, axis=None):
     """
-    :param shape: a shape of lenght L with P = S1 * S2 * ... * SL
+    :param shape: a shape of lenght L
     :param axis: None or an integer in the range 0 .. L -1
     :yields:
-        P tuples of indices with a slice(None) at the axis position (if any)
+        tuples of indices with a slice(None) at the axis position (if any)
+
+    >>> for slc in multi_index((2, 3), 0): print(slc)
+    (slice(None, None, None), 0, 0)
+    (slice(None, None, None), 0, 1)
+    (slice(None, None, None), 0, 2)
+    (slice(None, None, None), 1, 0)
+    (slice(None, None, None), 1, 1)
+    (slice(None, None, None), 1, 2)
     """
     if any(s >= TWO16 for s in shape):
         raise ValueError('Shape too big: ' + str(shape))
@@ -1017,10 +963,12 @@ def multi_index(shape, axis=None):
         yield tuple(lst)
 
 
-def fast_agg(indices, values=None, axis=0, factor=None):
+def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     """
     :param indices: N indices in the range 0 ... M - 1 with M < N
     :param values: N values (can be arrays)
+    :param factor: if given, a multiplicate factor (or weight) for the values
+    :param M: maximum index; if None, use max(indices) + 1
     :returns: M aggregated values (can be arrays)
 
     >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
@@ -1035,15 +983,16 @@ def fast_agg(indices, values=None, axis=0, factor=None):
         raise ValueError('There are %d values but %d indices' %
                          (N, len(indices)))
     shp = values.shape[1:]
+    if M is None:
+        M = max(indices) + 1
     if not shp:
-        return numpy.bincount(indices, values)
-    M = max(indices) + 1
+        return numpy.bincount(indices, values, M)
     lst = list(shp)
     lst.insert(axis, M)
     res = numpy.zeros(lst, values.dtype)
     for mi in multi_index(shp, axis):
         vals = values[mi] if factor is None else values[mi] * factor
-        res[mi] = numpy.bincount(indices, vals)
+        res[mi] = numpy.bincount(indices, vals, M)
     return res
 
 
@@ -1382,25 +1331,6 @@ def getsizeof(o, ids=None):
     return nbytes
 
 
-def add_defaults(array, **kw):
-    """
-    :param array: a structured array
-    :param kw: a dictionary field name -> default value
-    :returns: a new array with additional fields with default values
-    """
-    dtlist = [(name, array.dtype[name]) for name in array.dtype.names]
-    for k, v in kw.items():
-        if k not in array.dtype.names:
-            dtlist.append((k, type(v)))
-    new = numpy.zeros(array.shape, dtlist)
-    for name in array.dtype.names:
-        new[name] = array[name]
-    for k, v in kw.items():
-        if k not in array.dtype.names:
-            new[k] = v
-    return new
-
-
 def get_duplicates(array, *fields):
     """
     :returns: a dictionary {key: num_dupl} for duplicate records
@@ -1504,7 +1434,52 @@ def agg_probs(*probs):
         acc *= 1. - prob
     return 1. - acc
 
-# ###########]]]###### COMPRESSION/DECOMPRESSION ##################### #
+
+class RecordBuilder(object):
+    """
+    Builder for numpy records or arrays.
+
+    >>> rb = RecordBuilder(a=0, b=1., c="2")
+    >>> rb.dtype
+    dtype([('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
+    >>> rb()
+    (0, 1., b'2')
+    """
+    def __init__(self, **defaults):
+        self.names = []
+        self.values = []
+        dtypes = []
+        for name, value in defaults.items():
+            self.names.append(name)
+            self.values.append(value)
+            if isinstance(value, (str, bytes)):
+                tp = (numpy.string_, len(value))
+            elif isinstance(value, numpy.ndarray):
+                tp = value.dtype
+            else:
+                tp = type(value)
+            dtypes.append(tp)
+        self.dtype = numpy.dtype([(n, d) for n, d in zip(self.names, dtypes)])
+
+    def zeros(self, shape):
+        return numpy.zeros(shape, self.dtype)
+
+    def dictarray(self, shape):
+        return {n: numpy.ones(shape, self.dtype[n]) for n in self.names}
+
+    def __call__(self, *args, **kw):
+        rec = numpy.zeros(1, self.dtype)[0]
+        for i, name in enumerate(self.names):
+            if name in kw:
+                rec[name] = kw[name]  # takes precedence
+                continue
+            try:
+                rec[name] = args[i]
+            except IndexError:
+                rec[name] = self.values[i]
+        return rec
+
+# #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
 # do that, except in one case. The case if when you have a lot of workers

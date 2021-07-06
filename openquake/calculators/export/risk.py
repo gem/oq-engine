@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,15 +22,13 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode
+from openquake.baselib import hdf5, writers
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, build_damage_dt, build_damage_array, sanitize)
+    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
-from openquake.commonlib import writers
 from openquake.commonlib.util import get_assets, compose_arrays
 
 Output = collections.namedtuple('Output', 'ltype path array')
@@ -55,21 +53,30 @@ def tag2idx(tags):
     return {tag: i for i, tag in enumerate(tags)}
 
 
+def get_agg_tags(dstore, aggregate_by):
+    agg_tags = {}
+    if aggregate_by:
+        agg_keys = dstore['agg_keys'][:]
+        for tagname in aggregate_by:
+            agg_tags[tagname] = numpy.concatenate(
+                [agg_keys[tagname], ['*total*']])
+    else:
+        agg_tags = {}
+    return agg_tags
+
+
 # this is used by event_based_risk and ebrisk
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     lnames = numpy.array(oq.loss_names)
-    if oq.aggregate_by:
-        agg_keys = dstore['agg_keys'][:]
-    agg_tags = {}
-    for tagname in oq.aggregate_by:
-        agg_tags[tagname] = numpy.concatenate([agg_keys[tagname], ['*total*']])
+    agg_tags = get_agg_tags(dstore, oq.aggregate_by)
     aggvalue = dstore['agg_values'][()]  # shape (K+1, L)
     md = dstore.metadata
-    md['risk_investigation_time'] = oq.risk_investigation_time
+    md['risk_investigation_time'] = (
+        oq.risk_investigation_time or oq.investigation_time)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    descr = dstore.get_shape_descr(ekey[0])
+    descr = hdf5.get_shape_descr(dstore[ekey[0]].attrs['json'])
     name, suffix = ekey[0].split('-')
     rlzs_or_stats = descr[suffix[:-1]]
     aw = hdf5.ArrayWrapper(dstore[ekey[0]], descr, ('loss_value',))
@@ -90,7 +97,7 @@ def export_agg_curve_rlzs(ekey, dstore):
             dic['agg_id'], dic.pop('lti')]
         dic['annual_frequency_of_exceedence'] = 1 / dic['return_period']
         del dic['agg_id']
-        dest = dstore.build_fname(name, ros, 'csv')
+        dest = dstore.build_fname(md['kind'], '', 'csv')
         writer.save(pandas.DataFrame(dic), dest, comment=md)
     return writer.getsaved()
 
@@ -117,8 +124,10 @@ def export_agg_losses(ekey, dstore):
         'loss_value', 'exposed_value', 'loss_ratio')
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
-              risk_investigation_time=oq.risk_investigation_time))
+                   risk_investigation_time=oq.risk_investigation_time or
+                   oq.investigation_time))
     for r, ros in enumerate(rlzs_or_stats):
+        ros = ros if isinstance(ros, str) else 'rlz-%03d' % ros
         rows = []
         for (k, l), loss in numpy.ndenumerate(value[:, r]):
             if loss:  # many tag combinations are missing
@@ -135,8 +144,8 @@ def _get_data(dstore, dskey, stats):
     if kind == 'stats':
         weights = dstore['weights'][()]
         if dskey in set(dstore):  # precomputed
-            rlzs_or_stats = [decode(s) for s in dstore.get_attr(dskey, 'stat')]
-            statfuncs = [stats[ros] for ros in rlzs_or_stats]
+            rlzs_or_stats = list(stats)
+            statfuncs = [stats[ros] for ros in stats]
             value = dstore[dskey][()]  # shape (A, S, LI)
         else:  # compute on the fly
             rlzs_or_stats, statfuncs = zip(*stats.items())
@@ -164,7 +173,8 @@ def export_avg_losses(ekey, dstore):
     assets = get_assets(dstore)
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
+                   risk_investigation_time=oq.risk_investigation_time
+                   or oq.investigation_time))
     for ros, values in zip(rlzs_or_stats, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, ros, 'csv')
         array = numpy.zeros(len(values), dt)
@@ -184,7 +194,8 @@ def export_src_loss_table(ekey, dstore):
     oq = dstore['oqparam']
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
+                   risk_investigation_time=oq.risk_investigation_time or
+                   oq.investigation_time))
     aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
     dest = dstore.build_fname('src_loss_table', '', 'csv')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -192,34 +203,42 @@ def export_src_loss_table(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by scenario_risk, event_based_risk and ebrisk
-@export.add(('losses_by_event', 'csv'))
-def export_losses_by_event(ekey, dstore):
+# this is used by all GMF-based risk calculators
+# NB: it exports only the event loss table, i.e. the totals
+@export.add(('risk_by_event', 'csv'))
+def export_event_loss_table(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dest = dstore.build_fname('losses_by_event', '', 'csv')
+    dest = dstore.build_fname('risk_by_event', '', 'csv')
     md = dstore.metadata
     if 'scenario' not in oq.calculation_mode:
         md.update(dict(investigation_time=oq.investigation_time,
-                       risk_investigation_time=oq.risk_investigation_time))
+                       risk_investigation_time=oq.risk_investigation_time
+                       or oq.investigation_time))
     events = dstore['events'][()]
+    K = dstore.get_attr('risk_by_event', 'K', 0)
     try:
-        K = dstore.get_attr('agg_loss_table', 'K', 0)
-        df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
-    except KeyError:  # scenario_damage + consequences
-        df = dstore.read_df('losses_by_event')
-        ren = {'loss_%d' % l: ln for l, ln in enumerate(oq.loss_names)}
-        df.rename(columns=ren, inplace=True)
+        lstates = dstore.get_attr('risk_by_event', 'limit_states').split()
+    except KeyError:  # ebrisk, no limit states
+        lstates = []
+    lnames = numpy.array(oq.loss_names)
+    df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
+    df['loss_type'] = lnames[df.loss_id.to_numpy()]
+    del df['loss_id']
+    if 'variance' in df.columns:
+        del df['variance']
+    ren = {'dmg_%d' % i: lstate for i, lstate in enumerate(lstates, 1)}
+    df.rename(columns=ren, inplace=True)
     evs = events[df.event_id.to_numpy()]
-    df['rlz_id'] = evs['rlz_id']
-    if oq.investigation_time:  # not scenario
+    if 'scenario' not in oq.calculation_mode:
         df['rup_id'] = evs['rup_id']
+    if 'scenario' not in oq.calculation_mode and 'year' in evs.dtype.names:
         df['year'] = evs['year']
-    df.sort_values('event_id', inplace=True)
+    df.sort_values(['event_id', 'loss_type'], inplace=True)
     writer.save(df, dest, comment=md)
     return writer.getsaved()
 
@@ -263,7 +282,8 @@ def export_loss_maps_csv(ekey, dstore):
             ros = 'rlz-%d' % ros.ordinal
         fname = dstore.build_fname('loss_maps', ros, ekey[1])
         md.update(
-            dict(kind=ros, risk_investigation_time=oq.risk_investigation_time))
+            dict(kind=ros, risk_investigation_time=oq.risk_investigation_time
+                 or oq.investigation_time))
         writer.save(compose_arrays(assets, value[:, i]), fname, comment=md,
                     renamedict=dict(id='asset_id'))
     return writer.getsaved()
@@ -295,64 +315,58 @@ def modal_damage_array(data, damage_dt):
     dmgstate = damage_dt['structural'].names
     arr = numpy.zeros(A, [('modal-ds-' + lt, hdf5.vstr)
                           for lt in damage_dt.names])
-    for l, loss_type in enumerate(damage_dt.names):
-        arr['modal-ds-' + loss_type] = [dmgstate[data[a, l].argmax()]
+    for li, loss_type in enumerate(damage_dt.names):
+        arr['modal-ds-' + loss_type] = [dmgstate[data[a, li].argmax()]
                                         for a in range(A)]
     return arr
 
 
+# used by event_based_damage, scenario_damage, classical_damage
 @export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
+    ebd = oq.calculation_mode == 'event_based_damage'
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore[ekey[0]]
+    orig = dstore[ekey[0]][:]  # shape (A, R, L, D)
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
     if oq.investigation_time:
+        rit = oq.risk_investigation_time or oq.investigation_time
         md.update(dict(investigation_time=oq.investigation_time,
-                       risk_investigation_time=oq.risk_investigation_time))
+                       risk_investigation_time=rit))
+    D = len(oq.limit_states) + 1
+    R = 1 if oq.collect_rlzs else len(rlzs)
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
     else:
-        rlzs_or_stats = ['%03d' % r for r in range(len(rlzs))]
+        rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
+    name = ekey[0].split('-')[0]
+    if oq.calculation_mode != 'classical_damage':
+        name = 'avg_' + name
     for i, ros in enumerate(rlzs_or_stats):
-        if oq.modal_damage_state:
-            damages = modal_damage_array(data[:, i], dmg_dt)
-        else:
-            damages = build_damage_array(data[:, i], dmg_dt)
-        fname = dstore.build_fname(ekey[0].split('-')[0], ros, ekey[1])
+        if ebd:  # export only the consequences from damages-rlzs, i == 0
+            rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
+            data = orig[:, i] * rate
+            A, L, Dc = data.shape
+            if Dc == D:  # no consequences, export nothing
+                return
+            csq_dt = build_csq_dt(dstore)
+            damages = numpy.zeros(A, csq_dt)
+            for a in range(A):
+                for li, lt in enumerate(csq_dt.names):
+                    damages[lt][a] = tuple(data[a, li, D:Dc])
+            fname = dstore.build_fname('avg_risk', ros, ekey[1])
+        else:  # scenario_damage, classical_damage
+            if oq.modal_damage_state:
+                damages = modal_damage_array(orig[:, i], dmg_dt)
+            else:
+                damages = build_damage_array(orig[:, i], dmg_dt)
+            fname = dstore.build_fname(name, ros, ekey[1])
         writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
-
-
-@export.add(('dmg_by_event', 'csv'))
-def export_dmg_by_event(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    damage_dt = build_damage_dt(dstore)
-    dt_list = [('event_id', U32), ('rlz_id', U16)] + [
-        (f, damage_dt.fields[f][0]) for f in damage_dt.names]
-    dmg_by_event = dstore[ekey[0]][()]  # shape E, L, D
-    events = dstore['events'][()]
-    writer = writers.CsvWriter(fmt='%g')
-    fname = dstore.build_fname('dmg_by_event', '', 'csv')
-    writer.save(numpy.zeros(0, dt_list), fname)
-    with open(fname, 'a') as dest:
-        for rlz_id in numpy.unique(events['rlz_id']):
-            ok, = numpy.where(events['rlz_id'] == rlz_id)
-            arr = numpy.zeros(len(ok), dt_list)
-            arr['event_id'] = events['id'][ok]
-            arr['rlz_id'] = rlz_id
-            for l, loss_type in enumerate(damage_dt.names):
-                for d, dmg_state in enumerate(damage_dt[loss_type].names):
-                    arr[loss_type][dmg_state] = dmg_by_event[ok, l, d]
-            writer.save_block(arr, dest)
-    return [fname]
 
 
 # emulate a Django point
@@ -410,10 +424,10 @@ def export_agglosses(ekey, dstore):
     losses = []
     header = ['rlz_id', 'loss_type', 'unit', 'mean', 'stddev']
     for r in range(len(agglosses)):
-        for l, lt in enumerate(loss_dt.names):
+        for li, lt in enumerate(loss_dt.names):
             unit = unit_by_lt[lt]
-            mean = agglosses[r, l]['mean']
-            stddev = agglosses[r, l]['stddev']
+            mean = agglosses[r, li]['mean']
+            stddev = agglosses[r, li]['stddev']
             losses.append((r, lt, unit, mean, stddev))
     dest = dstore.build_fname('agglosses', '', 'csv')
     writers.write_csv(dest, losses, header=header, comment=dstore.metadata)
@@ -525,3 +539,46 @@ def export_agg_risk_csv(ekey, dstore):
     dset = dstore['agg_risk']
     writer.save(dset[()], fname, dset.dtype.names)
     return [fname]
+
+
+def rename(df, damage_states):
+    cols = {}
+    for col in df.columns:
+        if col.startswith('dmg_'):
+            cols[col] = damage_states[int(col[4:])]
+        else:
+            cols[col] = col
+    return df.rename(columns=cols)
+
+
+@export.add(('aggcurves', 'csv'))
+def export_aggcurves_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    oq = dstore['oqparam']
+    E = len(dstore['events'])
+    R = len(dstore['weights'])
+    lossnames = numpy.array(oq.loss_names)
+    aggtags = get_agg_tags(dstore, oq.aggregate_by)
+    df = dstore.read_df('aggcurves')
+    for tagname, tags in aggtags.items():
+        df[tagname] = tags[df.agg_id]
+    df['loss_type'] = lossnames[df.loss_id.to_numpy()]
+    del df['loss_id']
+    dest = dstore.export_path('%s.%s' % ekey)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    md = dstore.metadata
+    md['risk_investigation_time'] = (oq.risk_investigation_time or
+                                     oq.investigation_time)
+    md['num_events'] = E
+    md['effective_time'] = (
+        oq.investigation_time * oq.ses_per_logic_tree_path * R)
+    md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
+    dmg_states = ['nodamage'] + md['limit_states'].split()
+
+    # aggcurves
+    del df['agg_id']
+    writer.save(rename(df, dmg_states), dest, comment=md)
+    return [dest]

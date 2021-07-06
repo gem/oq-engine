@@ -43,12 +43,12 @@ There are a number of error situations:
    If you are in such situation you should consider using the command
    ``oq prepare_site_model``
    to manually prepare a site model on the location of the sites.
-5. Having duplicates (i.e. rows with identical lon, lat) in the site model	
-   is an error.   
+5. Having duplicates (i.e. rows with identical lon, lat up to 5 digits)
+   in the site model is an error.
 
-The relation between asset locations and hazard sites
-=====================================================
-
-This is one of the most frequently asked questions in the mailing list.
-The answer is long and difficult and depends very much on the version
-of the engine, since there are several corner cases and tricky points.
+If you want to compute the hazard on the locations specified by the site model
+and not on the exposure locations, you can split the calculation in two files:
+``job_haz.ini`` containing the site model and ``job_risk.ini`` containing the
+exposure. Then the risk calculator will find the closest hazard to each
+asset and use it. However, if the closest hazard is more distant than the
+``asset_hazard_distance`` parameter (default 15 km) an error is raised.

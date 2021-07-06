@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -52,7 +52,7 @@ class HDFArraysToDictTestCase(unittest.TestCase):
     def setUp(self):
         fd, self.fname = tempfile.mkstemp(suffix='.hdf5')
         os.close(fd)
-        self.hdf5 = h5py.File(self.fname)
+        self.hdf5 = h5py.File(self.fname, 'w')
         self.group = self.hdf5.create_group("TestGroup")
         dset1 = self.group.create_dataset("DSET1", (3, 3), dtype="f")
         dset1[:] = np.zeros([3, 3])
@@ -94,7 +94,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         """
         Open the hdf5 file
         """
-        self.hdf5 = h5py.File(self.TABLE_FILE)
+        self.hdf5 = h5py.File(self.TABLE_FILE, 'r')
         self.amp_table = AmplificationTable(self.hdf5["Amplification"],
                                             self.hdf5["Mw"][:],
                                             self.hdf5["Distances"][:])
@@ -123,8 +123,8 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
             np.testing.assert_array_almost_equal(self.amp_table.mean[key],
                                                  expected_mean[key])
             np.testing.assert_array_almost_equal(
-                self.amp_table.sigma["Total"][key],
-                expected_sigma["Total"][key])
+                self.amp_table.sigma[const.StdDev.TOTAL][key],
+                expected_sigma[const.StdDev.TOTAL][key])
 
     def _build_mean_and_stddev_table(self):
         """
@@ -195,7 +195,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         # PGA
         expected_table = np.ones([10, 2])
         expected_table[:, self.IDX] *= 0.8
-        stddevs = ["Total"]
+        stddevs = [const.StdDev.TOTAL]
         pga_table = self.amp_table.get_sigma_tables(imt_module.PGA(),
                                                     rctx,
                                                     stddevs)[0]
@@ -289,8 +289,8 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
             np.testing.assert_array_almost_equal(self.amp_table.mean[key],
                                                  expected_mean[key])
             np.testing.assert_array_almost_equal(
-                self.amp_table.sigma["Total"][key],
-                expected_sigma["Total"][key])
+                self.amp_table.sigma[const.StdDev.TOTAL][key],
+                expected_sigma[const.StdDev.TOTAL][key])
 
     def test_get_amplification_factors(self):
         """
@@ -354,7 +354,7 @@ class AmplificationTableBadTestCase(unittest.TestCase):
         """
         Open the hdf5 file
         """
-        self.hdf5 = h5py.File(self.TABLE_FILE)
+        self.hdf5 = h5py.File(self.TABLE_FILE, 'r')
 
     def test_unsupported_parameter(self):
         """
@@ -382,7 +382,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         Opens the hdf5 file
         """
-        self.hdf5 = h5py.File(self.TABLE_FILE)
+        self.hdf5 = h5py.File(self.TABLE_FILE, 'r')
 
     def test_correct_instantiation(self):
         """
@@ -407,7 +407,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                 gsim.imls[iml],
                 self.hdf5["IMLs/" + iml][:])
             np.testing.assert_array_almost_equal(
-                gsim.stddevs["Total"][iml],
+                gsim.stddevs[const.StdDev.TOTAL][iml],
                 self.hdf5["Total/" + iml][:])
 
     def test_retreival_tables_good_no_interp(self):
@@ -431,10 +431,10 @@ class GSIMTableGoodTestCase(unittest.TestCase):
             np.array([2.0, 1., 0.5]))
         # Also for standard deviations
         np.testing.assert_array_almost_equal(
-            gsim._return_tables(6.0, imt_module.PGA(), "Total"),
+            gsim._return_tables(6.0, imt_module.PGA(), const.StdDev.TOTAL),
             0.5 * np.ones(3))
         np.testing.assert_array_almost_equal(
-            gsim._return_tables(6.0, imt_module.SA(1.0), "Total"),
+            gsim._return_tables(6.0, imt_module.SA(1.0), const.StdDev.TOTAL),
             0.8 * np.ones(3))
 
     def test_retreival_tables_good_interp(self):
@@ -560,11 +560,11 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         sctx = SitesContext()
         sctx.vs30 = 1000. * np.ones(5)
         stddevs = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT]
-        with self.assertRaises(ValueError) as ve:
+        with self.assertRaises(KeyError) as ve:
             gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt_module.PGA(),
                                       stddevs)
         self.assertEqual(str(ve.exception),
-                         "Standard Deviation type Inter event not supported")
+                         "<StdDev.INTER_EVENT: 'Inter event'>")
 
     def tearDown(self):
         """

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -498,7 +498,7 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
             cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
             cps.id = ps[0].id
             cps.grp_id = ps[0].grp_id
-            cps.et_id = ps[0].et_id
+            cps.trt_smr = ps[0].trt_smr
             out.append(cps)
         else:  # there is a single source
             out.append(ps[idxs[0]])

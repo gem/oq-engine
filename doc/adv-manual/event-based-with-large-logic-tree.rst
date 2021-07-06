@@ -20,18 +20,14 @@ the parameter ``max_sites_disagg`` which by default is 10.
 Sampling of the logic tree
 ----------------------------------------------------
 
-There are real life examples of very complex logic trees, like the model
+There are real life examples of very large logic trees, like the model
 for South Africa which features 3,194,799,993,706,229,268,480 branches.
-In such situations it is impossible to perform
-a full computation. However, the engine allows to
+In such situations it is impossible to perform a computation with full
+enumeration. However, the engine allows to
 sample the branches of the complete logic tree. More precisely,
-for each branch sampled from the source model logic
-tree a branch of the GMPE logic tree is chosen randomly,
+for each branch sampled from the source model logic tree,
+a branch of the GMPE logic tree is chosen randomly,
 by taking into account the weights in the GMPE logic tree file.
-
-The details of how the sampling works are `documented here`_:
-
-.. _documented here: sampling.hmtl
 
 It should be noticed that even if source model path is sampled several
 times, the model is parsed and sent to the workers *only once*. In

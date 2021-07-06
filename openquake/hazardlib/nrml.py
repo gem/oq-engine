@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -97,6 +97,16 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
+def check_unique(ids):
+    """
+    Raise a DuplicatedID exception if there are duplicated IDs
+    """
+    unique, counts = numpy.unique(ids, return_counts=True)
+    for u, c in zip(unique, counts):
+        if c > 1:
+            raise DuplicatedID(u)
+
+
 class SourceModel(collections.abc.Sequence):
     """
     A container of source groups with attributes name, investigation_time
@@ -147,6 +157,16 @@ class SourceModel(collections.abc.Sequence):
             self.src_groups.append(grp)
 
 
+class GeometryModel(object):
+    """
+    Contains a list of sections
+    """
+    def __init__(self, sections):
+        check_unique([sec.sec_id for sec in sections])
+        self.sections = sections
+        self.src_groups = []
+
+
 def get_tag_version(nrml_node):
     """
     Extract from a node of kind NRML the tag and the version. For instance
@@ -169,14 +189,18 @@ def to_python(fname, *args):
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
 
+default = sourceconverter.SourceConverter(area_source_discretization=10,
+                                          rupture_mesh_spacing=10)
+
 
 @node_to_obj.add(('ruptureCollection', 'nrml/0.5'))
 def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
 
-default = sourceconverter.SourceConverter(area_source_discretization=10,
-                                          rupture_mesh_spacing=10)
+@node_to_obj.add(('geometryModel', 'nrml/0.5'))
+def get_geometry_model(node, fname, converter):
+    return GeometryModel(converter.convert_node(node))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
@@ -241,6 +265,7 @@ validators = {
     'a_val': valid.floats,
     'bValue': valid.positivefloat,
     'b_val': valid.positivefloats,
+    'cornerMag': valid.positivefloat,
     'magScaleRel': valid.mag_scale_rel,
     'tectonicRegion': str,
     'ruptAspectRatio': valid.positivefloat,

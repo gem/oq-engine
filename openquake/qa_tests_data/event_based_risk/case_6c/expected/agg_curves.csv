@@ -1,7 +1,7 @@
-#,,,,"generated_by='OpenQuake engine 3.11.0-gitdb8cbd829d', start_date='2020-12-24T10:04:24', checksum=3590982611, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
+#,,,,"generated_by='OpenQuake engine 3.12.0-git0c40386a1a', start_date='2021-03-10T05:08:23', checksum=3590982611, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
 return_period,loss_value,loss_type,loss_ratio,annual_frequency_of_exceedence
-50,1.93924E+03,structural,2.77034E-02,2.00000E-02
-100,3.15594E+03,structural,4.50848E-02,1.00000E-02
-200,5.25626E+03,structural,7.50894E-02,5.00000E-03
-500,1.04157E+04,structural,1.48796E-01,2.00000E-03
-1000,2.05654E+04,structural,2.93792E-01,1.00000E-03
+50,1.47712E+03,structural,2.11018E-02,2.00000E-02
+100,2.79679E+03,structural,3.99542E-02,1.00000E-02
+200,4.57461E+03,structural,6.53516E-02,5.00000E-03
+500,7.35903E+03,structural,1.05129E-01,2.00000E-03
+1000,9.49971E+03,structural,1.35710E-01,1.00000E-03

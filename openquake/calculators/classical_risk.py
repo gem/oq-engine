@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
 from openquake.calculators import base
@@ -40,34 +39,40 @@ def classical_risk(riskinputs, param, monitor):
     result = dict(loss_curves=[], stat_curves=[])
     weights = [w['default'] for w in param['weights']]
     statnames, stats = zip(*param['stats'])
+    mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        A = len(ri.assets)
+        A = len(ri.asset_df)
         L = len(crmodel.lti)
         R = ri.hazard_getter.num_rlzs
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
-        for out in ri.gen_outputs(crmodel, monitor):
-            r = out.rlzi
-            for l, loss_type in enumerate(crmodel.loss_types):
-                # loss_curves has shape (A, C)
-                for i, asset in enumerate(ri.assets):
-                    loss_curves[out.rlzi, l, i] = lc = out[loss_type][i]
-                    aid = asset['ordinal']
-                    avg = scientific.average_loss(lc)
-                    avg_losses[r, l, i] = avg
-                    lcurve = (lc['loss'], lc['poe'], avg)
-                    result['loss_curves'].append((l, r, aid, lcurve))
+        with mon:
+            haz = ri.hazard_getter.get_hazard()
+        for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
+            for rlz in range(R):
+                pcurve = haz.extract(rlz)
+                out = crmodel.get_output(taxo, asset_df, pcurve, rlz=rlz)
+                for li, loss_type in enumerate(crmodel.loss_types):
+                    # loss_curves has shape (A, C)
+                    for i, asset in enumerate(asset_df.to_records()):
+                        loss_curves[rlz, li, i] = lc = out[loss_type][i]
+                        aid = asset['ordinal']
+                        avg = scientific.average_loss(lc)
+                        avg_losses[rlz, li, i] = avg
+                        lcurve = (lc['loss'], lc['poe'], avg)
+                        result['loss_curves'].append((li, rlz, aid, lcurve))
 
         # compute statistics
-        for l, loss_type in enumerate(crmodel.loss_types):
-            for i, asset in enumerate(ri.assets):
-                avg_stats = compute_stats(avg_losses[:, l, i], stats, weights)
-                losses = loss_curves[0, l, i]['loss']
+        for li, loss_type in enumerate(crmodel.loss_types):
+            for i, asset in enumerate(ri.asset_df.to_records()):
+                avg_stats = compute_stats(
+                    avg_losses[:, li, i], stats, weights)
+                losses = loss_curves[0, li, i]['loss']
                 all_poes = numpy.array(
-                    [loss_curves[r, l, i]['poe'] for r in range(R)])
+                    [loss_curves[r, li, i]['poe'] for r in range(R)])
                 poes_stats = compute_stats(all_poes, stats, weights)
                 result['stat_curves'].append(
-                    (l, asset['ordinal'], losses, poes_stats, avg_stats))
+                    (li, asset['ordinal'], losses, poes_stats, avg_stats))
     if R == 1:  # the realization is the same as the mean
         del result['loss_curves']
     return result
@@ -114,27 +119,32 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         ltypes = self.crmodel.loss_types
 
         # loss curves stats are generated always
-        stats = encode(list(self.oqparam.hazard_stats()))
+        stats = list(self.oqparam.hazard_stats())
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
         avg_losses = numpy.zeros((self.A, self.S, self.L), F32)
-        for l, a, losses, statpoes, statloss in result['stat_curves']:
-            stat_curves_lt = stat_curves[ltypes[l]]
+        for li, a, losses, statpoes, statloss in result['stat_curves']:
+            stat_curves_lt = stat_curves[ltypes[li]]
             for s in range(self.S):
-                avg_losses[a, s, l] = statloss[s]
+                avg_losses[a, s, li] = statloss[s]
                 base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
                 base.set_array(stat_curves_lt['losses'][a, s], losses)
         self.datastore['avg_losses-stats'] = avg_losses
-        self.datastore.set_attrs('avg_losses-stats', stat=stats)
+        self.datastore.set_shape_descr(
+            'avg_losses-stats', asset_id=self.assetcol['id'],
+            stat=stats, loss_type=self.oqparam.loss_names)
         self.datastore['loss_curves-stats'] = stat_curves
         self.datastore.set_attrs('loss_curves-stats', stat=stats)
 
         if self.R > 1:  # individual realizations saved only if many
             loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)
             avg_losses = numpy.zeros((self.A, self.R, self.L), F32)
-            for l, r, a, (losses, poes, avg) in result['loss_curves']:
-                lc = loss_curves[a, r][ltypes[l]]
-                avg_losses[a, r, l] = avg
+            for li, r, a, (losses, poes, avg) in result['loss_curves']:
+                lc = loss_curves[a, r][ltypes[li]]
+                avg_losses[a, r, li] = avg
                 base.set_array(lc['losses'], losses)
                 base.set_array(lc['poes'], poes)
             self.datastore['avg_losses-rlzs'] = avg_losses
+            self.datastore.set_shape_descr(
+                'avg_losses-rlzs', asset_id=self.assetcol['id'],
+                rlz=numpy.arange(self.R), loss_type=self.oqparam.loss_names)
             self.datastore['loss_curves-rlzs'] = loss_curves

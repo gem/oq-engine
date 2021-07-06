@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2020 GEM Foundation
+# Copyright (C) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,8 @@ import sys
 import inspect
 import getpass
 from decorator import getfullargspec
-from openquake.baselib import sap, config
-from openquake.calculators.views import rst_table
+from openquake.baselib import config
+from openquake.calculators.views import text_table
 from openquake.commonlib import logs
 from openquake.server import dbserver
 from openquake.server.db import actions
@@ -45,8 +45,7 @@ def convert(strings):
             yield s
 
 
-@sap.script
-def db(cmd, args=()):
+def main(cmd, args=()):
     """
     Run a database command
     """
@@ -59,10 +58,10 @@ def db(cmd, args=()):
     dbserver.ensure_on()
     res = logs.dbcmd(cmd, *convert(args))
     if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
-        print(rst_table(res))
+        print(text_table(res))
     else:
         print(res)
 
 
-db.arg('cmd', 'db command')
-db.arg('args', 'db command arguments', nargs='*')
+main.cmd = 'db command'
+main.args = dict(help='db command arguments', nargs='*')

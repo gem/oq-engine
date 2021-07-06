@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,14 +25,14 @@ than 20 lines of code:
 
    import sys
    from openquake.commonlib import logs
-   from openquake.calculators.base import get_calc
+   from openquake.calculators.base import calculators
 
    def main(job_ini):
-       calc_id = logs.init()
-       calc = get_calc(job_ini, calc_id)
-       calc.run(individual_curves='true', shutdown=True)
-       print('The hazard curves are in %s::/hcurves-rlzs'
-             % calc.datastore.filename)
+       with logs.init('calc', job_ini) as log:
+           calc = calculators(log.get_oqparam(), log.calc_id)
+           calc.run(individual_curves='true', shutdown=True)
+           print('The hazard curves are in %s::/hcurves-rlzs'
+                % calc.datastore.filename)
 
    if __name__ == '__main__':
        main(sys.argv[1])  # path to a job.ini file
@@ -52,14 +52,14 @@ from openquake.hazardlib.probability_map import (
 from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.tom import FatedTOM
+from openquake.hazardlib.tom import PoissonTOM, FatedTOM
 
 
 def _cluster(imtls, tom, gsims, pmap):
     """
     Computes the probability map in case of a cluster group
     """
-    L, G = len(imtls.array), len(gsims)
+    L, G = imtls.size, len(gsims)
     pmapclu = ProbabilityMap(L, G)
     # Get temporal occurrence model
     # Number of occurrences for the cluster
@@ -78,7 +78,7 @@ def _cluster(imtls, tom, gsims, pmap):
     return pmap
 
 
-def classical(group, src_filter, gsims, param, monitor=Monitor()):
+def classical(group, src_filter, cmaker):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -106,14 +106,19 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         trts.add(src.tectonic_region_type)
         if hasattr(src, 'radius'):  # for prefiltered point sources
             maxradius = max(maxradius, src.radius)
-
-    param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
-    cmaker = ContextMaker(trt, gsims, param, monitor)
+    assert trt == cmaker.trt, (trt, cmaker.trt)
+    cmaker.maximum_distance = src_filter.integration_distance
+    try:
+        cmaker.tom = group.temporal_occurrence_model
+    except AttributeError:  # got a list of sources, not a group
+        time_span = cmaker.investigation_time  # None for nonparametric
+        cmaker.tom = PoissonTOM(time_span) if time_span else None
+    if cluster:
+        cmaker.tom = FatedTOM(time_span=1)
     pmap, rup_data, calc_times = PmapMaker(cmaker, src_filter, group).make()
     extra = {}
-    extra['task_no'] = getattr(monitor, 'task_no', 0)
-    extra['trt'] = trt
+    extra['task_no'] = cmaker.task_no
     extra['source_id'] = src.source_id
     extra['grp_id'] = src.grp_id
     extra['maxradius'] = maxradius
@@ -123,7 +128,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
-        pmap = _cluster(param['imtls'], tom, gsims, pmap)
+        pmap = _cluster(cmaker.imtls, tom, cmaker.gsims, pmap)
     return dict(pmap=pmap, calc_times=calc_times,
                 rup_data=rup_data, extra=extra)
 
@@ -171,32 +176,35 @@ def calc_hazard_curves(
         odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
-    # ensure the sources have the right et_id
     idx = 0
+    span = None
     for i, grp in enumerate(groups):
         for src in grp:
-            if not hasattr(src, 'et_id'):
-                src.et_id = i  # fix et_id
+            tom = getattr(src, 'temporal_occurrence_model', None)
+            if tom:
+                span = tom.time_span
             src.grp_id = i
             src.id = idx
             idx += 1
     imtls = DictArray(imtls)
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level, reqv=reqv,
-                 cluster=grp.cluster, shift_hypo=shift_hypo)
-    pmap = ProbabilityMap(len(imtls.array), 1)
+                 cluster=grp.cluster, shift_hypo=shift_hypo,
+                 investigation_time=kwargs.get('investigation_time', span))
+    pmap = ProbabilityMap(imtls.size, 1)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     for group in groups:
+        trt = group.trt
+        cmaker = ContextMaker(trt, [gsim_by_trt[trt]], param, mon)
         for src in group:
             if not src.nsites:  # not set
                 src.nsites = 1
-        gsim = gsim_by_trt[group[0].tectonic_region_type]
         if group.atomic:  # do not split
-            it = [classical(group, srcfilter, [gsim], param, mon)]
+            it = [classical(group, srcfilter, cmaker)]
         else:  # split the group and apply `classical` in parallel
             it = apply(
-                classical, (group.sources, srcfilter, [gsim], param),
+                classical, (group.sources, srcfilter, cmaker),
                 weight=operator.attrgetter('weight'))
         for dic in it:
             pmap |= dic['pmap']
@@ -204,21 +212,23 @@ def calc_hazard_curves(
     return pmap.convert(imtls, len(sitecol.complete))
 
 
-# called in adv-manual/developing.rst
-def calc_hazard_curve(site1, src, gsims, oqparam):
+# called in adv-manual/developing.rst and in SingleSiteOptTestCase
+def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     """
     :param site1: site collection with a single site
     :param src: a seismic source object
     :param gsims: a list of GSIM objects
     :param oqparam: an object with attributes .maximum_distance, .imtls
+    :param monitor: a Monitor instance (optional)
     :returns: a ProbabilityCurve object
     """
     assert len(site1) == 1, site1
     trt = src.tectonic_region_type
-    cmaker = ContextMaker(trt, gsims, vars(oqparam))
+    cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
+    cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
     pmap, rup_data, calc_times = PmapMaker(cmaker, srcfilter, [src]).make()
     if not pmap:  # filtered away
-        zero = numpy.zeros((len(oqparam.imtls.array), len(gsims)))
+        zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
         return ProbabilityCurve(zero)
     return pmap[0]  # pcurve with shape (L, G) on site 0

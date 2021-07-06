@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,6 +29,84 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _compute_distance_scaling(rjb, C):
+    """
+    Compute distance-scaling term (Page 141, Eq 1)
+    """
+    # Calculate distance according to Page 141, Eq 2.
+    rdist = np.sqrt((rjb ** 2.) + (C['h'] ** 2.))
+    return C['B5'] * np.log(rdist)
+
+
+def _compute_magnitude_scaling(mag, C):
+    """
+    Compute magnitude-scaling term (Page 141, Eq 1)
+    """
+    dmag = mag - 6.
+    return (C['B2'] * dmag) + (C['B3'] * (dmag ** 2.))
+
+
+def _compute_site_term(vs30, C):
+    """
+    Compute site amplification linear term (Page 141, Eq 1)
+    """
+    return C['Bv'] * np.log(vs30 / C['Va'])
+
+
+def _compute_style_of_faulting_term(sof, rup, C):
+    """
+    Computes the coefficient to scale for reverse or strike-slip events
+    Fault type (Strike-slip, Normal, Thrust/reverse) is
+    derived from rake angle.
+    Rakes angles within 30 of horizontal are strike-slip,
+    angles from 30 to 150 are reverse, and angles from
+    -30 to -150 are normal. See paragraph 'Predictor Variables'
+    pag 103.
+    Note that 'Unspecified' case is used to refer to all other rake
+    angles.
+    """
+    if sof is None:  # unspecified
+        return C['B1all']
+    elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+        # strike-slip
+        return C['B1ss']
+    elif rup.rake > 30.0 and rup.rake < 150.0:
+        # reverse
+        return C['B1rv']
+    else:
+        # unspecified (also includes Normal faulting!)
+        return C['B1all']
+
+
+def _get_stddevs(horizontal, C, stddev_types, num_sites):
+    """
+    Return standard deviations using Page 142 (Eq 4 - 5)
+    """
+    if horizontal:
+        # Return standard deviations as defined in table 8, pag 121.
+        stddevs = []
+        for stddev_type in stddev_types:
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(C['sigma_tot'] * np.ones(num_sites))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(C['sigma_r'] + np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(C['sigma_e'] + np.zeros(num_sites))
+        return stddevs
+
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            sigtot = np.sqrt(((C['sigma_e'] * np.ones(num_sites)) ** 2.) +
+                             (C['sigma1'] * np.ones(num_sites)) ** 2.)
+            stddevs.append(sigtot)
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['sigma1'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['sigma_e'] + np.zeros(num_sites))
+    return stddevs
+
+
 class BooreEtAl1997GeometricMean(GMPE):
     """
     Implements GMPE developed by David M. Boore and William B. Joyner and
@@ -43,21 +121,15 @@ class BooreEtAl1997GeometricMean(GMPE):
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see table 3
     #: pag. 110
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is geometric mean
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30.
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -68,6 +140,9 @@ class BooreEtAl1997GeometricMean(GMPE):
     #: Required distance measure is Rjb.
     REQUIRES_DISTANCES = {'rjb'}
 
+    sof = True
+    horizontal = False
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -77,73 +152,14 @@ class BooreEtAl1997GeometricMean(GMPE):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
-        mean = (self._compute_style_of_faulting_term(rup, C) +
-                self._compute_magnitude_scaling(rup.mag, C) +
-                self._compute_distance_scaling(dists.rjb, C) +
-                self._compute_site_term(sites.vs30, C))
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+        mean = (_compute_style_of_faulting_term(self.sof, rup, C) +
+                _compute_magnitude_scaling(rup.mag, C) +
+                _compute_distance_scaling(dists.rjb, C) +
+                _compute_site_term(sites.vs30, C))
+        stddevs = _get_stddevs(self.horizontal, C, stddev_types,
+                               num_sites=len(sites.vs30))
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations using Page 142 (Eq 4 - 5)
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigtot = np.sqrt(((C['sigma_e'] * np.ones(num_sites)) ** 2.) +
-                                 (C['sigma1'] * np.ones(num_sites)) ** 2.)
-                stddevs.append(sigtot)
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma1'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['sigma_e'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_distance_scaling(self, rjb, C):
-        """
-        Compute distance-scaling term (Page 141, Eq 1)
-        """
-        # Calculate distance according to Page 141, Eq 2.
-        rdist = np.sqrt((rjb ** 2.) + (C['h'] ** 2.))
-        return C['B5'] * np.log(rdist)
-
-    def _compute_magnitude_scaling(self, mag, C):
-        """
-        Compute magnitude-scaling term (Page 141, Eq 1)
-        """
-        dmag = mag - 6.
-        return (C['B2'] * dmag) + (C['B3'] * (dmag ** 2.))
-
-    def _compute_style_of_faulting_term(self, rup, C):
-        """
-        Computes the coefficient to scale for reverse or strike-slip events
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal. See paragraph 'Predictor Variables'
-        pag 103.
-        Note that 'Unspecified' case is used to refer to all other rake
-        angles.
-        """
-        if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-            # strike-slip
-            return C['B1ss']
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            return C['B1rv']
-        else:
-            # unspecified (also includes Normal faulting!)
-            return C['B1all']
-
-    def _compute_site_term(self, vs30, C):
-        """
-        Compute site amplification linear term (Page 141, Eq 1)
-        """
-        return C['Bv'] * np.log(vs30 / C['Va'])
 
     #: Coefficient table is constructed from values in Table 8
     #: Note that for periods between 0.1 s and 0.18s the inter-event term
@@ -209,12 +225,7 @@ class BooreEtAl1997GeometricMeanUnspecified(BooreEtAl1997GeometricMean):
     """
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _compute_style_of_faulting_term(self, rup, C):
-        """
-        Returns only the coefficients for the 'B1all' type
-        """
-        return C['B1all']
+    sof = None
 
 
 class BooreEtAl1997ArbitraryHorizontal(BooreEtAl1997GeometricMean):
@@ -230,21 +241,7 @@ class BooreEtAl1997ArbitraryHorizontal(BooreEtAl1997GeometricMean):
     """
     #: Supported intensity measure component is the arbitrary horizontal
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 8, pag 121.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma_tot'] * np.ones(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma_r'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['sigma_e'] + np.zeros(num_sites))
-        return stddevs
+    horizontal = True
 
 
 class BooreEtAl1997ArbitraryHorizontalUnspecified(
@@ -255,9 +252,4 @@ class BooreEtAl1997ArbitraryHorizontalUnspecified(
     """
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _compute_style_of_faulting_term(self, rup, C):
-        """
-        Returns only the coefficients for the 'B1all' type
-        """
-        return C['B1all']
+    sof = None

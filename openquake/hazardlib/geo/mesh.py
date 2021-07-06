@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,8 +44,8 @@ def sqrt(array):
 
 def surface_to_arrays(surface):
     """
-    :param surface: a Surface object
-    :returns: a list of arrays of shape (3, N, M)
+    :param surface: a (Multi)Surface object
+    :returns: a list of S arrays of shape (3, N, M)
     """
     if hasattr(surface, 'surfaces'):  # multiplanar surfaces
         lst = []

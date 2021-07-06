@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,9 +19,9 @@ Module :mod:`openquake.hazardlib.source.kite_fault` defines
 """
 import copy
 import numpy as np
-from typing import Tuple, Optional
+from typing import Tuple
 from openquake.hazardlib import mfd
-from openquake.hazardlib.geo import Point, Line, Polygon
+from openquake.hazardlib.geo import Point, Polygon
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.kite_fault import (
         get_profiles_from_simple_fault_data)
@@ -72,9 +72,9 @@ class KiteFaultSource(ParametricSeismicSource):
                         floating_y_step):
 
         # Get profiles
-        profiles = get_profiles_from_simple_fault_data(fault_trace, 
-                upper_seismogenic_depth, lower_seismogenic_depth, dip, 
-                rupture_mesh_spacing)
+        profiles = get_profiles_from_simple_fault_data(
+            fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+            dip, rupture_mesh_spacing)
 
         # Creating Kite Source
         self = cls(source_id, name, tectonic_region_type, mfd,

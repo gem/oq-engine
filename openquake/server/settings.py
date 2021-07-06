@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,8 @@ import os
 import socket
 import getpass
 
-from openquake.baselib import config, datastore
+from openquake.baselib import config
+from openquake.commonlib import datastore
 
 try:
     from openquakeplatform.settings import STANDALONE, STANDALONE_APPS

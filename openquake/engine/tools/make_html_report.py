@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,9 +23,8 @@ from datetime import date, datetime, timedelta
 import itertools
 from docutils.examples import html_parts
 
-from openquake.baselib.datastore import read
 from openquake.calculators.views import view_fullreport
-from openquake.commonlib.logs import dbcmd
+from openquake.commonlib import logs, datastore
 
 tablecounter = itertools.count(0)
 
@@ -105,9 +104,14 @@ PAGE_TEMPLATE = '''\
 <html>
 <head>
 <meta charset="UTF-8">
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
-<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js">
+</script>
+<link rel="stylesheet"
+ href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css"
+/>
+<script
+ src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js">
+</script>
 <script>
 $(function() {
 $("#tabs").tabs();
@@ -159,17 +163,17 @@ def make_report(isodate='today'):
     tag_contents = []
 
     # the fetcher returns an header which is stripped with [1:]
-    jobs = dbcmd(
+    jobs = logs.dbcmd(
         'fetch', ALL_JOBS, isodate.isoformat(), isodate1.isoformat())
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
     for job_id, user, status, ds_calc in jobs:
         tag_ids.append(job_id)
         tag_status.append(status)
-        [stats] = dbcmd('fetch', JOB_STATS, job_id)
+        [stats] = logs.dbcmd('fetch', JOB_STATS, job_id)
         (job_id, user, start_time, stop_time, status, duration) = stats
         try:
-            ds = read(job_id, datadir=os.path.dirname(ds_calc))
+            ds = datastore.read(job_id, datadir=os.path.dirname(ds_calc))
             txt = view_fullreport('fullreport', ds)
             report = html_parts(txt)
         except Exception as exc:

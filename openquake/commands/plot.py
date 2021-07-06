@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,11 +20,10 @@ import json
 import logging
 import shapely
 import numpy
-from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
-from openquake.calculators.extract import Extractor, WebExtractor
+from openquake.calculators.extract import Extractor, WebExtractor, clusterize
 
 
 def make_figure_hcurves(extractors, what):
@@ -54,6 +53,63 @@ def make_figure_hcurves(extractors, what):
             ax.loglog(imls, arr.flat, '-', label='%s_%s' % ck)
         ax.grid(True)
         ax.legend()
+    return plt
+
+
+def make_figure_uhs_cluster(extractors, what):
+    """
+    $ oq plot "uhs_cluster?k=12"
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.cm as cm
+    kstr = what.split('?')[1]
+    k = int(kstr.split('=')[1])
+    fig, ax = plt.subplots()
+    [ex] = extractors
+    hmaps = ex.get('hmaps?kind=rlzs')
+    rlzs = ex.get('realizations').array
+    labels = []
+    for p, poe in enumerate(ex.oqparam.poes):
+        for imt in ex.oqparam.imtls:
+            labels.append('%s' % imt)
+    xs = numpy.arange(len(labels))
+    ax.set_xticks(xs)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel('IML')
+    obs = [getattr(hmaps, 'rlz-%03d' % rlz)[0] for rlz in range(len(rlzs))]
+    arr, cluster = clusterize(numpy.array(obs), rlzs, k)
+    colors = cm.rainbow(numpy.linspace(0, 1, len(arr)))
+    paths = [p.decode('ascii') for p in arr['branch_paths']]
+    for rlz in range(len(rlzs)):
+        # ush-rlz has shape NMP
+        ys = getattr(hmaps, 'rlz-%03d' % rlz)[0].T.flatten()
+        ax.plot(xs, ys, '-', color=colors[cluster[rlz]])
+    for c, curve in enumerate(arr['centroid']):
+        lbl = '%s:%s' % (c + 1, paths[c])
+        print(lbl)
+        ax.plot(xs, curve, '--', color=colors[c], label=lbl)
+    ax.grid(True)
+    ax.legend()
+    return plt
+
+
+def make_figure_avg_gmf(extractors, what):
+    """
+    $ oq plot "avg_gmf?imt=gmv_0"
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    avg_gmf = ex.get(what)
+    imt = what.split('=')[1]
+    ax = fig.add_subplot(1, 1, 1)
+    ax.grid(True)
+    ax.set_title('Avg GMF for %s' % imt)
+    ax.set_xlabel('Lon')
+    ax.set_ylabel('Lat')
+    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'],
+                      c=avg_gmf[imt], cmap='jet')
+    plt.colorbar(coll)
     return plt
 
 
@@ -92,7 +148,9 @@ def make_figure_hmaps(extractors, what):
         itime = oq1.investigation_time
         assert oq2.investigation_time == itime
         sitecol = ex1.get('sitecol')
-        assert (ex2.get('sitecol').array == sitecol.array).all()
+        array2 = ex2.get('sitecol').array
+        for name in ('lon', 'lat'):
+            numpy.testing.assert_equal(array2[name], sitecol.array[name])
         hmaps1 = ex1.get(what)
         hmaps2 = ex2.get(what)
         [imt] = hmaps1.imt
@@ -558,16 +616,49 @@ def make_figure_agg_curves(extractors, what):
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
         aw = ex.get(what + '&absolute=1')
+        if isinstance(aw.json, numpy.ndarray):  # from webui
+            js = bytes(aw.json).decode('utf8')
+        else:
+            js = aw.json
+        vars(aw).update(json.loads(js))
         agg_curve = aw.array.squeeze()
         got[ex.calc_id, aw.kind[0]] = agg_curve
     oq = ex.oqparam
     periods = aw.return_period
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel('risk_inv_time=%dy' % oq.risk_investigation_time)
-    ax.set_ylabel('PoE')
+    ax.set_ylabel('loss')
     for ck, arr in got.items():
         ax.loglog(periods, agg_curve, '-', label='%s_%s' % ck)
         ax.loglog(periods, agg_curve, '.')
+    ax.grid(True)
+    ax.legend()
+    return plt
+
+
+def make_figure_csq_curves(extractors, what):
+    """
+    $ oq plot "csq_curves?agg_id=0&loss_type=structural&consequence=losses" -1
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    got = {}  # (calc_id, limit_state) -> curve
+    for i, ex in enumerate(extractors):
+        aw = ex.get(what)
+        P, C = aw.shape
+        if P < 2:
+            raise RuntimeError('Not enough return periods: %d' % P)
+        for c, csq in enumerate(aw.consequences):
+            if csq in what:
+                got[ex.calc_id, csq] = aw[:, c]
+    oq = ex.oqparam
+    periods = aw.return_period
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('risk_inv_time=%dy' % oq.risk_investigation_time)
+    ax.set_ylabel(csq)
+    for ck, arr in got.items():
+        ax.loglog(periods, arr, '-', label=ck[0])
+        ax.loglog(periods, arr, '.')
     ax.grid(True)
     ax.legend()
     return plt
@@ -577,18 +668,7 @@ def make_figure_tot_curves(extractors, what):
     """
     $ oq plot "tot_curves?loss_type=structural&kind=rlz-000&absolute=1"
     """
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    [ex] = extractors
-    tot = ex.get(what)
-    app = ex.get(what.replace('tot_', 'app_'))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.set_xlabel('return periods')
-    ax.set_ylabel('PoE')
-    ax.loglog(tot.return_period, tot[:, 0], '-', label='tot_curves')
-    ax.grid(True)
-    ax.legend()
-    return plt
+    return make_figure_agg_curves(extractors, what)
 
 
 def plot_wkt(wkt_string):
@@ -603,8 +683,10 @@ def plot_wkt(wkt_string):
     return plt
 
 
-@sap.script
-def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
+def main(what,
+         calc_id: int = -1,
+         others: int = [],
+         webapi=False,
          local=False):
     """
     Generic plotter for local and remote calculations.
@@ -632,23 +714,23 @@ def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
         what += '&poe_id=0'
     if local:
         xs = [WebExtractor(calc_id, 'http://localhost:8800', '')]
-        if other_id:
+        for other_id in others:
             xs.append(WebExtractor(other_id), 'http://localhost:8800', '')
     elif webapi:
         xs = [WebExtractor(calc_id)]
-        if other_id:
+        for other_id in others:
             xs.append(WebExtractor(other_id))
     else:
         xs = [Extractor(calc_id)]
-        if other_id:
+        for other_id in others:
             xs.append(Extractor(other_id))
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
     plt.show()
 
 
-plot.arg('what', 'what to extract')
-plot.arg('calc_id', 'computation ID', type=int)
-plot.arg('other_id', 'ID of another computation', type=int)
-plot.flg('webapi', 'if given, pass through the WebAPI')
-plot.flg('local', 'if passed, use the local WebAPI')
+main.what = 'what to extract (try examples)'
+main.calc_id = 'computation ID'
+main.others = dict(help='IDs of other computations', nargs='*')
+main.webapi = 'if given, pass through the WebAPI'
+main.local = 'if passed, use the local WebAPI'

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,15 +28,15 @@ from functools import partial
 import numpy
 import scipy.stats
 
-from openquake.hazardlib import contexts
 from openquake.baselib.general import AccumDict, groupby, pprod
+from openquake.hazardlib import const
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.gsim.base import (
-    ContextMaker, to_distribution_values)
+from openquake.hazardlib.gsim.base import to_distribution_values
+from openquake.hazardlib.contexts import ContextMaker
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -115,12 +115,11 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
+def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     """
-    :param ctxs: a list of U fat RuptureContexts
-    :param imts: a list of Intensity Measure Type objects
+    :param ctxs: a list of U RuptureContexts
+    :param tom: a temporal occurrence model
     :param g_by_z: an array of gsim indices
-    :param imt: an Intensity Measure Type
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
     """
@@ -143,10 +142,9 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     G = len(ctxs[0].mean_std)
     mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
-        if not hasattr(ctx, 'idx'):  # assume single site
-            idx = 0
-        else:
-            idx = ctx.idx[sid]
+        # search the index associated to the site ID; for instance
+        # searchsorted([2, 4, 6], 4) => 1
+        idx = numpy.searchsorted(ctx.sids, sid)
         dists[u] = ctx.rrup[idx]  # distance to the site
         lons[u] = ctx.clon[idx]  # closest point of the rupture lon
         lats[u] = ctx.clat[idx]  # closest point of the rupture lat
@@ -168,7 +166,7 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         poes[:, :, m, p, z] = _disagg_eps(
             truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     for u, ctx in enumerate(ctxs):
-        pnes[u] *= ctx.get_probability_no_exceedance(poes[u])  # this is slow
+        pnes[u] *= ctx.get_probability_no_exceedance(poes[u], tom)  # slow
     bindata = BinData(dists, lons, lats, pnes)
     DEBUG[idx].append(pnes.mean())
     if not bin_edges:
@@ -176,9 +174,9 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     return _build_disagg_matrix(bindata, bin_edges)
 
 
-def set_mean_std(ctxs, imts, gsims):
+def set_mean_std(ctxs, cmaker):
     for u, ctx in enumerate(ctxs):
-        ctx.mean_std = [gsim.get_mean_std([ctx], imts) for gsim in gsims]
+        ctx.mean_std = cmaker.get_mean_stds([ctx], const.StdDev.TOTAL)
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -368,8 +366,7 @@ def disaggregation(
     rups = AccumDict(accum=[])
     cmaker = {}  # trt -> cmaker
     for trt, srcs in by_trt.items():
-        contexts.RuptureContext.temporal_occurrence_model = (
-            srcs[0].temporal_occurrence_model)
+        tom = srcs[0].temporal_occurrence_model
         cmaker[trt] = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': truncation_level,
@@ -383,10 +380,9 @@ def disaggregation(
         int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
     for trt in cmaker:
-        gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            set_mean_std(ctxs, [imt], [gsim])
-            bdata[trt, magi] = disaggregate(ctxs, [0], {imt: iml2}, eps3)
+            set_mean_std(ctxs, cmaker[trt])
+            bdata[trt, magi] = disaggregate(ctxs, tom, [0], {imt: iml2}, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
