@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import math
 import warnings
 import numpy as np
 from openquake.hazardlib import const
@@ -26,7 +25,6 @@ from openquake.hazardlib.gsim.projects.acme_base import (
     get_phi_ss_at_quantile_ACME)
 from openquake.hazardlib.imt import SA
 from openquake.hazardlib.contexts import DistancesContext
-from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014ACME2019
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
         YenierAtkinson2015BSSA
 from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
@@ -58,6 +56,28 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
         # rupture by adding rake
         _previous = list(super().REQUIRES_RUPTURE_PARAMETERS)
         self.REQUIRES_RUPTURE_PARAMETERS = frozenset(_previous + ['rake'])
+
+
+def _setup_standard_deviations(gsim):
+    # setup tau
+    gsim.TAU = get_tau_at_quantile(TAU_SETUP[gsim.tau_model]["MEAN"],
+                                   TAU_SETUP[gsim.tau_model]["STD"],
+                                   gsim.tau_quantile)
+    # setup phi
+    PHI_SETUP['global_linear'] = gsim.COEFFS_PHI_SS_GLOBAL_LINEAR
+    gsim.PHI_SS = get_phi_ss_at_quantile_ACME(PHI_SETUP[gsim.phi_model],
+                                              gsim.phi_ss_quantile)
+    # if required setup phis2ss
+    if gsim.ergodic:
+        if gsim.phi_s2ss_model == 'cena':
+            gsim.PHI_S2SS = get_phi_s2ss_at_quantile(
+                PHI_S2SS_MODEL[gsim.phi_s2ss_model],
+                gsim.phi_s2ss_quantile)
+        elif gsim.phi_s2ss_model == 'brb':
+            gsim.PHI_S2SS = gsim.COEFFS_PHI_S2SS_BRB
+        else:
+            opts = "'cena', 'brb', or 'None'"
+            raise ValueError('phi_s2ss_model can be {}'.format(opts))
 
 
 class AlAtikSigmaModel(GMPE):
@@ -98,9 +118,7 @@ class AlAtikSigmaModel(GMPE):
         IMT. includes a header.
     :param kappa_val:
         kappa value corresponding to a column header in kappa_file
-
     """
-
     adapted = True
 
     # Parameters
@@ -128,7 +146,7 @@ class AlAtikSigmaModel(GMPE):
         self.tau_quantile = kwargs.get('tau_quantile')
         self.phi_ss_quantile = kwargs.get('phi_ss_quantile')
         self.phi_s2ss_quantile = kwargs.get('phi_s2ss_quantile')
-        self._setup_standard_deviations(fle=None)
+        _setup_standard_deviations(self)
         self.kappa_file = kwargs.get('kappa_file')
         self.kappa_val = kwargs.get('kappa_val')
 
@@ -140,27 +158,6 @@ class AlAtikSigmaModel(GMPE):
             with self.open(self.kappa_file) as myfile:
                 data = myfile.read().decode('utf-8')
             self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
-
-    def _setup_standard_deviations(self, fle):
-        # setup tau
-        self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
-                                       TAU_SETUP[self.tau_model]["STD"],
-                                       self.tau_quantile)
-        # setup phi
-        PHI_SETUP['global_linear'] = self.COEFFS_PHI_SS_GLOBAL_LINEAR
-        self.PHI_SS = get_phi_ss_at_quantile_ACME(PHI_SETUP[self.phi_model],
-                                                  self.phi_ss_quantile)
-        # if required setup phis2ss
-        if self.ergodic:
-            if self.phi_s2ss_model == 'cena':
-                self.PHI_S2SS = get_phi_s2ss_at_quantile(
-                    PHI_S2SS_MODEL[self.phi_s2ss_model],
-                    self.phi_s2ss_quantile)
-            elif self.phi_s2ss_model == 'brb':
-                self.PHI_S2SS = self.COEFFS_PHI_S2SS_BRB
-            else:
-                opts = "'cena', 'brb', or 'None'"
-                raise ValueError('phi_s2ss_model can be {}'.format(opts))
 
     def get_corner_period(self, mag):
         """
