@@ -34,7 +34,6 @@ try:
         jitfunc.jittable = True
         return jitfunc
 
-
     def compile(sigstr):
         """
         Compile a function Ahead-Of-Time using the given signature string

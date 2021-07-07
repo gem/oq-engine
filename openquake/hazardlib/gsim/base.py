@@ -571,6 +571,7 @@ class GMPE(GroundShakingIntensityModel):
         """
         To be overridden in subclasses.
         """
+        raise NotImplementedError
 
     def get_poes(self, mean_std, cmaker, ctxs=()):
         """
