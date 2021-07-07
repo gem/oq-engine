@@ -22,14 +22,14 @@ import unittest
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.base import _get_poes_site, _get_poes
+from openquake.hazardlib.gsim.base import _get_poes
 from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 from openquake.hazardlib.site import ampcode_dt
-from openquake.hazardlib.site_amplification import AmplFunction
+from openquake.hazardlib.site_amplification import AmplFunction, get_poes_site
 from openquake.hazardlib.tests.site_amplification_function_test import \
     ampl_func
 
@@ -87,8 +87,8 @@ class GetPoesSiteTestCase(unittest.TestCase):
         # This function is rather slow at the moment
         ctx = unittest.mock.Mock(mag=self.mag, rrup=self.rrup, sids=[0],
                                  sites=dict(ampcode=[sitecode]))
-        res = _get_poes_site(self.meastd, imtls_soil, truncation_level,
-                             af, [ctx])
+        res = get_poes_site(self.meastd, imtls_soil, truncation_level,
+                            af, [ctx])
 
         if False:
             import matplotlib.pyplot as plt
