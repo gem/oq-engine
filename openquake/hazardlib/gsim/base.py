@@ -71,14 +71,13 @@ class AdaptedWarning(UserWarning):
 
 
 # this is the critical function for the performance of the classical calculator
-# it is dominated by memory allocations (i.e. _truncnorm_sf is ultra-fast)
+# it is dominated by memory allocations;
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then _get_poes will be called less times
-
-
+# collapse the ruptures, then _get_delta will be called less times
+# even numba can only give a 15% speedup (on my workstation)
 @compile("float64[:, :](float64[:, :, :], float64[:], float64, int64)")
-def _get_out(mean_std, levels, truncation_level, L1):
+def _get_delta(mean_std, levels, truncation_level, L1):
     N = mean_std.shape[1]
     L = len(levels)
     out = numpy.zeros((N, L))
@@ -94,8 +93,9 @@ def _get_out(mean_std, levels, truncation_level, L1):
 
 
 def _get_poes(mean_std, loglevels, truncation_level):
-    out = _get_out(mean_std, loglevels.array, truncation_level, loglevels.L1)
-    return _truncnorm_sf(truncation_level, out)
+    delta = _get_delta(mean_std, loglevels.array, truncation_level,
+                       loglevels.L1)
+    return _truncnorm_sf(truncation_level, delta)
 
 
 def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
