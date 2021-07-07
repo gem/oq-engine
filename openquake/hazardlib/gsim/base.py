@@ -22,6 +22,7 @@ different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
 import abc
+import inspect
 import warnings
 import functools
 import numpy
@@ -195,6 +196,22 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
     return out_s
 
 
+OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters'
+
+
+def bad_methods(clsdict):
+    """
+    :returns: list of not acceptable method names
+    """
+    bad = []
+    for name, value in clsdict.items():
+        if name in OK_METHODS or name.startswith('__') and name.endswith('__'):
+            pass  # not bad
+        elif inspect.isfunction(value) or hasattr(value, '__func__'):
+            bad.append(name)
+    return bad
+
+
 class MetaGSIM(abc.ABCMeta):
     """
     A metaclass converting set class attributes into frozensets, to avoid
@@ -205,6 +222,9 @@ class MetaGSIM(abc.ABCMeta):
         if len(bases) > 1:
             raise TypeError('Multiple inheritance is forbidden: %s(%s)' % (
                 name, ', '.join(b.__name__ for b in bases)))
+        bad = bad_methods(dic)
+        if bad:
+            raise TypeError('%s cannot contain the methods %s' % (name, bad))
         for k, v in dic.items():
             if isinstance(v, set):
                 dic[k] = frozenset(v)
@@ -409,17 +429,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         and make ``get_mean_and_stddevs()`` just combine both (and possibly
         compute interim steps).
         """
-
-    def _check_imt(self, imt):
-        """
-        Make sure that ``imt`` is valid and is supported by this GSIM.
-        """
-        names = set(f.__name__
-                    for f in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
-        name = "SA" if imt.string[:2] == "SA" else imt.string
-        if name not in names:
-            raise ValueError('imt %s is not supported by %s' %
-                             (name, type(self).__name__))
 
     def __lt__(self, other):
         """
