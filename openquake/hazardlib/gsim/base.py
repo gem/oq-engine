@@ -22,6 +22,7 @@ different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
 import abc
+import inspect
 import warnings
 import functools
 import numpy
@@ -29,6 +30,7 @@ from scipy.special import ndtr
 from scipy.stats import norm
 
 from openquake.baselib.general import DeprecationWarning
+from openquake.baselib.performance import compile
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
@@ -70,21 +72,34 @@ class AdaptedWarning(UserWarning):
 
 
 # this is the critical function for the performance of the classical calculator
-# it is dominated by memory allocations (i.e. _truncnorm_sf is ultra-fast)
+# it is dominated by memory allocations;
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then _get_poes will be called less times
-def _get_poes(mean_std, loglevels, truncation_level):
-    out = numpy.zeros((mean_std.shape[1], loglevels.size))  # shape (N, L)
-    lvl = 0
-    for m, imt in enumerate(loglevels):
-        for iml in loglevels[imt]:
-            if truncation_level == 0:  # just compare imls to mean
-                out[:, lvl] = iml <= mean_std[0, :, m]
+# collapse the ruptures, then _get_delta will be called less times
+# even numba can only give a 15% speedup (on my workstation)
+@compile("float64[:, :](float64[:, :, :], float64[:], float64, int64)")
+def _get_delta(mean_std, levels, truncation_level, L1):
+    """
+    Compute (iml - mean) / std for each level
+    """
+    N = mean_std.shape[1]
+    L = len(levels)
+    out = numpy.zeros((N, L))
+    for lvl in range(L):
+        m = lvl // L1
+        iml = levels[lvl]
+        for s in range(N):
+            if truncation_level == 0.:  # just compare imls to mean
+                out[s, lvl] = iml <= mean_std[0, s, m]
             else:
-                out[:, lvl] = (iml - mean_std[0, :, m]) / mean_std[1, :, m]
-            lvl += 1
-    return _truncnorm_sf(truncation_level, out)
+                out[s, lvl] = (iml - mean_std[0, s, m]) / mean_std[1, s, m]
+    return out
+
+
+def _get_poes(mean_std, loglevels, truncation_level):
+    delta = _get_delta(mean_std, loglevels.array, truncation_level,
+                       loglevels.L1)
+    return _truncnorm_sf(truncation_level, delta)
 
 
 def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
@@ -181,6 +196,22 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
     return out_s
 
 
+OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters'
+
+
+def bad_methods(clsdict):
+    """
+    :returns: list of not acceptable method names
+    """
+    bad = []
+    for name, value in clsdict.items():
+        if name in OK_METHODS or name.startswith('__') and name.endswith('__'):
+            pass  # not bad
+        elif inspect.isfunction(value) or hasattr(value, '__func__'):
+            bad.append(name)
+    return bad
+
+
 class MetaGSIM(abc.ABCMeta):
     """
     A metaclass converting set class attributes into frozensets, to avoid
@@ -194,6 +225,9 @@ class MetaGSIM(abc.ABCMeta):
         if 'get_mean_and_stddevs' in dic and 'compute' in dic:
             raise TypeError('You cannot define both get_mean_and_stddevs '
                             'and compute in %s' % name)
+        bad = bad_methods(dic)
+        if bad:
+            raise TypeError('%s cannot contain the methods %s' % (name, bad))
         for k, v in dic.items():
             if isinstance(v, set):
                 dic[k] = frozenset(v)
@@ -413,17 +447,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(phi)
         return mean, stddevs
-
-    def _check_imt(self, imt):
-        """
-        Make sure that ``imt`` is valid and is supported by this GSIM.
-        """
-        names = set(f.__name__
-                    for f in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
-        name = "SA" if imt.string[:2] == "SA" else imt.string
-        if name not in names:
-            raise ValueError('imt %s is not supported by %s' %
-                             (name, type(self).__name__))
 
     def __lt__(self, other):
         """

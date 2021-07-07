@@ -34,11 +34,22 @@ try:
         jitfunc.jittable = True
         return jitfunc
 
+
+    def compile(sigstr):
+        """
+        Compile a function Ahead-Of-Time using the given signature string
+        """
+        return njit(sigstr, cache=True)
+
 except ImportError:
     def jittable(func):
         """Do nothing decorator, used if numba is missing"""
         func.jittable = True
         return func
+
+    def compile(sigstr):
+        """Do nothing decorator, used if numba is missing"""
+        return lambda func: func
 
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
