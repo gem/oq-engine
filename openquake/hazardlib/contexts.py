@@ -244,7 +244,8 @@ class ContextMaker(object):
             if hasattr(gsim, 'compute'):
                 self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
                 if numba:
-                    ctx = numpy.ones(1, gsim.ctx_builder.dtype)
+                    ctx = numpy.ones(1, gsim.ctx_builder.dtype).view(
+                        numpy.recarray)
                 else:
                     ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
                 gsim.__class__.compute(fake, ctx, self.imts, *out[g])

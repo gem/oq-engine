@@ -520,10 +520,10 @@ class GMPE(GroundShakingIntensityModel):
         :returns: mean and stddevs by calling the underlying .compute method
         """
         N = len(sites)
-        mean = numpy.zeros((N, 1))
-        sig = numpy.zeros((N, 1))
-        tau = numpy.zeros((N, 1))
-        phi = numpy.zeros((N, 1))
+        mean = numpy.zeros((1, N))
+        sig = numpy.zeros((1, N))
+        tau = numpy.zeros((1, N))
+        phi = numpy.zeros((1, N))
         self.compute(rup, [imt], mean, sig, tau, phi)
         stddevs = []
         for stddev_type in stddev_types:

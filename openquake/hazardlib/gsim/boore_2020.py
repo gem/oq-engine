@@ -42,8 +42,8 @@ def _get_inter_event_tau(C, mag, num_sites):
     if mag <= C["Mtau1"]:
         return base_vals + C["tau1"]
     elif mag > C["Mtau1"] and mag < C["Mtau2"]:
-        magncof = (mag-C["Mtau1"])/(C["Mtau2"]-C["Mtau1"])
-        return base_vals + C["tau1"]+(C["tau2"]-C["tau1"])*magncof
+        magncof = (mag - C["Mtau1"]) / (C["Mtau2"] - C["Mtau1"])
+        return base_vals + C["tau1"] + (C["tau2"] - C["tau1"])*magncof
     else:
         return base_vals + C["tau2"]
 
@@ -126,25 +126,6 @@ def _get_site_scaling(C, pga_rock, sites):
     return flin + fnl
 
 
-def _get_stddevs(C, rup, dists, sites, stddev_types):
-    """
-    Returns the aleatory uncertainty terms described in equations (13) to
-    (17)
-    """
-    stddevs = []
-    num_sites = len(sites.vs30)
-    tau = _get_inter_event_tau(C, rup.mag, num_sites)
-    phi = _get_intra_event_phi(C, num_sites)
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt((tau ** 2.0) + (phi ** 2.0)))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-    return stddevs
-
-
 def _get_style_of_faulting_term(C, rup):
     """
     Get fault type dummy variables
@@ -202,29 +183,20 @@ class BooreEtAl2020(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        N = len(ctx)
         C_PGA = self.COEFFS[PGA()]
-        pga_rock = _get_pga_on_rock(C_PGA, rup, dists)
-
-        mean = (_get_magnitude_scaling_term(C, rup) +
-                _get_path_scaling(C, dists, rup.mag) +
-                _get_site_scaling(C, pga_rock, sites))
-        stddevs = _get_stddevs(C, rup, dists, sites, stddev_types)
-
-        if imt.string == "PGV":
-            mean = mean
-        else:
-            mean = np.log((np.exp(mean)/981.00))
-
-        return mean, stddevs
+        pga_rock = _get_pga_on_rock(C_PGA, ctx, ctx)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (_get_magnitude_scaling_term(C, ctx) +
+                       _get_path_scaling(C, ctx, ctx.mag) +
+                       _get_site_scaling(C, pga_rock, ctx))
+            if imt.string != "PGV":
+                mean[m] = np.log((np.exp(mean)/981.00))
+            tau[m] = _get_inter_event_tau(C, ctx.mag, N)
+            phi[m] = _get_intra_event_phi(C, N)
+            sig[m] = np.sqrt((tau ** 2.0) + (phi ** 2.0))
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT	           B           e0	      e1	      e2	     e3	         e4	        e5	           e6	         Mh	          c1	         c2	         c3	            Mref	    Rref	     h	        clin	         V1	          Vc	     Vref	     f1	       f3	         f4	              f5	         phi	   tau1	        Mtau1	     Mtau2	  tau2	sigma_M_ge_6_0
