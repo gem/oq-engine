@@ -78,6 +78,9 @@ class AdaptedWarning(UserWarning):
 # even numba can only give a 15% speedup (on my workstation)
 @compile("float64[:, :](float64[:, :, :], float64[:], float64, int64)")
 def _get_delta(mean_std, levels, truncation_level, L1):
+    """
+    Compute (iml - mean) / std for each level
+    """
     N = mean_std.shape[1]
     L = len(levels)
     out = numpy.zeros((N, L))
