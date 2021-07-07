@@ -344,7 +344,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, AdaptedWarning)
 
-    # @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Calculate and return mean value of intensity distribution and it's
@@ -398,6 +397,22 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         and make ``get_mean_and_stddevs()`` just combine both (and possibly
         compute interim steps).
         """
+        # mean and stddevs by calling the underlying .compute method
+        N = len(sites)
+        mean = numpy.zeros((1, N))
+        sig = numpy.zeros((1, N))
+        tau = numpy.zeros((1, N))
+        phi = numpy.zeros((1, N))
+        self.compute(rup, [imt], mean, sig, tau, phi)
+        stddevs = []
+        for stddev_type in stddev_types:
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(sig)
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(tau)
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi)
+        return mean, stddevs
 
     def _check_imt(self, imt):
         """
@@ -515,26 +530,6 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        :returns: mean and stddevs by calling the underlying .compute method
-        """
-        N = len(sites)
-        mean = numpy.zeros((1, N))
-        sig = numpy.zeros((1, N))
-        tau = numpy.zeros((1, N))
-        phi = numpy.zeros((1, N))
-        self.compute(rup, [imt], mean, sig, tau, phi)
-        stddevs = []
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sig)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-        return mean, stddevs
-
     def set_parameters(self):
         """
         Combines the parameters of the GMPE provided at the construction level
@@ -548,6 +543,11 @@ class GMPE(GroundShakingIntensityModel):
                 pass
             else:
                 setattr(self, key, val)
+
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        """
+        To be overridden in subclasses.
+        """
 
     def get_poes(self, mean_std, cmaker, ctxs=()):
         """

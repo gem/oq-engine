@@ -30,10 +30,14 @@ try:
 
     def jittable(func):
         """Calls numba.njit with a cache"""
-        return njit(func, cache=True)
+        jitfunc = njit(func, cache=True)
+        jitfunc.jittable = True
+        return jitfunc
+
 except ImportError:
     def jittable(func):
         """Do nothing decorator, used if numba is missing"""
+        func.jittable = True
         return func
 
 from openquake.baselib.general import humansize

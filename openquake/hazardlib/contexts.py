@@ -241,25 +241,23 @@ class ContextMaker(object):
         out = numpy.zeros((G, 4, M, 1))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
-            if hasattr(gsim, 'compute'):
+            if hasattr(gsim.compute, 'jittable'):
                 self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
-                if numba:
-                    ctx = numpy.ones(1, gsim.ctx_builder.dtype).view(
-                        numpy.recarray)
-                else:
-                    ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
-                gsim.__class__.compute(fake, ctx, self.imts, *out[g])
+                rctx = numpy.ones(1, gsim.ctx_builder.dtype).view(
+                    numpy.recarray)
+                gsim.__class__.compute(fake, rctx, self.imts, *out[g])
 
     def gen_triples(self, gsim, ctxs):
         """
         Yield triples ctx, fake, slice for each context
         """
-        fake = self.fake[gsim]
+        fake = self.fake.get(gsim, gsim)
         start = 0
+        jittable = getattr(gsim.compute, 'jittable', False)
         for ctx in ctxs:
             n = ctx.size()
-            if numba:
-                new = gsim.ctx_builder.zeros(n)
+            if jittable:
+                new = gsim.ctx_builder.zeros(n).view(numpy.recarray)
                 for name in gsim.ctx_builder.names:
                     new[name] = getattr(ctx, name)
             else:
@@ -304,6 +302,7 @@ class ContextMaker(object):
         for par in self.REQUIRES_DISTANCES:
             dists = [getattr(ctx, par)[0] for ctx in ctxs]
             setattr(ctx, par, numpy.array(dists))
+        ctx.sids = numpy.concatenate([ctx.sids for ctx in ctxs])
         ctx.ctxs = ctxs
         return ctx
 
@@ -560,15 +559,15 @@ class ContextMaker(object):
                 stypes = (stdtype,)
             S = len(stypes)
             arr = numpy.zeros((1 + S, N, M))
-            gcls = gsim.__class__
-            calc_ms = getattr(gcls, 'compute', None)
-            if calc_ms:  # fast lane
-                if all(len(ctx) == 1 for ctx in ctxs):
+            compute = gsim.__class__.__dict__.get('compute')
+            if compute:  # fast lane
+                if getattr(compute, 'jittable', False) and all(
+                        len(ctx) == 1 for ctx in ctxs):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
                 outs = numpy.zeros((4, M, N))
-                for ctx, fake, slc in self.gen_triples(gsim, ctxs):
-                    calc_ms(fake, ctx, self.imts, *outs[:, :, slc])
+                for ctx, gsim, slc in self.gen_triples(gsim, ctxs):
+                    compute(gsim, ctx, self.imts, *outs[:, :, slc])
                 arr[0] = outs[0].T
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
@@ -966,14 +965,14 @@ class RuptureContext(BaseContext):
         of magnitudes and it refers to a single site, returns the size of
         the array, otherwise returns 1.
         """
-        nsites = len(self.rjb)
+        nsites = len(self.sids)
         if nsites == 1 and isinstance(self.mag, numpy.ndarray):
             return len(self.mag)
         return nsites
 
     # used in acme_2019
     def __len__(self):
-        return len(self.sites)
+        return len(self.sids)
 
     def roundup(self, minimum_distance):
         """
