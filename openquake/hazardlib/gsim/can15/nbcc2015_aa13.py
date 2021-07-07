@@ -7,7 +7,7 @@ import io
 import os
 import numpy as np
 from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, _return_tables, _get_mean)
+    GMPETable, _return_tables, _get_mean, _get_stddevs)
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -160,7 +160,7 @@ class NBCC2015_AA13(GMPETable):
         dists = self.distances[:, 0, idx - 1]
         # Get mean and standard deviations
         mean = np.log(_get_mean(self, imls, dctx, dists))
-        stddevs = self._get_stddevs(dists, rctx.mag, dctx, imt, stddev_types)
+        stddevs = _get_stddevs(self, dists, rctx.mag, dctx, imt, stddev_types)
         amplification = site_term(self, sctx, rctx, dctx, dists, imt,
                                   stddev_types)
         mean += amplification
