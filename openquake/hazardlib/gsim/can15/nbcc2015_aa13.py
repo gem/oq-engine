@@ -6,7 +6,8 @@ Module exports :class:`NBCC2015_AA13`
 import io
 import os
 import numpy as np
-from openquake.hazardlib.gsim.gmpe_table import GMPETable, _return_tables
+from openquake.hazardlib.gsim.gmpe_table import (
+    GMPETable, _return_tables, _get_mean, _get_stddevs)
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -78,10 +79,10 @@ def site_term(self, sctx, rctx, dctx, dists, imt, stddev_types):
     Assume PGA_760 = 0.1g for Vs30 > 450 m/s. Also need to correct PGA at
     site class C to 760 m/s. Cap PGA_450 at 0.1 - 0.5g.
     """
-    imls_pga = _return_tables(rctx.mag, PGA(), "IMLs")
-    PGA450 = self._get_mean(imls_pga, dctx, dists)
-    imls_SA02 = _return_tables(rctx.mag, SA(0.2), "IMLs")
-    SA02 = self._get_mean(imls_SA02, dctx, dists)
+    imls_pga = _return_tables(self, rctx.mag, PGA(), "IMLs")
+    PGA450 = _get_mean(self.kind, self.distance_type, imls_pga, dctx, dists)
+    imls_SA02 = _return_tables(self, rctx.mag, SA(0.2), "IMLs")
+    SA02 = _get_mean(self.kind, self.distance_type, imls_SA02, dctx, dists)
 
     PGA450[SA02 / PGA450 < 2.0] = PGA450[SA02 / PGA450 < 2.0] * 0.8
 
@@ -158,8 +159,9 @@ class NBCC2015_AA13(GMPETable):
         idx = np.searchsorted(self.m_w, rctx.mag)
         dists = self.distances[:, 0, idx - 1]
         # Get mean and standard deviations
-        mean = np.log(self._get_mean(imls, dctx, dists))
-        stddevs = self._get_stddevs(dists, rctx.mag, dctx, imt, stddev_types)
+        mean = np.log(_get_mean(
+            self.kind, self.distance_type, imls, dctx, dists))
+        stddevs = _get_stddevs(self, dists, rctx.mag, dctx, imt, stddev_types)
         amplification = site_term(self, sctx, rctx, dctx, dists, imt,
                                   stddev_types)
         mean += amplification
