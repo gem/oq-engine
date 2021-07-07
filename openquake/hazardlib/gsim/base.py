@@ -398,7 +398,8 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def get_poes(self, mean_std, cmaker):
+    # the ctxs are used in avg_poe_gmpe
+    def get_poes(self, mean_std, cmaker, ctxs=()):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
