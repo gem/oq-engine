@@ -29,6 +29,7 @@ from scipy.special import ndtr
 from scipy.stats import norm
 
 from openquake.baselib.general import DeprecationWarning
+from openquake.baselib.performance import compile
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
@@ -74,16 +75,26 @@ class AdaptedWarning(UserWarning):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then _get_poes will be called less times
-def _get_poes(mean_std, loglevels, truncation_level):
-    out = numpy.zeros((mean_std.shape[1], loglevels.size))  # shape (N, L)
-    lvl = 0
-    for m, imt in enumerate(loglevels):
-        for iml in loglevels[imt]:
-            if truncation_level == 0:  # just compare imls to mean
-                out[:, lvl] = iml <= mean_std[0, :, m]
+
+
+@compile("float64[:, :](float64[:, :, :], float64[:], float64, int64)")
+def _get_out(mean_std, levels, truncation_level, L1):
+    N = mean_std.shape[1]
+    L = len(levels)
+    out = numpy.zeros((N, L))
+    for lvl in range(L):
+        m = lvl // L1
+        iml = levels[lvl]
+        for s in range(N):
+            if truncation_level == 0.:  # just compare imls to mean
+                out[s, lvl] = iml <= mean_std[0, s, m]
             else:
-                out[:, lvl] = (iml - mean_std[0, :, m]) / mean_std[1, :, m]
-            lvl += 1
+                out[s, lvl] = (iml - mean_std[0, s, m]) / mean_std[1, s, m]
+    return out
+
+
+def _get_poes(mean_std, loglevels, truncation_level):
+    out = _get_out(mean_std, loglevels.array, truncation_level, loglevels.L1)
     return _truncnorm_sf(truncation_level, out)
 
 
