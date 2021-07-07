@@ -241,7 +241,7 @@ class ContextMaker(object):
         out = numpy.zeros((G, 4, M, 1))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
-            if hasattr(gsim.compute, 'jittable'):
+            if getattr(gsim.compute, 'jittable', False):
                 self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
                 rctx = numpy.ones(1, gsim.ctx_builder.dtype).view(
                     numpy.recarray)
