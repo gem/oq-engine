@@ -392,7 +392,7 @@ class Amplifier(object):
                 gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt))
 
 
-def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
+def get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
     """
     NOTE: this works for a single site
 

@@ -398,7 +398,7 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def get_poes(self, mean_std, cmaker, ctxs=()):
+    def get_poes(self, mean_std, cmaker):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -418,7 +418,6 @@ class GMPE(GroundShakingIntensityModel):
             float number, and if ``imts`` dictionary contain wrong or
             unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
-        af = cmaker.af
         loglevels = cmaker.loglevels
         trunclevel = cmaker.trunclevel
         if trunclevel is not None and trunclevel < 0:
@@ -434,16 +433,14 @@ class GMPE(GroundShakingIntensityModel):
                 outs.append(_get_poes(ms, loglevels, trunclevel))
             arr = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
-            shp = list(mean_std[0].shape)  # (N, M)
-            shp[1] = loglevels.size  # L
+            N = mean_std.shape[2]  # 2, M, N
+            shp = (N, loglevels.size)  # L
             arr = numpy.zeros(shp)
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):
                 mean_stdi = numpy.array(mean_std)  # a copy
                 mean_stdi[1] *= f  # multiply stddev by factor
                 arr += w * _get_poes(mean_stdi, loglevels, trunclevel)
-        elif af:  # kernel amplification function
-            arr = _get_poes_site(mean_std, loglevels, trunclevel, af, ctxs)
         else:  # regular case
             arr = _get_poes(mean_std, loglevels, trunclevel)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None

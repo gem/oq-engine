@@ -595,6 +595,7 @@ class ContextMaker(object):
         :param ctxs: a list of C context objects
         :yields: poes of shape (N, L, G)
         """
+        from openquake.hazardlib.site_amplification import get_poes_site
         nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
         N = nsites.sum()
         poes = numpy.zeros((N, self.loglevels.size, len(self.gsims)))
@@ -603,7 +604,12 @@ class ContextMaker(object):
         with self.poe_mon:
             for g, gsim in enumerate(self.gsims):
                 # builds poes of shape (N, L, G)
-                poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
+                if self.af:  # kernel amplification method
+                    poes[:, :, g] = get_poes_site(
+                        mean_stdt[g], self.loglevels, self.trunclevel,
+                        self.af, ctxs)
+                else:  # regular case
+                    poes[:, :, g] = gsim.get_poes(mean_stdt[g], self)
         s = 0
         for ctx, n in zip(ctxs, nsites):
             yield poes[s:s+n]
