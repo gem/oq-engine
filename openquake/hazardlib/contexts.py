@@ -609,7 +609,11 @@ class ContextMaker(object):
                         mean_stdt[g], self.loglevels, self.trunclevel,
                         self.af, ctxs)
                 else:  # regular case
-                    poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
+                    for m, imt in enumerate(self.loglevels):
+                        slc = self.loglevels(imt)
+                        levels = self.loglevels.array[slc]
+                        poes[:, slc, g] = gsim.get_poes(
+                            mean_stdt[g][:, m], self, imt, ctxs)
         s = 0
         for ctx, n in zip(ctxs, nsites):
             yield poes[s:s+n]

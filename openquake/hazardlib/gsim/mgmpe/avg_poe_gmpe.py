@@ -103,7 +103,7 @@ class AvgPoeGMPE(GMPE):
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """Do nothing: the work is done in get_poes"""
 
-    def get_poes(self, mean_std, cmaker, ctxs):
+    def get_poes(self, mean_std, cmaker, imt, ctxs):
         """
         :returns: an array of shape (N, L)
         """
