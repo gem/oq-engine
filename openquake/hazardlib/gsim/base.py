@@ -512,15 +512,6 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def open(self, fname_or_file):
-        """
-        :param fname_or_file: filename or filelike object
-        :returns: the file object
-        """
-        if hasattr(fname_or_file, 'read'):
-            return fname_or_file
-        return open(fname_or_file, 'rb')
-
     def set_parameters(self):
         """
         Combines the parameters of the GMPE provided at the construction level

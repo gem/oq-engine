@@ -24,7 +24,8 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
+from openquake.hazardlib.gsim.gmpe_table import (
+    GMPETable, _return_tables, _get_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -455,6 +456,116 @@ def get_nonlinear_stddev(C_NL, vs30):
     return sigma_f2
 
 
+def get_hard_rock_mean(self, rctx, dctx, imt, stddev_types):
+    """
+    Returns the mean and standard deviations for the reference very hard
+    rock condition (Vs30 = 3000 m/s)
+    """
+    # Return Distance Tables
+    imls = _return_tables(self, rctx.mag, imt, "IMLs")
+    # Get distance vector for the given magnitude
+    idx = np.searchsorted(self.m_w, rctx.mag)
+    dists = self.distances[:, 0, idx - 1]
+    # Get mean and standard deviations
+    mean = _get_mean(self.kind, self.distance_type, imls, dctx, dists)
+    return np.log(mean)
+
+
+def get_site_amplification(self, imt, pga_r, sites):
+    """
+    Returns the sum of the linear (Stewart et al., 2019) and non-linear
+    (Hashash et al., 2019) amplification terms
+    """
+    # Get the coefficients for the IMT
+    C_LIN = self.COEFFS_LINEAR[imt]
+    C_F760 = self.COEFFS_F760[imt]
+    C_NL = self.COEFFS_NONLINEAR[imt]
+    if str(imt).startswith("PGA"):
+        period = 0.01
+    elif str(imt).startswith("PGV"):
+        period = 0.5
+    else:
+        period = imt.period
+    # Get f760
+    f760 = _get_f760(C_F760, sites.vs30, self.CONSTANTS)
+    # Get the linear amplification factor
+    f_lin = _get_fv(C_LIN, sites, f760, self.CONSTANTS)
+    # Get the nonlinear amplification from Hashash et al., (2017)
+    f_nl, f_rk = get_fnl(C_NL, pga_r, sites.vs30, period)
+    # Mean amplification
+    ampl = f_lin + f_nl
+
+    # If an epistemic uncertainty is required then retrieve the epistemic
+    # sigma of both models and multiply by the input epsilon
+    if self.site_epsilon:
+        site_epistemic = get_site_amplification_sigma(
+            self, sites, f_rk, C_LIN, C_F760, C_NL)
+        ampl += self.site_epsilon * site_epistemic
+    return ampl
+
+
+def get_site_amplification_sigma(self, sites, f_rk, C_LIN, C_F760, C_NL):
+    """
+    Returns the epistemic uncertainty on the site amplification factor
+    """
+    # In the case of the linear model sigma_f760 and sigma_fv are
+    # assumed independent and the resulting sigma_flin is the root
+    # sum of squares (SRSS)
+    f760_stddev = _get_f760(C_F760, sites.vs30,
+                            self.CONSTANTS, is_stddev=True)
+    f_lin_stddev = np.sqrt(
+        f760_stddev ** 2. +
+        get_linear_stddev(C_LIN, sites.vs30, self.CONSTANTS) ** 2)
+    # Likewise, the epistemic uncertainty on the linear and nonlinear
+    # model are assumed independent and the SRSS is taken
+    f_nl_stddev = get_nonlinear_stddev(C_NL, sites.vs30) * f_rk
+    return np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
+
+
+def get_stddevs(self, mag, imt, stddev_types, num_sites):
+    """
+    Returns the standard deviations for either the ergodic or
+    non-ergodic models
+    """
+    stddevs = []
+    if self.__class__.__name__.endswith('TotalSigma'):
+        for stddev_type in stddev_types:
+            if stddev_type == const.StdDev.TOTAL:
+                sigma = _get_total_sigma(self, imt, mag)
+                stddevs.append(sigma + np.zeros(num_sites))
+        return stddevs
+    # else compute all stddevs
+    tau = _get_tau(self, imt, mag)
+    phi = _get_phi(self, imt, mag)
+    sigma = np.sqrt(tau ** 2. + phi ** 2.)
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(sigma + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau + np.zeros(num_sites))
+    return stddevs
+
+
+def _get_tau(self, imt, mag):
+    """
+    Returns the inter-event standard deviation (tau)
+    """
+    return TAU_EXECUTION[self.tau_model](imt, mag, self.TAU)
+
+
+def _get_phi(self, imt, mag):
+    """
+    Returns the within-event standard deviation (phi)
+    """
+    phi = get_phi_ss(imt, mag, self.PHI_SS)
+    if self.ergodic:
+        C = self.PHI_S2SS[imt]
+        phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
+    return phi
+
+
 class NGAEastGMPE(GMPETable):
     """
     A generalised base class for the implementation of a GMPE in which the
@@ -536,6 +647,8 @@ class NGAEastGMPE(GMPETable):
     # Requires Vs30 only - common to all models
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
+    kind = "nga_east"
+
     def __init__(self, **kwargs):
         """
         Instantiates the class with additional terms controlling which
@@ -571,7 +684,20 @@ class NGAEastGMPE(GMPETable):
         self.tau_quantile = kwargs.get('tau_quantile')
         self.phi_ss_quantile = kwargs.get('phi_ss_quantile')
         self.phi_s2ss_quantile = kwargs.get('phi_s2ss_quantile')
-        self._setup_standard_deviations(fle=None)
+        if self.kind != 'usgs':
+            # setup tau
+            self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
+                                           TAU_SETUP[self.tau_model]["STD"],
+                                           self.tau_quantile)
+            # setup phi
+            self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
+                                                 self.phi_ss_quantile)
+            # if required setup phis2ss
+            if self.ergodic:
+                self.PHI_S2SS = get_phi_s2ss_at_quantile(
+                    PHI_S2SS_MODEL[self.phi_s2ss_model],
+                    self.phi_s2ss_quantile)
+
         self.site_epsilon = kwargs.get('site_epsilon')
         fname = kwargs['gmpe_table']
         if not isinstance(fname, io.BytesIO):  # real path name
@@ -579,20 +705,6 @@ class NGAEastGMPE(GMPETable):
                 self.PATH, os.path.basename(fname))
             assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
         super().__init__(**kwargs)
-
-    def _setup_standard_deviations(self, fle):
-        # setup tau
-        self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
-                                       TAU_SETUP[self.tau_model]["STD"],
-                                       self.tau_quantile)
-        # setup phi
-        self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
-                                             self.phi_ss_quantile)
-        # if required setup phis2ss
-        if self.ergodic:
-            self.PHI_S2SS = get_phi_s2ss_at_quantile(
-                PHI_S2SS_MODEL[self.phi_s2ss_model],
-                self.phi_s2ss_quantile)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
@@ -603,121 +715,22 @@ class NGAEastGMPE(GMPETable):
             rock_imt = PGA()
         else:
             rock_imt = SA(0.01)
-        pga_r = self.get_hard_rock_mean(rctx, dctx, rock_imt, stddev_types)
+        pga_r = get_hard_rock_mean(self, rctx, dctx, rock_imt, stddev_types)
 
         # Get the desired spectral acceleration on rock
         if imt.string != "PGA":
             # Calculate the ground motion at required spectral period for
             # the reference rock
-            mean = self.get_hard_rock_mean(rctx, dctx, imt, stddev_types)
+            mean = get_hard_rock_mean(self, rctx, dctx, imt, stddev_types)
         else:
             # Avoid re-calculating PGA if that was already done!
             mean = np.copy(pga_r)
 
-        mean += self.get_site_amplification(imt, np.exp(pga_r), sctx)
+        mean += get_site_amplification(self, imt, np.exp(pga_r), sctx)
         # Get standard deviation model
         nsites = getattr(dctx, self.distance_type).shape
-        stddevs = self.get_stddevs(rctx.mag, imt, stddev_types, nsites)
+        stddevs = get_stddevs(self, rctx.mag, imt, stddev_types, nsites)
         return mean, stddevs
-
-    def get_hard_rock_mean(self, rctx, dctx, imt, stddev_types):
-        """
-        Returns the mean and standard deviations for the reference very hard
-        rock condition (Vs30 = 3000 m/s)
-        """
-        # Return Distance Tables
-        imls = self._return_tables(rctx.mag, imt, "IMLs")
-        # Get distance vector for the given magnitude
-        idx = np.searchsorted(self.m_w, rctx.mag)
-        dists = self.distances[:, 0, idx - 1]
-        # Get mean and standard deviations
-        mean = self._get_mean(imls, dctx, dists)
-        return np.log(mean)
-
-    def get_site_amplification(self, imt, pga_r, sites):
-        """
-        Returns the sum of the linear (Stewart et al., 2019) and non-linear
-        (Hashash et al., 2019) amplification terms
-        """
-        # Get the coefficients for the IMT
-        C_LIN = self.COEFFS_LINEAR[imt]
-        C_F760 = self.COEFFS_F760[imt]
-        C_NL = self.COEFFS_NONLINEAR[imt]
-        if str(imt).startswith("PGA"):
-            period = 0.01
-        elif str(imt).startswith("PGV"):
-            period = 0.5
-        else:
-            period = imt.period
-        # Get f760
-        f760 = _get_f760(C_F760, sites.vs30, self.CONSTANTS)
-        # Get the linear amplification factor
-        f_lin = _get_fv(C_LIN, sites, f760, self.CONSTANTS)
-        # Get the nonlinear amplification from Hashash et al., (2017)
-        f_nl, f_rk = get_fnl(C_NL, pga_r, sites.vs30, period)
-        # Mean amplification
-        ampl = f_lin + f_nl
-
-        # If an epistemic uncertainty is required then retrieve the epistemic
-        # sigma of both models and multiply by the input epsilon
-        if self.site_epsilon:
-            site_epistemic = self.get_site_amplification_sigma(sites, f_rk,
-                                                               C_LIN, C_F760,
-                                                               C_NL)
-            ampl += (self.site_epsilon * site_epistemic)
-        return ampl
-
-    def get_site_amplification_sigma(self, sites, f_rk, C_LIN, C_F760, C_NL):
-        """
-        Returns the epistemic uncertainty on the site amplification factor
-        """
-        # In the case of the linear model sigma_f760 and sigma_fv are
-        # assumed independent and the resulting sigma_flin is the root
-        # sum of squares (SRSS)
-        f760_stddev = _get_f760(C_F760, sites.vs30,
-                                self.CONSTANTS, is_stddev=True)
-        f_lin_stddev = np.sqrt(
-            f760_stddev ** 2. +
-            get_linear_stddev(C_LIN, sites.vs30, self.CONSTANTS) ** 2)
-        # Likewise, the epistemic uncertainty on the linear and nonlinear
-        # model are assumed independent and the SRSS is taken
-        f_nl_stddev = get_nonlinear_stddev(C_NL, sites.vs30) * f_rk
-        return np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
-
-    def get_stddevs(self, mag, imt, stddev_types, num_sites):
-        """
-        Returns the standard deviations for either the ergodic or
-        non-ergodic models
-        """
-        tau = self._get_tau(imt, mag)
-        phi = self._get_phi(imt, mag)
-        sigma = np.sqrt(tau ** 2. + phi ** 2.)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sigma + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
-        return stddevs
-
-    def _get_tau(self, imt, mag):
-        """
-        Returns the inter-event standard deviation (tau)
-        """
-        return TAU_EXECUTION[self.tau_model](imt, mag, self.TAU)
-
-    def _get_phi(self, imt, mag):
-        """
-        Returns the within-event standard deviation (phi)
-        """
-        phi = get_phi_ss(imt, mag, self.PHI_SS)
-        if self.ergodic:
-            C = self.PHI_S2SS[imt]
-            phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
-        return phi
 
     # Seven constants: vref, vL, vU, vw1, vw2, wt1 and wt2
     CONSTANTS = {"vref": 760., "vL": 200., "vU": 2000.0,
@@ -819,8 +832,124 @@ MAG_LIMS_KEYS = {
     "cena": {"mag": [5.0, 5.5, 6.5], "keys": ["tau1", "tau2", "tau3"]},
     "cena_constant": {"mag": [np.inf], "keys": ["tau"]},
     "global": {"mag": [4.5, 5.0, 5.5, 6.5],
-               "keys": ["tau1", "tau2", "tau3", "tau4"]}
-}
+               "keys": ["tau1", "tau2", "tau3", "tau4"]}}
+
+
+def _get_sigma_at_quantile(self, sigma_quantile):
+    """
+    Calculates the total standard deviation at the specified quantile
+    """
+    # Mean mean is found in self.TAU. Get the variance in tau
+    tau_std = TAU_SETUP[self.tau_model]["STD"]
+    # Mean phiss is found in self.PHI_SS. Get the variance in phi
+    phi_std = deepcopy(self.PHI_SS.sa_coeffs)
+    phi_std.update(self.PHI_SS.non_sa_coeffs)
+    for key in phi_std:
+        phi_std[key] = {"a": PHI_SETUP[self.phi_model][key]["var_a"],
+                        "b": PHI_SETUP[self.phi_model][key]["var_b"]}
+    if self.ergodic:
+        # IMT list should be taken from the PHI_S2SS_MODEL
+        imt_list = list(
+            PHI_S2SS_MODEL[self.phi_s2ss_model].non_sa_coeffs)
+        imt_list += list(PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs)
+    else:
+        imt_list = list(phi_std)
+    phi_std = CoeffsTable.fromdict(phi_std)
+    tau_bar, tau_std = _get_tau_vector(self, self.TAU, tau_std, imt_list)
+    phi_bar, phi_std = _get_phi_vector(self, self.PHI_SS, phi_std, imt_list)
+    sigma = {}
+    # Calculate the total standard deviation
+    for imt in imt_list:
+        sigma[imt] = {}
+        for i, key in enumerate(self.tau_keys):
+            # Calculates the expected standard deviation
+            sigma_bar = np.sqrt(tau_bar[imt][i] ** 2. +
+                                phi_bar[imt][i] ** 2.)
+            # Calculated the variance in the standard deviation
+            sigma_std = np.sqrt(tau_std[imt][i] ** 2. +
+                                phi_std[imt][i] ** 2.)
+            # The keys swap from tau to sigma
+            new_key = key.replace("tau", "sigma")
+            if sigma_quantile is not None:
+                sigma[imt][new_key] = _at_percentile(
+                    sigma_bar, sigma_std, sigma_quantile)
+            else:
+                sigma[imt][new_key] = sigma_bar
+            self.tau_keys[i] = new_key
+    self.SIGMA = CoeffsTable.fromdict(sigma)
+
+
+def _get_tau_vector(self, tau_mean, tau_std, imt_list):
+    """
+    Gets the vector of mean and variance of tau values corresponding to
+    the specific model and returns them as dictionaries
+    """
+    self.magnitude_limits = MAG_LIMS_KEYS[self.tau_model]["mag"]
+    self.tau_keys = MAG_LIMS_KEYS[self.tau_model]["keys"]
+    t_bar = {}
+    t_std = {}
+    for imt in imt_list:
+        t_bar[imt] = []
+        t_std[imt] = []
+        for mag, key in zip(self.magnitude_limits, self.tau_keys):
+            t_bar[imt].append(
+                TAU_EXECUTION[self.tau_model](imt, mag, tau_mean))
+            t_std[imt].append(
+                TAU_EXECUTION[self.tau_model](imt, mag, tau_std))
+    return t_bar, t_std
+
+
+def _get_phi_vector(self, phi_mean, phi_std, imt_list):
+    """
+    Gets the vector of mean and variance of phi values corresponding to
+    the specific model and returns them as dictionaries
+    """
+    p_bar = {}
+    p_std = {}
+    for imt in imt_list:
+        p_bar[imt] = []
+        p_std[imt] = []
+        for mag in self.magnitude_limits:
+            phi_ss_mean = get_phi_ss(imt, mag, phi_mean)
+            phi_ss_std = get_phi_ss(imt, mag, phi_std)
+            if self.ergodic:
+                # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
+                # of Al Atik (2015)
+                phi_ss_mean = np.sqrt(
+                    phi_ss_mean ** 2. +
+                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.
+                    )
+                phi_ss_std = np.sqrt(
+                    phi_ss_std ** 2. +
+                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.
+                    )
+            p_bar[imt].append(phi_ss_mean)
+            p_std[imt].append(phi_ss_std)
+    return p_bar, p_std
+
+
+def _get_total_sigma(self, imt, mag):
+    """
+    Returns the estimated total standard deviation for a given intensity
+    measure type and magnitude
+    """
+    C = self.SIGMA[imt]
+    if mag <= self.magnitude_limits[0]:
+        # The CENA constant model is always returned here
+        return C[self.tau_keys[0]]
+    elif mag > self.magnitude_limits[-1]:
+        return C[self.tau_keys[-1]]
+    else:
+        # Needs interpolation
+        for i in range(len(self.tau_keys) - 1):
+            l_m = self.magnitude_limits[i]
+            u_m = self.magnitude_limits[i + 1]
+            if mag > l_m and mag <= u_m:
+                return ITPL(mag,
+                            C[self.tau_keys[i + 1]],
+                            C[self.tau_keys[i]],
+                            l_m,
+                            u_m - l_m)
 
 
 class NGAEastGMPETotalSigma(NGAEastGMPE):
@@ -865,133 +994,7 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
         self.SIGMA = None
         self.magnitude_limits = []
         self.tau_keys = []
-        self._get_sigma_at_quantile(kwargs.get('sigma_quantile'))
-
-    def get_stddevs(self, mag, imt, stddev_types, num_sites):
-        """
-        Returns the total standard deviation
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma = self._get_total_sigma(imt, mag)
-                stddevs.append(sigma + np.zeros(num_sites))
-        return stddevs
-
-    def _get_sigma_at_quantile(self, sigma_quantile):
-        """
-        Calculates the total standard deviation at the specified quantile
-        """
-        # Mean mean is found in self.TAU. Get the variance in tau
-        tau_std = TAU_SETUP[self.tau_model]["STD"]
-        # Mean phiss is found in self.PHI_SS. Get the variance in phi
-        phi_std = deepcopy(self.PHI_SS.sa_coeffs)
-        phi_std.update(self.PHI_SS.non_sa_coeffs)
-        for key in phi_std:
-            phi_std[key] = {"a": PHI_SETUP[self.phi_model][key]["var_a"],
-                            "b": PHI_SETUP[self.phi_model][key]["var_b"]}
-        if self.ergodic:
-            # IMT list should be taken from the PHI_S2SS_MODEL
-            imt_list = list(
-                PHI_S2SS_MODEL[self.phi_s2ss_model].non_sa_coeffs)
-            imt_list += list(PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs)
-        else:
-            imt_list = list(phi_std)
-        phi_std = CoeffsTable.fromdict(phi_std)
-        tau_bar, tau_std = self._get_tau_vector(self.TAU, tau_std, imt_list)
-        phi_bar, phi_std = self._get_phi_vector(self.PHI_SS, phi_std, imt_list)
-        sigma = {}
-        # Calculate the total standard deviation
-        for imt in imt_list:
-            sigma[imt] = {}
-            for i, key in enumerate(self.tau_keys):
-                # Calculates the expected standard deviation
-                sigma_bar = np.sqrt(tau_bar[imt][i] ** 2. +
-                                    phi_bar[imt][i] ** 2.)
-                # Calculated the variance in the standard deviation
-                sigma_std = np.sqrt(tau_std[imt][i] ** 2. +
-                                    phi_std[imt][i] ** 2.)
-                # The keys swap from tau to sigma
-                new_key = key.replace("tau", "sigma")
-                if sigma_quantile is not None:
-                    sigma[imt][new_key] = _at_percentile(
-                        sigma_bar, sigma_std, sigma_quantile)
-                else:
-                    sigma[imt][new_key] = sigma_bar
-                self.tau_keys[i] = new_key
-        self.SIGMA = CoeffsTable.fromdict(sigma)
-
-    def _get_tau_vector(self, tau_mean, tau_std, imt_list):
-        """
-        Gets the vector of mean and variance of tau values corresponding to
-        the specific model and returns them as dictionaries
-        """
-        self.magnitude_limits = MAG_LIMS_KEYS[self.tau_model]["mag"]
-        self.tau_keys = MAG_LIMS_KEYS[self.tau_model]["keys"]
-        t_bar = {}
-        t_std = {}
-        for imt in imt_list:
-            t_bar[imt] = []
-            t_std[imt] = []
-            for mag, key in zip(self.magnitude_limits, self.tau_keys):
-                t_bar[imt].append(
-                    TAU_EXECUTION[self.tau_model](imt, mag, tau_mean))
-                t_std[imt].append(
-                    TAU_EXECUTION[self.tau_model](imt, mag, tau_std))
-        return t_bar, t_std
-
-    def _get_phi_vector(self, phi_mean, phi_std, imt_list):
-        """
-        Gets the vector of mean and variance of phi values corresponding to
-        the specific model and returns them as dictionaries
-        """
-        p_bar = {}
-        p_std = {}
-
-        for imt in imt_list:
-            p_bar[imt] = []
-            p_std[imt] = []
-            for mag in self.magnitude_limits:
-                phi_ss_mean = get_phi_ss(imt, mag, phi_mean)
-                phi_ss_std = get_phi_ss(imt, mag, phi_std)
-                if self.ergodic:
-                    # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
-                    # of Al Atik (2015)
-                    phi_ss_mean = np.sqrt(
-                        phi_ss_mean ** 2. +
-                        PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.
-                        )
-                    phi_ss_std = np.sqrt(
-                        phi_ss_std ** 2. +
-                        PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.
-                        )
-                p_bar[imt].append(phi_ss_mean)
-                p_std[imt].append(phi_ss_std)
-        return p_bar, p_std
-
-    def _get_total_sigma(self, imt, mag):
-        """
-        Returns the estimated total standard deviation for a given intensity
-        measure type and magnitude
-        """
-        C = self.SIGMA[imt]
-        if mag <= self.magnitude_limits[0]:
-            # The CENA constant model is always returned here
-            return C[self.tau_keys[0]]
-        elif mag > self.magnitude_limits[-1]:
-            return C[self.tau_keys[-1]]
-        else:
-            # Needs interpolation
-            for i in range(len(self.tau_keys) - 1):
-                l_m = self.magnitude_limits[i]
-                u_m = self.magnitude_limits[i + 1]
-                if mag > l_m and mag <= u_m:
-                    return ITPL(mag,
-                                C[self.tau_keys[i + 1]],
-                                C[self.tau_keys[i]],
-                                l_m,
-                                u_m - l_m)
+        _get_sigma_at_quantile(self, kwargs.get('sigma_quantile'))
 
 
 # populate gsim_aliases for the NGA East GMPEs

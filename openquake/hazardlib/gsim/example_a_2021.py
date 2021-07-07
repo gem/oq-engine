@@ -65,7 +65,7 @@ class ExampleA2021(GMPE):
     """)
 
     @jittable
-    def calc_all(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         mag, rjb = ctx.mag, ctx.rjb
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
