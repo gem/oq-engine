@@ -82,7 +82,7 @@ def _get_delta(mean_std, levels, truncation_level, L1):
     """
     Compute (iml - mean) / std for each level
     """
-    N = mean_std.shape[1]
+    N = mean_std.shape[2]  # shape (2, M, N)
     L = len(levels)
     out = numpy.zeros((N, L))
     for lvl in range(L):
@@ -90,9 +90,9 @@ def _get_delta(mean_std, levels, truncation_level, L1):
         iml = levels[lvl]
         for s in range(N):
             if truncation_level == 0.:  # just compare imls to mean
-                out[s, lvl] = iml <= mean_std[0, s, m]
+                out[s, lvl] = iml <= mean_std[0, m, s]
             else:
-                out[s, lvl] = (iml - mean_std[0, s, m]) / mean_std[1, s, m]
+                out[s, lvl] = (iml - mean_std[0, m, s]) / mean_std[1, m, s]
     return out
 
 
@@ -163,11 +163,11 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
             # Set the arguments of the truncated normal distribution
             # function
             if truncation_level == 0:
-                out_l = iml_l <= mean[:, m]
-                out_u = iml_u <= mean[:, m]
+                out_l = iml_l <= mean[m]
+                out_u = iml_u <= mean[m]
             else:
-                out_l = (iml_l - mean[:, m]) / stddev[:, m]
-                out_u = (iml_u - mean[:, m]) / stddev[:, m]
+                out_l = (iml_l - mean[m]) / stddev[m]
+                out_u = (iml_u - mean[m]) / stddev[m]
 
             # Probability of occurrence on rock
             pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
@@ -556,7 +556,7 @@ class GMPE(GroundShakingIntensityModel):
         for one or more pairs "site -- rupture".
 
         :param mean_std:
-            An array of shape (2, N, M) with mean and standard deviations
+            An array of shape (2, M, N) with mean and standard deviations
             for the sites and intensity measure types
         :param cmaker:
             A ContextMaker instance
@@ -581,7 +581,7 @@ class GMPE(GroundShakingIntensityModel):
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, :, m] += s * self.adjustment
+                    ms[0, m] += s * self.adjustment
                 outs.append(_get_poes(ms, loglevels, trunclevel))
             arr = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):

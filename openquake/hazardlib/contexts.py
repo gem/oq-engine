@@ -541,7 +541,7 @@ class ContextMaker(object):
         """
         :param ctxs: a list of contexts
         :param stdtype: a standard deviation type
-        :returns: a list of G arrays of shape (O, N, M) with mean and stddevs
+        :returns: a list of G arrays of shape (O, M, N) with mean and stddevs
         """
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
@@ -558,7 +558,7 @@ class ContextMaker(object):
             else:
                 stypes = (stdtype,)
             S = len(stypes)
-            arr = numpy.zeros((1 + S, N, M))
+            arr = numpy.zeros((1 + S, M, N))
             gcls = gsim.__class__
             calc_ms = getattr(gcls, 'compute', None)
             if calc_ms:  # fast lane
@@ -568,14 +568,14 @@ class ContextMaker(object):
                 outs = numpy.zeros((4, M, N))
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
                     calc_ms(fake, ctx, self.imts, *outs[:, :, slc])
-                arr[0] = outs[0].T
+                arr[0] = outs[0]
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
-                        arr[s] = outs[1].T
+                        arr[s] = outs[1]
                     elif stype == StdDev.INTER_EVENT:
-                        arr[s] = outs[2].T
+                        arr[s] = outs[2]
                     elif stype == StdDev.INTRA_EVENT:
-                        arr[s] = outs[3].T
+                        arr[s] = outs[3]
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:
@@ -583,9 +583,9 @@ class ContextMaker(object):
                     for m, imt in enumerate(self.imts):
                         mean, stds = gsim.get_mean_and_stddevs(
                             ctx, ctx, ctx, imt, stypes)
-                        arr[0, start:stop, m] = mean
+                        arr[0, m, start:stop] = mean
                         for s in range(S):
-                            arr[1 + s, start:stop, m] = stds[s]
+                            arr[1 + s, m, start:stop] = stds[s]
                     start = stop
             out.append(arr)
         return out
