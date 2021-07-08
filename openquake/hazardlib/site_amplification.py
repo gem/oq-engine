@@ -392,15 +392,14 @@ class Amplifier(object):
                 gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt))
 
 
-def get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
+def get_poes_site(mean_std, cmaker, ctxs):
     """
     NOTE: this works for a single site
 
     :param mean_std:
         See :function:`openquake.hazardlib.gsim.base.get_poes`
-    :param loglevels:
-        Intensity measure level per intensity measure type. See
-        :function:`openquake.hazardlib.gsim.base.get_poes`
+    :param cmaker:
+        A :class:`openquake.hazardlib.contexts.ContextMaker` instance
     :param truncation_level:
         The level of truncation of the normal distribution of ground-motion
         on rock
@@ -413,6 +412,8 @@ def get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
     # Mean and std of ground motion for the IMTs considered in this analysis
     # C - Number of contexts
     # L - Number of intensity measure levels
+    loglevels = cmaker.loglevels
+    trunclevel = cmaker.trunclevel
     mean, stddev = mean_std  # shape (C, M)
     C, L = mean.shape[1], loglevels.size
     for ctx in ctxs:
@@ -429,7 +430,7 @@ def get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
 
     # Compute the probability of exceedance for each in intensity
     # measure type IMT
-    sigma = ampfun.get_max_sigma()
+    sigma = cmaker.af.get_max_sigma()
     mags = [ctx.mag for ctx in ctxs]
     rrups = [ctx.rrup for ctx in ctxs]
     ampcode = ctxs[0].sites['ampcode'][0]
@@ -452,7 +453,7 @@ def get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
 
             # Set the arguments of the truncated normal distribution
             # function
-            if truncation_level == 0:
+            if trunclevel == 0:
                 out_l = iml_l <= mean[m]
                 out_u = iml_u <= mean[m]
             else:
@@ -460,8 +461,8 @@ def get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
                 out_u = (iml_u - mean[m]) / stddev[m]
 
             # Probability of occurrence on rock
-            pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
-                         _truncnorm_sf(truncation_level, out_u))  # shape C
+            pocc_rock = (_truncnorm_sf(trunclevel, out_l) -
+                         _truncnorm_sf(trunclevel, out_u))  # shape C
 
             # Skipping cases where the pocc on rock is negligible
             if numpy.all(pocc_rock < 1e-10):
@@ -472,7 +473,7 @@ def get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
 
             # Get mean and std of the amplification function for this
             # magnitude, distance and IML
-            median_af, std_af = ampfun.get_mean_std(  # shape C
+            median_af, std_af = cmaker.af.get_mean_std(  # shape C
                 ampcode, imt, iml_mid, mags, rrups)
 
             # Computing the probability of exceedance of the levels of
