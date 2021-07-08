@@ -303,7 +303,7 @@ class ContextMaker(object):
         for par in self.REQUIRES_DISTANCES:
             dists = [getattr(ctx, par)[0] for ctx in ctxs]
             setattr(ctx, par, numpy.array(dists))
-        #ctx.sids = numpy.concatenate([ctx.sids for ctx in ctxs])
+        ctx.sids = numpy.concatenate([ctx.sids for ctx in ctxs])
         ctx.ctxs = ctxs
         return ctx
 
@@ -560,12 +560,11 @@ class ContextMaker(object):
                 stypes = (stdtype,)
             S = len(stypes)
             arr = numpy.zeros((1 + S, M, N))
-            gcls = gsim.__class__
-            calc_ms = getattr(gcls, 'compute', None)
+            calc_ms = gsim.__class__.__dict__.get('compute')
             if calc_ms:  # fast lane
-                if all(len(ctx) == 1 for ctx in ctxs):
-                    # single-site-optimization
-                    ctxs = [self.multi(ctxs)]
+                # TODO: single-site-optimization
+                # if all(len(ctx) == 1 for ctx in ctxs):
+                #     ctxs = [self.multi(ctxs)]
                 outs = numpy.zeros((4, M, N))
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
                     calc_ms(fake, ctx, self.imts, *outs[:, :, slc])

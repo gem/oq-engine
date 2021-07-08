@@ -291,7 +291,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, AdaptedWarning)
 
-    # @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Calculate and return mean value of intensity distribution and it's
@@ -345,6 +344,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         and make ``get_mean_and_stddevs()`` just combine both (and possibly
         compute interim steps).
         """
+        # cannot be an abstractmethod
+        raise NotImplementedError
 
     def __lt__(self, other):
         """
