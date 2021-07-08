@@ -303,6 +303,7 @@ class ContextMaker(object):
         for par in self.REQUIRES_DISTANCES:
             dists = [getattr(ctx, par)[0] for ctx in ctxs]
             setattr(ctx, par, numpy.array(dists))
+        ctx.sids = numpy.concatenate([ctx.sids for ctx in ctxs])
         ctx.ctxs = ctxs
         return ctx
 
@@ -559,12 +560,11 @@ class ContextMaker(object):
                 stypes = (stdtype,)
             S = len(stypes)
             arr = numpy.zeros((1 + S, M, N))
-            gcls = gsim.__class__
-            calc_ms = getattr(gcls, 'compute', None)
+            calc_ms = gsim.__class__.__dict__.get('compute')
             if calc_ms:  # fast lane
-                if all(len(ctx) == 1 for ctx in ctxs):
-                    # single-site-optimization
-                    ctxs = [self.multi(ctxs)]
+                # TODO: single-site-optimization
+                # if all(len(ctx) == 1 for ctx in ctxs):
+                #     ctxs = [self.multi(ctxs)]
                 outs = numpy.zeros((4, M, N))
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
                     calc_ms(fake, ctx, self.imts, *outs[:, :, slc])
@@ -708,8 +708,7 @@ class PmapMaker(object):
         # compute PoEs and update pmap
         # splitting in blocks makes sure that the maximum poes array
         # generated has size N x L x G x 8 = 4 MB
-        for block in block_splitter(
-                ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
+        for block in block_splitter(ctxs, self.maxsites, RuptureContext.size):
             self.cmaker.get_pmap(block, pmap)
 
     def _ruptures(self, src, filtermag=None):
@@ -969,7 +968,7 @@ class RuptureContext(BaseContext):
         of magnitudes and it refers to a single site, returns the size of
         the array, otherwise returns 1.
         """
-        nsites = len(self.rjb)
+        nsites = len(self.sids)
         if nsites == 1 and isinstance(self.mag, numpy.ndarray):
             return len(self.mag)
         return nsites
