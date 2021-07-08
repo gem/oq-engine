@@ -303,6 +303,7 @@ class ContextMaker(object):
         for par in self.REQUIRES_DISTANCES:
             dists = [getattr(ctx, par)[0] for ctx in ctxs]
             setattr(ctx, par, numpy.array(dists))
+        #ctx.sids = numpy.concatenate([ctx.sids for ctx in ctxs])
         ctx.ctxs = ctxs
         return ctx
 
@@ -708,8 +709,7 @@ class PmapMaker(object):
         # compute PoEs and update pmap
         # splitting in blocks makes sure that the maximum poes array
         # generated has size N x L x G x 8 = 4 MB
-        for block in block_splitter(
-                ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
+        for block in block_splitter(ctxs, self.maxsites, RuptureContext.size):
             self.cmaker.get_pmap(block, pmap)
 
     def _ruptures(self, src, filtermag=None):
@@ -969,7 +969,7 @@ class RuptureContext(BaseContext):
         of magnitudes and it refers to a single site, returns the size of
         the array, otherwise returns 1.
         """
-        nsites = len(self.rjb)
+        nsites = len(self.sids)
         if nsites == 1 and isinstance(self.mag, numpy.ndarray):
             return len(self.mag)
         return nsites
