@@ -221,7 +221,6 @@ class ContextMaker(object):
                     self.loglevels[imt] = numpy.log(imls)
 
         self.init_monitoring(monitor)
-        self.newapi = any(hasattr(gs, 'compute') for gs in self.gsims)
         self.compile()
 
     def init_monitoring(self, monitor):
@@ -729,10 +728,7 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
-        # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.filter if self.N == 1 and self.newapi
-                else self.srcfilter.split)
-        for src, sites in filt(self.group):
+        for src, sites in self.srcfilter.split(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
