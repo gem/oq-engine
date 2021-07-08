@@ -28,7 +28,7 @@ import functools
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
-from openquake.baselib.performance import compile
+from openquake.baselib.performance import compile, numba
 from openquake.hazardlib import const
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
@@ -71,34 +71,43 @@ class AdaptedWarning(UserWarning):
 
 
 # this is the critical function for the performance of the classical calculator
-# it is dominated by memory allocations;
+# dominated by the CPU cache
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then _get_delta will be called less times
-# even numba can only give a 15% speedup (on my workstation)
-@compile("float64[:, :](float64[:, :, :], float64[:], float64, int64)")
-def _get_delta(mean_std, levels, truncation_level, L1):
-    """
-    Compute (iml - mean) / std for each level
-    """
+if numba:
+
+    @compile("void(float64[:, :], float64[:], float64[:, :])")
+    def _compute_delta(mean_std, levels, out):
+        # compute (iml - mean) / std for each level with numba
+        N, L = out.shape
+        for li in range(L):
+            iml = levels[li]
+            for si in range(N):
+                out[si, li] = (iml - mean_std[0, si]) / mean_std[1, si]
+else:
+
+    def _compute_delta(mean_std, levels, out):
+        # compute (iml - mean) / std for each level with numpy
+        for li, iml in enumerate(levels):
+            out[:, li] = (iml - mean_std[0]) / mean_std[1]
+
+
+def _get_poes(mean_std, loglevels, trunclevel):
+    # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
-    L = len(levels)
-    out = numpy.zeros((N, L))
-    for lvl in range(L):
-        m = lvl // L1
-        iml = levels[lvl]
-        for s in range(N):
-            if truncation_level == 0.:  # just compare imls to mean
-                out[s, lvl] = iml <= mean_std[0, m, s]
-            else:
-                out[s, lvl] = (iml - mean_std[0, m, s]) / mean_std[1, m, s]
-    return out
-
-
-def _get_poes(mean_std, loglevels, truncation_level):
-    delta = _get_delta(mean_std, loglevels.array, truncation_level,
-                       loglevels.L1)
-    return _truncnorm_sf(truncation_level, delta)
+    out = numpy.zeros((N, loglevels.size))  # shape (N, L)
+    L1 = loglevels.L1
+    for m, imt in enumerate(loglevels):
+        # loop needed to work on smaller matrices fitting the CPU cache
+        slc = loglevels(imt)
+        levels = loglevels.array[slc]
+        if trunclevel == 0:
+            for li, iml in enumerate(levels):
+                out[:, m * L1 + li] = iml <= mean_std[0, m]
+        else:
+            _compute_delta(mean_std[:, m], levels, out[:, slc])
+    return _truncnorm_sf(trunclevel, out)
 
 
 OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters'
