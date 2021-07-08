@@ -605,9 +605,7 @@ class ContextMaker(object):
             for g, gsim in enumerate(self.gsims):
                 # builds poes of shape (N, L, G)
                 if self.af:  # kernel amplification method
-                    poes[:, :, g] = get_poes_site(
-                        mean_stdt[g], self.loglevels, self.trunclevel,
-                        self.af, ctxs)
+                    poes[:, :, g] = get_poes_site(mean_stdt[g], self, ctxs)
                 else:  # regular case
                     poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
         s = 0
