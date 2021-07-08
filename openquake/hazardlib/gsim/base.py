@@ -75,11 +75,28 @@ class AdaptedWarning(UserWarning):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then _get_delta will be called less times
-@compile("void(float64[:, :], float64[:], float64[:, :])")
-def _compute_delta(mean_std, levels, out):
-    # compute (iml - mean) / std for each level
-    for li, iml in enumerate(levels):
-        out[:, li] = (iml - mean_std[0]) / mean_std[1]
+if numba:
+
+    @compile("void(float64[:, :], float64[:], float64, float64[:, :])")
+    def _compute_delta(mean_std, levels, trunclevel, out):
+        # compute (iml - mean) / std for each level with numba
+        N, L = out.shape
+        for li in range(L):
+            iml = levels[li]
+            for si in range(N):
+                if trunclevel == 0.:
+                    out[si, li] = iml <= mean_std[0, si]
+                else:
+                    out[si, li] = (iml - mean_std[0, si]) / mean_std[1, si]
+else:
+
+    def _compute_delta(mean_std, levels, trunclevel, out):
+        # compute (iml - mean) / std for each level with numpy
+        for li, iml in enumerate(levels):
+            if trunclevel == 0.:
+                out[:, li] = iml <= mean_std[0]
+            else:
+                out[:, li] = (iml - mean_std[0]) / mean_std[1]
 
 
 def _get_poes(mean_std, loglevels, truncation_level):
@@ -90,10 +107,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
         # loop needed to work on smaller matrices fitting the CPU cache
         slc = loglevels(imt)
         levels = loglevels.array[slc]
-        if truncation_level == 0:
-            out[:, slc] = loglevels <= mean_std[0, m][:, None]
-        else:
-            _compute_delta(mean_std[:, m], levels, out[:, slc])
+        _compute_delta(mean_std[:, m], levels, truncation_level, out[:, slc])
     return _truncnorm_sf(truncation_level, out)
 
 
