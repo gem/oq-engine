@@ -102,11 +102,7 @@ class StewartEtAl2016VH(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration; see title.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the
     #: :attr:`~openquake.hazardlib.const.IMC.VERTICAL_TO_HORIZONTAL_RATIO`
