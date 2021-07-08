@@ -41,7 +41,7 @@ def _compute_distance_terms(dists, coeffs):
 
     ``- ln(R) - c4*R``
     """
-    return - np.log(dists.rhypo) - coeffs['c4']*dists.rhypo
+    return - np.log(dists.rhypo) - coeffs['c4'] * dists.rhypo
 
 
 def _compute_magnitude_terms(rup, coeffs):
@@ -93,15 +93,6 @@ def _get_site_coeffs(NEHRP, NEHRP_UPPER, sites, imt):
     sigma[is_rock] = 0.
 
     return (a_1, a_2, sigma)
-
-
-def _get_stddevs(coeffs, stddev_types):
-    """
-    Equation (11) on p. 207 for total standard error at a given site:
-
-    ``σ{ln(ε_site)} = sqrt(σ{ln(ε_br)}**2 + σ{ln(δ_site)}**2)``
-    """
-    return np.sqrt(coeffs['sigma_bedrock']**2 + coeffs['sigma_site']**2)
 
 
 def get_nehrp_classes(NEHRP_VS30_UPPER_BOUNDS, sites):
@@ -213,13 +204,9 @@ class RaghukanthIyengar2007(GMPE):
     #: not covered.
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # pylint: disable=too-many-arguments
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for specification of input and result values.
+    def compute(self, ctx, imts, mean, sig, tau, phi):
 
+        """
         Implements the following equations:
 
         Equation (8) on p. 203 for the bedrock ground motion:
@@ -239,27 +226,29 @@ class RaghukanthIyengar2007(GMPE):
         ``σ{ln(ε_site)} = sqrt(σ{ln(ε_br)}**2 + σ{ln(δ_site)}**2)``
 
         """
-        # obtain site-class specific coefficients
-        a_1, a_2, sigma_site = _get_site_coeffs(
-            self.COEFFS_NEHRP, self.NEHRP_VS30_UPPER_BOUNDS, sites, imt)
-        coeffs = {'a1': a_1, 'a2': a_2, 'sigma_site': sigma_site}
+        for m, imt in enumerate(imts):
+            # obtain site-class specific coefficients
+            a_1, a_2, sigma_site = _get_site_coeffs(
+                self.COEFFS_NEHRP, self.NEHRP_VS30_UPPER_BOUNDS, ctx, imt)
+            coeffs = {'a1': a_1, 'a2': a_2, 'sigma_site': sigma_site}
 
-        # obtain coefficients for required intensity measure type
-        c = self.COEFFS_BEDROCK[imt]
-        for n in c.dtype.names:
-            coeffs[n] = c[n]
+            # obtain coefficients for required intensity measure type
+            c = self.COEFFS_BEDROCK[imt]
+            for n in c.dtype.names:
+                coeffs[n] = c[n]
 
-        # compute bedrock motion, equation (8)
-        ln_mean = (_compute_magnitude_terms(rup, coeffs) +
-                   _compute_distance_terms(dists, coeffs))
+            # compute bedrock motion, equation (8)
+            mean[m] = (_compute_magnitude_terms(ctx, coeffs) +
+                       _compute_distance_terms(ctx, coeffs))
 
-        # adjust for site class, equation (10)
-        ln_mean += _compute_site_amplification(ln_mean, coeffs)
-        # No need to convert to g since "In [equation (8)], y_br = (SA/g)"
+            # adjust for site class, equation (10)
+            mean[m] += _compute_site_amplification(mean[m], coeffs)
+            # No need to convert to g since "In [equation (8)], y_br = (SA/g)"
 
-        ln_stddevs = _get_stddevs(coeffs, stddev_types)
-
-        return ln_mean, [ln_stddevs]
+            # Equation (11) on p. 207 for total standard error at a given site
+            # σ{ln(ε_site)} = sqrt(σ{ln(ε_br)}**2 + σ{ln(δ_site)}**2)
+            sig[m] = np.sqrt(coeffs['sigma_bedrock']**2 +
+                             coeffs['sigma_site']**2)
 
     #: Coefficients taken from Table 3, p. 205.
     COEFFS_BEDROCK = CoeffsTable(sa_damping=5., table="""\
