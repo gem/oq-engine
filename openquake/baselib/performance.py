@@ -26,26 +26,9 @@ from datetime import datetime
 import psutil
 import numpy
 try:
-    from numba import njit
-
-    def jittable(func):
-        """Calls numba.njit with a cache"""
-        return njit(func, cache=True)
-
-    def compile(sigstr):
-        """
-        Compile a function Ahead-Of-Time using the given signature string
-        """
-        return njit(sigstr, cache=True)
-
+    import numba
 except ImportError:
-    def jittable(func):
-        """Do nothing decorator, used if numba is missing"""
-        return func
-
-    def compile(sigstr):
-        """Do nothing decorator, used if numba is missing"""
-        return lambda func: func
+    numba = None
 
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
@@ -331,3 +314,27 @@ class Monitor(object):
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg
+
+
+# numba helpers
+if numba:
+
+    def jittable(func):
+        """Calls numba.njit with a cache"""
+        return numba.njit(func, cache=True)
+
+    def compile(sigstr):
+        """
+        Compile a function Ahead-Of-Time using the given signature string
+        """
+        return numba.njit(sigstr, cache=True)
+
+else:
+
+    def jittable(func):
+        """Do nothing decorator, used if numba is missing"""
+        return func
+
+    def compile(sigstr):
+        """Do nothing decorator, used if numba is missing"""
+        return lambda func: func
