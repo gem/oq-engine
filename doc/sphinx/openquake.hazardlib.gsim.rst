@@ -1026,6 +1026,14 @@ stewart_2016
     :undoc-members:
     :show-inheritance:
 
+stewart_2016_vh
+-----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.stewart_2016_vh
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tavakoli_pezeshk_2005
 -----------------------------------------------------
 

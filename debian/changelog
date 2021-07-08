@@ -5,6 +5,8 @@
   * Added the Lanzano et al. (2020) GMPE
 
   [Stanley Sayson]
+  * Added the Stewart et al. (2016) GMPE for V/H
+  * Added the Bozorgnia and Campbell (2016) GMPE for V/H
   * Added the Gulerce and Abrahamson (2011) GMPE
   * Corrected Campbell and Bozorgnia (2014) GMPE
 
