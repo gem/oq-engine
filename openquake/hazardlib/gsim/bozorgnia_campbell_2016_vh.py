@@ -32,16 +32,9 @@ import openquake.hazardlib.gsim.bozorgnia_campbell_2016 as BC15
 import openquake.hazardlib.gsim.campbell_bozorgnia_2014 as CB14
 
 
-
 def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
     """
     Returns the inter-event, intra-event, and total standard deviations
-
-    Note that it is assumed here that the soil response of the vertical
-    component is linear (i.e. nonlinear site response effects not
-    included). Thus, the expressions for the aleatory std devs for the
-    vertical component is much simpler than in the horizontal component,
-    since the site response- and IMT-correlation functions are neglected.
     """
     num_sites = len(sites.vs30)
     tau_v = cls.VGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
@@ -108,21 +101,16 @@ class BozorgniaCampbell2016VH(GMPE):
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
-
     This V/H model is combined from VGMPE by Bozorgnia and Campbell (2016) as
     the vertical model, and HGMPE by Campbell and Bozorgnia (2014) as the
     horizontal model.
-
     **Reference:**
-
     Bozorgnia, Y. & Campbell, K. (2016). Ground Motion Model for the
     Vertical-to-Horizontal (V/H) Ratios of PGA, PGV, and Response Spectra
     *Earthquake Spectra*, 32(2), 951-978.
-
     Implements the global model that uses datasets from California, Taiwan,
     the Middle East, and other similar active tectonic regions to represent
     a typical or average Q region.
-
     Applies the average attenuation case (Dc20=0)
     """
     VGMPE = BC15.BozorgniaCampbell2016()
@@ -140,8 +128,9 @@ class BozorgniaCampbell2016VH(GMPE):
     ])
 
     #: Supported intensity measure component is the
-    #: :attr:`~openquake.hazardlib.const.IMC.Vertical` direction component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VERTICAL
+    #: :attr:`~openquake.hazardlib.const.IMC.VERTICAL_TO_HORIZONTAL_RATIO`
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
+                                        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory Variability Model".
@@ -223,7 +212,6 @@ class BozorgniaCampbell2016HighQVH(BozorgniaCampbell2016VH):
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
-
     Applies regional corrections in path scaling term for regions with
     low attenuation (high quality factor, Q) (e.g. eastern China)
     """
@@ -235,7 +223,6 @@ class BozorgniaCampbell2016LowQVH(BozorgniaCampbell2016VH):
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
-
     Applies regional corrections in path scaling term for regions with
     high attenuation (low quality factor, Q) (e.g. Japan and Italy)
     """
@@ -247,10 +234,8 @@ class BozorgniaCampbell2016AveQJapanSiteVH(BozorgniaCampbell2016VH):
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
-
     Incorporates the difference in linear Vs30 scaling for sites in Japan by
     activating the flag variable in shallow site reponse scaling
-
     Applies the average attenuation case (Dc20=0)
     """
     VGMPE = BC15.BozorgniaCampbell2016(SJ=1)
@@ -262,10 +247,8 @@ class BozorgniaCampbell2016HighQJapanSiteVH(
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
-
     Incorporates the difference in linear Vs30 scaling for sites in Japan by
     activating the flag variable in shallow site reponse scaling
-
     Applies regional corrections in path scaling term for regions with
     low attenuation (high quality factor, Q)
     """
@@ -278,10 +261,8 @@ class BozorgniaCampbell2016LowQJapanSiteVH(
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
-
     Incorporates the difference in linear Vs30 scaling for sites in Japan by
     activating the flag variable in shallow site reponse scaling
-
     Applies regional corrections in path scaling term for regions with
     high attenuation (low quality factor, Q)
     """
