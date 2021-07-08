@@ -149,7 +149,7 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         lons[u] = ctx.clon[idx]  # closest point of the rupture lon
         lats[u] = ctx.clat[idx]  # closest point of the rupture lat
         for g in range(G):
-            mean_std[:, u, :, g] = ctx.mean_std[g][:, idx]  # (2, M)
+            mean_std[:, u, :, g] = ctx.mean_std[g][:, :, idx]  # (2, M)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     for (m, p, z), iml in numpy.ndenumerate(iml3):
