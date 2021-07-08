@@ -258,7 +258,7 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
         # additional term activated for soft sites (Vs30 <= 200m/s)
         # in Japan data
         idx = vs30 <= 200.0
-        add_soft = (C["c12"] + C["k2"] * CONSTS["n"]) * \
+        add_soft = (C["c12"] + C["k2"] * CONSTS["n"])* \
             (np.log(vs_mod) - np.log(200.0 / C["k1"]))
         # combine terms
         fsite_j[idx] += add_soft[idx]

@@ -563,8 +563,7 @@ class ContextMaker(object):
             if compute:  # fast lane
                 if getattr(compute, 'jittable', False) and all(
                         len(ctx) == 1 for ctx in ctxs):
-                    # single-site-optimization
-                    ctxs = [self.multi(ctxs)]
+                     ctxs = [self.multi(ctxs)]
                 outs = numpy.zeros((4, M, N))
                 for ctx, gsim, slc in self.gen_triples(gsim, ctxs):
                     compute(gsim, ctx, self.imts, *outs[:, :, slc])
@@ -708,8 +707,7 @@ class PmapMaker(object):
         # compute PoEs and update pmap
         # splitting in blocks makes sure that the maximum poes array
         # generated has size N x L x G x 8 = 4 MB
-        for block in block_splitter(
-                ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
+        for block in block_splitter(ctxs, self.maxsites, RuptureContext.size):
             self.cmaker.get_pmap(block, pmap)
 
     def _ruptures(self, src, filtermag=None):

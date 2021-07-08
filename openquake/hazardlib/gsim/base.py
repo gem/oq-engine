@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
+import sys
 import abc
 import inspect
 import warnings
@@ -141,7 +142,8 @@ class MetaGSIM(abc.ABCMeta):
                             'and compute in %s' % name)
         bad = bad_methods(dic)
         if bad:
-            raise TypeError('%s cannot contain the methods %s' % (name, bad))
+            print('%s cannot contain the methods %s' % (name, bad),
+                  file=sys.stderr)
         for k, v in dic.items():
             if isinstance(v, set):
                 dic[k] = frozenset(v)
