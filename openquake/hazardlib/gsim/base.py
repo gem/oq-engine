@@ -77,38 +77,37 @@ class AdaptedWarning(UserWarning):
 # collapse the ruptures, then _get_delta will be called less times
 if numba:
 
-    @compile("void(float64[:, :], float64[:], float64, float64[:, :])")
-    def _compute_delta(mean_std, levels, trunclevel, out):
+    @compile("void(float64[:, :], float64[:], float64[:, :])")
+    def _compute_delta(mean_std, levels, out):
         # compute (iml - mean) / std for each level with numba
         N, L = out.shape
         for li in range(L):
             iml = levels[li]
             for si in range(N):
-                if trunclevel == 0.:
-                    out[si, li] = iml <= mean_std[0, si]
-                else:
-                    out[si, li] = (iml - mean_std[0, si]) / mean_std[1, si]
+                out[si, li] = (iml - mean_std[0, si]) / mean_std[1, si]
 else:
 
-    def _compute_delta(mean_std, levels, trunclevel, out):
+    def _compute_delta(mean_std, levels, out):
         # compute (iml - mean) / std for each level with numpy
         for li, iml in enumerate(levels):
-            if trunclevel == 0.:
-                out[:, li] = iml <= mean_std[0]
-            else:
-                out[:, li] = (iml - mean_std[0]) / mean_std[1]
+            out[:, li] = (iml - mean_std[0]) / mean_std[1]
 
 
-def _get_poes(mean_std, loglevels, truncation_level):
+def _get_poes(mean_std, loglevels, trunclevel):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
     out = numpy.zeros((N, loglevels.size))  # shape (N, L)
+    L1 = loglevels.L1
     for m, imt in enumerate(loglevels):
         # loop needed to work on smaller matrices fitting the CPU cache
         slc = loglevels(imt)
         levels = loglevels.array[slc]
-        _compute_delta(mean_std[:, m], levels, truncation_level, out[:, slc])
-    return _truncnorm_sf(truncation_level, out)
+        if trunclevel == 0:
+            for li, iml in enumerate(levels):
+                out[:, m * L1 + li] = iml <= mean_std[0, m]
+        else:
+            _compute_delta(mean_std[:, m], levels, out[:, slc])
+    return _truncnorm_sf(trunclevel, out)
 
 
 OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters'
