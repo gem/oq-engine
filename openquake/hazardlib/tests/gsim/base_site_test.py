@@ -61,9 +61,9 @@ class GetPoesSiteTestCase(unittest.TestCase):
         self.rrup = ctx.rrup
 
         # Compute GM on rock
-        cmaker = ContextMaker(
+        self.cmaker = ContextMaker(
             'TRT', [gmmA], dict(imtls={str(im): [0] for im in imts}))
-        [self.meastd] = cmaker.get_mean_stds([ctx], const.StdDev.TOTAL)
+        [self.meastd] = self.cmaker.get_mean_stds([ctx], const.StdDev.TOTAL)
         # shp(2, N=1, M=2)
 
     def test01(self):
@@ -71,24 +71,23 @@ class GetPoesSiteTestCase(unittest.TestCase):
         fname = gettemp(ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
-        af = AmplFunction.from_dframe(df)
-
-        truncation_level = 3
         sitecode = b'A'
 
         imls_soil = numpy.log([0.012, 0.052, 0.12, 0.22, 0.52])
         imls_soil = numpy.log(numpy.logspace(-2, 0, num=20))
-        imtls_soil = DictArray({'PGA': imls_soil, 'SA(1.0)': imls_soil})
+        self.cmaker.loglevels = ll = DictArray(
+            {'PGA': imls_soil, 'SA(1.0)': imls_soil})
+        self.cmaker.af = AmplFunction.from_dframe(df)
+        self.cmaker.trunclevel = tl = 3
 
         # The output in this case will be (1, x, 2) i.e. 1 site, number
         # intensity measure levels times 2 and 2 GMMs
-        tmp = _get_poes(self.meastd, imtls_soil, truncation_level)
+        tmp = _get_poes(self.meastd, ll, tl)
 
         # This function is rather slow at the moment
         ctx = unittest.mock.Mock(mag=self.mag, rrup=self.rrup, sids=[0],
                                  sites=dict(ampcode=[sitecode]))
-        res = get_poes_site(self.meastd, imtls_soil, truncation_level,
-                            af, [ctx])
+        res = get_poes_site(self.meastd, self.cmaker, [ctx])
 
         if False:
             import matplotlib.pyplot as plt
