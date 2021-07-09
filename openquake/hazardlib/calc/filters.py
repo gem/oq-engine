@@ -345,6 +345,7 @@ class SourceFilter(object):
                         src.data, lambda pair: pair[0].mag):
                     new = src.__class__(src.source_id, src.name,
                                         src.tectonic_region_type, list(group))
+                    vars(new).update(vars(src))
                     sites = self.get_close_sites(new)
                     if sites is not None:
                         yield new, sites
