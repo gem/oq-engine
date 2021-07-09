@@ -211,7 +211,7 @@ class ModifiableGMPE(GMPE):
 
         # Save the stds
         for key, val in zip(working_std_types, ostds):
-            setattr(self, key.name, val)
+            setattr(self, key, val)
         self.mean = omean
 
         # Apply sequentially the modifications
@@ -222,6 +222,6 @@ class ModifiableGMPE(GMPE):
         # Return the standard deviation types as originally requested
         outs = []
         for key in stddev_types:
-            outs.append(getattr(self, key.name))
+            outs.append(getattr(self, key))
 
         return self.mean, outs
