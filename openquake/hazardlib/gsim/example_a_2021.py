@@ -64,7 +64,7 @@ class ExampleA2021(GMPE):
     4.00  -0.74  1.86 -0.31  0.92  0.46  0.0017   6.9  0.61  0.62  0.66  0.45  0.12
     """)
 
-    #@jittable
+    @jittable
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         mag, rjb = ctx.mag, ctx.rjb
         for m, imt in enumerate(imts):

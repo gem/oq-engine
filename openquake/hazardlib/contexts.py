@@ -216,11 +216,12 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        for gsim in gsims:
-            reqs = (sorted(gsim.REQUIRES_RUPTURE_PARAMETERS) +
-                    sorted(gsim.REQUIRES_SITES_PARAMETERS) +
-                    sorted(gsim.REQUIRES_DISTANCES))
-            gsim.ctx_builder = RecordBuilder(**{req: 0. for req in reqs})
+        reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
+                sorted(self.REQUIRES_SITES_PARAMETERS) +
+                sorted(self.REQUIRES_DISTANCES))
+        dic = {req: 0. for req in reqs}
+        dic['sids'] = numpy.uint32([0])
+        self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -249,11 +250,10 @@ class ContextMaker(object):
         M = len(self.imts)
         out = numpy.zeros((G, 4, M, 1))
         self.fake = {}
+        rctx = numpy.ones(1, self.ctx_builder.dtype).view(numpy.recarray)
         for g, gsim in enumerate(self.gsims):
             if getattr(gsim.compute, 'jittable', False):
                 self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
-                rctx = numpy.ones(1, gsim.ctx_builder.dtype).view(
-                    numpy.recarray)
                 gsim.__class__.compute(fake, rctx, self.imts, *out[g])
 
     def read_ctxs(self, dstore, slc=None):
@@ -284,15 +284,11 @@ class ContextMaker(object):
         :returns: a recarray
         """
         C = sum(len(ctx) for ctx in ctxs)
-        reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
-                sorted(self.REQUIRES_SITES_PARAMETERS) +
-                sorted(self.REQUIRES_DISTANCES) + ['sids'])
-        dic = {req: getattr(ctxs[0], req) for req in reqs}
-        ra = RecordBuilder(**dic).zeros(C).view(numpy.recarray)
+        ra = self.ctx_builder.zeros(C).view(numpy.recarray)
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
-            for par in reqs:
+            for par in self.ctx_builder.names:
                 getattr(ra, par)[slc] = getattr(ctx, par)
             ra.sids[slc] = ctx.sids
             start = slc.stop
@@ -557,9 +553,10 @@ class ContextMaker(object):
             if compute:  # new api
                 outs = numpy.zeros((4, M, N))
                 start = 0
+                fake = self.fake[gsim]
                 for ctx in ctxs:
                     slc = slice(start, start + len(ctx))
-                    compute(gsim, ctx, self.imts, *outs[:, :, slc])
+                    compute(fake, ctx, self.imts, *outs[:, :, slc])
                     start = slc.stop
                 arr[0] = outs[0]
                 for s, stype in enumerate(stypes, 1):
