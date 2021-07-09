@@ -39,7 +39,7 @@ def get_magnitude_scaling_term(C, imt, mag):
     """
     Returns the magnitude scaling term (Equation 3.16)
     """
-    if str(imt) in ("PGA", "PGV"):
+    if imt.string in ("PGA", "PGV"):
         m_ref = 8.3
     else:
         if imt.period < 2.0:
