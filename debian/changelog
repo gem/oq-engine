@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the single site case by splitting the sources less
   * Restricted the acceptable methods in GMPE subclasses
 
   [Claudia Mascandola]

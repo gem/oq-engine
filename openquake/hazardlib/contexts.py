@@ -607,7 +607,7 @@ class ContextMaker(object):
                 else:  # regular case
                     poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
         s = 0
-        for ctx, n in zip(ctxs, nsites):
+        for n in nsites:
             yield poes[s:s+n]
             s += n
 
@@ -728,7 +728,10 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
-        for src, sites in self.srcfilter.split(self.group):
+        # split the sources only if there is more than 1 site
+        filt = (self.srcfilter.split_less if self.N == 1
+                else self.srcfilter.split)
+        for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
