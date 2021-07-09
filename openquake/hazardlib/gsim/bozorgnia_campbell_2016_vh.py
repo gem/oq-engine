@@ -28,8 +28,8 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.gsim import bozorgnia_campbell_2016 as BC15
-from openquake.hazardlib.gsim import campbell_bozorgnia_2014 as CB14
+from openquake.hazardlib.gsim import bozorgnia_campbell_2016
+from openquake.hazardlib.gsim import campbell_bozorgnia_2014
 
 
 def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
@@ -52,13 +52,14 @@ def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
     for stddev_type in stddev_types:
         if stddev_type == const.StdDev.TOTAL:
             stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
-                            np.zeros(num_sites))
+                           np.zeros(num_sites))
         elif stddev_type == const.StdDev.INTRA_EVENT:
             stddevs.append(phi + np.zeros(num_sites))
         elif stddev_type == const.StdDev.INTER_EVENT:
             stddevs.append(tau + np.zeros(num_sites))
     # return std dev values for each stddev type in site collection
     return stddevs
+
 
 def _get_tau_vh(C, mag, stddev_v, stddev_h):
     """
@@ -79,6 +80,7 @@ def _get_tau_vh(C, mag, stddev_v, stddev_h):
     tau_h = np.array(stddev_h)
     return np.sqrt(tau_v ** 2 + tau_h ** 2 - 2 * rhob * tau_v * tau_h)
 
+
 def _get_phi_vh(C, mag, stddev_v, stddev_h):
     """
     Returns the intra-event random effects coefficient (phi) defined in
@@ -96,6 +98,7 @@ def _get_phi_vh(C, mag, stddev_v, stddev_h):
     phi_v = np.array(stddev_v)
     phi_h = np.array(stddev_h)
     return np.sqrt(phi_v ** 2 + phi_h ** 2 - 2 * rhow * phi_v * phi_h)
+
 
 class BozorgniaCampbell2016VH(GMPE):
     """
@@ -118,8 +121,8 @@ class BozorgniaCampbell2016VH(GMPE):
 
     Applies the average attenuation case (Dc20=0)
     """
-    VGMPE = BC15.BozorgniaCampbell2016()
-    HGMPE = CB14.CampbellBozorgnia2014()
+    VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016()
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014()
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -130,8 +133,8 @@ class BozorgniaCampbell2016VH(GMPE):
 
     #: Supported intensity measure component is the
     #: :attr:`~openquake.hazardlib.const.IMC.VERTICAL_TO_HORIZONTAL_RATIO`
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
-                                        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO)
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory Variability Model".
@@ -217,8 +220,8 @@ class BozorgniaCampbell2016HighQVH(BozorgniaCampbell2016VH):
     Applies regional corrections in path scaling term for regions with
     low attenuation (high quality factor, Q) (e.g. eastern China)
     """
-    VGMPE = BC15.BozorgniaCampbell2016(sgn=+1)
-    HGMPE = CB14.CampbellBozorgnia2014HighQ()
+    VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(sgn=+1)
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014HighQ()
 
 
 class BozorgniaCampbell2016LowQVH(BozorgniaCampbell2016VH):
@@ -229,8 +232,8 @@ class BozorgniaCampbell2016LowQVH(BozorgniaCampbell2016VH):
     Applies regional corrections in path scaling term for regions with
     high attenuation (low quality factor, Q) (e.g. Japan and Italy)
     """
-    VGMPE = BC15.BozorgniaCampbell2016(sgn=-1)
-    HGMPE = CB14.CampbellBozorgnia2014LowQ()
+    VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(sgn=-1)
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014LowQ()
 
 
 class BozorgniaCampbell2016AveQJapanSiteVH(BozorgniaCampbell2016VH):
@@ -243,12 +246,12 @@ class BozorgniaCampbell2016AveQJapanSiteVH(BozorgniaCampbell2016VH):
 
     Applies the average attenuation case (Dc20=0)
     """
-    VGMPE = BC15.BozorgniaCampbell2016(SJ=1)
-    HGMPE = CB14.CampbellBozorgnia2014JapanSite()
+    VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(SJ=1)
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014JapanSite()
 
 
 class BozorgniaCampbell2016HighQJapanSiteVH(
-                                        BozorgniaCampbell2016AveQJapanSiteVH):
+        BozorgniaCampbell2016AveQJapanSiteVH):
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
@@ -259,12 +262,12 @@ class BozorgniaCampbell2016HighQJapanSiteVH(
     Applies regional corrections in path scaling term for regions with
     low attenuation (high quality factor, Q)
     """
-    VGMPE = BC15.BozorgniaCampbell2016(SJ=1, sgn=+1)
-    HGMPE = CB14.CampbellBozorgnia2014HighQJapanSite()
+    VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(SJ=1, sgn=+1)
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014HighQJapanSite()
 
 
 class BozorgniaCampbell2016LowQJapanSiteVH(
-                                        BozorgniaCampbell2016AveQJapanSiteVH):
+        BozorgniaCampbell2016AveQJapanSiteVH):
     """
     Implements the GMPE by Bozorgnia & Campbell (2016) vertical-to-horizontal
     ratio for ground motions from the PEER NGA-West2 Project
@@ -275,5 +278,5 @@ class BozorgniaCampbell2016LowQJapanSiteVH(
     Applies regional corrections in path scaling term for regions with
     high attenuation (low quality factor, Q)
     """
-    VGMPE = BC15.BozorgniaCampbell2016(SJ=1, sgn=-1)
-    HGMPE = CB14.CampbellBozorgnia2014LowQJapanSite()
+    VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(SJ=1, sgn=-1)
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014LowQJapanSite()
