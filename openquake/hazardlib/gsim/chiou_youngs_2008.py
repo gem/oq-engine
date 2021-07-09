@@ -26,6 +26,129 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _get_ln_y_ref(rup, dists, C):
+    """
+    Get an intensity on a reference soil.
+
+    Implements eq. 13a.
+    """
+    # reverse faulting flag
+    Frv = 1 if 30 <= rup.rake <= 150 else 0
+    # normal faulting flag
+    Fnm = 1 if -120 <= rup.rake <= -60 else 0
+    # hanging wall flag
+    Fhw = (dists.rx >= 0)
+    # aftershock flag. always zero since we only consider main shock
+    AS = 0
+
+    ln_y_ref = (
+        # first line of eq. 13a
+        C['c1']
+        + (C['c1a'] * Frv
+           + C['c1b'] * Fnm
+           + C['c7'] * (rup.ztor - 4))
+        * (1 - AS)
+        + (C['c10'] + C['c7a'] * (rup.ztor - 4)) * AS
+        # second line
+        + C['c2'] * (rup.mag - 6)
+        + ((C['c2'] - C['c3']) / C['cn'])
+        * np.log(1 + np.exp(C['cn'] * (C['cm'] - rup.mag)))
+        # third line
+        + C['c4']
+        * np.log(dists.rrup
+                 + C['c5']
+                 * np.cosh(C['c6'] * max(rup.mag - C['chm'], 0)))
+        # fourth line
+        + (C['c4a'] - C['c4'])
+        * np.log(np.sqrt(dists.rrup ** 2 + C['crb'] ** 2))
+        # fifth line
+        + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
+        * dists.rrup
+        # sixth line
+        + C['c9'] * Fhw
+        * np.tanh(dists.rx
+                  * (np.cos(np.radians(rup.dip)) ** 2)
+                  / C['c9a'])
+        * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
+           / (dists.rrup + 0.001))
+    )
+    return ln_y_ref
+
+
+def _get_mean(sites, C, ln_y_ref, exp1, exp2):
+    """
+    Add site effects to an intensity.
+
+    Implements eq. 13b.
+    """
+    # we do not support estimating of basin depth and instead
+    # rely on it being available (since we require it).
+    z1pt0 = sites.z1pt0
+
+    # we consider random variables being zero since we want
+    # to find the exact mean value.
+    eta = epsilon = 0
+
+    ln_y = (
+        # first line of eq. 13b
+        ln_y_ref + C['phi1'] * np.log(sites.vs30 / 1130).clip(-np.inf, 0)
+        # second line
+        + C['phi2'] * (exp1 - exp2)
+        * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
+        # third line
+        + C['phi5']
+        * (1.0 - 1.0 / np.cosh(
+            C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
+        + C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
+        # fourth line
+        + eta + epsilon
+    )
+    return ln_y
+
+
+def _get_stddevs(sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
+    """
+    Get standard deviation for a given intensity on reference soil.
+
+    Implements equations 19, 20 and 21 for inter-event, intra-event
+    and total standard deviations respectively.
+    """
+    # aftershock flag is zero, we consider only main shock.
+    AS = 0
+    Fmeasured = sites.vs30measured
+    Finferred = 1 - sites.vs30measured
+
+    # eq. 19 to calculate inter-event standard error
+    mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
+    tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
+
+    # b and c coeffs from eq. 10
+    b = C['phi2'] * (exp1 - exp2)
+    c = C['phi4']
+
+    y_ref = np.exp(ln_y_ref)
+    # eq. 20
+    NL = b * y_ref / (y_ref + c)
+    sigma = (
+        # first line of eq. 20
+        (C['sig1'] + 0.5 * (C['sig2'] - C['sig1']) * mag_test + C['sig4'] * AS)
+        # second line
+        * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
+                  + (1 + NL) ** 2))
+
+    ret = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            # eq. 21
+            ret += [np.sqrt(((1 + NL) ** 2) * (tau ** 2) + (sigma ** 2))]
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            ret.append(sigma)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            # this is implied in eq. 21
+            ret.append(np.abs((1 + NL) * tau))
+    return ret
+
+
 class ChiouYoungs2008(GMPE):
     """
     Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
@@ -39,11 +162,7 @@ class ChiouYoungs2008(GMPE):
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see tables
     #: at pages 198 and 199.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~openquake.hazardlib.const.IMC.GMRotI50`, see page 174.
@@ -51,11 +170,8 @@ class ChiouYoungs2008(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see chapter "Variance model".
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     DEFINED_FOR_REFERENCE_VELOCITY = 1130.
 
@@ -81,140 +197,16 @@ class ChiouYoungs2008(GMPE):
         C = self.COEFFS[imt]
         # intensity on a reference soil is used for both mean
         # and stddev calculations.
-        ln_y_ref = self._get_ln_y_ref(rup, dists, C)
+        ln_y_ref = _get_ln_y_ref(rup, dists, C)
         # exp1 and exp2 are parts of eq. 10 and eq. 13b,
         # calculate it once for both.
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
         exp2 = np.exp(C['phi3'] * (1130 - 360))
 
-        mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2)
-        stddevs = self._get_stddevs(sites, rup, C, stddev_types,
-                                    ln_y_ref, exp1, exp2)
+        mean = _get_mean(sites, C, ln_y_ref, exp1, exp2)
+        stddevs = _get_stddevs(sites, rup, C, stddev_types,
+                               ln_y_ref, exp1, exp2)
         return mean, stddevs
-
-    def _get_mean(self, sites, C, ln_y_ref, exp1, exp2):
-        """
-        Add site effects to an intensity.
-
-        Implements eq. 13b.
-        """
-        # we do not support estimating of basin depth and instead
-        # rely on it being available (since we require it).
-        z1pt0 = sites.z1pt0
-
-        # we consider random variables being zero since we want
-        # to find the exact mean value.
-        eta = epsilon = 0
-
-        ln_y = (
-            # first line of eq. 13b
-            ln_y_ref + C['phi1'] * np.log(sites.vs30 / 1130).clip(-np.inf, 0)
-            # second line
-            + C['phi2'] * (exp1 - exp2)
-            * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
-            # third line
-            + C['phi5']
-            * (1.0 - 1.0 / np.cosh(
-                C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
-            + C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
-            # fourth line
-            + eta + epsilon
-        )
-        return ln_y
-
-    def _get_stddevs(self, sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
-        """
-        Get standard deviation for a given intensity on reference soil.
-
-        Implements equations 19, 20 and 21 for inter-event, intra-event
-        and total standard deviations respectively.
-        """
-        # aftershock flag is zero, we consider only main shock.
-        AS = 0
-        Fmeasured = sites.vs30measured
-        Finferred = 1 - sites.vs30measured
-
-        # eq. 19 to calculate inter-event standard error
-        mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
-        tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
-
-        # b and c coeffs from eq. 10
-        b = C['phi2'] * (exp1 - exp2)
-        c = C['phi4']
-
-        y_ref = np.exp(ln_y_ref)
-        # eq. 20
-        NL = b * y_ref / (y_ref + c)
-        sigma = (
-            # first line of eq. 20
-            (C['sig1']
-            + 0.5 * (C['sig2'] - C['sig1']) * mag_test
-            + C['sig4'] * AS)
-            # second line
-            * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
-                      + (1 + NL) ** 2)
-        )
-
-        ret = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                # eq. 21
-                ret += [np.sqrt(((1 + NL) ** 2) * (tau ** 2) + (sigma ** 2))]
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                ret.append(sigma)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                # this is implied in eq. 21
-                ret.append(np.abs((1 + NL) * tau))
-        return ret
-
-    def _get_ln_y_ref(self, rup, dists, C):
-        """
-        Get an intensity on a reference soil.
-
-        Implements eq. 13a.
-        """
-        # reverse faulting flag
-        Frv = 1 if 30 <= rup.rake <= 150 else 0
-        # normal faulting flag
-        Fnm = 1 if -120 <= rup.rake <= -60 else 0
-        # hanging wall flag
-        Fhw = (dists.rx >= 0)
-        # aftershock flag. always zero since we only consider main shock
-        AS = 0
-
-        ln_y_ref = (
-            # first line of eq. 13a
-            C['c1']
-            + (C['c1a'] * Frv
-               + C['c1b'] * Fnm
-               + C['c7'] * (rup.ztor - 4))
-            * (1 - AS)
-            + (C['c10'] + C['c7a'] * (rup.ztor - 4)) * AS
-            # second line
-            + C['c2'] * (rup.mag - 6)
-            + ((C['c2'] - C['c3']) / C['cn'])
-            * np.log(1 + np.exp(C['cn'] * (C['cm'] - rup.mag)))
-            # third line
-            + C['c4']
-            * np.log(dists.rrup
-                     + C['c5']
-                     * np.cosh(C['c6'] * max(rup.mag - C['chm'], 0)))
-            # fourth line
-            + (C['c4a'] - C['c4'])
-            * np.log(np.sqrt(dists.rrup ** 2 + C['crb'] ** 2))
-            # fifth line
-            + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
-            * dists.rrup
-            # sixth line
-            + C['c9'] * Fhw
-            * np.tanh(dists.rx
-                      * (np.cos(np.radians(rup.dip)) ** 2)
-                      / C['c9a'])
-            * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
-               / (dists.rrup + 0.001))
-        )
-        return ln_y_ref
 
     #: Coefficient tables are constructed from values in tables 1, 2 and 3
     #: (pages 197, 198 and 199). Spectral acceleration is defined for damping

@@ -8,7 +8,7 @@ from openquake.hazardlib.imt import SA
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.projects.acme_2019 import AlAtikSigmaModel
-from openquake.hazardlib.gsim.projects.acme_2019 import get_sof_adjustment
+from openquake.hazardlib.gsim.yenier_atkinson_2015 import get_sof_adjustment
 
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'projects')

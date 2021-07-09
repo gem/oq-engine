@@ -27,9 +27,418 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 """
 import numpy as np
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+CONSTANTS = {"m_c": 7.1,
+             "xcro": 2.0,
+             "xinto": 10.0,  # Used in subduction Interface class
+             "alpha": 2.0,
+             "beta": 0.6,
+             "Imin": 1.0,
+             "Imax": 12.0,
+             "m_sc": 6.3}  # Used in Subduction Slab class
+
+# Impedence ratio factors for each site class
+IMF = {1: (1. + 0.8 * 2.73) / 3.5,  # IMF 0.91
+       2: 3.07 / 3.0,
+       3: (1. + 0.9 * 1.76) / 2.5,
+       4: (1. + 0.6 * 2.02) / 3.0}
+
+get_magnitude_scaling_term = CallableDict()
+
+
+@get_magnitude_scaling_term.add(
+    const.TRT.ACTIVE_SHALLOW_CRUST, const.TRT.UPPER_MANTLE)
+def get_magnitude_scaling_term_asc(trt, C, rup):
+    """
+    Returns the magnitude scaling term in equations 1 and 2
+    """
+    if rup.mag <= CONSTANTS["m_c"]:
+        return C["ccr"] * rup.mag
+    else:
+        return (C["ccr"] * CONSTANTS["m_c"]) +\
+            (C["dcr"] * (rup.mag - CONSTANTS["m_c"]))
+
+
+@get_magnitude_scaling_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def get_magnitude_scaling_term_SInter(trt, C, rup):
+    """
+    Returns magnitude scaling term, which is dependent on top of rupture
+    depth - as described in equations 1 and 2
+    """
+    if rup.ztor > 25.0:
+        # Deep interface events
+        c_int = C["cint"]
+    else:
+        c_int = C["cintS"]
+
+    if rup.mag <= CONSTANTS["m_c"]:
+        return c_int * rup.mag
+    else:
+        return (c_int * CONSTANTS["m_c"]) +\
+            (C["dint"] * (rup.mag - CONSTANTS["m_c"]))
+
+
+@get_magnitude_scaling_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def get_magnitude_scaling_term_sslab(trt, C, rup):
+    """
+    Returns the magnitude scaling defined in equation 1
+    """
+    m_c = CONSTANTS["m_c"]
+    if rup.mag <= m_c:
+        return C["cSL"] * rup.mag +\
+            C["cSL2"] * ((rup.mag - CONSTANTS["m_sc"]) ** 2.)
+    else:
+        return C["cSL"] * m_c +\
+           C["cSL2"] * ((m_c - CONSTANTS["m_sc"]) ** 2.) +\
+           C["dSL"] * (rup.mag - m_c)
+
+
+get_sof_term = CallableDict()
+
+
+@get_sof_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def get_sof_term_asc(trt, C, rup):
+    """
+    Shallow crustal faults have a style-of-faulting dependence as
+    normal faulting is found to produce higher ground motion (equation 1)
+    """
+    if rup.rake <= -45.0 and rup.rake >= -135.0:
+        # Normal faulting
+        return C["FN_CR"]
+    else:
+        # No adjustment for strike-slip or reverse faulting
+        return 0.0
+    pass
+
+
+@get_sof_term.add(const.TRT.UPPER_MANTLE)
+def get_sof_term_um(trt, C, rup):
+    """
+    In the case of the upper mantle events separate coefficients
+    are considered for normal, reverse and strike-slip
+    """
+    if rup.rake <= -45.0 and rup.rake >= -135.0:
+        # Normal faulting
+        return C["FN_UM"]
+    elif rup.rake > 45.0 and rup.rake < 135.0:
+        # Reverse faulting
+        return C["FRV_UM"]
+    else:
+        # No adjustment for strike-slip faulting
+        return 0.0
+
+
+@get_sof_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def get_sof_term_SInter(trt, C, rup):
+    """
+    No style of faulting dependence here
+    """
+    return 0.0
+
+
+@get_sof_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def get_sof_term_sslab(trt, C, rup):
+    """
+    No style of faulting dependence here
+    """
+    return 0.0
+
+
+get_depth_term = CallableDict()
+
+
+@get_depth_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def get_depth_term_asc(trt, C, rup):
+    """
+    Returns the top-of-rupture depth scaling (equation 1)
+    """
+    return C["bcr"] * rup.ztor
+
+
+@get_depth_term.add(const.TRT.UPPER_MANTLE)
+def get_depth_term_um(trt, C, rup):
+    """
+    No top of rupture depth is considered for upper mantle events
+    """
+    return 0.0
+
+
+@get_depth_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def get_depth_term_SInter(trt, C, rup):
+    """
+    Returns depth term (dependent on top of rupture depth) as given
+    in equations 1 and 2
+    """
+    return (C["bint"] * rup.ztor)
+
+
+@get_depth_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def get_depth_term_sslab(trt, C, rup):
+    """
+    Returns depth term (dependent on top of rupture depth) as given
+    in equations 1
+
+    Note that there is a ztor cap of 100 km that is introduced in the
+    Fortran code but not mentioned in the original paper!
+    """
+    if rup.ztor > 100.0:
+        return C["bSLH"] * 100.0
+    else:
+        return C["bSLH"] * rup.ztor
+
+
+get_distance_term = CallableDict()
+
+
+@get_distance_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def get_distance_term_asc(trt, C, dists, rup):
+    """
+    Returns the distance scaling term defined in equation 3
+    """
+    x_ij = dists.rrup
+    gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
+
+    # Geometric attenuation scaling described in equation 6
+    g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
+        np.ones_like(x_ij)
+    idx = x_ij <= 30.0
+    if np.any(idx):
+        g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
+                                      x_ij[idx] + gn_exp)
+
+    # equation 5
+    c_m = min(rup.mag, CONSTANTS["m_c"])
+    # equation 4
+    r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
+    return C["gcr"] * np.log(r_ij) + C["gcrL"] * np.log(x_ij + 200.0) +\
+        g_n + C["ecr"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
+
+
+@get_distance_term.add(const.TRT.UPPER_MANTLE)
+def get_distance_term_um(trt, C, dists, rup):
+    """
+    Returns the distance attenuation term
+    """
+    x_ij = dists.rrup
+    gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
+    g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
+        np.ones_like(x_ij)
+    idx = x_ij <= 30.0
+    if np.any(idx):
+        g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
+                                      x_ij[idx] + gn_exp)
+    c_m = min(rup.mag, CONSTANTS["m_c"])
+    r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
+    return C["gUM"] * np.log(r_ij) +\
+        C["gcrL"] * np.log(x_ij + 200.0) +\
+        g_n + C["eum"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
+
+
+@get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def get_distance_term_SInter(trt, C, dists, rup):
+    """
+    Returns distance scaling term, dependent on top of rupture depth,
+    as described in equation 6
+    """
+    x_ij = dists.rrup
+    # Get r_ij - distance for geometric spreading (equations 4 & 5)
+    c_m = min(rup.mag, CONSTANTS["m_c"])
+    r_ij = CONSTANTS["xinto"] + x_ij +\
+        np.exp(C["alpha"] + C["beta"] * c_m)
+    # Get factors common to both shallow and deep
+    dist_term = C["gint"] * np.log(r_ij) + C["eintV"] * dists.rvolc +\
+        C["gammaint"]
+
+    if rup.ztor < 25.:
+        # Shallow events have geometric and anelastic attenuation term
+        dist_term += (C["gintLS"] * np.log(x_ij + 200.0)
+                      + C["eintS"] * x_ij) + C["gamma_ints"]
+    else:
+        # Deep events do not have an anelastic attenuation term
+        dist_term += (C["gintLD"] * np.log(x_ij + 200.0))
+    return dist_term
+
+
+@get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def get_distance_term_sslab(trt, C, dists, rup):
+    """
+    Returns the distance scaling term in equation 2a
+
+    Note that the paper describes a lower and upper cap on Rvolc that
+    is not found in the Fortran code, and is thus neglected here.
+    """
+    x_ij = dists.rrup
+    # Get anelastic scaling term in quation 5
+    if rup.ztor >= 50.:
+        qslh = C["eSLH"] * (0.02 * rup.ztor - 1.0)
+    else:
+        qslh = 0.0
+    # r_volc = np.copy(dists.rvolc)
+    # r_volc[np.logical_and(r_volc > 0.0, r_volc <= 12.0)] = 12.0
+    # r_volc[r_volc >= 80.0] = 80.0
+    # Get r_ij - distance for geometric spreading (equations 3 and 4)
+    c_m = min(rup.mag, CONSTANTS["m_c"])
+    r_ij = x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
+    return C["gSL"] * np.log(r_ij) + \
+        C["gLL"] * np.log(x_ij + 200.) +\
+        C["eSL"] * x_ij + qslh * x_ij +\
+        C["eSLV"] * dists.rvolc + C["gamma"]
+
+
+def _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup):
+    """
+    Returns the log SF term required for equation 9
+
+    For events deeper than 25 km the rock-site factor is slightly different
+    for site classes SCII, SCIII, SCIV
+    """
+    ln_sf = np.zeros(n_sites)
+    for i in range(1, 5):
+        ln_sf_i = (C["lnSC1AM"] - C_SITE["LnAmax1D{:g}".format(i)])
+        if i > 1:
+            if trt == const.TRT.SUBDUCTION_INTERFACE and rup.ztor > 25.0:
+                # For deep events site classes 5, 6, and 7 are used
+                loc = i + 3
+            else:
+                # For shallow events the conventional approach applies
+                loc = i
+            ln_sf_i += C["S{:g}".format(loc)]
+        ln_sf[idx[i]] += ln_sf_i
+    return ln_sf
+
+
+def _get_ln_a_n_max(trt, C, n_sites, idx, rup):
+    """
+    Defines the rock site amplification defined in equations 7a and 7b
+
+    For events deeper than 25 km the rock-site factor is slightly different
+    for site classes SCII, SCIII, SCIV
+    """
+    ln_a_n_max = C["lnSC1AM"] * np.ones(n_sites)
+    for i in [2, 3, 4]:
+        if np.any(idx[i]):
+            # For deep events site classes 5, 6 and 7 are used
+            if trt == const.TRT.SUBDUCTION_INTERFACE and rup.ztor > 25.0:
+                loc = i + 3
+            else:
+                loc = i
+            ln_a_n_max[idx[i]] += C["S{:g}".format(loc)]
+    return ln_a_n_max
+
+
+def add_site_amplification(trt, C, C_SITE, sites, sa_rock, idx, rup):
+    """
+    Applies the site amplification scaling defined in equations from 10
+    to 15
+    """
+    n_sites = sites.vs30.shape
+    # Convert from reference rock to hard rock
+    hard_rock_sa = sa_rock - C["lnSC1AM"]
+    # Gets the elastic site amplification ratio
+    ln_a_n_max = _get_ln_a_n_max(trt, C, n_sites, idx, rup)
+
+    # Retrieves coefficients needed to determine smr
+    sreff, sreffc, f_sr = _get_smr_coeffs(C, C_SITE, idx, n_sites,
+                                          hard_rock_sa)
+    snc = np.zeros(n_sites)
+    alpha = CONSTANTS["alpha"]
+    beta = CONSTANTS["beta"]
+    smr = np.zeros(n_sites)
+    sa_soil = hard_rock_sa + ln_a_n_max
+    # Get lnSF
+    ln_sf = _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup)
+    lnamax_idx = np.exp(ln_a_n_max) < 1.25
+    not_lnamax_idx = np.logical_not(lnamax_idx)
+    for i in range(1, 5):
+        idx_i = idx[i]
+        if not np.any(idx_i):
+            # No sites of the given site class
+            continue
+        idx2 = np.logical_and(lnamax_idx, idx_i)
+        if np.any(idx2):
+            # Use the approximate method for SRC and SNC
+            c_a = C_SITE["LnAmax1D{:g}".format(i)] /\
+                (np.log(beta) - np.log(sreffc[idx2] ** alpha + beta))
+            c_b = -c_a * np.log(sreffc[idx2] ** alpha + beta)
+
+            snc[idx2] = np.exp((c_a * (alpha - 1.) *
+                               np.log(beta) * np.log(10.0 * beta) -
+                               np.log(10.0) * (c_b + ln_sf[idx2])) /
+                               (c_a * (alpha * np.log(10.0 * beta) -
+                                np.log(beta))))
+        # For the cases when ln_a_n_max >= 1.25
+        idx2 = np.logical_and(not_lnamax_idx, idx_i)
+        if np.any(idx2):
+            snc[idx2] = (np.exp((ln_a_n_max[idx2] *
+                         np.log(sreffc[idx2] ** alpha + beta) -
+                         ln_sf[idx2] * np.log(beta)) /
+                         C_SITE["LnAmax1D{:g}".format(i)]) - beta) **\
+                         (1.0 / alpha)
+
+        smr[idx_i] = sreff[idx_i] * (snc[idx_i] / sreffc[idx_i]) *\
+            f_sr[idx_i]
+        # For the cases when site class = i and SMR != 0
+        idx2 = np.logical_and(idx_i, np.fabs(smr) > 0.0)
+        if np.any(idx2):
+            sa_soil[idx2] += (-C_SITE["LnAmax1D{:g}".format(i)] *
+                              (np.log(smr[idx2] ** alpha + beta) -
+                              np.log(beta)) /
+                              (np.log(sreffc[idx2] ** alpha + beta) -
+                               np.log(beta)))
+    return sa_soil
+
+
+def _get_smr_coeffs(C, C_SITE, idx, n_sites, sa_rock):
+    """
+    Returns the SReff and SReffC terms needed for equation 14 and 15
+    """
+    # Get SR
+    sreff = np.zeros(n_sites)
+    sreffc = np.zeros(n_sites)
+    f_sr = np.zeros(n_sites)
+    for i in range(1, 5):
+        sreff[idx[i]] += (np.exp(sa_rock[idx[i]]) * IMF[i])
+        sreffc[idx[i]] += (C_SITE["Src1D{:g}".format(i)] * IMF[i])
+        # Get f_SR
+        f_sr[idx[i]] += C_SITE["fsr{:g}".format(i)]
+    return sreff, sreffc, f_sr
+
+
+def _get_site_classification(vs30):
+    """
+    Define the site class categories based on Vs30. Returns a
+    vector of site class values and a dictionary containing logical
+    vectors for each of the site classes
+    """
+    site_class = np.ones(vs30.shape, dtype=int)
+    idx = {}
+    idx[1] = vs30 > 600.
+    idx[2] = np.logical_and(vs30 > 300., vs30 <= 600.)
+    idx[3] = np.logical_and(vs30 > 200., vs30 <= 300.)
+    idx[4] = vs30 <= 200.
+    for i in [2, 3, 4]:
+        site_class[idx[i]] = i
+    return site_class, idx
+
+
+def get_stddevs(C, phi, stddev_types):
+    """
+    Retuns the standard deviation
+    """
+    stddevs = []
+    tau = C["tau"] + np.zeros_like(phi)
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau)
+    return stddevs
 
 
 class ZhaoEtAl2016Asc(GMPE):
@@ -52,10 +461,7 @@ class ZhaoEtAl2016Asc(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components :
@@ -63,11 +469,8 @@ class ZhaoEtAl2016Asc(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30 (converted to site class)
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -88,199 +491,25 @@ class ZhaoEtAl2016Asc(GMPE):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
-        C_SITE = self.SITE_COEFFS[imt]
-        s_c, idx = self._get_site_classification(sites.vs30)
-        sa_rock = (self.get_magnitude_scaling_term(C, rup) +
-                   self.get_sof_term(C, rup) +
-                   self.get_depth_term(C, rup) +
-                   self.get_distance_term(C, dists, rup))
+        C_SITE = self.COEFFS_SITE[imt]
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+        s_c, idx = _get_site_classification(sites.vs30)
+        sa_rock = (get_magnitude_scaling_term(trt, C, rup) +
+                   get_sof_term(trt, C, rup) +
+                   get_depth_term(trt, C, rup) +
+                   get_distance_term(trt, C, dists, rup))
 
-        sa_soil = self.add_site_amplification(C, C_SITE, sites,
-                                              sa_rock, idx, rup)
+        sa_soil = add_site_amplification(trt, C, C_SITE, sites,
+                                         sa_rock, idx, rup)
 
-        stddevs = self.get_stddevs(C, sites.vs30.shape, idx, stddev_types)
+        if self.__class__.__name__.endswith('SiteSigma'):
+            phi = np.zeros_like(sites.vs30)
+            for i in range(1, 5):
+                phi[idx[i]] += C["sc{:g}_sigma_S".format(i)]
+        else:
+            phi = C["sigma"] + np.zeros_like(sites.vs30)
+        stddevs = get_stddevs(C, phi, stddev_types)
         return sa_soil, stddevs
-
-    def get_magnitude_scaling_term(self, C, rup):
-        """
-        Returns the magnitude scaling term in equations 1 and 2
-        """
-        if rup.mag <= self.CONSTANTS["m_c"]:
-            return C["ccr"] * rup.mag
-        else:
-            return (C["ccr"] * self.CONSTANTS["m_c"]) +\
-                (C["dcr"] * (rup.mag - self.CONSTANTS["m_c"]))
-
-    def get_sof_term(self, C, rup):
-        """
-        Shallow crustal faults have a style-of-faulting dependence as
-        normal faulting is found to produce higher ground motion (equation 1)
-        """
-        if rup.rake <= -45.0 and rup.rake >= -135.0:
-            # Normal faulting
-            return C["FN_CR"]
-        else:
-            # No adjustment for strike-slip or reverse faulting
-            return 0.0
-
-    def get_depth_term(self, C, rup):
-        """
-        Returns the top-of-rupture depth scaling (equation 1)
-        """
-        return C["bcr"] * rup.ztor
-
-    def get_distance_term(self, C, dists, rup):
-        """
-        Returns the distance scaling term defined in equation 3
-        """
-        x_ij = dists.rrup
-        gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
-
-        # Geometric attenuation scaling described in equation 6
-        g_n = C["gcrN"] * np.log(self.CONSTANTS["xcro"] + 30. + gn_exp) *\
-            np.ones_like(x_ij)
-        idx = x_ij <= 30.0
-        if np.any(idx):
-            g_n[idx] = C["gcrN"] * np.log(self.CONSTANTS["xcro"] +
-                                          x_ij[idx] + gn_exp)
-
-        # equation 5
-        c_m = min(rup.mag, self.CONSTANTS["m_c"])
-        # equation 4
-        r_ij = self.CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
-        return C["gcr"] * np.log(r_ij) + C["gcrL"] * np.log(x_ij + 200.0) +\
-            g_n + C["ecr"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
-
-    def add_site_amplification(self, C, C_SITE, sites, sa_rock, idx, rup):
-        """
-        Applies the site amplification scaling defined in equations from 10
-        to 15
-        """
-        n_sites = sites.vs30.shape
-        # Convert from reference rock to hard rock
-        hard_rock_sa = sa_rock - C["lnSC1AM"]
-        # Gets the elastic site amplification ratio
-        ln_a_n_max = self._get_ln_a_n_max(C, n_sites, idx, rup)
-
-        # Retrieves coefficients needed to determine smr
-        sreff, sreffc, f_sr = self._get_smr_coeffs(C, C_SITE, idx, n_sites,
-                                                   hard_rock_sa)
-        snc = np.zeros(n_sites)
-        alpha = self.CONSTANTS["alpha"]
-        beta = self.CONSTANTS["beta"]
-        smr = np.zeros(n_sites)
-        sa_soil = hard_rock_sa + ln_a_n_max
-        # Get lnSF
-        ln_sf = self._get_ln_sf(C, C_SITE, idx, n_sites, rup)
-        lnamax_idx = np.exp(ln_a_n_max) < 1.25
-        not_lnamax_idx = np.logical_not(lnamax_idx)
-        for i in range(1, 5):
-            idx_i = idx[i]
-            if not np.any(idx_i):
-                # No sites of the given site class
-                continue
-            idx2 = np.logical_and(lnamax_idx, idx_i)
-            if np.any(idx2):
-                # Use the approximate method for SRC and SNC
-                c_a = C_SITE["LnAmax1D{:g}".format(i)] /\
-                    (np.log(beta) - np.log(sreffc[idx2] ** alpha + beta))
-                c_b = -c_a * np.log(sreffc[idx2] ** alpha + beta)
-
-                snc[idx2] = np.exp((c_a * (alpha - 1.) *
-                                   np.log(beta) * np.log(10.0 * beta) -
-                                   np.log(10.0) * (c_b + ln_sf[idx2])) /
-                                   (c_a * (alpha * np.log(10.0 * beta) -
-                                    np.log(beta))))
-            # For the cases when ln_a_n_max >= 1.25
-            idx2 = np.logical_and(not_lnamax_idx, idx_i)
-            if np.any(idx2):
-                snc[idx2] = (np.exp((ln_a_n_max[idx2] *
-                             np.log(sreffc[idx2] ** alpha + beta) -
-                             ln_sf[idx2] * np.log(beta)) /
-                             C_SITE["LnAmax1D{:g}".format(i)]) - beta) **\
-                             (1.0 / alpha)
-
-            smr[idx_i] = sreff[idx_i] * (snc[idx_i] / sreffc[idx_i]) *\
-                f_sr[idx_i]
-            # For the cases when site class = i and SMR != 0
-            idx2 = np.logical_and(idx_i, np.fabs(smr) > 0.0)
-            if np.any(idx2):
-                sa_soil[idx2] += (-C_SITE["LnAmax1D{:g}".format(i)] *
-                                  (np.log(smr[idx2] ** alpha + beta) -
-                                  np.log(beta)) /
-                                  (np.log(sreffc[idx2] ** alpha + beta) -
-                                   np.log(beta)))
-        return sa_soil
-
-    def _get_smr_coeffs(self, C, C_SITE, idx, n_sites, sa_rock):
-        """
-        Returns the SReff and SReffC terms needed for equation 14 and 15
-        """
-        # Get SR
-        sreff = np.zeros(n_sites)
-        sreffc = np.zeros(n_sites)
-        f_sr = np.zeros(n_sites)
-        for i in range(1, 5):
-            sreff[idx[i]] += (np.exp(sa_rock[idx[i]]) * self.IMF[i])
-            sreffc[idx[i]] += (C_SITE["Src1D{:g}".format(i)] * self.IMF[i])
-            # Get f_SR
-            f_sr[idx[i]] += C_SITE["fsr{:g}".format(i)]
-        return sreff, sreffc, f_sr
-
-    def _get_ln_a_n_max(self, C, n_sites, idx, rup):
-        """
-        Defines the rock site amplification defined in equations 10a and 10b
-        """
-        ln_a_n_max = C["lnSC1AM"] * np.ones(n_sites)
-        for i in [2, 3, 4]:
-            if np.any(idx[i]):
-                ln_a_n_max[idx[i]] += C["S{:g}".format(i)]
-        return ln_a_n_max
-
-    def _get_ln_sf(self, C, C_SITE, idx, n_sites, rup):
-        """
-        Returns the log SF term required for equation 12
-        """
-        ln_sf = np.zeros(n_sites)
-        for i in range(1, 5):
-            ln_sf_i = (C["lnSC1AM"] - C_SITE["LnAmax1D{:g}".format(i)])
-            if i > 1:
-                ln_sf_i += C["S{:g}".format(i)]
-            ln_sf[idx[i]] += ln_sf_i
-        return ln_sf
-
-    def _get_site_classification(self, vs30):
-        """
-        Define the site class categories based on Vs30. Returns a
-        vector of site class values and a dictionary containing logical
-        vectors for each of the site classes
-        """
-        site_class = np.ones(vs30.shape, dtype=int)
-        idx = {}
-        idx[1] = vs30 > 600.
-        idx[2] = np.logical_and(vs30 > 300., vs30 <= 600.)
-        idx[3] = np.logical_and(vs30 > 200., vs30 <= 300.)
-        idx[4] = vs30 <= 200.
-        for i in [2, 3, 4]:
-            site_class[idx[i]] = i
-        return site_class, idx
-
-    def get_stddevs(self, C, n_sites, idx, stddev_types):
-        """
-        Retuns the standard deviation
-        """
-        stddevs = []
-        phi = C["sigma"] + np.zeros(n_sites)
-        tau = C["tau"] + np.zeros(n_sites)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs
 
     # Coefficients taken from Excel spreadsheet provided by the author
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -326,7 +555,7 @@ class ZhaoEtAl2016Asc(GMPE):
     """)
 
     # Coefficients specific to the site amplification
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt    LnAmax1D1   LnAmax1D2   LnAmax1D3   LnAmax1D4     Src1D1     Src1D2     Src1D3     Src1D4      fsr1      fsr2      fsr3      fsr4
     pga     0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440  1.000000  1.000000  1.000000  1.000000
     0.005   0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440  1.000000  1.000000  1.000000  1.000000
@@ -368,21 +597,6 @@ class ZhaoEtAl2016Asc(GMPE):
     5.000   0.583950    1.000000    1.606820    0.547360  14.817000  10.670300  30.000000  14.381810  0.000000  0.000000  0.000000  0.000000
     """)
 
-    CONSTANTS = {"m_c": 7.1,
-                 "xcro": 2.0,
-                 "xinto": 10.0,  # Used in subduction Interface class
-                 "alpha": 2.0,
-                 "beta": 0.6,
-                 "Imin": 1.0,
-                 "Imax": 12.0,
-                 "m_sc": 6.3}  # Used in Subduction Slab class
-
-    # Impedence ratio factors for each site class
-    IMF = {1: (1. + 0.8 * 2.73) / 3.5,  # IMF 0.91
-           2: 3.07 / 3.0,
-           3: (1. + 0.9 * 1.76) / 2.5,
-           4: (1. + 0.6 * 2.02) / 3.0}
-
 
 class ZhaoEtAl2016AscSiteSigma(ZhaoEtAl2016Asc):
     """
@@ -390,25 +604,6 @@ class ZhaoEtAl2016AscSiteSigma(ZhaoEtAl2016Asc):
     events for the case when within-event variability is dependent on site
     class
     """
-    def get_stddevs(self, C, n_sites, idx, stddev_types):
-        """
-        Returns site class specific standard deviation
-        """
-        stddevs = []
-        tau = C["tau"] + np.zeros(n_sites)
-        phi = np.zeros(n_sites)
-        for i in range(1, 5):
-            phi[idx[i]] += C["sc{:g}_sigma_S".format(i)]
-
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs
 
 
 class ZhaoEtAl2016UpperMantle(ZhaoEtAl2016Asc):
@@ -418,47 +613,8 @@ class ZhaoEtAl2016UpperMantle(ZhaoEtAl2016Asc):
     #: Supported tectonic region type is upper mantle
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.UPPER_MANTLE
 
-    def get_sof_term(self, C, rup):
-        """
-        In the case of the upper mantle events separate coefficients
-        are considered for normal, reverse and strike-slip
-        """
-        if rup.rake <= -45.0 and rup.rake >= -135.0:
-            # Normal faulting
-            return C["FN_UM"]
-        elif rup.rake > 45.0 and rup.rake < 135.0:
-            # Reverse faulting
-            return C["FRV_UM"]
-        else:
-            # No adjustment for strike-slip faulting
-            return 0.0
-
-    def get_depth_term(self, C, rup):
-        """
-        No top of rupture depth is considered for upper mantle events
-        """
-        return 0.0
-
-    def get_distance_term(self, C, dists, rup):
-        """
-        Returns the distance attenuation term
-        """
-        x_ij = dists.rrup
-        gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
-        g_n = C["gcrN"] * np.log(self.CONSTANTS["xcro"] + 30. + gn_exp) *\
-            np.ones_like(x_ij)
-        idx = x_ij <= 30.0
-        if np.any(idx):
-            g_n[idx] = C["gcrN"] * np.log(self.CONSTANTS["xcro"] +
-                                          x_ij[idx] + gn_exp)
-        c_m = min(rup.mag, self.CONSTANTS["m_c"])
-        r_ij = self.CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
-        return C["gUM"] * np.log(r_ij) +\
-            C["gcrL"] * np.log(x_ij + 200.0) +\
-            g_n + C["eum"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
-
     # For Upper Mantle
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt    LnAmax1D1   LnAmax1D2   LnAmax1D3   LnAmax1D4     Src1D1     Src1D2     Src1D3     Src1D4      fsr1      fsr2      fsr3      fsr4
     pga     0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440  1.000000  1.000000  1.000000  1.000000
     0.005   0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440  1.000000  1.000000  1.000000  1.000000
@@ -506,25 +662,6 @@ class ZhaoEtAl2016UpperMantleSiteSigma(ZhaoEtAl2016UpperMantle):
     Adaption of the Zhao et al (2016a) GMPE for upper mantle events for the
     case when within-event variability is dependent on site class
     """
-    def get_stddevs(self, C, n_sites, idx, stddev_types):
-        """
-        Returns site class specific standard deviation
-        """
-        stddevs = []
-        tau = C["tau"] + np.zeros(n_sites)
-        phi = np.zeros(n_sites)
-        for i in range(1, 5):
-            phi[idx[i]] += C["sc{:g}_sigma_S".format(i)]
-
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs
 
 
 class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
@@ -545,98 +682,6 @@ class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
 
     #: Required rupture parameters are magnitude and top-of-rupture depth
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
-
-    def get_magnitude_scaling_term(self, C, rup):
-        """
-        Returns magnitude scaling term, which is dependent on top of rupture
-        depth - as described in equations 1 and 2
-        """
-        if rup.ztor > 25.0:
-            # Deep interface events
-            c_int = C["cint"]
-        else:
-            c_int = C["cintS"]
-
-        if rup.mag <= self.CONSTANTS["m_c"]:
-            return c_int * rup.mag
-        else:
-            return (c_int * self.CONSTANTS["m_c"]) +\
-                (C["dint"] * (rup.mag - self.CONSTANTS["m_c"]))
-
-    def get_sof_term(self, C, rup):
-        """
-        No style of faulting dependence here
-        """
-        return 0.0
-
-    def get_depth_term(self, C, rup):
-        """
-        Returns depth term (dependent on top of rupture depth) as given
-        in equations 1 and 2
-        """
-        return (C["bint"] * rup.ztor)
-
-    def get_distance_term(self, C, dists, rup):
-        """
-        Returns distance scaling term, dependent on top of rupture depth,
-        as described in equation 6
-        """
-        x_ij = dists.rrup
-        # Get r_ij - distance for geometric spreading (equations 4 & 5)
-        c_m = min(rup.mag, self.CONSTANTS["m_c"])
-        r_ij = self.CONSTANTS["xinto"] + x_ij +\
-            np.exp(C["alpha"] + C["beta"] * c_m)
-        # Get factors common to both shallow and deep
-        dist_term = C["gint"] * np.log(r_ij) + C["eintV"] * dists.rvolc +\
-            C["gammaint"]
-
-        if rup.ztor < 25.:
-            # Shallow events have geometric and anelastic attenuation term
-            dist_term += (C["gintLS"] * np.log(x_ij + 200.0)
-                          + C["eintS"] * x_ij) + C["gamma_ints"]
-        else:
-            # Deep events do not have an anelastic attenuation term
-            dist_term += (C["gintLD"] * np.log(x_ij + 200.0))
-        return dist_term
-
-    def _get_ln_a_n_max(self, C, n_sites, idx, rup):
-        """
-        Defines the rock site amplification defined in equations 7a and 7b
-
-        For events deeper than 25 km the rock-site factor is slightly different
-        for site classes SCII, SCIII, SCIV
-        """
-        ln_a_n_max = C["lnSC1AM"] * np.ones(n_sites)
-        for i in [2, 3, 4]:
-            if np.any(idx[i]):
-                # For deep events site classes 5, 6 and 7 are used
-                if rup.ztor > 25.0:
-                    loc = i + 3
-                else:
-                    loc = i
-                ln_a_n_max[idx[i]] += C["S{:g}".format(loc)]
-        return ln_a_n_max
-
-    def _get_ln_sf(self, C, C_SITE, idx, n_sites, rup):
-        """
-        Returns the log SF term required for equation 9
-
-        For events deeper than 25 km the rock-site factor is slightly different
-        for site classes SCII, SCIII, SCIV
-        """
-        ln_sf = np.zeros(n_sites)
-        for i in range(1, 5):
-            ln_sf_i = (C["lnSC1AM"] - C_SITE["LnAmax1D{:g}".format(i)])
-            if i > 1:
-                if rup.ztor > 25.0:
-                    # For deep events site classes 5, 6, and 7 are used
-                    loc = i + 3
-                else:
-                    # For shallow events the conventional approach applies
-                    loc = i
-                ln_sf_i += C["S{:g}".format(loc)]
-            ln_sf[idx[i]] += ln_sf_i
-        return ln_sf
 
     # Coefficients table taken from spreadsheet supplied by the author
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -682,7 +727,7 @@ class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
     """)
 
     # Coefficients specific to the site amplification
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt    LnAmax1D1   LnAmax1D2   LnAmax1D3   LnAmax1D4     Src1D1     Src1D2     Src1D3     Src1D4     fsr1    fsr2    fsr3    fsr4
     pga     0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440   1.0000  1.0000  1.1650  1.0000
     0.005   0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440   1.0000  1.0000  1.1650  1.0000
@@ -731,25 +776,6 @@ class ZhaoEtAl2016SInterSiteSigma(ZhaoEtAl2016SInter):
     case of site-dependent within-event variability
     """
 
-    def get_stddevs(self, C, n_sites, idx, stddev_types):
-        """
-        """
-        stddevs = []
-        tau = C["tau"] + np.zeros(n_sites)
-        phi = np.zeros(n_sites)
-        for i in range(1, 5):
-            phi[idx[i]] += C["sc{:g}_sigma_S".format(i)]
-
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs
-
 
 class ZhaoEtAl2016SSlab(ZhaoEtAl2016Asc):
     """
@@ -770,62 +796,6 @@ class ZhaoEtAl2016SSlab(ZhaoEtAl2016Asc):
 
     #: Required rupture parameters are magnitude and top of rupture depth.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
-
-    def get_magnitude_scaling_term(self, C, rup):
-        """
-        Returns the magnitude scaling defined in equation 1
-        """
-        m_c = self.CONSTANTS["m_c"]
-        if rup.mag <= m_c:
-            return C["cSL"] * rup.mag +\
-                C["cSL2"] * ((rup.mag - self.CONSTANTS["m_sc"]) ** 2.)
-        else:
-            return C["cSL"] * m_c +\
-               C["cSL2"] * ((m_c - self.CONSTANTS["m_sc"]) ** 2.) +\
-               C["dSL"] * (rup.mag - m_c)
-
-    def get_sof_term(self, C, rup):
-        """
-        No style of faulting dependence here
-        """
-        return 0.0
-
-    def get_depth_term(self, C, rup):
-        """
-        Returns depth term (dependent on top of rupture depth) as given
-        in equations 1
-
-        Note that there is a ztor cap of 100 km that is introduced in the
-        Fortran code but not mentioned in the original paper!
-        """
-        if rup.ztor > 100.0:
-            return C["bSLH"] * 100.0
-        else:
-            return C["bSLH"] * rup.ztor
-
-    def get_distance_term(self, C, dists, rup):
-        """
-        Returns the distance scaling term in equation 2a
-
-        Note that the paper describes a lower and upper cap on Rvolc that
-        is not found in the Fortran code, and is thus neglected here.
-        """
-        x_ij = dists.rrup
-        # Get anelastic scaling term in quation 5
-        if rup.ztor >= 50.:
-            qslh = C["eSLH"] * (0.02 * rup.ztor - 1.0)
-        else:
-            qslh = 0.0
-        # r_volc = np.copy(dists.rvolc)
-        # r_volc[np.logical_and(r_volc > 0.0, r_volc <= 12.0)] = 12.0
-        # r_volc[r_volc >= 80.0] = 80.0
-        # Get r_ij - distance for geometric spreading (equations 3 and 4)
-        c_m = min(rup.mag, self.CONSTANTS["m_c"])
-        r_ij = x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
-        return C["gSL"] * np.log(r_ij) + \
-            C["gLL"] * np.log(x_ij + 200.) +\
-            C["eSL"] * x_ij + qslh * x_ij +\
-            C["eSLV"] * dists.rvolc + C["gamma"]
 
     # Coefficients table taken from spreadsheet supplied by the author
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -871,7 +841,7 @@ pga    -5.30118903954448  1.151  1.44758  0.37625  0.42646  0.01825668401347  -1
     """)
 
     # Coefficients specific to the site amplification
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt    LnAmax1D1   LnAmax1D2   LnAmax1D3   LnAmax1D4     Src1D1     Src1D2     Src1D3     Src1D4     fsr1    fsr2    fsr3    fsr4
     pga     0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440   1.0000  1.0000  1.0000  1.0000
     0.005   0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440   1.0000  1.0000  1.0000  1.0000
@@ -919,24 +889,3 @@ class ZhaoEtAl2016SSlabSiteSigma(ZhaoEtAl2016SSlab):
     Subclass of the Zhao et al. (2016c) subduction in-slab GMPE for the
     case of site-dependent within-event variability
     """
-
-    def get_stddevs(self, C, n_sites, idx, stddev_types):
-        """
-        Returns the intra-event standard deviation calibrated for the
-        specific site class
-        """
-        stddevs = []
-        tau = C["tau"] + np.zeros(n_sites)
-        phi = np.zeros(n_sites)
-        for i in range(1, 5):
-            phi[idx[i]] += C["sc{:g}_sigma_S".format(i)]
-
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs

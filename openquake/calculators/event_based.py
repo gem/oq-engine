@@ -150,7 +150,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 src.num_ruptures = src.count_ruptures()
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
-        eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
+        eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         allargs = []
         if self.oqparam.is_ucerf():
@@ -173,7 +173,7 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
-        self.nruptures = 0
+        self.nruptures = 0  # estimated classical ruptures within maxdist
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
@@ -269,6 +269,8 @@ class EventBasedCalculator(base.HazardCalculator):
             self.gsims = [gsim_rlz.value[0] for gsim_rlz in gsim_lt]
             self.cmaker = ContextMaker(
                 '*', self.gsims, {'maximum_distance': oq.maximum_distance,
+                                  'minimum_distance': oq.minimum_distance,
+                                  'truncation_level': oq.truncation_level,
                                   'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
@@ -283,8 +285,11 @@ class EventBasedCalculator(base.HazardCalculator):
                     'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
-            num_gsims = numpy.array(
-                [len(gsim_lt.values[trt]) for trt in gsim_lt.values], U32)
+            if list(gsim_lt.values) == ['*']:
+                num_gsims = numpy.array([len(gsim_lt.values['*'])], U32)
+            else:
+                num_gsims = numpy.array(
+                    [len(gsim_lt.values.get(trt, [])) for trt in aw.trts], U32)
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ
                 aw['n_occ'] *= ngmfs * num_gsims[aw['trt_smr']]

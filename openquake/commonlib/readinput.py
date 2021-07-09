@@ -145,11 +145,23 @@ def unzip_rename(zpath, name):
     return xpath
 
 
+def normpath(fnames, base_path):
+    vals = []
+    for fname in fnames:
+        val = os.path.normpath(os.path.join(base_path, fname))
+        if not os.path.exists(val):
+            raise OSError('No such file: %s' % val)
+        vals.append(val)
+    return vals
+
+
 def normalize(key, fnames, base_path):
     input_type, _ext = key.rsplit('_', 1)
     filenames = []
     for val in fnames:
-        if '://' in val:
+        if isinstance(val, list):
+            val = normpath(val, base_path)
+        elif '://' in val:
             # get the data from an URL
             resp = requests.get(val)
             _, val = val.rsplit('/', 1)
@@ -157,7 +169,7 @@ def normalize(key, fnames, base_path):
                 f.write(resp.content)
         elif os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
-        if val.endswith('.zip'):
+        elif val.endswith('.zip'):
             zpath = os.path.normpath(os.path.join(base_path, val))
             if key == 'exposure_file':
                 name = 'exposure.xml'
@@ -168,7 +180,7 @@ def normalize(key, fnames, base_path):
             val = unzip_rename(zpath, name)
         else:
             val = os.path.normpath(os.path.join(base_path, val))
-        if not os.path.exists(val):
+        if isinstance(val, str) and not os.path.exists(val):
             # tested in archive_err_2
             raise OSError('No such file: %s' % val)
         filenames.append(val)
@@ -622,7 +634,7 @@ def get_ruptures(fname_csv):
         geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:
         return ()
-    dic = dict(geom=numpy.array(geoms, object))
+    dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
     # NB: PMFs for nonparametric ruptures are missing
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
@@ -714,6 +726,9 @@ def get_full_lt(oqparam):
 
 
 def save_source_info(csm, h5):
+    """
+    Creates source_info, source_wkt, trt_smrs, toms
+    """
     data = {}  # src_id -> row
     wkts = []
     lens = []
@@ -820,8 +835,7 @@ def get_composite_source_model(oqparam, h5=None):
                 csm.full_lt = full_lt
             if h5:
                 # avoid errors with --reuse_hazard
-                h5['trt_smrs'] = csm.get_trt_smrs()
-                hdf5.create(h5, 'source_info', source_info_dt)
+                save_source_info(csm, h5)
             _check_csm(csm, oqparam, h5)
             return csm
 
@@ -842,17 +856,6 @@ def get_imts(oqparam):
     Return a sorted list of IMTs as hazardlib objects
     """
     return list(map(imt.from_string, sorted(oqparam.imtls)))
-
-
-def get_amplification(oqparam):
-    """
-    :returns: a DataFrame (ampcode, level, PGA, SA() ...)
-    """
-    fname = oqparam.inputs['amplification']
-    df = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64},
-                       index='ampcode')
-    df.fname = fname
-    return df
 
 
 def _cons_coeffs(records, limit_states):
@@ -878,18 +881,21 @@ def get_crmodel(oqparam):
     consdict = {}
     if 'consequence' in oqparam.inputs:
         # build consdict of the form consequence_by_tagname -> tag -> array
-        for by, fname in oqparam.inputs['consequence'].items():
-            dtypedict = {
-                by: str, 'consequence': str, 'loss_type': str, None: float}
-            dic = group_array(
-                hdf5.read_csv(fname, dtypedict).array, 'consequence')
-            for consequence, group in dic.items():
-                if consequence not in scientific.KNOWN_CONSEQUENCES:
-                    raise InvalidFile('Unknown consequence %s in %s' %
-                                      (consequence, fname))
-                bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
-                         for tag, grp in group_array(group, by).items()}
-                consdict['%s_by_%s' % (consequence, by)] = bytag
+        for by, fnames in oqparam.inputs['consequence'].items():
+            if isinstance(fnames, str):  # single file
+                fnames = [fnames]
+            for fname in fnames:
+                dtypedict = {
+                    by: str, 'consequence': str, 'loss_type': str, None: float}
+                dic = group_array(
+                    hdf5.read_csv(fname, dtypedict).array, 'consequence')
+                for consequence, group in dic.items():
+                    if consequence not in scientific.KNOWN_CONSEQUENCES:
+                        raise InvalidFile('Unknown consequence %s in %s' %
+                                          (consequence, fname))
+                    bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
+                             for tag, grp in group_array(group, by).items()}
+                    consdict['%s_by_%s' % (consequence, by)] = bytag
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
@@ -1218,7 +1224,11 @@ def get_input_files(oqparam, hazard=False):
                 fnames.update(exp.datafiles)
             fnames.update(fname)
         elif isinstance(fname, dict):
-            fnames.update(fname.values())
+            for key, val in fname.items():
+                if isinstance(val, list):  # list of files
+                    fnames.update(val)
+                else:
+                    fnames.add(val)
         elif isinstance(fname, list):
             for f in fname:
                 if f == oqparam.input_dir:

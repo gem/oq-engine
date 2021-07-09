@@ -23,10 +23,209 @@ Module exports :class:`AmeriEtAl2017Rjb`,
                :class:`AmeriEtAl2017RepiStressDrop`
 """
 import numpy as np
+
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
 g = 9.81  # According to G. Ameri, pers. communication (May 20th, 2019)
+
+CONSTS = {"Mref": 5.5, "Mh": 6.75, "Rref": 1.0}
+
+
+def _compute_between_events_std(C_SIGMA, mag):
+    """
+    Return between-events standard deviation term. Expression is provided:
+    - according to eqn. 11 if model is heteroscedastic
+      (mag parameter is not None);
+    - or using a constant term if model is homoscedastic
+      (mag parameter is None).
+    """
+    if mag is None:
+        # Homoscedastic model:
+        tau = C_SIGMA['tau']
+    else:
+        # Heteroscedastic model:
+        if mag <= 4.0:
+            tau = C_SIGMA['tau1']
+        elif mag >= 5:
+            tau = C_SIGMA['tau2']
+        else:
+            tau = C_SIGMA['tau1'] + (C_SIGMA['tau2']-C_SIGMA['tau1'])*(mag-4.0)
+    return tau
+
+
+def _compute_within_event_std(C_SIGMA):
+    """
+    Return within-event standard deviation
+    """
+    return C_SIGMA['phi']
+
+
+def _get_distance_scaling_term(C, rval, mag):
+    """
+    Returns the distance scaling term of the GMPE described in equation 2
+    """
+    r_adj = np.sqrt((rval ** 2.0) + (C["h"] ** 2.0))
+    return (
+        (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
+        np.log10(r_adj / CONSTS["Rref"]))
+
+
+def _get_magnitude_scaling_term(C, mag):
+    """
+    Returns the magnitude scaling term of the GMPE described in
+    equation 3
+    """
+    dmag = mag - CONSTS["Mh"]
+    if mag <= CONSTS["Mh"]:
+        return C["b1"] * dmag + C["b2"] * (dmag ** 2.0)
+    else:
+        return C["b3"] * dmag
+
+
+_get_mean = CallableDict()
+
+
+@_get_mean.add("rjb")
+def _get_mean_1(kind, stress_drop, C, rup, dists, sites):
+    """
+    Returns the mean ground motion (i.e. log10(ground motion in cm/s^2) )
+    """
+    return (C["a"] +
+            _get_distance_scaling_term(C, dists.rjb, rup.mag) +
+            _get_magnitude_scaling_term(C, rup.mag) +
+            _get_site_amplification_term(C, sites.vs30) +
+            _get_style_of_faulting_term(C, rup.rake))
+
+
+@_get_mean.add("rjb_stress")
+def _get_mean_2(kind, stress_drop, C, C_STRESS, rup, dists, sites):
+    """
+    Returns the mean ground motion
+    """
+    return (C["a"] +
+            _get_magnitude_scaling_term(C, rup.mag) +
+            _get_distance_scaling_term(C, dists.rjb, rup.mag) +
+            _get_style_of_faulting_term(C, rup.rake) +
+            _get_site_amplification_term(C, sites.vs30) +
+            _get_stress_term(C_STRESS, rup.mag, stress_drop))
+
+
+@_get_mean.add("repi")
+def _get_mean_3(kind, stress_drop, C, rup, dists, sites):
+    """
+    Returns the mean ground motion
+    """
+    return (C["a"] +
+            _get_magnitude_scaling_term(C, rup.mag) +
+            _get_distance_scaling_term(C, dists.repi, rup.mag) +
+            _get_style_of_faulting_term(C, rup.rake) +
+            _get_site_amplification_term(C, sites.vs30))
+
+
+@_get_mean.add("repi_stress")
+def _get_mean_4(kind, stress_drop, C, C_STRESS, rup, dists, sites):
+    """
+    Returns the mean ground motion
+    """
+    return (C["a"] +
+            _get_magnitude_scaling_term(C, rup.mag) +
+            _get_distance_scaling_term(C, dists.repi, rup.mag) +
+            _get_style_of_faulting_term(C, rup.rake) +
+            _get_site_amplification_term(C, sites.vs30) +
+            _get_stress_term(C_STRESS, rup.mag, stress_drop))
+
+
+def _get_site_amplification_term(C, vs30):
+    """
+    Returns the site amplification given Eurocode 8 site classification
+    """
+    f_s = np.zeros_like(vs30)
+    # Site class A
+    idx = vs30 >= 800.0
+    f_s[idx] = C["e1"]
+    # Site class B
+    idx = np.logical_and(vs30 < 800.0, vs30 >= 360.0)
+    f_s[idx] = C["e2"]
+    # Site Class C
+    idx = np.logical_and(vs30 < 360.0, vs30 >= 180.0)
+    f_s[idx] = C["e3"]
+    # Site Class D
+    idx = vs30 < 180.0
+    f_s[idx] = C["e4"]
+    return f_s
+
+
+def _get_stddevs(clsname, C_SIGMA, stddev_types, num_sites, mag):
+    """
+    Return standard deviations
+    """
+    if clsname == "Ameri2014Rjb":  # early version
+        tau = C_SIGMA["sigmaB"] + np.zeros(num_sites)
+        phi = C_SIGMA["sigmaW"] + np.zeros(num_sites)
+        sigma = np.sqrt(tau ** 2 + phi ** 2)
+        stddevs = []
+        for stddev_type in stddev_types:
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(sigma)
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi)
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(tau)
+        return stddevs
+
+    tau = _compute_between_events_std(C_SIGMA, mag)
+    phi = _compute_within_event_std(C_SIGMA)
+    sigma = np.sqrt(tau**2 + phi**2)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(sigma + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau + np.zeros(num_sites))
+    return stddevs
+
+
+def _get_stress_term(C, mag, norm_stress_drop):
+    """
+    Returns the stress parameter-dependent term, based on Yenier and Atkinson
+    (2015)
+    """
+    if norm_stress_drop <= 1:
+        e = C['s0'] + C['s1'] * mag + C['s2'] * (mag**2) + \
+            C['s3'] * (mag**3) + C['s4'] * (mag**4)
+    else:
+        e = C['s5'] + C['s6'] * mag + C['s7'] * (mag**2) + \
+            C['s8'] * (mag**3) + C['s9'] * (mag**4)
+    return e * np.log10(norm_stress_drop)
+
+
+def _get_style_of_faulting_term(C, rake):
+    """
+    Returns the style-of-faulting term of the GMPE described in equation 4
+    Fault type (Strike-slip, Normal, Thrust/reverse) is
+    derived from rake angle.
+    Rakes angles within 30 of horizontal are strike-slip,
+    angles from 30 to 150 are reverse, and angles from
+    -30 to -150 are normal.
+    Note that the 'Unspecified' case is not considered in this class
+    as rake is required as an input variable
+    """
+    SS, NS, RS = 0.0, 0.0, 0.0
+    if np.abs(rake) <= 30.0 or (180.0 - np.abs(rake)) <= 30.0:
+        # strike-slip
+        SS = 1.0
+    elif rake > 30.0 and rake < 150.0:
+        # reverse
+        RS = 1.0
+    else:
+        # normal
+        NS = 1.0
+    return (C["f1"] * NS) + (C["f2"] * RS) + (C["f3"] * SS)
 
 
 class AmeriEtAl2017Rjb(GMPE):
@@ -34,11 +233,11 @@ class AmeriEtAl2017Rjb(GMPE):
     Implements the Ameri et al (2017) GMPE for the case where Joyner-Boore
     distance is used. Standard deviation uses the heteroscedastic formulation
     given in eqn. 11. (for periods T<=1 s.)
-    
+
     Reference:
     Ameri, G., Drouet, S., Traversa, P., Bindi, D., Cotton, F., (2017),
-    Toward an empirical ground motion prediction equation for France: 
-    accounting for regional differences in the source stress parameter, 
+    Toward an empirical ground motion prediction equation for France:
+    accounting for regional differences in the source stress parameter,
     Bull. Earthquake Eng., 15: 4681-4717.
     """
     #: Supported tectonic region type is 'active shallow crust'
@@ -47,10 +246,7 @@ class AmeriEtAl2017Rjb(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -58,11 +254,8 @@ class AmeriEtAl2017Rjb(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -73,8 +266,12 @@ class AmeriEtAl2017Rjb(GMPE):
     #: Required distance measure is Rjb (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def __init__(self, adjustment_factor=1.0, **kwargs):
-        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+    kind = "rjb"
+
+    def __init__(self, norm_stress_drop=0., adjustment_factor=1.0, **kwargs):
+        super().__init__(norm_stress_drop=norm_stress_drop,
+                         adjustment_factor=adjustment_factor, **kwargs)
+        self.norm_stress_drop = norm_stress_drop
         self.adjustment_factor = np.log(adjustment_factor)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -88,140 +285,16 @@ class AmeriEtAl2017Rjb(GMPE):
 
         C = self.COEFFS[imt]
         C_SIGMA = self.COEFFS_SIGMA[imt]
-        imean = self._get_mean(C, rup, dists, sites)
+        imean = _get_mean(self.kind, self.norm_stress_drop,
+                          C, rup, dists, sites)
         # Convert mean to ln(SA) with SA in units of g:
         mean = np.log((10.0 ** (imean - 2.0)) / g)
 
-        istddevs = self._get_stddevs(C_SIGMA, stddev_types, len(sites.vs30), rup.mag)
+        istddevs = _get_stddevs(
+            self.__class__.__name__,
+            C_SIGMA, stddev_types, len(sites.vs30), rup.mag)
         stddevs = np.log(10.0 ** np.array(istddevs))
         return mean + self.adjustment_factor, stddevs
-
-    def _get_mean(self, C, rup, dists, sites):
-        """
-        Returns the mean ground motion (i.e. log10(ground motion in cm/s^2) )
-        """
-        return (C["a"] + 
-                self._get_distance_scaling_term(C, dists.rjb, rup.mag) +
-                self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_site_amplification_term(C, sites.vs30) +
-                self._get_style_of_faulting_term(C, rup.rake))
-
-    def _get_magnitude_scaling_term(self, C, mag):
-        """
-        Returns the magnitude scaling term of the GMPE described in
-        equation 3
-        """
-        dmag = mag - self.CONSTS["Mh"]
-        if mag <= self.CONSTS["Mh"]:
-            return C["b1"] * dmag + C["b2"] * (dmag ** 2.0)
-        else:
-            return C["b3"]* dmag
-
-    def _get_distance_scaling_term(self, C, rval, mag):
-        """
-        Returns the distance scaling term of the GMPE described in equation 2
-        """
-        r_adj = np.sqrt((rval ** 2.0) + (C["h"] ** 2.0))
-        return (
-            (C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *
-            np.log10(r_adj / self.CONSTS["Rref"]))
-
-    def _get_style_of_faulting_term(self, C, rake):
-        """
-        Returns the style-of-faulting term of the GMPE described in equation 4
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal.
-        Note that the 'Unspecified' case is not considered in this class
-        as rake is required as an input variable
-        """
-        SS, NS, RS = 0.0, 0.0, 0.0
-        if np.abs(rake) <= 30.0 or (180.0 - np.abs(rake)) <= 30.0:
-            # strike-slip
-            SS = 1.0
-        elif rake > 30.0 and rake < 150.0:
-            # reverse
-            RS = 1.0
-        else:
-            # normal
-            NS = 1.0
-        return (C["f1"] * NS) + (C["f2"] * RS) + (C["f3"] * SS)
-
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification given Eurocode 8 site classification
-        """
-        f_s = np.zeros_like(vs30)
-        # Site class A
-        idx = vs30 >= 800.0
-        f_s[idx] = C["e1"]
-        # Site class B
-        idx = np.logical_and(vs30 < 800.0, vs30 >= 360.0)
-        f_s[idx] = C["e2"]
-        # Site Class C
-        idx = np.logical_and(vs30 < 360.0, vs30 >= 180.0)
-        f_s[idx] = C["e3"]
-        # Site Class D
-        idx = vs30 < 180.0
-        f_s[idx] = C["e4"]
-        return f_s
-
-    def _get_stress_term(self, C, mag, norm_stress_drop):
-        """
-        Returns the stress parameter-dependent term, based on Yenier and Atkinson (2015)
-        """
-        if norm_stress_drop<=1:
-            e = C['s0'] + C['s1'] * mag + C['s2'] * (mag**2) + \
-                C['s3'] * (mag**3) + C['s4'] * (mag**4)
-        else:
-            e = C['s5'] + C['s6'] * mag + C['s7'] * (mag**2) + \
-                C['s8'] * (mag**3) + C['s9'] * (mag**4)
-        return e * np.log10( norm_stress_drop )
-
-    def _get_stddevs(self, C_SIGMA, stddev_types, num_sites, mag):
-        """
-        Return standard deviations
-        """
-        tau = self._compute_between_events_std(C_SIGMA, mag)
-        phi = self._compute_within_event_std(C_SIGMA)
-        sigma = np.sqrt( tau**2 + phi**2 )
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sigma + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_between_events_std(self, C_SIGMA, mag):
-        """
-        Return between-events standard deviation term. Expression is provided:
-        - according to eqn. 11 if model is heteroscedastic (mag parameter is not None);
-        - or using a constant term if model is homoscedastic (mag parameter is None).
-        """
-        if mag is None:
-            # Homoscedastic model:
-            tau = C_SIGMA['tau']
-        else:
-            # Heteroscedastic model:
-            if mag<=4.0:
-                tau = C_SIGMA['tau1']
-            elif mag>=5:
-                tau = C_SIGMA['tau2']
-            else:
-                tau = C_SIGMA['tau1'] + (C_SIGMA['tau2']-C_SIGMA['tau1'])*(mag-4.0)
-        return tau
-
-    def _compute_within_event_std(self, C_SIGMA):
-        """
-        Return within-event standard deviation
-        """
-        return C_SIGMA['phi']
 
 
     #: Coefficients from Table "10518_2017_171_MOESM2_ESM.xlsx" in electronic supplementary material:
@@ -326,10 +399,6 @@ class AmeriEtAl2017Rjb(GMPE):
     3.0     -7.980000000000000000      6.643000000000000000     -1.924000000000000000      0.236600000000000000     -0.010390000000000000     -4.180000000000000000      3.317000000000000000     -0.886200000000000000      0.098880000000000000     -0.003853000000000000
     """)
 
-    CONSTS = {"Mref": 5.5,
-              "Mh": 6.75,
-              "Rref": 1.0}
-
 
 class AmeriEtAl2017RjbStressDrop(AmeriEtAl2017Rjb):
     """
@@ -359,9 +428,7 @@ class AmeriEtAl2017RjbStressDrop(AmeriEtAl2017Rjb):
     #: Required rupture parameters are magnitude and rake (eq. 1).
     REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
-    def __init__(self, norm_stress_drop, adjustment_factor=1.0):
-        super().__init__(adjustment_factor=adjustment_factor)
-        self.norm_stress_drop = norm_stress_drop
+    kind = "rjb_stress"
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -375,25 +442,17 @@ class AmeriEtAl2017RjbStressDrop(AmeriEtAl2017Rjb):
         C = self.COEFFS[imt]
         C_SIGMA = self.COEFFS_SIGMA[imt]
         C_STRESS = self.COEFFS_STRESS[imt]
-        imean = self._get_mean(C, C_STRESS, rup, dists, sites)
+        imean = _get_mean(self.kind, self.norm_stress_drop,
+                          C, C_STRESS, rup, dists, sites)
         # Convert mean to ln(SA) with SA in units of g:
         mean = np.log((10.0 ** (imean - 2.0)) / g)
 
-        istddevs = self._get_stddevs(C_SIGMA, stddev_types, len(sites.vs30), None)
+        istddevs = _get_stddevs(
+            self.__class__.__name__, C_SIGMA, stddev_types,
+            len(sites.vs30), None)
         stddevs = np.log(10.0 ** np.array(istddevs))
         return mean + self.adjustment_factor, stddevs
 
-    def _get_mean(self, C, C_STRESS, rup, dists, sites):
-        """
-        Returns the mean ground motion
-        """
-        return (C["a"] + 
-                self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists.rjb, rup.mag) +
-                self._get_style_of_faulting_term(C, rup.rake) +
-                self._get_site_amplification_term(C, sites.vs30) +
-                self._get_stress_term(C_STRESS, rup.mag, self.norm_stress_drop))
- 
 
 class AmeriEtAl2017Repi(AmeriEtAl2017Rjb):
     """
@@ -403,24 +462,15 @@ class AmeriEtAl2017Repi(AmeriEtAl2017Rjb):
 
     Reference:
     Ameri, G., Drouet, S., Traversa, P., Bindi, D., Cotton, F., (2017),
-    Toward an empirical ground motion prediction equation for France: 
-    accounting for regional differences in the source stress parameter, 
+    Toward an empirical ground motion prediction equation for France:
+    accounting for regional differences in the source stress parameter,
     Bull. Earthquake Eng., 15: 4681-4717.
     """
+    kind = "repi"
 
     #: Required distance measure is Repi (eq. 1).
-    REQUIRES_DISTANCES = set(('repi', ))
+    REQUIRES_DISTANCES = {'repi'}
 
-    def _get_mean(self, C, rup, dists, sites):
-        """
-        Returns the mean ground motion
-        """
-        return (C["a"] + 
-                self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists.repi, rup.mag) +
-                self._get_style_of_faulting_term(C, rup.rake) +
-                self._get_site_amplification_term(C, sites.vs30))
-    
     #: Coefficients from Table "10518_2017_171_MOESM1_ESM.xlsx" in electronic supplementary material:
     COEFFS = CoeffsTable(sa_damping=5, table="""
         imt           a              c1             c2             h              b1             b2             b3             e1             e2             e3             e4             f1             f2             f3                 
@@ -503,12 +553,12 @@ class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
          norm_stress_drop = 0.3
      </uncertaintyModel>
 
-    The stress parameter is normalized according to STRESS_DROP/REF_STRESS_DROP,
-    where REF_STRESS_DROP varies regionally. The authors used the following
-    values for reference regional stress estimates: 1 bar for the Swtzerland
-    (Swiss Alps+ Foreland), 10 bars for the French Alps + Rhine Graben, and 100
-    bars for the Pyrenees events. In this cas, the standard deviation
-    implements a homoscedastic formulation.
+    The stress parameter is normalized according to
+    STRESS_DROP/REF_STRESS_DROP, where REF_STRESS_DROP varies regionally.
+    The authors used the following values for reference regional stress
+    estimates: 1 bar for the Swtzerland (Swiss Alps+ Foreland), 10 bars
+    for the French Alps + Rhine Graben, and 100 bars for the Pyrenees events.
+    In this case, the standard deviation implements a homoscedastic formulation
 
     Reference:
     Ameri, G., Drouet, S., Traversa, P., Bindi, D., Cotton, F., (2017),
@@ -516,6 +566,8 @@ class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
     accounting for regional differences in the source stress parameter,
     Bull. Earthquake Eng., 15: 4681-4717.
     """
+    kind = "repi_stress"
+
     REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     def __init__(self, norm_stress_drop, adjustment_factor=1.0):
@@ -534,25 +586,96 @@ class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
         C = self.COEFFS[imt]
         C_SIGMA = self.COEFFS_SIGMA[imt]
         C_STRESS = self.COEFFS_STRESS[imt]
-        imean = self._get_mean(C, C_STRESS, rup, dists, sites)
+        imean = _get_mean(self.kind, self.norm_stress_drop,
+                          C, C_STRESS, rup, dists, sites)
         # Convert mean to ln(SA) with SA in units of g:
         mean = np.log((10.0 ** (imean - 2.0)) / g)
 
-        istddevs = self._get_stddevs(C_SIGMA, stddev_types, len(sites.vs30), None)
+        istddevs = _get_stddevs(
+            self.__class__.__name__, C_SIGMA, stddev_types,
+            len(sites.vs30), None)
         stddevs = np.log(10.0 ** np.array(istddevs))
         return mean + self.adjustment_factor, stddevs
 
-    def _get_mean(self, C, C_STRESS, rup, dists, sites):
-        """
-        Returns the mean ground motion
-        """
-        return (C["a"] + 
-                self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists.repi, rup.mag) +
-                self._get_style_of_faulting_term(C, rup.rake) +
-                self._get_site_amplification_term(C, sites.vs30) +
-                self._get_stress_term(C_STRESS, rup.mag, self.norm_stress_drop))
- 
 
-    
+class Ameri2014Rjb(AmeriEtAl2017Rjb):
+    """
+    Implementation of Ameri (2014), an early version of the Ameri et al. (2017)
+    GMM published in:
 
+    Ameri (2014) "Empirical Ground Motion Model Adapted to the French Context",
+    Seismic Ground Motion Assessment (SIGMA) Deliverable SIGMA-2014-D2-131
+
+    However, the model is adopted in favour of the Ameri et al. (2017) model
+    within the 2020 seismic hazard model of France published by Drouet et al.
+    (2020):
+
+    Drouet S, Ameri G, Le Dortz, K, Sevanell R, Senfaute G. (2020)
+    "A probabilistic seismic hazard map for the metropolitan France",
+    Bulletin of Earthquake Engineering, 18: 1865 - 1898
+
+    Adopts a homoskedastic standard deviation model.
+    """
+    #: Coefficients from xls file "coeff_AMERI2014_Rjb_generic.xls":
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    imt             a           c1          c2           h           b1           b2     b3     e1          e2          e3          e4           f1           f2     f3
+    pga     3.4299200   -1.4186000   0.2155010   6.9348200   -0.1344920   -0.1021380   0.00   0.00   0.1662230   0.2201900   0.2073030   -0.0259315    0.0575387   0.00
+    0.010   3.4445000   -1.4249900   0.2181910   7.0431800   -0.1319270   -0.0983586   0.00   0.00   0.1609590   0.2139220   0.2046230   -0.0250589    0.0628565   0.00
+    0.020   3.4780800   -1.4342900   0.2169050   6.8457100   -0.1211040   -0.0944366   0.00   0.00   0.1511240   0.2018620   0.2011810   -0.0211561    0.0650619   0.00
+    0.030   3.5340800   -1.4724500   0.2327950   7.0594700   -0.1335990   -0.0846513   0.00   0.00   0.1344390   0.1799090   0.1822870   -0.0140633    0.0846879   0.00
+    0.040   3.5845300   -1.4965000   0.2364990   7.0683300   -0.1410750   -0.0786815   0.00   0.00   0.1338950   0.1680250   0.1454330   -0.0085579    0.0868674   0.00
+    0.050   3.6592600   -1.5159600   0.2257250   7.1327700   -0.1401910   -0.0795892   0.00   0.00   0.1372460   0.1604960   0.1270730   -0.0065000    0.0867504   0.00
+    0.075   3.8433500   -1.5442900   0.1855380   7.3996300   -0.1322830   -0.0960448   0.00   0.00   0.1623400   0.1702940   0.1255480   -0.0137204    0.0725592   0.00
+    0.100   3.9491600   -1.5521700   0.1589970   7.8753900   -0.1304940   -0.1137860   0.00   0.00   0.1977650   0.2014370   0.1558740   -0.0124134    0.0602458   0.00
+    0.150   3.9690700   -1.4935600   0.1398220   7.8395000   -0.1230940   -0.1358840   0.00   0.00   0.2241600   0.2314580   0.2126800   -0.0229505    0.0324183   0.00
+    0.200   3.8815600   -1.4021600   0.1295530   7.1482300   -0.0907246   -0.1459470   0.00   0.00   0.2155400   0.2565140   0.2432830   -0.0323343    0.0270226   0.00
+    0.260   3.7621300   -1.3151300   0.1198170   6.4311000   -0.0411302   -0.1506240   0.00   0.00   0.2172770   0.2952000   0.2687630   -0.0390729    0.0133672   0.00
+    0.300   3.6809100   -1.2603400   0.1131640   5.9062600   -0.0132164   -0.1543630   0.00   0.00   0.2066750   0.3094220   0.2870460   -0.0481329    0.0088210   0.00
+    0.360   3.5548100   -1.1894500   0.1104210   5.2933300    0.0334797   -0.1522850   0.00   0.00   0.2112730   0.3385730   0.3324460   -0.0510757   -0.0059703   0.00
+    0.400   3.4885400   -1.1623200   0.1119970   5.1330600    0.0530004   -0.1514720   0.00   0.00   0.2194750   0.3560050   0.3595690   -0.0536326   -0.0149397   0.00
+    0.460   3.4207700   -1.1375300   0.1165370   4.9782100    0.0763429   -0.1497750   0.00   0.00   0.2199700   0.3761570   0.4020090   -0.0648424   -0.0315718   0.00
+    0.500   3.3758300   -1.1137300   0.1160610   4.7366800    0.0996337   -0.1484540   0.00   0.00   0.2175090   0.3866420   0.4309080   -0.0721233   -0.0397411   0.00
+    0.600   3.2676500   -1.0768700   0.1191360   4.4259300    0.1355550   -0.1469930   0.00   0.00   0.2165190   0.3998460   0.4989120   -0.0726062   -0.0517600   0.00
+    0.700   3.1724200   -1.0534700   0.1199620   4.2476000    0.1504170   -0.1489880   0.00   0.00   0.2126620   0.4083170   0.5600450   -0.0752202   -0.0684885   0.00
+    0.800   3.0660600   -1.0182000   0.1268360   3.9563300    0.1726660   -0.1464220   0.00   0.00   0.2032800   0.4128690   0.5960230   -0.0758408   -0.0794567   0.00
+    0.900   2.9964500   -0.9942510   0.1280420   3.9208300    0.1979320   -0.1457170   0.00   0.00   0.1955140   0.4193100   0.6355290   -0.0792907   -0.0870377   0.00
+    1.000   2.9350300   -0.9752740   0.1264460   3.8208500    0.2339080   -0.1415580   0.00   0.00   0.1966170   0.4212260   0.6486290   -0.0737010   -0.0878048   0.00
+    1.300   2.7827900   -0.9400810   0.1392110   3.8020600    0.2942740   -0.1332020   0.00   0.00   0.1832300   0.4053710   0.6727040   -0.0754954   -0.0903559   0.00
+    1.500   2.7402500   -0.9350050   0.1326680   3.8021500    0.3559020   -0.1261410   0.00   0.00   0.1809680   0.3976890   0.7102410   -0.0729895   -0.0783815   0.00
+    1.800   2.6933600   -0.9415820   0.1345680   4.2154000    0.4141180   -0.1148970   0.00   0.00   0.1632190   0.3692440   0.6611440   -0.0791300   -0.0768855   0.00
+    2.000   2.6643400   -0.9479680   0.1337100   4.4291100    0.4369840   -0.1139270   0.00   0.00   0.1558270   0.3645580   0.6458130   -0.0888361   -0.0845512   0.00
+    2.600   2.5117100   -0.9447250   0.1570700   4.6118900    0.4858550   -0.0985749   0.00   0.00   0.1209170   0.3188600   0.5885730   -0.0735028   -0.0659589   0.00
+    3.000   2.4565500   -0.9442740   0.1724760   5.1844600    0.5461080   -0.0768508   0.00   0.00   0.1099650   0.3089590   0.5937220   -0.0879513   -0.0845897   0.00
+    """)
+
+    # Homoskedastic sigma model
+    COEFFS_SIGMA = CoeffsTable(sa_damping=5, table="""\
+    imt        sigmaB      sigmaW      sigmaT
+    pga     0.2269060   0.3025410   0.3781770
+    0.010   0.2286200   0.3048270   0.3810330
+    0.020   0.2300070   0.3066760   0.3833450
+    0.030   0.2335220   0.3182370   0.3947250
+    0.040   0.2402440   0.3273970   0.4060860
+    0.050   0.2476110   0.3301480   0.4126840
+    0.075   0.2553120   0.3261180   0.4141700
+    0.100   0.2455130   0.3203650   0.4036210
+    0.150   0.2342130   0.3122840   0.3903550
+    0.200   0.2240930   0.2987910   0.3734880
+    0.260   0.2050650   0.2921950   0.3569730
+    0.300   0.1996860   0.2910900   0.3529980
+    0.360   0.1967460   0.2935280   0.3533660
+    0.400   0.1901640   0.2975480   0.3531250
+    0.460   0.1875050   0.3006780   0.3543520
+    0.500   0.1875000   0.3006690   0.3543420
+    0.600   0.1863500   0.2988250   0.3521690
+    0.700   0.1882750   0.3019110   0.3558050
+    0.800   0.1879880   0.3014520   0.3552650
+    0.900   0.1816910   0.2987540   0.3496650
+    1.000   0.1804730   0.2967510   0.3473210
+    1.300   0.1921380   0.2934950   0.3507940
+    1.500   0.1878810   0.2939760   0.3488860
+    1.800   0.1888490   0.2954910   0.3506840
+    2.000   0.1894050   0.2963620   0.3517170
+    2.600   0.2007940   0.2927050   0.3549570
+    3.000   0.2076440   0.2829710   0.3509820
+    """)

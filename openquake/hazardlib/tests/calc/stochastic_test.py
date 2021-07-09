@@ -33,6 +33,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         [group] = nrml.to_python(source_model)
         for i, src in enumerate(group):
             src.id = i
+            src.grp_id = 0
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])

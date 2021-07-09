@@ -30,6 +30,7 @@ from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
 import pandas
+from scipy.cluster.vq import kmeans2
 
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
@@ -38,8 +39,8 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
+from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation, datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -924,6 +925,21 @@ def build_damage_dt(dstore):
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
 
 
+def build_csq_dt(dstore):
+    """
+    :param dstore: a datastore instance
+    :returns:
+       a composite dtype loss_type -> (csq1, csq2, ...)
+    """
+    oq = dstore['oqparam']
+    attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
+    limit_states = list(dstore.get_attr('crm', 'limit_states'))
+    csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
+    dt = numpy.dtype([(csq, F32) for csq in csqs])
+    loss_types = oq.loss_dt().names
+    return numpy.dtype([(lt, dt) for lt in loss_types])
+
+
 def build_damage_array(data, damage_dt):
     """
     :param data: an array of shape (A, L, D)
@@ -1510,3 +1526,23 @@ class WebExtractor(Extractor):
         Close the session
         """
         self.sess.close()
+
+
+def clusterize(hmaps, rlzs, k):
+    """
+    :param hmaps: array of shape (R, M, P)
+    :param rlzs: composite array of shape R
+    :param k: number of clusters to build
+    :returns: (array(K, MP), labels(R))
+    """
+    R, M, P = hmaps.shape
+    hmaps = hmaps.transpose(0, 2, 1).reshape(R, M * P)
+    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M*P))]
+    centroid, labels = kmeans2(hmaps, k, minit='++')
+    dic = dict(path=rlzs['branch_path'], label=labels)
+    df = pandas.DataFrame(dic)
+    tbl = []
+    for label, grp in df.groupby('label'):
+        paths = [encode(path) for path in grp['path']]
+        tbl.append((label, logictree.collect_paths(paths), centroid[label]))
+    return numpy.array(tbl, dt), labels

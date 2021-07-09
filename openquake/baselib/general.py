@@ -1434,6 +1434,51 @@ def agg_probs(*probs):
         acc *= 1. - prob
     return 1. - acc
 
+
+class RecordBuilder(object):
+    """
+    Builder for numpy records or arrays.
+
+    >>> rb = RecordBuilder(a=0, b=1., c="2")
+    >>> rb.dtype
+    dtype([('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
+    >>> rb()
+    (0, 1., b'2')
+    """
+    def __init__(self, **defaults):
+        self.names = []
+        self.values = []
+        dtypes = []
+        for name, value in defaults.items():
+            self.names.append(name)
+            self.values.append(value)
+            if isinstance(value, (str, bytes)):
+                tp = (numpy.string_, len(value))
+            elif isinstance(value, numpy.ndarray):
+                tp = value.dtype
+            else:
+                tp = type(value)
+            dtypes.append(tp)
+        self.dtype = numpy.dtype([(n, d) for n, d in zip(self.names, dtypes)])
+
+    def zeros(self, shape):
+        return numpy.zeros(shape, self.dtype)
+
+    def dictarray(self, shape):
+        return {n: numpy.ones(shape, self.dtype[n]) for n in self.names}
+
+    def __call__(self, *args, **kw):
+        rec = numpy.zeros(1, self.dtype)[0]
+        for i, name in enumerate(self.names):
+            if name in kw:
+                rec[name] = kw[name]  # takes precedence
+                continue
+            try:
+                rec[name] = args[i]
+            except IndexError:
+                rec[name] = self.values[i]
+        return rec
+
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT

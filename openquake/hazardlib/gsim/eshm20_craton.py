@@ -23,12 +23,117 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile,
-                                               get_phi_ss_at_quantile,
-                                               TAU_EXECUTION, TAU_SETUP,
-                                               PHI_SETUP, get_phi_ss,
-                                               NGAEastGMPE)
+from openquake.hazardlib.gsim.nga_east import (
+    get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
+    PHI_SETUP, get_phi_ss, NGAEastGMPE, _get_f760, get_nonlinear_stddev,
+    _get_fv, get_fnl)
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
+
+CONSTANTS = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
+
+
+def get_distance_term(C, mag, rrup):
+    """
+    Returns the distance attenuation factor
+    """
+    rval = np.sqrt(rrup ** 2. + CONSTANTS["h"] ** 2.)
+    rref_val = np.sqrt(CONSTANTS["Rref"] ** 2. +
+                       CONSTANTS["h"] ** 2.)
+
+    f_r = (C["c1"] + C["c2"] * (mag - CONSTANTS["Mref"])) *\
+        np.log(rval / rref_val) + (C["c3"] * (rval - rref_val) / 100.)
+    return f_r
+
+
+def get_hard_rock_mean(C, rctx, dctx):
+    """
+    Returns the mean and standard deviations for the reference very hard
+    rock condition (Vs30 = 3000 m/s)
+    """
+    return get_magnitude_scaling(C, rctx.mag) + get_distance_term(
+        C, rctx.mag, dctx.rrup)
+
+
+def get_magnitude_scaling(C, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    d_m = mag - CONSTANTS["Mh"]
+    if mag <= CONSTANTS["Mh"]:
+        return C["e1"] + C["b1"] * d_m + C["b2"] * (d_m ** 2.0)
+    else:
+        return C["e1"] + C["b3"] * d_m
+
+
+def get_site_amplification(site_epsilon, imt, pga_r, sites):
+    """
+    Returns the sum of the linear (Stewart et al., 2019) and non-linear
+    (Hashash et al., 2019) amplification terms
+    """
+    # Get the coefficients for the IMT
+    C_LIN = NGAEastGMPE.COEFFS_LINEAR[imt]
+    C_F760 = NGAEastGMPE.COEFFS_F760[imt]
+    C_NL = NGAEastGMPE.COEFFS_NONLINEAR[imt]
+    if str(imt).startswith("PGA"):
+        period = 0.01
+    elif str(imt).startswith("PGV"):
+        period = 0.5
+    else:
+        period = imt.period
+    # Get f760
+    f760 = _get_f760(C_F760, sites.vs30,
+                     NGAEastGMPE.CONSTANTS)
+    # Get the linear amplification factor
+    f_lin = _get_fv(C_LIN, sites, f760,
+                    NGAEastGMPE.CONSTANTS)
+    # Get the nonlinear amplification from Hashash et al., (2017)
+    f_nl, f_rk = get_fnl(C_NL, pga_r, sites.vs30, period)
+    # Mean amplification
+    ampl = f_lin + f_nl
+
+    # If an epistemic uncertainty is required then retrieve the epistemic
+    # sigma of both models and multiply by the input epsilon
+    if site_epsilon:
+        # In the case of the linear model sigma_f760 and sigma_fv are
+        # assumed independent and the resulting sigma_flin is the root
+        # sum of squares (SRSS)
+        f760_stddev = _get_f760(C_F760, sites.vs30,
+                                NGAEastGMPE.CONSTANTS,
+                                is_stddev=True)
+        f_lin_stddev = np.sqrt(
+            f760_stddev ** 2. +
+            NGAEastGMPE.get_linear_stddev(
+                C_LIN, sites.vs30, NGAEastGMPE.CONSTANTS) ** 2)
+        # Likewise, the epistemic uncertainty on the linear and nonlinear
+        # model are assumed independent and the SRSS is taken
+        f_nl_stddev = get_nonlinear_stddev(
+            C_NL, sites.vs30) * f_rk
+        site_epistemic = np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
+        ampl += (site_epsilon * site_epistemic)
+    return ampl
+
+
+def get_stddevs(ergodic, tau_model, TAU, PHI_SS,
+                mag, imt, sites, stddev_types, num_sites):
+    """
+    Returns the standard deviations for either the ergodic or
+    non-ergodic models
+    """
+    phi = get_phi_ss(imt, mag, PHI_SS)
+    if ergodic:
+        phi_s2s = get_stewart_2019_phis2s(imt, sites.vs30)
+        phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+    tau = TAU_EXECUTION[tau_model](imt, mag, TAU)
+    sigma = np.sqrt(tau ** 2. + phi ** 2.)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(sigma + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau + np.zeros(num_sites))
+    return stddevs
 
 
 class ESHM20Craton(GMPE):
@@ -87,7 +192,6 @@ class ESHM20Craton(GMPE):
     :param float site_epsilon:
         Number of standard deviations above or below median for the uncertainty
         in the site amplification model
-
     """
     experimental = True
 
@@ -95,10 +199,7 @@ class ESHM20Craton(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
 
     #: The GMPE is defined only for PGA and SA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -106,11 +207,8 @@ class ESHM20Craton(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Median calibrated for Vs30 3000 m/s Vs30, no site term required Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -139,16 +237,9 @@ class ESHM20Craton(GMPE):
         self.tau_quantile = kwargs.get("tau_quantile", None)
         self.phi_ss_quantile = kwargs.get("phi_ss_quantile", None)
         self.site_epsilon = kwargs.get("site_epsilon", 0.0)
-        self.TAU = None
-        self.PHI_SS = None
         self.PHI_S2SS = None
-        self._setup_standard_deviations()
-
-    def _setup_standard_deviations(self):
-        """
-        Defines the standard deviation model from the NGA East aleatory
-        uncertainty model according to the calibrations specified by the user
-        """
+        # define the standard deviation model from the NGA East aleatory
+        # uncertainty model according to the calibrations specified by the user
         # setup tau
         self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
                                        TAU_SETUP[self.tau_model]["STD"],
@@ -163,139 +254,29 @@ class ESHM20Craton(GMPE):
         """
         C = self.COEFFS[imt]
         C_ROCK = self.COEFFS[PGA()]
-        pga_r = self.get_hard_rock_mean(C_ROCK, rctx, dctx)
+        pga_r = get_hard_rock_mean(C_ROCK, rctx, dctx)
 
         # Get the desired spectral acceleration on rock
         if not str(imt) == "PGA":
             # Calculate the ground motion at required spectral period for
             # the reference rock
-            mean = self.get_hard_rock_mean(C, rctx, dctx)
+            mean = get_hard_rock_mean(C, rctx, dctx)
         else:
             # Avoid re-calculating PGA if that was already done!
             mean = np.copy(pga_r)
 
-        mean += self.get_site_amplification(imt, np.exp(pga_r), sctx)
+        mean += get_site_amplification(
+            self.site_epsilon, imt, np.exp(pga_r), sctx)
+
         # Get standard deviation model
         nsites = dctx.rrup.shape
-        stddevs = self.get_stddevs(rctx.mag, imt, sctx, stddev_types, nsites)
+        stddevs = get_stddevs(
+            self.ergodic, self.tau_model, self.TAU, self.PHI_SS,
+            rctx.mag, imt, sctx, stddev_types, nsites)
         if self.epsilon:
             # If requested, apply epistemic uncertainty
             mean += (self.epsilon * C["sigma_mu"])
         return mean, stddevs
-
-    def get_hard_rock_mean(self, C, rctx, dctx):
-        """
-        Returns the mean and standard deviations for the reference very hard
-        rock condition (Vs30 = 3000 m/s)
-        """
-        return self.get_magnitude_scaling(C, rctx.mag) +\
-            self.get_distance_term(C, rctx.mag, dctx.rrup)
-
-    def get_magnitude_scaling(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        d_m = mag - self.CONSTANTS["Mh"]
-        if mag <= self.CONSTANTS["Mh"]:
-            return C["e1"] + C["b1"] * d_m + C["b2"] * (d_m ** 2.0)
-        else:
-            return C["e1"] + C["b3"] * d_m
-
-    def get_distance_term(self, C, mag, rrup):
-        """
-        Returns the distance attenuation factor
-        """
-        rval = np.sqrt(rrup ** 2. + self.CONSTANTS["h"] ** 2.)
-        rref_val = np.sqrt(self.CONSTANTS["Rref"] ** 2. +
-                           self.CONSTANTS["h"] ** 2.)
-
-        f_r = (C["c1"] + C["c2"] * (mag - self.CONSTANTS["Mref"])) *\
-            np.log(rval / rref_val) + (C["c3"] * (rval - rref_val) / 100.)
-        return f_r
-
-    def get_site_amplification(self, imt, pga_r, sites):
-        """
-        Returns the sum of the linear (Stewart et al., 2019) and non-linear
-        (Hashash et al., 2019) amplification terms
-        """
-        # Get the coefficients for the IMT
-        C_LIN = NGAEastGMPE.LINEAR_COEFFS[imt]
-        C_F760 = NGAEastGMPE.F760[imt]
-        C_NL = NGAEastGMPE.NONLINEAR_COEFFS[imt]
-        if str(imt).startswith("PGA"):
-            period = 0.01
-        elif str(imt).startswith("PGV"):
-            period = 0.5
-        else:
-            period = imt.period
-        # Get f760
-        f760 = NGAEastGMPE._get_f760(C_F760, sites.vs30,
-                                     NGAEastGMPE.CONSTANTS)
-        # Get the linear amplification factor
-        f_lin = NGAEastGMPE._get_fv(C_LIN, sites, f760,
-                                    NGAEastGMPE.CONSTANTS)
-        # Get the nonlinear amplification from Hashash et al., (2017)
-        f_nl, f_rk = NGAEastGMPE.get_fnl(C_NL, pga_r, sites.vs30, period)
-        # Mean amplification
-        ampl = f_lin + f_nl
-
-        # If an epistemic uncertainty is required then retrieve the epistemic
-        # sigma of both models and multiply by the input epsilon
-        if self.site_epsilon:
-            # In the case of the linear model sigma_f760 and sigma_fv are
-            # assumed independent and the resulting sigma_flin is the root
-            # sum of squares (SRSS)
-            f760_stddev = NGAEastGMPE._get_f760(C_F760, sites.vs30,
-                                                NGAEastGMPE.CONSTANTS,
-                                                is_stddev=True)
-            f_lin_stddev = np.sqrt(
-                f760_stddev ** 2. +
-                NGAEastGMPE.get_linear_stddev(
-                    C_LIN, sites.vs30, NGAEastGMPE.CONSTANTS) ** 2)
-            # Likewise, the epistemic uncertainty on the linear and nonlinear
-            # model are assumed independent and the SRSS is taken
-            f_nl_stddev = NGAEastGMPE.get_nonlinear_stddev(
-                C_NL, sites.vs30) * f_rk
-            site_epistemic = np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
-            ampl += (self.site_epsilon * site_epistemic)
-        return ampl
-
-    def get_stddevs(self, mag, imt, sites, stddev_types, num_sites):
-        """
-        Returns the standard deviations for either the ergodic or
-        non-ergodic models
-        """
-        tau = self._get_tau(imt, mag)
-        phi = self._get_phi(imt, mag, sites, num_sites)
-        sigma = np.sqrt(tau ** 2. + phi ** 2.)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sigma + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
-        return stddevs
-
-    def _get_tau(self, imt, mag):
-        """
-        Returns the inter-event standard deviation (tau)
-        """
-        return TAU_EXECUTION[self.tau_model](imt, mag, self.TAU)
-
-    def _get_phi(self, imt, mag, sites, num_sites):
-        """
-        Returns the within-event standard deviation (phi). If the ergodic
-        model is chosen the "global" phi_s2s model of Stewart et al. (2019)
-        is used.
-        """
-        phi = get_phi_ss(imt, mag, self.PHI_SS)
-        if self.ergodic:
-            phi_s2s = get_stewart_2019_phis2s(imt, sites.vs30)
-            phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
-        return phi
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                    e1                 b1                    b2                  b3                  c1                   c2                    c3            sigma_mu
@@ -325,4 +306,4 @@ class ESHM20Craton(GMPE):
     10.00  -5.489149076214530  2.381480607871230   -0.0633541563175792   1.620019767639500   -1.12740443208222    0.141291747206530    0.0059559626930461   0.560198970449326
     """)
 
-    CONSTANTS = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
+

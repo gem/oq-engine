@@ -33,7 +33,7 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, ArbitraryMFD
 from openquake.hazardlib.source import PointSource, SimpleFaultSource
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.akkar_bommer_2010 import AkkarBommer2010
-from openquake.hazardlib.gsim.toro_2002 import ToroEtAl2002
+from openquake.hazardlib.gsim.example_a_2021 import ExampleA2021
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014PEER
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 
@@ -265,11 +265,17 @@ asource = nrml.get('''\
 </areaSource>''')
 
 
-class SingleSiteOptTestCase(unittest.TestCase):
+class NewApiTestCase(unittest.TestCase):
     """
-    Test the single site optimization for BooreAtkinson2008
+    Test the 2021 new API for hazarlib.gsim
     """
-    def test(self):
+    def test_single_site(self):
+        # NB: the performance of get_mean_std is totally dominated by two
+        # concomitant factors:
+        # 1) source splitting (do not split the area source)
+        # 2) collect the contexts in a single array
+        # together they give a 200x speedup
+        # numba is totally useless
         site = Site(Point(0, 0), vs30=760., z1pt0=48.0, z2pt5=0.607,
                     vs30measured=True)
         sitecol = SiteCollection([site])
@@ -277,12 +283,12 @@ class SingleSiteOptTestCase(unittest.TestCase):
         for period in numpy.arange(.1, 1.3, .1):
             imtls['SA(%.2f)' % period] = [.123]
         assert len(imtls) == 13  # 13 periods
-        mon = Monitor()
         oq = unittest.mock.Mock(
             imtls=DictArray(imtls),
             maximum_distance=MagDepDistance.new('300'))
+        mon = Monitor()
         hcurve = calc_hazard_curve(
-            sitecol, asource, [ToroEtAl2002()], oq, mon)
+            sitecol, asource, [ExampleA2021()], oq, mon)
         for child in mon.children:
             print(child)
         got = hcurve.array[:, 0]
@@ -290,3 +296,19 @@ class SingleSiteOptTestCase(unittest.TestCase):
                0.103438, 0.079094, 0.062861, 0.051344, 0.04066, 0.031589,
                0.024935]
         numpy.testing.assert_allclose(got, exp, atol=1E-5)
+
+    def test_two_sites(self):
+        site1 = Site(Point(0, 0), vs30=760., z1pt0=48.0, z2pt5=0.607,
+                     vs30measured=True)
+        site2 = Site(Point(0, 0.5), vs30=760., z1pt0=48.0, z2pt5=0.607,
+                     vs30measured=True)
+        sitecol = SiteCollection([site1, site2])
+        srcfilter = SourceFilter(sitecol, MagDepDistance.new('200'))
+        imtls = {"PGA": [.123]}
+        for period in numpy.arange(.1, .5, .1):
+            imtls['SA(%.2f)' % period] = [.123]
+        assert len(imtls) == 5  # 5 periods
+        gsim_by_trt = {'Stable Continental Crust': ExampleA2021()}
+        hcurves = calc_hazard_curves(
+            [asource], srcfilter, DictArray(imtls), gsim_by_trt)
+        print(hcurves)

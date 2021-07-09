@@ -12,8 +12,8 @@ def main(job_ini):
     sitecol = readinput.get_site_collection(oq)
     src_filter = SourceFilter(sitecol, oq.maximum_distance)
     csm = readinput.get_composite_source_model(oq)
-    for eri, rlzs in csm.full_lt.get_rlzs_by_eri().items():
-        groups = csm.get_groups(eri)
+    for smr, rlzs in csm.full_lt.get_rlzs_by_smr().items():
+        groups = csm.get_groups(smr)
         for rlz in rlzs:
             hcurves = calc_hazard_curves(
                 groups, src_filter, oq.imtls,

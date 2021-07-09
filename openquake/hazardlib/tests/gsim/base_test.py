@@ -21,7 +21,6 @@ import collections
 import unittest.mock as mock
 
 import numpy
-from copy import deepcopy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
@@ -70,13 +69,13 @@ class _FakeGSIMTestCase(unittest.TestCase):
 
 
 class TGMPE(GMPE):
-    DEFINED_FOR_TECTONIC_REGION_TYPE = None
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ()
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = ()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
-    REQUIRES_SITES_PARAMETERS = None
-    REQUIRES_RUPTURE_PARAMETERS = None
-    REQUIRES_DISTANCES = None
+    REQUIRES_SITES_PARAMETERS = ()
+    REQUIRES_RUPTURE_PARAMETERS = ()
+    REQUIRES_DISTANCES = ()
     get_mean_and_stddevs = None
 
 
@@ -310,34 +309,3 @@ class GsimInstantiationTestCase(unittest.TestCase):
         self.assertEqual(
             warning_msg, 'MyGMPE is not independently verified - '
             'the user is liable for their application')
-
-
-class CoeffsTableTestCase(unittest.TestCase):
-    def setUp(self):
-        self.coefficient_string = """\
-            imt      a     b
-            pgv   0.10   0.2
-            pga   0.05   0.1
-            0.10  1.00   2.0
-            1.00  5.00  10.0
-            10.0  10.0  20.0
-            """
-
-    def test_table_string_instantiation(self):
-        # Check that the table instantiates in the conventional way
-        table1 = CoeffsTable(sa_damping=5, table=self.coefficient_string)
-        self.assertDictEqual(
-            table1.non_sa_coeffs,
-            {PGV(): {"a": 0.1, "b": 0.2},
-             PGA(): {"a": 0.05, "b": 0.1}})
-        self.assertDictEqual(
-            table1.sa_coeffs,
-            {SA(period=0.1, damping=5): {"a": 1.0, "b": 2.0},
-             SA(period=1.0, damping=5): {"a": 5.0, "b": 10.0},
-             SA(period=10.0, damping=5): {"a": 10.0, "b": 20.0}})
-
-    def test_table_bad_instantiation(self):
-        # If instantiated with anything other than string or dict should
-        # raise an error
-        with self.assertRaises(TypeError):
-            CoeffsTable(sa_damping=5, table=5)

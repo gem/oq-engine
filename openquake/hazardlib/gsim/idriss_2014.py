@@ -26,6 +26,81 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _get_magnitude_scaling_term(C, mag):
+    """
+    Returns the magnitude scaling term defined in equation 3
+    """
+    if mag < 6.75:
+        return C["a1_lo"] + C["a2_lo"] * mag + C["a3"] *\
+            ((8.5 - mag) ** 2.0)
+    else:
+        return C["a1_hi"] + C["a2_hi"] * mag + C["a3"] *\
+            ((8.5 - mag) ** 2.0)
+
+
+def _get_distance_scaling_term(C, mag, rrup):
+    """
+    Returns the magnitude dependent distance scaling term
+    """
+    if mag < 6.75:
+        mag_factor = -(C["b1_lo"] + C["b2_lo"] * mag)
+    else:
+        mag_factor = -(C["b1_hi"] + C["b2_hi"] * mag)
+    return mag_factor * np.log(rrup + 10.0) + (C["gamma"] * rrup)
+
+
+def _get_style_of_faulting_term(C, rake):
+    """
+    Only distinction is between reverse faulting events and
+    normal/strike-slip. Returns the style-of-faulting factor only for
+    reverse events
+    """
+    if (rake > 30.0) and (rake < 150.0):
+        return C["phi"]
+    else:
+        return 0.0
+
+
+def _get_site_scaling_term(C, vs30):
+    """
+    Returns the site scaling. For sites with Vs30 > 1200 m/s the site
+    amplification for Vs30 = 1200 is used
+    """
+    site_amp = C["xi"] * np.log(1200.0) * np.ones(len(vs30))
+    idx = vs30 < 1200.0
+    site_amp[idx] = C["xi"] * np.log(vs30[idx])
+    return site_amp
+
+
+def _get_stddevs(imt, mag, n_sites, stddev_types):
+    """
+    The standard error (assumed equivalent to total standard deviation)
+    is defined as a function of magnitude and period (equation 4,
+    page 1168). For magnitudes lower than 5.0 the standard deviation is
+    equal to that for the case in which magnitude is 5.0. For short
+    periods (T < 0.05), including PGA, the standard deviation is
+    assumed to be equal to the case in which T = 0.05, whilst for long
+    periods (T > 3.0) it is assumed to be equal to the case in which
+    T = 3.0
+    """
+    if mag < 5.0:
+        stddev_mag = 5.0
+    else:
+        stddev_mag = mag
+
+    if imt.string == "PGA" or imt.period < 0.05:
+        total_sigma = 1.18 + 0.035 * np.log(0.05) - 0.06 * stddev_mag
+    elif imt.period > 3.0:
+        total_sigma = 1.18 + 0.035 * np.log(3.0) - 0.06 * stddev_mag
+    else:
+        total_sigma = 1.18 + 0.035 * np.log(imt.period) - 0.06 * stddev_mag
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(total_sigma + np.zeros(n_sites, dtype=float))
+    return stddevs
+
+
 class Idriss2014(GMPE):
     """
     Implements GMPE developed by Idriss 2014 and published as "An NGA-West2
@@ -41,20 +116,15 @@ class Idriss2014(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
-    #:and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    #: and peak ground acceleration
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     #: Supported standard deviation types are total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -78,87 +148,16 @@ class Idriss2014(GMPE):
         # intensity measure type.
         C = self.COEFFS[imt]
 
-        mean = (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, rup.mag, dists.rrup) +
-                self._get_style_of_faulting_term(C, rup.rake) +
-                self._get_site_scaling_term(C, sites.vs30))
+        mean = (_get_magnitude_scaling_term(C, rup.mag) +
+                _get_distance_scaling_term(C, rup.mag, dists.rrup) +
+                _get_style_of_faulting_term(C, rup.rake) +
+                _get_site_scaling_term(C, sites.vs30))
 
-        stddevs = self._get_stddevs(imt,
+        stddevs = _get_stddevs(imt,
                                     rup.mag,
                                     len(dists.rrup),
                                     stddev_types)
         return mean, stddevs
-
-    def _get_magnitude_scaling_term(self, C, mag):
-        """
-        Returns the magnitude scaling term defined in equation 3
-        """
-        if mag < 6.75:
-            return C["a1_lo"] + C["a2_lo"] * mag + C["a3"] *\
-                ((8.5 - mag) ** 2.0)
-        else:
-            return C["a1_hi"] + C["a2_hi"] * mag + C["a3"] *\
-                ((8.5 - mag) ** 2.0)
-
-    def _get_distance_scaling_term(self, C, mag, rrup):
-        """
-        Returns the magnitude dependent distance scaling term
-        """
-        if mag < 6.75:
-            mag_factor = -(C["b1_lo"] + C["b2_lo"] * mag)
-        else:
-            mag_factor = -(C["b1_hi"] + C["b2_hi"] * mag)
-        return mag_factor * np.log(rrup + 10.0) + (C["gamma"] * rrup)
-
-    def _get_style_of_faulting_term(self, C, rake):
-        """
-        Only distinction is between reverse faulting events and
-        normal/strike-slip. Returns the style-of-faulting factor only for
-        reverse events
-        """
-        if (rake > 30.0) and (rake < 150.0):
-            return C["phi"]
-        else:
-            return 0.0
-
-    def _get_site_scaling_term(self, C, vs30):
-        """
-        Returns the site scaling. For sites with Vs30 > 1200 m/s the site
-        amplification for Vs30 = 1200 is used
-        """
-        site_amp = C["xi"] * np.log(1200.0) * np.ones(len(vs30))
-        idx = vs30 < 1200.0
-        site_amp[idx] = C["xi"] * np.log(vs30[idx])
-        return site_amp
-
-    def _get_stddevs(self, imt, mag, n_sites, stddev_types):
-        """
-        The standard error (assumed equivalent to total standard deviation)
-        is defined as a function of magnitude and period (equation 4,
-        page 1168). For magnitudes lower than 5.0 the standard deviation is
-        equal to that for the case in which magnitude is 5.0. For short
-        periods (T < 0.05), including PGA, the standard deviation is
-        assumed to be equal to the case in which T = 0.05, whilst for long
-        periods (T > 3.0) it is assumed to be equal to the case in which
-        T = 3.0
-        """
-        if mag < 5.0:
-            stddev_mag = 5.0
-        else:
-            stddev_mag = mag
-
-        if imt.name == "PGA" or imt.period < 0.05:
-            total_sigma = 1.18 + 0.035 * np.log(0.05) - 0.06 * stddev_mag
-        elif imt.period > 3.0:
-            total_sigma = 1.18 + 0.035 * np.log(3.0) - 0.06 * stddev_mag
-        else:
-            total_sigma = 1.18 + 0.035 * np.log(imt.period) - 0.06 * stddev_mag
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(total_sigma + np.zeros(n_sites, dtype=float))
-        return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT       a1_lo    a2_lo    b1_lo     b2_lo     a1_hi     a2_hi    b1_hi    b2_hi         a3        xi     gamma      phi

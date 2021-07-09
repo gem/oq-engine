@@ -50,7 +50,7 @@ class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
         # Get original mean and standard deviations
         mean, stddevs = super().get_mean_and_stddevs(
             sctx, rctx, dctx, imt, stddev_types)
-        mean += np.log(SInterCan15Mid.SITE_COEFFS[imt]['mf'])
+        mean += np.log(SInterCan15Mid.COEFFS_SITE[imt]['mf'])
         return mean, stddevs
 
 

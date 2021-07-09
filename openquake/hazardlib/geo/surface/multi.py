@@ -127,9 +127,10 @@ class MultiSurface(BaseSurface):
         deps = []
         for m in meshes:
             for lo, la, de in zip(m.lons, m.lats, m.depths):
-                lons.append(lo)
-                lats.append(la)
-                deps.append(de)
+                if numpy.isfinite(lo) and numpy.isfinite(la):
+                    lons.append(lo)
+                    lats.append(la)
+                    deps.append(de)
         return Mesh(numpy.array(lons), numpy.array(lats), numpy.array(deps))
 
     def __init__(self, surfaces, tol=0.1):
@@ -179,8 +180,11 @@ class MultiSurface(BaseSurface):
                 # The calculation of indexes below is needed because we want
                 # on each 'profile' of the mesh the uppermost node that is
                 # finite (i.e. on the real grid)
-                for icol, irow in zip(range(lons.shape[1]),
-                                      numpy.isfinite(lons).argmax(axis=0)):
+                for icol in range(lons.shape[1]):
+                    if numpy.all(numpy.isnan(lons[:, icol])):
+                        continue
+                    tmp = numpy.nonzero(numpy.isfinite(lons[:, icol]))[0]
+                    irow = tmp.argmax(axis=0)
                     edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
                                  mesh.depths[irow, icol]])
                 edges.append(numpy.array(edge))
@@ -209,7 +213,6 @@ class MultiSurface(BaseSurface):
         for spec of input and result values.
         """
         dists = [surf.get_min_distance(mesh) for surf in self.surfaces]
-
         return numpy.min(dists, axis=0)
 
     def get_closest_points(self, mesh):
@@ -253,7 +256,6 @@ class MultiSurface(BaseSurface):
         lats = lats.reshape(mesh.lats.shape)
         if depths is not None:
             depths = depths.reshape(mesh.depths.shape)
-
         return Mesh(lons, lats, depths)
 
     def get_joyner_boore_distance(self, mesh):

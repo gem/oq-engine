@@ -23,10 +23,87 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+    BooreAtkinson2008, _get_site_amplification_linear,
+    _get_site_amplification_non_linear)
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+# c1 is the reference magnitude, fixed to 6.5
+# see paragraph 'Functional Form', p. 2982
+c1 = 6.5
+
+
+def _compute_faulting_style_term(C, rake):
+    """
+    Compute and return fifth and sixth terms in equations (1a)
+    and (1b), pages 2981 and 2982, respectively.
+    """
+    Fn = float(rake > -135.0 and rake < -45.0)
+    Fr = float(rake > 45.0 and rake < 135.0)
+
+    return C['a8'] * Fn + C['a9'] * Fr
+
+
+def _compute_linear_magnitude_term(C, mag):
+    """
+    Compute and return second term in equations (1a)
+    and (1b), pages 2981 and 2982, respectively.
+    """
+    if mag <= c1:
+        # this is the second term in eq. (1a), p. 2981
+        return C['a2'] * (mag - c1)
+    else:
+        # this is the second term in eq. (1b), p. 2982
+        return C['a3'] * (mag - c1)
+
+
+def _compute_logarithmic_distance_term(C, mag, rjb):
+    """
+    Compute and return fourth term in equations (1a)
+    and (1b), pages 2981 and 2982, respectively.
+    """
+    return ((C['a5'] + C['a6'] * (mag - c1)) *
+            np.log(np.sqrt(rjb ** 2 + C['a7'] ** 2)))
+
+
+def _compute_mean(C, mag, rjb, rake):
+    """
+    Compute and return mean value without site conditions,
+    that is equations (1a) and (1b), p.2981-2982.
+    """
+    mean = (C['a1'] +
+            _compute_linear_magnitude_term(C, mag) +
+            _compute_quadratic_magnitude_term(C, mag) +
+            _compute_logarithmic_distance_term(C, mag, rjb) +
+            _compute_faulting_style_term(C, rake))
+
+    return mean
+
+
+def _compute_quadratic_magnitude_term(C, mag):
+    """
+    Compute and return third term in equations (1a)
+    and (1b), pages 2981 and 2982, respectively.
+    """
+    return C['a4'] * (8.5 - mag) ** 2
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in table 3, p. 2985.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            sigma_t = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
+            stddevs.append(sigma_t + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['sigma'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
 
 
 class AkkarCagnan2010(BooreAtkinson2008):
@@ -48,11 +125,7 @@ class AkkarCagnan2010(BooreAtkinson2008):
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see paragraph
     # 'Functional Form', p. 2981
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components :
@@ -62,11 +135,8 @@ class AkkarCagnan2010(BooreAtkinson2008):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see Table 3, p. 2985.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Functionl Form', p. 2981.
@@ -94,99 +164,29 @@ class AkkarCagnan2010(BooreAtkinson2008):
         # amplification
         C = self.COEFFS_AC10[PGA()]
         pga4nl = np.exp(
-            self._compute_mean(C, rup.mag, dists.rjb, rup.rake)) * 1e-2 / g
+            _compute_mean(C, rup.mag, dists.rjb, rup.rake)) * 1e-2 / g
 
         # compute full mean value by adding site amplification terms
         # (but avoiding recomputing mean on rock for PGA)
-        if imt == PGA():
+        if imt.string == "PGA":
             mean = (np.log(pga4nl) +
-                    self._get_site_amplification_linear(sites.vs30, C_SR) +
-                    self._get_site_amplification_non_linear(sites.vs30, pga4nl,
-                                                            C_SR))
+                    _get_site_amplification_linear(sites.vs30, C_SR) +
+                    _get_site_amplification_non_linear(sites.vs30, pga4nl,
+                                                       C_SR))
         else:
             C = self.COEFFS_AC10[imt]
-            mean = (self._compute_mean(C, rup.mag, dists.rjb, rup.rake) +
-                    self._get_site_amplification_linear(sites.vs30, C_SR) +
-                    self._get_site_amplification_non_linear(sites.vs30, pga4nl,
-                                                            C_SR))
+            mean = (_compute_mean(C, rup.mag, dists.rjb, rup.rake) +
+                    _get_site_amplification_linear(sites.vs30, C_SR) +
+                    _get_site_amplification_non_linear(sites.vs30, pga4nl,
+                                                       C_SR))
 
         # convert from cm/s**2 to g for SA (PGA is already computed in g)
-        if imt.name == "SA":
+        if imt.string[:2] == "SA":
             mean = np.log(np.exp(mean) * 1e-2 / g)
 
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+        stddevs = _get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 3, p. 2985.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma_t = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
-                stddevs.append(sigma_t + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_linear_magnitude_term(self, C, mag):
-        """
-        Compute and return second term in equations (1a)
-        and (1b), pages 2981 and 2982, respectively.
-        """
-        if mag <= self.c1:
-            # this is the second term in eq. (1a), p. 2981
-            return C['a2'] * (mag - self.c1)
-        else:
-            # this is the second term in eq. (1b), p. 2982
-            return C['a3'] * (mag - self.c1)
-
-    def _compute_quadratic_magnitude_term(self, C, mag):
-        """
-        Compute and return third term in equations (1a)
-        and (1b), pages 2981 and 2982, respectively.
-        """
-        return C['a4'] * (8.5 - mag) ** 2
-
-    def _compute_logarithmic_distance_term(self, C, mag, rjb):
-        """
-        Compute and return fourth term in equations (1a)
-        and (1b), pages 2981 and 2982, respectively.
-        """
-        return ((C['a5'] + C['a6'] * (mag - self.c1)) *
-                np.log(np.sqrt(rjb ** 2 + C['a7'] ** 2)))
-
-    def _compute_faulting_style_term(self, C, rake):
-        """
-        Compute and return fifth and sixth terms in equations (1a)
-        and (1b), pages 2981 and 2982, respectively.
-        """
-        Fn = float(rake > -135.0 and rake < -45.0)
-        Fr = float(rake > 45.0 and rake < 135.0)
-
-        return C['a8'] * Fn + C['a9'] * Fr
-
-    def _compute_mean(self, C, mag, rjb, rake):
-        """
-        Compute and return mean value without site conditions,
-        that is equations (1a) and (1b), p.2981-2982.
-        """
-        mean = (C['a1'] +
-                self._compute_linear_magnitude_term(C, mag) +
-                self._compute_quadratic_magnitude_term(C, mag) +
-                self._compute_logarithmic_distance_term(C, mag, rjb) +
-                self._compute_faulting_style_term(C, rake))
-
-        return mean
-
-    # c1 is the reference magnitude, fixed to 6.5
-    # see paragraph 'Functional Form', p. 2982
-    c1 = 6.5
 
     #: Coefficient table (from Table 3, p. 2985)
     #: sigma is the 'intra-event' standard deviation,

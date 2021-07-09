@@ -29,6 +29,7 @@ from openquake.hazardlib.geo.geodetic import point_at
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.hazard_curve import classical
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
@@ -94,7 +95,6 @@ class HazardCurvesTestCase01(unittest.TestCase):
         self.sites = s_filter
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
         gsim = SadighEtAl1997()
-        gsim.minimum_distance = 12  # test minimum_distance
         self.gsim_by_trt = {"Active Shallow Crust": gsim}
 
     def test_hazard_curve_X(self):
@@ -105,11 +105,10 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
-        npt.assert_almost_equal([0.30000, 0.2646, 0.0625], crv, decimal=4)
+        npt.assert_almost_equal([0.30000, 0.2785, 0.0891], crv, decimal=4)
 
     def test_hazard_curve_A(self):
-        # Test back-compatibility
-        # Classical case i.e. independent sources in a list instance
+        # independent sources in a list
         curves = calc_hazard_curves([self.src2],
                                     self.sites,
                                     self.imtls,
@@ -117,11 +116,11 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     truncation_level=None,
                                     investigation_time=1)
         crv = list(curves[0][0])
-        npt.assert_almost_equal([0.30000, 0.2646, 0.0625],
+        npt.assert_almost_equal([0.30000, 0.2785, 0.0891],
                                 crv, decimal=4)
 
     def test_hazard_curve_B(self):
-        # Test simple calculation
+        # independent sources in a group
         group = SourceGroup(
             "Active Shallow Crust", [self.src2], 'test', 'indep', 'indep')
         groups = [group]
@@ -131,7 +130,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None,
                                     investigation_time=1)
-        npt.assert_almost_equal(numpy.array([0.30000, 0.2646, 0.0625]),
+        npt.assert_almost_equal(numpy.array([0.30000, 0.2785, 0.0891]),
                                 curves[0][0], decimal=4)
 
 
@@ -158,7 +157,8 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
-        crv = classical(group, self.sites, gsim_by_trt, param)['pmap'][0]
+        cmaker = ContextMaker(src.tectonic_region_type, gsim_by_trt, param)
+        crv = classical(group, self.sites, cmaker)['pmap'][0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
                                 crv.array[:, 0], decimal=4)
 
@@ -193,7 +193,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     truncation_level=None,
                                     investigation_time=1)
         crv = curves[0][0]
-        npt.assert_almost_equal(numpy.array([0.58000, 0.53, 0.1347]),
+        npt.assert_almost_equal(numpy.array([0.58000, 0.5389, 0.1592]),
                                 crv, decimal=4)
 
 

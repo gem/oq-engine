@@ -26,7 +26,7 @@ from openquake.baselib import hdf5, writers
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, build_damage_dt, build_damage_array, sanitize)
+    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -325,6 +325,7 @@ def modal_damage_array(data, damage_dt):
 @export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
+    ebd = oq.calculation_mode == 'event_based_damage'
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
     orig = dstore[ekey[0]][:]  # shape (A, R, L, D)
@@ -335,10 +336,7 @@ def export_damages_csv(ekey, dstore):
         rit = oq.risk_investigation_time or oq.investigation_time
         md.update(dict(investigation_time=oq.investigation_time,
                        risk_investigation_time=rit))
-    if oq.calculation_mode == 'event_based_damage':
-        rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
-    else:
-        rate = 1
+    D = len(oq.limit_states) + 1
     R = 1 if oq.collect_rlzs else len(rlzs)
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
@@ -348,11 +346,24 @@ def export_damages_csv(ekey, dstore):
     if oq.calculation_mode != 'classical_damage':
         name = 'avg_' + name
     for i, ros in enumerate(rlzs_or_stats):
-        if oq.modal_damage_state:
-            damages = modal_damage_array(orig[:, i] * rate, dmg_dt)
-        else:
-            damages = build_damage_array(orig[:, i] * rate, dmg_dt)
-        fname = dstore.build_fname(name, ros, ekey[1])
+        if ebd:  # export only the consequences from damages-rlzs, i == 0
+            rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
+            data = orig[:, i] * rate
+            A, L, Dc = data.shape
+            if Dc == D:  # no consequences, export nothing
+                return
+            csq_dt = build_csq_dt(dstore)
+            damages = numpy.zeros(A, csq_dt)
+            for a in range(A):
+                for li, lt in enumerate(csq_dt.names):
+                    damages[lt][a] = tuple(data[a, li, D:Dc])
+            fname = dstore.build_fname('avg_risk', ros, ekey[1])
+        else:  # scenario_damage, classical_damage
+            if oq.modal_damage_state:
+                damages = modal_damage_array(orig[:, i], dmg_dt)
+            else:
+                damages = build_damage_array(orig[:, i], dmg_dt)
+            fname = dstore.build_fname(name, ros, ekey[1])
         writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()

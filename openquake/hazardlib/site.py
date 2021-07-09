@@ -30,6 +30,12 @@ from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
 ampcode_dt = (numpy.string_, 4)
+param = dict(
+    vs30measured='reference_vs30_type',
+    vs30='reference_vs30_value',
+    z1pt0='reference_depth_to_1pt0km_per_sec',
+    z2pt5='reference_depth_to_2pt5km_per_sec',
+    backarc='reference_backarc')
 
 
 class Site(object):

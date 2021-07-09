@@ -33,7 +33,7 @@ from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
 from openquake.hazardlib import correlation, stats, calc
-from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
@@ -390,6 +390,11 @@ minimum_asset_loss:
   Example: *minimum_asset_loss = {"structural": 1000}*.
   Default: empty dictionary
 
+minimum_distance:
+   If set, distances below the minimum are rounded up.
+   Example: *minimum_distance = 5*
+   Default: 0
+
 minimum_intensity:
   If set, ground motion values below the *minimum_intensity* are
   considered zeros.
@@ -705,12 +710,6 @@ class OqParam(valid.ParamSet):
                     'structural_vulnerability_retrofitted',
                     'occupants_vulnerability'}
     hazard_imtls = {}
-    siteparam = dict(
-        vs30measured='reference_vs30_type',
-        vs30='reference_vs30_value',
-        z1pt0='reference_depth_to_1pt0km_per_sec',
-        z2pt5='reference_depth_to_2pt5km_per_sec',
-        backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), None)
@@ -759,7 +758,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    individual_curves = valid.Param(valid.boolean, False)
+    individual_curves = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -782,6 +781,7 @@ class OqParam(valid.ParamSet):
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
+    minimum_distance = valid.Param(valid.positivefloat, 0)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
@@ -979,6 +979,11 @@ class OqParam(valid.ParamSet):
             raise ValueError('Unknown key %s_file in %s' %
                              (unknown.pop(), self.inputs['job_ini']))
 
+        # check return_periods vs poes
+        if self.return_periods and not self.poes and self.investigation_time:
+            self.poes = 1 - numpy.exp(
+                - self.investigation_time / numpy.array(self.return_periods))
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and self.poes:
@@ -1084,7 +1089,10 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
-        imts = set(from_string(imt).name for imt in self.imtls)
+        imts = set()
+        for imt in self.imtls:
+            im = from_string(imt)
+            imts.add("SA" if imt.startswith("SA") else im.string)
         for gsim in gsims:
             if hasattr(gsim, 'weight'):  # disable the check
                 continue
@@ -1105,8 +1113,8 @@ class OqParam(valid.ParamSet):
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     if param in ('lon', 'lat'):  # no check
                         continue
-                    elif param in self.siteparam:  # mandatory params
-                        param_name = self.siteparam[param]
+                    elif param in site.param:  # mandatory params
+                        param_name = site.param[param]
                         param_value = getattr(self, param_name)
                         if (isinstance(param_value, float) and
                                 numpy.isnan(param_value)):

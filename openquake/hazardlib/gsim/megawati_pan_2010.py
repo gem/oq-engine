@@ -27,6 +27,32 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _get_magnitude_scaling(C, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    return C["a0"] + C["a1"] * (mag - 6.0) + C["a2"] * (mag - 6.0) ** 2.
+
+
+def _get_distance_scaling(C, mag, rhypo):
+    """
+    Returns the distance scalig term
+    """
+    return (C["a3"] * np.log(rhypo)) + (C["a4"] + C["a5"] * mag) * rhypo
+
+
+def _compute_std(C, stddev_types, num_sites):
+    """
+    Compute total standard deviation, see tables 3 and 4, pages 227 and
+    228.
+    """
+    std_total = C['sigma']
+    stddevs = []
+    for _ in stddev_types:
+        stddevs.append(np.zeros(num_sites) + std_total)
+    return stddevs
+
+
 class MegawatiPan2010(GMPE):
     """
     Implements GMPE developed by Kusnowidjaja Megawati and Tso-Chien Pan
@@ -72,40 +98,13 @@ class MegawatiPan2010(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
-        mean = (self._get_magnitude_scaling(C, rup.mag) +
-                self._get_distance_scaling(C, rup.mag, dists.rhypo))
-        if imt.name in "SA PGA":
+        mean = (_get_magnitude_scaling(C, rup.mag) +
+                _get_distance_scaling(C, rup.mag, dists.rhypo))
+        if imt.string.startswith(('PGA', 'SA')):
             mean = np.log(np.exp(mean) / (100.0 * g))
-        stddevs = self._compute_std(C, stddev_types, len(dists.rhypo))
+        stddevs = _compute_std(C, stddev_types, len(dists.rhypo))
         return mean, stddevs
-
-    def _get_magnitude_scaling(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        return C["a0"] + C["a1"] * (mag - 6.0) + C["a2"] * (mag - 6.0) ** 2.
-
-    def _get_distance_scaling(self, C, mag, rhypo):
-        """
-        Returns the distance scalig term
-        """
-        return (C["a3"] * np.log(rhypo)) + (C["a4"] + C["a5"] * mag) * rhypo
-
-    def _compute_std(self, C, stddev_types, num_sites):
-        """
-        Compute total standard deviation, see tables 3 and 4, pages 227 and
-        228.
-        """
-        std_total = C['sigma']
-
-        stddevs = []
-        for _ in stddev_types:
-            stddevs.append(np.zeros(num_sites) + std_total)
-        return stddevs
 
     #: Coefficient table for rock sites, see table 3 page 227.
     COEFFS = CoeffsTable(sa_damping=5, table="""\

@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-import os
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, case_10, occupants, case_master,
@@ -25,7 +24,7 @@ from openquake.qa_tests_data.scenario_risk import (
 
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
-from openquake.commonlib.logictree import InvalidLogicTree
+from openquake.hazardlib.gsim_lt import InvalidLogicTree
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.views import view
 from openquake.calculators.export import export

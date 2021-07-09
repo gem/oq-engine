@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import CauzziFaccioli2008
-
+from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import (
+    CauzziFaccioli2008, FaccioliEtAl2010)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
@@ -60,3 +60,15 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
             sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_array_equal(mean_0, mean_15)
         numpy.testing.assert_array_equal(stds_0, stds_15)
+
+
+class FaccioliEtAl2010TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = FaccioliEtAl2010
+
+    def test_mean(self):
+        self.check('F10/F10_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check('F10/F10_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
