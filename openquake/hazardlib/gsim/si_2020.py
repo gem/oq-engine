@@ -21,31 +21,18 @@ Module exports :class:`SiEtAl2020SInter`
                :class:`SiEtAl2020SSlab`
 """
 import numpy as np
-from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-get_base_term = CallableDict()
-
-
-@get_base_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_base_term_sinter(trt, C):
+def get_base_term(trt, C):
     """
     Returns the constant term of the GMM.
     Depends on tectonic type
     """
-    return C["e"] + C["d0"]
-
-
-@get_base_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_base_term_sslab(trt, C):
-    """
-    Returns the constant term of the GMM.
-    Depends on tectonic type
-    """
-    return C["e"] + C["d1"]
+    return C["e"] +\
+        (C["d0"] if trt == const.TRT.SUBDUCTION_INTERFACE else C["d1"])
 
 
 def get_magnitude_scaling_term(C, imt, mag):
@@ -200,11 +187,7 @@ class SiEtAl2020SInter(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: average horizontal :attr:`~openquake.hazardlib.const.IMC.GMRotI50`
@@ -212,11 +195,8 @@ class SiEtAl2020SInter(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see section "Aleatory Variability Model", page 1094.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30 and Z2.5
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
@@ -227,28 +207,27 @@ class SiEtAl2020SInter(GMPE):
     #: Required distance measure is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
-        C_PGA = self.COEFFS[PGA()]
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        # Get mean and standard deviation of PGA on rock (Vs30 760 m/s)
-        pga760 = _get_pga_rock(C_PGA, trt, PGA(), sites, rup, dists)
+        # extract dictionaries of coefficients specific to PGA
+        # intensity measure type and for PGA
+        C_PGA = self.COEFFS[PGA()]
+        # Get mean PGA on rock (Vs30 760 m/s)
+        pga760 = _get_pga_rock(C_PGA, trt, PGA(), ctx, ctx, ctx)
 
-        # Get mean and standard deviations for IMT
-        mean = get_mean_values(C, trt, imt, sites, rup, dists, pga760)
-
-        # Get standard deviations
-        stddevs = get_stddevs(
-            C, stddev_types, num_sites=len(sites.vs30)
-        )
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            # Get the coefficients for the IMT
+            C = self.COEFFS[imt]
+            # Get mean and standard deviations for IMT
+            mean[m] = get_mean_values(C, trt, imt, ctx, ctx, ctx, pga760)
+            tau[m] = C["tau"]
+            phi[m] = C["phi"]
+        sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt             e        a1   d0         d1        a2         h     Cd     Dd         c       Vc   Vref   f1   f3         f4        f5    phi    tau  sigma   Mb     c_gs     c_attn
