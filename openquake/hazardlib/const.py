@@ -82,7 +82,7 @@ class IMC(Enum):
     VERTICAL_TO_HORIZONTAL_RATIO = 'Vertical-to-Horizontal Ratio'
 
 
-class StdDev(Enum):
+class StdDev(object):
     """
     GSIM standard deviation represents ground shaking variability at a site.
     """
