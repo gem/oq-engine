@@ -28,8 +28,8 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-import openquake.hazardlib.gsim.bozorgnia_campbell_2016 as BC15
-import openquake.hazardlib.gsim.campbell_bozorgnia_2014 as CB14
+from openquake.hazardlib.gsim import bozorgnia_campbell_2016 as BC15
+from openquake.hazardlib.gsim import campbell_bozorgnia_2014 as CB14
 
 
 def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
