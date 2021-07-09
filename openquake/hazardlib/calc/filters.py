@@ -331,7 +331,9 @@ class SourceFilter(object):
         :yields: pairs (split, sites)
         """
         for src, _sites in self.filter(sources):
-            if hasattr(src, 'get_annual_occurrence_rates'):
+            if hasattr(src, 'rupture_idxs'):  # MultiFaultSource, do not split
+                yield src, _sites
+            elif hasattr(src, 'get_annual_occurrence_rates'):
                 for mag, rate in src.get_annual_occurrence_rates():
                     new = copy.copy(src)
                     new.mfd = mfd.ArbitraryMFD([mag], [rate])
