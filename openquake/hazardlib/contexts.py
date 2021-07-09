@@ -622,7 +622,7 @@ def combine_pmf(o1, o2):
 
     :param o1: probability distribution of length n1
     :param o2: probability distribution of length n2
-    :returns: probability distribution of length n1 + n2
+    :returns: probability distribution of length n1 + n2 - 1
 
     >>> combine_pmf([.99, .01], [.98, .02])
     array([9.702e-01, 2.960e-02, 2.000e-04])
