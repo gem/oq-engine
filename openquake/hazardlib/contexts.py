@@ -221,7 +221,6 @@ class ContextMaker(object):
                     self.loglevels[imt] = numpy.log(imls)
 
         self.init_monitoring(monitor)
-        self.newapi = any(hasattr(gs, 'compute') for gs in self.gsims)
         self.compile()
 
     def init_monitoring(self, monitor):
@@ -241,24 +240,23 @@ class ContextMaker(object):
         out = numpy.zeros((G, 4, M, 1))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
-            if hasattr(gsim, 'compute'):
+            if getattr(gsim.compute, 'jittable', False):
                 self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
-                if numba:
-                    ctx = numpy.ones(1, gsim.ctx_builder.dtype)
-                else:
-                    ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
-                gsim.__class__.compute(fake, ctx, self.imts, *out[g])
+                rctx = numpy.ones(1, gsim.ctx_builder.dtype).view(
+                    numpy.recarray)
+                gsim.__class__.compute(fake, rctx, self.imts, *out[g])
 
     def gen_triples(self, gsim, ctxs):
         """
         Yield triples ctx, fake, slice for each context
         """
-        fake = self.fake[gsim]
+        fake = self.fake.get(gsim, gsim)
         start = 0
+        jittable = getattr(gsim.compute, 'jittable', False)
         for ctx in ctxs:
             n = ctx.size()
-            if numba:
-                new = gsim.ctx_builder.zeros(n)
+            if jittable:
+                new = gsim.ctx_builder.zeros(n).view(numpy.recarray)
                 for name in gsim.ctx_builder.names:
                     new[name] = getattr(ctx, name)
             else:
@@ -560,14 +558,14 @@ class ContextMaker(object):
                 stypes = (stdtype,)
             S = len(stypes)
             arr = numpy.zeros((1 + S, M, N))
-            calc_ms = gsim.__class__.__dict__.get('compute')
-            if calc_ms:  # fast lane
-                # TODO: single-site-optimization
-                # if all(len(ctx) == 1 for ctx in ctxs):
-                #     ctxs = [self.multi(ctxs)]
+            compute = gsim.__class__.__dict__.get('compute')
+            if compute:  # fast lane
+                if getattr(compute, 'jittable', False) and all(
+                        len(ctx) == 1 for ctx in ctxs):
+                    ctxs = [self.multi(ctxs)]
                 outs = numpy.zeros((4, M, N))
-                for ctx, fake, slc in self.gen_triples(gsim, ctxs):
-                    calc_ms(fake, ctx, self.imts, *outs[:, :, slc])
+                for ctx, gsim, slc in self.gen_triples(gsim, ctxs):
+                    compute(gsim, ctx, self.imts, *outs[:, :, slc])
                 arr[0] = outs[0]
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
@@ -730,10 +728,7 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
-        # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.filter if self.N == 1 and self.newapi
-                else self.srcfilter.split)
-        for src, sites in filt(self.group):
+        for src, sites in self.srcfilter.split(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
@@ -975,7 +970,7 @@ class RuptureContext(BaseContext):
 
     # used in acme_2019
     def __len__(self):
-        return len(self.sites)
+        return len(self.sids)
 
     def roundup(self, minimum_distance):
         """

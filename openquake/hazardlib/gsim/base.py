@@ -137,6 +137,9 @@ class MetaGSIM(abc.ABCMeta):
         if len(bases) > 1:
             raise TypeError('Multiple inheritance is forbidden: %s(%s)' % (
                 name, ', '.join(b.__name__ for b in bases)))
+        if 'get_mean_and_stddevs' in dic and 'compute' in dic:
+            raise TypeError('You cannot define both get_mean_and_stddevs '
+                            'and compute in %s' % name)
         bad = bad_methods(dic)
         if bad:
             print('%s cannot contain the methods %s' % (name, bad),
@@ -344,8 +347,22 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         and make ``get_mean_and_stddevs()`` just combine both (and possibly
         compute interim steps).
         """
-        # cannot be an abstractmethod
-        raise NotImplementedError
+        # mean and stddevs by calling the underlying .compute method
+        N = len(sites)
+        mean = numpy.zeros((1, N))
+        sig = numpy.zeros((1, N))
+        tau = numpy.zeros((1, N))
+        phi = numpy.zeros((1, N))
+        self.compute(rup, [imt], mean, sig, tau, phi)
+        stddevs = []
+        for stddev_type in stddev_types:
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(sig)
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(tau)
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi)
+        return mean, stddevs
 
     def __lt__(self, other):
         """
@@ -409,6 +426,12 @@ class GMPE(GroundShakingIntensityModel):
                 pass
             else:
                 setattr(self, key, val)
+
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        """
+        To be overridden in subclasses.
+        """
+        raise NotImplementedError
 
     # the ctxs are used in avg_poe_gmpe
     def get_poes(self, mean_std, cmaker, ctxs=()):
