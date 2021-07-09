@@ -125,22 +125,6 @@ def get_basin_response_term(C, z_value):
     return C["Cd"] + C["Dd"] * z_value
 
 
-def get_stddevs(C, stddev_types, num_sites):
-    """
-    Returns the standard deviations based on the coefficients in Table 3.4
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma_tot = np.sqrt(C["phi"] ** 2 + C["tau"] ** 2)
-            stddevs.append(sigma_tot + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C["phi"] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C["tau"] + np.zeros(num_sites))
-    return stddevs
-
-
 def _get_pga_rock(C, trt, imt, sites, rup, dists):
     """
     Returns the PGA on rock for site response
