@@ -562,8 +562,8 @@ class ContextMaker(object):
             calc_ms = gsim.__class__.__dict__.get('compute')
             if calc_ms:  # fast lane
                 # TODO: single-site-optimization
-                # if all(len(ctx) == 1 for ctx in ctxs):
-                #     ctxs = [self.multi(ctxs)]
+                if all(len(ctx) == 1 for ctx in ctxs):
+                    ctxs = [self.multi(ctxs)]
                 outs = numpy.zeros((4, M, N))
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
                     calc_ms(fake, ctx, self.imts, *outs[:, :, slc])
@@ -730,7 +730,7 @@ class PmapMaker(object):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.filter if self.N == 1
+        filt = (self.srcfilter.split_by_mag if self.N == 1
                 else self.srcfilter.split)
         for src, sites in filt(self.group):
             t0 = time.time()
