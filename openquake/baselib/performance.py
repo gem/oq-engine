@@ -321,7 +321,9 @@ if numba:
 
     def jittable(func):
         """Calls numba.njit with a cache"""
-        return numba.njit(func, cache=True)
+        jitfunc = numba.njit(func, cache=True)
+        jitfunc.jittable = True
+        return jitfunc
 
     def compile(sigstr):
         """

@@ -162,6 +162,15 @@ def fake_gsim(gsim, imts):
     return obj
 
 
+def use_recarray(gsims):
+    """
+    :returns:
+        True if the `ctx` argument of gsim.compute is a recarray for all gsims
+    """
+    return all(gsim.compute.__annotations__.get("ctx") is numpy.recarray
+               for gsim in gsims)
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
@@ -185,6 +194,7 @@ class ContextMaker(object):
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
+        self.use_recarray = use_recarray(gsims)
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -246,25 +256,6 @@ class ContextMaker(object):
                     numpy.recarray)
                 gsim.__class__.compute(fake, rctx, self.imts, *out[g])
 
-    def gen_triples(self, gsim, ctxs):
-        """
-        Yield triples ctx, fake, slice for each context
-        """
-        fake = self.fake.get(gsim, gsim)
-        start = 0
-        jittable = getattr(gsim.compute, 'jittable', False)
-        for ctx in ctxs:
-            n = ctx.size()
-            if jittable:
-                new = gsim.ctx_builder.zeros(n).view(numpy.recarray)
-                for name in gsim.ctx_builder.names:
-                    new[name] = getattr(ctx, name)
-            else:
-                new = ctx
-            stop = start + n
-            yield new, fake, slice(start, stop)
-            start = stop
-
     def read_ctxs(self, dstore, slc=None):
         """
         :param dstore: a DataStore instance
@@ -287,23 +278,25 @@ class ContextMaker(object):
             ctxs.append(ctx)
         return ctxs
 
-    def multi(self, ctxs):
+    def recarray(self, ctxs):
         """
-        :params ctxs: a list of contexts, all referring to a single point
-        :returns: a multiple RuptureContext
+        :params ctxs: a list of contexts
+        :returns: a recarray
         """
-        ctx = RuptureContext()
-        for par in self.REQUIRES_SITES_PARAMETERS:
-            setattr(ctx, par, getattr(ctxs[0], par))
-        for par in self.REQUIRES_RUPTURE_PARAMETERS:
-            vals = [getattr(ctx, par) for ctx in ctxs]
-            setattr(ctx, par, numpy.array(vals))
-        for par in self.REQUIRES_DISTANCES:
-            dists = [getattr(ctx, par)[0] for ctx in ctxs]
-            setattr(ctx, par, numpy.array(dists))
-        ctx.sids = numpy.concatenate([ctx.sids for ctx in ctxs])
-        ctx.ctxs = ctxs
-        return ctx
+        C = sum(len(ctx) for ctx in ctxs)
+        reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
+                sorted(self.REQUIRES_SITES_PARAMETERS) +
+                sorted(self.REQUIRES_DISTANCES) + ['sids'])
+        dic = {req: getattr(ctxs[0], req) for req in reqs}
+        ra = RecordBuilder(**dic).zeros(C).view(numpy.recarray)
+        start = 0
+        for ctx in ctxs:
+            slc = slice(start, start + len(ctx))
+            for par in reqs:
+                getattr(ra, par)[slc] = getattr(ctx, par)
+            ra.sids[slc] = ctx.sids
+            start = slc.stop
+        return ra
 
     def get_ctx_params(self):
         """
@@ -546,6 +539,8 @@ class ContextMaker(object):
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imts)
         out = []
+        if self.use_recarray:
+            ctxs = [self.recarray(ctxs)]
         for g, gsim in enumerate(self.gsims):
             if stdtype is None or self.trunclevel == 0:
                 stypes = ()
@@ -559,13 +554,13 @@ class ContextMaker(object):
             S = len(stypes)
             arr = numpy.zeros((1 + S, M, N))
             compute = gsim.__class__.__dict__.get('compute')
-            if compute:  # fast lane
-                if getattr(compute, 'jittable', False) and all(
-                        len(ctx) == 1 for ctx in ctxs):
-                     ctxs = [self.multi(ctxs)]
+            if compute:  # new api
                 outs = numpy.zeros((4, M, N))
-                for ctx, gsim, slc in self.gen_triples(gsim, ctxs):
+                start = 0
+                for ctx in ctxs:
+                    slc = slice(start, start + len(ctx))
                     compute(gsim, ctx, self.imts, *outs[:, :, slc])
+                    start = slc.stop
                 arr[0] = outs[0]
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
@@ -574,7 +569,7 @@ class ContextMaker(object):
                         arr[s] = outs[2]
                     elif stype == StdDev.INTRA_EVENT:
                         arr[s] = outs[3]
-            else:  # slow lane
+            else:  # legacy api
                 start = 0
                 for ctx in ctxs:
                     stop = start + len(ctx.sids)
@@ -642,7 +637,7 @@ def _collapse(ctxs):
     for ctx in ctxs:
         if numpy.isnan(ctx.occurrence_rate):  # nonparametric
             nrups.append(ctx)
-        else:  # parametrix
+        else:  # parametric
             prups.append(ctx)
     if len(prups) > 1:
         ctx = copy.copy(prups[0])
