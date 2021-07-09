@@ -561,7 +561,6 @@ class ContextMaker(object):
             arr = numpy.zeros((1 + S, M, N))
             calc_ms = gsim.__class__.__dict__.get('compute')
             if calc_ms:  # fast lane
-                # TODO: single-site-optimization
                 if all(len(ctx) == 1 for ctx in ctxs):
                     ctxs = [self.multi(ctxs)]
                 outs = numpy.zeros((4, M, N))
