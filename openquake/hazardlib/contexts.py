@@ -562,7 +562,7 @@ class ContextMaker(object):
             if compute:  # fast lane
                 if getattr(compute, 'jittable', False) and all(
                         len(ctx) == 1 for ctx in ctxs):
-                     ctxs = [self.multi(ctxs)]
+                    ctxs = [self.multi(ctxs)]
                 outs = numpy.zeros((4, M, N))
                 for ctx, gsim, slc in self.gen_triples(gsim, ctxs):
                     compute(gsim, ctx, self.imts, *outs[:, :, slc])
