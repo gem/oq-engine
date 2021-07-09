@@ -221,7 +221,6 @@ class ContextMaker(object):
                     self.loglevels[imt] = numpy.log(imls)
 
         self.init_monitoring(monitor)
-        self.newapi = any(hasattr(gs, 'compute') for gs in self.gsims)
         self.compile()
 
     def init_monitoring(self, monitor):
@@ -609,7 +608,7 @@ class ContextMaker(object):
                 else:  # regular case
                     poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
         s = 0
-        for ctx, n in zip(ctxs, nsites):
+        for n in nsites:
             yield poes[s:s+n]
             s += n
 
@@ -731,7 +730,7 @@ class PmapMaker(object):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.filter if self.N == 1 and self.newapi
+        filt = (self.srcfilter.filter if self.N == 1
                 else self.srcfilter.split)
         for src, sites in filt(self.group):
             t0 = time.time()
