@@ -326,7 +326,7 @@ class SourceFilter(object):
                 if sites is not None:
                     yield s, sites
 
-    def split_by_mag(self, sources):
+    def split_less(self, sources):
         """
         :yields: pairs (split, sites)
         """
