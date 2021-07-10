@@ -331,7 +331,8 @@ class SourceFilter(object):
         :yields: pairs (split, sites)
         """
         for src, _sites in self.filter(sources):
-            if src.__class__.__name__.startswith('Multi'):  # do not split
+            if src.__class__.__name__.startswith(('Multi', 'Collapsed')):
+                # do not split
                 yield src, _sites
             elif hasattr(src, 'get_annual_occurrence_rates'):
                 for mag, rate in src.get_annual_occurrence_rates():
