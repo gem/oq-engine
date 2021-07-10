@@ -135,31 +135,13 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def fake_gsim(gsim, imts):
+def use_recarray(gsims):
     """
-    :returns: a numba object emulating the gsim, or the gsim as is
+    :returns:
+        True if the `ctx` argument of gsim.compute is a recarray for all gsims
     """
-    if not numba:
-        return gsim
-    dic = {attr: getattr(gsim, attr) for attr in gsim.REQUIRES_ATTRIBUTES}
-    for attr in dir(gsim):
-        value = getattr(gsim, attr)
-        if isinstance(value, CoeffsTable):
-            imt0 = imts[0]
-            ctable = getattr(gsim, attr)
-            td = numba.typed.Dict.empty(
-                key_type=numba.typeof(imt0),
-                value_type=numba.typeof(ctable[imt0]))
-            for imt in imts:  # populate td
-                td[imt] = ctable[imt]
-            dic[attr] = td
-    typedic = {a: numba.typeof(dic[a]) for a in dic}
-    cls = type(gsim.__class__.__name__, (), dict(__init__=lambda self: None))
-    jcls = numba.experimental.jitclass(typedic)(cls)
-    obj = jcls()
-    for a in dic:
-        setattr(obj, a, dic[a])
-    return obj
+    return all(gsim.compute.__annotations__.get("ctx") is numpy.recarray
+               for gsim in gsims)
 
 
 class ContextMaker(object):
@@ -187,6 +169,7 @@ class ContextMaker(object):
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
+        self.use_recarray = use_recarray(gsims)
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -208,11 +191,12 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        for gsim in gsims:
-            reqs = (sorted(gsim.REQUIRES_RUPTURE_PARAMETERS) +
-                    sorted(gsim.REQUIRES_SITES_PARAMETERS) +
-                    sorted(gsim.REQUIRES_DISTANCES))
-            gsim.ctx_builder = RecordBuilder(**{req: 0. for req in reqs})
+        reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
+                sorted(self.REQUIRES_SITES_PARAMETERS) +
+                sorted(self.REQUIRES_DISTANCES))
+        dic = {req: 0. for req in reqs}
+        dic['sids'] = numpy.uint32([0])
+        self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -221,51 +205,15 @@ class ContextMaker(object):
             for imt, imls in self.imtls.items():
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
-
         self.init_monitoring(monitor)
-        self.compile()
 
     def init_monitoring(self, monitor):
-        # instantiate child monitors
+        # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
-
-    def compile(self):
-        """
-        Compile the required jittable functions
-        """
-        G = len(self.gsims)
-        M = len(self.imts)
-        out = numpy.zeros((G, 4, M, 1))
-        self.fake = {}
-        for g, gsim in enumerate(self.gsims):
-            if getattr(gsim.compute, 'jittable', False):
-                self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
-                rctx = numpy.ones(1, gsim.ctx_builder.dtype).view(
-                    numpy.recarray)
-                gsim.__class__.compute(fake, rctx, self.imts, *out[g])
-
-    def gen_triples(self, gsim, ctxs):
-        """
-        Yield triples ctx, fake, slice for each context
-        """
-        fake = self.fake.get(gsim, gsim)
-        start = 0
-        jittable = getattr(gsim.compute, 'jittable', False)
-        for ctx in ctxs:
-            n = ctx.size()
-            if jittable:
-                new = gsim.ctx_builder.zeros(n).view(numpy.recarray)
-                for name in gsim.ctx_builder.names:
-                    new[name] = getattr(ctx, name)
-            else:
-                new = ctx
-            stop = start + n
-            yield new, fake, slice(start, stop)
-            start = stop
 
     def read_ctxs(self, dstore, slc=None):
         """
@@ -289,23 +237,21 @@ class ContextMaker(object):
             ctxs.append(ctx)
         return ctxs
 
-    def multi(self, ctxs):
+    def recarray(self, ctxs):
         """
-        :params ctxs: a list of contexts, all referring to a single point
-        :returns: a multiple RuptureContext
+        :params ctxs: a list of contexts
+        :returns: a recarray
         """
-        ctx = RuptureContext()
-        for par in self.REQUIRES_SITES_PARAMETERS:
-            setattr(ctx, par, getattr(ctxs[0], par))
-        for par in self.REQUIRES_RUPTURE_PARAMETERS:
-            vals = [getattr(ctx, par) for ctx in ctxs]
-            setattr(ctx, par, numpy.array(vals))
-        for par in self.REQUIRES_DISTANCES:
-            dists = [getattr(ctx, par)[0] for ctx in ctxs]
-            setattr(ctx, par, numpy.array(dists))
-        ctx.sids = numpy.concatenate([ctx.sids for ctx in ctxs])
-        ctx.ctxs = ctxs
-        return ctx
+        C = sum(len(ctx) for ctx in ctxs)
+        ra = self.ctx_builder.zeros(C).view(numpy.recarray)
+        start = 0
+        for ctx in ctxs:
+            slc = slice(start, start + len(ctx))
+            for par in self.ctx_builder.names:
+                getattr(ra, par)[slc] = getattr(ctx, par)
+            ra.sids[slc] = ctx.sids
+            start = slc.stop
+        return ra
 
     def get_ctx_params(self):
         """
@@ -538,6 +484,7 @@ class ContextMaker(object):
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
+    # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, stdtype):
         """
         :param ctxs: a list of contexts
@@ -548,6 +495,8 @@ class ContextMaker(object):
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imts)
         out = []
+        if self.use_recarray:
+            ctxs = [self.recarray(ctxs)]
         for g, gsim in enumerate(self.gsims):
             if stdtype is None or self.trunclevel == 0:
                 stypes = ()
@@ -561,13 +510,13 @@ class ContextMaker(object):
             S = len(stypes)
             arr = numpy.zeros((1 + S, M, N))
             compute = gsim.__class__.__dict__.get('compute')
-            if compute:  # fast lane
-                if getattr(compute, 'jittable', False) and all(
-                        len(ctx) == 1 for ctx in ctxs):
-                    ctxs = [self.multi(ctxs)]
+            if compute:  # new api
                 outs = numpy.zeros((4, M, N))
-                for ctx, gsim, slc in self.gen_triples(gsim, ctxs):
+                start = 0
+                for ctx in ctxs:
+                    slc = slice(start, start + len(ctx))
                     compute(gsim, ctx, self.imts, *outs[:, :, slc])
+                    start = slc.stop
                 arr[0] = outs[0]
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
@@ -576,7 +525,7 @@ class ContextMaker(object):
                         arr[s] = outs[2]
                     elif stype == StdDev.INTRA_EVENT:
                         arr[s] = outs[3]
-            else:  # slow lane
+            else:  # legacy api
                 start = 0
                 for ctx in ctxs:
                     stop = start + len(ctx.sids)
@@ -644,7 +593,7 @@ def _collapse(ctxs):
     for ctx in ctxs:
         if numpy.isnan(ctx.occurrence_rate):  # nonparametric
             nrups.append(ctx)
-        else:  # parametrix
+        else:  # parametric
             prups.append(ctx)
     if len(prups) > 1:
         ctx = copy.copy(prups[0])
