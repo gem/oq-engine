@@ -93,7 +93,6 @@ class PmapGetter(object):
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
-        self.sids = sids
 
     @property
     def imts(self):
