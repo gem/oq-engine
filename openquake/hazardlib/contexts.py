@@ -181,6 +181,8 @@ class ContextMaker(object):
             param.get('maximum_distance') or MagDepDistance({}))
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
+        if self.investigation_time:
+            self.tom = registry['PoissonTOM'](self.investigation_time)
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.grp_id = param.get('grp_id', 0)
