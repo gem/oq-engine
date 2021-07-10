@@ -16,11 +16,25 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
+from openquake.baselib.performance import numba, compile
 import numpy
 
 F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+
+if numba:
+    @compile("void(float64[:, :], float64[:], uint32[:])")
+    def combine_probs(array, other, rlzs):
+        for li in range(len(array)):
+            for ri in rlzs:
+                if other[li] != 0.:
+                    array[li, ri] = (
+                        1. - (1. - array[li, ri]) * (1. - other[li]))
+else:
+    def combine_probs(array, other, rlzs):
+        for r in rlzs:
+            array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
 
 
 class AllEmptyProbabilityMaps(ValueError):
@@ -106,9 +120,7 @@ class ProbabilityCurve(object):
         of integers in the range 0..R-1.
         """
         for g, rlz_group in enumerate(rlz_groups):
-            for r in rlz_group:
-                self.array[:, r] = (
-                    1. - (1. - self.array[:, r]) * (1. - other.array[:, g]))
+            combine_probs(self.array, other.array[:, g], rlz_group)
 
     # used when exporting to HDF5
     def convert(self, imtls, idx=0):
