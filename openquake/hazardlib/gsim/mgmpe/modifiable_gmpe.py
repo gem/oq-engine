@@ -42,15 +42,15 @@ def set_between_epsilon(self, sites, rup, dists, imt, epsilon_tau):
         the epsilon value used to constrain the between event variability
     """
     # Index for the between event standard deviation
-    key = const.StdDev.INTER_EVENT.name
+    key = const.StdDev.INTER_EVENT
     self.mean = self.mean + epsilon_tau * getattr(self, key)
 
     # Set between event variability to 0
-    keya = const.StdDev.TOTAL.name
+    keya = const.StdDev.TOTAL
     setattr(self, key, np.zeros_like(getattr(self, keya)))
 
     # Set total variability equal to the within-event one
-    keyb = const.StdDev.INTRA_EVENT.name
+    keyb = const.StdDev.INTRA_EVENT
     setattr(self, keya, getattr(self, keyb))
 
 
@@ -80,9 +80,9 @@ def set_scale_total_sigma_scalar(self, sites, rup, dists, imt,
     :param scaling_factor:
         Factor to scale the standard deviations
     """
-    total_stddev = getattr(self, const.StdDev.TOTAL.name)
+    total_stddev = getattr(self, const.StdDev.TOTAL)
     total_stddev *= scaling_factor
-    setattr(self, const.StdDev.TOTAL.name, total_stddev)
+    setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
 def set_scale_total_sigma_vector(self, sites, rup, dists, imt,
@@ -94,9 +94,9 @@ def set_scale_total_sigma_vector(self, sites, rup, dists, imt,
         CoeffsTable
     """
     C = scaling_factor[imt]
-    total_stddev = getattr(self, const.StdDev.TOTAL.name)
+    total_stddev = getattr(self, const.StdDev.TOTAL)
     total_stddev *= C["scaling_factor"]
-    setattr(self, const.StdDev.TOTAL.name, total_stddev)
+    setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
 def set_fixed_total_sigma(self, sites, rup, dists, imt, total_sigma):
@@ -106,9 +106,8 @@ def set_fixed_total_sigma(self, sites, rup, dists, imt, total_sigma):
         IMT-dependent total standard deviation as a CoeffsTable
     """
     C = total_sigma[imt]
-    shp = getattr(self, const.StdDev.TOTAL.name).shape
-    setattr(self, const.StdDev.TOTAL.name,
-            C["total_sigma"] + np.zeros(shp))
+    shp = getattr(self, const.StdDev.TOTAL).shape
+    setattr(self, const.StdDev.TOTAL, C["total_sigma"] + np.zeros(shp))
 
 
 def add_delta_std_to_total_std(self, sites, rup, dists, imt, delta):
@@ -116,9 +115,9 @@ def add_delta_std_to_total_std(self, sites, rup, dists, imt, delta):
     :param delta:
         A delta std e.g. a phi S2S to be removed from total
     """
-    total_stddev = getattr(self, const.StdDev.TOTAL.name)
+    total_stddev = getattr(self, const.StdDev.TOTAL)
     total_stddev = (total_stddev**2 + np.sign(delta) * delta**2)**0.5
-    setattr(self, const.StdDev.TOTAL.name, total_stddev)
+    setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
 def set_total_std_as_tau_plus_delta(self, sites, rup, dists, imt, delta):
@@ -126,9 +125,9 @@ def set_total_std_as_tau_plus_delta(self, sites, rup, dists, imt, delta):
     :param delta:
         A delta std e.g. a phi SS to be combined with between std, tau.
     """
-    tau = getattr(self, const.StdDev.INTER_EVENT.name)
+    tau = getattr(self, const.StdDev.INTER_EVENT)
     total_stddev = (tau**2 + np.sign(delta) * delta**2)**0.5
-    setattr(self, const.StdDev.TOTAL.name, total_stddev)
+    setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
 def _dict_to_coeffs_table(input_dict, name):
@@ -211,7 +210,7 @@ class ModifiableGMPE(GMPE):
 
         # Save the stds
         for key, val in zip(working_std_types, ostds):
-            setattr(self, key.name, val)
+            setattr(self, key, val)
         self.mean = omean
 
         # Apply sequentially the modifications
@@ -222,6 +221,6 @@ class ModifiableGMPE(GMPE):
         # Return the standard deviation types as originally requested
         outs = []
         for key in stddev_types:
-            outs.append(getattr(self, key.name))
+            outs.append(getattr(self, key))
 
         return self.mean, outs

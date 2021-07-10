@@ -540,5 +540,5 @@ pgv     6.75    330     -2.02   2400    4.5     5.975   -0.919  0.275   -0.1    
 
 
 for region in 'CHN JPN TWN'.split():
-    gsim_aliases['AbrahamsonEtAl2014' + region] = \
-        f'[AbrahamsonEtAl2014Reg{region}]\region="{region}"'
+    gsim_aliases[f'AbrahamsonEtAl2014Reg{region}'] = \
+        f'[AbrahamsonEtAl2014]\region="{region}"'

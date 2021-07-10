@@ -18,13 +18,15 @@
 
 import ast
 import sys
+import copy
 import operator
+import itertools
 from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree
 
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib import site
+from openquake.hazardlib import site, mfd
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
@@ -323,6 +325,32 @@ class SourceFilter(object):
                 sites = self.get_close_sites(s)
                 if sites is not None:
                     yield s, sites
+
+    def split_less(self, sources):
+        """
+        :yields: pairs (split, sites)
+        """
+        for src, _sites in self.filter(sources):
+            if src.__class__.__name__.startswith('Multi'):  # do not split
+                yield src, _sites
+            elif hasattr(src, 'get_annual_occurrence_rates'):
+                for mag, rate in src.get_annual_occurrence_rates():
+                    new = copy.copy(src)
+                    new.mfd = mfd.ArbitraryMFD([mag], [rate])
+                    new.num_ruptures = new.count_ruptures()
+                    sites = self.get_close_sites(new)
+                    if sites is not None:
+                        yield new, sites
+            else:  # nonparametric source
+                # data is a list of pairs (rup, pmf)
+                for mag, group in itertools.groupby(
+                        src.data, lambda pair: pair[0].mag):
+                    new = src.__class__(src.source_id, src.name,
+                                        src.tectonic_region_type, list(group))
+                    vars(new).update(vars(src))
+                    sites = self.get_close_sites(new)
+                    if sites is not None:
+                        yield new, sites
 
     # used in source and rupture prefiltering: it should not discard too much
     def close_sids(self, src_or_rec, trt=None, maxdist=None):

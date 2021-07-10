@@ -135,33 +135,6 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def fake_gsim(gsim, imts):
-    """
-    :returns: a numba object emulating the gsim, or the gsim as is
-    """
-    if not numba:
-        return gsim
-    dic = {attr: getattr(gsim, attr) for attr in gsim.REQUIRES_ATTRIBUTES}
-    for attr in dir(gsim):
-        value = getattr(gsim, attr)
-        if isinstance(value, CoeffsTable):
-            imt0 = imts[0]
-            ctable = getattr(gsim, attr)
-            td = numba.typed.Dict.empty(
-                key_type=numba.typeof(imt0),
-                value_type=numba.typeof(ctable[imt0]))
-            for imt in imts:  # populate td
-                td[imt] = ctable[imt]
-            dic[attr] = td
-    typedic = {a: numba.typeof(dic[a]) for a in dic}
-    cls = type(gsim.__class__.__name__, (), dict(__init__=lambda self: None))
-    jcls = numba.experimental.jitclass(typedic)(cls)
-    obj = jcls()
-    for a in dic:
-        setattr(obj, a, dic[a])
-    return obj
-
-
 def use_recarray(gsims):
     """
     :returns:
@@ -230,31 +203,15 @@ class ContextMaker(object):
             for imt, imls in self.imtls.items():
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
-
         self.init_monitoring(monitor)
-        self.compile()
 
     def init_monitoring(self, monitor):
-        # instantiate child monitors
+        # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
-
-    def compile(self):
-        """
-        Compile the required jittable functions
-        """
-        G = len(self.gsims)
-        M = len(self.imts)
-        out = numpy.zeros((G, 4, M, 1))
-        self.fake = {}
-        rctx = numpy.ones(1, self.ctx_builder.dtype).view(numpy.recarray)
-        for g, gsim in enumerate(self.gsims):
-            if getattr(gsim.compute, 'jittable', False):
-                self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
-                gsim.__class__.compute(fake, rctx, self.imts, *out[g])
 
     def read_ctxs(self, dstore, slc=None):
         """
@@ -553,10 +510,9 @@ class ContextMaker(object):
             if compute:  # new api
                 outs = numpy.zeros((4, M, N))
                 start = 0
-                fake = self.fake[gsim]
                 for ctx in ctxs:
                     slc = slice(start, start + len(ctx))
-                    compute(fake, ctx, self.imts, *outs[:, :, slc])
+                    compute(gsim, ctx, self.imts, *outs[:, :, slc])
                     start = slc.stop
                 arr[0] = outs[0]
                 for s, stype in enumerate(stypes, 1):
@@ -599,7 +555,7 @@ class ContextMaker(object):
                 else:  # regular case
                     poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
         s = 0
-        for ctx, n in zip(ctxs, nsites):
+        for n in nsites:
             yield poes[s:s+n]
             s += n
 
@@ -612,7 +568,7 @@ def combine_pmf(o1, o2):
 
     :param o1: probability distribution of length n1
     :param o2: probability distribution of length n2
-    :returns: probability distribution of length n1 + n2
+    :returns: probability distribution of length n1 + n2 - 1
 
     >>> combine_pmf([.99, .01], [.98, .02])
     array([9.702e-01, 2.960e-02, 2.000e-04])
@@ -720,7 +676,10 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
-        for src, sites in self.srcfilter.split(self.group):
+        # split the sources only if there is more than 1 site
+        filt = (self.srcfilter.split_less if self.N == 1
+                else self.srcfilter.split)
+        for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete

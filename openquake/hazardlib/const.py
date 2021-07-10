@@ -82,7 +82,8 @@ class IMC(Enum):
     VERTICAL_TO_HORIZONTAL_RATIO = 'Vertical-to-Horizontal Ratio'
 
 
-class StdDev(Enum):
+# NB: cannot be an enum because it would break the Strong Motion Toolkit :-(
+class StdDev(object):
     """
     GSIM standard deviation represents ground shaking variability at a site.
     """

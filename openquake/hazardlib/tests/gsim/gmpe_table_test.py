@@ -563,8 +563,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         with self.assertRaises(KeyError) as ve:
             gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt_module.PGA(),
                                       stddevs)
-        self.assertEqual(str(ve.exception),
-                         "<StdDev.INTER_EVENT: 'Inter event'>")
+        self.assertEqual(str(ve.exception), "'Inter event'")
 
     def tearDown(self):
         """

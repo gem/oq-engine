@@ -335,6 +335,7 @@ else:
 
     def jittable(func):
         """Do nothing decorator, used if numba is missing"""
+        func.jittable = True
         return func
 
     def compile(sigstr):
