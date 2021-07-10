@@ -466,6 +466,9 @@ class HazardCalculator(BaseCalculator):
                 for trt in mags_by_trt:
                     self.datastore['source_mags/' + trt] = numpy.array(
                         mags_by_trt[trt])
+                    it = list(oq.maximum_distance.ddic[trt].items())
+                    md = '%s->%d ... %s->%d' % (it[0] + it[-1])
+                    logging.info('max_dist %s: %s', trt, md)
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
