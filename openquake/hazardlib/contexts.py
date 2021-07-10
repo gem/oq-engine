@@ -687,7 +687,7 @@ class PmapMaker(object):
         self.fewsites = self.N <= cmaker.max_sites_disagg
         # NB: if maxsites is too big or too small the performance of
         # get_poes can easily become 2-3 times worse!
-        self.maxsites = 512000 / len(self.gsims) / self.imtls.size
+        self.maxsites = 128000 / len(self.gsims) / self.imtls.size
 
     def count_bytes(self, ctxs):
         # # usuful for debugging memory issues
@@ -705,7 +705,7 @@ class PmapMaker(object):
     def _update_pmap(self, ctxs, pmap):
         # compute PoEs and update pmap
         # splitting in blocks makes sure that the maximum poes array
-        # generated has size N x L x G x 8 = 4 MB
+        # generated has size N x L x G x 8 = 1 MB
         for block in block_splitter(ctxs, self.maxsites, RuptureContext.size):
             self.cmaker.get_pmap(block, pmap)
 
