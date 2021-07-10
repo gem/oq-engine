@@ -32,7 +32,7 @@ from scipy.constants import g
 from math import log10
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
-from openquake.hazardlib import const, contexts
+from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean)
@@ -438,7 +438,6 @@ class BooreAtkinson2008(GMPE):
 
         # compute PGA on rock conditions - needed to compute non-linear
         # site amplification term
-        vars(rup).update(contexts.get_dists(dists))  # update distances
         pga4nl = _get_pga_on_rock(self.COEFFS[PGA()], rup, C)
 
         # equation 1, pag 106, without sigma term, that is only the first 3
