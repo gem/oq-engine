@@ -482,6 +482,7 @@ class ContextMaker(object):
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
+    # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, stdtype):
         """
         :param ctxs: a list of contexts
