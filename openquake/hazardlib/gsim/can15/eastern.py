@@ -44,7 +44,6 @@ def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
     distsl = copy.copy(dists)
     distsl.rjb, distsl.rrup = utils.get_equivalent_distances_east(
         rup.mag, dists.repi)
-    rup.rjb, rup.rrup = distsl.rjb, distsl.rrup
 
     # Pezeshk et al. 2011 - Rrup
     mean1, stds1 = PezeshkEtAl2011.get_mean_and_stddevs(
