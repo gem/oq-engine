@@ -32,7 +32,7 @@ from scipy.constants import g
 from math import log10
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean)
@@ -435,6 +435,11 @@ class BooreAtkinson2008(GMPE):
         # intensity measure type.
         C = self.COEFFS[imt]
         C_SR = self.COEFFS_SOIL_RESPONSE[imt]
+
+        # horrible hack to fix the distance parameters; needed for the can15
+        # subclasses; extra distances are add in can15.eastern
+        # this also affects generic_gmpe_avgsa_test.py
+        vars(rup).update(contexts.get_dists(dists))
 
         # compute PGA on rock conditions - needed to compute non-linear
         # site amplification term
