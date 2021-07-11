@@ -438,10 +438,8 @@ class BooreAtkinson2008(GMPE):
 
         # horrible hack to fix the distance parameters; needed for the can15
         # subclasses; extra distances are add in can15.eastern
-        base_dists = contexts.get_dists(rup)
-        extra_dists = contexts.get_dists(dists)
-        if set(extra_dists) - set(base_dists):
-            vars(rup).update(extra_dists)
+        # this also affects generic_gmpe_avgsa_test.py
+        vars(rup).update(contexts.get_dists(dists))
 
         # compute PGA on rock conditions - needed to compute non-linear
         # site amplification term
