@@ -31,7 +31,7 @@ import numpy as np
 from scipy.constants import g
 from math import log10
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils import (
@@ -807,36 +807,18 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     """)
 
 
-gsim_aliases["AtkinsonBoore2006MblgAB1987bar140NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mblg87"
-scale_fac = 0.
-"""
-gsim_aliases["AtkinsonBoore2006MblgJ1996bar140NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mblg96"
-scale_fac = 0.
-"""
-gsim_aliases["AtkinsonBoore2006Mwbar140NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mw"
-scale_fac = 0.
-"""
-gsim_aliases["AtkinsonBoore2006MblgAB1987bar200NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mblg87"
-scale_fac = 0.5146
-"""
-gsim_aliases["AtkinsonBoore2006MblgJ1996bar200NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mblg96"
-scale_fac = 0.5146
-"""
-gsim_aliases["AtkinsonBoore2006Mwbar200NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mw"
-scale_fac = 0.5146
-"""
+add_alias("AtkinsonBoore2006MblgAB1987bar140NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mblg87", scale_fac=0.)
+add_alias("AtkinsonBoore2006MblgJ1996bar140NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mblg96", scale_fac=0.)
+add_alias("AtkinsonBoore2006Mwbar140NSHMP2008", AtkinsonBoore2006,
+          mag_eq="Mw", scale_fac=0.)
+add_alias("AtkinsonBoore2006MblgAB1987bar200NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mblg87", scale_fac=0.5146)
+add_alias("AtkinsonBoore2006MblgJ1996bar200NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mblg96", scale_fac=0.5146)
+add_alias("AtkinsonBoore2006Mwbar200NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mw", scale_fac=0.5146)
 
 
 class AtkinsonBoore2006Modified2011(AtkinsonBoore2006):

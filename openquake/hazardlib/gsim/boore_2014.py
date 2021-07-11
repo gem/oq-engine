@@ -46,7 +46,7 @@ Module exports :class:`BooreEtAl2014`,
 import numpy as np
 
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -1078,10 +1078,8 @@ class StewartEtAl2016(BooreEtAl2014):
     """)
 
 
-gsim_aliases['StewartEtAl2016RegCHN'] = '[StewartEtAl2016]\nregion="CHN"'
-gsim_aliases['StewartEtAl2016RegJPN'] = '[StewartEtAl2016]\nregion="JPN"'
-gsim_aliases['StewartEtAl2016NoSOF'] = '[StewartEtAl2016]\nsof=false'
-gsim_aliases['StewartEtAl2016CHNNoSOF'] = \
-    '[StewartEtAl2016]\nregion="CHN"\nsof=false'
-gsim_aliases['StewartEtAl2016JPNNoSOF'] = \
-    '[StewartEtAl2016]\nregion="JPN"\nsof=false'
+add_alias('StewartEtAl2016RegCHN', StewartEtAl2016, region="CHN")
+add_alias('StewartEtAl2016RegJPN', StewartEtAl2016, region="JPN")
+add_alias('StewartEtAl2016NoSOF', StewartEtAl2016, sof=0)
+add_alias('StewartEtAl2016CHNNoSOF', StewartEtAl2016, region="CHN", sof=0)
+add_alias('StewartEtAl2016JPNNoSOF', StewartEtAl2016, region="JPN", sof=0)
