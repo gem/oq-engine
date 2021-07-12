@@ -255,7 +255,7 @@ def _get_stddevs(kind, C, rup, dists, sites, stddev_types):
         elif stddev_type == const.StdDev.INTRA_EVENT:
             stddevs.append(phi)
         elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
+            stddevs.append(np.full_like(dists.rjb, tau))
     return stddevs
 
 

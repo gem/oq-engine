@@ -40,7 +40,7 @@ def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
     g = self.gsims
     cff = self.COEFFS_SITE[imt]
 
-    # distances
+    # add equivalent distances
     distsl = copy.copy(dists)
     distsl.rjb, distsl.rrup = utils.get_equivalent_distances_east(
         rup.mag, dists.repi)
