@@ -374,12 +374,12 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         stddevs = []
         for stddev_type in stddev_types:
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sig)
+                stddevs.append(sig[0])
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
+                stddevs.append(tau[0])
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-        return mean, stddevs
+                stddevs.append(phi[0])
+        return mean[0], stddevs
 
     def __lt__(self, other):
         """
