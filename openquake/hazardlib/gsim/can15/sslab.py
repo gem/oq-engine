@@ -41,7 +41,7 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
     #: Supported standard deviations
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    sgn = 0
+    delta = 0.
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """
@@ -57,12 +57,9 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
         ctx.rjb = rjb
         ctx.rrup = rrup
         super().compute(ctx, imts, mean, sig, tau, phi)
-        # adjust mean values using the recommended delta (see Atkinson and
-        # Adams, 2013; page 992)
-        delta = np.log(10.**0.15)
         for m, imt in enumerate(imts):
             cff = self.COEFFS_SITE[imt]
-            mean[m] = np.log(np.exp(mean[m]) * 10**cff['mf']) + self.sgn*delta
+            mean[m] = np.log(np.exp(mean[m]) * 10**cff['mf']) + self.delta
             sig[m] = get_sigma(imt)
 
     # These are the coefficients included in Table 1 of Atkinson and Adams
@@ -88,11 +85,15 @@ class SSlabCan15Low(SSlabCan15Mid):
     """
     Slab backbone model for the Canada 2015 model. Low ground motion version
     """
-    sgn = -1
+    # adjust mean values using the recommended delta (see Atkinson and
+    # Adams, 2013; page 992)
+    delta = -np.log(10.**0.15)
 
 
 class SSlabCan15Upp(SSlabCan15Mid):
     """
     Slab backbone model for the Canada 2015 model. High ground motion version
     """
-    sgn = +1
+    # adjust mean values using the recommended delta (see Atkinson and
+    # Adams, 2013; page 992)
+    delta = np.log(10.**0.15)

@@ -23,6 +23,7 @@ import getpass
 import operator
 import itertools
 from datetime import datetime
+from decorator import decorator
 import psutil
 import numpy
 try:
@@ -314,6 +315,23 @@ class Monitor(object):
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg
+
+
+def vectorize_arg(idx):
+    """
+    Vectorize a function efficiently, if the argument with index `idx` contains
+    many repetitions.
+    """
+    def caller(func, *args):
+        args = list(args)
+        uniq, inv = numpy.unique(args[idx], return_inverse=True)
+        res = []
+        for arg in uniq:
+            args[idx] = arg
+            res.append(func(*args))
+        return numpy.array(res)[inv]
+
+    return decorator(caller)
 
 
 # numba helpers
