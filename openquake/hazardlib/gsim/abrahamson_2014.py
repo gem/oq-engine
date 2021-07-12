@@ -26,7 +26,7 @@ import copy
 import numpy as np
 
 from scipy import interpolate
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -540,5 +540,5 @@ pgv     6.75    330     -2.02   2400    4.5     5.975   -0.919  0.275   -0.1    
 
 
 for region in 'CHN JPN TWN'.split():
-    gsim_aliases[f'AbrahamsonEtAl2014Reg{region}'] = \
-        f'[AbrahamsonEtAl2014]\region="{region}"'
+    add_alias('AbrahamsonEtAl2014Reg' + region, AbrahamsonEtAl2014,
+              region=region)

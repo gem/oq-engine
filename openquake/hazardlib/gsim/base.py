@@ -48,7 +48,16 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
 registry = {}  # GSIM name -> GSIM class
-gsim_aliases = {}  # populated for instance in nbcc2015_AA13.py
+gsim_aliases = {}  # GSIM alias -> TOML representation
+
+
+def add_alias(name, cls, **kw):
+    """
+    Add a GSIM alias to both gsim_aliases and the registry.
+    """
+    text = '\n'.join('%s = %r' % it for it in kw.items())
+    gsim_aliases[name] = '[%s]\n%s' % (cls.__name__, text)
+    registry[name] = cls
 
 
 class NotVerifiedWarning(UserWarning):
