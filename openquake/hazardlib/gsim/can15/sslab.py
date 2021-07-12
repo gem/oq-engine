@@ -42,6 +42,8 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
     #: Supported standard deviations
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
+    delta = 0.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -58,7 +60,7 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         cff = self.COEFFS_SITE[imt]
-        mean_adj = np.log(np.exp(mean) * 10**cff['mf'])
+        mean_adj = np.log(np.exp(mean) * 10**cff['mf']) + self.delta
         stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         return mean_adj, stddevs
 
@@ -86,40 +88,11 @@ class SSlabCan15Low(SSlabCan15Mid):
     Slab backbone model for the Canada 2015 model. Low ground motion version
     """
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # get original values
-        hslab = 50  # See info in GMPEt_Inslab_med.dat
-        rjb, rrup = utils.get_equivalent_distance_inslab(rup.mag, dists.repi,
-                                                         hslab)
-        dists.rjb = rjb
-        dists.rrup = rrup
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        # adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013; page 992)
-        delta = np.log(10.**(0.15))
-        mean_adj = mean - delta
-        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        return mean_adj, stddevs
+    delta = -np.log(10.**0.15)
 
 
 class SSlabCan15Upp(SSlabCan15Mid):
     """
     Slab backbone model for the Canada 2015 model. High ground motion version
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # get original values
-        hslab = 50  # See info in GMPEt_Inslab_med.dat
-        rjb, rrup = utils.get_equivalent_distance_inslab(rup.mag, dists.repi,
-                                                         hslab)
-        dists.rjb = rjb
-        dists.rrup = rrup
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        # adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013; page 992)
-        delta = np.log(10.**(0.15))
-        mean_adj = mean + delta
-        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        return mean_adj, stddevs
+    delta = np.log(10.**0.15)
