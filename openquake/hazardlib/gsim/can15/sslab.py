@@ -3,7 +3,7 @@
 :class:`SSlabCan15Mid`, :class:`SSlabCan15Upp`,
 :class:`SSlabCan15Low`
 """
-
+import copy
 import numpy as np
 
 from openquake.hazardlib import const
@@ -51,8 +51,9 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
         """
         # get original values
         hslab = 50  # See info in GMPEt_Inslab_med.dat
-        rjb, rrup = utils.get_equivalent_distance_inslab(ctx.mag, ctx.repi,
-                                                         hslab)
+        rjb, rrup = utils.get_equivalent_distance_inslab(
+            ctx.mag, ctx.repi, hslab)
+        ctx = copy.copy(ctx)
         ctx.rjb = rjb
         ctx.rrup = rrup
         super().compute(ctx, imts, mean, sig, tau, phi)
