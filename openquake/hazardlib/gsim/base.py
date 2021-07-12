@@ -33,7 +33,7 @@ from openquake.baselib.performance import compile, numba
 from openquake.hazardlib import const
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
-from openquake.hazardlib.contexts import KNOWN_DISTANCES
+from openquake.hazardlib.contexts import KNOWN_DISTANCES, RuptureContext
 from openquake.hazardlib.contexts import *  # for backward compatibility
 
 
@@ -363,6 +363,13 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         sig = numpy.zeros((1, N))
         tau = numpy.zeros((1, N))
         phi = numpy.zeros((1, N))
+        if not isinstance(rup, RuptureContext):
+            ctx = RuptureContext()
+            vars(ctx).update(vars(rup))
+            vars(ctx).update(vars(sites))
+            vars(ctx).update(vars(dists))
+        else:
+            ctx = rup
         self.compute(rup, [imt], mean, sig, tau, phi)
         stddevs = []
         for stddev_type in stddev_types:
