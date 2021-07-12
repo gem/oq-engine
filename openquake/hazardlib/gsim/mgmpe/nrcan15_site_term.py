@@ -183,7 +183,7 @@ class NRCan15SiteTerm(GMPE):
         ctx = copy.copy(rup)
         ctx.vs30 = np.ones_like(ctx.vs30) * 760.
         # compute mean and standard deviation
-        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites, ctx, ctx,
+        mean, stddvs = self.gmpe.get_mean_and_stddevs(ctx, ctx, ctx,
                                                       imt, stds_types)
         if imt.string != 'PGA':
             # compute mean and standard deviation on rock

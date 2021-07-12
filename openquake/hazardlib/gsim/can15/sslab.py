@@ -53,7 +53,7 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
         hslab = 50  # See info in GMPEt_Inslab_med.dat
         rjb, rrup = utils.get_equivalent_distance_inslab(
             ctx.mag, ctx.repi, hslab)
-        ctx = copy.copy(ctx)
+        # ctx = copy.copy(ctx)
         ctx.rjb = rjb
         ctx.rrup = rrup
         super().compute(ctx, imts, mean, sig, tau, phi)
