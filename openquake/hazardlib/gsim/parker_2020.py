@@ -29,7 +29,7 @@ from scipy.special import erf
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
 
 CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
@@ -474,106 +474,55 @@ class ParkerEtAl2020SSlabB(ParkerEtAl2020SSlab):
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
 
-gsim_aliases['ParkerEtAl2020SInterAleutian'] = '''[ParkerEtAl2020SInter]
-region="AK"
-saturation_region="Aleutian"
-'''
-gsim_aliases['ParkerEtAl2020SInterAlaska'] = '''[ParkerEtAl2020SInter]
-region="AK"
-'''
-gsim_aliases['ParkerEtAl2020SInterCAMN'] = '''[ParkerEtAl2020SInter]
-region="CAM"
-saturation_region="CAM_N"
-'''
-gsim_aliases['ParkerEtAl2020SInterCAMS'] = '''[ParkerEtAl2020SInter]
-region="CAM"
-saturation_region="CAM_S"
-'''
-gsim_aliases['ParkerEtAl2020SInterSAN'] = '''[ParkerEtAl2020SInter]
-region="SA"
-saturation_region="SA_N"
-'''
-gsim_aliases['ParkerEtAl2020SInterSAS'] = '''[ParkerEtAl2020SInter]
-region="SA"
-saturation_region="SA_S"
-'''
-gsim_aliases['ParkerEtAl2020SInterTaiwanE'] = '''[ParkerEtAl2020SInter]
-region="TW"
-saturation_region="TW_E"
-'''
-gsim_aliases['ParkerEtAl2020SInterTaiwanW'] = '''[ParkerEtAl2020SInter]
-region="TW"
-saturation_region="TW_W"
-'''
-gsim_aliases['ParkerEtAl2020SInterCascadia'] = '''[ParkerEtAl2020SInterB]
-region="Cascadia"
-'''
-gsim_aliases['ParkerEtAl2020SInterCascadiaOut'] = '''[ParkerEtAl2020SInterB]
-region="Cascadia"
-basin="out"
-'''
-gsim_aliases['ParkerEtAl2020SInterCascadiaSeattle'] = '''
-[ParkerEtAl2020SInterB]
-region="Cascadia"
-basin="Seattle"
-'''
-gsim_aliases['ParkerEtAl2020SInterJapanPac'] = '''[ParkerEtAl2020SInterB]
-region="JP"
-saturation_region="JP_Pac"
-'''
-gsim_aliases['ParkerEtAl2020SInterJapanPhi'] = '''[ParkerEtAl2020SInterB]
-region="JP"
-saturation_region="JP_Phi"
-'''
-
-gsim_aliases['ParkerEtAl2020SSlabAleutian'] = '''[ParkerEtAl2020SSlab]
-region="AK"
-saturation_region="Aleutian"
-'''
-gsim_aliases['ParkerEtAl2020SSlabAlaska'] = '''[ParkerEtAl2020SSlab]
-region="AK"
-'''
-gsim_aliases['ParkerEtAl2020SSlabCAMN'] = '''[ParkerEtAl2020SSlab]
-region="CAM"
-saturation_region="CAM_N"
-'''
-gsim_aliases['ParkerEtAl2020SSlabCAMS'] = '''[ParkerEtAl2020SSlab]
-region="CAM"
-saturation_region="CAM_S"
-'''
-gsim_aliases['ParkerEtAl2020SSlabSAN'] = '''[ParkerEtAl2020SSlab]
-region="SA"
-saturation_region="SA_N"
-'''
-gsim_aliases['ParkerEtAl2020SSlabSAS'] = '''[ParkerEtAl2020SSlab]
-region="SA"
-saturation_region="SA_S"
-'''
-gsim_aliases['ParkerEtAl2020SSlabTaiwanE'] = '''[ParkerEtAl2020SSlab]
-region="TW"
-saturation_region="TW_E"
-'''
-gsim_aliases['ParkerEtAl2020SSlabTaiwanW'] = '''[ParkerEtAl2020SSlab]
-region="TW"
-saturation_region="TW_W"
-'''
-gsim_aliases['ParkerEtAl2020SSlabCascadia'] = '''[ParkerEtAl2020SSlabB]
-region="Cascadia"
-'''
-gsim_aliases['ParkerEtAl2020SSlabCascadiaOut'] = '''[ParkerEtAl2020SSlabB]
-region="Cascadia"
-basin="out"
-'''
-gsim_aliases['ParkerEtAl2020SSlabCascadiaSeattle'] = '''
-[ParkerEtAl2020SSlabB]
-region="Cascadia"
-basin="Seattle"
-'''
-gsim_aliases['ParkerEtAl2020SSlabJapanPac'] = '''[ParkerEtAl2020SSlabB]
-region="JP"
-saturation_region="JP_Pac"
-'''
-gsim_aliases['ParkerEtAl2020SSlabJapanPhi'] = '''[ParkerEtAl2020SSlabB]
-region="JP"
-saturation_region="JP_Phi"
-'''
+add_alias('ParkerEtAl2020SInterAleutian', ParkerEtAl2020SInter,
+          region="AK", saturation_region="Aleutian")
+add_alias('ParkerEtAl2020SInterAlaska', ParkerEtAl2020SInter,
+          region="AK")
+add_alias('ParkerEtAl2020SInterCAMN', ParkerEtAl2020SInter,
+          region="CAM", saturation_region="CAM_N")
+add_alias('ParkerEtAl2020SInterCAMS', ParkerEtAl2020SInter,
+          region="CAM", saturation_region="CAM_S")
+add_alias('ParkerEtAl2020SInterSAN', ParkerEtAl2020SInter,
+          region="SA", saturation_region="SA_N")
+add_alias('ParkerEtAl2020SInterSAS', ParkerEtAl2020SInter,
+          region="SA", saturation_region="SA_S")
+add_alias('ParkerEtAl2020SInterTaiwanE', ParkerEtAl2020SInter,
+          region="TW", saturation_region="TW_E")
+add_alias('ParkerEtAl2020SInterTaiwanW', ParkerEtAl2020SInter,
+          region="TW", saturation_region="TW_W")
+add_alias('ParkerEtAl2020SInterCascadia', ParkerEtAl2020SInterB,
+          region="Cascadia")
+add_alias('ParkerEtAl2020SInterCascadiaOut', ParkerEtAl2020SInterB,
+          region="Cascadia", basin="out")
+add_alias('ParkerEtAl2020SInterCascadiaSeattle', ParkerEtAl2020SInterB,
+          region="Cascadia", basin="Seattle")
+add_alias('ParkerEtAl2020SInterJapanPac', ParkerEtAl2020SInterB,
+          region="JP", saturation_region="JP_Pac")
+add_alias('ParkerEtAl2020SInterJapanPhi', ParkerEtAl2020SInterB,
+          region="JP", saturation_region="JP_Phi")
+add_alias('ParkerEtAl2020SSlabAleutian', ParkerEtAl2020SSlab,
+          region="AK", saturation_region="Aleutian")
+add_alias('ParkerEtAl2020SSlabAlaska', ParkerEtAl2020SSlab,
+          region="AK")
+add_alias('ParkerEtAl2020SSlabCAMN', ParkerEtAl2020SSlab,
+          region="CAM", saturation_region="CAM_N")
+add_alias('ParkerEtAl2020SSlabCAMS', ParkerEtAl2020SSlab,
+          region="CAM", saturation_region="CAM_S")
+add_alias('ParkerEtAl2020SSlabSAN', ParkerEtAl2020SSlab,
+          region="SA", saturation_region="SA_N")
+add_alias('ParkerEtAl2020SSlabSAS', ParkerEtAl2020SSlab,
+          region="SA", saturation_region="SA_S")
+add_alias('ParkerEtAl2020SSlabTaiwanE', ParkerEtAl2020SSlab,
+          region="TW", saturation_region="TW_E")
+add_alias('ParkerEtAl2020SSlabTaiwanW', ParkerEtAl2020SSlab,
+          region="TW", saturation_region="TW_W")
+add_alias('ParkerEtAl2020SSlabCascadia', ParkerEtAl2020SSlabB,
+          region="Cascadia")
+add_alias('ParkerEtAl2020SSlabCascadiaOut', ParkerEtAl2020SSlabB,
+          region="Cascadia", basin="out")
+add_alias('ParkerEtAl2020SSlabCascadiaSeattle', ParkerEtAl2020SSlabB,
+          region="Cascadia", basin="Seattle")
+add_alias('ParkerEtAl2020SSlabJapanPac', ParkerEtAl2020SSlabB,
+          region="JP", saturation_region="JP_Pac")
+add_alias('ParkerEtAl2020SSlabJapanPhi', ParkerEtAl2020SSlabB,
+          region="JP", saturation_region="JP_Phi")

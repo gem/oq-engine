@@ -6,7 +6,6 @@
 import numpy as np
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import gsim_aliases
 from openquake.hazardlib.gsim.can15.western import get_sigma
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SInter
