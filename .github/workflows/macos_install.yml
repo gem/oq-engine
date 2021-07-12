@@ -1,4 +1,4 @@
-name: MacOS: Install engine for 3.6, 3.7 and 3.8
+name: MacOS Install engine for 3.6, 3.7 and 3.8
 'on':
   schedule:
     - cron: "0 1 * * *"
