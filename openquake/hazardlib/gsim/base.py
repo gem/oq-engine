@@ -28,7 +28,7 @@ import warnings
 import functools
 import numpy
 
-from openquake.baselib.general import DeprecationWarning
+from openquake.baselib.general import DeprecationWarning, gen_slices
 from openquake.baselib.performance import compile, numba
 from openquake.hazardlib import const
 from openquake.hazardlib.stats import _truncnorm_sf
@@ -47,6 +47,7 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_SITES_PARAMETERS',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
+ONE_MB = 1024 ** 2
 registry = {}  # GSIM name -> GSIM class
 gsim_aliases = {}  # GSIM alias -> TOML representation
 
@@ -465,6 +466,10 @@ class GMPE(GroundShakingIntensityModel):
         """
         loglevels = cmaker.loglevels
         trunclevel = cmaker.trunclevel
+        N = mean_std.shape[2]  # 2, M, N
+        L = loglevels.size
+        maxsize = int(numpy.ceil(ONE_MB / L / 8))
+        arr = numpy.zeros((N, L))
         if trunclevel is not None and trunclevel < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
@@ -476,18 +481,17 @@ class GMPE(GroundShakingIntensityModel):
                 for m in range(len(loglevels)):
                     ms[0, m] += s * self.adjustment
                 outs.append(_get_poes(ms, loglevels, trunclevel))
-            arr = numpy.average(outs, weights=weights, axis=0)
+            arr[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
-            N = mean_std.shape[2]  # 2, M, N
-            shp = (N, loglevels.size)  # L
-            arr = numpy.zeros(shp)
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):
                 mean_stdi = numpy.array(mean_std)  # a copy
                 mean_stdi[1] *= f  # multiply stddev by factor
-                arr += w * _get_poes(mean_stdi, loglevels, trunclevel)
+                arr[:] += w * _get_poes(mean_stdi, loglevels, trunclevel)
         else:  # regular case
-            arr = _get_poes(mean_std, loglevels, trunclevel)
+            # split large arrays in slices < 1 MB to fit inside the CPU cache
+            for sl in gen_slices(0, N, maxsize):
+                arr[sl] = _get_poes(mean_std[:, :, sl], loglevels, trunclevel)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for imt in loglevels:
             if imtweight and imtweight.dic.get(imt) == 0:
