@@ -179,4 +179,4 @@ for key, dist, trt, hdf5 in arguments:
         add_alias(name, NBCC2015_AA13,
                   REQUIRES_DISTANCES=[dist],
                   DEFINED_FOR_TECTONIC_REGION_TYPE=trt,
-                  gmpe_table=f"{hdf5}.hdf5")
+                  gmpe_table=f"{hdf5}.hdf5" % kind)
