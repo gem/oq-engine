@@ -37,7 +37,7 @@ jobs:
         #grep setuptools requirements*
         #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
         #echo $PY_VER
-        pip3 install -U pip wheel setuptools
+        pip3 install --default-timeout=100 -U pip wheel setuptools
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
         python install.py devel 
