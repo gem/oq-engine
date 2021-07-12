@@ -319,7 +319,7 @@ class Monitor(object):
 
 def vectorize_arg(idx):
     """
-    Vectorize a function efficientlyif the argument with index `idx` contains
+    Vectorize a function efficiently, if the argument with index `idx` contains
     many repetitions.
     """
     def caller(func, *args):
