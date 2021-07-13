@@ -488,8 +488,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                 consequence, tagname = byname.split('_by_')
                 # the taxonomy map is a dictionary loss_type ->
                 # [[(risk_taxon, weight]),...] for each asset taxonomy
-                for _, weight in self.tmap[loss_type][asset['taxonomy']]:
-                    cs = coeffs[asset[tagname]][loss_type]
+                for risk_t, weight in self.tmap[loss_type][asset['taxonomy']]:
+                    # for instance risk_t = 'W_LFM-DUM_H6'
+                    cs = coeffs[risk_t][loss_type]
                     csq[consequence] += scientific.consequence(
                         consequence, cs, asset, fractions[:, 1:], loss_type
                     ) * weight
@@ -505,6 +506,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         for riskid, dic in self.risklist.groupby_id(
                 kind='consequence').items():
             if dic:
+                # this happens for consequence models in XML format,
+                # see EventBasedDamageTestCase.test_case_11
                 dtlist = [(lt, F32) for lt, kind in dic]
                 coeffs = numpy.zeros(len(self.risklist.limit_states), dtlist)
                 for (lt, kind), cf in dic.items():
@@ -593,23 +596,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         descr = ([('agg_id', U32), ('event_id', U32), ('loss_id', U8)] +
                  [(dc, dt) for dc in self.get_dmg_csq()])
         return numpy.dtype(descr)
-
-    # called only in absence of a taxonomy mapping
-    def reduce_cons_model(self, tagcol):
-        """
-        Convert the dictionaries tag -> coeffs in the consequence model
-        into dictionaries tag index -> coeffs (one per consequence)
-        """
-        for consequence_by_tagname, dic in self.consdict.items():
-            # for instance losses_by_taxonomy
-            consequence, tagname = consequence_by_tagname.split('_by_')
-            tagidx = tagcol.get_tagidx(tagname)
-            newdic = {tagidx[tag]: cf for tag, cf in dic.items()
-                      if tag in tagidx}  # tag in the exposure
-            if not newdic:
-                logging.warning('%s: no assets with known tags',
-                                consequence_by_tagname)
-            self.consdict[consequence_by_tagname] = newdic
 
     @cached_property
     def taxonomy_dict(self):
