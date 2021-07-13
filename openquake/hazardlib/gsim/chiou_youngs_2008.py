@@ -137,7 +137,7 @@ def _set_stddevs(sig, tau, phi, ctx, C, ln_y_ref, exp1, exp2):
                   + (1 + NL) ** 2))
     # eq. 21
     sig[:] = np.sqrt(((1 + NL) ** 2) * (t ** 2) + sigma ** 2)
-    tau[:] = np.abs((1 + NL) * tau)
+    tau[:] = np.abs((1 + NL) * t)
     phi[:] = sigma
 
 

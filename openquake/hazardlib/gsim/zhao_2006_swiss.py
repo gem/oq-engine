@@ -83,7 +83,6 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
             _apply_adjustments(
                 C, self.COEFFS_FS_ROCK[imt], tau_ss,
                 mean, sig, tau, phi, ctx, ctx.rrup, imt, log_phi_ss)
-            print(imt, mean)
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS05
     #: Original Coefficient table
