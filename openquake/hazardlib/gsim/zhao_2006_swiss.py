@@ -22,6 +22,7 @@ Module exports
 :class:`ZhaoEtAl2006AscSWISS03`,
 :class:`ZhaoEtAl2006AscSWISS08`.
 """
+import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -74,6 +75,7 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        ctx = copy.copy(ctx)
         ctx.vs30 = 700 * np.ones(len(ctx.vs30))
         super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tauC'
@@ -82,7 +84,8 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
         for m, imt in enumerate(imts):
             _apply_adjustments(
                 C, self.COEFFS_FS_ROCK[imt], tau_ss,
-                mean, sig, tau, phi, ctx, ctx.rrup, imt, log_phi_ss)
+                mean[m], sig[m], tau[m], phi[m],
+                ctx, ctx.rrup, imt, log_phi_ss)
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS05
     #: Original Coefficient table
