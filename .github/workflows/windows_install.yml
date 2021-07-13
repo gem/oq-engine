@@ -1,5 +1,4 @@
----
-name: Install engine for 3.6, 3.7 and 3.8 on Windows
+name: Windows Install engine for 3.6, 3.7 and 3.8 
 
 on:
   schedule:
@@ -34,10 +33,12 @@ jobs:
           #git status
           #$PY_VER="py${{ matrix.python-version }}"
           #$py = $PY_VER.replace(".","")
+          set PIP_DEFAULT_TIMEOUT=100
           python -m pip install pip wheel setuptools --upgrade
           #python -m pip install install -r requirements-$py-win64.txt
           #python -m pip install -e .
           python install.py devel
+        shell: cmd
       - name: Run demos to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1

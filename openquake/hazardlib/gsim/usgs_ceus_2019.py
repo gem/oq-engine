@@ -23,7 +23,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.nga_east import (
     ITPL, NGAEastGMPE, get_hard_rock_mean, get_site_amplification,
     get_site_amplification_sigma)
@@ -342,5 +342,4 @@ NGAEastUSGSSammons16 usgs_16
 NGAEastUSGSSammons17 usgs_17'''.splitlines()
 for line in lines:
     alias, key = line.split()
-    gsim_aliases[alias] = (f'[NGAEastUSGSGMPE]\n'
-                           f'gmpe_table="nga_east_{key}.hdf5"')
+    add_alias(alias, NGAEastUSGSGMPE, gmpe_table=f"nga_east_{key}.hdf5")

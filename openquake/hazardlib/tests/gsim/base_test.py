@@ -22,9 +22,9 @@ import unittest.mock as mock
 
 import numpy
 
-from openquake.hazardlib import const
+from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.base import (
-    GMPE, CoeffsTable, SitesContext, RuptureContext,
+    GMPE, CoeffsTable, gsim_aliases, SitesContext, RuptureContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -309,3 +309,15 @@ class GsimInstantiationTestCase(unittest.TestCase):
         self.assertEqual(
             warning_msg, 'MyGMPE is not independently verified - '
             'the user is liable for their application')
+
+
+class AliasesTestCase(unittest.TestCase):
+    """
+    Check that all aliases are valid
+    """
+    def test_valid(self):
+        n = 0
+        for toml in gsim_aliases.values():
+            valid.gsim(toml)
+            n += 1
+        print('Checked %d valid aliases' % n)
