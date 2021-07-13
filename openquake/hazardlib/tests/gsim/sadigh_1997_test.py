@@ -19,9 +19,7 @@
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import (
-    SitesContext, RuptureContext, DistancesContext
-)
+from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 
@@ -51,28 +49,23 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
 
     def test_mag_greater_8pt5(self):
         gmpe = SadighEtAl1997()
-
-        sctx = SitesContext()
-        rctx = RuptureContext()
-        dctx = DistancesContext()
-
-        rctx.rake = 0.0
-        dctx.rrup = numpy.array([0., 1.])
-        sctx.vs30 = numpy.array([800., 800.])
-
-        rctx.mag = 9.0
+        ctx = RuptureContext()
+        ctx.rake = 0.0
+        ctx.rrup = numpy.array([0., 1.])
+        ctx.vs30 = numpy.array([800., 800.])
+        ctx.mag = 9.0
         mean_rock_9, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
-        rctx.mag = 8.5
+            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
+        ctx.mag = 8.5
         mean_rock_8pt5, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
+            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_allclose(mean_rock_9, mean_rock_8pt5)
 
-        sctx.vs30 = numpy.array([300., 300.])
-        rctx.mag = 9.0
+        ctx.vs30 = numpy.array([300., 300.])
+        ctx.mag = 9.0
         mean_soil_9, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
-        rctx.mag = 8.5
+            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
+        ctx.mag = 8.5
         mean_soil_8pt5, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
+            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_allclose(mean_soil_9, mean_soil_8pt5)

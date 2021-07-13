@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim.base import (
     GMPE, CoeffsTable, gsim_aliases, SitesContext, RuptureContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
