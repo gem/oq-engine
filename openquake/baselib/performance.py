@@ -23,18 +23,13 @@ import getpass
 import operator
 import itertools
 from datetime import datetime
+from decorator import decorator
 import psutil
 import numpy
 try:
-    from numba import njit
-
-    def jittable(func):
-        """Calls numba.njit with a cache"""
-        return njit(func, cache=True)
+    import numba
 except ImportError:
-    def jittable(func):
-        """Do nothing decorator, used if numba is missing"""
-        return func
+    numba = None
 
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
@@ -320,3 +315,47 @@ class Monitor(object):
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg
+
+
+def vectorize_arg(idx):
+    """
+    Vectorize a function efficiently, if the argument with index `idx` contains
+    many repetitions.
+    """
+    def caller(func, *args):
+        args = list(args)
+        uniq, inv = numpy.unique(args[idx], return_inverse=True)
+        res = []
+        for arg in uniq:
+            args[idx] = arg
+            res.append(func(*args))
+        return numpy.array(res)[inv]
+
+    return decorator(caller)
+
+
+# numba helpers
+if numba:
+
+    def jittable(func):
+        """Calls numba.njit with a cache"""
+        jitfunc = numba.njit(func, cache=True)
+        jitfunc.jittable = True
+        return jitfunc
+
+    def compile(sigstr):
+        """
+        Compile a function Ahead-Of-Time using the given signature string
+        """
+        return numba.njit(sigstr, cache=True)
+
+else:
+
+    def jittable(func):
+        """Do nothing decorator, used if numba is missing"""
+        func.jittable = True
+        return func
+
+    def compile(sigstr):
+        """Do nothing decorator, used if numba is missing"""
+        return lambda func: func

@@ -216,7 +216,7 @@ def classical(srcs, cmaker, monitor):
     Read the SourceFilter and call the classical calculator in hazardlib
     """
     srcfilter = monitor.read('srcfilter')
-    cmaker.mon = monitor
+    cmaker.init_monitoring(monitor)
     return hazclassical(srcs, srcfilter, cmaker)
 
 

@@ -20,11 +20,9 @@
 Module exports :class:`MontalvaEtAl2017SInter`
                :class:`MontalvaEtAl2017SSlab`
 """
-import numpy as np
-
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SInter,
-                                                      AbrahamsonEtAl2015SSlab)
+from openquake.hazardlib.gsim.abrahamson_2015 import (
+    AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SSlab)
 
 
 class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
@@ -40,33 +38,7 @@ class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
     implementation, as coefficients and model changed at the point of
     publication
     """
-
-    def _compute_magnitude_term(self, C, dc1, mag):
-        """
-        Computes the magnitude scaling term given by equations (2) and (3)
-        corrected by a local adjustment factor. Modified from original
-        Abrahamson et al (2015) implementation as theta4 and theta5 are now
-        period-dependent, whilst theta13 is now zero
-        """
-        base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = self.CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = C['theta5'] * (mag - dmag)
-
-        else:
-            f_mag = C['theta4'] * (mag - dmag)
-
-        return base + f_mag
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (4).
-        Note this is overwriting the Abrahamson et al (2016) version as
-        theta3 is now period dependent
-        """
-        return (C['theta2'] + C['theta3'] * (mag - self.CONSTS["C1"])) *\
-            np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
-                   self.CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
+    kind = "montalva17"
 
     # Coefficients table taken from electronic supplement to Montalva et al.
     # (2017)
@@ -133,46 +105,13 @@ class MontalvaEtAl2017SInter(AbrahamsonEtAl2015SInter):
     10.00   -0.200000000
     """)
 
-    CONSTS = {
-        # Period-Independent Coefficients (Table 2 of BC Hydro)
-        'n': 1.18,
-        'c': 1.88,
-        'c4': 10.0,
-        'C1': 7.2,
-        'theta9': 0.4
-        }
-
 
 class MontalvaEtAl2017SSlab(AbrahamsonEtAl2015SSlab):
     """
     Adaptation of the Abrahamson et al. (2015) BC Hydro subduction in-slab
     GMPE, calibrated to Chilean strong motion data
     """
-
-    def _compute_magnitude_term(self, C, dc1, mag):
-        """
-        Computes the magnitude scaling term given by equations (2) and (3),
-        corrected by a local adjustment factor - see documentation for
-        interface version for changes
-        """
-        base = C['theta1'] + (C['theta4'] * dc1)
-        dmag = self.CONSTS["C1"] + dc1
-        if mag > dmag:
-            f_mag = C['theta5'] * (mag - dmag)
-
-        else:
-            f_mag = C['theta4'] * (mag - dmag)
-        return base + f_mag
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (4)
-        """
-        return ((C['theta2'] + C['theta14'] + C['theta3'] *
-                (mag - self.CONSTS["C1"])) *
-                np.log(dists.rhypo + self.CONSTS['c4'] *
-                np.exp((mag - 6.) * self.CONSTS['theta9'])) +
-                (C['theta6'] * dists.rhypo)) + C["theta10"]
+    kind = "montalva17"
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt       vlin       b        theta1         theta2        theta3         theta4         theta5         theta6   theta7  theta8      theta10      theta11        theta12        theta13        theta14  theta15 theta16           phi           tau         sigma       phi_S2S
@@ -201,12 +140,3 @@ class MontalvaEtAl2017SSlab(AbrahamsonEtAl2015SSlab):
     7.500    400.0   0.000   -0.24139803    -1.14070070    0.10950824     1.71125604     0.60252124     0.00000000  -0.4433    0.30   5.08281865    0.00167053    -0.32638288     0.00000000    -0.98803311   0.3000    0.00    0.47063810    0.41701232    0.62880800    0.29895226
     10.00    400.0   0.000   -0.96313983    -1.09295336    0.11343926     1.67160339     0.77620830     0.00000000  -0.4828    0.30   5.49692364   -0.00070392    -0.25811162     0.00000000    -1.05008478   0.3000    0.00    0.46023151    0.38872242    0.60242690    0.28453650
     """)
-
-    CONSTS = {
-        # Period-Independent Coefficients (Table 2 of BC Hydro)
-        'n': 1.18,
-        'c': 1.88,
-        'c4': 10.0,
-        'C1': 7.2,
-        'theta9': 0.4
-        }

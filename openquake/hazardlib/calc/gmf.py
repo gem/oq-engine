@@ -196,7 +196,7 @@ class GmfComputer(object):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
-        :param mean_stds: array of shape O, N, M
+        :param mean_stds: array of shape O, M, N
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for stddev_inter
@@ -209,7 +209,7 @@ class GmfComputer(object):
         for imti, imt in enumerate(self.imts):
             try:
                 result[imti], sig[imti], eps[imti] = self._compute(
-                     mean_stds[:, :, imti], num_events, imt, gsim)
+                     mean_stds[:, imti], num_events, imt, gsim)
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
@@ -233,6 +233,7 @@ class GmfComputer(object):
         num_sids = len(self.sids)
         num_outs = len(mean_stds)
         if num_outs == 1:
+            # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')

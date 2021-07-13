@@ -50,7 +50,7 @@ class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
         # Get original mean and standard deviations
         mean, stddevs = super().get_mean_and_stddevs(
             sctx, rctx, dctx, imt, stddev_types)
-        mean += np.log(SInterCan15Mid.SITE_COEFFS[imt]['mf'])
+        mean += np.log(SInterCan15Mid.COEFFS_SITE[imt]['mf'])
         return mean, stddevs
 
 
@@ -132,4 +132,4 @@ for name in ('Idriss2014', 'ChiouYoungs2014', 'CampbellBozorgnia2014',
              'BooreEtAl2014', 'AbrahamsonEtAl2014'):
     for sgn in (1, -1, 0):
         a = name + 'NSHMP' + SUFFIX[sgn]
-        base.gsim_aliases[a] = f'[NSHMP2014]\ngmpe_name="{name}"\nsgn={sgn}'
+        base.add_alias(a, NSHMP2014, gmpe_name=name, sgn=sgn)

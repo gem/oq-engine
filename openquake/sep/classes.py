@@ -106,7 +106,7 @@ class NewmarkDisplacement(SecondaryPeril):
     def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
-            if im.name == 'PGA':
+            if im.string == 'PGA':
                 nd = newmark_displ_from_pga_M(
                     gmf, sites.crit_accel, mag,
                     self.c1, self.c2, self.c3, self.c4,
@@ -128,7 +128,7 @@ class HazusLiquefaction(SecondaryPeril):
     def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
-            if im.name == 'PGA':
+            if im.string == 'PGA':
                 out.append(hazus_liquefaction_probability(
                     pga=gmf, mag=mag, liq_susc_cat=sites.liq_susc_cat,
                     groundwater_depth=sites.gwd,
@@ -151,7 +151,7 @@ class HazusDeformation(SecondaryPeril):
     def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
-            if im.name == 'PGA':
+            if im.string == 'PGA':
                 ls = hazus_lateral_spreading_displacement(
                     mag=mag, pga=gmf, liq_susc_cat=sites.liq_susc_cat,
                     return_unit=self.return_unit)
@@ -178,7 +178,7 @@ class ZhuLiquefactionGeneral(SecondaryPeril):
     def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
-            if im.name == 'PGA':
+            if im.string == 'PGA':
                 out.append(zhu_liquefaction_probability_general(
                     pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
         return out

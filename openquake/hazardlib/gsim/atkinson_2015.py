@@ -38,11 +38,12 @@ def _get_magnitude_term(C, mag):
 
 def _get_distance_term(C, rhypo, mag):
     """
-    Returns the distance scaling term
+    Returns the distance scaling term including the apparent anelastic
+    attenuation term (C4 * R)
     """
     h_eff = _get_effective_distance(mag)
     r_val = np.sqrt(rhypo ** 2.0 + h_eff ** 2.0)
-    return C["c3"] * np.log10(r_val)
+    return C["c3"] * np.log10(r_val) + C["c4"] * r_val
 
 
 def _get_effective_distance(mag):
@@ -99,14 +100,10 @@ class Atkinson2015(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', }
 
     #: Required distance measure is hypocentral distance
-    REQUIRES_DISTANCES = {'rhypo'}
-
-    #: GMPE not tested against independent implementation so raise
-    #: not verified warning
-    non_verified = True
+    REQUIRES_DISTANCES = {'rhypo', }
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -119,7 +116,7 @@ class Atkinson2015(GMPE):
         imean = (_get_magnitude_term(C, rup.mag) +
                  _get_distance_term(C, dists.rhypo, rup.mag))
         # Convert mean from cm/s and cm/s/s
-        if imt.name in "SA PGA":
+        if imt.string.startswith(('PGA', 'SA')):
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             mean = np.log(10.0 ** imean)
@@ -127,17 +124,17 @@ class Atkinson2015(GMPE):
         return mean, stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
-    IMT         c0      c1         c2      c3    phi    tau    sigma
-    pgv     -4.151   1.762  -0.09509   -1.669   0.27   0.19     0.33
-    pga     -2.376   1.818  -0.1153    -1.752   0.28   0.24     0.37
-    0.0303  -2.283   1.842  -0.1189    -1.785   0.28   0.27     0.39
-    0.0500  -2.018   1.826  -0.1192    -1.831   0.28   0.30     0.41
-    0.1000  -1.954   1.830  -0.1185    -1.774   0.29   0.25     0.39
-    0.2000  -2.266   1.785  -0.1061    -1.657   0.30   0.21     0.37
-    0.3000  -2.794   1.852  -0.1078    -1.608   0.30   0.19     0.36
-    0.5000  -3.873   2.060  -0.1212    -1.544   0.29   0.20     0.35
-    1.0000  -4.081   1.742  -0.07381   -1.481   0.26   0.22     0.34
-    2.0000  -4.462   1.485  -0.03815   -1.361   0.24   0.23     0.33
-    3.0303  -3.827   1.060   0.009086  -1.398   0.24   0.22     0.32
-    5.0000  -4.321   1.080   0.009376  -1.378   0.25   0.18     0.31
+    IMT         c0      c1         c2      c3         c4    phi    tau    sigma
+    pgv     -4.151   1.762  -0.09509   -1.669   -0.00060   0.27   0.19     0.33
+    pga     -2.376   1.818  -0.1153    -1.752   -0.00200   0.28   0.24     0.37
+    0.0300  -2.283   1.842  -0.1189    -1.785   -0.00200   0.28   0.27     0.39
+    0.0500  -2.018   1.826  -0.1192    -1.831   -0.00200   0.28   0.30     0.41
+    0.1000  -1.954   1.830  -0.1185    -1.774   -0.00200   0.29   0.25     0.39
+    0.2000  -2.266   1.785  -0.1061    -1.657   -0.00140   0.30   0.21     0.37
+    0.3000  -2.794   1.852  -0.1078    -1.608   -0.00100   0.30   0.19     0.36
+    0.5000  -3.873   2.060  -0.1212    -1.544   -0.00060   0.29   0.20     0.35
+    1.0000  -4.081   1.742  -0.07381   -1.481    0.00000   0.26   0.22     0.34
+    2.0000  -4.462   1.485  -0.03815   -1.361    0.00000   0.24   0.23     0.33
+    3.0000  -3.827   1.060   0.009086  -1.398    0.00000   0.24   0.22     0.32
+    5.0000  -4.321   1.080   0.009376  -1.378    0.00000   0.25   0.18     0.31
     """)

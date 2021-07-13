@@ -154,6 +154,58 @@ REQUIRES_DISTANCES
 '''.split()
 
 
+def get_alatik_youngs_sigma_mu(mag, rake, imt):
+    """
+    Implements the statistical uncertainty model of Al Atik & Youngs (2014)
+    given in equations 9 to 11 in the manuscript.
+    """
+    if str(imt) == "PGA":
+        period = 0.01
+    elif str(imt).startswith("SA"):
+        period = imt.period
+    else:
+        raise ValueError("Al Atik & Youngs (2014) Model not supported "
+                         "for %s" % str(imt))
+    if mag >= 7.0:
+        sigma_mu = 0.056 * (mag - 7.0) + 0.083
+    else:
+        sigma_mu = 0.083
+    if period >= 1.0:
+        sigma_mu += (0.0171 * np.log(period))
+    if rake >= -135. and rake <= -45.:
+        # Normal faulting case
+        sigma_mu += 0.038
+    return sigma_mu
+
+
+def get_stddevs(branch, phi_ds2s, homoskedastic_sigma,
+                stddev_types, imt, mag, nsites):
+    """
+    Returns the standard deviations as described in Figure 10 and
+    section 4 of Tromans et al. (2019).
+    """
+    if homoskedastic_sigma:
+        # Homoskedastic sigma branch
+        tau = np.zeros(nsites) + HOMOSKEDASTIC_TAU[branch](imt)
+        phi = np.zeros(nsites) + HOMOSKEDASTIC_PHI[branch](imt)
+    else:
+        # Heteroskedastic sigma branch
+        tau = np.zeros(nsites) + HETEROSKEDASTIC_TAU[branch](imt, mag)
+        phi = np.zeros(nsites) + HETEROSKEDASTIC_PHI[branch](imt, mag)
+    # Add on the delta phi_d2s
+    if phi_ds2s:
+        phi = np.sqrt(phi ** 2. + DELTA_PHI_S2S[imt]["dfs2s"] ** 2.)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(tau ** 2. + phi ** 2.))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau)
+    return stddevs
+
+
 class TromansEtAl2019(GMPE):
     """
     Implements a modifiable GMPE to apply the standard deviation model and
@@ -203,11 +255,8 @@ class TromansEtAl2019(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = set()
@@ -267,35 +316,10 @@ class TromansEtAl2019(GMPE):
         if self.vskappa:
             mean += self.vskappa[imt]["vskappa"]
         # Get stddevs
-        stddevs = self.get_stddevs(stddev_types, imt, rup.mag, mean.shape)
+        stddevs = get_stddevs(
+            self.branch, self.phi_ds2s, self.homoskedastic_sigma,
+            stddev_types, imt, rup.mag, mean.shape)
         return mean, stddevs
-
-    def get_stddevs(self, stddev_types, imt, mag, nsites):
-        """
-        Returns the standard deviations as described in Figure 10 and
-        section 4 of Tromans et al. (2019).
-        """
-        if self.homoskedastic_sigma:
-            # Homoskedastic sigma branch
-            tau = np.zeros(nsites) + HOMOSKEDASTIC_TAU[self.branch](imt)
-            phi = np.zeros(nsites) + HOMOSKEDASTIC_PHI[self.branch](imt)
-        else:
-            # Heteroskedastic sigma branch
-            tau = np.zeros(nsites) + HETEROSKEDASTIC_TAU[self.branch](imt, mag)
-            phi = np.zeros(nsites) + HETEROSKEDASTIC_PHI[self.branch](imt, mag)
-        # Add on the delta phi_d2s
-        if self.phi_ds2s:
-            phi = np.sqrt(phi ** 2. + DELTA_PHI_S2S[imt]["dfs2s"] ** 2.)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs
 
 
 class TromansEtAl2019SigmaMu(TromansEtAl2019):
@@ -335,34 +359,12 @@ class TromansEtAl2019SigmaMu(TromansEtAl2019):
         # Apply sigma_mu epsilon factor
         if self.sigma_mu_epsilon:
             mean += (self.sigma_mu_epsilon *
-                     self.get_alatik_youngs_sigma_mu(rup.mag, rup.rake, imt))
+                     get_alatik_youngs_sigma_mu(rup.mag, rup.rake, imt))
         # Apply vs-kappa correction
         if self.vskappa:
             mean += self.vskappa[imt]["vskappa"]
         # Get stddevs
-        stddevs = self.get_stddevs(stddev_types, imt, rup.mag, mean.shape)
+        stddevs = get_stddevs(
+            self.branch, self.phi_ds2s, self.homoskedastic_sigma,
+            stddev_types, imt, rup.mag, mean.shape)
         return mean, stddevs
-
-    @staticmethod
-    def get_alatik_youngs_sigma_mu(mag, rake, imt):
-        """
-        Implements the statistical uncertainty model of Al Atik & Youngs (2014)
-        given in equations 9 to 11 in the manuscript.
-        """
-        if str(imt) == "PGA":
-            period = 0.01
-        elif str(imt).startswith("SA"):
-            period = imt.period
-        else:
-            raise ValueError("Al Atik & Youngs (2014) Model not supported "
-                             "for %s" % str(imt))
-        if mag >= 7.0:
-            sigma_mu = 0.056 * (mag - 7.0) + 0.083
-        else:
-            sigma_mu = 0.083
-        if period >= 1.0:
-            sigma_mu += (0.0171 * np.log(period))
-        if rake >= -135. and rake <= -45.:
-            # Normal faulting case
-            sigma_mu += 0.038
-        return sigma_mu
