@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * There is now a huge speedup when computing the hazard curve statistics
+    if numba is available
   * Made it possible to compute consequences in presence of a taxonomy mapping
   * Fixed a bug in `get_available_gsims`: GSIM aliases were not considered
   * Optimized the single site case by splitting the sources less
