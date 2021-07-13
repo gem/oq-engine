@@ -53,7 +53,6 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         ctx.rhypo.flags.writeable = False
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
-        ctx.rhypo = numpy.array([15.0, 15.0, 16.0])
         mean_15, stds_15 = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_array_equal(mean_0, mean_15)
