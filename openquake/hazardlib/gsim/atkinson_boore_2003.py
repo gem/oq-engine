@@ -269,7 +269,7 @@ class AtkinsonBoore2003SInter(GMPE):
                 mean[m] /= 0.550
 
             sig[m] = np.log(10 ** C['sigma'])
-            if 's2' in C.dtype.names:
+            if 's2' in C.dtype.names:  # in the Gupta subclass
                 tau[m] = np.log(10 ** C['s2'])
                 phi[m] = np.log(10 ** C['s1'])
 
@@ -337,7 +337,7 @@ class AtkinsonBoore2003SSlab(AtkinsonBoore2003SInter):
                 mean[m] /= 0.550
 
             sig[m] = np.log(10 ** C['sigma'])
-            if 's2' in C.dtype.names:
+            if 's2' in C.dtype.names:  # in the Gupta subclass
                 tau[m] = np.log(10 ** C['s2'])
                 phi[m] = np.log(10 ** C['s1'])
 
