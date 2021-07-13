@@ -39,7 +39,6 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
-from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface

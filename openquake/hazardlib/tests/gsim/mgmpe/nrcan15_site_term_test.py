@@ -227,8 +227,8 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='AtkinsonBoore2006')
         # Set parameters
         ctx = self.ctx(2, vs30=[760, 2010])
-        ctx.mag = 7.0
         ctx.rrup = np.array([15., 15.])
+        ctx.mag = 7.0
         stdt = [const.StdDev.TOTAL]
         gmpe = AtkinsonBoore2006()
 
