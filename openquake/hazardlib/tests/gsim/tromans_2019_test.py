@@ -20,9 +20,7 @@ import numpy as np
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib import const
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import (RuptureContext,
-                                           SitesContext,
-                                           DistancesContext)
+from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.gsim.tromans_2019 import (
     TromansEtAl2019, TromansEtAl2019SigmaMu, HOMOSKEDASTIC_PHI,
     HOMOSKEDASTIC_TAU, HETEROSKEDASTIC_PHI, HETEROSKEDASTIC_TAU,
@@ -34,8 +32,6 @@ class SigmaFunctionsTestCase(unittest.TestCase):
     Tests the general sigma functions
     """
     def setUp(self):
-        """
-        """
         self.expected_hetero_pga = np.array([[4.0, 0.4700, 0.49],
                                              [4.5, 0.4700, 0.49],
                                              [5.0, 0.4700, 0.49],
@@ -137,13 +133,11 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
         """
         """
         self.gsim = TromansEtAl2019
-        self.rctx = RuptureContext()
-        self.rctx.mag = 6.5
-        self.rctx.rake = 0.
-        self.dctx = DistancesContext()
-        self.dctx.rjb = np.array([5., 10., 20., 50., 100.])
-        self.sctx = SitesContext()
-        self.sctx.vs30 = 500. * np.ones(5)
+        self.ctx = RuptureContext()
+        self.ctx.mag = 6.5
+        self.ctx.rake = 0.
+        self.ctx.rjb = np.array([5., 10., 20., 50., 100.])
+        self.ctx.vs30 = 500. * np.ones(5)
 
     def _compare_arrays(self, arr1, arr2, diffs):
         """
@@ -158,9 +152,9 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
 
         gsim_2 = self.gsim("BindiEtAl2014Rjb", branch="central")
 
-        mean_1 = gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+        mean_1 = gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                              PGA(), [const.StdDev.TOTAL])[0]
-        mean_2 = gsim_2.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+        mean_2 = gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                              PGA(), [const.StdDev.TOTAL])[0]
         self._compare_arrays(mean_1, mean_2, 1.2)
 
@@ -172,22 +166,22 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
         gsim_2 = self.gsim("BindiEtAl2014Rjb", branch="central")
         # PGA
         self._compare_arrays(
-            gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+            gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                         PGA(), [const.StdDev.TOTAL])[0],
-            gsim_2.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+            gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                         PGA(), [const.StdDev.TOTAL])[0], 1.2)
 
         # SA(0.2)
         self._compare_arrays(
-            gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+            gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                         SA(0.2), [const.StdDev.TOTAL])[0],
-            gsim_2.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+            gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                         SA(0.2), [const.StdDev.TOTAL])[0], 1.3)
         # SA(1.0)
         self._compare_arrays(
-            gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+            gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                         SA(1.0), [const.StdDev.TOTAL])[0],
-            gsim_2.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+            gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                         SA(1.0), [const.StdDev.TOTAL])[0], 1.4)
 
 
@@ -199,13 +193,11 @@ class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
         """
         """
         self.gsim = TromansEtAl2019SigmaMu
-        self.rctx = RuptureContext()
-        self.rctx.mag = 6.5
-        self.rctx.rake = 0.
-        self.dctx = DistancesContext()
-        self.dctx.rjb = np.array([5., 10., 20., 50., 100.])
-        self.sctx = SitesContext()
-        self.sctx.vs30 = 500. * np.ones(5)
+        self.ctx = RuptureContext()
+        self.ctx.mag = 6.5
+        self.ctx.rake = 0.
+        self.ctx.rjb = np.array([5., 10., 20., 50., 100.])
+        self.ctx.vs30 = 500. * np.ones(5)
 
     def test_alatik_youngs_factors(self):
         self.assertAlmostEqual(
@@ -230,9 +222,9 @@ class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
 
         gsim_2 = self.gsim("BindiEtAl2014Rjb", branch="central")
 
-        mean_1 = gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+        mean_1 = gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                              PGA(), [const.StdDev.TOTAL])[0]
-        mean_2 = gsim_2.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+        mean_2 = gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                              PGA(), [const.StdDev.TOTAL])[0]
         self._compare_arrays(mean_1, mean_2, np.exp(0.083))
 
