@@ -26,7 +26,7 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, AmplificationTable, hdf_arrays_to_dict)
+    GMPETable, AmplificationTable, hdf_arrays_to_dict, _return_tables)
 from openquake.hazardlib.gsim.base import (
     RuptureContext, SitesContext, DistancesContext)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
@@ -418,23 +418,23 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         # PGA
         np.testing.assert_array_almost_equal(
-            gsim._return_tables(6.0, imt_module.PGA(), "IMLs"),
+            _return_tables(gsim, 6.0, imt_module.PGA(), "IMLs"),
             np.array([2., 1., 0.5]))
         # PGV
         np.testing.assert_array_almost_equal(
-            gsim._return_tables(6.0, imt_module.PGV(), "IMLs"),
+            _return_tables(gsim, 6.0, imt_module.PGV(), "IMLs"),
             np.array([20., 10., 5.]),
             5)
         # SA(1.0)
         np.testing.assert_array_almost_equal(
-            gsim._return_tables(6.0, imt_module.SA(1.0), "IMLs"),
+            _return_tables(gsim, 6.0, imt_module.SA(1.0), "IMLs"),
             np.array([2.0, 1., 0.5]))
         # Also for standard deviations
         np.testing.assert_array_almost_equal(
-            gsim._return_tables(6.0, imt_module.PGA(), const.StdDev.TOTAL),
+            _return_tables(gsim, 6.0, imt_module.PGA(), const.StdDev.TOTAL),
             0.5 * np.ones(3))
         np.testing.assert_array_almost_equal(
-            gsim._return_tables(6.0, imt_module.SA(1.0), const.StdDev.TOTAL),
+            _return_tables(gsim, 6.0, imt_module.SA(1.0), const.StdDev.TOTAL),
             0.8 * np.ones(3))
 
     def test_retreival_tables_good_interp(self):
@@ -447,14 +447,14 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                                        midpoint(10., 20.),
                                        midpoint(5., 10.)])
         np.testing.assert_array_almost_equal(
-            gsim._return_tables(6.5, imt_module.PGV(), "IMLs"),
+            _return_tables(gsim, 6.5, imt_module.PGV(), "IMLs"),
             expected_table_pgv,
             5)
         expected_table_sa1 = np.array([midpoint(2., 4.),
                                        midpoint(1., 2.),
                                        midpoint(0.5, 1.)])
         np.testing.assert_array_almost_equal(
-            gsim._return_tables(6.5, imt_module.SA(1.0), "IMLs"),
+            _return_tables(gsim, 6.5, imt_module.SA(1.0), "IMLs"),
             expected_table_sa1)
 
     def test_retreival_tables_outside_mag_range(self):
@@ -464,7 +464,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         with self.assertRaises(ValueError) as ve:
-            gsim._return_tables(4.5, imt_module.PGA(), "IMLs")
+            _return_tables(gsim, 4.5, imt_module.PGA(), "IMLs")
         self.assertEqual(
             str(ve.exception),
             "Magnitude 4.50 outside of supported range (5.00 to 7.00)")
@@ -476,7 +476,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         with self.assertRaises(ValueError) as ve:
-            gsim._return_tables(6.0, imt_module.SA(2.5), "IMLs")
+            _return_tables(gsim, 6.0, imt_module.SA(2.5), "IMLs")
         self.assertEqual(
             str(ve.exception),
             "Spectral period 2.500 outside of valid range (0.100 to 2.000)")
@@ -563,8 +563,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         with self.assertRaises(KeyError) as ve:
             gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt_module.PGA(),
                                       stddevs)
-        self.assertEqual(str(ve.exception),
-                         "<StdDev.INTER_EVENT: 'Inter event'>")
+        self.assertEqual(str(ve.exception), "'Inter event'")
 
     def tearDown(self):
         """

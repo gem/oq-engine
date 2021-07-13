@@ -270,6 +270,12 @@ class NewApiTestCase(unittest.TestCase):
     Test the 2021 new API for hazarlib.gsim
     """
     def test_single_site(self):
+        # NB: the performance of get_mean_std is totally dominated by two
+        # concomitant factors:
+        # 1) source splitting (do not split the area source)
+        # 2) collect the contexts in a single array
+        # together they give a 200x speedup
+        # numba is totally useless
         site = Site(Point(0, 0), vs30=760., z1pt0=48.0, z2pt5=0.607,
                     vs30measured=True)
         sitecol = SiteCollection([site])

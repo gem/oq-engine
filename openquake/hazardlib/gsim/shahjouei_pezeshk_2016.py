@@ -96,7 +96,7 @@ def _compute_standard_dev(rup, imt, C):
     described on page 744, eq. 4
     """
     sigma_mean = 0.
-    if imt.name in "SA PGA":
+    if imt.string.startswith(('PGA', 'SA')):
         psi = -6.898E-3
     else:
         psi = -3.054E-5

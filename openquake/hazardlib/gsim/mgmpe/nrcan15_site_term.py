@@ -24,7 +24,8 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+    _get_site_amplification_non_linear, _get_site_amplification_linear)
 from openquake.baselib.general import CallableDict
 
 BA08_AB06 = CallableDict()
@@ -72,10 +73,8 @@ def BA08_AB06_base(kind, C, C2, vs30, imt, pgar):
                                  np.log10([760.0, 2000.0]),
                                  np.log10([1.0, C2['c']])))
         """
-        nl = BooreAtkinson2008()._get_site_amplification_non_linear(
-            vs[idx], pgar[idx], C)
-        lin = BooreAtkinson2008()._get_site_amplification_linear(
-            vs[idx], C)
+        nl = _get_site_amplification_non_linear(vs[idx], pgar[idx], C)
+        lin = _get_site_amplification_linear(vs[idx], C)
         tmp = np.exp(nl+lin)
         fa[idx] = tmp
     #
@@ -83,10 +82,8 @@ def BA08_AB06_base(kind, C, C2, vs30, imt, pgar):
     # using the site term of Boore and Atkinson (2008)
     idx = np.where(vs < 760.)
     if np.size(idx) > 0:
-        nl = BooreAtkinson2008()._get_site_amplification_non_linear(
-            vs[idx], pgar[idx], C)
-        lin = BooreAtkinson2008()._get_site_amplification_linear(
-            vs[idx], C)
+        nl = _get_site_amplification_non_linear(vs[idx], pgar[idx], C)
+        lin = _get_site_amplification_linear(vs[idx], C)
         fa[idx] = np.exp(nl+lin)
     return fa
 
@@ -131,10 +128,8 @@ def BA08_AB06_linear(kind, C, C2, vs30, imt, pgar):
     # using the site term of Boore and Atkinson (2008)
     idx = np.where(vs < 760.)
     if np.size(idx) > 0:
-        nl = BooreAtkinson2008()._get_site_amplification_non_linear(
-            vs[idx], pgar[idx], C)
-        lin = BooreAtkinson2008()._get_site_amplification_linear(
-            vs[idx], C)
+        nl = _get_site_amplification_non_linear(vs[idx], pgar[idx], C)
+        lin = _get_site_amplification_linear(vs[idx], C)
         fa[idx] = np.exp(nl+lin)
     return fa
 
@@ -190,7 +185,7 @@ class NRCan15SiteTerm(GMPE):
         # compute mean and standard deviation
         mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
                                                       imt, stds_types)
-        if imt.name != 'PGA':
+        if imt.string != 'PGA':
             # compute mean and standard deviation on rock
             mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(
                 sites_rock, rup, dists, imt, stds_types)

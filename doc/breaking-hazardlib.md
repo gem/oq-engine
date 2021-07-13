@@ -150,11 +150,7 @@ get_stddevs
 
 Before doing that we should see if we can replace the IMT classes with
 numpy objects. This looks much easier, even if still difficult since
-it will break use code. We will have to replace in hundreds of places
-`imt.name` with `imt["name"]` and `imt.period` with `imt["period"]`.
-We will need to thing of a multi-step strategy, going from the current
-class-oriented IMTs to numpy-oriented IMTs without breaking anything
-until the very last step.
+it may break use code.
 
 It is important to notice that there is an unwanted complication in the IMTs:
 there is a lot of work to  support the `sa_damping` field which actually is
@@ -216,12 +212,12 @@ except for the method *get_mean_and_stddevs*. This can be done mostly
 without breaking user code since such methods were essentially
 private already. In progress.
 
-**Phase 2:** replace all helper functions with numpy-friendly
-functions. This is hard, but can be done without breaking user code.
+**Phase 2:** replace the method *get_mean_and_stddevs* with a new method
+*compute(ctx, imts, mean, sig, tau, phi)*, while keeping backward
+compatibility.
 
-**Phase 3:** replace the methods *get_mean_and_stddevs* with a new
-API. This will break user code, it has to considered carefully. It is
-in this phase that the single site speedup will appear.
+**Phase 3:** vectorize by rupture. This is hard, and it is only in this phase
+that we will see the speedup for single site situations.
 
 **Phase 4:** investigate the usage of numba or other compilation
 techniques.  They will always be *optional*, i.e. the engine will work

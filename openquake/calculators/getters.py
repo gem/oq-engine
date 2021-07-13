@@ -93,7 +93,6 @@ class PmapGetter(object):
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
-        self.sids = sids
 
     @property
     def imts(self):
@@ -151,10 +150,9 @@ class PmapGetter(object):
         pc0 = probability_map.ProbabilityCurve(
             numpy.zeros((self.L, self.num_rlzs)))
         try:
-            pc = pmap[sid]
+            pc0.combine(pmap[sid], self.rlzs_by_g)
         except KeyError:  # no hazard for sid
-            return pc0
-        pc0.combine(pc, self.rlzs_by_g)
+            pass
         return pc0
 
     def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src

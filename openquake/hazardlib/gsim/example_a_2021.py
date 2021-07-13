@@ -64,17 +64,16 @@ class ExampleA2021(GMPE):
     4.00  -0.74  1.86 -0.31  0.92  0.46  0.0017   6.9  0.61  0.62  0.66  0.45  0.12
     """)
 
-    @jittable
-    def calc_mean_stds(fake, ctx, imts, mean, stds):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         mag, rjb = ctx.mag, ctx.rjb
         for m, imt in enumerate(imts):
-            C = fake.COEFFS[m]
-            mean[:, m] = C['c1'] + _compute_term1(C, mag) + \
-                _compute_term2(C, mag, rjb)
+            C = self.COEFFS[imt]
+            mean[m] = (C['c1'] + _compute_term1(C, mag) +
+                       _compute_term2(C, mag, rjb))
             if imt.period == 3.0:
-                mean[:, m] /= 0.612
+                mean[m] /= 0.612
             elif imt.period == 4.0:
-                mean[:, m] /= 0.559
+                mean[m] /= 0.559
 
             sigma_ale_m = np.interp(
                 mag, [5.0, 5.5, 8.0],
@@ -84,4 +83,4 @@ class ExampleA2021(GMPE):
             sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
             sigma_epi = (0.36 + 0.07 * (mag - 6) if imt.period < 1
                          else 0.34 + 0.06 * (mag - 6))
-            stds[0, m] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
+            sig[m] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)

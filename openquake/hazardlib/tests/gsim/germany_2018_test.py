@@ -22,8 +22,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.base import (RuptureContext, DistancesContext,
                                            SitesContext)
-from openquake.hazardlib.gsim.germany_2018 import (CauzziEtAl2014RhypoGermany,
-                                                   DerrasEtAl2014RhypoGermany)
+from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014RhypoGermany
+from openquake.hazardlib.gsim.derras_2014 import DerrasEtAl2014RhypoGermany
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRhyp2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rhyp
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rhypo

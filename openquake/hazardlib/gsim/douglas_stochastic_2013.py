@@ -198,7 +198,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
 
         #: Mean ground motions initially returned in cm/s/s (for PGA, SA)
         #: and cm/s for PGV
-        if not imt.name == "PGV":
+        if not imt.string == "PGV":
             # Convert mean from log(cm/s/s) to g
             mean = np.log(np.exp(mean) / (100. * g))
 

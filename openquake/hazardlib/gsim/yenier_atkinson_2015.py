@@ -23,7 +23,7 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
-from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014, CONSTS
 
 
 def get_sof_adjustment(rake, imt):
@@ -38,11 +38,12 @@ def get_sof_adjustment(rake, imt):
     :return:
         The adjustment factor
     """
-    if imt.name == 'PGA' or (imt.name == 'SA' and imt.period <= 0.4):
+    im2 = imt.string[:2]
+    if imt.string == 'PGA' or (im2 == 'SA' and imt.period <= 0.4):
         f_r_ss = 1.2
-    elif imt.name == 'SA' and imt.period > 0.4 and imt.period < 3.0:
+    elif im2 == 'SA' and imt.period > 0.4 and imt.period < 3.0:
         f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(imt.period/0.4)
-    elif imt.name == 'SA' and imt.period >= 3.0:
+    elif im2 == 'SA' and imt.period >= 3.0:
         f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(3.0/0.4)
     else:
         raise ValueError('Unsupported IMT')
@@ -71,9 +72,9 @@ def _get_c_e(region, imt):
     """
     if region == 'CENA':
         # See equation 23 page 2003 of Yenier and Atkinson
-        if imt.name == 'PGA':
+        if imt.string == 'PGA':
             return -0.25
-        elif imt.name == 'PGV':
+        elif imt.string == 'PGV':
             return -0.21
         elif imt.period <= 10.:
             return -0.25 + np.max([0, 0.39*np.log(imt.period/2)])
@@ -93,9 +94,9 @@ def _get_c_p(region, imt, rrup, m):
     """
     if region == 'CENA':
         # See equations 24 and 25 page 2003 of Yenier and Atkinson
-        if imt.name == 'PGA':
+        if imt.string == 'PGA':
             delta_b3 = 0.030
-        elif imt.name == 'PGV':
+        elif imt.string == 'PGV':
             delta_b3 = 0.052
         elif imt.period <= 10.:
             tmp = 0.095*np.log(imt.period/0.065)
@@ -210,7 +211,9 @@ def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4,
     # Compute the mean on soil
     mean = _get_mean_on_rock(
         region, focal_depth, C2, C3, C4, sctx, rctx, dctx, imt, stddev_types)
-    mean += get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30)
+    # coefficients of BooreEtAl2014
+    C = gmm.COEFFS[imt]
+    mean += get_fs_SeyhanStewart2014(C, imt, pga_rock, vs30)
     if adapted:
         # acme_2019 considers the SoF correction
         famp = get_sof_adjustment(rctx.rake, imt)
@@ -236,7 +239,7 @@ def _get_stress_drop_adjstment(region, focal_depth, C, imt, m):
         raise ValueError(msg)
 
 
-def get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30):
+def get_fs_SeyhanStewart2014(C, imt, pga_rock, vs30):
     """
     Implements eq. 11 and 12 at page 1992 in Yenier and Atkinson (2015)
 
@@ -244,11 +247,9 @@ def get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30):
         Median peak ground horizontal acceleration for reference
     :param vs30:
     """
-    # coefficients of BooreEtAl2014
-    C = gmm.COEFFS[imt]
     # Linear term
-    flin = vs30 / gmm.CONSTS['Vref']
-    flin[vs30 > C['Vc']] = C['Vc'] / gmm.CONSTS['Vref']
+    flin = vs30 / CONSTS['Vref']
+    flin[vs30 > C['Vc']] = C['Vc'] / CONSTS['Vref']
     fl = C['c'] * np.log(flin)
     # Non-linear term
     v_s = np.copy(vs30)
@@ -256,8 +257,7 @@ def get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30):
     # parameter (equation 8 of BSSA 2014)
     f_2 = C['f4'] * (np.exp(C['f5'] * (v_s - 360.)) -
                      np.exp(C['f5'] * 400.))
-    fnl = gmm.CONSTS['f1'] + f_2 * np.log((pga_rock + gmm.CONSTS['f3']) /
-                                          gmm.CONSTS['f3'])
+    fnl = CONSTS['f1'] + f_2 * np.log((pga_rock + CONSTS['f3']) / CONSTS['f3'])
     return fl + fnl
 
 

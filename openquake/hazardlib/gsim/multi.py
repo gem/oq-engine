@@ -73,7 +73,8 @@ class MultiGMPE(GMPE):
         for imt, gsim_dic in self.kwargs.items():
             [(gsim_name, kw)] = gsim_dic.items()
             self.kwargs[imt] = gsim = registry[gsim_name](**kw)
-            imt_factory = getattr(imt_module, imt_module.from_string(imt).name)
+            name = "SA" if imt.startswith("SA") else imt
+            imt_factory = getattr(imt_module, name)
             if imt_factory not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
                 raise ValueError("IMT %s not supported by %s" % (imt, gsim))
             for name in uppernames:

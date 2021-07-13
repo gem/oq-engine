@@ -36,7 +36,8 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import (
+    ContextMaker, get_probability_no_exceedance)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -149,7 +150,7 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         lons[u] = ctx.clon[idx]  # closest point of the rupture lon
         lats[u] = ctx.clat[idx]  # closest point of the rupture lat
         for g in range(G):
-            mean_std[:, u, :, g] = ctx.mean_std[g][:, idx]  # (2, M)
+            mean_std[:, u, :, g] = ctx.mean_std[g][:, :, idx]  # (2, M)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     for (m, p, z), iml in numpy.ndenumerate(iml3):
@@ -166,7 +167,7 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         poes[:, :, m, p, z] = _disagg_eps(
             truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     for u, ctx in enumerate(ctxs):
-        pnes[u] *= ctx.get_probability_no_exceedance(poes[u], tom)  # slow
+        pnes[u] *= get_probability_no_exceedance(ctx, poes[u], tom)  # slow
     bindata = BinData(dists, lons, lats, pnes)
     DEBUG[idx].append(pnes.mean())
     if not bin_edges:

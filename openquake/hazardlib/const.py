@@ -78,9 +78,12 @@ class IMC(Enum):
     #: horizontal components in the time domain"
     #: p. 880 of Kanno et al. (2006, Bull. Seism. Soc. Am. 96, 879-897)
     PEAK_SRSS_HORIZONTAL = 'Peak square root of sum of squares of horizontals'
+    #: A vertical-to-horizontal spectral ratio
+    VERTICAL_TO_HORIZONTAL_RATIO = 'Vertical-to-Horizontal Ratio'
 
 
-class StdDev(Enum):
+# NB: cannot be an enum because it would break the Strong Motion Toolkit :-(
+class StdDev(object):
     """
     GSIM standard deviation represents ground shaking variability at a site.
     """

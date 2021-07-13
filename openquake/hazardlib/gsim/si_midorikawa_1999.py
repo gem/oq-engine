@@ -115,7 +115,7 @@ def _apply_subduction_trench_correction(mean, x_tr, H, rrup, imt):
     equation 3.5.2-1, page 3-148 of "Technical Reports on National Seismic
     Hazard Maps for Japan"
     """
-    if imt.name == 'PGV':
+    if imt.string == 'PGV':
         V1 = 10 ** ((-4.021e-5 * x_tr + 9.905e-3) * (H - 30))
         V2 = np.maximum(1., (10 ** (-0.012)) * ((rrup / 300.) ** 2.064))
         corr = V2
@@ -137,7 +137,7 @@ def _apply_volcanic_front_correction(mean, x_vf, H, imt):
     Hazard Maps for Japan"
     """
     V1 = np.zeros_like(x_vf)
-    if imt.name == 'PGV':
+    if imt.string == 'PGV':
         idx = x_vf <= 75
         V1[idx] = 4.28e-5 * x_vf[idx] * (H - 30)
         idx = x_vf > 75
@@ -181,7 +181,7 @@ def _get_mean(imt, mag, hypo_depth, rrup, d):
     # clip magnitude at 8.3 as per note at page 3-36 in table Table 3.3.2-6
     # in "Technical Reports on National Seismic Hazard Maps for Japan"
     mag = min(mag, 8.3)
-    if imt.name == 'PGV':
+    if imt.string == 'PGV':
         mean = (
             0.58 * mag +
             0.0038 * hypo_depth +
@@ -313,7 +313,7 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        if imt.name == 'PGV':
+        if imt.string == 'PGV':
             d = -0.02
         else:
             d = 0.01
@@ -393,7 +393,7 @@ class SiMidorikawa1999SSlab(SiMidorikawa1999SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        if imt.name == 'PGV':
+        if imt.string == 'PGV':
             d = 0.12
         else:
             d = 0.22

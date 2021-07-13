@@ -137,7 +137,7 @@ class RietbrockEdwards2019Mean(GMPE):
         imean = C["c1"] + (_get_magnitude_term(C, rup.mag) +
                            _get_distance_term(C, dists.rjb, rup.mag))
         # Converting from log10 to log
-        if imt.name in "SA PGA":
+        if imt.string.startswith(("SA", "PGA")):
             mean = np.log(10.0**(imean) / 980.665)
         else:
             mean = np.log(10 ** imean)

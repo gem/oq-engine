@@ -226,9 +226,9 @@ class YuEtAl2013Ms(GMPE):
         x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
         y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
         mean = mean1 * mean2 / np.sqrt(x+y)
-        if imt.name == "PGA":
+        if imt.string == "PGA":
             mean = np.exp(mean)/g/100
-        elif imt.name == "PGV":
+        elif imt.string == "PGV":
             mean = np.exp(mean)
         else:
             raise ValueError('Unsupported IMT')
@@ -333,9 +333,9 @@ class YuEtAl2013Mw(YuEtAl2013Ms):
         x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
         y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
         mean = mean1 * mean2 / np.sqrt(x+y)
-        if imt.name == "PGA":
+        if imt.string == "PGA":
             mean = np.exp(mean)/g/100
-        elif imt.name == "PGV":
+        elif imt.string == "PGV":
             mean = np.exp(mean)
         else:
             raise ValueError('Unsupported IMT')

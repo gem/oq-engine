@@ -128,9 +128,9 @@ class DrouetBrazil2015(GMPE):
         C = self.COEFFS[imt]
         depth = "hypo_depth" in self.REQUIRES_RUPTURE_PARAMETERS
         mean = _compute_mean(depth, C, rup, dists.rjb)
-        if imt.name in "SA PGA":  # Convert from m/s**2 to g
+        if imt.string.startswith(('PGA', 'SA')):  # Convert from m/s**2 to g
             mean -= np.log(g)
-        elif imt.name == "PGV":  # Convert from m/s to cm/s
+        elif imt.string == "PGV":  # Convert from m/s to cm/s
             mean += np.log(100.0)
         stddevs = _get_stddevs(C, stddev_types, rup.mag, dists.rjb.shape)
 

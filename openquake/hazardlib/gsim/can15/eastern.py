@@ -15,7 +15,7 @@ from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.pezeshk_2011 import PezeshkEtAl2011
 from openquake.hazardlib.gsim.boore_atkinson_2011 import Atkinson2008prime
-from openquake.hazardlib.gsim.atkinson_boore_2006 import \
+from openquake.hazardlib.gsim.boore_atkinson_2008 import \
     AtkinsonBoore2006Modified2011
 from openquake.hazardlib.gsim.silva_2002 import (
     SilvaEtAl2002SingleCornerSaturation)
@@ -40,7 +40,7 @@ def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
     g = self.gsims
     cff = self.COEFFS_SITE[imt]
 
-    # distances
+    # add equivalent distances
     distsl = copy.copy(dists)
     distsl.rjb, distsl.rrup = utils.get_equivalent_distances_east(
         rup.mag, dists.repi)

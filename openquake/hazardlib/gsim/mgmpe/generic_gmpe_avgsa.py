@@ -65,15 +65,26 @@ class GenericGmpeAvgSA(GMPE):
         super().__init__(gmpe_name=gmpe_name, avg_periods=avg_periods,
                          corr_func=corr_func, **kwargs)
         self.gmpe = registry[gmpe_name](**kwargs)
-        self.set_parameters()
+        # Combine the parameters of the GMPE provided at the construction
+        # level with the ones assigned to the average GMPE.
+        for key in dir(self):
+            if key.startswith('REQUIRES_'):
+                setattr(self, key, getattr(self.gmpe, key))
+            if key.startswith('DEFINED_'):
+                if not key.endswith('FOR_INTENSITY_MEASURE_TYPES'):
+                    setattr(self, key, getattr(self.gmpe, key))
+
+        # Ensure that it is always recogised that the AvgSA GMPE is defined
+        # only for total standard deviation even if the called GMPE is
+        # defined for inter- and intra-event standard deviations too
+        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
         self.avg_periods = avg_periods
         self.tnum = len(self.avg_periods)
 
         correlation_function_handles = {
             'baker_jayaram': BakerJayaramCorrelationModel,
             'akkar': AkkarCorrelationModel,
-            'none': DummyCorrelationModel
-        }
+            'none': DummyCorrelationModel}
 
         # Check for existing correlation function
         if corr_func not in correlation_function_handles:
@@ -85,29 +96,12 @@ class GenericGmpeAvgSA(GMPE):
         # Check if this GMPE has the necessary requirements
         # TO-DO
 
-    def set_parameters(self):
-        """
-        Combines the parameters of the GMPE provided at the construction
-        level with the ones assigned to the average GMPE.
-        """
-        for key in dir(self):
-            if key.startswith('REQUIRES_'):
-                setattr(self, key, getattr(self.gmpe, key))
-            if key.startswith('DEFINED_'):
-                if not key.endswith('FOR_INTENSITY_MEASURE_TYPES'):
-                    setattr(self, key, getattr(self.gmpe, key))
-        # Ensure that it is always recogised that the AvgSA GMPE is defined
-        # only for total standard deviation even if the called GMPE is
-        # defined for inter- and intra-event standard deviations too
-        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-
         mean_list = []
         stddvs_list = []
 
