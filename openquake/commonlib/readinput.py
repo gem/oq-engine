@@ -503,6 +503,15 @@ def get_site_model(oqparam):
     return numpy.concatenate(arrays)
 
 
+def count_old_style(gsim_lt):
+    # count the number of old style GMPEs
+    old = 0
+    for gsims in gsim_lt.values.values():
+        for gsim in gsims:
+            old += 'get_mean_and_stddevs' in gsim.__class__.__dict__
+    return old
+
+    
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -584,6 +593,9 @@ def get_gsim_lt(oqparam, trts=('*',)):
         logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     gsim_lt_cache[key] = gsim_lt
+
+    old_style = count_old_style(gsim_lt)
+    logging.info('There are %d old style GMPEs', old_style)
     return gsim_lt
 
 
