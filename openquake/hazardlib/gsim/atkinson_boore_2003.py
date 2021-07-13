@@ -249,6 +249,10 @@ class AtkinsonBoore2003SInter(GMPE):
         if mag > 8.5:
             mag = 8.5
 
+        if self.kind == 'SInter2008':
+            rup = copy.copy(rup)
+            rup.hypo_depth = 20.
+
         # compute PGA on rock (needed for site amplification calculation)
         G = 10 ** (1.2 - 0.18 * mag)
         pga_rock = _compute_mean(self.kind, self.COEFFS_SINTER[PGA()], G, mag,
@@ -386,24 +390,6 @@ class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
     """
     kind = 'SInter2008'
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-
-        Call super class method with hypocentral depth fixed at 20 km
-        """
-        # fix hypocentral depth to 20 km. Create new rupture context to avoid
-        # changing the original one
-        new_rup = copy.copy(rup)
-        new_rup.hypo_depth = 20.
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, new_rup, dists, imt, stddev_types)
-
-        return mean, stddevs
 
 
 class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
