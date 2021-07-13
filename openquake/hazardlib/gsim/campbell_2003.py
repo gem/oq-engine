@@ -315,15 +315,15 @@ class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mag = _convert_magnitude(self.kind, ctx.mag)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            mag = _convert_magnitude(self.kind, ctx.mag)
 
             mean[m] = _compute_mean(self.kind, C, mag, ctx.rrup)
             mean[m] = clip_mean(imt, mean[m])
 
-            if ctx.mag < 7.16:
-                sig[m] = C['c11'] + C['c12'] * ctx.mag
+            if mag < 7.16:
+                sig[m] = C['c11'] + C['c12'] * mag
             else:
                 sig[m] = C['c13']
 
