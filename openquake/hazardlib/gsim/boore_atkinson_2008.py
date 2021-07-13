@@ -31,7 +31,7 @@ import numpy as np
 from scipy.constants import g
 from math import log10
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils import (
@@ -436,9 +436,13 @@ class BooreAtkinson2008(GMPE):
         C = self.COEFFS[imt]
         C_SR = self.COEFFS_SOIL_RESPONSE[imt]
 
+        # horrible hack to fix the distance parameters; needed for the can15
+        # subclasses; extra distances are add in can15.eastern
+        # this also affects generic_gmpe_avgsa_test.py
+        vars(rup).update(contexts.get_dists(dists))
+
         # compute PGA on rock conditions - needed to compute non-linear
         # site amplification term
-        vars(rup).update(contexts.get_dists(dists))  # update distances
         pga4nl = _get_pga_on_rock(self.COEFFS[PGA()], rup, C)
 
         # equation 1, pag 106, without sigma term, that is only the first 3
@@ -808,36 +812,18 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     """)
 
 
-gsim_aliases["AtkinsonBoore2006MblgAB1987bar140NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mblg87"
-scale_fac = 0.
-"""
-gsim_aliases["AtkinsonBoore2006MblgJ1996bar140NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mblg96"
-scale_fac = 0.
-"""
-gsim_aliases["AtkinsonBoore2006Mwbar140NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mw"
-scale_fac = 0.
-"""
-gsim_aliases["AtkinsonBoore2006MblgAB1987bar200NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mblg87"
-scale_fac = 0.5146
-"""
-gsim_aliases["AtkinsonBoore2006MblgJ1996bar200NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mblg96"
-scale_fac = 0.5146
-"""
-gsim_aliases["AtkinsonBoore2006Mwbar200NSHMP2008"] = """
-[AtkinsonBoore2006]
-mag_eq = "Mw"
-scale_fac = 0.5146
-"""
+add_alias("AtkinsonBoore2006MblgAB1987bar140NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mblg87", scale_fac=0.)
+add_alias("AtkinsonBoore2006MblgJ1996bar140NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mblg96", scale_fac=0.)
+add_alias("AtkinsonBoore2006Mwbar140NSHMP2008", AtkinsonBoore2006,
+          mag_eq="Mw", scale_fac=0.)
+add_alias("AtkinsonBoore2006MblgAB1987bar200NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mblg87", scale_fac=0.5146)
+add_alias("AtkinsonBoore2006MblgJ1996bar200NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mblg96", scale_fac=0.5146)
+add_alias("AtkinsonBoore2006Mwbar200NSHMP2008",
+          AtkinsonBoore2006, mag_eq="Mw", scale_fac=0.5146)
 
 
 class AtkinsonBoore2006Modified2011(AtkinsonBoore2006):

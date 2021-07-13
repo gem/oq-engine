@@ -32,6 +32,7 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+
 def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
     """
     Returns the inter-event, intra-event, and total standard deviations

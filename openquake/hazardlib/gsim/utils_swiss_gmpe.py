@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
-from openquake.hazardlib import const
 
 
 def _compute_C1_term(C, dists):
@@ -78,48 +77,34 @@ def _compute_phi_ss(C, mag, c1_dists, log_phi_ss, mean_phi_ss):
     return (phi_ss * 0.50 + mean_phi_ss * 0.50) / log_phi_ss
 
 
-def _get_corr_stddevs(C, tau_ss, stddev_types, num_sites, phi_ss, NL=None,
-                      tau_value=None):
+def _corr_sig(sig, C, tau_ss, phi_ss, NL=None, tau_value=None):
     """
-    Return standard deviations adjusted for single station sigma
+    Adjust standard deviations for single station sigma
     as the total standard deviation - as proposed to be used in
     the Swiss Hazard Model [2014].
     """
-    stddevs = []
-    temp_stddev = phi_ss * phi_ss
-
+    s = phi_ss ** 2
     if tau_value is not None and NL is not None:
-        temp_stddev = temp_stddev + tau_value * tau_value * ((1 + NL) ** 2)
+        s += tau_value * tau_value * ((1 + NL) ** 2)
     else:
-        temp_stddev = temp_stddev + C[tau_ss] * C[tau_ss]
-
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(temp_stddev) + np.zeros(num_sites))
-    return stddevs
+        s += C[tau_ss] * C[tau_ss]
+    return np.sqrt(s)
 
 
-def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, stddevs, sites, rup, dists,
-                       imt, stddev_types, log_phi_ss, NL=None, tau_value=None):
+def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, sig, tau, phi, ctx,
+                       dist, imt, log_phi_ss, NL=None, tau_value=None):
     """
     This method applies adjustments to the mean and standard deviation.
     The small-magnitude adjustments are applied to mean, whereas the
-    embeded single station sigma logic tree is applied to the
+    embedded single station sigma logic tree is applied to the
     total standard deviation.
     """
-    c1_dists = _compute_C1_term(C_ADJ, dists)
+    c1_dists = _compute_C1_term(C_ADJ, dist)
     phi_ss = _compute_phi_ss(
-        C_ADJ, rup.mag, c1_dists, log_phi_ss, C_ADJ['mean_phi_ss']
-    )
+        C_ADJ, ctx.mag, c1_dists, log_phi_ss, C_ADJ['mean_phi_ss'])
 
     mean_corr = np.exp(mean) * C_ADJ['k_adj'] * \
-        _compute_small_mag_correction_term(C_ADJ, rup.mag, dists)
+        _compute_small_mag_correction_term(C_ADJ, ctx.mag, dist)
 
-    mean_corr = np.log(mean_corr)
-
-    std_corr = _get_corr_stddevs(COEFFS[imt], tau_ss, stddev_types,
-                                 len(sites.vs30), phi_ss, NL, tau_value)
-
-    stddevs = np.array(std_corr)
-
-    return mean_corr, stddevs
+    mean[:] = np.log(mean_corr)
+    sig[:] = _corr_sig(sig, COEFFS[imt], tau_ss, phi_ss, NL, tau_value)
