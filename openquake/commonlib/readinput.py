@@ -595,8 +595,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
     gsim_lt_cache[key] = gsim_lt
 
     old_style = count_old_style(gsim_lt)
-    msg = 'no' if not old_style else old_style
-    logging.info('There are %s old style GMPEs', msg)
+    logging.info('There are %d old style GMPEs', old_style)
     return gsim_lt
 
 
