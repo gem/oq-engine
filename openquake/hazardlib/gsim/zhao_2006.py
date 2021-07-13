@@ -364,8 +364,6 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
 
             # convert from cm/s**2 to g
             mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
-            if imt.string == 'PGA':
-                print(mean[m])
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
 
     #: Coefficient table containing subduction slab coefficients taken from
