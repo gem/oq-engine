@@ -20,7 +20,7 @@ import unittest
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA, MMI
 from openquake.hazardlib.gsim.base import registry, CoeffsTable
-from openquake.hazardlib.contexts import DistancesContext
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
     ModifiableGMPE, _dict_to_coeffs_table)
@@ -29,12 +29,15 @@ from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
 class ModifiableGMPETest(unittest.TestCase):
 
     def setUp(self):
-        # Set parameters
-        self.sites = Dummy.get_site_collection(4, vs30=760.)
-        self.rup = Dummy.get_rupture(mag=6.0)
-        self.dists = DistancesContext()
-        self.dists.rrup = np.array([1., 10., 30., 70.])
-        self.dists.rjb = np.array([1., 10., 30., 70.])
+        self.ctx = ctx = RuptureContext()
+        ctx.mag = 6.
+        ctx.rake = 0.
+        ctx.hypo_depth = 10.
+        sites = Dummy.get_site_collection(4, vs30=760.)
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
+        ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.rjb = np.array([1., 10., 30., 70.])
         self.imt = PGA()
 
     def test_set_between_epsilon_raises_error(self):
@@ -44,8 +47,8 @@ class ModifiableGMPETest(unittest.TestCase):
         gmm = ModifiableGMPE(gmpe={'Campbell2003': {}},
                              set_between_epsilon={'epsilon_tau': 0.5})
         with self.assertRaises(ValueError):
-            _, _ = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
-                                            self.imt, stds_types)
+            gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                     self.imt, stds_types)
 
     def test_get_mean_std(self):
         """ Check calculation of mean and stds """
@@ -56,13 +59,12 @@ class ModifiableGMPETest(unittest.TestCase):
         gmpe_name = 'AkkarEtAlRjb2014'
         gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
                              set_between_epsilon={'epsilon_tau': 0.5})
-        mean, stds = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
+        mean, stds = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                               self.imt, stds_types)
 
         gmpe = registry[gmpe_name]()
-        emean, estds = gmpe.get_mean_and_stddevs(self.sites, self.rup,
-                                                 self.dists,
-                                                 self.imt, stds_types)
+        emean, estds = gmpe.get_mean_and_stddevs(
+            self.ctx, self.ctx, self.ctx, self.imt, stds_types)
         idx = stds_types.index(const.StdDev.INTER_EVENT)
         exp_mean = emean + estds[idx] * 0.5
 
@@ -90,12 +92,10 @@ class ModifiableGMPETest(unittest.TestCase):
         gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
         gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
                              set_scale_median_scalar={'scaling_factor': 1.2})
-        mean_unscaled = gmm_unscaled.get_mean_and_stddevs(self.sites, self.rup,
-                                                          self.dists, self.imt,
-                                                          stddevs)[0]
-        mean = gmm.get_mean_and_stddevs(self.sites, self.rup,
-                                        self.dists, self.imt,
-                                        stddevs)[0]
+        mean_unscaled = gmm_unscaled.get_mean_and_stddevs(
+            self.ctx, self.ctx, self.ctx, self.imt, stddevs)[0]
+        mean = gmm.get_mean_and_stddevs(
+            self.ctx, self.ctx, self.ctx, self.imt, stddevs)[0]
         np.testing.assert_almost_equal(np.exp(mean) / np.exp(mean_unscaled),
                                        1.2 * np.ones(mean.shape))
 
@@ -109,11 +109,9 @@ class ModifiableGMPETest(unittest.TestCase):
             set_scale_median_vector={'scaling_factor': {"PGA": 0.9,
                                                         "SA(0.2)": 1.1}})
         for imt, sfact in zip([PGA(), SA(0.2)], [0.9, 1.1]):
-            mean_unscaled = gmm_unscaled.get_mean_and_stddevs(self.sites,
-                                                              self.rup,
-                                                              self.dists, imt,
-                                                              stddevs)[0]
-            mean = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
+            mean_unscaled = gmm_unscaled.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, imt, stddevs)[0]
+            mean = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                             imt, stddevs)[0]
             np.testing.assert_almost_equal(
                 np.exp(mean) / np.exp(mean_unscaled),
@@ -127,12 +125,9 @@ class ModifiableGMPETest(unittest.TestCase):
         gmm = ModifiableGMPE(
             gmpe={gmpe_name: {}},
             set_scale_total_sigma_scalar={"scaling_factor": 1.2})
-        [stddev_unscaled] = gmm_unscaled.get_mean_and_stddevs(self.sites,
-                                                              self.rup,
-                                                              self.dists,
-                                                              self.imt,
-                                                              stddevs)[1]
-        [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
+        [stddev_unscaled] = gmm_unscaled.get_mean_and_stddevs(
+            self.ctx, self.ctx, self.ctx, self.imt, stddevs)[1]
+        [stddev] = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                             self.imt, stddevs)[1]
         np.testing.assert_array_almost_equal(stddev / stddev_unscaled,
                                              1.2 * np.ones(stddev.shape))
@@ -148,13 +143,10 @@ class ModifiableGMPETest(unittest.TestCase):
                                                              "SA(0.2)": 1.1}})
 
         for imt, sfact in zip([PGA(), SA(0.2)], [0.9, 1.1]):
-            [stddev_unscaled] = gmm_unscaled.get_mean_and_stddevs(self.sites,
-                                                                  self.rup,
-                                                                  self.dists,
-                                                                  imt,
-                                                                  stddevs)[1]
-            [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
-                                                self.dists, imt, stddevs)[1]
+            [stddev_unscaled] = gmm_unscaled.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, imt, stddevs)[1]
+            [stddev] = gmm.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, imt, stddevs)[1]
             np.testing.assert_almost_equal(
                 stddev / stddev_unscaled,
                 sfact * np.ones(stddev.shape))
@@ -169,11 +161,10 @@ class ModifiableGMPETest(unittest.TestCase):
                                                    "SA(0.2)": 0.75}})
 
         for imt, sfact in zip([PGA(), SA(0.2)], [0.6, 0.75]):
-            [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
-                                                self.dists, imt, stddevs)[1]
+            [stddev] = gmm.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, imt, stddevs)[1]
             np.testing.assert_almost_equal(stddev,
                                            sfact * np.ones(stddev.shape))
-
 
     def test_add_delta(self):
         """Check adding/removing a delta std to the total std"""
@@ -184,12 +175,11 @@ class ModifiableGMPETest(unittest.TestCase):
             gmpe={gmpe_name: {}},
             add_delta_std_to_total_std={"delta": -0.20})
         imt = PGA()
-        [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
-                                            self.dists, imt, stddevs)[1]
+        [stddev] = gmm.get_mean_and_stddevs(
+            self.ctx, self.ctx, self.ctx, imt, stddevs)[1]
 
         # Original total std for PGA is 0.7121
         np.testing.assert_almost_equal(stddev[0], 0.68344277, decimal=6)
-
 
     def test_set_total_std_as_tau_plus_phi(self):
         """Check set total std as between plus phi SS"""
@@ -200,8 +190,8 @@ class ModifiableGMPETest(unittest.TestCase):
             gmpe={gmpe_name: {}},
             set_total_std_as_tau_plus_delta={"delta": 0.45})
         imt = PGA()
-        [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
-                                            self.dists, imt, stddevs)[1]
+        [stddev] = gmm.get_mean_and_stddevs(
+            self.ctx, self.ctx, self.ctx, imt, stddevs)[1]
 
         # Original tau for PGA is 0.6201
         np.testing.assert_almost_equal(stddev[0], 0.5701491121, decimal=6)
@@ -213,13 +203,15 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """
 
     def setUp(self):
-        # Set parameters
-        self.sites = Dummy.get_site_collection(4, amplfactor=[-1.0, 1.5,
-                                                              0.00, -1.99])
-        self.rup = Dummy.get_rupture(mag=6.0, hypo_depth=10)
-        self.dists = DistancesContext()
-        self.dists.rhypo = np.array([1., 10., 30., 70.])
-        self.dists.repi = np.array([1., 10., 30., 70.])
+        self.ctx = ctx = RuptureContext()
+        ctx.mag = 6.0
+        ctx.hypo_depth = 10.
+        sites = Dummy.get_site_collection(
+            4, amplfactor=[-1.0, 1.5, 0.00, -1.99])
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
+        ctx.rhypo = np.array([1., 10., 30., 70.])
+        ctx.repi = np.array([1., 10., 30., 70.])
         self.imt = MMI()
 
     def test_get_mean_std(self):
@@ -232,14 +224,12 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
             stds_types = [const.StdDev.TOTAL]
             gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
                                  apply_swiss_amplification={})
-            mean, stds = gmm.get_mean_and_stddevs(self.sites, self.rup,
-                                                  self.dists, self.imt,
-                                                  stds_types)
+            mean, stds = gmm.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, self.imt, stds_types)
 
             gmpe = registry[gmpe_name]()
-            emean, estds = gmpe.get_mean_and_stddevs(self.sites, self.rup,
-                                                     self.dists,
-                                                     self.imt, stds_types)
+            emean, estds = gmpe.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, self.imt, stds_types)
 
             exp_mean = emean + np.array([-1.00, 1.50, 0, -1.99])
 
