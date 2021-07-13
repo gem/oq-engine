@@ -269,8 +269,9 @@ class AtkinsonBoore2003SInter(GMPE):
                 mean[m] /= 0.550
 
             sig[m] = np.log(10 ** C['sigma'])
-            tau[m] = np.log(10 ** C['s2'])
-            phi[m] = np.log(10 ** C['s1'])
+            if 's2' in C.dtype.names:
+                tau[m] = np.log(10 ** C['s2'])
+                phi[m] = np.log(10 ** C['s1'])
 
     COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
     IMT      c1          c2          c3           c4          c5          c6          c7          sigma       s1          s2
@@ -336,8 +337,9 @@ class AtkinsonBoore2003SSlab(AtkinsonBoore2003SInter):
                 mean[m] /= 0.550
 
             sig[m] = np.log(10 ** C['sigma'])
-            tau[m] = np.log(10 ** C['s2'])
-            phi[m] = np.log(10 ** C['s1'])
+            if 's2' in C.dtype.names:
+                tau[m] = np.log(10 ** C['s2'])
+                phi[m] = np.log(10 ** C['s1'])
 
     COEFFS_SSLAB = CoeffsTable(sa_damping=5, table="""\
     IMT      c1         c2         c3         c4         c5          c6         c7         sigma      s1        s2
