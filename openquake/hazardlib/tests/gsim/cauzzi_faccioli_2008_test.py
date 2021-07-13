@@ -45,6 +45,7 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         # method should return values equal to the ones obtained by clipping
         # distances at 15 km.
         ctx = RuptureContext()
+        ctx.sids = [0, 1, 2]
         ctx.vs30 = numpy.array([800.0, 800.0, 800.0])
         ctx.mag = 5.0
         ctx.rake = 0
@@ -52,7 +53,6 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         ctx.rhypo.flags.writeable = False
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
-        setattr(ctx, 'rhypo', numpy.array([15.0, 15.0, 16.0]))
         mean_15, stds_15 = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_array_equal(mean_0, mean_15)

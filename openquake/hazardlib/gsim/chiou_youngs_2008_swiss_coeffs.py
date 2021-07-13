@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.imt import PGA, PGV, SA
 
 #: Coefficient table constructed from the electronic suplements of the
 #: original paper.

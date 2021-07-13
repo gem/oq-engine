@@ -38,6 +38,7 @@ CONSTS = {
     'n': 1.18,
     'c': 1.88}
 
+
 def _compute_base_term(C, rup, dists):
     """
     Compute and return base model term, that is the first term, f1, in 
