@@ -41,8 +41,7 @@ def _compute_mean(kind, C, g, mag, hypo_depth, rrup, vs30, pga_rock, imt):
     """
     Compute mean according to equation 1, page 1706.
     """
-    if hypo_depth > 100:
-        hypo_depth = 100
+    hypo_depth = np.clip(hypo_depth, 0, 100.)
     delta = 0.00724 * 10 ** (0.507 * mag)
     R = np.sqrt(rrup ** 2 + delta ** 2)
 
