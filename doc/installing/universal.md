@@ -105,7 +105,7 @@ Calculation data will be stored in `/var/lib/openquake/oqdata`.
 
 ## `devel_server` installation
 
-This method adds to `server` installation the possibility to modify the engine codebase or add new features for the engine.
+This method adds to `server` installation the possibility to run the engine from a git repository.
 If you are on a Linux machine _and_ you have root permissions
 
 ```
