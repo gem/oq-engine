@@ -39,6 +39,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
+from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -193,8 +194,13 @@ class ContextMaker(object):
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
                 sorted(self.REQUIRES_SITES_PARAMETERS) +
                 sorted(self.REQUIRES_DISTANCES))
-        dic = {req: 0. for req in reqs}
-        dic['sids'] = numpy.uint32([0])
+        dic = {}
+        for req in reqs:
+            if req in site_param_dt:
+                dic[req] = site_param_dt[req](0)
+            else:
+                dic[req] = 0.
+        dic['sids'] = numpy.uint32(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')

@@ -33,11 +33,13 @@ def _get_ln_y_ref(ctx, C):
     Implements eq. 13a.
     """
     # reverse faulting flag
-    Frv = 1 if 30 <= ctx.rake <= 150 else 0
+    Frv = np.zeros_like(ctx.mag)
+    Frv[(30 <= ctx.rake) & (ctx.rake <= 150)] = 1
     # normal faulting flag
-    Fnm = 1 if -120 <= ctx.rake <= -60 else 0
+    Fnm = np.zeros_like(ctx.mag)
+    Fnm[(-120 <= ctx.rake) & (ctx.rake <= -60)] = 1
     # hanging wall flag
-    Fhw = (ctx.rx >= 0)
+    Fhw = np.where(ctx.rx >= 0, 1, 0)
     # aftershock flag. always zero since we only consider main shock
     AS = 0
 
@@ -57,12 +59,12 @@ def _get_ln_y_ref(ctx, C):
         + C['c4']
         * np.log(ctx.rrup
                  + C['c5']
-                 * np.cosh(C['c6'] * max(ctx.mag - C['chm'], 0)))
+                 * np.cosh(C['c6'] * np.fmax(ctx.mag - C['chm'], 0)))
         # fourth line
         + (C['c4a'] - C['c4'])
         * np.log(np.sqrt(ctx.rrup ** 2 + C['crb'] ** 2))
         # fifth line
-        + (C['cg1'] + C['cg2'] / (np.cosh(max(ctx.mag - C['cg3'], 0))))
+        + (C['cg1'] + C['cg2'] / (np.cosh(np.fmax(ctx.mag - C['cg3'], 0))))
         * ctx.rrup
         # sixth line
         + C['c9'] * Fhw
@@ -115,11 +117,11 @@ def _set_stddevs(sig, tau, phi, ctx, C, ln_y_ref, exp1, exp2):
     """
     # aftershock flag is zero, we consider only main shock.
     AS = 0
-    Fmeasured = ctx.vs30measured
-    Finferred = 1 - ctx.vs30measured
+    Fmeasured = np.where(ctx.vs30measured, True, False)
+    Finferred = ~Fmeasured
 
     # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(ctx.mag, 5.0), 7.0) - 5.0
+    mag_test = np.clip(ctx.mag, 5.0, 7.0) - 5.0
     t = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
     # b and c coeffs from eq. 10
@@ -127,6 +129,7 @@ def _set_stddevs(sig, tau, phi, ctx, C, ln_y_ref, exp1, exp2):
     c = C['phi4']
 
     y_ref = np.exp(ln_y_ref)
+
     # eq. 20
     NL = b * y_ref / (y_ref + c)
     sigma = (
@@ -135,6 +138,7 @@ def _set_stddevs(sig, tau, phi, ctx, C, ln_y_ref, exp1, exp2):
         # second line
         * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
                   + (1 + NL) ** 2))
+
     # eq. 21
     sig[:] = np.sqrt(((1 + NL) ** 2) * (t ** 2) + sigma ** 2)
     tau[:] = np.abs((1 + NL) * t)
@@ -178,7 +182,7 @@ class ChiouYoungs2008(GMPE):
     #: Required distance measures are RRup, Rjb and Rx (all are in eq. 13a).
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
