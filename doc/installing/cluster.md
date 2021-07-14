@@ -65,7 +65,8 @@ The following port must be open on the **workers node**:
 
 * 1909 for the ZeroMQ workerpools
 
-The **worker nodes** must be able to connect to the master on port 1908.
+The **master node** and the **worker nodes** must be able to communicate on the specified ports.
+
 Moreover the user `openquake` on the master must be able to access the workers via ssh.
 This means that you have to generate and copy the ssh keys properly, and
 the first time you must connect to the workers manually. Then the engine
@@ -73,20 +74,18 @@ will be able to start and stop zworker processes at each new calculation.
 
 ### Storage requirements
 
-Storage requirements depend a lot on the type of calculations you want to run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example). Starting from OpenQuake 2.3 the software and all its libraries are located in `/opt/openquake`.
+Storage requirements depend a lot on the type of calculations you want to run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example).
 
 On the master node you will also need space for:
-- the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
-- the OpenQuake database (located under `/var/lib/openquake`): it contains only logs and metadata, the expected size is tens of megabyte
+- the **shared_dir** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
+- the OpenQuake database (located under `/var/lib/openquake/oqdata/`): it contains only logs and metadata, the expected size is tens of megabyte
 - the temporary folder (`/tmp`). A different temporary folder can be customized via the `openquake.cfg`
 
 On large installations we strongly suggest to create separate partition for `/home` and `/tmp` (or any custom temporary folder set in the `openquake.cfg`.
 
-
 ### Swap partitions
 
 Having swap active on resources dedicated to the OpenQuake Engine is _strongly discouraged_ because of the performance penality when it's being used and because how python allocates memory. In most cases (when memory throughput is relevant) is totally useless and it will just increase by many orders of magnitude the time required to complete the job (making the job actually stuck).
-
 
 
 ## Initial install
@@ -143,11 +142,11 @@ NB: when using the zmq mechanism you should not touch the parameter
 
 ### Configuring daemons
 
-The required daemons are configured from the universal installer.
+The required systemd services are configured from the universal installer into the folder /etc/systemd/system/
 
 #### Master node
-- OpenQuake Engine DbServer
-- OpenQuake Engine WebUI (optional)
+- OpenQuake Engine DbServer - `openquake-dbserver.service`
+- OpenQuake Engine WebUI - `openquake-webui.service` (optional)
 
 ### Monitoring zmq
 
