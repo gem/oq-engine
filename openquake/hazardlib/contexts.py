@@ -197,7 +197,11 @@ class ContextMaker(object):
         dic = {}
         for req in reqs:
             if req in site_param_dt:
-                dic[req] = site_param_dt[req](0)
+                dt = site_param_dt[req]
+                if isinstance(dt, tuple):  # (string_, size)
+                    dic[req] = b''
+                else:
+                    dic[req] = dt(0)
             else:
                 dic[req] = 0.
         dic['sids'] = numpy.uint32(0)
