@@ -58,7 +58,7 @@ The following ports must be open on the **master node**:
 
 * 1908 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
 * 1910 for the ZeroMQ streamer
-* 1921-1930 for ZeroMQ receivers
+* 1912-1920 for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
 
 The following port must be open on the **workers node**:
@@ -120,7 +120,7 @@ listen = < IP address of master>
 # of the master node (on the master node cfg too)
 host = < IP address of master>
 port = 1908
-receiver_ports = 1921-1930
+receiver_ports = 1912-1920
 authkey = somethingstronger
 
 [zworkers]
