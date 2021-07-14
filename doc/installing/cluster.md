@@ -27,7 +27,7 @@ As soon as the shared export is in place, the `shared_dir` config parameter in `
 # unless the user sets his own OQ_DATADIR variable
 shared_dir = /home
 ```
-It is reccommended to set as shared dir the `/home` folder: in such case `oqdata` will have the default path `/home/<user>/oqdata` and setgid is not required. Please note that the `openquake` user on workers still needs to get access to the `oqdata` content, so make sure that permission are properly set (`traverse` on the user home and `read` access to oqdata).
+It is recommended to set as shared dir the `/home` folder: in such case `oqdata` will have the default path `/home/<user>/oqdata` and setgid is not required. Please note that the `openquake` user on workers still needs to get access to the `oqdata` content, so make sure that permission are properly set (`traverse` on the user home and `read` access to oqdata).
 
 When `shared_dir` is set to a differente value, the `oqdata` folders will be stored under `$shared_dir/<user>/oqdata` instead of `/home/<user>/oqdata`. See the comment in the `openquake.cfg` for further information.
 You need then to give `RWX` permission to the `shared_dir` on _master_ to the `openquake` group (which is usually created by packages) and add all the cluster users to the `openquake` group. For example:
@@ -134,7 +134,7 @@ between 0 and the maximum number of available core to limit the
 resource usage. The engine will automatically start and stop zmq
 processes on the worker nodes at each new calculation, *provided the
 user openquake has ssh access to the workers*.
-Please note that you must write all the workers that want to use to perform the calculations.
+Please note that you must list explicitly the workers that want to use to perform the calculations.
 
 NB: when using the zmq mechanism you should not touch the parameter
 `serialize_jobs` and keep it at its default value of `true`.
