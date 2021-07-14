@@ -61,10 +61,12 @@ class WesternCan15Mid(BooreAtkinson2011):
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     #: Standard deviation types supported
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
 
     #: Required distance is only repi since rrup and rjb are obtained from repi
-    REQUIRES_DISTANCES = set(('repi',))
+    REQUIRES_DISTANCES = {'repi'}
+
+    sgn = 0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
@@ -75,46 +77,20 @@ class WesternCan15Mid(BooreAtkinson2011):
         # get original values
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, distsl, imt,
                                                      stddev_types)
+        if self.sgn:
+            # adjust mean values using the reccomended delta (see Atkinson and
+            # Adams, 2013)
+            tmp = 0.1+0.0007*distsl.rjb
+            tmp = np.vstack((tmp, np.full_like(tmp, 0.3)))
+            delta = np.log(10.**(np.amin(tmp, axis=0)))
+            mean += self.sgn * delta
         stds = [np.ones(len(distsl.rjb))*get_sigma(imt)]
         return mean, stds
 
 
 class WesternCan15Low(WesternCan15Mid):
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # distances
-        distsl = copy.copy(dists)
-        distsl.rjb, distsl.rrup = \
-            get_equivalent_distances_west(rup.mag, dists.repi)
-        # get original values
-        mean, _ = super().get_mean_and_stddevs(sites, rup, distsl, imt,
-                                               stddev_types)
-        # adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013)
-        tmp = 0.1+0.0007*distsl.rjb
-        tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
-        delta = np.log(10.**(np.amin(tmp, axis=0)))
-        mean_adj = mean - delta
-        stddevs = [np.ones(len(distsl.rjb))*get_sigma(imt)]
-        return mean_adj, stddevs
+    sgn = -1
 
 
 class WesternCan15Upp(WesternCan15Mid):
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
-        # distances
-        distsl = copy.copy(dists)
-        distsl.rjb, distsl.rrup = \
-            get_equivalent_distances_west(rup.mag, dists.repi)
-        # get original values
-        mean, _ = super().get_mean_and_stddevs(sites, rup, distsl, imt,
-                                               stddev_types)
-        # Adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013)
-        tmp = 0.1+0.0007*distsl.rjb
-        tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
-        delta = np.log(10.**(np.amin(tmp, axis=0)))
-        mean_adj = mean + delta
-        stddevs = [np.ones(len(distsl.rjb))*get_sigma(imt)]
-        return mean_adj, stddevs
+    sgn = +1

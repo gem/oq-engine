@@ -34,7 +34,6 @@ class WesternCan15RjbMid(BooreAtkinson2011):
     calculation of hazard for the fifth generation of Canada's hazard maps,
     released in 2015.
     """
-
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
     non_verified = True
@@ -43,45 +42,29 @@ class WesternCan15RjbMid(BooreAtkinson2011):
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     #: Standard deviation types supported
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
+
+    sgn = 0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
         # get original values
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
+        if self.sgn:
+            # adjust mean values using the reccomended delta (see Atkinson and
+            # Adams, 2013)
+            tmp = 0.1+0.0007*dists.rjb
+            tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
+            delta = np.log(10.**(np.amin(tmp, axis=0)))
+            mean += self.sgn * delta
         stds = [np.ones(len(dists.rjb))*get_sigma(imt)]
         return mean, stds
 
 
 class WesternCan15RjbLow(WesternCan15RjbMid):
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # get original values
-        mean, _ = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                               stddev_types)
-        # adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013)
-        tmp = 0.1+0.0007*dists.rjb
-        tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
-        delta = np.log(10.**(np.amin(tmp, axis=0)))
-        mean_adj = mean - delta
-        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
-        return mean_adj, stddevs
+    sgn = -1
 
 
 class WesternCan15RjbUpp(WesternCan15RjbMid):
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
-        # get original values
-        mean, _ = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                               stddev_types)
-        # Adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013)
-        tmp = 0.1+0.0007*dists.rjb
-        tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
-        delta = np.log(10.**(np.amin(tmp, axis=0)))
-        mean_adj = mean + delta
-        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
-        return mean_adj, stddevs
+    sgn = +1
