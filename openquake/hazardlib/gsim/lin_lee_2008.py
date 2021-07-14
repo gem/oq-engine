@@ -30,7 +30,10 @@ def _compute_mean(C, mag, rhypo, hypo_depth, mean, idx):
     """
     Compute mean value according to equations 10 and 11 page 226.
     """
-    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo[idx] +
+    mag = mag[idx]
+    rhypo = rhypo[idx]
+    hypo_depth = hypo_depth[idx]
+    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo +
                  C['C4'] * np.exp(C['C5'] * mag)) + C['C6'] * hypo_depth)
 
 
@@ -75,7 +78,7 @@ class LinLee2008SInter(GMPE):
     #: Vs30 threshold value between rock ctx (B, C) and soil ctx (C, D).
     ROCK_VS30 = 360
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
