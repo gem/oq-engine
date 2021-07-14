@@ -54,10 +54,9 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     """
     base = theta1 + theta4 * dc1
     dmag = C1 + dc1
-    if mag > dmag:
-        f_mag = theta5 * (mag - dmag) + theta13 * (10. - mag) ** 2.
-    else:
-        f_mag = theta4 * (mag - dmag) + theta13 * (10. - mag) ** 2.
+    f_mag = np.where(mag > dmag,
+                     theta5 * (mag - dmag) + theta13 * (10. - mag) ** 2.,
+                     theta4 * (mag - dmag) + theta13 * (10. - mag) ** 2.)
     return base + f_mag
 
 

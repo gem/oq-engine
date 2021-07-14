@@ -511,7 +511,17 @@ def count_old_style(gsim_lt):
             old += 'get_mean_and_stddevs' in gsim.__class__.__dict__
     return old
 
-    
+
+def count_no_vect(gsim_lt):
+    # count the number of not vectorize GMPEs
+    no = 0
+    for gsims in gsim_lt.values.values():
+        for gsim in gsims:
+            compute = getattr(gsim.__class__, 'compute')
+            no += 'ctx' not in compute.__annotations__
+    return no
+
+
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -595,7 +605,9 @@ def get_gsim_lt(oqparam, trts=('*',)):
     gsim_lt_cache[key] = gsim_lt
 
     old_style = count_old_style(gsim_lt)
+    no_vect = count_no_vect(gsim_lt)
     logging.info('There are %d old style GMPEs', old_style)
+    logging.info('There are %d not vectorized GMPEs', no_vect)
     return gsim_lt
 
 

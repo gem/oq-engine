@@ -24,7 +24,6 @@ def _compute_C1_term(C, dists):
     Rodriguez-Marek et al (2013)
     The C1 coeff are used to compute the single station sigma
     """
-
     c1_dists = np.zeros_like(dists)
     idx = dists < C['Rc11']
     c1_dists[idx] = C['phi_11']
@@ -40,15 +39,17 @@ def _compute_small_mag_correction_term(C, mag, rhypo):
     """
     small magnitude correction applied to the median values
     """
-    if mag >= 3.00 and mag < 5.5:
-        min_term = np.minimum(rhypo, C['Rm'])
-        max_term = np.maximum(min_term, 10)
-        term_ln = np.log(max_term / 20)
-        term_ratio = ((5.50 - mag) / C['a1'])
-        temp = (term_ratio) ** C['a2'] * (C['b1'] + C['b2'] * term_ln)
-        return 1 / np.exp(temp)
-    else:
-        return 1
+    if not isinstance(mag, np.ndarray):
+        mag = np.full_like(rhypo, mag)
+    term = np.ones_like(mag)
+    within = (mag >= 3.00) & (mag < 5.5)
+    min_term = np.minimum(rhypo[within], C['Rm'])
+    max_term = np.maximum(min_term, 10)
+    term_ln = np.log(max_term / 20)
+    term_ratio = ((5.50 - mag[within]) / C['a1'])
+    temp = (term_ratio) ** C['a2'] * (C['b1'] + C['b2'] * term_ln)
+    term[within] = 1 / np.exp(temp)
+    return term
 
 
 def _compute_phi_ss(C, mag, c1_dists, log_phi_ss, mean_phi_ss):
@@ -61,19 +62,14 @@ def _compute_phi_ss(C, mag, c1_dists, log_phi_ss, mean_phi_ss):
     (mean_phi_ss) single station value;
     the resulted phi_ss is in natural logarithm units
     """
-
-    phi_ss = 0
-
-    if mag < C['Mc1']:
-        phi_ss = c1_dists
-
-    elif mag >= C['Mc1'] and mag <= C['Mc2']:
-        phi_ss = c1_dists + \
-            (C['C2'] - c1_dists) * \
-            ((mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-    elif mag > C['Mc2']:
-        phi_ss = C['C2']
-
+    phi_ss = np.zeros_like(c1_dists)
+    if not isinstance(mag, np.ndarray):
+        mag = np.full_like(c1_dists, mag)
+    phi_ss[mag < C['Mc1']] = c1_dists[mag < C['Mc1']]
+    within = (mag >= C['Mc1']) & (mag <= C['Mc2'])
+    phi_ss[within] = c1_dists[within] + (C['C2'] - c1_dists[within]) * (
+        (mag[within] - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+    phi_ss[mag > C['Mc2']] = C['C2']
     return (phi_ss * 0.50 + mean_phi_ss * 0.50) / log_phi_ss
 
 

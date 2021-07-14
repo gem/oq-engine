@@ -60,14 +60,8 @@ def _get_fault_type_dummy_variables(ctx, imt):
     on Akkar and Bommer 2007b; read Strong-Motion Dataset and Record
     Processing on p. 514 (Akkar and Bommer 2007b).
     """
-
-    Fn, Fr = 0, 0
-    if ctx.rake >= -135 and ctx.rake <= -45:
-        # normal
-        Fn = 1
-    elif ctx.rake >= 45 and ctx.rake <= 135:
-        # reverse
-        Fr = 1
+    Fn = (ctx.rake >= -135) & (ctx.rake <= -45)  # normal fault
+    Fr = (ctx.rake >= 45) & (ctx.rake <= 135)  # reverse fault
     return Fn, Fr
 
 
@@ -159,7 +153,7 @@ class AkkarBommer2010(GMPE):
     #: Reference Vs30. See page 2983 (top or right column)
     DEFINED_FOR_REFERENCE_VELOCITY = 760.0
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -299,7 +293,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

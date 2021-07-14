@@ -48,7 +48,7 @@ def _compute_faulting_style_term(C, rake):
     # p. 900. "The differentiation in focal mechanism was
     # based on a rake angle criterion, with a rake of +/- 45
     # as demarcation between dip-slip and strike-slip."
-    return float(rake > 45.0 and rake < 135.0) * C['FR']
+    return ((rake > 45.0) & (rake < 135.0)) * C['FR']
 
 
 def _compute_focal_depth_term(C, hypo_depth):
@@ -56,9 +56,7 @@ def _compute_focal_depth_term(C, hypo_depth):
     Compute fourth term in equation 1, p. 901.
     """
     # p. 901. "(i.e, depth is capped at 125 km)".
-    focal_depth = hypo_depth
-    if focal_depth > 125.0:
-        focal_depth = 125.0
+    focal_depth = np.clip(hypo_depth, 0, 125.)
 
     # p. 902. "We used the value of 15 km for the
     # depth coefficient hc ...".
@@ -66,7 +64,7 @@ def _compute_focal_depth_term(C, hypo_depth):
 
     # p. 901. "When h is larger than hc, the depth terms takes
     # effect ...". The next sentence specifies h>=hc.
-    return float(focal_depth >= hc) * C['e'] * (focal_depth - hc)
+    return (focal_depth >= hc) * C['e'] * (focal_depth - hc)
 
 
 def _compute_magnitude_squared_term(P, M, Q, W, mag):
@@ -174,7 +172,7 @@ class ZhaoEtAl2006Asc(GMPE):
     #  DEFINED_FOR_REFERENCE_VELOCITY = 1100
     DEFINED_FOR_REFERENCE_VELOCITY = 800
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -251,7 +249,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     #: Required rupture parameters are magnitude and focal depth.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -331,7 +329,7 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     #: Required rupture parameters are magnitude and focal depth.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -409,7 +407,7 @@ class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
     ``hazSUBXnga.f`` Fotran code available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
     """
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -453,7 +451,7 @@ class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
     For the 2014 US National Seismic Hazard Maps the magnitude of Zhao et al.
     (2006) for the subduction inslab events is capped at magnitude Mw 7.8
     """
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -470,10 +468,7 @@ class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
             d = np.array(ctx.rrup)  # make a copy
             d[d == 0.0] = 0.1
 
-            if ctx.mag > 7.8:
-                rup_mag = 7.8
-            else:
-                rup_mag = ctx.mag
+            rup_mag = np.clip(ctx.mag, 0., 7.8)
             # mean value as given by equation 1, p. 901, without considering
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
@@ -537,7 +532,7 @@ class ZhaoEtAl2006SInterCascadia(ZhaoEtAl2006SInter):
     equation for active shallow crust, by removing the faulting style
     term and adding a subduction interface term.
     """
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -583,7 +578,7 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
     term and adding subduction slab terms.
     """
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -629,7 +624,7 @@ class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
     by SGS for the national PSHA model for Saudi Arabia.
     """
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Using a minimum distance of 5km for the calculation.
         """
