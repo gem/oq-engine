@@ -9,79 +9,6 @@ Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](
 
 ### Pre-requisites
 
-## Initial install
-
-Have read [Universal installation script](universal.md) 
-
-### Master node
-Clone the repository of engine in the /home folder that must be shared with the workers
-On the Master node the method server must be used from the folder /home/oq-engine
-
-## OpenQuake Engine 'master' node configuration File
-
-### Enable zmq distribution
-
-The following file (on all nodes) should be modified to enable
-*zmq* support:
-
-`/opt/openquake/openquake.cfg`
-
-```
-[distribution]
-# enable celery only if you have a cluster
-oq_distribute = zmq
-
-[dbserver]
-multi_user = true
-file = /var/lib/openquake/oqdata/db.sqlite3
-# daemon bind address; must be a valid IP address
-listen = < IP address of master>
-# address of the dbserver; can be an hostname too
-# on multi-node cluster it must be the IP or hostname
-# of the master node (on the master node cfg too)
-host = < IP address of master>
-port = 1908
-receiver_ports = 1921-1930
-authkey = somethingstronger
-
-[zworkers]
-host_cores = < IP address of worker1> -1, < IP address of worker2> -1
-ctrl_port = 1909
-```
-
-Notice that the -1 in `< IP address of worker1> -1` means that all the cores in
-that worker will be used. You can use a number
-between 0 and the maximum number of available core to limit the
-resource usage. The engine will automatically start and stop zmq
-processes on the worker nodes at each new calculation, *provided the
-user openquake has ssh access to the workers*.
-Please note that you must write all the workers that want to use to perform the calculations.
-
-NB: when using the zmq mechanism you should not touch the parameter
-`serialize_jobs` and keep it at its default value of `true`.
-
-
-### Configuring daemons
-
-The required daemons are configured from the universal installer.
-
-#### Master node
-- OpenQuake Engine DbServer
-- OpenQuake Engine WebUI (optional)
-
-### Monitoring zmq
-
-`oq workers status` can be used to check the status of the worker nodes and the task distribution. An output like this is produced:
-
-```
-$ oq workers status
-[('192.168.2.1', 1, 64), ('192.168.2.2', 7, 64), ('192.168.2.3', 7, 64)]
-```
-For each worker in the cluster you can see its IP and the cores which are
-currently running with respect to the number of cores available (for instance
-on the host 192.168.2.1 only 1 core of 64 is running, while in the other
-two workers 7 cores are running each).
-
 ## Shared filesystem
 
 OpenQuake 2.4 introduced the concept of _shared directory_ (aka _shared_dir_). This _shared directory_ allows the workers to read directly from the master's filesystem, thus increasing scalability and performance; starting with OpenQuake 3.3 this feature is **mandatory** on a multi-node deployment.
@@ -157,6 +84,81 @@ On large installations we strongly suggest to create separate partition for `/ho
 Having swap active on resources dedicated to the OpenQuake Engine is _strongly discouraged_ because of the performance penality when it's being used and because how python allocates memory. In most cases (when memory throughput is relevant) is totally useless and it will just increase by many orders of magnitude the time required to complete the job (making the job actually stuck).
 
 
+
+## Initial install
+
+Have read [Universal installation script](universal.md) 
+
+### Master node
+Clone the repository of engine in the /home folder that must be shared with the workers.
+On the Master node the method server must be used from the folder /home/oq-engine
+
+## OpenQuake Engine 'master' node configuration File
+
+### Enable zmq distribution
+
+The following file (on all nodes) should be modified to enable
+*zmq* support:
+
+`/opt/openquake/openquake.cfg`
+
+```
+[distribution]
+# enable celery only if you have a cluster
+oq_distribute = zmq
+
+[dbserver]
+multi_user = true
+file = /var/lib/openquake/oqdata/db.sqlite3
+# daemon bind address; must be a valid IP address
+listen = < IP address of master>
+# address of the dbserver; can be an hostname too
+# on multi-node cluster it must be the IP or hostname
+# of the master node (on the master node cfg too)
+host = < IP address of master>
+port = 1908
+receiver_ports = 1921-1930
+authkey = somethingstronger
+
+[zworkers]
+host_cores = < IP address of worker1> -1, < IP address of worker2> -1
+ctrl_port = 1909
+```
+
+Notice that the -1 in `< IP address of worker1> -1` means that all the cores in
+that worker will be used. You can use a number
+between 0 and the maximum number of available core to limit the
+resource usage. The engine will automatically start and stop zmq
+processes on the worker nodes at each new calculation, *provided the
+user openquake has ssh access to the workers*.
+Please note that you must write all the workers that want to use to perform the calculations.
+
+NB: when using the zmq mechanism you should not touch the parameter
+`serialize_jobs` and keep it at its default value of `true`.
+
+
+### Configuring daemons
+
+The required daemons are configured from the universal installer.
+
+#### Master node
+- OpenQuake Engine DbServer
+- OpenQuake Engine WebUI (optional)
+
+### Monitoring zmq
+
+`oq workers status` can be used to check the status of the worker nodes and the task distribution. An output like this is produced:
+
+```
+$ oq workers status
+[('192.168.2.1', 1, 64), ('192.168.2.2', 7, 64), ('192.168.2.3', 7, 64)]
+```
+For each worker in the cluster you can see its IP and the cores which are
+currently running with respect to the number of cores available (for instance
+on the host 192.168.2.1 only 1 core of 64 is running, while in the other
+two workers 7 cores are running each).
+
 ## Running calculations
 
 Jobs can be submitted through the master node using the `oq engine` command line interface, the API or the WebUI if active. See the documentation about [how to run a calculation](../running/unix.md) or about how to use the [WebUI](../running/server.md)
+
