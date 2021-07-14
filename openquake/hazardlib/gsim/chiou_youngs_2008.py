@@ -119,7 +119,7 @@ def _set_stddevs(sig, tau, phi, ctx, C, ln_y_ref, exp1, exp2):
     Finferred = 1 - ctx.vs30measured
 
     # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(ctx.mag, 5.0), 7.0) - 5.0
+    mag_test = np.clip(ctx.mag, 5.0, 7.0) - 5.0
     t = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
     # b and c coeffs from eq. 10
