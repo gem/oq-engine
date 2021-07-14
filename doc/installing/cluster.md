@@ -15,7 +15,7 @@ OpenQuake 2.4 introduced the concept of _shared directory_ (aka _shared_dir_). T
 
 The _shared directory_ must be exported from the master node to the workers via a _POSIX_ compliant filesystem (**NFSv4** is higly recommended). The export may be (and _should_ be) exported and/or mounted as **read-only** by the workers.
 
-Starting from OpenQuake 2.3 the software and all its libraries are located in `/opt/openquake`. Also that folder must be exported from the master node to the workers.dd
+Starting from OpenQuake 2.3 the software and all its libraries are located in `/opt/openquake`. Also that folder must be exported from the master node to the workers.
 
 As soon as the shared export is in place, the `shared_dir` config parameter in `openquake.cfg` must be configured to point to the path of the exported dir on the _master_ node and to where the export is mounted on each _worker_ node. 
 
