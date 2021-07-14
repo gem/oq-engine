@@ -30,10 +30,10 @@ def _compute_mean(C, mag, rhypo, hypo_depth, mean, idx):
     """
     Compute mean value according to equations 10 and 11 page 226.
     """
-    mag = mag[idx]
-    rhypo = rhypo[idx]
-    hypo_depth = hypo_depth[idx]
-    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo +
+    if isinstance(mag, np.ndarray):
+        mag = mag[idx]
+        hypo_depth = hypo_depth[idx]
+    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo[idx] +
                  C['C4'] * np.exp(C['C5'] * mag)) + C['C6'] * hypo_depth)
 
 
