@@ -7,67 +7,71 @@ The nodes must all be able to communicate with the OpenQuake Engine *DbServer*.
 Both services run on a single "master" node.
 Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](../faq.md#mpi-support) for more information.
 
-### Pre-requisites
+## Pre-requisites
 
-## Shared filesystem
+### Shared filesystem
 
 OpenQuake 2.4 introduced the concept of _shared directory_ (aka _shared_dir_). This _shared directory_ allows the workers to read directly from the master's filesystem, thus increasing scalability and performance; starting with OpenQuake 3.3 this feature is **mandatory** on a multi-node deployment.
 
-The _shared directory_ must be exported from the master node to the workers via a _POSIX_ compliant filesystem (**NFSv4** is recommended). The export may be (and _should_ be) exported and/or mounted as **read-only** by the workers.
+The _shared directory_ must be exported from the master node to the workers via a _POSIX_ compliant filesystem (**NFSv4** is higly recommended). The export may be (and _should_ be) exported and/or mounted as **read-only** by the workers.
 
-As soon as the shared export is in place, the `shared_dir` config parameter in `openquake.cfg` must be configured to point to the path of the exported dir on the _master_ node and to where the export is mounted on each _worker_ node.
+Starting from OpenQuake 2.3 the software and all its libraries are located in `/opt/openquake`. Also that folder must be exported from the master node to the workers.dd
+
+As soon as the shared export is in place, the `shared_dir` config parameter in `openquake.cfg` must be configured to point to the path of the exported dir on the _master_ node and to where the export is mounted on each _worker_ node. 
 
 ```
 [directory]
-# the base directory containing the <user>/oqdata directories;
-# if set, it should be on a shared filesystem; for instance in our
-# cluster it is /home/openquake; if not set, the oqdata directories
-# go into $HOME/oqdata, unless the user sets his own OQ_DATADIR variable
-shared_dir = /home/openquake
+# the base directory containing the <user>/oqdata directories:
+# if set, it should be on a shared filesystem; this is **mandatory** on a multi-node cluster
+# if not set, the oqdata directories go into $HOME/oqdata,
+# unless the user sets his own OQ_DATADIR variable
+shared_dir = /home
 ```
+It is reccommended to set as shared dir the `/home` folder: in such case `oqdata` will have the default path `/home/<user>/oqdata` and setgid is not required. Please note that the `openquake` user on workers still needs to get access to the `oqdata` content, so make sure that permission are properly set (`traverse` on the user home and `read` access to oqdata).
 
-When `shared_dir` is set, the `oqdata` folders will be stored under `$shared_dir/<user>/oqdata` instead of `/home/<user>/oqdata`. See the comment in the `openquake.cfg` for further information.
+When `shared_dir` is set to a differente value, the `oqdata` folders will be stored under `$shared_dir/<user>/oqdata` instead of `/home/<user>/oqdata`. See the comment in the `openquake.cfg` for further information.
 You need then to give `RWX` permission to the `shared_dir` on _master_ to the `openquake` group (which is usually created by packages) and add all the cluster users to the `openquake` group. For example:
 
 ```bash
-$ mkdir /home/openquake
-$ chown openquake.openquake /home/openquake
+$ mkdir /oq_shared
+$ chown openquake.openquake /oq_shared
 # Enable setgid on the tree
-$ chmod 2770 /home/openquake
+$ chmod 2770 /oq_shared
 ```
 
-On the workers the _shared_dir_ should be mounted as the `openquake` user too, or access must be given to the user running `celeryd` (which is `openquake` by default in the official packages).
+On the workers the _shared_dir_ should be mounted as the `openquake` user too
 
-Another possibility would be exporting the entire `/home` to the workers: in such case `oqdata` will have the default path `/home/<user>/oqdata` and setgid is not required. Please note that the `openquake` user on workers still needs to get access to the `oqdata` content, so make sure that permission are properly set (`traverse` on the user home and `read` access to oqdata).
 
 ```
 [directory]
-shared_dir = /home
+shared_dir = /oq_shared
 ```
 
-## Network and security considerations
+It is not necessary to configure `openquake.cfg` for `/opt/openquake`
+
+### Network and security considerations
 
 The worker nodes should be isolated from the external network using either a dedicated internal network or a firewall.
 Additionally, access to the DbServer ports should be limited (again by internal LAN or firewall) so that external traffic is excluded.
 
 The following ports must be open on the **master node**:
 
-* 1907 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
-* 1911 for the ZeroMQ streamer
-* 1912-1920 for ZeroMQ receivers
+* 1908 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
+* 1910 for the ZeroMQ streamer
+* 1921-1930 for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
 
 The following port must be open on the **workers node**:
 
 * 1909 for the ZeroMQ workerpools
 
-The **worker nodes** must be able to connect to the master on port 1907.
-Moreover the master must be able to access the workers via ssh.
+The **worker nodes** must be able to connect to the master on port 1908.
+Moreover the user `openquake` on the master must be able to access the workers via ssh.
 This means that you have to generate and copy the ssh keys properly, and
 the first time you must connect to the workers manually. Then the engine
 will be able to start and stop zworker processes at each new calculation.
 
-## Storage requirements
+### Storage requirements
 
 Storage requirements depend a lot on the type of calculations you want to run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example). Starting from OpenQuake 2.3 the software and all its libraries are located in `/opt/openquake`.
 
@@ -79,7 +83,7 @@ On the master node you will also need space for:
 On large installations we strongly suggest to create separate partition for `/home` and `/tmp` (or any custom temporary folder set in the `openquake.cfg`.
 
 
-## Swap partitions
+### Swap partitions
 
 Having swap active on resources dedicated to the OpenQuake Engine is _strongly discouraged_ because of the performance penality when it's being used and because how python allocates memory. In most cases (when memory throughput is relevant) is totally useless and it will just increase by many orders of magnitude the time required to complete the job (making the job actually stuck).
 
@@ -90,8 +94,8 @@ Having swap active on resources dedicated to the OpenQuake Engine is _strongly d
 Have read [Universal installation script](universal.md) 
 
 ### Master node
-Clone the repository of engine in the /home folder that must be shared with the workers.
-On the Master node the method server must be used from the folder /home/oq-engine
+Clone the repository of engine in the shared_dir folder that is shared with the workers.
+On the Master node the method server must be used from the folder /shared_dir/oq-engine
 
 ## OpenQuake Engine 'master' node configuration File
 
