@@ -870,8 +870,8 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def _cons_coeffs(records, limit_states):
-    dtlist = [(lt, F32) for lt in records['loss_type']]
+def _cons_coeffs(records, loss_types, limit_states):
+    dtlist = [(lt, F32) for lt in loss_types]
     coeffs = numpy.zeros(len(limit_states), dtlist)
     for rec in records:
         coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
@@ -890,6 +890,7 @@ def get_crmodel(oqparam):
         oqparam.limit_states = risklist.limit_states
     elif 'damage' in oqparam.calculation_mode and risklist.limit_states:
         assert oqparam.limit_states == risklist.limit_states
+    loss_types = oqparam.loss_dt().names
     consdict = {}
     if 'consequence' in oqparam.inputs:
         # build consdict of the form consequence_by_tagname -> tag -> array
@@ -908,8 +909,9 @@ def get_crmodel(oqparam):
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
                     raise InvalidFile('Unknown consequence %s in %s' %
                                       (consequence, fnames))
-                bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
-                         for tag, grp in group_array(group, by).items()}
+                bytag = {
+                    tag: _cons_coeffs(grp, loss_types, risklist.limit_states)
+                    for tag, grp in group_array(group, by).items()}
                 consdict['%s_by_%s' % (consequence, by)] = bytag
     # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
     # is [(0.05,), (0.2 ,), (0.6 ,), (1.  ,)] for damage state and structural
