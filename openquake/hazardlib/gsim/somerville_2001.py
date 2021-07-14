@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,48 @@ from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import clip_mean
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+
+def _compute_mean(C, mag, rjb):
+    """
+    Compute and return mean value (table 8, page 8)
+    """
+    d1 = np.sqrt(50. ** 2 + 6. ** 2)
+    d = np.sqrt(rjb ** 2 + 6 ** 2)
+
+    mean = np.zeros_like(rjb)
+
+    mean += (
+        C['a1'] + C['a2'] * (mag - 6.4) +
+        C['a7'] * (8.5 - mag) ** 2
+    )
+
+    idx = rjb < 50.
+    mean[idx] += (
+        C['a3'] * np.log(d[idx]) +
+        C['a4'] * (mag - 6.4) * np.log(d[idx]) +
+        C['a5'] * rjb[idx]
+    )
+
+    idx = rjb >= 50.
+    mean[idx] += (
+        C['a3'] * np.log(d1) +
+        C['a4'] * (mag - 6.4) * np.log(d[idx]) +
+        C['a5'] * rjb[idx] + C['a6'] * (np.log(d[idx]) - np.log(d1))
+    )
+
+    return mean
+
+
+def _compute_stddevs(C, num_sites, stddev_types):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for _ in stddev_types:
+        stddevs.append(np.zeros(num_sites) + C['sigma'])
+
+    return stddevs
 
 
 class SomervilleEtAl2001NSHMP2008(GMPE):
@@ -53,10 +95,7 @@ class SomervilleEtAl2001NSHMP2008(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of
     #: two : horizontal components
@@ -64,9 +103,7 @@ class SomervilleEtAl2001NSHMP2008(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No site parameters required
     REQUIRES_SITES_PARAMETERS = set()
@@ -91,52 +128,12 @@ class SomervilleEtAl2001NSHMP2008(GMPE):
 
         C = self.COEFFS[imt]
 
-        mean = self._compute_mean(C, rup.mag, dists.rjb)
+        mean = _compute_mean(C, rup.mag, dists.rjb)
         mean = clip_mean(imt, mean)
 
-        stddevs = self._compute_stddevs(C, dists.rjb.size, stddev_types)
+        stddevs = _compute_stddevs(C, dists.rjb.size, stddev_types)
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, rjb):
-        """
-        Compute and return mean value (table 8, page 8)
-        """
-        d1 = np.sqrt(50. ** 2 + 6. ** 2)
-        d = np.sqrt(rjb ** 2 + 6 ** 2)
-
-        mean = np.zeros_like(rjb)
-
-        mean += (
-            C['a1'] + C['a2'] * (mag - 6.4) +
-            C['a7'] * (8.5 - mag) ** 2
-        )
-
-        idx = rjb < 50.
-        mean[idx] += (
-            C['a3'] * np.log(d[idx]) +
-            C['a4'] * (mag - 6.4) * np.log(d[idx]) +
-            C['a5'] * rjb[idx]
-        )
-
-        idx = rjb >=50.
-        mean[idx] += (
-            C['a3'] * np.log(d1) +
-            C['a4'] * (mag - 6.4) * np.log(d[idx]) +
-            C['a5'] * rjb[idx] + C['a6'] * (np.log(d[idx]) - np.log(d1))
-        )
-
-        return mean
-
-    def _compute_stddevs(self, C, num_sites, stddev_types):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for _ in stddev_types:
-            stddevs.append(np.zeros(num_sites) + C['sigma'])
-
-        return stddevs
 
     #: Coefficient table obtained from coefficient arrays (a1, a2, a3, a4,
     #: a5, a6, a7, sig0) defined in subroutine getSomer in hazgridXnga2.f

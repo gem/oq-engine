@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,9 +31,7 @@ from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.contexts import read_ctxs, RuptureContext
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -94,7 +92,7 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
+def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -106,8 +104,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
         an ArrayWrapper of shape (N, M, P, Z)
-    :param trti:
-        tectonic region type index
     :param magi:
         magnitude bin indices
     :param bin_egdes:
@@ -117,12 +113,9 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
     :returns:
         a dictionary sid, imti -> 6D-array
     """
-    RuptureContext.temporal_occurrence_model = PoissonTOM(
-        cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, close_ctxs = read_ctxs(
-            dstore, slc, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
+        allctxs = cmaker.read_ctxs(dstore, slc)
         for magidx, ctx in zip(magi, allctxs):
             ctx.magi = magidx
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -136,15 +129,14 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
     eps3 = disagg._eps3(cmaker.trunclevel, cmaker.num_epsilon_bins)
     imts = [from_string(im) for im in cmaker.imtls]
     for magi, ctxs in groupby(allctxs, operator.attrgetter('magi')).items():
-        res = {'trti': trti, 'magi': magi}
+        res = {'trti': cmaker.trti, 'magi': magi}
         with ms_mon:
-            # compute mean and std for a single IMT to save memory
-            # the size is N * U * G * 16 bytes
-            disagg.set_mean_std(ctxs, imts, cmaker.gsims)
+            # compute mean and std (N * U * M * G * 16 bytes)
+            disagg.set_mean_std(ctxs, cmaker)
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(hmap4):
-            close = [ctx for ctx in close_ctxs[s] if ctx.magi == magi]
+            close = [ctx for ctx in ctxs if ctx.magi == magi and s in ctx.sids]
             if not g_by_z[s] or not close:
                 # g_by_z[s] is empty in test case_7
                 continue
@@ -154,8 +146,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
             iml2 = dict(zip(imts, iml3))
             with dis_mon:
                 # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
-                matrix = disagg.disaggregate(
-                    close, g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
+                matrix = disagg.disaggregate(close, cmaker.tom, g_by_z[s],
+                                             iml2, eps3, s, bins)  # 7D-matrix
                 for m in range(M):
                     mat6 = matrix[..., m, :, :]
                     if mat6.any():
@@ -194,7 +186,11 @@ class DisaggregationCalculator(base.HazardCalculator):
     precalc = 'classical'
     accept_precalc = ['classical', 'disaggregation']
 
-    def init(self):
+    def pre_checks(self):
+        """
+        Checks on the number of sites, atomic groups and size of the
+        disaggregation matrix.
+        """
         if self.N >= 32768:
             raise ValueError('You can disaggregate at max 32,768 sites')
         few = self.oqparam.max_sites_disagg
@@ -202,7 +198,27 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
-        super().init()
+        if hasattr(self, 'csm'):
+            for sg in self.csm.src_groups:
+                if sg.atomic:
+                    raise NotImplementedError(
+                        'Atomic groups are not supported yet')
+        elif self.datastore['source_info'].attrs['atomic']:
+            raise NotImplementedError(
+                'Atomic groups are not supported yet')
+        all_edges, shapedic = disagg.get_edges_shapedic(
+            self.oqparam, self.sitecol, self.datastore['source_mags'])
+        *b, trts = all_edges
+        T = len(trts)
+        shape = [len(bin) - 1 for bin in
+                 (b[0], b[1], b[2][0], b[3][0], b[4])] + [T]
+        matrix_size = numpy.prod(shape)  # 6D
+        if matrix_size > 1E6:
+            raise ValueError(
+                'The disaggregation matrix is too large '
+                '(%d elements): fix the binning!' % matrix_size)
+        tot = get_outputs_size(shapedic, self.oqparam.disagg_outputs)
+        logging.info('Total output size: %s', humansize(sum(tot.values())))
 
     def execute(self):
         """Performs the disaggregation"""
@@ -217,9 +233,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         :returns: a list of Z arrays of PoEs
         """
         poes = []
-        pcurves = self.pgetter.get_pcurves(sid)
+        pcurve = self.pgetter.get_pcurve(sid)
         for z, rlz in enumerate(rlzs):
-            pc = pcurves[rlz]
+            pc = pcurve.extract(rlz)
             if z == 0:
                 self.curves.append(pc.array[:, 0])
             poes.append(pc.convert(self.oqparam.imtls))
@@ -230,19 +246,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         Run the disaggregation phase.
         """
         oq = self.oqparam
-        mags_by_trt = self.datastore['source_mags']
-        all_edges, self.shapedic = disagg.get_edges_shapedic(
-            oq, self.sitecol, mags_by_trt)
-        *self.bin_edges, self.trts = all_edges
-        if hasattr(self, 'csm'):
-            for sg in self.csm.src_groups:
-                if sg.atomic:
-                    raise NotImplementedError(
-                        'Atomic groups are not supported yet')
-        elif self.datastore['source_info'].attrs['atomic']:
-            raise NotImplementedError(
-                'Atomic groups are not supported yet')
-
+        edges, self.shapedic = disagg.get_edges_shapedic(
+            oq, self.sitecol, self.datastore['source_mags'])
+        self.save_bin_edges(edges)
         self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
@@ -259,12 +265,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in self.sitecol.sids:
-                    curves = numpy.array(
-                        [pc.array for pc in self.pgetter.get_pcurves(sid)])
+                    pcurve = self.pgetter.get_pcurve(sid)
                     mean = getters.build_stat_curve(
-                        curves, oq.imtls, stats.mean_curve, ws)
+                        pcurve, oq.imtls, stats.mean_curve, ws)
                     # get the closest realization to the mean
-                    rlzs[sid] = util.closest_to_ref(curves, mean.array)[:Z]
+                    rlzs[sid] = util.closest_to_ref(
+                        pcurve.array.T, mean.array)[:Z]
             self.datastore['best_rlzs'] = rlzs
         else:
             Z = len(oq.rlz_index)
@@ -291,10 +297,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise SystemExit('Cannot do any disaggregation: zero hazard')
         self.datastore['hmap4'] = self.hmap4
         self.datastore['poe4'] = numpy.zeros_like(self.hmap4.array)
-
-        self.save_bin_edges()
-        tot = get_outputs_size(self.shapedic, oq.disagg_outputs)
-        logging.info('Total output size: %s', humansize(sum(tot.values())))
         return self.compute()
 
     def compute(self):
@@ -313,60 +315,49 @@ class DisaggregationCalculator(base.HazardCalculator):
         rdata['magi'] = magi
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
-        rdata['nsites'] = dstore['rup/nsites'][:]
+        rdata['nsites'] = [len(sids) for sids in dstore['rup/sids_']]
         totweight = rdata['nsites'].sum()
-        et_ids = dstore['et_ids'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
+        trt_smrs = dstore['trt_smrs'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
             numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
-        num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
         U = 0
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        # ABSURDLY IMPORTANT!! we rely on the fact that the classical part
+        # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices;
         # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
+        cmakers = read_cmakers(self.datastore)
         for block in block_splitter(rdata, maxweight,
                                     operator.itemgetter('nsites'),
                                     operator.itemgetter('grp_id')):
             grp_id = block[0]['grp_id']
-            trti = et_ids[grp_id][0] // num_eff_rlzs
-            trt = self.trts[trti]
-            cmaker = ContextMaker(
-                trt, rlzs_by_gsim[grp_id],
-                {'truncation_level': oq.truncation_level,
-                 'maximum_distance': oq.maximum_distance,
-                 'collapse_level': oq.collapse_level,
-                 'num_epsilon_bins': oq.num_epsilon_bins,
-                 'investigation_time': oq.investigation_time,
-                 'imtls': oq.imtls})
+            cmaker = cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, self.hmap4, trti, magi[slc],
-                         self.bin_edges))
-            task_inputs.append((trti, slc.stop-slc.start))
+            smap.submit((dstore, slc, cmaker, self.hmap4,
+                         magi[slc], self.bin_edges))
+            task_inputs.append((cmaker.trti, slc.stop-slc.start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
         s = self.shapedic
-        sd = dict(N=s['N'], M=s['M'], P=s['P'], Z=s['Z'], D=s['dist'],
-                  E=s['eps'], Lo=s['lon'], La=s['lat'])
-        sd['tasks'] = numpy.ceil(len(task_inputs))
-        nbytes, msg = get_nbytes_msg(sd)
-        if nbytes > oq.max_data_transfer:
+        Ta = len(task_inputs)
+        nbytes = s['N'] * s['M'] * s['P'] * s['Z'] * Ta * 8
+        data_transfer = (s['dist'] * s['eps'] + s['lon'] * s['lat']) * nbytes
+        if data_transfer > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
-                (msg, humansize(oq.max_data_transfer)))
-        logging.info('Estimated data transfer:\n%s', msg)
+                (humansize(data_transfer), humansize(oq.max_data_transfer)))
+        logging.info('Estimated data transfer: %s', humansize(data_transfer))
 
-        sd.pop('tasks')
         dt = numpy.dtype([('trti', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
@@ -388,34 +379,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                     x = acc[s, m, k].get((trti, magi), 0)
                     acc[s, m, k][trti, magi] = agg_probs(x, out[k])
         return acc
-
-    def save_bin_edges(self):
-        """
-        Save disagg-bins
-        """
-        b = self.bin_edges
-        T = len(self.trts)
-        shape = [len(bin) - 1 for bin in
-                 (b[0], b[1], b[2][0], b[3][0], b[4])] + [T]
-        matrix_size = numpy.prod(shape)  # 6D
-        if matrix_size > 1E6:
-            raise ValueError(
-                'The disaggregation matrix is too large '
-                '(%d elements): fix the binning!' % matrix_size)
-
-        def a(bin_no):
-            # lon/lat edges for the sites, bin_no can be 2 or 3
-            num_edges = len(b[bin_no][0])
-            arr = numpy.zeros((self.N, num_edges))
-            for sid, edges in b[bin_no].items():
-                arr[sid] = edges
-            return arr
-        self.datastore['disagg-bins/Mag'] = b[0]
-        self.datastore['disagg-bins/Dist'] = b[1]
-        self.datastore['disagg-bins/Lon'] = a(2)
-        self.datastore['disagg-bins/Lat'] = a(3)
-        self.datastore['disagg-bins/Eps'] = b[4]
-        self.datastore['disagg-bins/TRT'] = encode(self.trts)
 
     def post_execute(self, results):
         """
@@ -439,6 +402,27 @@ class DisaggregationCalculator(base.HazardCalculator):
         with self.monitor('saving disagg results'):
             self.save_disagg_results(results)
 
+    def save_bin_edges(self, all_edges):
+        """
+        Save disagg-bins
+        """
+        *self.bin_edges, self.trts = all_edges
+        b = self.bin_edges
+
+        def a(bin_no):
+            # lon/lat edges for the sites, bin_no can be 2 or 3
+            num_edges = len(b[bin_no][0])
+            arr = numpy.zeros((self.N, num_edges))
+            for sid, edges in b[bin_no].items():
+                arr[sid] = edges
+            return arr
+        self.datastore['disagg-bins/Mag'] = b[0]
+        self.datastore['disagg-bins/Dist'] = b[1]
+        self.datastore['disagg-bins/Lon'] = a(2)
+        self.datastore['disagg-bins/Lat'] = a(3)
+        self.datastore['disagg-bins/Eps'] = b[4]
+        self.datastore['disagg-bins/TRT'] = encode(self.trts)
+
     def save_disagg_results(self, results):
         """
         Save the computed PMFs in the datastore
@@ -453,6 +437,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         vcurves = []  # hazard curves with a vertical section for large poes
         for (s, m, k), mat6 in sorted(results.items()):
+            # NB: k is an index with value 0 (MagDistEps) or 1 (MagLonLat)
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat5 = mat6[..., p, :]
@@ -494,6 +479,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
         if len(vcurves):
-            NML1 = len(vcurves), self.M, len(oq.imtls.array) // self.M
+            NML1 = len(vcurves), self.M, oq.imtls.size // self.M
             self.datastore['_vcurves'] = numpy.array(vcurves).reshape(NML1)
             self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]

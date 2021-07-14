@@ -37,9 +37,11 @@ def layout(node):
     add_face_to_node(TextFace(node.name), node, 0, position='branch-top')
 
 
-@sap.Script
 def main(fname):
     smlt = SourceModelLogicTree(fname)
+    if smlt.num_paths > 1000:
+        raise ValueError('The logic tree is too big to plot: {:_d} branches'.
+                         format(smlt.num_paths))
     tree = Tree()
     extend(tree, smlt.root_branchset)
     print(tree)
@@ -48,8 +50,7 @@ def main(fname):
     ts.layout_fn = layout
     tree.show(tree_style=ts)
 
-main.arg('fname', 'path to a source_model_logic_tree file')
-
+main.fname = 'path to a source_model_logic_tree file'
 
 if __name__ == '__main__':
-    main.callfunc()
+    sap.run(main)

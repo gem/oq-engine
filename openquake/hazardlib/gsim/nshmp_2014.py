@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -50,7 +50,7 @@ class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
         # Get original mean and standard deviations
         mean, stddevs = super().get_mean_and_stddevs(
             sctx, rctx, dctx, imt, stddev_types)
-        mean += np.log(SInterCan15Mid.SITE_COEFFS[imt]['mf'])
+        mean += np.log(SInterCan15Mid.COEFFS_SITE[imt]['mf'])
         return mean, stddevs
 
 

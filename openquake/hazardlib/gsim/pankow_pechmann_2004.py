@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,24 +40,16 @@ class PankowPechmann2004(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: TO CHECK PSV!
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is VECTORIAL
     #: :attr:`~openquake.hazardlib.const.IMC.VECTORIAL`,
     #: NOTE: The paper indicates it as Geometric mean (to check)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = set([
-        const.IMC.VECTORIAL,
-        const.IMC.RANDOM_HORIZONTAL
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {
+        const.IMC.VECTORIAL, const.IMC.RANDOM_HORIZONTAL}
 
     #: Supported standard deviation type is total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -80,6 +72,7 @@ class PankowPechmann2004(GMPE):
         for spec of input and result values.
         """
         C = self.COEFFS[imt]
+        num_sites = len(dists.rjb)
 
         M = rup.mag - 6
         R = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
@@ -91,11 +84,11 @@ class PankowPechmann2004(GMPE):
 
         mean = np.zeros_like(R)
 
-        mean += C['b1'] + \
-                C['b2'] * M + \
-                C['b3'] * M ** 2 + \
-                C['b5'] * np.log10(R) + \
-                C['b6'] * gamma
+        mean += (C['b1'] +
+                 C['b2'] * M +
+                 C['b3'] * M ** 2 +
+                 C['b5'] * np.log10(R) +
+                 C['b6'] * gamma)
 
         # Convert from base 10 to base e
         mean /= np.log10(np.e)
@@ -106,29 +99,18 @@ class PankowPechmann2004(GMPE):
             mean += np.log(omega/(gravity*100))
 
         # Computing standard deviation
-        stddevs = self._get_stddevs(C, stddev_types,  dists.rjb.shape[0])
-
-        # Convert from base 10 to base e
-        stddevs = [sd/np.log10(np.e) for sd in stddevs]
-
-        return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         if self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT == 'Random horizontal':
             # Using equation 8 of the paper,
             # corrected as indicated in the erratum
             Sr = np.sqrt(C['SlZ']**2 + (C['S3']/np.sqrt(2))**2)
         else:
             Sr = C['SlZ']
-
         stddevs = [np.zeros(num_sites) + Sr for _ in stddev_types]
-        return stddevs
+
+        # Convert from base 10 to base e
+        stddevs = [sd/np.log10(np.e) for sd in stddevs]
+
+        return mean, stddevs
 
     #: coefficient table provided by GSC (corrected as in the erratum)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

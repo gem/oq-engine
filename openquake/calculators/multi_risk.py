@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,6 +19,7 @@ import csv
 import json
 import logging
 import numpy
+import pandas
 import shapely
 from openquake.baselib import hdf5, general
 from openquake.hazardlib import valid, geo, InvalidFile
@@ -44,17 +45,18 @@ def get_dmg_csq(crm, assets_by_site, gmf):
     D = len(crm.damage_states)
     out = numpy.zeros((A, L, 1, D + 1), F32)
     for assets, gmv in zip(assets_by_site, gmf):
+        df = pandas.DataFrame(dict(peril=[gmv]))
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
-            for l, loss_type in enumerate(crm.loss_types):
+            for li, loss_type in enumerate(crm.loss_types):
                 # NB: risk logic trees are not yet supported in multi_risk
-                [rm], [w] = crm.get_rmodels_weights(taxonomy)
-                fracs = rm.scenario_damage(loss_type, assets, [gmv])
+                [rm], [w] = crm.get_rmodels_weights(loss_type, taxonomy)
+                fracs = rm.scenario_damage(loss_type, assets, df, 'peril')
                 for asset, frac in zip(assets, fracs):
                     dmg = asset['number'] * frac  # shape (1, D)
                     csq = crm.compute_csq(asset, frac, loss_type)
-                    out[asset['ordinal'], l, 0, :D] = dmg
-                    out[asset['ordinal'], l, 0, D] = csq['losses']
+                    out[asset['ordinal'], li, 0, :D] = dmg
+                    out[asset['ordinal'], li, 0, D] = csq['losses']
     return out
 
 
@@ -64,20 +66,19 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     dtlist = []
     field2tup = {}
     occupants = [name for name in assetcol.array.dtype.names
-                 if name.startswith('occupants') and
-                 not name.endswith('_None')]
+                 if name.startswith('occupants')]
     for name, dt in assetcol.array.dtype.descr:
-        if name not in {'area', 'occupants_None', 'ordinal', 'id'}:
+        if name not in {'area', 'value-occupants', 'ordinal', 'id'}:
             dtlist.append((name, dt))
     dtlist.sort()
     dtlist.insert(0, ('id', '<S100'))
     if not loss_types:  # missing ASH
         loss_types = ['structural']  # for LAVA, LAHAR, PYRO
-    for l, loss_type in enumerate(loss_types):
+    for li, loss_type in enumerate(loss_types):
         for d, ds in enumerate(damage_states + ['loss']):
             for p, peril in enumerate(perils):
                 field = ds + '-' + loss_type + '-' + peril
-                field2tup[field] = (p, l, 0, d)
+                field2tup[field] = (p, li, 0, d)
                 dtlist.append((field, F32))
         for peril in binary_perils:
             dtlist.append(('loss-' + loss_type + '-' + peril, F32))

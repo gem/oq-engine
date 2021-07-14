@@ -8,8 +8,8 @@ herein major differences.
 \begin{minted}[firstline=1,linenos=true,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 [general]
 description = A demo .ini file for PSHA disaggregation
-calculation_mode = disaggregation
-random_seed = 1024
+calculation\_mode = disaggregation
+random\_seed = 1024
 \end{minted}
 
 The calculation mode parameter in this case is set as
@@ -34,13 +34,13 @@ of each parameter is provided below.
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=7,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 [disaggregation]
-poes_disagg = 0.02, 0.1
-mag_bin_width = 1.0
-distance_bin_width = 25.0
-coordinate_bin_width = 1.5
-num_epsilon_bins = 3
-disagg_outputs = Mag_Dist_Eps Mag_Lon_Lat
-num_rlzs_disagg = 3
+poes\_disagg = 0.02, 0.1
+mag\_bin\_width = 1.0
+distance\_bin\_width = 25.0
+coordinate\_bin\_width = 1.5
+num\_epsilon\_bins = 3
+disagg\_outputs = Mag\_Dist\_Eps Mag\_Lon\_Lat
+num\_rlzs\_disagg = 3
 \end{minted}
 
 \begin{itemize}
@@ -103,10 +103,11 @@ rlz_index = 22,23
 \end{minted}
 
 If \texttt{num\_rlzs\_disagg} is specified, the user cannot specify
-\texttt{rlz\_index}, and vice versa. If neither is specified, the
-realization that yields the intensity measure level closest to the mean will be
-selected. The mean disaggregation is based on only the selected realizations,
-$not$ all the realizations of the model.  
+\texttt{rlz\_index}, and vice versa. If  \texttt{num\_rlzs\_disagg} or \texttt{rlz\_index} are
+specified, the mean disaggregation is automatically computed from the
+selected realizations.  If neither is specified, the realization that
+yields the intensity measure level closest to the mean level will be
+selected.
 
 As mentioned above, the user also has the option to perform disaggregation by
 directly specifying the intensity measure level to be disaggregated, rather than

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,9 +19,15 @@
 """
 Implements the comprehensive test suite for the Campbell & Bozorgnia (2014)
 NGA-West2 GMPE
-Tests generated using a modified form of the implementation from Yue Hua,
-Stanford University. The original implementation can be found at this link:
-http://web.stanford.edu/~bakerjw/GMPEs.html
+Test data generated using the Excel file published as supplementary material
+with the V/H Earthquake Spectra paper from the same authors:
+https://journals.sagepub.com/doi/suppl/10.1193/100614eqs151m
+
+# Take note of the following bug in the 'HOR Spectrum (PSA)' Sheet of
+# the supplemental Excel file:
+#   * Formula error in cell A62 and Column L, i.e. the formula for f_sed
+#     (Basin Response Term) should refer to the Sj flag instead of the Sji flag
+#   * A1100 should refer to Z2.5 (VS30=1100) in Cell B48, not constant in A48.
 """
 
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (

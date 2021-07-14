@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="None"
+    >
+        <areaSource
+        id="516"
+        name="Appennino emiliano"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <Polygon>
+                    <exterior>
+                        <LinearRing>
+                            <posList>
+                                11.10120233 44.38567008 10.83778578 44.19320654 9.95750184 44.5349863 10.29987328 44.68097767 11.10120233 44.38567008
+                            </posList>
+                        </LinearRing>
+                    </exterior>
+                </Polygon>
+                <upperSeismoDepth>
+                    1.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    10.0
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.0
+            </ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="4.5" bValue="1.0" minMag="5.0" maxMag="7.0"/>
+            <nodalPlaneDist>
+                <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="5.0"
+                probability="1.0"
+                >
+                    1.0 5.0
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+    </sourceModel>
+</nrml>

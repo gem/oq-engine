@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -37,6 +37,10 @@ class TruncatedGRMFDFromMomentTestCase(unittest.TestCase):
         computed = np.sum(10**(1.5*rates[:, 0] + 9.1) * rates[:, 1])
         msg = "Scalar Mo rate from MFD does not match the original one"
         self.assertAlmostEqual(moment_rate, computed, msg=msg, delta=1e14)
+
+        # test for a_val = -inf
+        with self.assertRaises(ValueError):
+            TruncatedGRMFD(min_mag, max_mag, bin_width, -np.inf, b_val)
 
 
 class TruncatedGRMFDConstraintsTestCase(BaseMFDTestCase):

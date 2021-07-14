@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Source model XML Writer
 """
@@ -192,6 +191,27 @@ def build_truncated_gr_mfd(mfd):
     return Node("truncGutenbergRichterMFD",
                 {"aValue": mfd.a_val, "bValue": mfd.b_val,
                  "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
+
+
+@obj_to_node.add('TaperedGRMFD')
+def build_tapered_gr_mfd(mfd):
+    """
+    Parses the truncated Gutenberg Richter MFD as a Node
+
+    :param mfd:
+        MFD as instance of :class:
+        `openquake.hazardlib.mfd.tapered_gr_mfd.TaperedGRMFD`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    return Node(
+        "taperedGutenbergRichterMFD", {
+            "aValue": mfd.a_val,
+            "bValue": mfd.b_val,
+            "cornerMag": mfd.corner_mag,
+            "minMag": mfd.min_mag,
+            "maxMag": mfd.max_mag
+        })
 
 
 @obj_to_node.add('ArbitraryMFD')
@@ -472,6 +492,8 @@ def build_rupture_node(rupt, probs_occur):
         name = 'complexFaultRupture'
     elif geom == 'griddedSurface':
         name = 'griddedRupture'
+    elif geom == 'kiteSurface':
+        name = 'kiteSurface'
     return Node(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
 
 
@@ -569,6 +591,35 @@ def build_complex_fault_source_node(fault_source):
     return Node("complexFaultSource",
                 get_source_attributes(fault_source),
                 nodes=source_nodes)
+
+
+@obj_to_node.add('MultiFaultSource')
+def build_multi_fault_source_node(multi_fault_source):
+    """
+    Parses a MultiFaultSource to a Node class
+
+    :param multi_fault_source:
+        Multi fault source as instance of :class:
+        `openquake.hazardlib.source.multi_fault.MultiFaultSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    rup_nodes = []  # multiPlanesRupture
+    for rup_idxs, pmf_, mag, rake in zip(
+            multi_fault_source.rupture_idxs,
+            multi_fault_source.pmfs,
+            multi_fault_source.mags,
+            multi_fault_source.rakes):
+        probs = ' '.join(map(str, [pair[0] for pair in pmf_.data]))
+        nodes = [Node('magnitude', text=str(mag)),
+                 Node('sectionIndexes', {'indexes': ','.join(rup_idxs)}),
+                 Node('rake', text=str(rake))]
+        rup_node = Node('multiPlanesRupture', {'probs_occur': probs},
+                        nodes=nodes)
+        rup_nodes.append(rup_node)
+    return Node("multiFaultSource",
+                get_source_attributes(multi_fault_source),
+                nodes=rup_nodes)
 
 
 @obj_to_node.add('SourceGroup')

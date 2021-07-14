@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,8 +35,10 @@ from openquake.hazardlib.scalerel.leonard2014 import (Leonard2014_SCR,
 from openquake.hazardlib.scalerel.strasser2010 import (StrasserInterface,
                                                        StrasserIntraslab)
 from openquake.hazardlib.scalerel.wc1994_qcss import WC1994_QCSS
-
-
+from openquake.hazardlib.scalerel.thingbaijam2017 import ThingbaijamInterface
+from openquake.hazardlib.scalerel.allenhayes2017 import (
+    AllenHayesInterfaceLinear, AllenHayesInterfaceBilinear,
+    AllenHayesIntraslab)
 
 
 def _get_available_class(base_class):

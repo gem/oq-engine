@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,10 @@ import itertools
 from datetime import datetime
 import psutil
 import numpy
+try:
+    import numba
+except ImportError:
+    numba = None
 
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
@@ -273,14 +277,18 @@ class Monitor(object):
         """
         :param key: key in the _tmp.hdf5 file
         :param obj: big object to store in pickle format
+        :returns: True is saved, False if not because the key was taken
         """
         tmp = self.filename[:-5] + '_tmp.hdf5'
         f = hdf5.File(tmp, 'a') if os.path.exists(tmp) else hdf5.File(tmp, 'w')
         with f:
+            if key in f:  # already saved
+                return False
             if isinstance(obj, numpy.ndarray):
                 f[key] = obj
             else:
                 f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+        return True
 
     def read(self, key):
         """
@@ -306,3 +314,30 @@ class Monitor(object):
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg
+
+
+# numba helpers
+if numba:
+
+    def jittable(func):
+        """Calls numba.njit with a cache"""
+        jitfunc = numba.njit(func, cache=True)
+        jitfunc.jittable = True
+        return jitfunc
+
+    def compile(sigstr):
+        """
+        Compile a function Ahead-Of-Time using the given signature string
+        """
+        return numba.njit(sigstr, cache=True)
+
+else:
+
+    def jittable(func):
+        """Do nothing decorator, used if numba is missing"""
+        func.jittable = True
+        return func
+
+    def compile(sigstr):
+        """Do nothing decorator, used if numba is missing"""
+        return lambda func: func

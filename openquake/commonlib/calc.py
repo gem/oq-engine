@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,7 @@ NB: parallelization would kill the performance::
     oq = dstore['oqparam']
     N = len(dstore['sitecol'])
     M = len(oq.imtls)
-    L1 = len(oq.imtls.array) // M
+    L1 = oq.imtls.size // M
     gmf_df = dstore.read_df('gmf_data', 'sid')
     mean = numpy.zeros((N, 1, M, L1))
     for sid, df in gmf_df.groupby(gmf_df.index):
@@ -41,12 +41,13 @@ NB: parallelization would kill the performance::
 import itertools
 import warnings
 import logging
+from unittest.mock import Mock
 import numpy
 
 from openquake.baselib import parallel
-from openquake.baselib.general import get_indices
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
+from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -107,9 +108,10 @@ def compute_hazard_maps(curves, imls, poes):
     ``poes``.
 
     :param curves:
-        2D array of floats. Each row represents a curve, where the values
-        in the row are the PoEs (Probabilities of Exceedance) corresponding to
-        ``imls``. Each curve corresponds to a geographical location.
+        Array of floats of shape N x L. Each row represents a curve, where the
+        values in the row are the PoEs (Probabilities of Exceedance)
+        corresponding to the ``imls``.
+        Each curve corresponds to a geographical location.
     :param imls:
         Intensity Measure Levels associated with these hazard ``curves``. Type
         should be an array-like of floats.
@@ -143,20 +145,19 @@ def compute_hazard_maps(curves, imls, poes):
         imls = numpy.log(numpy.array(imls[::-1]))
     for n, curve in enumerate(curves):
         # the hazard curve, having replaced the too small poes with EPSILON
-        log_cutoff = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
+        log_curve = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
         for p, log_poe in enumerate(log_poes):
-            if log_poe > log_cutoff[-1]:
+            if log_poe > log_curve[-1]:
                 # special case when the interpolation poe is bigger than the
-                # maximum, i.e the iml must be smaller than the minumum
+                # maximum, i.e the iml must be smaller than the minimum;
                 # extrapolate the iml to zero as per
-                # https://bugs.launchpad.net/oq-engine/+bug/1292093
-                # a consequence is that if all poes are zero any poe > 0
-                # is big and the hmap goes automatically to zero
+                # https://bugs.launchpad.net/oq-engine/+bug/1292093;
+                # then the hmap goes automatically to zero
                 pass
             else:
                 # exp-log interpolation, to reduce numerical errors
                 # see https://bugs.launchpad.net/oq-engine/+bug/1252770
-                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_cutoff, imls))
+                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_curve, imls))
     return hmap
 
 
@@ -188,19 +189,19 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     return poes
 
 
-def gmvs_to_poes(gmvs, imtls, ses_per_logic_tree_path):
+def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
     """
-    :param gmvs: an array of GMVs of shape (M, E)
+    :param df: a DataFrame with fields gmv_0, .. gmv_{M-1}
     :param imtls: a dictionary imt -> imls with M IMTs and L levels
     :param ses_per_logic_tree_path: a positive integer
     :returns: an array of PoEs of shape (M, L)
     """
     M = len(imtls)
-    assert len(gmvs) == M, (len(gmvs), M)
     L = len(imtls[next(iter(imtls))])
     arr = numpy.zeros((M, L))
-    for m, imls in enumerate(imtls.values()):
-        arr[m] = _gmvs_to_haz_curve(gmvs[m], imls, ses_per_logic_tree_path)
+    for m, imt in enumerate(imtls):
+        arr[m] = _gmvs_to_haz_curve(
+            df[f'gmv_{m}'].to_numpy(), imtls[imt], ses_per_logic_tree_path)
     return arr
 
 
@@ -263,50 +264,63 @@ class RuptureImporter(object):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
 
-    def import_rups(self, rup_array):
+    def get_eid_rlz(self, proxies, rlzs_by_gsim):
         """
-        Import an array of ruptures in the proper format
+        :returns: a composite array with the associations eid->rlz
         """
+        eid_rlz = []
+        for rup in proxies:
+            ebr = EBRupture(Mock(rup_id=rup['seed']), rup['source_id'],
+                            rup['trt_smr'], rup['n_occ'], e0=rup['e0'])
+            ebr.scenario = 'scenario' in self.oqparam.calculation_mode
+            for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
+                for eid in eids:
+                    eid_rlz.append((eid, rup['id'], rlz_id))
+        return numpy.array(eid_rlz, events_dt)
+
+    def import_rups_events(self, rup_array, get_rupture_getters):
+        """
+        Import an array of ruptures and store the associated events.
+        :returns: (number of imported ruptures, number of imported events)
+        """
+        oq = self.oqparam
         logging.info('Reordering the ruptures and storing the events')
-        # order the ruptures by serial
-        rup_array.sort(order='serial')
+        # order the ruptures by seed
+        rup_array.sort(order='seed')
         nr = len(rup_array)
-        serials, counts = numpy.unique(rup_array['serial'], return_counts=True)
-        if len(serials) != nr:
-            dupl = serials[counts > 1]
+        seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
+        if len(seeds) != nr:
+            dupl = seeds[counts > 1]
             logging.info('The following %d rupture seeds are duplicated: %s',
                          len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
         self.datastore['ruptures'] = rup_array
-        self.save_events(rup_array)
+        rgetters = get_rupture_getters(  # fast
+            self.datastore, self.oqparam.concurrent_tasks)
+        self._save_events(rup_array, rgetters)
+        nr, ne = len(rup_array), rup_array['n_occ'].sum()
+        if oq.investigation_time:
+            eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
+                        len(self.datastore['weights']))
+            logging.info('There are {:_d} events and {:_d} ruptures in {:_d} '
+                         'years'.format(ne, nr, int(eff_time)))
 
-    def save_events(self, rup_array):
-        """
-        :param rup_array: an array of ruptures with fields et_id
-        :returns: a list of RuptureGetters
-        """
-        from openquake.calculators.getters import (
-            get_eid_rlz, gen_rupture_getters)
+    def _save_events(self, rup_array, rgetters):
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         self.check_overflow(E)  # check the number of events
         events = numpy.zeros(E, rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = gen_rupture_getters(
-            self.datastore, self.oqparam.concurrent_tasks)
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Associating event_id -> rlz_id for {:_d} events '
-                     'and {:_d} ruptures'.format(len(events), len(rup_array)))
         iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
         if len(events) < 1E5:
-            it = itertools.starmap(get_eid_rlz, iterargs)
+            it = itertools.starmap(self.get_eid_rlz, iterargs)
         else:
             it = parallel.Starmap(
-                get_eid_rlz, iterargs, progress=logging.debug,
-                h5=self.datastore.hdf5)
+                self.get_eid_rlz, iterargs, progress=logging.debug)
         i = 0
         for eid_rlz in it:
             for er in eid_rlz:
@@ -328,10 +342,9 @@ class RuptureImporter(object):
             extra['year'] = numpy.random.choice(itime, len(events)) + 1
         extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
-        eindices = get_indices(events['rup_id'])
-        arr = numpy.array(list(eindices.values()))[:, 0, :]
-        self.datastore['ruptures']['e0'] = arr[:, 0]
-        self.datastore['ruptures']['e1'] = arr[:, 1]
+        cumsum = self.datastore['ruptures']['n_occ'].cumsum()
+        rup_array['e0'][1:] = cumsum[:-1]
+        self.datastore['ruptures']['e0'] = rup_array['e0']
 
     def check_overflow(self, E):
         """
@@ -361,3 +374,4 @@ class RuptureImporter(object):
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
+

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,53 +20,18 @@ import unittest
 import pickle
 
 import numpy
+import pandas
 from openquake.risklib import scientific
 
-aaae = numpy.testing.assert_array_almost_equal
+aae = numpy.testing.assert_allclose
+eids = numpy.arange(3)
 
 
-class DegenerateDistributionTest(unittest.TestCase):
-    def setUp(self):
-        self.distribution = scientific.DegenerateDistribution()
-
-    def test_survival_zero_mean(self):
-        self.assertEqual(
-            0, self.distribution.survival(numpy.random.random(), 0, None))
-
-    def test_survival_nonzeromean(self):
-        loss_ratio = numpy.random.random()
-        mean = loss_ratio - numpy.random.random()
-
-        self.assertEqual(
-            0, self.distribution.survival(loss_ratio, mean, None))
-
-        mean = loss_ratio + numpy.random.random()
-        self.assertEqual(
-            1, self.distribution.survival(loss_ratio, mean, None))
-
-
-class BetaDistributionTestCase(unittest.TestCase):
-    def test_sample_one(self):
-        numpy.random.seed(0)
-        numpy.testing.assert_allclose(
-            [0.057241368], scientific.BetaDistribution().sample(
-                numpy.array([0.1]), None, numpy.array([0.1])))
-
-    def test_zero_ratios(self):
-        # a loss ratio can be zero if the corresponding CoV is zero
-        scientific.VulnerabilityFunction(
-            'v1', 'PGA', [.1, .2, .3], [0, .1, .2], [0, .2, .3], 'BT')
-
-    def test_large_covs(self):
-        with self.assertRaises(ValueError) as ctx:
-            scientific.VulnerabilityFunction(
-                'v1', 'PGA', [.1, .2, .3], [.05, .1, .2], [.1, .2, 3], 'BT')
-        self.assertIn('The coefficient of variation 3.0 > 2.0 is too large',
-                      str(ctx.exception))
-
-
-epsilons = scientific.make_epsilons(
-    numpy.zeros((1, 3)), seed=3, correlation=0)[0]
+def call(vf, gmvs, eids):
+    rng = scientific.MultiEventRNG(42, eids)
+    gmf_df = pandas.DataFrame(
+        dict(eid=eids, gmv_0=gmvs, sid=numpy.zeros(len(eids))))
+    return [vf(None, gmf_df, 'gmv_0', rng).loss.to_numpy()]
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
@@ -96,7 +61,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         self.test_func = scientific.VulnerabilityFunction(
             self.ID, self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
             self.COVS_GOOD)
-        self.test_func.seed = 42
         self.test_func.init()
 
     def test_vuln_func_constructor_raises_on_bad_imls(self):
@@ -163,20 +127,20 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             self.COVS_GOOD)
 
     def test_loss_ratio_interp_many_values(self):
-        expected_lrs = numpy.array([0.0161928, 0.05880167, 0.12242504])
+        expected_lrs = numpy.array([[0.006926, 0.033077, 0.181509]])
         test_input = [0.005, 0.006, 0.0269]
         numpy.testing.assert_allclose(
-            expected_lrs, self.test_func(test_input, epsilons))
+            expected_lrs, call(self.test_func, test_input, eids), atol=1E-6)
 
     def test_loss_ratio_interp_many_values_clipped(self):
         # Given a list of IML values (abscissae), test for proper interpolation
         # of loss ratios (ordinates).
         # This test also ensures that input IML values are 'clipped' to the IML
         # range defined for the vulnerability function.
-        expected_lrs = numpy.array([0., 0.05880167, 0.12242504])
+        expected_lrs = numpy.array([[0.033077, 0.181509]])
         test_input = [0.00049, 0.006, 2.7]
         numpy.testing.assert_allclose(
-            expected_lrs, self.test_func(test_input, epsilons))
+            expected_lrs, call(self.test_func, test_input, eids), atol=1E-6)
 
     def test_cov_interp_many_values(self):
         expected_covs = numpy.array([0.3, 0.2, 10])
@@ -202,14 +166,11 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             vf = scientific.VulnerabilityFunction(
                 self.ID, self.IMT, self.IMLS_GOOD,
                 [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-                [0.001, 0.002, 0.003, 0.004, 0.005, 0.006],
-            )
-            vf.seed = 42
+                [0.001, 0.002, 0.003, 0.004, 0.005, 0.006])
             vf.init()
         expected_error = (
-            'It is not valid to define a loss ratio = 0.0 with a corresponding'
-            ' coeff. of variation > 0.0'
-        )
+            'It is not valid to define a mean loss ratio = 0 with a '
+            'corresponding coefficient of variation > 0')
         self.assertEqual(expected_error, str(ar.exception))
 
     def test_lrem_lr_cov_special_cases(self):
@@ -223,9 +184,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             [0.1, 0.2, 0.3, 0.45, 0.6],  # IMLs
             [0.0, 0.1, 0.2, 0.4, 1.2],   # loss ratios
             [0.0, 0.0, 0.3, 0.2, 0.1],   # CoVs
-            'LN'
-        )
-        curve.seed = 42
+            'LN')
         curve.init()
         loss_ratios = tuple(curve.mean_loss_ratios_with_steps(5))
         lrem = curve.loss_ratio_exceedance_matrix(loss_ratios)
@@ -252,126 +211,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             [0.000, 0.000, 0.000, 0.000, 0.917],
             [0.000, 0.000, 0.000, 0.000, 0.480],
         ])
-        aaae(lrem, expected_lrem, decimal=3)
+        aae(lrem, expected_lrem, atol=1E-3)
 
-
-class VulnerabilityFunctionBlockSizeTestCase(unittest.TestCase):
-    """
-    Test the block size independency of the vulnerability function
-    """
-    @classmethod
-    def setUpClass(cls):
-        cls.vf = scientific.VulnerabilityFunction(
-            'RM', 'PGA', [0.02, 0.3, 0.5, 0.9, 1.2],
-            [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.0001, 0.0001, 0.0001, 0.0001, 0.0001])
-        cls.vf.seed = 42
-        cls.vf.init()
-
-    def test(self):
-        # values passed as a single block produce the same losses when
-        # passed in several blocks
-
-        gmvs = [0.3307648, 0.77900947, 0., 2.15393227, 0.,
-                0., 0.42448847, 0., 0., 0., 0.15023323,
-                0., 0., 0., 0., 0., 0., 0., 0.51451394, 0.]
-        eps = [0.49671415, 0.64768854, -0.23415337, 1.57921282, -0.46947439,
-               -0.46341769, 0.24196227, -1.72491783, -1.01283112, -0.90802408,
-               1.46564877, 0.0675282, -0.54438272, -1.15099358, -0.60063869,
-               -0.60170661, -0.01349722, 0.82254491, 0.2088636, -1.32818605]
-        singleblock = list(self.vf(gmvs, eps).reshape(-1))
-
-        # multiblock
-        gmvs_, eps_ = [None] * 7, [None] * 7
-        gmvs_[0] = [0.3307648, 0.77900947, 0.]
-        eps_[0] = [0.49671415, 0.64768854, -0.23415337]
-        gmvs_[1] = [2.15393227, 0., 0.]
-        eps_[1] = [1.57921282, -0.46947439, -0.46341769]
-        gmvs_[2] = [0.42448847, 0., 0.]
-        eps_[2] = [0.24196227, -1.72491783, -1.01283112]
-        gmvs_[3] = [0., 0.15023323, 0.]
-        eps_[3] = [-0.90802408, 1.46564877, 0.0675282]
-        gmvs_[4] = [0., 0., 0.]
-        eps_[4] = [-0.54438272, -1.15099358, -0.60063869]
-        gmvs_[5] = [0., 0., 0.]
-        eps_[5] = [-0.60170661, -0.01349722, 0.82254491]
-        gmvs_[6] = [0.51451394, 0.]
-        eps_[6] = [0.2088636, -1.32818605]
-        multiblock = []
-        for gmvs, eps in zip(gmvs_, eps_):
-            multiblock.extend(self.vf(gmvs, eps).reshape(-1))
-
-        # this test has been broken forever, finally fixed in OpenQuake 1.5
-        self.assertEqual(singleblock, multiblock)
-
-
-class MeanLossTestCase(unittest.TestCase):
-    def test_mean_loss(self):
-        vf = scientific.VulnerabilityFunction(
-            'VF1', 'PGA', imls=[0.1, 0.2, 0.3, 0.5, 0.7],
-            mean_loss_ratios=[0.0035, 0.07, 0.14, 0.28, 0.56],
-            covs=[0.1, 0.2, 0.3, 0.4, 0.5])
-        vf.seed = 42
-        vf.init()
-
-        epsilons = [0.98982371, 0.2776809, -0.44858935, 0.96196624,
-                    -0.82757864, 0.53465707, 1.22838619]
-        imls = [0.280357, 0.443609, 0.241845, 0.506982, 0.459758,
-                0.456199, 0.38077]
-        mean = vf(imls, epsilons).mean()
-        aaae(mean, 0.2318058254)
-
-        # if you don't reorder the epsilons, the mean loss depends on
-        # the order of the imls!
-        reordered_imls = [0.443609, 0.280357, 0.241845, 0.506982, 0.459758,
-                          0.456199, 0.38077]
-        mean2 = vf(reordered_imls, epsilons).mean()
-        aaae(mean2, 0.238145174018)
-        self.assertGreater(abs(mean2 - mean), 0.005)
-
-        # by reordering the epsilons the problem is solved
-        reordered_epsilons = [0.2776809, 0.98982371, -0.44858935, 0.96196624,
-                              -0.82757864, 0.53465707, 1.22838619]
-        mean3 = vf(reordered_imls, reordered_epsilons).mean()
-        aaae(mean3, mean)
-
-
-class LogNormalDistributionTestCase(unittest.TestCase):
-
-    def test_init(self):
-        assets_num = 100
-        samples_num = 1000
-        correlation = 0.37
-        epsilons = scientific.make_epsilons(
-            numpy.zeros((assets_num, samples_num)),
-            seed=17, correlation=correlation)
-        self.dist = scientific.LogNormalDistribution(epsilons)
-
-        tol = 0.1
-        for a1, a2 in scientific.pairwise(range(assets_num)):
-            coeffs = numpy.corrcoef(
-                self.dist.epsilons[a1, :], self.dist.epsilons[a2, :])
-
-            numpy.testing.assert_allclose([1, 1], [coeffs[0, 0], coeffs[1, 1]])
-            numpy.testing.assert_allclose(
-                correlation, coeffs[0, 1], rtol=0, atol=tol)
-            numpy.testing.assert_allclose(
-                correlation, coeffs[1, 0], rtol=0, atol=tol)
-
-    def test_sample_mixed(self):
-        # test that sampling works also when we have both covs = 0 and
-        # covs != 0
-        assets_num = 1
-        samples_num = 1
-        correlation = 0.37
-        epsilons = scientific.make_epsilons(
-            numpy.zeros((assets_num, samples_num)),
-            seed=17, correlation=correlation)
-        self.dist = scientific.LogNormalDistribution(epsilons)
-        samples = self.dist.sample(numpy.array([0., 0., .1, .1]),
-                                   numpy.array([0., .1, 0., .1]),
-                                   None, slice(None)).reshape(-1)
-        numpy.testing.assert_allclose([0., 0., 0.1, 0.10228396], samples)
 
 
 class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
@@ -649,8 +490,8 @@ class ClassicalDamageTestCase(unittest.TestCase):
         poos = scientific.classical_damage(
             fragility_functions, hazard_imls, hazard_poes,
             investigation_time, risk_investigation_time)
-        aaae(poos, [1.0415184E-09, 1.4577245E-06, 1.9585762E-03, 6.9677521E-02,
-                    9.2836244E-01])
+        aae(poos, [1.0415184E-09, 1.4577245E-06, 1.9585762E-03, 6.9677521E-02,
+                   9.2836244E-01], atol=1E-5)
 
     def test_continuous(self):
         hazard_imls = numpy.array(
@@ -704,4 +545,22 @@ class ClassicalDamageTestCase(unittest.TestCase):
         poos = scientific.classical_damage(
             fragility_functions, hazard_imls, hazard_poes,
             investigation_time, risk_investigation_time)
-        aaae(poos, [0.56652127, 0.12513401, 0.1709355, 0.06555033, 0.07185889])
+        aae(poos, [0.56652127, 0.12513401, 0.1709355, 0.06555033, 0.07185889])
+
+
+class LossesByEventTestCase(unittest.TestCase):
+    def test(self):
+        # testing convergency of the mean curve
+        periods = [10, 20, 50, 100, 150, 200, 250]
+        eff_time = 500
+        losses = 10**numpy.random.default_rng(42).random(2000)
+        losses0 = losses[:1000]
+        losses1 = losses[1000:]
+        curve0 = scientific.losses_by_period(
+            losses0, periods, eff_time=eff_time)
+        curve1 = scientific.losses_by_period(
+            losses1, periods, eff_time=eff_time)
+        mean = (curve0 + curve1) / 2
+        full = scientific.losses_by_period(
+            losses, periods, eff_time=2*eff_time)
+        aae(mean, full, rtol=1E-2)  # converges only at 1%

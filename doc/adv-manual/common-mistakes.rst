@@ -62,7 +62,7 @@ The engine gives users a lot of control on the maximum distance
 parameter. For instance, you can have a different maximum distance
 depending on the tectonic region, like in the following example::
 
-maximum_distance = {'Active Shallow Crust': 200, 'Subduction': 500}
+  maximum_distance = {'Active Shallow Crust': 200, 'Subduction': 500}
 
 You can also have a magnitude-dependent maximum distance::
 
@@ -93,43 +93,25 @@ in the job.ini; you can determine the distance as follows:
 >>> md('TRT', 6.5)
 150.0
 >>> md('TRT', 7.5)
-250
+250.0
 >>> md('TRT', 8.5)
-300
-
-Intensity measure types and levels
-----------------------------------
-
-Classical calculations are roughly linear in the number of intensity
-measure types and levels. A common mistake is to use too many levels.
-For instance a configuration like the following one::
-
-  intensity_measure_types_and_levels = {
-    "PGA":  logscale(0.001,4.0, 100),
-    "SA(0.3)":  logscale(0.001,4.0, 100),
-    "SA(1.0)":  logscale(0.001,4.0, 100)}
-
-requires computing the PoEs on 300 levels. Is that really what the user wants?
-It could very well be that using only 20 levels per each intensity
-measure type produces good enough results, while potentially
-reducing the computation time by a factor of 5.
+300.0
 
 pointsource_distance
 ----------------------------
 
-PointSources (and MultiPointSources and AreaSources,
-which are split into PointSources and therefore are effectively
-the same thing) are not pointwise for the engine: they actually generate
-ruptures with rectangular surfaces, where size
-is determined by the magnitude scaling relationship. The geometry and
-position of such rectangles depends on the hypocenter distribution and
-the nodal plane distribution of the point source, which are used to model
-the uncertainties on the hypocenter location and on the orientation of the
-underlying ruptures.
+PointSources (and MultiPointSources and AreaSources, which are split
+into PointSources and therefore are effectively the same thing) are
+not pointwise for the engine: they actually generate ruptures with
+rectangular surfaces which size is determined by the magnitude scaling
+relationship. The geometry and position of such rectangles depends on
+the hypocenter distribution and the nodal plane distribution of the
+point source, which are used to model the uncertainties on the
+hypocenter location and on the orientation of the underlying ruptures.
 
 Is the effect of the hypocenter/nodal planes distributions relevant?
 Not always: in particular, if you are interested in points that
-are far from the rupture the effect is minimal. So if you have a nodal
+are far away from the rupture the effect is minimal. So if you have a nodal
 plane distribution with 20 planes and a hypocenter distribution with 5
 hypocenters, the engine will consider 20 x 5 ruptures and perform 100
 times more calculations than needed, since at large distance the hazard
@@ -140,16 +122,16 @@ parameter: you can set it in the ``job.ini`` as a dictionary (tectonic
 region type -> distance in km) or as a scalar (in that case it is
 converted into a dictionary ``{"default": distance}`` and the same
 distance is used for all TRTs).  For sites that are more distant than
-the `pointsource_distance` from the point source, the engine ignores
-the hypocenter and nodal plane distributions and consider only the
-first rupture in the distribution, by rescaling its occurrent rate to
-also take into account the effect of the other ruptures. For closer
-points, all the ruptures are considered.  This approximation
-(we call it *rupture collapsing* because it essentially reduces the
-number of ruptures) can give a substantial speedup if the model is
-dominated by PointSources and there are several nodal
-planes/hypocenters in the distribution. In some situations it also
-makes sense to set
+the `pointsource_distance` from the point source, the engine (starting
+from release 3.11) creates an average rupture by taking weighted means
+of the parameters `strike`, `dip`, `rake` and `depth` from the nodal
+plane and hypocenter distributions and by rescaling the occurrence
+rate. For closer points, all the original ruptures are considered.
+This approximation (we call it *rupture collapsing* because it
+essentially reduces the number of ruptures) can give a substantial
+speedup if the model is dominated by PointSources and there are
+several nodal planes/hypocenters in the distribution. In some
+situations it also makes sense to set
 
 ``pointsource_distance = 0``
 
@@ -171,6 +153,19 @@ have seen cases when setting setting ``pointsource_distance = 0``
 changed the result in the hazard maps only by 0.1% and gained an order of
 magnitude of speedup. You have to check on a case by case basis.
 
+There is a good example of use of the ``pointsource_distance`` in the
+MultiPointClassicalPSHA demo. Here we will just show a plot displaying the
+hazard curve without `pointsource_distance` (with ID=-2) and with
+`pointsource_distance=200` km (with ID=-1). As you see they are nearly
+identical but the second calculation is ten times faster.
+
+.. image:: mp-demo.png
+
+The ``pointsource_distance`` is also crucial when using the
+`point source gridding`_ approximation: then it can be used to
+speedup calculations even when the nodal plane and hypocenter
+distributions are trivial and no speedup would be expected.
+
 NB: the ``pointsource_distance`` approximation has changed a lot
 across engine releases and you should not expect it to give always the same
 results. In particular, in engine 3.8 it has been
@@ -185,17 +180,6 @@ compute an upper limit for the maximum intensity generated by a rupture at any
 distance. Then it can invert the curve and given the magnitude and the
 maximum intensity can determine the collapse distance for that magnitude.
 
-In engine 3.9 this feature has been removed and it is not used anymore.
-However, you will not get the same results than in engine
-3.7 because the underlying logic has changed: before we were just
-picking one nodal plane/hypocenter from the distribution, now the
-approximation neglects completely the finite size effects by replacing
-planar ruptures with point ruptures of zero lenght. This is the reason
-why in engine 3.9 one should use larger pointsource_distances than
-before, since the approximation is cruder.  On the other hand, it
-collapses more than before and it makes the engine much faster for
-single site analysis.
-
 Starting from engine 3.9 you can set
 
 pointsource_distance = ?
@@ -205,6 +189,38 @@ pointsource_distance, but it is recommended that you use your own distance,
 because in the next version the algorithm used with `pointsource_distance = ?`
 may change again.
 
+In engine 3.11, contrarily to all previous releases, finite side effects
+are not ignored for distance sites, they are simply averaged over. This
+gives a better precision. In some case (i.e. the Alaska model) versions
+of the engine before 3.11 could give giving a completely wrong hazard
+on some sites. This is now fixed.
+
+Note: setting ``pointsource_distance=0`` does not completely remove finite
+size effects. If you want to replace point sources with points you
+need to also change the magnitude-scaling relationship to ``PointMSR``.
+Then the area of the underlying planar ruptures will be set to 1E-4 squared km
+and the ruptures will effectively become points.
+
+The linear parameters: `width_of_mfd_bin` and intensity levels
+--------------------------------------------------------------
+
+The number of ruptures generated by the engine is controlled by the
+parameter `width_of_mfd_bin`; for instance if you raise it from 0.1
+to 0.2 you will reduce by half the number of ruptures and double the
+speed of the calculation. It is a linear parameter, at least approximately.
+Classical calculations are also roughly linear in the number of intensity
+measure types and levels. A common mistake is to use too many levels.
+For instance a configuration like the following one::
+
+  intensity_measure_types_and_levels = {
+    "PGA":  logscale(0.001,4.0, 100),
+    "SA(0.3)":  logscale(0.001,4.0, 100),
+    "SA(1.0)":  logscale(0.001,4.0, 100)}
+
+requires computing the PoEs on 300 levels. Is that really what the user wants?
+It could very well be that using only 20 levels per each intensity
+measure type produces good enough results, while potentially
+reducing the computation time by a factor of 5.
 
 concurrent_tasks parameter
 ---------------------------
@@ -231,3 +247,4 @@ best not to touch this parameter unless you know what you are doing.
 
 .. _equivalent distance approximation: special-features.html#equivalent-epicenter-distance-approximation
 .. _rupture radius: https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/source/point.py
+.. _point source gridding: point-source-gridding.html

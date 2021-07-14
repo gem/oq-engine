@@ -19,39 +19,22 @@ $ docker build -t openquake/engine -f Dockerfile.engine .
 --build-arg oq_branch=master      ## oq-engine branch
 ```
 
-
-## Master/worker images (clustered setup)
-
-### OpenQuake Engine master node container (zmq)
+### Testing the image
+To create a development image use the following command:
 
 ```bash
-$ docker build -t openquake/engine-master-zmq -f zmq/Dockerfile.master .
+$ docker build -t openquake/engine:dev -f Dockerfile.dev .
 ```
 
-### OpenQuake Engine worker node container (zmq)
+### Testing
+If you want to use the nightly build instead of the latest, the files are in the docker folder.
 
-```bash
-$ docker build -t openquake/engine-worker-zmq -f zmq/Dockerfile.worker .
-```
-
-## Master/worker images (clustered setup) via 'docker-compose'
-
-### ZMQ
-
-```bash
-$ docker-compose -f docker-compose.yml <build,up,down...> 
-```
-
-If you want more to scale the worker service start with follow:
-```bash
-$ docker-compose -f docker-compose.yml <build,up,down...> --scale worker=NUM
-
-```
+Please note that the nightly image is meant for testing purposes and not for production.
 
 ### Debug
 
 It's possible to enter a container as `root`, for debug purposes, running
 
 ```bash
-$ docker exec -u 0 -t -i engine-master /bin/bash
+$ docker run -u 0 -t -i  openquake/engine:nightly /bin/bash
 ```

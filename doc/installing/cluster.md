@@ -74,27 +74,17 @@ The required daemons are:
 
 ### Monitoring zmq
 
-`oq workers inspect` can be used to check the status of the worker nodes and the task distribution. An output like this is produced:
+`oq workers status` can be used to check the status of the worker nodes and the task distribution. An output like this is produced:
 
 ```
-$ oq workers inspect
-[('192.168.2.1',
-  '101 105 109 113 117 121 126 130 135 140 143 147 151 155 159 163 167 17 19 '
-  '20 22 25 27 29 30 33 35 38 43 44 50 54 58 61 65 69 73 76 81 85 89 93 97'),
- ('192.168.2.2',
-  '102 106 110 115 118 123 127 131 133 137 141 145 149 153 158 162 166 18 21 '
-  '23 24 26 28 31 32 36 39 41 45 47 53 57 62 66 70 74 78 82 86 90 94 98'),
- ('192.168.2.3',
-  '100 104 108 112 116 120 124 128 132 136 139 144 148 152 156 160 164 168 34 '
-  '37 40 42 46 48 51 55 59 64 68 72 77 80 84 88 92 96'),
- ('192.168.2.4', '0 1 10 11 12 13 14 15 16 2 3 4 5 6 7 8 9'),
- ('192.168.2.5',
-  '103 107 111 114 119 122 125 129 134 138 142 146 150 154 157 161 165 49 52 '
-  '56 60 63 67 71 75 79 83 87 91 95 99')]
+$ oq workers status
+[('192.168.2.1', 1, 64), ('192.168.2.2', 7, 64), ('192.168.2.3', 7, 64)]
 ```
 
-For each worker in the cluster you can see its IP and the task which are
-currently running, identified by an incremental number.
+For each worker in the cluster you can see its IP and the cores which are
+currently running with respect to the number of cores available (for instance
+on the host 192.168.2.1 only 1 core of 64 is running, while in the other
+two workers 7 cores are running each).
 
 ## Shared filesystem
 
@@ -143,6 +133,10 @@ The following ports must be open on the **master node**:
 * 1911 for the ZeroMQ streamer
 * 1912-1920 for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
+
+The following port must be open on the **workers node**:
+
+* 1909 for the ZeroMQ workerpools
 
 The **worker nodes** must be able to connect to the master on port 1907.
 Moreover the master must be able to access the workers via ssh.

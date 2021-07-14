@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,13 +20,12 @@
 import json
 import logging
 import requests
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.commonlib import oqzip
 from openquake.calculators.extract import WebAPIError
 
 
-@sap.Script
-def postzip(zipfile):
+def main(zipfile):
     """Post a zipfile to the WebUI"""
     sess = requests.Session()
     if config.webapi.username:
@@ -46,7 +45,4 @@ def postzip(zipfile):
     print(json.loads(resp.text))
 
 
-postzip.arg('zipfile', 'archive with the files of the computation')
-
-if __name__ == '__main__':
-    postzip.callfunc()
+main.zipfile = 'archive with the files of the computation'

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -115,18 +115,6 @@ class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
                    for i in range(num_samples)) / float(num_samples)
         self.assertAlmostEqual(mean, rate * time_span, delta=2e-3)
 
-    def test_get_probability_no_exceedance(self):
-        rupture = make_rupture(ParametricProbabilisticRupture,
-                               occurrence_rate=0.01,
-                               temporal_occurrence_model=PoissonTOM(50))
-        poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
-        pne = rupture.get_probability_no_exceedance(poes)
-        numpy.testing.assert_allclose(
-            pne,
-            numpy.array([[0.6376282, 0.6703200, 0.7046881],
-                         [0.7408182, 0.7788008, 0.8187308]])
-        )
-
 
 class Cdppvalue(unittest.TestCase):
 
@@ -214,34 +202,21 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
         pmf = PMF([(0.8, 1), (0.2, 2)])
         self.assert_failed_creation(
             NonParametricProbabilisticRupture,
-            ValueError, 'minimum number of ruptures must be zero', pmf=pmf
-        )
+            ValueError, 'minimum number of ruptures must be zero', pmf=pmf)
 
     def test_numbers_of_ruptures_not_in_increasing_order(self):
         pmf = PMF([(0.8, 0), (0.1, 2), (0.1, 1)])
         self.assert_failed_creation(
             NonParametricProbabilisticRupture,
             ValueError,
-            'numbers of ruptures must be defined in increasing order', pmf=pmf
-        )
+            'numbers of ruptures must be defined in increasing order', pmf=pmf)
 
     def test_numbers_of_ruptures_not_defined_with_unit_step(self):
         pmf = PMF([(0.8, 0), (0.2, 2)])
         self.assert_failed_creation(
             NonParametricProbabilisticRupture,
             ValueError,
-            'numbers of ruptures must be defined with unit step', pmf=pmf
-        )
-
-    def test_get_probability_no_exceedance(self):
-        pmf = PMF([(0.7, 0), (0.2, 1), (0.1, 2)])
-        poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
-        rup = make_rupture(NonParametricProbabilisticRupture, pmf=pmf)
-        pne = rup.get_probability_no_exceedance(poes)
-        numpy.testing.assert_allclose(
-            pne,
-            numpy.array([[0.721, 0.744, 0.769], [0.796, 0.825, 0.856]])
-        )
+            'numbers of ruptures must be defined with unit step', pmf=pmf)
 
     def test_sample_number_of_occurrences(self):
         pmf = PMF([(0.7, 0), (0.2, 1), (0.1, 2)])
@@ -250,8 +225,7 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
 
         n_samples = 50000
         n_occs = numpy.array([
-            rup.sample_number_of_occurrences() for i in range(n_samples)
-        ])
+            rup.sample_number_of_occurrences() for i in range(n_samples)])
 
         p_occs_0 = float(len(n_occs[n_occs == 0])) / n_samples
         p_occs_1 = float(len(n_occs[n_occs == 1])) / n_samples

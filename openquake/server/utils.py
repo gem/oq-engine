@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@ import getpass
 import requests
 import logging
 import django
-import numpy
 
 from time import sleep
 from django.conf import settings
@@ -32,10 +31,13 @@ if settings.LOCKDOWN:
 
 
 def is_superuser(request):
-    if settings.LOCKDOWN and hasattr(request, 'user'):
-        if request.user.is_superuser:
-            return True
-    return False
+    """
+    Without authentication (settings.LOCKDOW is false) every user is considered
+    a superuser, otherwise look at the attribute `request.user.is_superuser`.
+    """
+    if not settings.LOCKDOWN:
+        return True
+    return request.user.is_superuser if hasattr(request, 'user') else False
 
 
 def get_user(request):

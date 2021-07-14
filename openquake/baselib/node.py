@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -129,7 +129,7 @@ list(lazytree) will generated all of them. If your goal is to
 store the tree on the filesystem in XML format you should use
 a writing routine converting a subnode at the time, without
 requiring the full list of them. The routines provided by
-ElementTree are no good, however commonlib.writers
+ElementTree are no good, however baselib.writers
 provide an StreamingXMLWriter just for that purpose.
 
 Lazy trees should *not* be used unless it is absolutely necessary in
@@ -161,7 +161,7 @@ import numpy
 def floatformat(fmt_string):
     """
     Context manager to change the default format string for the
-    function :func:`openquake.commonlib.writers.scientificformat`.
+    function :func:`openquake.baselib.writers.write_csv`.
 
     :param fmt_string: the format to use; for instance '%13.9E'
     """
@@ -729,13 +729,14 @@ def node_from_xml(xmlfile, nodefactory=Node):
     return node_from_elem(root, nodefactory)
 
 
-def node_to_xml(node, output=sys.stdout, nsmap=None):
+def node_to_xml(node, output, nsmap=None):
     """
     Convert a Node object into a pretty .xml file without keeping
     everything in memory. If you just want the string representation
     use tostring(node).
 
     :param node: a Node-compatible object (ElementTree nodes are fine)
+    :param output: a binary output file
     :param nsmap: if given, shorten the tags with aliases
 
     """

@@ -23,7 +23,97 @@ import numpy as np
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
+from openquake.hazardlib.gsim.boore_2014 import (
+    BooreEtAl2014, _get_magnitude_scaling_term,
+    _get_path_scaling, _get_site_scaling, _get_pga_on_rock)
+
+
+def _get_C2_term(Cadj, rjb):
+    """
+    distance term, C2, from HA15
+    """
+    F2 = Cadj["C2"] * rjb
+    return F2
+
+
+def _get_C3_term(Cadj, rjb):
+    """
+    anelastic attenuation, C3, from HA15
+    """
+    F3 = Cadj["C3"] * np.maximum(0, np.log10(np.minimum(rjb, 150)/50))
+    return F3
+
+
+def _get_ZR19_distance_term(C_ZR19, rhypo):
+    """
+    Returns the distance scaling term
+    """
+    Rb_ = C_ZR19["Rb"]
+    FR = np.zeros_like(rhypo)
+    FR[(rhypo < Rb_) & (rhypo >= 4)] = (
+        C_ZR19["a"] * np.log(rhypo[(rhypo < Rb_) & (rhypo >= 4)]/Rb_))
+    FR[rhypo < 4] = C_ZR19["a"] * np.log(4/Rb_)
+    return FR
+
+
+def _get_ZR19_magnitude_term(C_ZR19, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    Mb_ = C_ZR19["Mb"]
+    if mag < Mb_:
+        FM = C_ZR19["b0"] + C_ZR19["Cadj"]
+    elif mag > Mb_ and mag < 5.8:
+        FM = C_ZR19["b0"] + C_ZR19["b1"] * (mag - Mb_) + C_ZR19["Cadj"]
+    else:
+        FM = C_ZR19["b0"] + C_ZR19["b1"] * (5.8 - Mb_) + C_ZR19["Cadj"]
+    return FM
+
+
+def _get_ZR19_site_term(C_ZR19, sites):
+    """
+    Returns the amplification factor, based on vs30
+    """
+    Vc_ = C_ZR19["Vc"]
+    FS = np.zeros_like(sites.vs30)
+    FS[sites.vs30 < Vc_] = (
+        C_ZR19["c"] * np.log(sites.vs30[sites.vs30 < Vc_]/Vc_))
+    return FS
+
+
+def _get_stddevs(C_ZR19, num_sites, stddev_types):
+    """
+    Return standard deviations, in ln units [g]
+    """
+    # the units for PGV are not clearly stated in the paper,
+    # assumed here cm/s
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(C_ZR19["sigma"] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C_ZR19["tau"] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C_ZR19["phi"] + np.zeros(num_sites))
+    return stddevs
+
+
+def get_FENA(Cadj, rup, dists, imt):
+    """
+    See :meth:`superclass method
+    <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+    for spec of input and result values.
+    """
+
+    imean = (Cadj["C1"] + _get_C2_term(Cadj, dists.rjb) +
+             _get_C3_term(Cadj, dists.rjb))
+
+    # Convert from log10 to ln
+    if imt.string.startswith(("SA", "PGA")):
+        FENA = np.log(10.0 ** imean)
+    else:
+        FENA = np.log(10.0 ** imean)
+    return FENA
 
 
 class ZalachorisRathje2019(BooreEtAl2014):
@@ -51,9 +141,7 @@ class ZalachorisRathje2019(BooreEtAl2014):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, pag 106.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT}
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -82,111 +170,31 @@ class ZalachorisRathje2019(BooreEtAl2014):
         Cadj = self.COEFFS_HA15[imt]
         C_ZR19 = self.COEFFS_ZR19[imt]
 
-        imt_per = 0 if imt.name == 'PGV' else imt.period
-        pga_rock = self._get_pga_on_rock(C_PGA, rup, dists)
+        imt_per = 0 if imt.string == 'PGV' else imt.period
+        pga_rock = _get_pga_on_rock(self.kind, self.region, self.sof,
+                                    C_PGA, rup, dists)
         mean_BSSA14 = (
-            self._get_magnitude_scaling_term(C, rup) +
-			self._get_path_scaling(C, dists, rup.mag) +
-			self._get_site_scaling(C, pga_rock, sites, imt_per, dists.rjb))
+            _get_magnitude_scaling_term(self.sof, C, rup) +
+            _get_path_scaling(self.kind, self.region, C, dists, rup.mag) +
+            _get_site_scaling(self.kind, self.region, C, pga_rock, sites,
+                              imt_per, dists.rjb))
 
-        FZR19 = (self._get_ZR19_magnitude_term(C_ZR19, rup.mag) +
-				 self._get_ZR19_distance_term(C_ZR19, dists.rhypo) +
-			 	 self._get_ZR19_site_term(C_ZR19, sites))
+        FZR19 = (_get_ZR19_magnitude_term(C_ZR19, rup.mag) +
+                 _get_ZR19_distance_term(C_ZR19, dists.rhypo) +
+                 _get_ZR19_site_term(C_ZR19, sites))
 
         # add HA15, all in ln units
-        mean = mean_BSSA14 + self.get_FENA(Cadj, rup, dists, imt)
+        mean = mean_BSSA14 + get_FENA(Cadj, rup, dists, imt)
 
         # add ZR19, all in ln units
         mean = mean + FZR19
 
-        stddevs = self._get_stddevs(C_ZR19, len(dists.rjb), stddev_types)
+        stddevs = _get_stddevs(C_ZR19, len(dists.rjb), stddev_types)
 
         return mean, stddevs
 
     #: terms for HA15
-    def _get_C2_term(self, Cadj, rjb):
-        """
-        distance term, C2, from HA15
-        """
-        F2 = Cadj["C2"] * rjb
-        return F2
-
-    def _get_C3_term(self, Cadj, rjb):
-        """
-        anelastic attenuation, C3, from HA15
-        """
-        F3 = Cadj["C3"] * np.maximum(0, np.log10(np.minimum(rjb, 150)/50))
-        return F3
-
-    def get_FENA(self, Cadj, rup, dists, imt):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-
-        imean = (Cadj["C1"] + self._get_C2_term(Cadj, dists.rjb) +
-                 self._get_C3_term(Cadj, dists.rjb))
-
-        # Convert from log10 to ln
-        if imt.name in "SA PGA":
-            FENA = np.log(10.0 ** imean)
-        else:
-            FENA = np.log(10.0 ** imean)
-        return FENA
-
-    def _get_stddevs(self, C_ZR19, num_sites, stddev_types):
-        """
-        Return standard deviations, in ln units [g]
-        """
-        # the units for PGV are not clearly stated in the paper,
-        # assumed here cm/s
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C_ZR19["sigma"] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C_ZR19["tau"] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C_ZR19["phi"] + np.zeros(num_sites))
-        return stddevs
-
     #: terms for ZR19
-    def _get_ZR19_magnitude_term(self, C_ZR19, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        Mb_ = C_ZR19["Mb"]
-        if mag < Mb_:
-            FM = C_ZR19["b0"] + C_ZR19["Cadj"]
-        elif mag > Mb_ and mag < 5.8:
-            FM = C_ZR19["b0"] + C_ZR19["b1"] * (mag - Mb_) + C_ZR19["Cadj"]
-        else:
-            FM = C_ZR19["b0"] + C_ZR19["b1"] * (5.8 - Mb_) + C_ZR19["Cadj"]
-        return FM
-
-    def _get_ZR19_distance_term(self, C_ZR19, rhypo):
-        """
-        Returns the distance scaling term
-        """
-        Rb_ = C_ZR19["Rb"]
-        FR = np.zeros_like(rhypo)
-        FR[(rhypo < Rb_) & (rhypo >= 4)] = (C_ZR19["a"] *
-			    np.log(rhypo[(rhypo < Rb_) & (rhypo >= 4)]/Rb_))
-        FR[rhypo < 4] = C_ZR19["a"] * np.log(4/Rb_)
-        return FR
-
-    def _get_ZR19_site_term(self, C_ZR19, sites):
-        """
-        Returns the amplification factor, based on vs30
-        """
-        Vc_ = C_ZR19["Vc"]
-        FS = np.zeros_like(sites.vs30)
-        FS[sites.vs30 < Vc_] = (C_ZR19["c"] *
-				np.log(sites.vs30[sites.vs30 < Vc_]/Vc_))
-        return FS
-
     #: coeffs for BSSA14
     #: fewer decimals used for BSSA14 by Zalachoris compared to the original 
     #: values

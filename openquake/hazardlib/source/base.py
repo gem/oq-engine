@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,6 +23,8 @@ import numpy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
+EPS = .01  # used for src.nsites outside the maximum_distance
+
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
@@ -37,7 +39,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
-    et_id = 0  # set by the engine
+    trt_smr = 0  # set by the engine
     nsites = 0  # set when filtering the source
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
@@ -53,35 +55,35 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         Determine the source weight from the number of ruptures
         """
+        # NB: for point sources .num_ruptures is preset in preclassical,
+        # and it is less than the real number of ruptures if the
+        # pointsource_distance is set
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        nsites_factor = bool(self.nsites)
-        if hasattr(self, 'nodal_plane_distribution'):
-            rescale = len(self.nodal_plane_distribution.data) * len(
-                self.hypocenter_distribution.data)
-        else:
-            rescale = 1
-        return self.num_ruptures * self.ngsims * nsites_factor / rescale
+        w = self.num_ruptures * self.ngsims * (.1 if self.nsites == EPS else 1)
+        if not hasattr(self, 'nodal_plane_distribution'):  # not pointlike
+            w *= 10  # increase weight of non point sources
+        return w
 
     @property
-    def et_ids(self):
+    def trt_smrs(self):
         """
-        :returns: a list of source group IDs (usually of 1 element)
+        :returns: a list of integers (usually of 1 element)
         """
-        et_id = self.et_id
-        return [et_id] if isinstance(et_id, int) else et_id
+        trt_smr = self.trt_smr
+        return [trt_smr] if isinstance(trt_smr, int) else trt_smr
 
     def serial(self, ses_seed):
         """
         :returns: a random seed derived from source_id and ses_seed
         """
-        return zlib.adler32(self.source_id.encode('ascii'), ses_seed)
+        return zlib.crc32(self.source_id.encode('ascii'), ses_seed)
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
-        self.et_id = -1  # set by the engine
+        self.trt_smr = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
         self.min_mag = 0  # set by the SourceConverter
@@ -106,15 +108,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     def sample_ruptures(self, eff_num_ses, ses_seed):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples
-        :yields: pairs (rupture, num_occurrences[num_samples])
+        :yields: triples (rupture, trt_smr, num_occurrences)
         """
         seed = self.serial(ses_seed)
         numpy.random.seed(seed)
-        for et_id in self.et_ids:
+        for trt_smr in self.trt_smrs:
             for rup, num_occ in self._sample_ruptures(eff_num_ses):
                 rup.rup_id = seed
                 seed += 1
-                yield rup, et_id, num_occ
+                yield rup, trt_smr, num_occ
 
     def _sample_ruptures(self, eff_num_ses):
         tom = getattr(self, 'temporal_occurrence_model', None)
@@ -236,6 +238,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         meth = getattr(self, 'modify_%s' % modification)
         meth(**parameters)
 
+    def to_xml(self):
+        """
+        Convert the source into an XML string, very useful for debugging
+        """
+        from openquake.hazardlib import nrml, sourcewriter
+        return nrml.to_string(sourcewriter.obj_to_node(self))
+
 
 class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     """
@@ -326,7 +335,9 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
 
     def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
-        Yields one random rupture from a source
+        Yields one random rupture from a source. IMPORTANT: this method
+        does not take into account the frequency of occurrence of the
+        ruptures
         """
         # The Mutex case is admitted only for non-parametric ruptures
         msg = 'Mutually exclusive ruptures are admitted only in case of'

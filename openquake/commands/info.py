@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,13 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import sys
+import string
+import inspect
 import unittest.mock as mock
 import logging
 import operator
 import collections
 import numpy
 from decorator import FunctionMaker
-from openquake.baselib import sap
 from openquake.baselib.general import groupby, gen_subclasses
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
@@ -33,7 +35,7 @@ from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
-from openquake.calculators.views import view, rst_table
+from openquake.calculators.views import view, text_table
 
 
 def source_model_info(sm_nodes):
@@ -62,7 +64,7 @@ def source_model_info(sm_nodes):
     out[-1]['TRT'] = 'Total'
     for name in out.dtype.names[1:]:
         out[-1][name] = out[name][:-1].sum()
-    return rst_table(out)
+    return text_table(out)
 
 
 def do_build_reports(directory):
@@ -83,11 +85,18 @@ def do_build_reports(directory):
 
 
 choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
-           'extracts', 'parameters', 'sources', 'mfds']
+           'extracts', 'parameters', 'sources', 'mfds', 'venv']
 
 
-@sap.script
-def info(what, report=False):
+def is_upper(func):
+    """
+    True if the name of the function starts with an uppercase character
+    """
+    char = func.__name__[0]
+    return char in string.ascii_uppercase
+
+
+def main(what, report=False):
     """
     Give information about the passed keyword or filename
     """
@@ -99,9 +108,13 @@ def info(what, report=False):
     elif what == 'gsims':
         for gs in gsim.get_available_gsims():
             print(gs)
+    elif what == 'portable_gsims':
+        for gs in gsim.get_portable_gsims():
+            print(gs)
     elif what == 'imts':
-        for im in gen_subclasses(imt.IMT):
-            print(im.__name__)
+        for im in vars(imt).values():
+            if inspect.isfunction(im) and is_upper(im):
+                print(im.__name__)
     elif what == 'views':
         for name in sorted(view):
             print(name)
@@ -124,16 +137,20 @@ def info(what, report=False):
                 fm = FunctionMaker(func)
             print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))
     elif what == 'parameters':
-        params = []
+        docs = OqParam.docs()
+        names = set()
         for val in vars(OqParam).values():
             if hasattr(val, 'name'):
-                params.append(val)
-        params.sort(key=lambda x: x.name)
+                names.add(val.name)
+        params = sorted(names)
         for param in params:
-            print(param.name)
+            print(param)
+            print(docs[param])
     elif what == 'mfds':
         for cls in gen_subclasses(BaseMFD):
             print(cls.__name__)
+    elif what == 'venv':
+        print(sys.prefix)
     elif what == 'sources':
         for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)
@@ -165,5 +182,5 @@ def info(what, report=False):
         print("No info for '%s'" % what)
 
 
-info.arg('what', 'filename or one of %s' % ', '.join(choices))
-info.flg('report', 'build rst report from job.ini file or zip archive')
+main.what = 'filename or one of %s' % ', '.join(choices)
+main.report = 'build rst report from job.ini file or zip archive'

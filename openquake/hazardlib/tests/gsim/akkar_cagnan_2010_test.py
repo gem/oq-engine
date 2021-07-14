@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,12 +30,12 @@ class AkkarCagnan2010TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('AC10/AC10_STD_TOTAL.csv',
-                  max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
     def test_std_intra(self):
         self.check('AC10/AC10_STD_INTRA.csv',
-                  max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
     def test_std_inter(self):
         self.check('AC10/AC10_STD_INTER.csv',
-                  max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)

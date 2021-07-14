@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,36 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _compute_mean(C, mag, ztor, rrup):
+    """
+    Compute mean value as in ``subroutine getGeom`` in ``hazgridXnga2.f``
+    """
+    gc0 = 0.2418
+    ci = 0.3846
+    gch = 0.00607
+    g4 = 1.7818
+    ge = 0.554
+    gm = 1.414
+
+    mean = (
+        gc0 + ci + ztor * gch + C['gc1'] +
+        gm * mag + C['gc2'] * (10 - mag) ** 3 +
+        C['gc3'] * np.log(rrup + g4 * np.exp(ge * mag)))
+
+    return mean
+
+
+def _compute_stddevs(C, mag, num_sites, stddev_types):
+    """
+    Return total standard deviation.
+    """
+    std_total = C['gc4'] + C['gc5'] * np.minimum(8., mag)
+    stddevs = []
+    for _ in stddev_types:
+        stddevs.append(np.zeros(num_sites) + std_total)
+    return stddevs
+
+
 class Geomatrix1993SSlabNSHMP2008(GMPE):
     """
     Implements GMPE for subduction intraslab events developed by Geomatrix
@@ -44,19 +74,14 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of
     #: two horizontal components
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No site parameters required
     REQUIRES_SITES_PARAMETERS = set()
@@ -77,48 +102,13 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
 
-        mean = self._compute_mean(C, rup.mag, rup.ztor, dists.rrup)
-        stddevs = self._compute_stddevs(
-            C, rup.mag, dists.rrup.shape, stddev_types
-        )
+        mean = _compute_mean(C, rup.mag, rup.ztor, dists.rrup)
+        stddevs = _compute_stddevs(
+            C, rup.mag, dists.rrup.shape, stddev_types)
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, ztor, rrup):
-        """
-        Compute mean value as in ``subroutine getGeom`` in ``hazgridXnga2.f``
-        """
-        gc0 = 0.2418
-        ci = 0.3846
-        gch = 0.00607
-        g4 = 1.7818
-        ge = 0.554
-        gm = 1.414
-
-        mean = (
-            gc0 + ci + ztor * gch + C['gc1'] +
-            gm * mag + C['gc2'] * (10 - mag) ** 3 +
-            C['gc3'] * np.log(rrup + g4 * np.exp(ge * mag))
-        )
-
-        return mean
-
-    def _compute_stddevs(self, C, mag, num_sites, stddev_types):
-        """
-        Return total standard deviation.
-        """
-        std_total = C['gc4'] + C['gc5'] * np.minimum(8., mag)
-
-        stddevs = []
-        for _ in stddev_types:
-            stddevs.append(np.zeros(num_sites) + std_total)
-
-        return stddevs
 
     #: Coefficient table obtained from coefficient arrays and variables
     #: defined in subroutine getGeom in hazgridXnga2.f

@@ -27,9 +27,301 @@ import math
 import numpy as np
 from scipy.special import erf
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
 from openquake.hazardlib.imt import PGA, SA, PGV
+
+CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
+             "vref_fnl": 760, "V1": 270, "vref": 760}
+
+_a0 = CallableDict()
+
+
+@_a0.add(const.TRT.SUBDUCTION_INTERFACE)
+def _a0_1(trt, region, basin, C, C_PGA):
+    """
+    Regional anelastic coefficient, a0
+    """
+    if region is None or region == "Cascadia":
+        a0 = C["a0"]
+        a0_pga = C_PGA["a0"]
+    else:
+        a0 = C[region + "_a0"]
+        a0_pga = C_PGA[region + "_a0"]
+
+    return a0, a0_pga
+
+
+@_a0.add(const.TRT.SUBDUCTION_INTRASLAB)
+def _a0_2(trt, region, basin, C, C_PGA):
+    """
+    Regional anelastic coefficient for subduction slab, a0
+    """
+    if region is None:
+        return C["a0slab"], C_PGA["a0slab"]
+    return C[region + "_a0slab"], C_PGA[region + "_a0slab"]
+
+
+def _basin_term(region, basin, C, sites=None):
+    """
+    Basin term main handler.
+    """
+    if not hasattr(sites, 'z2pt5'):
+        return 0
+
+    if region == "JP":
+        return _get_basin_term_factors(3.05, -0.8, 500, 0.33,
+                                       C["J_e1"], C["J_e2"],
+                                       C["J_e3"], sites)
+
+    if region == "Cascadia":
+        if basin is None:
+            return _get_basin_term_factors(3.94, -0.42, 200, 0.2,
+                                           C["C_e1"], C["C_e2"],
+                                           C["C_e3"], sites)
+        if basin == "out":
+            dn = C["del_None"]
+            return _get_basin_term_factors(3.94, -0.42, 200, 0.2,
+                                           C["C_e1"],
+                                           C["C_e2"] + dn,
+                                           C["C_e3"] + dn, sites)
+        if basin == "Seattle":
+            ds = C["del_Seattle"]
+            return _get_basin_term_factors(3.94, -0.42, 200, 0.2,
+                                           C["C_e1"],
+                                           C["C_e2"] + ds,
+                                           C["C_e3"] + ds, sites)
+
+    return 0
+
+
+_c0 = CallableDict()
+
+
+@_c0.add(const.TRT.SUBDUCTION_INTERFACE)
+def _c0_1(trt, region, saturation_region, C, C_PGA):
+    """
+    c0 factor.
+    """
+    if saturation_region is None:
+        c0_col = "c0"
+    else:
+        c0_col = saturation_region + "_c0"
+    return C[c0_col], C_PGA[c0_col]
+
+
+@_c0.add(const.TRT.SUBDUCTION_INTRASLAB)
+def _c0_2(trt, region, saturation_region, C, C_PGA):
+    """
+    c0 factor.
+    """
+    if saturation_region is None:
+        c0_col = "c0slab"
+    elif region in ["AK", "SA"]:
+        c0_col = saturation_region + "_c0slab"
+    else:
+        # no more specific region available
+        c0_col = region + "_c0slab"
+    return C[c0_col], C_PGA[c0_col]
+
+
+_depth_scaling = CallableDict()
+
+
+@_depth_scaling.add(const.TRT.SUBDUCTION_INTERFACE)
+def _depth_scaling_1(trt, C, rup):
+    """
+    Depth scaling is for slab.
+    """
+    return 0
+
+
+@_depth_scaling.add(const.TRT.SUBDUCTION_INTRASLAB)
+def _depth_scaling_2(trt, C, rup):
+    if rup.hypo_depth >= C["db"]:
+        return C["d"]
+    if rup.hypo_depth <= 20:
+        return C["m"] * (20 - C["db"]) + C["d"]
+    return C["m"] * (rup.hypo_depth - C["db"]) + C["d"]
+
+
+def _get_basin_term_factors(theta0, theta1, vmu, vsig, e1, e2, e3,
+                            sites):
+    """
+    Basin term for given factors.
+    """
+    btf = np.zeros_like(sites.vs30)
+    select = sites.z2pt5 != 0
+    if len(select) == 0:
+        return btf
+    vs30 = sites.vs30[select]
+    z2pt5 = sites.z2pt5[select]
+
+    z2pt5_pred = 10 ** (theta0 + theta1
+                        * (1 + erf((np.log10(vs30) - math.log10(vmu))
+                                   / (vsig * math.sqrt(2)))))
+    del_z2pt5 = np.log(z2pt5) - np.log(z2pt5_pred)
+
+    btf[select] = np.where(del_z2pt5 <= (e1 / e3), e1,
+                           np.where(del_z2pt5 >= (e2 / e3), e2,
+                                    e3 * del_z2pt5))
+    return btf
+
+
+def _linear_amplification(region, C, vs30):
+    """
+    Linear site term.
+    """
+    # site coefficients
+    v1 = CONSTANTS["V1"]
+    vref = CONSTANTS["vref"]
+    if region is None or region == "CAM":
+        s2 = C["s2"]
+        s1 = s2
+    elif region == "TW" or region == "JP":
+        s2 = C[region + "_s2"]
+        s1 = C[region + "_s1"]
+    else:
+        s2 = C[region + "_s2"]
+        s1 = s2
+
+    # linear site term
+    fnl = np.where(vs30 <= v1,
+                   s1 * np.log(vs30 / v1) + s2 * math.log(v1 / vref),
+                   0)
+    fnl = np.where((v1 < vs30) & (vs30 <= C["V2"]),
+                   s2 * np.log(vs30 / vref), fnl)
+    fnl = np.where(vs30 > C["V2"], s2 * math.log(C["V2"] / vref), fnl)
+
+    return fnl
+
+
+def _magnitude_scaling(sfx, C, C_PGA, mag, m_b):
+    """
+    Magnitude scaling factor.
+    """
+    m_diff = mag - m_b
+    if m_diff > 0:
+        fm = C["c6" + sfx] * m_diff
+        fm_pga = C_PGA["c6" + sfx] * m_diff
+    else:
+        fm = C["c4" + sfx] * m_diff + C["c5" + sfx] * m_diff ** 2
+        fm_pga = C_PGA["c4" + sfx] * m_diff \
+            + C_PGA["c5" + sfx] * m_diff ** 2
+
+    return fm, fm_pga
+
+
+def _non_linear_term(C, imt, vs30, fp, fm, c0, fd=0):
+    """
+    Non-linear site term.
+    """
+    # fd for slab only
+    pgar = np.exp(fp + fm + c0 + fd)
+
+    if hasattr(imt, "period") and imt.period >= 3:
+        fnl = 0
+    else:
+        fnl = C["f4"] * (np.exp(C["f5"] * (
+            np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"]))
+             - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
+        fnl *= np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
+
+    return fnl
+
+
+def _path_term(trt, region, basin, suffix, C, C_PGA, mag, rrup, m_b):
+    """
+    Path term.
+    """
+    h = _path_term_h(trt, mag, m_b)
+    r = np.sqrt(rrup ** 2 + h ** 2)
+    # log(R / Rref)
+    r_rref = np.log(r / math.sqrt(1 + h ** 2))
+
+    a0, a0_pga = _a0(trt, region, basin, C, C_PGA)
+
+    c1n = "c1" + suffix
+    fp = C[c1n] * np.log(r) + (CONSTANTS["b4"] * mag) \
+        * r_rref + a0 * r
+    fp_pga = C_PGA[c1n] * np.log(r) + (CONSTANTS["b4"] * mag) \
+        * r_rref + a0_pga * r
+
+    return fp, fp_pga
+
+
+_path_term_h = CallableDict()
+
+
+@_path_term_h.add(const.TRT.SUBDUCTION_INTERFACE)
+def _path_term_h_1(trt, mag, m_b=None):
+    """
+    H factor for path term.
+    """
+    return 10 ** (-0.82 + 0.252 * mag)
+
+
+@_path_term_h.add(const.TRT.SUBDUCTION_INTRASLAB)
+def _path_term_h_2(trt, mag, m_b=None):
+    """
+    H factor for path term, subduction slab.
+    """
+    if mag <= m_b:
+        m = (math.log10(35) - math.log10(3.12)) / (m_b - 4)
+        return 10 ** (m * (mag - m_b) + math.log10(35))
+    return 35
+
+
+def get_stddevs(C, rrup, vs30, stddev_types):
+    """
+    Returns the standard deviations.
+    Generate tau, phi, and total sigma computed from both
+    total and partitioned phi models.
+    """
+
+    # define period-independent coefficients for phi models
+    v1 = 200
+    v2 = 500
+    r1 = 200
+    r2 = 500
+
+    stddevs = []
+
+    # total Phi
+    phi_rv = np.zeros(len(vs30))
+    for i, vs30i in enumerate(vs30):
+        if rrup[i] <= r1:
+            phi_rv[i] = C["phi21"]
+        elif rrup[i] >= r2:
+            phi_rv[i] = C["phi22"]
+        else:
+            phi_rv[i] = ((C["phi22"] - C["phi21"])
+                         / (math.log(r2) - math.log(r1))) \
+                        * (math.log(rrup[i]) - math.log(r1)) + C["phi21"]
+
+        if vs30i <= v1:
+            phi_rv[i] += C["phi2V"] * \
+                         (math.log(r2 / max(r1, min(r2, rrup[i])))
+                          / math.log(r2 / r1))
+        elif vs30i < v2:
+            phi_rv[i] += C["phi2V"] * \
+                      ((math.log(v2 / min(v2, vs30i)))
+                       / math.log(v2 / v1)) * \
+                      (math.log(r2 / max(r1, min(r2, rrup[i])))
+                       / math.log(r2 / r1))
+
+    phi_tot = np.sqrt(phi_rv)
+
+    for stddev in stddev_types:
+        if stddev == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(C["Tau"] ** 2 + phi_tot ** 2))
+        elif stddev == const.StdDev.INTER_EVENT:
+            stddevs.append(np.repeat(C["Tau"], len(vs30)))
+        elif stddev == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi_tot)
+
+    return stddevs
 
 
 class ParkerEtAl2020SInter(GMPE):
@@ -41,20 +333,13 @@ class ParkerEtAl2020SInter(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground acceleration and peak ground velocity
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGV,
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV, PGA, SA}
 
     #: Supported intensity measure component is the geometric mean component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Site amplification is dependent only upon Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -65,6 +350,7 @@ class ParkerEtAl2020SInter(GMPE):
     #: Required distance measure is closest distance to rupture, for
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
+    REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin'}
 
     def __init__(self, region=None, saturation_region=None, basin=None,
                  **kwargs):
@@ -87,260 +373,35 @@ class ParkerEtAl2020SInter(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+
         # extract dictionaries of coefficients specific to required
         # intensity measure type and for PGA
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
 
-        m_b = self._get_mb()
-        c0, c0_pga = self._c0(C, C_PGA)
-        fm, fm_pga = self._magnitude_scaling(C, C_PGA, rup.mag, m_b)
-        fp, fp_pga = self._path_term(C, C_PGA, rup.mag, dists.rrup, m_b)
-        fd = self._depth_scaling(C, rup)
-        fd_pga = self._depth_scaling(C_PGA, rup)
-        fb = self._basin_term(C, sites)
-        flin = self._linear_amplification(C, sites.vs30)
-        fnl = self._non_linear_term(C, imt, sites.vs30, fp_pga, fm_pga, c0_pga,
-                                    fd_pga)
+        # Regional Mb factor
+        if self.saturation_region in self.MB_REGIONS:
+            m_b = self.MB_REGIONS[self.saturation_region]
+        else:
+            m_b = self.MB_REGIONS["default"]
+        c0, c0_pga = _c0(trt, self.region, self.saturation_region, C, C_PGA)
+        fm, fm_pga = _magnitude_scaling(self.SUFFIX, C, C_PGA, rup.mag, m_b)
+        fp, fp_pga = _path_term(trt, self.region, self.basin, self.SUFFIX,
+                                C, C_PGA, rup.mag, dists.rrup, m_b)
+        fd = _depth_scaling(trt, C, rup)
+        fd_pga = _depth_scaling(trt, C_PGA, rup)
+        fb = _basin_term(self.region, self.basin, C, sites)
+        flin = _linear_amplification(self.region, C, sites.vs30)
+        fnl = _non_linear_term(C, imt, sites.vs30, fp_pga, fm_pga, c0_pga,
+                               fd_pga)
 
         # The output is the desired median model prediction in LN units
         # Take the exponential to get PGA, PSA in g or the PGV in cm/s
         mean = fp + fnl + fb + flin + fm + c0 + fd
 
-        stddevs = self.get_stddevs(C, dists.rrup, sites.vs30, stddev_types)
+        stddevs = get_stddevs(C, dists.rrup, sites.vs30, stddev_types)
         return mean, stddevs
-
-    def get_stddevs(self, C, rrup, vs30, stddev_types):
-        """
-        Returns the standard deviations.
-        Generate tau, phi, and total sigma computed from both
-        total and partitioned phi models.
-        """
-
-        # define period-independent coefficients for phi models
-        v1 = 200
-        v2 = 500
-        r1 = 200
-        r2 = 500
-
-        stddevs = []
-
-        # total Phi
-        phi_rv = np.zeros(len(vs30))
-        for i, vs30i in enumerate(vs30):
-            if rrup[i] <= r1:
-                phi_rv[i] = C["phi21"]
-            elif rrup[i] >= r2:
-                phi_rv[i] = C["phi22"]
-            else:
-                phi_rv[i] = ((C["phi22"] - C["phi21"])
-                             / (math.log(r2) - math.log(r1))) \
-                            * (math.log(rrup[i]) - math.log(r1)) + C["phi21"]
-
-            if vs30i <= v1:
-                phi_rv[i] += C["phi2V"] * \
-                             (math.log(r2 / max(r1, min(r2, rrup[i])))
-                              / math.log(r2 / r1))
-            elif vs30i < v2:
-                phi_rv[i] += C["phi2V"] * \
-                          ((math.log(v2 / min(v2, vs30i)))
-                           / math.log(v2 / v1)) * \
-                          (math.log(r2 / max(r1, min(r2, rrup[i])))
-                           / math.log(r2 / r1))
-
-        phi_tot = np.sqrt(phi_rv)
-
-        for stddev in stddev_types:
-            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C["Tau"] ** 2 + phi_tot ** 2))
-            elif stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(np.repeat(C["Tau"], len(vs30)))
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi_tot)
-
-        return stddevs
-
-    def _c0(self, C, C_PGA):
-        """
-        c0 factor.
-        """
-        if self.saturation_region is None:
-            c0_col = "c0"
-        else:
-            c0_col = self.saturation_region + "_c0"
-        return C[c0_col], C_PGA[c0_col]
-
-    def _magnitude_scaling(self, C, C_PGA, mag, m_b):
-        """
-        Magnitude scaling factor.
-        """
-        m_diff = mag - m_b
-        sfx = self.SUFFIX
-        if m_diff > 0:
-            fm = C["c6" + sfx] * m_diff
-            fm_pga = C_PGA["c6" + sfx] * m_diff
-        else:
-            fm = C["c4" + sfx] * m_diff + C["c5" + sfx] * m_diff ** 2
-            fm_pga = C_PGA["c4" + sfx] * m_diff \
-                + C_PGA["c5" + sfx] * m_diff ** 2
-
-        return fm, fm_pga
-
-    def _get_mb(self):
-        """
-        Regional Mb factor.
-        """
-        if self.saturation_region in self.MB_REGIONS:
-            return self.MB_REGIONS[self.saturation_region]
-        return self.MB_REGIONS["default"]
-
-    def _path_term_h(self, mag, m_b=None):
-        """
-        H factor for path term.
-        """
-        return 10 ** (-0.82 + 0.252 * mag)
-
-    def _a0(self, C, C_PGA, region):
-        """
-        Regional anelastic coefficient, a0
-        """
-        if region is None or region == "Cascadia":
-            a0 = C["a0"]
-            a0_pga = C_PGA["a0"]
-        else:
-            a0 = C[region + "_a0"]
-            a0_pga = C_PGA[region + "_a0"]
-
-        return a0, a0_pga
-
-    def _path_term(self, C, C_PGA, mag, rrup, m_b):
-        """
-        Path term.
-        """
-        h = self._path_term_h(mag, m_b)
-        r = np.sqrt(rrup ** 2 + h ** 2)
-        # log(R / Rref)
-        r_rref = np.log(r / math.sqrt(1 + h ** 2))
-
-        a0, a0_pga = self._a0(C, C_PGA, self.region)
-
-        c1n = "c1" + self.SUFFIX
-        fp = C[c1n] * np.log(r) + (self.CONSTANTS["b4"] * mag) \
-            * r_rref + a0 * r
-        fp_pga = C_PGA[c1n] * np.log(r) + (self.CONSTANTS["b4"] * mag) \
-            * r_rref + a0_pga * r
-
-        return fp, fp_pga
-
-    def _linear_amplification(self, C, vs30):
-        """
-        Linear site term.
-        """
-        # site coefficients
-        v1 = self.CONSTANTS["V1"]
-        vref = self.CONSTANTS["vref"]
-        if self.region is None or self.region == "CAM":
-            s2 = C["s2"]
-            s1 = s2
-        elif self.region == "TW" or self.region == "JP":
-            s2 = C[self.region + "_s2"]
-            s1 = C[self.region + "_s1"]
-        else:
-            s2 = C[self.region + "_s2"]
-            s1 = s2
-
-        # linear site term
-        fnl = np.where(vs30 <= v1,
-                       s1 * np.log(vs30 / v1) + s2 * math.log(v1 / vref),
-                       0)
-        fnl = np.where((v1 < vs30) & (vs30 <= C["V2"]),
-                       s2 * np.log(vs30 / vref), fnl)
-        fnl = np.where(vs30 > C["V2"], s2 * math.log(C["V2"] / vref), fnl)
-
-        return fnl
-
-    def _non_linear_term(self, C, imt, vs30, fp, fm, c0, fd=0):
-        """
-        Non-linear site term.
-        """
-        # fd for slab only
-        pgar = np.exp(fp + fm + c0 + fd)
-
-        if hasattr(imt, "period") and imt.period >= 3:
-            fnl = 0
-        else:
-            fnl = C["f4"] * \
-                (np.exp(C["f5"] * (np.minimum(vs30, self.CONSTANTS["vref_fnl"])
-                                   - self.CONSTANTS["Vb"]))
-                 - math.exp(C["f5"]
-                            * (self.CONSTANTS["vref_fnl"]
-                               - self.CONSTANTS["Vb"])))
-            fnl *= np.log((pgar
-                           + self.CONSTANTS["f3"]) / self.CONSTANTS["f3"])
-
-        return fnl
-
-    def _basin_term(self, C, sites=None):
-        """
-        Basin term main handler.
-        """
-        if not hasattr(sites, 'z2pt5'):
-            return 0
-
-        if self.region == "JP":
-            return self._get_basin_term_factors(3.05, -0.8, 500, 0.33,
-                                                C["J_e1"], C["J_e2"],
-                                                C["J_e3"], sites)
-
-        if self.region == "Cascadia":
-            if self.basin is None:
-                return self._get_basin_term_factors(3.94, -0.42, 200, 0.2,
-                                                    C["C_e1"], C["C_e2"],
-                                                    C["C_e3"], sites)
-            if self.basin == "out":
-                dn = C["del_None"]
-                return self._get_basin_term_factors(3.94, -0.42, 200, 0.2,
-                                                    C["C_e1"],
-                                                    C["C_e2"] + dn,
-                                                    C["C_e3"] + dn, sites)
-            if self.basin == "Seattle":
-                ds = C["del_Seattle"]
-                return self._get_basin_term_factors(3.94, -0.42, 200, 0.2,
-                                                    C["C_e1"],
-                                                    C["C_e2"] + ds,
-                                                    C["C_e3"] + ds, sites)
-
-        return 0
-
-    def _get_basin_term_factors(self, theta0, theta1, vmu, vsig, e1, e2, e3,
-                                sites):
-        """
-        Basin term for given factors.
-        """
-        btf = np.zeros_like(sites.vs30)
-        select = sites.z2pt5 != 0
-        if len(select) == 0:
-            return btf
-        vs30 = sites.vs30[select]
-        z2pt5 = sites.z2pt5[select]
-
-        z2pt5_pred = 10 ** (theta0 + theta1
-                            * (1 + erf((np.log10(vs30) - math.log10(vmu))
-                                       / (vsig * math.sqrt(2)))))
-        del_z2pt5 = np.log(z2pt5) - np.log(z2pt5_pred)
-
-        btf[select] = np.where(del_z2pt5 <= (e1 / e3), e1,
-                               np.where(del_z2pt5 >= (e2 / e3), e2,
-                                        e3 * del_z2pt5))
-
-        return btf
-
-    def _depth_scaling(self, C, rup):
-        """
-        Depth scaling is for slab.
-        """
-        return 0
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT    c0    AK_c0        Aleutian_c0  Cascadia_c0 CAM_N_c0     CAM_S_c0    JP_Pac_c0    JP_Phi_c0    SA_N_c0     SA_S_c0      TW_E_c0      TW_W_c0     c0slab AK_c0slab Aleutian_c0slab Cascadia_c0slab CAM_c0slab JP_c0slab SA_N_c0slab SA_S_c0slab TW_c0slab  c1     c1slab b4   a0        AK_a0     CAM_a0    JP_a0     SA_a0     TW_a0     a0slab    AK_a0slab Cascadia_a0slab CAM_a0slab JP_a0slab SA_a0slab TW_a0slab c4     c5    c6    c4slab c5slab c6slab d      m      db   V2  JP_s1  TW_s1  s2     AK_s2  Cascadia_s2 JP_s2  SA_s2  TW_s2  f4       f4slab   f5       J_e1   J_e2   J_e3  C_e1   C_e2   C_e3   del_None del_Seattle Tau   phi21 phi22  phi2V  VM phi2S2S,0 a1    phi2SS,1 phi2SS,2 a2
@@ -375,9 +436,6 @@ class ParkerEtAl2020SInter(GMPE):
     # constant table suffix
     SUFFIX = ""
 
-    CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
-                 "vref_fnl": 760, "V1": 270, "vref": 760}
-
     MB_REGIONS = {"Aleutian": 8, "AK": 8.6, "Cascadia": 7.7,
                   "CAM_S": 7.4, "CAM_N": 7.4, "JP_Pac": 8.5, "JP_Phi": 7.7,
                   "SA_N": 8.5, "SA_S": 8.6, "TW_W": 7.1, "TW_E": 7.1,
@@ -395,48 +453,10 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
     """
     Modifications for subduction slab.
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     # slab also requires hypo_depth
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
-
-    def _c0(self, C, C_PGA):
-        """
-        c0 factor.
-        """
-        if self.saturation_region is None:
-            c0_col = "c0slab"
-        elif self.region in ["AK", "SA"]:
-            c0_col = self.saturation_region + "_c0slab"
-        else:
-            # no more specific region available
-            c0_col = self.region + "_c0slab"
-        return C[c0_col], C_PGA[c0_col]
-
-    def _path_term_h(self, mag, m_b=None):
-        """
-        H factor for path term, subduction slab.
-        """
-        if mag <= m_b:
-            m = (math.log10(35) - math.log10(3.12)) / (m_b - 4)
-            return 10 ** (m * (mag - m_b) + math.log10(35))
-        return 35
-
-    def _a0(self, C, C_PGA, region):
-        """
-        Regional anelastic coefficient for subduction slab, a0
-        """
-        if self.region is None:
-            return C["a0slab"], C_PGA["a0slab"]
-        return C[self.region + "_a0slab"], C_PGA[self.region + "_a0slab"]
-
-    def _depth_scaling(self, C, rup):
-        if rup.hypo_depth >= C["db"]:
-            return C["d"]
-        if rup.hypo_depth <= 20:
-            return C["m"] * (20 - C["db"]) + C["d"]
-        return C["m"] * (rup.hypo_depth - C["db"]) + C["d"]
 
     # constant table suffix
     SUFFIX = "slab"

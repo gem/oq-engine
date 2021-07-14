@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
-    ChiouYoungs2014, ChiouYoungs2014PEER, ChiouYoungs2014NearFaultEffect)
+    ChiouYoungs2014, ChiouYoungs2014PEER, ChiouYoungs2014NearFaultEffect,
+    ChiouYoungs2014Japan, ChiouYoungs2014Italy, ChiouYoungs2014Wenchuan)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.calc import ground_motion_fields
@@ -63,6 +64,47 @@ class ChiouYoungs2014TestCase(BaseGSIMTestCase):
         # data generated from opensha
         self.check('NGA/CY14/CY14_TOTAL_EVENT_SIGMA.csv',
                    max_discrep_percentage=0.05)
+
+    def test_mean_refactor(self):
+        # Test for backward compatibility - and extended test table
+        self.check('NGA/CY14/cy14_extended_table_mean.csv',
+                   max_discrep_percentage=0.001)
+
+    def test_total_stddev_refactor(self):
+        # Test for backward compatibility - and extended test table
+        self.check('NGA/CY14/cy14_extended_table_total_stddev.csv',
+                   max_discrep_percentage=0.001)
+        
+
+
+# Note that in the regionalisation cases the discrepancy percentage is raised
+# to 1 % to allow for a different interpretation of the deltaZ1.0 when Z1.0 = 0
+# when compared to the verification code
+class ChiouYoungs2014JapanTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ChiouYoungs2014Japan
+    def test_mean_japan(self):
+        # Data generated from implementation from Yue Hua
+        # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
+        self.check('NGA/CY14/CY14_Japan_MEAN.csv',
+                   max_discrep_percentage=1.0)
+
+
+class ChiouYoungs2014ItalyTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ChiouYoungs2014Italy
+    def test_mean_italy(self):
+        # Data generated from implementation from Yue Hua
+        # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
+        self.check('NGA/CY14/CY14_Italy_MEAN.csv',
+                   max_discrep_percentage=1.0)
+
+
+class ChiouYoungs2014WenchuanTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ChiouYoungs2014Wenchuan
+    def test_mean_wenchuan(self):
+        # Data generated from implementation from Yue Hua
+        # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
+        self.check('NGA/CY14/CY14_Wenchuan_MEAN.csv',
+                   max_discrep_percentage=1.0)
 
 
 class ChiouYoungs2014PEERTestCase(BaseGSIMTestCase):
@@ -133,7 +175,7 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
         rupture = ParametricProbabilisticRupture(**kwargs)
         return rupture
 
-    def test_mearn_nearfault_distance_taper(self):
+    def test_mean_nearfault_distance_taper(self):
         rupture = self.make_rupture()
         site1 = Site(location=Point(27.9, 41), vs30=1200.,
                      vs30measured=True, z1pt0=2.36, z2pt5=2.)

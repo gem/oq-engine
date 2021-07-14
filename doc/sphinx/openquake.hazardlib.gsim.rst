@@ -108,6 +108,13 @@ allen_2012_ipe
     :undoc-members:
     :show-inheritance:
 
+ameri_2014
+---------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.ameri_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ameri_2017
 ---------------------------------------------------
 .. automodule:: openquake.hazardlib.gsim.ameri_2017
@@ -274,6 +281,14 @@ boore_2014
     :undoc-members:
     :show-inheritance:
 
+boore_2020
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.boore_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 boore_atkinson_2008
 ---------------------------------------------------
 
@@ -294,6 +309,14 @@ bozorgnia_campbell_2016
 -----------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bozorgnia_campbell_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bozorgnia_campbell_2016_vh
+-----------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bozorgnia_campbell_2016_vh
     :members:
     :undoc-members:
     :show-inheritance:
@@ -438,6 +461,14 @@ climent_1994
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.climent_1994
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+coeffs_table
+------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.base
     :members:
     :undoc-members:
     :show-inheritance:
@@ -594,14 +625,6 @@ geomatrix_1993
     :undoc-members:
     :show-inheritance:
 
-germany_2018
-----------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.germany_2018
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ghofrani_atkinson_2014
 ------------------------------------------------------
 
@@ -614,6 +637,14 @@ gmpe_table
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.gmpe_table
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+gulerce_abrahamson_2011
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.gulerce_abrahamson_2011
     :members:
     :undoc-members:
     :show-inheritance:
@@ -650,6 +681,14 @@ hong_goda_2007
     :undoc-members:
     :show-inheritance:
 
+idini_2017
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.idini_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
 idriss_2014
 -------------------------------------------
 
@@ -694,6 +733,27 @@ kuehn_2020
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.kuehn_2020
+
+lanzano_2016
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lanzano_2019
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+lanzano_2020
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2020
     :members:
     :undoc-members:
     :show-inheritance:
@@ -907,6 +967,14 @@ sera_amplification_models
     :undoc-members:
     :show-inheritance:
 
+sgobba_2020
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sgobba_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
 shahjouei_pezeshk_2016
 --------------------------------------------
 
@@ -979,10 +1047,26 @@ stewart_2016
     :undoc-members:
     :show-inheritance:
 
+stewart_2016_vh
+-----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.stewart_2016_vh
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tavakoli_pezeshk_2005
 -----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.tavakoli_pezeshk_2005
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+example_a_2021
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.example_a_2021
     :members:
     :undoc-members:
     :show-inheritance:

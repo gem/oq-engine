@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,11 +22,10 @@ import unittest.mock as mock
 import unittest
 from io import BytesIO
 
-from openquake.baselib import general, datastore
-from openquake.hazardlib import InvalidFile, site_amplification
+from openquake.baselib import general
+from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.risklib import asset
-from openquake.risklib.riskmodels import ValidationError
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import readinput, logictree, datastore
 from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
@@ -62,7 +61,7 @@ investigation_time = 50
 export_dir = %s
         """ % (site_model_input, TMP))
         with self.assertRaises(ValueError) as ctx:
-            readinput.get_params(job_config)
+            readinput.get_params(job_config, {})
         self.assertIn('is an absolute path', str(ctx.exception))
 
     def test_get_oqparam_with_sites_csv(self):
@@ -88,13 +87,13 @@ export_dir = %s
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
             expected_params = {
+                'all_cost_types': [],
                 'export_dir': TMP,
                 'base_path': exp_base_path,
                 'calculation_mode': 'scenario',
                 'complex_fault_mesh_spacing': 5.0,
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'collapse_level': 0,
                 'maximum_distance': {'default': [(1, 1), (10, 1)]},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
@@ -103,9 +102,8 @@ export_dir = %s
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
-                'risk_investigation_time': None,
+                'minimum_asset_loss': {},
             }
-
             params = getparams(readinput.get_oqparam(source))
             self.assertEqual(expected_params, params)
         finally:
@@ -430,10 +428,7 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         fname = os.path.join(DATADIR, 'exposure.xml')
         with self.assertRaises(InvalidFile) as ctx:
             asset.Exposure.read([fname])
-        self.assertIn('''\
-Expected: ['id', 'lat', 'lon', 'number', 'structural', 'taxonomy']
-Got: ['Lon', 'id', 'lat', 'number', 'structural', 'taxonomy']
-Missing: {'lon'}''', str(ctx.exception))
+        self.assertIn("missing {'lon'}", str(ctx.exception))
 
     def test_case_similar(self):
         fname = os.path.join(DATADIR, 'exposure2.xml')
@@ -477,7 +472,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_wrong_trts(self):
         # 'active Shallow Crust' is missing, 'Active Shallow Crust' is there
         oq = readinput.get_oqparam('job.ini', case_16)
-        with self.assertRaises(logictree.InvalidLogicTree) as c:
+        with self.assertRaises(gsim_lt.InvalidLogicTree) as c:
             readinput.get_gsim_lt(oq, ['active Shallow Crust'])
         self.assertIn("is missing the TRT 'active Shallow Crust'",
                       str(c.exception))
@@ -502,26 +497,15 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
             error.call_args[0][0], 'source SFLT2: too large: 84 km')
 
 
-class GetCompositeRiskModelTestCase(unittest.TestCase):
-    def tearDown(self):
-        # cleanup evil global
-        readinput.exposure = None
-
-    def test_missing_vulnerability_function(self):
-        oq = readinput.get_oqparam('job.ini', case_caracas)
-        with self.assertRaises(ValidationError):
-            readinput.get_crmodel(oq)
-
-
 class SitecolAssetcolTestCase(unittest.TestCase):
 
-    def tearDown(self):
+    def setUp(self):
         # cleanup evil global
         readinput.exposure = None
 
     def test_grid_site_model_exposure(self):
-        oq = readinput.get_oqparam(
-            'job.ini', case_16, region_grid_spacing='15')
+        oq = readinput.get_oqparam('job.ini', case_16)
+        oq.region_grid_spacing = 15
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
@@ -538,11 +522,8 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.inputs['amplification'] = os.path.join(
             oq.base_path, 'invalid_amplification.csv')
-        df = readinput.get_amplification(oq)
         with self.assertRaises(ValueError) as ctx:
+            df = site_amplification.AmplFunction.read_df(
+                oq.inputs['amplification'])
             site_amplification.Amplifier(oq.imtls, df)
         self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
-
-    def test_site_model_sites(self):
-        # you can set them at the same time
-        readinput.get_oqparam('job.ini', case_16, sites='0 0')

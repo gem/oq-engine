@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -273,11 +273,11 @@ class Point(object):
         # get a projection that is centered in the point
         proj = geo_utils.OrthographicProjection(
             self.longitude, self.longitude, self.latitude, self.latitude)
-        
+
         # create a shapely object from a projected point coordinates,
         # which are supposedly (0, 0)
         point = shapely.geometry.Point(*proj(self.longitude, self.latitude))
-    
+
         # extend the point to a shapely polygon using buffer()
         # and create openquake.hazardlib.geo.polygon.Polygon object from it
         return Polygon._from_2d(point.buffer(radius), proj)

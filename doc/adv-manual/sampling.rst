@@ -19,30 +19,30 @@ full logic tree of the calculation. The precise why the random extraction
 works depends on the sampling method.
 
 early_weights
-  We this sampling method, the engine randomly choose branches depending
+  With this sampling method, the engine randomly choose branches depending
   on the weights in the logic tree; having done that, the hazard curve
   statistics (mean and quantiles) are computed with equal weights.
 
 late_weights
-  We this sampling method, the engine randomly choose branches ignoring
+  With this sampling method, the engine randomly choose branches ignoring
   the weights in the logic tree; however, the hazard curve
   statistics are computed by taking into account the weights.
 
 early_latin
-  We this sampling method, the engine randomly choose branches depending
+  With this sampling method, the engine randomly choose branches depending
   on the weights in the logic tree by using an hypercube latin sampling;
   having done that, the hazard curve statistics are computed with equal weights.
 
 late_latin
-  We this sampling method, the engine randomly choose branches ignoring
+  Wit this sampling method, the engine randomly choose branches ignoring
   the weights in the logic tree, but still using an hypercube sampling;
   then, the hazard curve statistics are computed by taking into account
   the weights.
 
-More precisely, the engine calls something like the function
+More precisely, the engine calls something like the function::
 
-``openquake.hazardlib.lt.random_sample(
-    branchsets, num_samples, seed, sampling_method)``
+  openquake.hazardlib.lt.random_sample(
+    branchsets, num_samples, seed, sampling_method)
 
 You are invited to play with it; in general the latin sampling produces
 samples much closer to the expected weights even with few samples.
