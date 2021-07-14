@@ -52,8 +52,11 @@ def _compute_mean(C, A1, A2, A3, A4, A5, A6, mag, hypo_depth,
     Compute mean for subduction interface events, as explained in table 2,
     page 67.
     """
+    mag = mag[idx]
+    rrup = rrup[idx]
+    hypo_depth = hypo_depth[idx]
     mean[idx] = (A1 + A2 * mag + C['C1'] + C['C2'] * (A3 - mag) ** 3 +
-                 C['C3'] * np.log(rrup[idx] + A4 * np.exp(A5 * mag)) +
+                 C['C3'] * np.log(rrup + A4 * np.exp(A5 * mag)) +
                  A6 * hypo_depth)
 
 
@@ -106,7 +109,7 @@ class YoungsEtAl1997SInter(GMPE):
 
     delta = 0  # changed in subclasses
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -127,7 +130,8 @@ class YoungsEtAl1997SInter(GMPE):
                               CONSTS['A4_rock'], CONSTS['A5_rock'],
                               CONSTS['A6_rock'], ctx.mag, ctx.hypo_depth,
                               ctx.rrup, mean[m], idx_rock)
-                sig[m, idx_rock] += C['C4'] + C['C5'] * np.clip(ctx.mag, 0, 8.)
+                sig[m, idx_rock] += C['C4'] + C['C5'] * np.clip(
+                    ctx.mag[idx_rock], 0, 8.)
 
                 if imt == SA(period=4.0, damping=5.0):
                     mean[m] /= 0.399
@@ -139,7 +143,8 @@ class YoungsEtAl1997SInter(GMPE):
                               CONSTS['A4_soil'], CONSTS['A5_soil'],
                               CONSTS['A6_soil'], ctx.mag, ctx.hypo_depth,
                               ctx.rrup, mean[m], idx_soil)
-                sig[m, idx_soil] += C['C4'] + C['C5'] * np.clip(ctx.mag, 0, 8.)
+                sig[m, idx_soil] += C['C4'] + C['C5'] * np.clip(
+                    ctx.mag[idx_soil], 0, 8.)
 
             if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
                     const.TRT.SUBDUCTION_INTRASLAB):  # sslab correction
