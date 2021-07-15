@@ -89,53 +89,53 @@ _get_mean = CallableDict()
 
 
 @_get_mean.add("rjb", "homoscedastic")
-def _get_mean_1(kind, stress_drop, C, C_STRESS, rup, dists, sites):
+def _get_mean_1(kind, stress_drop, C, C_STRESS, ctx):
     """
     Returns the mean ground motion (i.e. log10(ground motion in cm/s^2) )
     """
     return (C["a"] +
-            _get_distance_scaling_term(C, dists.rjb, rup.mag) +
-            _get_magnitude_scaling_term(C, rup.mag) +
-            _get_site_amplification_term(C, sites.vs30) +
-            _get_style_of_faulting_term(C, rup.rake))
+            _get_distance_scaling_term(C, ctx.rjb, ctx.mag) +
+            _get_magnitude_scaling_term(C, ctx.mag) +
+            _get_site_amplification_term(C, ctx.vs30) +
+            _get_style_of_faulting_term(C, ctx.rake))
 
 
 @_get_mean.add("rjb_stress")
-def _get_mean_2(kind, stress_drop, C, C_STRESS, rup, dists, sites):
+def _get_mean_2(kind, stress_drop, C, C_STRESS, ctx):
     """
     Returns the mean ground motion
     """
     return (C["a"] +
-            _get_magnitude_scaling_term(C, rup.mag) +
-            _get_distance_scaling_term(C, dists.rjb, rup.mag) +
-            _get_style_of_faulting_term(C, rup.rake) +
-            _get_site_amplification_term(C, sites.vs30) +
-            _get_stress_term(C_STRESS, rup.mag, stress_drop))
+            _get_magnitude_scaling_term(C, ctx.mag) +
+            _get_distance_scaling_term(C, ctx.rjb, ctx.mag) +
+            _get_style_of_faulting_term(C, ctx.rake) +
+            _get_site_amplification_term(C, ctx.vs30) +
+            _get_stress_term(C_STRESS, ctx.mag, stress_drop))
 
 
 @_get_mean.add("repi")
-def _get_mean_3(kind, stress_drop, C, C_STRESS, rup, dists, sites):
+def _get_mean_3(kind, stress_drop, C, C_STRESS, ctx):
     """
     Returns the mean ground motion
     """
     return (C["a"] +
-            _get_magnitude_scaling_term(C, rup.mag) +
-            _get_distance_scaling_term(C, dists.repi, rup.mag) +
-            _get_style_of_faulting_term(C, rup.rake) +
-            _get_site_amplification_term(C, sites.vs30))
+            _get_magnitude_scaling_term(C, ctx.mag) +
+            _get_distance_scaling_term(C, ctx.repi, ctx.mag) +
+            _get_style_of_faulting_term(C, ctx.rake) +
+            _get_site_amplification_term(C, ctx.vs30))
 
 
 @_get_mean.add("repi_stress")
-def _get_mean_4(kind, stress_drop, C, C_STRESS, rup, dists, sites):
+def _get_mean_4(kind, stress_drop, C, C_STRESS, ctx):
     """
     Returns the mean ground motion
     """
     return (C["a"] +
-            _get_magnitude_scaling_term(C, rup.mag) +
-            _get_distance_scaling_term(C, dists.repi, rup.mag) +
-            _get_style_of_faulting_term(C, rup.rake) +
-            _get_site_amplification_term(C, sites.vs30) +
-            _get_stress_term(C_STRESS, rup.mag, stress_drop))
+            _get_magnitude_scaling_term(C, ctx.mag) +
+            _get_distance_scaling_term(C, ctx.repi, ctx.mag) +
+            _get_style_of_faulting_term(C, ctx.rake) +
+            _get_site_amplification_term(C, ctx.vs30) +
+            _get_stress_term(C_STRESS, ctx.mag, stress_drop))
 
 
 def _get_site_amplification_term(C, vs30):
@@ -158,38 +158,23 @@ def _get_site_amplification_term(C, vs30):
     return f_s
 
 
-def _get_stddevs(kind, C_SIGMA, stddev_types, num_sites, mag):
+def _get_stddevs(kind, C_SIGMA, mag):
     """
     Return standard deviations
     """
+    if kind == "homoscedastic":
+        tau = C_SIGMA["sigmaB"]
+        phi = C_SIGMA["sigmaW"]
+        sigma = np.sqrt(tau ** 2 + phi ** 2)
+        return sigma, tau, phi
+
     if kind not in "rjb repi":
         mag = None
-    if kind == "homoscedastic":
-        tau = C_SIGMA["sigmaB"] + np.zeros(num_sites)
-        phi = C_SIGMA["sigmaW"] + np.zeros(num_sites)
-        sigma = np.sqrt(tau ** 2 + phi ** 2)
-        stddevs = []
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sigma)
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs
-
     tau = _compute_between_events_std(C_SIGMA, mag)
     phi = _compute_within_event_std(C_SIGMA)
     sigma = np.sqrt(tau**2 + phi**2)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(sigma + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(num_sites))
-    return stddevs
+
+    return sigma, tau, phi
 
 
 def _get_stress_term(C, mag, norm_stress_drop):
@@ -276,27 +261,25 @@ class AmeriEtAl2017Rjb(GMPE):
         self.norm_stress_drop = norm_stress_drop
         self.adjustment_factor = np.log(adjustment_factor)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-
-        C = self.COEFFS[imt]
-        C_SIGMA = self.COEFFS_SIGMA[imt]
-        C_STRESS = self.COEFFS_STRESS[imt]
-        imean = _get_mean(self.kind, self.norm_stress_drop,
-                          C, C_STRESS, rup, dists, sites)
-        # Convert mean to ln(SA) with SA in units of g:
-        mean = np.log((10.0 ** (imean - 2.0)) / g)
-
-        istddevs = _get_stddevs(
-            self.kind, C_SIGMA, stddev_types, len(sites.vs30), rup.mag)
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        return mean + self.adjustment_factor, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            C_SIGMA = self.COEFFS_SIGMA[imt]
+            C_STRESS = self.COEFFS_STRESS[imt]
+            imean = _get_mean(self.kind, self.norm_stress_drop,
+                              C, C_STRESS, ctx)
+            # Convert mean to ln(SA) with SA in units of g:
+            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] += self.adjustment_factor
+            s, t, p = _get_stddevs(self.kind, C_SIGMA, ctx.mag)
+            sig[m] = np.log(10.0 ** s)
+            tau[m] = np.log(10.0 ** t)
+            phi[m] = np.log(10.0 ** p)
 
     #: Coefficients from Table "10518_2017_171_MOESM2_ESM.xlsx" in electronic supplementary material:
     COEFFS = CoeffsTable(sa_damping=5, table="""
