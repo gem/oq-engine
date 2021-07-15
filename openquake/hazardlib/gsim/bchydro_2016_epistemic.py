@@ -189,7 +189,7 @@ class FABATaperGaussian(FABATaperStep):
         return y
 
 
-FABA_ALL_MODELS = {
+AbrahamsonEtAl2015SInter.FABA_ALL_MODELS = {
     "Step": FABATaperStep,
     "Linear": FABATaperLinear,
     "SFunc": FABATaperSFunc,
@@ -223,13 +223,6 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
-
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -269,13 +262,6 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
     pga      865.1000  -1.1860   4.2203   -1.3500   -0.00721467    1.0988   -1.4200   3.1200   0.0130    0.9800   -0.0135   -0.4000   0.9969   -1.0000   0.6000  0.4300  0.7400    0.6000
@@ -314,13 +300,6 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
-
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -368,13 +347,6 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
     pga      865.1000  -1.1860   4.2203   -1.3500   -0.00278801    1.0988   -1.4200   3.1200   0.0130    0.9800   -0.0135   -0.4000   0.9969   -1.0000   0.6000  0.4300  0.7400    0.6000
@@ -414,13 +386,6 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
     pga      865.1000  -1.1860   4.2203   -1.3500   -0.00278801    1.0988   -1.4200   3.1200   0.0130    0.9800   -0.0135   -0.4000   0.9969   -1.0000   0.6000  0.4300  0.7400    0.6000
@@ -459,13 +424,6 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
-
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss

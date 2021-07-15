@@ -311,13 +311,18 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     delta_c1 = None
     kind = "base"
-    theta6_adj = 0.
-    faba_model = None  # overridden in BCHydro
-    sigma_mu_epsilon = 0.  # overridden in BCHydro
+    FABA_ALL_MODELS = {}  # overridden in BCHydro
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ergodic = kwargs.get('ergodic', True)
+        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
+        faba_type = kwargs.get("faba_taper_model", "Step")
+        if self.FABA_ALL_MODELS:  # BCHydro
+            self.faba_model = self.FABA_ALL_MODELS[faba_type](**kwargs)
+        else:
+            self.faba_mode = None
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
