@@ -88,7 +88,7 @@ def _get_magnitude_scaling_term(C, mag):
 _get_mean = CallableDict()
 
 
-@_get_mean.add("rjb")
+@_get_mean.add("rjb", "homoscedastic")
 def _get_mean_1(kind, stress_drop, C, C_STRESS, rup, dists, sites):
     """
     Returns the mean ground motion (i.e. log10(ground motion in cm/s^2) )
@@ -158,11 +158,11 @@ def _get_site_amplification_term(C, vs30):
     return f_s
 
 
-def _get_stddevs(clsname, C_SIGMA, stddev_types, num_sites, mag):
+def _get_stddevs(kind, C_SIGMA, stddev_types, num_sites, mag):
     """
     Return standard deviations
     """
-    if clsname == "Ameri2014Rjb":  # early version
+    if kind == "homoscedastic":
         tau = C_SIGMA["sigmaB"] + np.zeros(num_sites)
         phi = C_SIGMA["sigmaW"] + np.zeros(num_sites)
         sigma = np.sqrt(tau ** 2 + phi ** 2)
@@ -292,8 +292,7 @@ class AmeriEtAl2017Rjb(GMPE):
         mean = np.log((10.0 ** (imean - 2.0)) / g)
 
         istddevs = _get_stddevs(
-            self.__class__.__name__,
-            C_SIGMA, stddev_types, len(sites.vs30), rup.mag)
+            self.kind, C_SIGMA, stddev_types, len(sites.vs30), rup.mag)
         stddevs = np.log(10.0 ** np.array(istddevs))
         return mean + self.adjustment_factor, stddevs
 
@@ -449,8 +448,7 @@ class AmeriEtAl2017RjbStressDrop(AmeriEtAl2017Rjb):
         mean = np.log((10.0 ** (imean - 2.0)) / g)
 
         istddevs = _get_stddevs(
-            self.__class__.__name__, C_SIGMA, stddev_types,
-            len(sites.vs30), None)
+            self.kind, C_SIGMA, stddev_types, len(sites.vs30), None)
         stddevs = np.log(10.0 ** np.array(istddevs))
         return mean + self.adjustment_factor, stddevs
 
@@ -593,8 +591,7 @@ class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
         mean = np.log((10.0 ** (imean - 2.0)) / g)
 
         istddevs = _get_stddevs(
-            self.__class__.__name__, C_SIGMA, stddev_types,
-            len(sites.vs30), None)
+            self.kind, C_SIGMA, stddev_types, len(sites.vs30), None)
         stddevs = np.log(10.0 ** np.array(istddevs))
         return mean + self.adjustment_factor, stddevs
 
@@ -615,8 +612,9 @@ class Ameri2014Rjb(AmeriEtAl2017Rjb):
     "A probabilistic seismic hazard map for the metropolitan France",
     Bulletin of Earthquake Engineering, 18: 1865 - 1898
 
-    Adopts a homoskedastic standard deviation model.
+    Adopts a homoscedastic standard deviation model.
     """
+    kind = "homoscedastic"
     #: Coefficients from xls file "coeff_AMERI2014_Rjb_generic.xls":
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt             a           c1          c2           h           b1           b2     b3     e1          e2          e3          e4           f1           f2     f3
@@ -649,7 +647,7 @@ class Ameri2014Rjb(AmeriEtAl2017Rjb):
     3.000   2.4565500   -0.9442740   0.1724760   5.1844600    0.5461080   -0.0768508   0.00   0.00   0.1099650   0.3089590   0.5937220   -0.0879513   -0.0845897   0.00
     """)
 
-    # Homoskedastic sigma model
+    # Homoscedastic sigma model
     COEFFS_SIGMA = CoeffsTable(sa_damping=5, table="""\
     imt        sigmaB      sigmaW      sigmaT
     pga     0.2269060   0.3025410   0.3781770
