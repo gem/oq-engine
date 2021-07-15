@@ -19,7 +19,7 @@ import numpy as np
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.can15.western import (
-    get_sigma, WesternCan15RjbMid)
+    get_sigma, WesternCan15RjbMid, WesternCan15RjbLow, WesternCan15RjbUpp)
 
 
 class GetSigmaTestCase(unittest.TestCase):
@@ -54,16 +54,24 @@ class GetSigmaTestCase(unittest.TestCase):
 
 
 class WesternCan15RjbHighTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = WesternCan15RjbUpp
+
+    def test_mean(self):
+        self.check('CAN15/GMPEt_Wcrust_high.csv',
+                   max_discrep_percentage=80.)
+
+
+class WesternCan15RjbMidTestCase(BaseGSIMTestCase):
     GSIM_CLASS = WesternCan15RjbMid
 
-    def test_mean_upp(self):
-        self.check('CAN15/GMPEt_Wcrust_high.csv',
-                   max_discrep_percentage=80., sgn=1)
-
-    def test_mean_mid(self):
+    def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_med.csv',
                    max_discrep_percentage=80.)
 
-    def test_mean_low(self):
+
+class WesternCan15RjbLowTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = WesternCan15RjbLow
+
+    def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_low.csv',
-                   max_discrep_percentage=80., sgn=-1)
+                   max_discrep_percentage=80.)
