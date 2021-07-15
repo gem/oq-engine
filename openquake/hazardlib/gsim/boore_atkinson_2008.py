@@ -425,6 +425,10 @@ class BooreAtkinson2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
+    def __init__(self, sgn=0, **kwargs):
+        super().__init__(**kwargs)
+        self.sgn = sgn
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method

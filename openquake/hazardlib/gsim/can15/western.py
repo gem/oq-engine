@@ -22,6 +22,7 @@
 
 import copy
 import numpy as np
+from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.can15.utils import \
     get_equivalent_distances_west
 from openquake.hazardlib.gsim.boore_atkinson_2011 import BooreAtkinson2011
@@ -66,8 +67,6 @@ class WesternCan15Mid(BooreAtkinson2011):
     #: Required distance is only repi since rrup and rjb are obtained from repi
     REQUIRES_DISTANCES = {'repi'}
 
-    sgn = 0
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         # distances
         if self.REQUIRES_DISTANCES == {'repi'}:
@@ -89,14 +88,6 @@ class WesternCan15Mid(BooreAtkinson2011):
         return mean, stds
 
 
-class WesternCan15Low(WesternCan15Mid):
-    sgn = -1
-
-
-class WesternCan15Upp(WesternCan15Mid):
-    sgn = +1
-
-
 class WesternCan15RjbMid(WesternCan15Mid):
     """
     Implements the Boore and Atkinson (2008) with adjustments proposed by
@@ -104,25 +95,11 @@ class WesternCan15RjbMid(WesternCan15Mid):
     calculation of hazard for the fifth generation of Canada's hazard maps,
     released in 2015.
     """
-    #: GMPE not tested against independent implementation so raise
-    #: not verified warning
-    non_verified = True
-
-    #: Shear-wave velocity for reference soil conditions in [m s-1]
-    DEFINED_FOR_REFERENCE_VELOCITY = 760.
-
-    #: Standard deviation types supported
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
-
     #: Use rjb as the original BooreAtkinson
     REQUIRES_DISTANCES = {'rjb'}
 
-    sgn = 0
 
-
-class WesternCan15RjbLow(WesternCan15RjbMid):
-    sgn = -1
-
-
-class WesternCan15RjbUpp(WesternCan15RjbMid):
-    sgn = +1
+add_alias('WesternCan15Upp', WesternCan15Mid, sgn=+1)
+add_alias('WesternCan15Low', WesternCan15Mid, sgn=-1)
+add_alias('WesternCan15RjbUpp', WesternCan15RjbMid, sgn=+1)
+add_alias('WesternCan15RjbLow', WesternCan15RjbMid, sgn=-1)
