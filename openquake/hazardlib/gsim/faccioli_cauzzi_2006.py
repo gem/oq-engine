@@ -53,29 +53,25 @@ class FaccioliCauzzi2006(GMPE):
 
     REQUIRES_DISTANCES = {'repi'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
-        d = np.sqrt(dists.repi**2 + C['h']**2)
-        term01 = C['c3'] * (np.log(d))
-        mean = C['c1'] + C['c2'] * rup.mag + term01
-        stddevs = []
-        for stddev_type in stddev_types:
-            stddevs.append((C['sigma']) + np.zeros(len(d)))
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            d = np.sqrt(ctx.repi**2 + C['h']**2)
+            term01 = C['c3'] * (np.log(d))
+            mean[m] = C['c1'] + C['c2'] * ctx.mag + term01
+            sig[m] = C['sigma']
 
-    #: Coefficient table constructed from the electronic suplements of the
-    #: original paper - coeff in the same order as in Table 4/page 703
-    #: for Maw only (read last paragraph on page 701 -
-    #: explains what Maw should be used)
+        #: Coefficient table constructed from the electronic suplements of the
+        #: original paper - coeff in the same order as in Table 4/page 703
+        #: for Maw only (read last paragraph on page 701 -
+        #: explains what Maw should be used)
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
     IMT           c1        c2         c3       h    sigma
     MMI       1.0157    1.2566    -0.6547       2   0.5344
-        """)
+    """)

@@ -11,8 +11,33 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SInter
 from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
 from openquake.hazardlib.gsim.abrahamson_2015 import AbrahamsonEtAl2015SInter
-from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import \
-    GhofraniAtkinson2014
+from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import (
+    GhofraniAtkinson2014)
+
+
+class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
+    """
+    Implements an adjusted version of the Atkinson and Macias (2009) GMPE.
+    The motion is scaled B/C conditions following the approach described in
+    Atkinson and Adams (2013) and implemented in
+    :mod:`openquake.hazardlib.gsim.can15.sinter`.
+    """
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
+    #: GMPE not tested against independent implementation so raise
+    #: not verified warning
+    non_verified = True
+
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            mean[m] += np.log(SInterCan15Mid.COEFFS_SITE[imt]['mf'])
 
 
 def _get_mean(self, sites, rup, dists, imt, stddev_types):

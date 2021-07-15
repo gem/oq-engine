@@ -52,20 +52,16 @@ def _compute_mean(C, A1, A2, A3, A4, A5, A6, mag, hypo_depth,
     Compute mean for subduction interface events, as explained in table 2,
     page 67.
     """
+    if isinstance(mag, np.ndarray):
+        mag = mag[idx]
+        hypo_depth = hypo_depth[idx]
     mean[idx] = (A1 + A2 * mag + C['C1'] + C['C2'] * (A3 - mag) ** 3 +
                  C['C3'] * np.log(rrup[idx] + A4 * np.exp(A5 * mag)) +
                  A6 * hypo_depth)
 
 
-def _compute_std(C, mag, stddevs, idx):
-    """
-    Compute total standard deviation, as explained in table 2, page 67.
-    """
-    if mag > 8.0:
-        mag = 8.0
-
-    for stddev in stddevs:
-        stddev[idx] += C['C4'] + C['C5'] * mag
+def get(array, idx):
+    return array[idx] if isinstance(array, np.ndarray) else array
 
 
 class YoungsEtAl1997SInter(GMPE):
@@ -101,7 +97,7 @@ class YoungsEtAl1997SInter(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 760
 
     #: Required site parameters is Vs30, used to distinguish between rock
-    #: and soil sites, see paragraph 'Strong Motion Data Base', page 59.
+    #: and soil ctx, see paragraph 'Strong Motion Data Base', page 59.
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and focal depth, see
@@ -117,58 +113,53 @@ class YoungsEtAl1997SInter(GMPE):
 
     delta = 0  # changed in subclasses
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         if self.__class__.__name__.endswith('NSHMP2008'):
             # NSHMP2008 adjustement of the hypo_depth
-            rup = copy.copy(rup)
-            rup.hypo_depth = 20.
+            ctx = copy.copy(ctx)
+            ctx.hypo_depth = 20.
+        idx_rock = ctx.vs30 >= self.ROCK_VS30
+        idx_soil = ctx.vs30 < self.ROCK_VS30
+        for m, imt in enumerate(imts):
 
-        mean = np.zeros_like(sites.vs30)
-        stddevs = [np.zeros_like(sites.vs30) for _ in stddev_types]
+            if idx_rock.any():
+                C = self.COEFFS_ROCK[imt]
+                _compute_mean(C, CONSTS['A1_rock'],
+                              CONSTS['A2_rock'], CONSTS['A3_rock'],
+                              CONSTS['A4_rock'], CONSTS['A5_rock'],
+                              CONSTS['A6_rock'], ctx.mag, ctx.hypo_depth,
+                              ctx.rrup, mean[m], idx_rock)
+                sig[m, idx_rock] += C['C4'] + C['C5'] * np.clip(
+                    get(ctx.mag, idx_rock), 0, 8.)
 
-        idx_rock = sites.vs30 >= self.ROCK_VS30
-        idx_soil = sites.vs30 < self.ROCK_VS30
+                if imt == SA(period=4.0, damping=5.0):
+                    mean[m] /= 0.399
 
-        if idx_rock.any():
-            C = self.COEFFS_ROCK[imt]
-            _compute_mean(C, CONSTS['A1_rock'],
-                          CONSTS['A2_rock'], CONSTS['A3_rock'],
-                          CONSTS['A4_rock'], CONSTS['A5_rock'],
-                          CONSTS['A6_rock'], rup.mag, rup.hypo_depth,
-                          dists.rrup, mean, idx_rock)
-            _compute_std(C, rup.mag, stddevs, idx_rock)
+            if idx_soil.any():
+                C = self.COEFFS_SOIL[imt]
+                _compute_mean(C, CONSTS['A1_soil'],
+                              CONSTS['A2_soil'], CONSTS['A3_soil'],
+                              CONSTS['A4_soil'], CONSTS['A5_soil'],
+                              CONSTS['A6_soil'], ctx.mag, ctx.hypo_depth,
+                              ctx.rrup, mean[m], idx_soil)
+                sig[m, idx_soil] += C['C4'] + C['C5'] * np.clip(
+                    get(ctx.mag, idx_soil), 0, 8.)
 
-            if imt == SA(period=4.0, damping=5.0):
-                mean = mean / 0.399
+            if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                    const.TRT.SUBDUCTION_INTRASLAB):  # sslab correction
+                if imt.period == 4.0:
+                    mean[m, idx_rock] += 0.3846 / 0.399
+                else:
+                    mean[m, idx_rock] += 0.3846
 
-        if idx_soil.any():
-            C = self.COEFFS_SOIL[imt]
-            _compute_mean(C, CONSTS['A1_soil'],
-                          CONSTS['A2_soil'], CONSTS['A3_soil'],
-                          CONSTS['A4_soil'], CONSTS['A5_soil'],
-                          CONSTS['A6_soil'], rup.mag, rup.hypo_depth,
-                          dists.rrup, mean, idx_soil)
-            _compute_std(C, rup.mag, stddevs, idx_soil)
+                mean[m, idx_soil] += 0.3643
 
-        if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
-                const.TRT.SUBDUCTION_INTRASLAB):  # sslab correction
-
-            idx_rock = sites.vs30 >= self.ROCK_VS30
-            idx_soil = sites.vs30 < self.ROCK_VS30
-
-            if imt.period == 4.0:
-                mean[idx_rock] += 0.3846 / 0.399
-            else:
-                mean[idx_rock] += 0.3846
-
-            mean[idx_soil] += 0.3643
-
-        return mean + self.delta, stddevs
+        mean += self.delta
 
     #: Coefficient table containing soil coefficients,
     #: taken from table 2, p. 67

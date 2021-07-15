@@ -35,91 +35,70 @@ from openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs import (
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
-def _compute_distance(rup, dists, imt, C):
+def _compute_distance(ctx, imt, C):
     """
     Compute the second term of the equation described on p. 199:
 
     ``(b4 + b5 * M) * log(sqrt(Rjb ** 2 + b6 ** 2))``
     """
-    return (((C['b4'] + C['b5'] * rup.mag)
-             * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))))
+    return (((C['b4'] + C['b5'] * ctx.mag)
+             * np.log10((np.sqrt(ctx.rjb ** 2.0 + C['b6'] ** 2.0)))))
 
 
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     Compute the first term of the equation described on p. 199:
 
     ``b1 + b2 * M + b3 * M**2``
     """
-    return C['b1'] + (C['b2'] * rup.mag) + (C['b3'] * (rup.mag ** 2))
+    return C['b1'] + (C['b2'] * ctx.mag) + (C['b3'] * (ctx.mag ** 2))
 
 
-def _get_fault_type_dummy_variables(sites, rup, imt):
+def _get_fault_type_dummy_variables(ctx, imt):
     """
     Same classification of SadighEtAl1997. Akkar and Bommer 2010 is based
     on Akkar and Bommer 2007b; read Strong-Motion Dataset and Record
     Processing on p. 514 (Akkar and Bommer 2007b).
     """
-
-    Fn, Fr = 0, 0
-    if rup.rake >= -135 and rup.rake <= -45:
-        # normal
-        Fn = 1
-    elif rup.rake >= 45 and rup.rake <= 135:
-        # reverse
-        Fr = 1
+    Fn = (ctx.rake >= -135) & (ctx.rake <= -45)  # normal fault
+    Fr = (ctx.rake >= 45) & (ctx.rake <= 135)  # reverse fault
     return Fn, Fr
 
 
-def _get_mechanism(sites, rup, imt, C):
+def _get_mechanism(ctx, imt, C):
     """
     Compute the fourth term of the equation described on p. 199:
 
     ``b9 * Fn + b10 * Fr``
     """
-    Fn, Fr = _get_fault_type_dummy_variables(sites, rup, imt)
+    Fn, Fr = _get_fault_type_dummy_variables(ctx, imt)
     return (C['b9'] * Fn) + (C['b10'] * Fr)
 
 
-def _get_site_amplification(sites, imt, C):
+def _get_site_amplification(ctx, imt, C):
     """
     Compute the third term of the equation described on p. 199:
 
     ``b7 * Ss + b8 * Sa``
     """
-    Ss, Sa = _get_site_type_dummy_variables(sites)
+    Ss, Sa = _get_site_type_dummy_variables(ctx)
     return (C['b7'] * Ss) + (C['b8'] * Sa)
 
 
-def _get_site_type_dummy_variables(sites):
+def _get_site_type_dummy_variables(ctx):
     """
-    Get site type dummy variables, ``Ss`` (for soft and stiff soil sites)
-    and ``Sa`` (for rock sites).
+    Get site type dummy variables, ``Ss`` (for soft and stiff soil ctx)
+    and ``Sa`` (for rock ctx).
     """
-    Ss = np.zeros((len(sites.vs30),))
-    Sa = np.zeros((len(sites.vs30),))
+    Ss = np.zeros((len(ctx.vs30),))
+    Sa = np.zeros((len(ctx.vs30),))
     # Soft soil; Vs30 < 360 m/s. Page 199.
-    idxSs = (sites.vs30 < 360.0)
+    idxSs = (ctx.vs30 < 360.0)
     # Stiff soil Class A; 360 m/s <= Vs30 <= 750 m/s. Page 199.
-    idxSa = (sites.vs30 >= 360.0) & (sites.vs30 <= 750.0)
+    idxSa = (ctx.vs30 >= 360.0) & (ctx.vs30 <= 750.0)
     Ss[idxSs] = 1
     Sa[idxSa] = 1
     return Ss, Sa
-
-
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return standard deviations as defined in table 1, p. 200.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['SigmaTot'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['Sigma1'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
 
 
 class AkkarBommer2010(GMPE):
@@ -174,40 +153,37 @@ class AkkarBommer2010(GMPE):
     #: Reference Vs30. See page 2983 (top or right column)
     DEFINED_FOR_REFERENCE_VELOCITY = 760.0
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS[imt]
 
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_distance(rup, dists, imt, C) +
-                 _get_site_amplification(sites, imt, C) +
-                 _get_mechanism(sites, rup, imt, C))
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(ctx, imt, C) +
+                     _get_site_amplification(ctx, imt, C) +
+                     _get_mechanism(ctx, imt, C))
 
-        # Convert units to g,
-        # but only for PGA and SA (not PGV):
-        if imt.string.startswith(("SA", "PGA")):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
+            # Convert units to g,
+            # but only for PGA and SA (not PGV):
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV:
+                mean[m] = np.log(10.0 ** imean)
 
-        # apply scaling factor for SA at 4 s
-        if imt.string[:2] == 'SA' and imt.period == 4.0:
-            mean /= 0.8
+            # apply scaling factor for SA at 4 s
+            if imt.string[:2] == 'SA' and imt.period == 4.0:
+                mean[m] /= 0.8
 
-        istddevs = _get_stddevs(
-            C, stddev_types, num_sites=len(sites.vs30)
-        )
-
-        stddevs = np.log(10 ** np.array(istddevs))
-
-        return mean, stddevs
+            sig[m] = np.log(10 ** C['SigmaTot'])
+            tau[m] = np.log(10 ** C['tau'])
+            phi[m] = np.log(10 ** C['Sigma1'])
 
     #: For PGA and SA up to 0.05 seconds, coefficients are taken from table 5,
     #: page 385 of 'Extending ground-motion prediction equations for spectral
@@ -309,7 +285,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
     Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
 
-    Model implmented by laurentiu.danciu@gmail.com
+    Model implemented by laurentiu.danciu@gmail.com
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
@@ -317,26 +293,23 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
-        sites.vs30 = 600 * np.ones(len(sites.vs30))
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
+        ctx.vs30 = np.full_like(ctx.vs30, 600.)
+        super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tau'
         log_phi_ss = np.log(10)
-        mean, stddevs = _apply_adjustments(
-            AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
-            log_phi_ss)
-
-        return mean,  np.log(10 ** np.array(stddevs))
+        for m, imt in enumerate(imts):
+            _apply_adjustments(
+                AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
+                mean[m], sig[m], tau[m], phi[m], ctx, ctx.rjb, imt, log_phi_ss)
+            sig[m] = np.log(10 ** sig[m])
+            #tau[m] = np.log(10 ** tau[m])
+            #phi[m] = np.log(10 ** phi[m])
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 

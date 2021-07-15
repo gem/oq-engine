@@ -23,7 +23,7 @@ import pandas
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.commonlib import datastore
-from openquake.calculators import base, scenario_damage
+from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import get_loss_builder
 

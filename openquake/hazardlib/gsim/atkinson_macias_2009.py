@@ -20,7 +20,6 @@
 Module exports :class:'AtkinsonMacias2009'
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -44,18 +43,6 @@ def _get_magnitude_term(C, mag):
     """
     dmag = mag - 8.0
     return C["c0"] + C["c3"] * dmag + C["c4"] * (dmag ** 2.)
-
-
-def _get_stddevs(C, num_sites, stddev_types):
-    """
-    Returns the total standard deviation, converting from log10 to log
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(
-                np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-    return stddevs
 
 
 class AtkinsonMacias2009(GMPE):
@@ -90,21 +77,20 @@ class AtkinsonMacias2009(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-
-        imean = (_get_magnitude_term(C, rup.mag) +
-                 _get_distance_term(C, dists.rrup, rup.mag))
-        # Convert mean from cm/s and cm/s/s and from common logarithm to
-        # natural logarithm
-        mean = np.log((10.0 ** (imean - 2.0)) / g)
-        stddevs = _get_stddevs(C, len(dists.rrup), stddev_types)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_get_magnitude_term(C, ctx.mag) +
+                     _get_distance_term(C, ctx.rrup, ctx.mag))
+            # Convert mean from cm/s and cm/s/s and from common logarithm to
+            # natural logarithm
+            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            sig[m] = np.log(10.0 ** C["sigma"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT            c0        c1          c2       c3        c4  sigma

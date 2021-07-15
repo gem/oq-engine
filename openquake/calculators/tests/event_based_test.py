@@ -26,8 +26,7 @@ import numpy.testing
 
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import countby, gettemp
-from openquake.hazardlib import nrml, InvalidFile
-from openquake.hazardlib.sourceconverter import RuptureConverter
+from openquake.hazardlib import InvalidFile
 from openquake.commonlib.datastore import read
 from openquake.baselib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index

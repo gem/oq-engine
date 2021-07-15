@@ -21,6 +21,7 @@
 Check GSIM class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
 """
+import os
 import csv
 import math
 import sys
@@ -28,7 +29,6 @@ import time
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.contexts import (
     RuptureContext, DistancesContext, ContextMaker)
 from openquake.hazardlib.imt import from_string
@@ -44,7 +44,8 @@ def set_read_only(ctx):
     ctx.sids = numpy.arange(n)
 
 
-def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
+def check_gsim(gsim, datafile, max_discrep_percentage,
+               debug=os.environ.get('OQ_DEBUG')):
     """
     Test GSIM against the data file and return test result.
 
@@ -269,63 +270,3 @@ def _parse_csv_line(headers, values, req_site_params):
 
     assert result_type is not None
     return ctx, stddev_type, expected_results, result_type
-
-
-if __name__ == '__main__':
-    import argparse
-
-    def gsim_by_import_path(import_path):
-        if '.' not in import_path:
-            raise argparse.ArgumentTypeError(
-                '%r is not well-formed import path' % import_path)
-        module_name, class_name = import_path.rsplit('.', 1)
-        try:
-            module = __import__(module_name, fromlist=[class_name])
-        except ImportError:
-            raise argparse.ArgumentTypeError(
-                'can not import module %r, make sure '
-                'it is in your $PYTHONPATH' % module_name)
-        if not hasattr(module, class_name):
-            raise argparse.ArgumentTypeError(
-                "module %r doesn't export name %r" % (module_name, class_name))
-        gsim_class = getattr(module, class_name)
-        if not isinstance(gsim_class, type) \
-                or not issubclass(gsim_class, GroundShakingIntensityModel):
-            raise argparse.ArgumentTypeError(
-                "%r is not subclass of "
-                "openquake.hazardlib.gsim.base.GroundShakingIntensityModel"
-                % import_path)
-        return gsim_class
-
-    parser = argparse.ArgumentParser(description=' '.join(__doc__.split()))
-    parser.add_argument('gsim', type=gsim_by_import_path,
-                        help='an import path of the ground shaking '
-                        'intensity model class in a form '
-                        '"package.module.ClassName".')
-    parser.add_argument('datafile', type=argparse.FileType('r'),
-                        help='test data file in a csv format. use "-" for '
-                             'reading from standard input')
-    parser.add_argument('-p', '--max-discrepancy', type=float, metavar='prcnt',
-                        help='the maximum discrepancy allowed for result '
-                        'value to be considered matching, expressed '
-                             'in percentage points. default value is 0.5.',
-                        nargs='?', default=0.5, dest='max_discrep_percentage')
-    dbg_group = parser.add_mutually_exclusive_group()
-    dbg_group.add_argument('-d', '--debug', required=False,
-                           action='store_true',
-                           help='run unvectorized, stop on first error '
-                                'and print information about line containing '
-                                'failing test')
-    dbg_group.add_argument('-q', '--quiet', action='store_true',
-                           help="don't print stats at the end. use exit "
-                           "code to determine if test succeeded.")
-
-    args = parser.parse_args()
-    errors, stats, _, _, _, = check_gsim(
-        gsim=args.gsim(), datafile=args.datafile,
-        max_discrep_percentage=args.max_discrep_percentage,
-        debug=args.debug)
-    if not args.quiet:
-        print(stats, file=sys.stderr)
-    if errors:
-        exit(127)

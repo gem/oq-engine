@@ -70,7 +70,6 @@ class Gupta2010SSlab(AtkinsonBoore2003SSlab):
     for subduction-zone earthquakes and their application to Cascadia and other
     regions. *Bull. Seism. Soc. Am.*, 93(4):1703–1729.
     """
-
     #: As stated in the title.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
@@ -78,7 +77,7 @@ class Gupta2010SSlab(AtkinsonBoore2003SSlab):
     #: histories are taken as the response spectral amplitudes at a period of
     #: 0.02 s (50 Hz frequency)." p. 371. Based on this comment, the
     #: coefficients labeled as being for 0.02 s have been relabeld as PGA.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Unlike Atkinson & Boore (2003), "rather than the random horizontal
     #: component, the geometric mean of both the horizontal components has
@@ -87,7 +86,7 @@ class Gupta2010SSlab(AtkinsonBoore2003SSlab):
 
     #: Since the database is small only the total standard deviation is
     #: reported.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Coefficients taken from Table 3, p. 884. The row for 0.02 was
     #: relabeled PGA since the paper indicates this is what it actually is

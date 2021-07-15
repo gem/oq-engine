@@ -25,9 +25,7 @@ from openquake.hazardlib.gsim.frankel_1996 import (
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import SA
-from openquake.hazardlib.gsim.base import (
-    SitesContext, RuptureContext, DistancesContext
-)
+from openquake.hazardlib.gsim.base import RuptureContext
 
 import numpy
 
@@ -57,59 +55,47 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         )
 
     def test_mag_dist_outside_range(self):
-        sctx = SitesContext()
-        rctx = RuptureContext()
-        dctx = DistancesContext()
-
+        ctx = RuptureContext()
         # rupture with Mw = 3 (Mblg=2.9434938048208452) at rhypo = 1 must give
         # same mean as rupture with Mw = 4.4 (Mblg=4.8927897867183798) at
         # rhypo = 10
-        rctx.mag = 2.9434938048208452
-        dctx.rhypo = numpy.array([1])
+        ctx.mag = 2.9434938048208452
+        ctx.rhypo = numpy.array([1])
         mean_mw3_d1, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, SA(0.1, 5), [StdDev.TOTAL]
-        )
+            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 
-        rctx.mag = 4.8927897867183798
-        dctx.rhypo = numpy.array([10])
+        ctx.mag = 4.8927897867183798
+        ctx.rhypo = numpy.array([10])
         mean_mw4pt4_d10, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, SA(0.1, 5), [StdDev.TOTAL]
-        )
+            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 
         self.assertAlmostEqual(float(mean_mw3_d1), float(mean_mw4pt4_d10))
 
         # rupture with Mw = 9 (Mblg = 8.2093636421088814) at rhypo = 1500 km
         # must give same mean as rupture with Mw = 8.2
         # (Mblg = 7.752253535347597) at rhypo = 1000
-        rctx.mag = 8.2093636421088814
-        dctx.rhypo = numpy.array([1500.])
+        ctx.mag = 8.2093636421088814
+        ctx.rhypo = numpy.array([1500.])
         mean_mw9_d1500, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, SA(0.1, 5), [StdDev.TOTAL]
-        )
+            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 
-        rctx.mag = 7.752253535347597
-        dctx.rhypo = numpy.array([1000.])
+        ctx.mag = 7.752253535347597
+        ctx.rhypo = numpy.array([1000.])
         mean_mw8pt2_d1000, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, SA(0.1, 5), [StdDev.TOTAL]
-        )
+            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 
         self.assertAlmostEqual(mean_mw9_d1500, mean_mw8pt2_d1000)
 
     def test_dist_not_in_increasing_order(self):
-        sctx = SitesContext()
-        rctx = RuptureContext()
-        dctx = DistancesContext()
-
-        rctx.mag = 5.
-        dctx.rhypo = numpy.array([150, 100])
+        ctx = RuptureContext()
+        ctx.mag = 5.
+        ctx.rhypo = numpy.array([150, 100])
         mean_150_100, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, SA(0.1, 5), [StdDev.TOTAL]
-        )
+            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 
-        dctx.rhypo = numpy.array([100, 150])
+        ctx.rhypo = numpy.array([100, 150])
         mean_100_150, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, SA(0.1, 5), [StdDev.TOTAL]
-        )
+            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
         self.assertAlmostEqual(mean_150_100[1], mean_100_150[0])
         self.assertAlmostEqual(mean_150_100[0], mean_100_150[1])
 
