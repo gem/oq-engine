@@ -40,7 +40,7 @@ class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
             mean[m] += np.log(SInterCan15Mid.COEFFS_SITE[imt]['mf'])
 
 
-def _get_mean(self, sites, rup, dists, imt, stddev_types):
+def _get_mean(self, ctx, imt, stddev_types):
     """
     See :meth:`superclass method
     <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
@@ -53,19 +53,19 @@ def _get_mean(self, sites, rup, dists, imt, stddev_types):
 
     # Zhao et al. 2006 - Vs30 + Rrup
     mean_zh06, stds1 = ZhaoEtAl2006SInter.get_mean_and_stddevs(
-        self, sites, rup, dists, imt, stddev_types)
+        self, ctx, ctx, ctx, imt, stddev_types)
     #
     # Atkinson and Macias (2009) - Rrup
     mean_am09, stds2 = g[0].get_mean_and_stddevs(
-        sites, rup, dists, imt, stddev_types)
+        ctx, ctx, ctx, imt, stddev_types)
     #
     # Abrahamson et al. (2015) - Rrup + vs30 + backarc
     mean_ab15, stds3 = g[1].get_mean_and_stddevs(
-        sites, rup, dists, imt, stddev_types)
+        ctx, ctx, ctx, imt, stddev_types)
     #
     # Ghofrani and Atkinson (2014) - Rrup + vs30
     mean_ga14, stds4 = g[2].get_mean_and_stddevs(
-        sites, rup, dists, imt,  stddev_types)
+        ctx, ctx, ctx, imt,  stddev_types)
     mean_adj = (np.log(np.exp(mean_zh06)*cff['mf'])*0.1 +
                 mean_am09*0.5 + mean_ab15*0.2 +
                 np.log(np.exp(mean_ga14)*cff['mf'])*0.2)
@@ -105,7 +105,7 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean = _get_mean(self, sites, rup, dists, imt, stddev_types)
+        mean = _get_mean(self, rup, imt, stddev_types)
         if self.sgn:
             delta = np.minimum((0.15-0.0007*dists.rrup), 0.35)
             mean += self.sgn * delta
