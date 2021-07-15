@@ -22,9 +22,7 @@
 
 import copy
 import numpy as np
-from openquake.hazardlib.gsim.base import add_alias
-from openquake.hazardlib.gsim.can15.utils import \
-    get_equivalent_distances_west
+from openquake.hazardlib.gsim.can15.utils import get_equivalent_distances_west
 from openquake.hazardlib.gsim.boore_atkinson_2011 import BooreAtkinson2011
 from openquake.hazardlib.const import StdDev
 
@@ -94,6 +92,9 @@ class WesternCan15Mid(BooreAtkinson2011):
         return mean, stds
 
 
+# IMPORTANT! we must use subclasses and not aliases here because we would
+# break classical/case_59 that use the NRCanSiteTerm with the subclasses
+
 class WesternCan15RjbMid(WesternCan15Mid):
     """
     Implements the Boore and Atkinson (2008) with adjustments proposed by
@@ -112,9 +113,25 @@ class OceanicCan15Mid(WesternCan15Mid):
     delta_mag = -.5
 
 
-add_alias('WesternCan15Upp', WesternCan15Mid, sgn=+1)
-add_alias('WesternCan15Low', WesternCan15Mid, sgn=-1)
-add_alias('WesternCan15RjbUpp', WesternCan15RjbMid, sgn=+1)
-add_alias('WesternCan15RjbLow', WesternCan15RjbMid, sgn=-1)
-add_alias('OceanicCan15Upp', OceanicCan15Mid, sgn=+1)
-add_alias('OceanicCan15Low', OceanicCan15Mid, sgn=-1)
+class WesternCan15Upp(WesternCan15Mid):
+    sgn = +1
+
+
+class WesternCan15Low(WesternCan15Mid):
+    sgn = -1
+
+
+class WesternCan15RjbUpp(WesternCan15RjbMid):
+    sgn = +1
+
+
+class WesternCan15RjbLow(WesternCan15RjbMid):
+    sgn = -1
+
+
+class OceanicCan15Upp(OceanicCan15Mid):
+    sgn = +1
+
+
+class OceanicCan15Low(OceanicCan15Mid):
+    sgn = -1

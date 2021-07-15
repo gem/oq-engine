@@ -35,25 +35,7 @@ class BooreAtkinson2011(BooreAtkinson2008):
     Bulletin of the Seismological Society of America, Volume 101, No. 3,
     pages 1121-1135).
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-
-        # get mean and std using the superclass
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        # correction factor (see Atkinson and Boore, 2011; equation 5 at
-        # page 1126 and nga08_gm_tmr.for line 508
-        corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * rup.mag]) -
-                           (np.max([0, 2.933 - 0.510 * rup.mag]) *
-                            np.log10(dists.rjb + 10.)))
-
-        return np.log(np.exp(mean)*corr_fact), stddevs
+    kind = '2011'
 
 
 class Atkinson2008prime(BooreAtkinson2011):

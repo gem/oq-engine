@@ -425,6 +425,8 @@ class BooreAtkinson2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
+    kind = 'base'
+
     def __init__(self, sgn=0, **kwargs):
         super().__init__(**kwargs)
         self.sgn = sgn
@@ -464,6 +466,14 @@ class BooreAtkinson2008(GMPE):
                 _compute_distance_scaling(rup, C) + \
                 _get_site_amplification_linear(sites.vs30, C_SR) + \
                 _get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
+
+        if self.kind == '2011':
+            # correction factor (see Atkinson and Boore, 2011; equation 5 at
+            # page 1126 and nga08_gm_tmr.for line 508
+            corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * rup.mag]) -
+                               (np.max([0, 2.933 - 0.510 * rup.mag]) *
+                                np.log10(dists.rjb + 10.)))
+            mean = np.log(np.exp(mean) * corr_fact)
 
         stddevs = _get_stddevs(
             self.__class__.__name__, C, stddev_types, len(sites.vs30))
