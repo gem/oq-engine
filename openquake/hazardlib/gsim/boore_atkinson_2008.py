@@ -514,7 +514,7 @@ class BooreAtkinson2008(GMPE):
                 _get_site_amplification_linear(sites.vs30, C_SR) + \
                 _get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
 
-        if self.kind == '2011':
+        if self.kind in ('2011', 'prime'):
             # correction factor (see Atkinson and Boore, 2011; equation 5 at
             # page 1126 and nga08_gm_tmr.for line 508
             corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * rup.mag]) -
@@ -522,8 +522,14 @@ class BooreAtkinson2008(GMPE):
                                 np.log10(dists.rjb + 10.)))
             mean = np.log(np.exp(mean) * corr_fact)
 
-        if 'Hawaii' in self.__class__.__name__:
+        if self.kind == 'hawaii':
             hawaii_adjust(mean, rup, imt)
+        elif self.kind == 'prime':
+            # Implements the Boore & Atkinson (2011) adjustment to the
+            # Atkinson (2008) GMPE
+            A08 = self.COEFFS_A08[imt]
+            f_ena = 10.0 ** (A08["c"] + A08["d"] * dists.rjb)
+            mean = np.log(np.exp(mean) * f_ena)
 
         stddevs = _get_stddevs(
             self.__class__.__name__, C, stddev_types, len(sites.vs30))
@@ -611,6 +617,23 @@ class BooreAtkinson2008(GMPE):
     10.00  -0.650  -0.215  -0.00
     """)
 
+    COEFFS_A08 = CoeffsTable(sa_damping=5, table="""\
+    IMT         c         d
+    pgv     0.450   0.00211
+    pga     0.419   0.00039
+    0.005   0.417   0.00192
+    0.050   0.417   0.00192
+    0.100   0.245   0.00273
+    0.200   0.042   0.00232
+    0.300  -0.078   0.00190
+    0.500  -0.180   0.00180
+    1.000  -0.248   0.00153
+    2.000  -0.214   0.00117
+    3.030  -0.084   0.00091
+    5.000   0.000   0.00000
+    10.00   0.000   0.00000
+    """)
+
 
 class Atkinson2010Hawaii(BooreAtkinson2008):
     """
@@ -620,6 +643,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
     from a Referenced Empirical Approach", Bulletin of the Seismological
     Society of America, Vol. 100, No. 2, pp. 751–761
     """
+    kind = 'hawaii'
 
     #: Supported tectonic region type is active volcanic, see
     #: paragraph 'Introduction', page 99.
