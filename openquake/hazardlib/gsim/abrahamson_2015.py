@@ -46,6 +46,48 @@ CONSTS = {
 
 C1 = 7.2  # for Montalva2017
 
+# Total epistemic uncertainty factors from Abrahamson et al. (2018)
+BCHYDRO_SIGMA_MU = CoeffsTable(sa_damping=5, table="""
+    imt     SIGMA_MU_SINTER    SIGMA_MU_SSLAB
+    pga                 0.3              0.50
+    0.010               0.3              0.50
+    0.020               0.3              0.50
+    0.030               0.3              0.50
+    0.050               0.3              0.50
+    0.075               0.3              0.50
+    0.100               0.3              0.50
+    0.150               0.3              0.50
+    0.200               0.3              0.50
+    0.250               0.3              0.46
+    0.300               0.3              0.42
+    0.400               0.3              0.38
+    0.500               0.3              0.34
+    0.600               0.3              0.30
+    0.750               0.3              0.30
+    1.000               0.3              0.30
+    1.500               0.3              0.30
+    2.000               0.3              0.30
+    2.500               0.3              0.30
+    3.000               0.3              0.30
+    4.000               0.3              0.30
+    5.000               0.3              0.30
+    6.000               0.3              0.30
+    7.500               0.3              0.30
+    10.00               0.3              0.30
+    """)
+
+
+def get_stress_factor(imt, slab):
+    """
+    Returns the stress adjustment factor for the BC Hydro GMPE according to
+    Abrahamson et al. (2018)
+    """
+    if slab:
+        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SSLAB"]
+    else:
+        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SINTER"]
+    return sigma_mu / 1.65
+
 
 def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     """
@@ -269,12 +311,18 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     delta_c1 = None
     kind = "base"
-    theta6_adj = 0.
-    faba_model = None  # overridden in BCHydro
+    FABA_ALL_MODELS = {}  # overridden in BCHydro
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ergodic = kwargs.get('ergodic', True)
+        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
+        faba_type = kwargs.get("faba_taper_model", "Step")
+        if 'xvf' in self.REQUIRES_SITES_PARAMETERS:  # BCHydro subclasses
+            self.faba_model = self.FABA_ALL_MODELS[faba_type](**kwargs)
+        else:
+            self.faba_model = None
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -303,6 +351,11 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 _compute_forearc_backarc_term(self.trt, self.faba_model,
                                               C, sites, dists) +
                 _compute_site_response_term(C, sites, pga1000))
+        if self.sigma_mu_epsilon:
+            sigma_mu = get_stress_factor(
+                imt, self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                const.TRT.SUBDUCTION_INTRASLAB)
+            mean += sigma_mu * self.sigma_mu_epsilon
         stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
         return mean, stddevs
 
