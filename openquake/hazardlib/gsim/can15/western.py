@@ -53,7 +53,6 @@ class WesternCan15Mid(BooreAtkinson2011):
     calculation of hazard for the fifth generation of Canada's hazard maps,
     released in 2015.
     """
-
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
     non_verified = True
@@ -67,13 +66,20 @@ class WesternCan15Mid(BooreAtkinson2011):
     #: Required distance is only repi since rrup and rjb are obtained from repi
     REQUIRES_DISTANCES = {'repi'}
 
+    delta_mag = 0.  # overridden in Oceanic subclass
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # distances
+        # fix the magnitude for the Oceanic subclass
+        if self.delta_mag:
+            rup = copy.copy(rup)
+            rup.mag += self.delta_mag
+
+        # possibly convert distances from repi to rjb
         if self.REQUIRES_DISTANCES == {'repi'}:
-            # convert from repi to rjb
             dists = copy.copy(dists)
             dists.rjb, dists.rrup = get_equivalent_distances_west(
                 rup.mag, dists.repi)
+
         # get original values
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
@@ -99,7 +105,16 @@ class WesternCan15RjbMid(WesternCan15Mid):
     REQUIRES_DISTANCES = {'rjb'}
 
 
+class OceanicCan15Mid(WesternCan15Mid):
+    """
+    Implements the GMPE for oceanic sources
+    """
+    delta_mag = -.5
+
+
 add_alias('WesternCan15Upp', WesternCan15Mid, sgn=+1)
 add_alias('WesternCan15Low', WesternCan15Mid, sgn=-1)
 add_alias('WesternCan15RjbUpp', WesternCan15RjbMid, sgn=+1)
 add_alias('WesternCan15RjbLow', WesternCan15RjbMid, sgn=-1)
+add_alias('OceanicCan15Upp', OceanicCan15Mid, sgn=+1)
+add_alias('OceanicCan15Low', OceanicCan15Mid, sgn=-1)
