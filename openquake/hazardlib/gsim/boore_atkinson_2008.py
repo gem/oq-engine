@@ -326,7 +326,6 @@ def _get_pga_on_rock(C_pga, ctx, _C):
     # Rref=1.0 km for all periods)".
     pga4nl = np.exp(_compute_magnitude_scaling(ctx, C_pga) +
                     _compute_distance_scaling(ctx, C_pga))
-
     return pga4nl
 
 
@@ -426,10 +425,7 @@ class BooreAtkinson2008(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     kind = 'base'
-
-    def __init__(self, sgn=0, **kwargs):
-        super().__init__(**kwargs)
-        self.sgn = sgn
+    sgn = 0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

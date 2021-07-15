@@ -67,12 +67,12 @@ class WesternCan15Mid(BooreAtkinson2011):
     delta_mag = 0.  # overridden in Oceanic subclass
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # fix the magnitude for the Oceanic subclass
+        # first fix the magnitude for the Oceanic subclass
         if self.delta_mag:
             rup = copy.copy(rup)
             rup.mag += self.delta_mag
 
-        # possibly convert distances from repi to rjb
+        # then possibly convert distances from repi to rjb
         if self.REQUIRES_DISTANCES == {'repi'}:
             dists = copy.copy(dists)
             dists.rjb, dists.rrup = get_equivalent_distances_west(
@@ -106,6 +106,7 @@ class WesternCan15RjbMid(WesternCan15Mid):
     REQUIRES_DISTANCES = {'rjb'}
 
 
+# tested in ClassicalTestCase::test_case_59
 class OceanicCan15Mid(WesternCan15Mid):
     """
     Implements the GMPE for oceanic sources
