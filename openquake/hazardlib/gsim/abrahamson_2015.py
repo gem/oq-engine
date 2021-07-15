@@ -77,7 +77,7 @@ BCHYDRO_SIGMA_MU = CoeffsTable(sa_damping=5, table="""
     """)
 
 
-def get_stress_factor(imt, slab=False):
+def get_stress_factor(imt, slab):
     """
     Returns the stress adjustment factor for the BC Hydro GMPE according to
     Abrahamson et al. (2018)
