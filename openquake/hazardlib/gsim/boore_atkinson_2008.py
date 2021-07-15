@@ -37,6 +37,20 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean)
 
+#: IMT-independent coefficients. std_total is the total standard deviation,
+#: see Table 6, pag 2192 and Table 9, pag 2202. R0, R1, R2 are coefficients
+#: required for mean calculation - see equation (5) pag 2191. v1, v2, Vref
+#: are coefficients required for soil response calculation, see table 8,
+#: p. 2201
+# the std is converted from base 10 to base e
+std_total = np.log(10 ** 0.30),
+R0 = 10.0
+R1 = 70.0
+R2 = 140.0
+# v1 = 180.0
+# v2 = 300.0
+# Vref = 760.0
+
 
 def _clip_distances(rrup):
     """
@@ -326,7 +340,6 @@ def _get_pga_on_rock(C_pga, ctx, _C):
     # Rref=1.0 km for all periods)".
     pga4nl = np.exp(_compute_magnitude_scaling(ctx, C_pga) +
                     _compute_distance_scaling(ctx, C_pga))
-
     return pga4nl
 
 
@@ -384,6 +397,43 @@ def _get_stress_drop_scaling_factor(magnitude):
     return log10(stress_drop / 140.0) / log10(2.0)
 
 
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        Using a frequency dependent correction for the mean ground motion.
+        Standard deviation is fixed.
+        """
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
+                                                     imt, stddev_types)
+
+
+def hawaii_adjust(mean, ctx, imt):
+    # Defining frequency
+    if imt == PGA():
+        freq = 50.0
+    elif imt == PGV():
+        freq = 2.0
+    else:
+        freq = 1./imt.period
+
+    # Equation 3 of Atkinson (2010)
+    x1 = np.min([-0.18+0.17*np.log10(freq), 0])
+
+    # Equation 4 a-b-c of Atkinson (2010)
+    if ctx.hypo_depth < 20.0:
+        x0 = np.max([0.217-0.321*np.log10(freq), 0])
+    elif ctx.hypo_depth > 35.0:
+        x0 = np.min([0.263+0.0924*np.log10(freq), 0.35])
+    else:
+        x0 = 0.2
+
+    # Limiting calculation distance to 1km
+    # (as suggested by C. Bruce Worden)
+    rjb = [d if d > 1 else 1 for d in ctx.rjb]
+
+    # Equation 2 and 5 of Atkinson (2010)
+    mean += (x0 + x1*np.log10(rjb)) / np.log10(np.e)
+
+
 class BooreAtkinson2008(GMPE):
     """
     Implements GMPE developed by David M. Boore and Gail M. Atkinson
@@ -425,6 +475,9 @@ class BooreAtkinson2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
+    kind = 'base'
+    sgn = 0
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -460,6 +513,23 @@ class BooreAtkinson2008(GMPE):
                 _compute_distance_scaling(rup, C) + \
                 _get_site_amplification_linear(sites.vs30, C_SR) + \
                 _get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
+
+        if self.kind in ('2011', 'prime'):
+            # correction factor (see Atkinson and Boore, 2011; equation 5 at
+            # page 1126 and nga08_gm_tmr.for line 508
+            corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * rup.mag]) -
+                               (np.max([0, 2.933 - 0.510 * rup.mag]) *
+                                np.log10(dists.rjb + 10.)))
+            mean = np.log(np.exp(mean) * corr_fact)
+
+        if self.kind == 'hawaii':
+            hawaii_adjust(mean, rup, imt)
+        elif self.kind == 'prime':
+            # Implements the Boore & Atkinson (2011) adjustment to the
+            # Atkinson (2008) GMPE
+            A08 = self.COEFFS_A08[imt]
+            f_ena = 10.0 ** (A08["c"] + A08["d"] * dists.rjb)
+            mean = np.log(np.exp(mean) * f_ena)
 
         stddevs = _get_stddevs(
             self.__class__.__name__, C, stddev_types, len(sites.vs30))
@@ -547,6 +617,23 @@ class BooreAtkinson2008(GMPE):
     10.00  -0.650  -0.215  -0.00
     """)
 
+    COEFFS_A08 = CoeffsTable(sa_damping=5, table="""\
+    IMT         c         d
+    pgv     0.450   0.00211
+    pga     0.419   0.00039
+    0.005   0.417   0.00192
+    0.050   0.417   0.00192
+    0.100   0.245   0.00273
+    0.200   0.042   0.00232
+    0.300  -0.078   0.00190
+    0.500  -0.180   0.00180
+    1.000  -0.248   0.00153
+    2.000  -0.214   0.00117
+    3.030  -0.084   0.00091
+    5.000   0.000   0.00000
+    10.00   0.000   0.00000
+    """)
+
 
 class Atkinson2010Hawaii(BooreAtkinson2008):
     """
@@ -556,6 +643,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
     from a Referenced Empirical Approach", Bulletin of the Seismological
     Society of America, Vol. 100, No. 2, pp. 751–761
     """
+    kind = 'hawaii'
 
     #: Supported tectonic region type is active volcanic, see
     #: paragraph 'Introduction', page 99.
@@ -572,60 +660,8 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
     # Adding hypocentral depth as required rupture parameter
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Using a frequency dependent correction for the mean ground motion.
-        Standard deviation is fixed.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
-                                                     imt, stddev_types)
-        # Defining frequency
-        if imt == PGA():
-            freq = 50.0
-        elif imt == PGV():
-            freq = 2.0
-        else:
-            freq = 1./imt.period
 
-        # Equation 3 of Atkinson (2010)
-        x1 = np.min([-0.18+0.17*np.log10(freq), 0])
-
-        # Equation 4 a-b-c of Atkinson (2010)
-        if rup.hypo_depth < 20.0:
-            x0 = np.max([0.217-0.321*np.log10(freq), 0])
-        elif rup.hypo_depth > 35.0:
-            x0 = np.min([0.263+0.0924*np.log10(freq), 0.35])
-        else:
-            x0 = 0.2
-
-        # Limiting calculation distance to 1km
-        # (as suggested by C. Bruce Worden)
-        rjb = [d if d > 1 else 1 for d in dists.rjb]
-
-        # Equation 2 and 5 of Atkinson (2010)
-        mean += (x0 + x1*np.log10(rjb))/np.log10(np.e)
-
-        return mean, stddevs
-
-    import numpy as np
-
-
-#: IMT-independent coefficients. std_total is the total standard deviation,
-#: see Table 6, pag 2192 and Table 9, pag 2202. R0, R1, R2 are coefficients
-#: required for mean calculation - see equation (5) pag 2191. v1, v2, Vref
-#: are coefficients required for soil response calculation, see table 8,
-#: p. 2201
-# the std is converted from base 10 to base e
-std_total = np.log(10 ** 0.30),
-R0 = 10.0
-R1 = 70.0
-R2 = 140.0
-# v1 = 180.0
-# v2 = 300.0
-# Vref = 760.0
-
-
-class AtkinsonBoore2006(BooreAtkinson2008):
+class AtkinsonBoore2006(GMPE):
     """
     Implements GMPE developed by Gail M. Atkinson and David M. Boore and
     published as "Earthquake Ground-Motion Prediction Equations for Eastern
@@ -634,8 +670,8 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     equations for stress parameter of 140 bars. The correction described in
     'Adjustment of Equations to Consider Alternative Stress Parameters',
     p. 2198, is not implemented.
-    This class extends the BooreAtkinson2008 because it uses the same soil
-    amplification function. Note that in the paper, the reported soil
+    This class uses the same soil amplification function as the
+    BooreAtkinson2008. Note that in the paper, the reported soil
     amplification function is the one used in a preliminary version of the
     Boore and Atkinson 2008 GMPE, while the one that should be used is the
     one described in the final paper. See comment in:
@@ -810,6 +846,8 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     5.0    0.15   6.00  8.50
     pgv    0.11   2.00  5.50
     """)
+
+    COEFFS_SOIL_RESPONSE = BooreAtkinson2008.COEFFS_SOIL_RESPONSE
 
 
 add_alias("AtkinsonBoore2006MblgAB1987bar140NSHMP2008",
