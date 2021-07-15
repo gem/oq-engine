@@ -52,20 +52,20 @@ def _get_mean(self, ctx, imt, stddev_types):
     cff = self.COEFFS_SITE[imt]
 
     # Zhao et al. 2006 - Vs30 + Rrup
-    mean_zh06, stds1 = ZhaoEtAl2006SInter.get_mean_and_stddevs(
-        self, ctx, ctx, ctx, imt, stddev_types)
+    mean_zh06 = ZhaoEtAl2006SInter.get_mean_and_stddevs(
+        self, ctx, ctx, ctx, imt, stddev_types)[0]
     #
     # Atkinson and Macias (2009) - Rrup
-    mean_am09, stds2 = g[0].get_mean_and_stddevs(
-        ctx, ctx, ctx, imt, stddev_types)
+    mean_am09 = g[0].get_mean_and_stddevs(
+        ctx, ctx, ctx, imt, stddev_types)[0]
     #
     # Abrahamson et al. (2015) - Rrup + vs30 + backarc
-    mean_ab15, stds3 = g[1].get_mean_and_stddevs(
-        ctx, ctx, ctx, imt, stddev_types)
+    mean_ab15 = g[1].get_mean_and_stddevs(
+        ctx, ctx, ctx, imt, stddev_types)[0]
     #
     # Ghofrani and Atkinson (2014) - Rrup + vs30
-    mean_ga14, stds4 = g[2].get_mean_and_stddevs(
-        ctx, ctx, ctx, imt,  stddev_types)
+    mean_ga14 = g[2].get_mean_and_stddevs(
+        ctx, ctx, ctx, imt,  stddev_types)[0]
     mean_adj = (np.log(np.exp(mean_zh06)*cff['mf'])*0.1 +
                 mean_am09*0.5 + mean_ab15*0.2 +
                 np.log(np.exp(mean_ga14)*cff['mf'])*0.2)
