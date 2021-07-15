@@ -635,7 +635,7 @@ R2 = 140.0
 # Vref = 760.0
 
 
-class AtkinsonBoore2006(BooreAtkinson2008):
+class AtkinsonBoore2006(GMPE):
     """
     Implements GMPE developed by Gail M. Atkinson and David M. Boore and
     published as "Earthquake Ground-Motion Prediction Equations for Eastern
@@ -644,8 +644,8 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     equations for stress parameter of 140 bars. The correction described in
     'Adjustment of Equations to Consider Alternative Stress Parameters',
     p. 2198, is not implemented.
-    This class extends the BooreAtkinson2008 because it uses the same soil
-    amplification function. Note that in the paper, the reported soil
+    This class uses the same soil amplification function as the
+    BooreAtkinson2008. Note that in the paper, the reported soil
     amplification function is the one used in a preliminary version of the
     Boore and Atkinson 2008 GMPE, while the one that should be used is the
     one described in the final paper. See comment in:
@@ -820,6 +820,8 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     5.0    0.15   6.00  8.50
     pgv    0.11   2.00  5.50
     """)
+
+    COEFFS_SOIL_RESPONSE = BooreAtkinson2008.COEFFS_SOIL_RESPONSE
 
 
 add_alias("AtkinsonBoore2006MblgAB1987bar140NSHMP2008",
