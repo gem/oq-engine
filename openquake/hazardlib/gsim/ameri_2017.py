@@ -162,6 +162,8 @@ def _get_stddevs(kind, C_SIGMA, stddev_types, num_sites, mag):
     """
     Return standard deviations
     """
+    if kind not in "rjb repi":
+        mag = None
     if kind == "homoscedastic":
         tau = C_SIGMA["sigmaB"] + np.zeros(num_sites)
         phi = C_SIGMA["sigmaW"] + np.zeros(num_sites)
@@ -296,7 +298,6 @@ class AmeriEtAl2017Rjb(GMPE):
         stddevs = np.log(10.0 ** np.array(istddevs))
         return mean + self.adjustment_factor, stddevs
 
-
     #: Coefficients from Table "10518_2017_171_MOESM2_ESM.xlsx" in electronic supplementary material:
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt           a              c1             c2             h              b1             b2             b3             e1             e2             e3             e4             f1             f2             f3                      
@@ -430,28 +431,6 @@ class AmeriEtAl2017RjbStressDrop(AmeriEtAl2017Rjb):
 
     kind = "rjb_stress"
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-
-        C = self.COEFFS[imt]
-        C_SIGMA = self.COEFFS_SIGMA[imt]
-        C_STRESS = self.COEFFS_STRESS[imt]
-        imean = _get_mean(self.kind, self.norm_stress_drop,
-                          C, C_STRESS, rup, dists, sites)
-        # Convert mean to ln(SA) with SA in units of g:
-        mean = np.log((10.0 ** (imean - 2.0)) / g)
-
-        istddevs = _get_stddevs(
-            self.kind, C_SIGMA, stddev_types, len(sites.vs30), None)
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        return mean + self.adjustment_factor, stddevs
-
 
 class AmeriEtAl2017Repi(AmeriEtAl2017Rjb):
     """
@@ -572,28 +551,6 @@ class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
     def __init__(self, norm_stress_drop, adjustment_factor=1.0):
         super().__init__(adjustment_factor=adjustment_factor)
         self.norm_stress_drop = norm_stress_drop
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-
-        C = self.COEFFS[imt]
-        C_SIGMA = self.COEFFS_SIGMA[imt]
-        C_STRESS = self.COEFFS_STRESS[imt]
-        imean = _get_mean(self.kind, self.norm_stress_drop,
-                          C, C_STRESS, rup, dists, sites)
-        # Convert mean to ln(SA) with SA in units of g:
-        mean = np.log((10.0 ** (imean - 2.0)) / g)
-
-        istddevs = _get_stddevs(
-            self.kind, C_SIGMA, stddev_types, len(sites.vs30), None)
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        return mean + self.adjustment_factor, stddevs
 
 
 class Ameri2014Rjb(AmeriEtAl2017Rjb):
