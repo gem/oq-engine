@@ -137,7 +137,7 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
         return f_faba
 
     # in BCHydro subclasses
-    fixed_dists = np.copy(ctx)
+    fixed_dists = np.copy(dists)
     fixed_dists[fixed_dists < min_dist] = min_dist
     f_faba = a + b * np.log(fixed_dists / 40.)
     return f_faba * faba_model(-ctx.xvf)
