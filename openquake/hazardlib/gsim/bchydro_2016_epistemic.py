@@ -25,49 +25,6 @@ from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SSlabLow, AbrahamsonEtAl2015SSlabHigh)
 
 
-# Total epistemic uncertainty factors from Abrahamson et al. (2018)
-BCHYDRO_SIGMA_MU = CoeffsTable(sa_damping=5, table="""
-    imt     SIGMA_MU_SINTER    SIGMA_MU_SSLAB
-    pga                 0.3              0.50
-    0.010               0.3              0.50
-    0.020               0.3              0.50
-    0.030               0.3              0.50
-    0.050               0.3              0.50
-    0.075               0.3              0.50
-    0.100               0.3              0.50
-    0.150               0.3              0.50
-    0.200               0.3              0.50
-    0.250               0.3              0.46
-    0.300               0.3              0.42
-    0.400               0.3              0.38
-    0.500               0.3              0.34
-    0.600               0.3              0.30
-    0.750               0.3              0.30
-    1.000               0.3              0.30
-    1.500               0.3              0.30
-    2.000               0.3              0.30
-    2.500               0.3              0.30
-    3.000               0.3              0.30
-    4.000               0.3              0.30
-    5.000               0.3              0.30
-    6.000               0.3              0.30
-    7.500               0.3              0.30
-    10.00               0.3              0.30
-    """)
-
-
-def get_stress_factor(imt, slab=False):
-    """
-    Returns the stress adjustment factor for the BC Hydro GMPE according to
-    Abrahamson et al. (2018)
-    """
-    if slab:
-        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SSLAB"]
-    else:
-        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SINTER"]
-    return sigma_mu / 1.65
-
-
 class FABATaperStep(object):
     """
     General class for a tapering function, in this case
@@ -274,19 +231,6 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
         faba_type = kwargs.get("faba_taper_model", "Step")
         self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=False)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
     pga      865.1000  -1.1860   4.2203   -1.3500   -0.00721467    1.0988   -1.4200   3.1200   0.0130    0.9800   -0.0135   -0.4000   0.9969   -1.0000   0.6000  0.4300  0.7400    0.6000
@@ -331,19 +275,6 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
         self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=False)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -390,19 +321,6 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
         self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=False)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -457,19 +375,6 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
         faba_type = kwargs.get("faba_taper_model", "Step")
         self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=True)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
     pga      865.1000  -1.1860   4.2203   -1.3500   -0.00278801    1.0988   -1.4200   3.1200   0.0130    0.9800   -0.0135   -0.4000   0.9969   -1.0000   0.6000  0.4300  0.7400    0.6000
@@ -516,19 +421,6 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
         faba_type = kwargs.get("faba_taper_model", "Step")
         self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=True)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
     pga      865.1000  -1.1860   4.2203   -1.3500   -0.00278801    1.0988   -1.4200   3.1200   0.0130    0.9800   -0.0135   -0.4000   0.9969   -1.0000   0.6000  0.4300  0.7400    0.6000
@@ -574,19 +466,6 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
         self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=True)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
