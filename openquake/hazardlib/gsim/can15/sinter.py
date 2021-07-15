@@ -5,7 +5,7 @@
 
 import numpy as np
 
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.can15.western import get_sigma
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SInter
@@ -40,38 +40,6 @@ class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
             mean[m] += np.log(SInterCan15Mid.COEFFS_SITE[imt]['mf'])
 
 
-def _get_mean(self, ctx, imt, stddev_types):
-    """
-    See :meth:`superclass method
-    <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-    for spec of input and result values.
-    """
-    g = self.gsims
-
-    # Computing adjusted mean and stds
-    cff = self.COEFFS_SITE[imt]
-
-    # Zhao et al. 2006 - Vs30 + Rrup
-    mean_zh06 = ZhaoEtAl2006SInter.get_mean_and_stddevs(
-        self, ctx, ctx, ctx, imt, stddev_types)[0]
-    #
-    # Atkinson and Macias (2009) - Rrup
-    mean_am09 = g[0].get_mean_and_stddevs(
-        ctx, ctx, ctx, imt, stddev_types)[0]
-    #
-    # Abrahamson et al. (2015) - Rrup + vs30 + backarc
-    mean_ab15 = g[1].get_mean_and_stddevs(
-        ctx, ctx, ctx, imt, stddev_types)[0]
-    #
-    # Ghofrani and Atkinson (2014) - Rrup + vs30
-    mean_ga14 = g[2].get_mean_and_stddevs(
-        ctx, ctx, ctx, imt,  stddev_types)[0]
-    mean_adj = (np.log(np.exp(mean_zh06)*cff['mf'])*0.1 +
-                mean_am09*0.5 + mean_ab15*0.2 +
-                np.log(np.exp(mean_ga14)*cff['mf'])*0.2)
-    return mean_adj
-
-
 class SInterCan15Mid(ZhaoEtAl2006SInter):
     """
     Implements the Interface backbone model used for computing hazard for t
@@ -95,22 +63,34 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
 
     REQUIRES_ATTRIBUTES = {'sgn'}
 
-    gsims = [AtkinsonMacias2009(), AbrahamsonEtAl2015SInter(),
+    gsims = [ZhaoEtAl2006SInter(), AtkinsonMacias2009(),
+             AbrahamsonEtAl2015SInter(),
              GhofraniAtkinson2014()]  # underlying GSIMs
     sgn = 0
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean = _get_mean(self, rup, imt, stddev_types)
-        if self.sgn:
-            delta = np.minimum((0.15-0.0007*dists.rrup), 0.35)
-            mean += self.sgn * delta
-        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        return mean, stddevs
+        imtls = {imt.string: [0] for imt in imts}
+        cmaker = contexts.ContextMaker(
+            self.DEFINED_FOR_TECTONIC_REGION_TYPE,
+            self.gsims, {'imtls': imtls})
+        mean_zh06, mean_am09, mean_ab15, mean_ga14 = cmaker.get_mean_stds(
+            [ctx], None)  # 4 arrays of shape (1, M, N)
+
+        # Computing adjusted means
+        for m, imt in enumerate(imts):
+            cff = self.COEFFS_SITE[imt]
+            mean[m] = (np.log(np.exp(mean_zh06[0, m]) * cff['mf']) * 0.1 +
+                       mean_am09[0, m] * 0.5 + mean_ab15[0, m] * 0.2 +
+                       np.log(np.exp(mean_ga14[0, m]) * cff['mf']) * 0.2)
+            if self.sgn:
+                delta = np.minimum((0.15-0.0007 * ctx.rrup), 0.35)
+                mean[m] += self.sgn * delta
+            sig[m] = get_sigma(imt)
 
     COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     IMT        mf
