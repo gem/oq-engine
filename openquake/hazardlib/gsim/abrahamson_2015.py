@@ -221,16 +221,15 @@ def _compute_magnitude_term(kind, C, dc1, mag):
                                 C['theta5'], 0., dc1, mag)
 
 
-def _compute_pga_rock(kind, trt, theta6_adj, faba_model,
-                      C, dc1, sites, rup, dists):
+def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
     """
     Compute and return mean imt value for rock conditions
     (vs30 = 1000 m/s)
     """
-    mean = (_compute_magnitude_term(kind, C, dc1, rup.mag) +
-            _compute_distance_term(kind, trt, theta6_adj, C, rup) +
-            _compute_focal_depth_term(trt, C, rup) +
-            _compute_forearc_backarc_term(trt, faba_model, C, rup))
+    mean = (_compute_magnitude_term(kind, C, dc1, ctx.mag) +
+            _compute_distance_term(kind, trt, theta6_adj, C, ctx) +
+            _compute_focal_depth_term(trt, C, ctx) +
+            _compute_forearc_backarc_term(trt, faba_model, C, ctx))
     # Apply linear site term
     site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
                      np.log(1000. / C['vlin']))
@@ -343,7 +342,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         # term calculation
         pga1000 = np.exp(_compute_pga_rock(
             self.kind, self.trt, self.theta6_adj, self.faba_model,
-            C_PGA, dc1_pga, sites, rup, dists))
+            C_PGA, dc1_pga, rup))
         mean = (_compute_magnitude_term(self.kind, C, dc1, rup.mag) +
                 _compute_distance_term(self.kind, self.trt, self.theta6_adj,
                                        C, rup) +
