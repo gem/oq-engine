@@ -103,27 +103,27 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
 
 
 # theta6_adj used in BCHydro
-def _compute_disterm(trt, C1, theta2, theta14, theta3, mag, dists, c4, theta9,
+def _compute_disterm(trt, C1, theta2, theta14, theta3, ctx, c4, theta9,
                      theta6_adj, theta6, theta10):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
-        dists = dists.rrup
+        dists = ctx.rrup
         assert theta10 == 0., theta10
     elif trt == const.TRT.SUBDUCTION_INTRASLAB:
-        dists = dists.rhypo
+        dists = ctx.rhypo
     else:
         raise NotImplementedError(trt)
-    return ((theta2 + theta14 + theta3 * (mag - C1)) * np.log(
-        dists + c4 * np.exp((mag - 6.) * theta9)) +
-            ((theta6_adj + theta6) * dists)) + theta10
+    return ((theta2 + theta14 + theta3 * (ctx.mag - C1)) * np.log(
+        dists + c4 * np.exp((ctx.mag - 6.) * theta9)) +
+            (theta6_adj + theta6) * dists) + theta10
 
 
-def _compute_forearc_backarc_term(trt, faba_model, C, sites, dists):
+def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
-        dists = dists.rrup
+        dists = ctx.rrup
         a, b = C['theta15'], C['theta16']
         min_dist = 100.
     elif trt == const.TRT.SUBDUCTION_INTRASLAB:
-        dists = dists.rhypo
+        dists = ctx.rhypo
         a, b = C['theta7'], C['theta8']
         min_dist = 85.
     else:
@@ -131,16 +131,16 @@ def _compute_forearc_backarc_term(trt, faba_model, C, sites, dists):
     if faba_model is None:
         f_faba = np.zeros_like(dists)
         # Term only applies to backarc sites (F_FABA = 0. for forearc)
-        fixed_dists = dists[sites.backarc]
+        fixed_dists = dists[ctx.backarc]
         fixed_dists[fixed_dists < min_dist] = min_dist
-        f_faba[sites.backarc] = a + b * np.log(fixed_dists / 40.)
+        f_faba[ctx.backarc] = a + b * np.log(fixed_dists / 40.)
         return f_faba
 
     # in BCHydro subclasses
     fixed_dists = np.copy(dists)
     fixed_dists[fixed_dists < min_dist] = min_dist
     f_faba = a + b * np.log(fixed_dists / 40.)
-    return f_faba * faba_model(-sites.xvf)
+    return f_faba * faba_model(-ctx.xvf)
 
 
 def _get_stddevs(ergodic, C, stddev_types, num_sites):
@@ -164,7 +164,7 @@ def _get_stddevs(ergodic, C, stddev_types, num_sites):
     return stddevs
 
 
-def _compute_distance_term(kind, trt, theta6_adj, C, mag, dists):
+def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
     """
     Computes the distance scaling term, as contained within equation (1)
     """
@@ -178,11 +178,11 @@ def _compute_distance_term(kind, trt, theta6_adj, C, mag, dists):
         C1 = 7.8
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         return _compute_disterm(
-            trt, C1, C['theta2'], 0., theta3, mag, dists, CONSTS['c4'],
+            trt, C1, C['theta2'], 0., theta3, ctx, CONSTS['c4'],
             CONSTS['theta9'], theta6_adj, C['theta6'], theta10=0.)
     else:  # sslab
         return _compute_disterm(
-            trt, C1, C['theta2'], C['theta14'], theta3, mag, dists,
+            trt, C1, C['theta2'], C['theta14'], theta3, ctx,
             CONSTS['c4'], CONSTS['theta9'], theta6_adj, C['theta6'],
             C["theta10"])
 
@@ -228,9 +228,9 @@ def _compute_pga_rock(kind, trt, theta6_adj, faba_model,
     (vs30 = 1000 m/s)
     """
     mean = (_compute_magnitude_term(kind, C, dc1, rup.mag) +
-            _compute_distance_term(kind, trt, theta6_adj, C, rup.mag, dists) +
+            _compute_distance_term(kind, trt, theta6_adj, C, rup) +
             _compute_focal_depth_term(trt, C, rup) +
-            _compute_forearc_backarc_term(trt, faba_model, C, sites, dists))
+            _compute_forearc_backarc_term(trt, faba_model, C, rup))
     # Apply linear site term
     site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
                      np.log(1000. / C['vlin']))
@@ -346,10 +346,10 @@ class AbrahamsonEtAl2015SInter(GMPE):
             C_PGA, dc1_pga, sites, rup, dists))
         mean = (_compute_magnitude_term(self.kind, C, dc1, rup.mag) +
                 _compute_distance_term(self.kind, self.trt, self.theta6_adj,
-                                       C, rup.mag, dists) +
+                                       C, rup) +
                 _compute_focal_depth_term(self.trt, C, rup) +
                 _compute_forearc_backarc_term(self.trt, self.faba_model,
-                                              C, sites, dists) +
+                                              C, rup) +
                 _compute_site_response_term(C, sites, pga1000))
         if self.sigma_mu_epsilon:
             sigma_mu = get_stress_factor(
