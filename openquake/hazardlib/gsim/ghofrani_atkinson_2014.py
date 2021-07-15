@@ -125,7 +125,6 @@ def _get_site_term(C, vs30):
     return C["c3"] * np.log10(vs30 / 760.0)
 
 
-# TODO: convert to one-parameter GMPE ("kind")
 class GhofraniAtkinson2014(GMPE):
     """
     Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
