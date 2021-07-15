@@ -319,10 +319,10 @@ class AbrahamsonEtAl2015SInter(GMPE):
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
-        if self.FABA_ALL_MODELS:  # BCHydro
+        if 'xvf' in self.REQUIRES_SITES_PARAMETERS:  # BCHydro subclasses
             self.faba_model = self.FABA_ALL_MODELS[faba_type](**kwargs)
         else:
-            self.faba_mode = None
+            self.faba_model = None
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
