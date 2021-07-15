@@ -37,6 +37,20 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean)
 
+#: IMT-independent coefficients. std_total is the total standard deviation,
+#: see Table 6, pag 2192 and Table 9, pag 2202. R0, R1, R2 are coefficients
+#: required for mean calculation - see equation (5) pag 2191. v1, v2, Vref
+#: are coefficients required for soil response calculation, see table 8,
+#: p. 2201
+# the std is converted from base 10 to base e
+std_total = np.log(10 ** 0.30),
+R0 = 10.0
+R1 = 70.0
+R2 = 140.0
+# v1 = 180.0
+# v2 = 300.0
+# Vref = 760.0
+
 
 def _clip_distances(rrup):
     """
@@ -383,6 +397,43 @@ def _get_stress_drop_scaling_factor(magnitude):
     return log10(stress_drop / 140.0) / log10(2.0)
 
 
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        Using a frequency dependent correction for the mean ground motion.
+        Standard deviation is fixed.
+        """
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
+                                                     imt, stddev_types)
+
+
+def hawaii_adjust(mean, ctx, imt):
+    # Defining frequency
+    if imt == PGA():
+        freq = 50.0
+    elif imt == PGV():
+        freq = 2.0
+    else:
+        freq = 1./imt.period
+
+    # Equation 3 of Atkinson (2010)
+    x1 = np.min([-0.18+0.17*np.log10(freq), 0])
+
+    # Equation 4 a-b-c of Atkinson (2010)
+    if ctx.hypo_depth < 20.0:
+        x0 = np.max([0.217-0.321*np.log10(freq), 0])
+    elif ctx.hypo_depth > 35.0:
+        x0 = np.min([0.263+0.0924*np.log10(freq), 0.35])
+    else:
+        x0 = 0.2
+
+    # Limiting calculation distance to 1km
+    # (as suggested by C. Bruce Worden)
+    rjb = [d if d > 1 else 1 for d in ctx.rjb]
+
+    # Equation 2 and 5 of Atkinson (2010)
+    mean += (x0 + x1*np.log10(rjb)) / np.log10(np.e)
+
+
 class BooreAtkinson2008(GMPE):
     """
     Implements GMPE developed by David M. Boore and Gail M. Atkinson
@@ -470,6 +521,9 @@ class BooreAtkinson2008(GMPE):
                                (np.max([0, 2.933 - 0.510 * rup.mag]) *
                                 np.log10(dists.rjb + 10.)))
             mean = np.log(np.exp(mean) * corr_fact)
+
+        if 'Hawaii' in self.__class__.__name__:
+            hawaii_adjust(mean, rup, imt)
 
         stddevs = _get_stddevs(
             self.__class__.__name__, C, stddev_types, len(sites.vs30))
@@ -581,58 +635,6 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
 
     # Adding hypocentral depth as required rupture parameter
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Using a frequency dependent correction for the mean ground motion.
-        Standard deviation is fixed.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
-                                                     imt, stddev_types)
-        # Defining frequency
-        if imt == PGA():
-            freq = 50.0
-        elif imt == PGV():
-            freq = 2.0
-        else:
-            freq = 1./imt.period
-
-        # Equation 3 of Atkinson (2010)
-        x1 = np.min([-0.18+0.17*np.log10(freq), 0])
-
-        # Equation 4 a-b-c of Atkinson (2010)
-        if rup.hypo_depth < 20.0:
-            x0 = np.max([0.217-0.321*np.log10(freq), 0])
-        elif rup.hypo_depth > 35.0:
-            x0 = np.min([0.263+0.0924*np.log10(freq), 0.35])
-        else:
-            x0 = 0.2
-
-        # Limiting calculation distance to 1km
-        # (as suggested by C. Bruce Worden)
-        rjb = [d if d > 1 else 1 for d in dists.rjb]
-
-        # Equation 2 and 5 of Atkinson (2010)
-        mean += (x0 + x1*np.log10(rjb))/np.log10(np.e)
-
-        return mean, stddevs
-
-    import numpy as np
-
-
-#: IMT-independent coefficients. std_total is the total standard deviation,
-#: see Table 6, pag 2192 and Table 9, pag 2202. R0, R1, R2 are coefficients
-#: required for mean calculation - see equation (5) pag 2191. v1, v2, Vref
-#: are coefficients required for soil response calculation, see table 8,
-#: p. 2201
-# the std is converted from base 10 to base e
-std_total = np.log(10 ** 0.30),
-R0 = 10.0
-R1 = 70.0
-R2 = 140.0
-# v1 = 180.0
-# v2 = 300.0
-# Vref = 760.0
 
 
 class AtkinsonBoore2006(GMPE):

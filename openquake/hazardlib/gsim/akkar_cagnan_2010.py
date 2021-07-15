@@ -112,10 +112,8 @@ class AkkarCagnan2010(BooreAtkinson2008):
     published as "A Local Ground-Motion Predictive Model for Turkey,
     and Its Comparison with Other Regional and Global Ground-Motion
     Models" (2010, Bulletin of the Seismological Society of America,
-    Volume 100, No. 6, pages 2978-2995). It extends
-    :class:`openquake.hazardlib.gsim.boore_atkinson_2008.BooreAtkinson2008`
-    because the linear and non-linear site effects are described by
-    the same site response function used in Boore and Atkinson 2008.
+    Volume 100, No. 6, pages 2978-2995). It uses the same site response
+    function used in Boore and Atkinson 2008.
     """
     #: Supported tectonic region type is active shallow crust (the
     #: equations being developed for Turkey, see paragraph 'Strong Motion
