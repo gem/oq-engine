@@ -89,7 +89,7 @@ _get_mean = CallableDict()
 
 
 @_get_mean.add("rjb")
-def _get_mean_1(kind, stress_drop, C, rup, dists, sites):
+def _get_mean_1(kind, stress_drop, C, C_STRESS, rup, dists, sites):
     """
     Returns the mean ground motion (i.e. log10(ground motion in cm/s^2) )
     """
@@ -114,7 +114,7 @@ def _get_mean_2(kind, stress_drop, C, C_STRESS, rup, dists, sites):
 
 
 @_get_mean.add("repi")
-def _get_mean_3(kind, stress_drop, C, rup, dists, sites):
+def _get_mean_3(kind, stress_drop, C, C_STRESS, rup, dists, sites):
     """
     Returns the mean ground motion
     """
@@ -285,8 +285,9 @@ class AmeriEtAl2017Rjb(GMPE):
 
         C = self.COEFFS[imt]
         C_SIGMA = self.COEFFS_SIGMA[imt]
+        C_STRESS = self.COEFFS_STRESS[imt]
         imean = _get_mean(self.kind, self.norm_stress_drop,
-                          C, rup, dists, sites)
+                          C, C_STRESS, rup, dists, sites)
         # Convert mean to ln(SA) with SA in units of g:
         mean = np.log((10.0 ** (imean - 2.0)) / g)
 
