@@ -130,38 +130,17 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
         raise NotImplementedError(trt)
     if faba_model is None:
         f_faba = np.zeros_like(dists)
-        # Term only applies to backarc sites (F_FABA = 0. for forearc)
+        # Term only applies to backarc ctx (F_FABA = 0. for forearc)
         fixed_dists = dists[ctx.backarc]
         fixed_dists[fixed_dists < min_dist] = min_dist
         f_faba[ctx.backarc] = a + b * np.log(fixed_dists / 40.)
         return f_faba
 
     # in BCHydro subclasses
-    fixed_dists = np.copy(dists)
+    fixed_dists = np.copy(ctx)
     fixed_dists[fixed_dists < min_dist] = min_dist
     f_faba = a + b * np.log(fixed_dists / 40.)
     return f_faba * faba_model(-ctx.xvf)
-
-
-def _get_stddevs(ergodic, C, stddev_types, num_sites):
-    """
-    Return standard deviations as defined in Table 3
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma = C["sigma"] if ergodic else C["sigma_ss"]
-            stddevs.append(sigma + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            if ergodic:
-                phi = C["phi"]
-            else:
-                # Get single station phi
-                phi = np.sqrt(C["sigma_ss"] ** 2. - C["tau"] ** 2.)
-            stddevs.append(phi + np.zeros(num_sites))
-    return stddevs
 
 
 def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
@@ -187,7 +166,7 @@ def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
             C["theta10"])
 
 
-def _compute_focal_depth_term(trt, C, rup):
+def _compute_focal_depth_term(trt, C, ctx):
     """
     Computes the hypocentral depth scaling term - as indicated by
     equation (3)
@@ -197,10 +176,10 @@ def _compute_focal_depth_term(trt, C, rup):
     """
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         return 0.
-    if rup.hypo_depth > 120.0:
+    if ctx.hypo_depth > 120.0:
         z_h = 120.0
     else:
-        z_h = rup.hypo_depth
+        z_h = ctx.hypo_depth
     return C['theta11'] * (z_h - 60.)
 
 
@@ -236,19 +215,19 @@ def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
     return mean + site_response
 
 
-def _compute_site_response_term(C, sites, pga1000):
+def _compute_site_response_term(C, ctx, pga1000):
     """
     Compute and return site response model term
     This GMPE adopts the same site response scaling model of
     Walling et al (2008) as implemented in the Abrahamson & Silva (2008)
     GMPE. The functional form is retained here.
     """
-    vs_star = sites.vs30.copy()
+    vs_star = ctx.vs30.copy()
     vs_star[vs_star > 1000.0] = 1000.
     arg = vs_star / C["vlin"]
     site_resp_term = C["theta12"] * np.log(arg)
     # Get linear scaling term
-    idx = sites.vs30 >= C["vlin"]
+    idx = ctx.vs30 >= C["vlin"]
     site_resp_term[idx] += (C["b"] * CONSTS["n"] * np.log(arg[idx]))
     # Get nonlinear scaling term
     idx = np.logical_not(idx)
@@ -323,40 +302,43 @@ class AbrahamsonEtAl2015SInter(GMPE):
         else:
             self.faba_model = None
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
-        if self.delta_c1 is None:
-            dc1 = self.COEFFS_MAG_SCALE[imt]["dc1"]
-            dc1_pga = self.COEFFS_MAG_SCALE[PGA()]["dc1"]
-        else:
-            dc1 = dc1_pga = self.delta_c1
+        dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
         # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
         pga1000 = np.exp(_compute_pga_rock(
             self.kind, self.trt, self.theta6_adj, self.faba_model,
-            C_PGA, dc1_pga, rup))
-        mean = (_compute_magnitude_term(self.kind, C, dc1, rup.mag) +
-                _compute_distance_term(self.kind, self.trt, self.theta6_adj,
-                                       C, rup) +
-                _compute_focal_depth_term(self.trt, C, rup) +
-                _compute_forearc_backarc_term(self.trt, self.faba_model,
-                                              C, rup) +
-                _compute_site_response_term(C, sites, pga1000))
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(
-                imt, self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
-                const.TRT.SUBDUCTION_INTRASLAB)
-            mean += sigma_mu * self.sigma_mu_epsilon
-        stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
-        return mean, stddevs
+            C_PGA, dc1_pga, ctx))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            dc1 = self.delta_c1 or self.COEFFS_MAG_SCALE[imt]["dc1"]
+            mean[m] = (
+                _compute_magnitude_term(
+                    self.kind, C, dc1, ctx.mag) +
+                _compute_distance_term(
+                    self.kind, self.trt, self.theta6_adj, C, ctx) +
+                _compute_focal_depth_term(
+                    self.trt, C, ctx) +
+                _compute_forearc_backarc_term(
+                    self.trt, self.faba_model, C, ctx) +
+                _compute_site_response_term(
+                    C, ctx, pga1000))
+            if self.sigma_mu_epsilon:
+                sigma_mu = get_stress_factor(
+                    imt, self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                    const.TRT.SUBDUCTION_INTRASLAB)
+                mean[m] += sigma_mu * self.sigma_mu_epsilon
+
+            sig[m] = C["sigma"] if self.ergodic else C["sigma_ss"]
+            tau[m] = C['tau']
+            phi[m] = C["phi"] if self.ergodic else np.sqrt(
+                C["sigma_ss"] ** 2. - C["tau"] ** 2.)
 
     # Period-dependent coefficients (Table 3)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
