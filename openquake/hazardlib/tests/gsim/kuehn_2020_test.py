@@ -73,19 +73,19 @@ class KuehnEtAl2020SInterAlaskaTestCase(BaseGSIMTestCase):
     INTRA_FILE = "kuehn2020/KUEHN2020_INTERFACE_ALASKA_INTRA_EVENT_STDDEV.csv"
 
     def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.1, region="USA-AL")
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.1, region="USA-AK")
 
     def test_std_total(self):
         self.check(self.TOTAL_FILE, max_discrep_percentage=0.1,
-                   region="USA-AL")
+                   region="USA-AK")
 
     def test_std_inter_event(self):
         self.check(self.INTER_FILE, max_discrep_percentage=0.1,
-                   region="USA-AL")
+                   region="USA-AK")
 
     def test_std_intra_event(self):
         self.check(self.INTRA_FILE, max_discrep_percentage=0.1,
-                   region="USA-AL")
+                   region="USA-AK")
 
 
 # Interface Cascadia
@@ -266,19 +266,19 @@ class KuehnEtAl2020SSlabAlaskaTestCase(BaseGSIMTestCase):
     INTRA_FILE = "kuehn2020/KUEHN2020_INSLAB_ALASKA_INTRA_EVENT_STDDEV.csv"
 
     def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.1, region="USA-AL")
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.1, region="USA-AK")
 
     def test_std_total(self):
         self.check(self.TOTAL_FILE, max_discrep_percentage=0.1,
-                   region="USA-AL")
+                   region="USA-AK")
 
     def test_std_inter_event(self):
         self.check(self.INTER_FILE, max_discrep_percentage=0.1,
-                   region="USA-AL")
+                   region="USA-AK")
 
     def test_std_intra_event(self):
         self.check(self.INTRA_FILE, max_discrep_percentage=0.1,
-                   region="USA-AL")
+                   region="USA-AK")
 
 
 # Intraslab Cascadia

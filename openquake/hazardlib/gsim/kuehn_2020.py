@@ -53,7 +53,7 @@ KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020_coeffs.csv")
 # Regions: Global (GLO), Alaska (ALU), Cascadia (CAS),
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),
 #          New Zealand (NZL), South America (SAM), Taiwan (TWN)
-SUPPORTED_REGIONS = ["GLO", "USA-AL", "CAS", "CAM", "JPN", "NZL", "SAM", "TWN"]
+SUPPORTED_REGIONS = ["GLO", "USA-AK", "CAS", "CAM", "JPN", "NZL", "SAM", "TWN"]
 
 # Define inputs according to 3-letter codes
 REGION_TERMS_IF = {
@@ -66,7 +66,7 @@ REGION_TERMS_IF = {
         "file_unc": "kuehn2020_uncertainty_if_Global.hdf5",
     },
     # Alaska
-    "USA-AL": {
+    "USA-AK": {
         "c1": "c_1_if_reg_Al",
         "c6": "c_6_2_reg_Al",
         "c7": "c_7_reg_Al",
@@ -143,7 +143,7 @@ REGION_TERMS_SLAB = {
         "file_unc": "kuehn2020_uncertainty_slab_Global.hdf5",
     },
     # Alaska
-    "USA-AL": {
+    "USA-AK": {
         "c1": "c_1_slab_reg_Al",
         "c6": "c_6_2_reg_Al",
         "c7": "c_7_reg_Al",
@@ -564,7 +564,7 @@ class KuehnEtAl2020SInter(GMPE):
     The GMM define a "global" model as well as a set of region-specific
     coefficients (and in some cases methods). The coefficients are defined for
     seven specific subduction regions (with their region codes):
-        * Alaska (USA-AL)
+        * Alaska (USA-AK)
         * Cascadia (CAS)
         * Central America & Mexico (CAM)
         * Japan (JPM)
@@ -714,7 +714,7 @@ class KuehnEtAl2020SInter(GMPE):
             # Get standard deviations
             tau[m] = C["tau"]
             phi[m] = C["phi"]
-        sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)
+            sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
     # Coefficients in external file - supplied directly by the author
     COEFFS = CoeffsTable(sa_damping=5, table=open(KUEHN_COEFFS).read())
@@ -742,7 +742,7 @@ class KuehnEtAl2020SSlab(KuehnEtAl2020SInter):
 # For the aliases use the verbose form of the region name
 REGION_ALIASES = {
     "GLO": "",
-    "USA-AL": "Alaska",
+    "USA-AK": "Alaska",
     "CAS": "Cascadia",
     "CAM": "CentralAmericaMexico",
     "JPN": "Japan",
