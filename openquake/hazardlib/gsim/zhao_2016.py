@@ -195,11 +195,11 @@ get_distance_term = CallableDict()
 
 
 @get_distance_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def get_distance_term_asc(trt, C, dists, rup):
+def get_distance_term_asc(trt, C, ctx):
     """
     Returns the distance scaling term defined in equation 3
     """
-    x_ij = dists.rrup
+    x_ij = ctx.rrup
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
 
     # Geometric attenuation scaling described in equation 6
@@ -211,19 +211,19 @@ def get_distance_term_asc(trt, C, dists, rup):
                                       x_ij[idx] + gn_exp)
 
     # equation 5
-    c_m = min(rup.mag, CONSTANTS["m_c"])
+    c_m = min(ctx.mag, CONSTANTS["m_c"])
     # equation 4
     r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
     return C["gcr"] * np.log(r_ij) + C["gcrL"] * np.log(x_ij + 200.0) +\
-        g_n + C["ecr"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
+        g_n + C["ecr"] * x_ij + C["ecrV"] * ctx.rvolc + C["gamma_S"]
 
 
 @get_distance_term.add(const.TRT.UPPER_MANTLE)
-def get_distance_term_um(trt, C, dists, rup):
+def get_distance_term_um(trt, C, ctx):
     """
     Returns the distance attenuation term
     """
-    x_ij = dists.rrup
+    x_ij = ctx.rrup
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
     g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
         np.ones_like(x_ij)
@@ -231,62 +231,60 @@ def get_distance_term_um(trt, C, dists, rup):
     if np.any(idx):
         g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
                                       x_ij[idx] + gn_exp)
-    c_m = min(rup.mag, CONSTANTS["m_c"])
+    c_m = min(ctx.mag, CONSTANTS["m_c"])
     r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
     return C["gUM"] * np.log(r_ij) +\
         C["gcrL"] * np.log(x_ij + 200.0) +\
-        g_n + C["eum"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
+        g_n + C["eum"] * x_ij + C["ecrV"] * ctx.rvolc + C["gamma_S"]
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_distance_term_SInter(trt, C, dists, rup):
+def get_distance_term_SInter(trt, C, ctx):
     """
     Returns distance scaling term, dependent on top of rupture depth,
     as described in equation 6
     """
-    x_ij = dists.rrup
+    x_ij = ctx.rrup
     # Get r_ij - distance for geometric spreading (equations 4 & 5)
-    c_m = min(rup.mag, CONSTANTS["m_c"])
-    r_ij = CONSTANTS["xinto"] + x_ij +\
-        np.exp(C["alpha"] + C["beta"] * c_m)
+    c_m = min(ctx.mag, CONSTANTS["m_c"])
+    r_ij = CONSTANTS["xinto"] + x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
     # Get factors common to both shallow and deep
-    dist_term = C["gint"] * np.log(r_ij) + C["eintV"] * dists.rvolc +\
-        C["gammaint"]
+    dterm = C["gint"] * np.log(r_ij) + C["eintV"] * ctx.rvolc + C["gammaint"]
 
-    if rup.ztor < 25.:
+    if ctx.ztor < 25.:
         # Shallow events have geometric and anelastic attenuation term
-        dist_term += (C["gintLS"] * np.log(x_ij + 200.0)
-                      + C["eintS"] * x_ij) + C["gamma_ints"]
+        dterm += (C["gintLS"] * np.log(x_ij + 200.0) + C["eintS"] * x_ij
+                  + C["gamma_ints"])
     else:
         # Deep events do not have an anelastic attenuation term
-        dist_term += (C["gintLD"] * np.log(x_ij + 200.0))
-    return dist_term
+        dterm += (C["gintLD"] * np.log(x_ij + 200.0))
+    return dterm
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_distance_term_sslab(trt, C, dists, rup):
+def get_distance_term_sslab(trt, C, ctx):
     """
     Returns the distance scaling term in equation 2a
 
     Note that the paper describes a lower and upper cap on Rvolc that
     is not found in the Fortran code, and is thus neglected here.
     """
-    x_ij = dists.rrup
+    x_ij = ctx.rrup
     # Get anelastic scaling term in quation 5
-    if rup.ztor >= 50.:
-        qslh = C["eSLH"] * (0.02 * rup.ztor - 1.0)
+    if ctx.ztor >= 50.:
+        qslh = C["eSLH"] * (0.02 * ctx.ztor - 1.0)
     else:
         qslh = 0.0
     # r_volc = np.copy(dists.rvolc)
     # r_volc[np.logical_and(r_volc > 0.0, r_volc <= 12.0)] = 12.0
     # r_volc[r_volc >= 80.0] = 80.0
     # Get r_ij - distance for geometric spreading (equations 3 and 4)
-    c_m = min(rup.mag, CONSTANTS["m_c"])
+    c_m = min(ctx.mag, CONSTANTS["m_c"])
     r_ij = x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
     return C["gSL"] * np.log(r_ij) + \
         C["gLL"] * np.log(x_ij + 200.) +\
         C["eSL"] * x_ij + qslh * x_ij +\
-        C["eSLV"] * dists.rvolc + C["gamma"]
+        C["eSLV"] * ctx.rvolc + C["gamma"]
 
 
 def _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup):
@@ -497,7 +495,7 @@ class ZhaoEtAl2016Asc(GMPE):
         sa_rock = (get_magnitude_scaling_term(trt, C, rup) +
                    get_sof_term(trt, C, rup) +
                    get_depth_term(trt, C, rup) +
-                   get_distance_term(trt, C, dists, rup))
+                   get_distance_term(trt, C, rup))
 
         sa_soil = add_site_amplification(trt, C, C_SITE, sites,
                                          sa_rock, idx, rup)
