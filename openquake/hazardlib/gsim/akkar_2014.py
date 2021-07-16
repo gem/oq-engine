@@ -56,32 +56,32 @@ _compute_logarithmic_distance_term = CallableDict()
 
 
 @_compute_logarithmic_distance_term.add("rjb")
-def _compute_logarithmic_distance_term_1(kind, C, c1, mag, ctx):
+def _compute_logarithmic_distance_term_1(kind, C, c1, ctx):
     """
     Compute and return fourth term in equations (2a)
     and (2b), page 20.
     """
-    return ((C['a4'] + C['a5'] * (mag - c1)) *
+    return ((C['a4'] + C['a5'] * (ctx.mag - c1)) *
             np.log(np.sqrt(ctx.rjb ** 2 + C['a6'] ** 2)))
 
 
 @_compute_logarithmic_distance_term.add("repi")
-def _compute_logarithmic_distance_term_2(kind, C, c1, mag, ctx):
+def _compute_logarithmic_distance_term_2(kind, C, c1, ctx):
     """
     Compute and return fourth term in equations (2a)
     and (2b), page 20.
     """
-    return ((C['a4'] + C['a5'] * (mag - c1)) *
+    return ((C['a4'] + C['a5'] * (ctx.mag - c1)) *
             np.log(np.sqrt(ctx.repi ** 2 + C['a6'] ** 2)))
 
 
 @_compute_logarithmic_distance_term.add("rhypo")
-def _compute_logarithmic_distance_term_3(kind, C, c1, mag, ctx):
+def _compute_logarithmic_distance_term_3(kind, C, c1, ctx):
     """
     Compute and return fourth term in equations (2a)
     and (2b), page 20.
     """
-    return ((C['a4'] + C['a5'] * (mag - c1)) *
+    return ((C['a4'] + C['a5'] * (ctx.mag - c1)) *
             np.log(np.sqrt(ctx.rhypo ** 2 + C['a6'] ** 2)))
 
 
@@ -93,7 +93,7 @@ def _compute_mean(kind, C, c1, ctx):
     mean = (C['a1'] +
             _compute_linear_magnitude_term(C, c1, ctx.mag) +
             _compute_quadratic_magnitude_term(C, ctx.mag) +
-            _compute_logarithmic_distance_term(kind, C, c1, ctx.mag, ctx) +
+            _compute_logarithmic_distance_term(kind, C, c1, ctx) +
             _compute_faulting_style_term(C, ctx.rake))
     return mean
 
