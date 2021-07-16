@@ -7,12 +7,12 @@
 import copy
 import numpy as np
 
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.can15 import utils
 from openquake.hazardlib.gsim.can15.western import get_sigma
 
-from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.const import StdDev, IMC, TRT
 from openquake.hazardlib.gsim.pezeshk_2011 import PezeshkEtAl2011
 from openquake.hazardlib.gsim.boore_atkinson_2011 import Atkinson2008prime
 from openquake.hazardlib.gsim.boore_atkinson_2008 import \
@@ -97,7 +97,7 @@ def apply_correction_to_BC(cff, mean, imt, dists):
     return mean + np.log(10**tmp)
 
 
-class EasternCan15Mid(PezeshkEtAl2011):
+class EasternCan15Mid(GMPE):
     """
     Implements the hybrid GMPE used to compute hazard in the Eastern part of
     Canada.
@@ -126,6 +126,29 @@ class EasternCan15Mid(PezeshkEtAl2011):
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
     non_verified = True
+
+    #: Supported tectonic region type is 'stable continental region'
+    #: equation has been derived from data from Eastern North America (ENA)
+    # 'Instroduction', page 1859.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = TRT.STABLE_CONTINENTAL
+
+    #: Supported intensity measure types are spectral acceleration,
+    #: and peak ground acceleration. See Table 2 in page 1865
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+
+    #: Geometric mean determined from the fiftieth percentile values of the
+    #: geometric means computed for all nonredundant rotation angles and all
+    #: periods less than the maximum useable period, independent of
+    #: sensor orientation. See page 1864.
+    #: :attr:'~openquake.hazardlib.const.IMC.GMRotI50'.
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = IMC.GMRotI50
+
+    #: Required rupture parameters are magnitude (eq. 4, page 1866).
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
+
+    #: Required distance measure is RRup, explained in page 1864 (eq. 2 page
+    #: 1861, eq. 5 page 1866).
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Required site parameters
     REQUIRES_SITES_PARAMETERS = {'vs30'}
