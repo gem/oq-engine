@@ -273,7 +273,9 @@ def _get_stddevs(C, C_PGA, ctx, pga1100, stddev_types):
     Returns the inter- and intra-event and total standard deviations
     """
     # Get stddevs for PGA on basement rock
-    tau_lnpga_b, phi_lnpga_b = _get_stddevs_pga(C_PGA, ctx)
+    tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
+    phi_lnpga_b = np.sqrt(_get_philny(C_PGA, ctx.mag) ** 2. -
+                          CONSTS["philnAF"] ** 2.)
     num_sites = len(ctx.vs30)
     # Get tau_lny on the basement rock
     tau_lnyb = _get_taulny(C, ctx.mag)
@@ -304,16 +306,6 @@ def _get_stddevs(C, C_PGA, ctx, pga1100, stddev_types):
         elif stddev_type == const.StdDev.INTER_EVENT:
             stddevs.append(tau + np.zeros(num_sites))
     return stddevs
-
-
-def _get_stddevs_pga(C, ctx):
-    """
-    Returns the inter- and intra-event coefficients for PGA
-    """
-    tau_lnpga_b = _get_taulny(C, ctx.mag)
-    phi_lnpga_b = np.sqrt(_get_philny(C, ctx.mag) ** 2. -
-                          CONSTS["philnAF"] ** 2.)
-    return tau_lnpga_b, phi_lnpga_b
 
 
 def _get_style_of_faulting_term(C, ctx):
