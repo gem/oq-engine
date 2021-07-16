@@ -251,7 +251,7 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
                    CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
             np.log(pga_rock[idx] + CONSTS["c"]))
 
-    # For Japan ctx (SJ = 1) further scaling is needed (equation 19)
+    # For Japan (SJ = 1) further scaling is needed (equation 19)
     if SJ:
         fsite_j = (C["c13"] + C["k2"] * CONSTS["n"]) * \
             np.log(vs_mod)

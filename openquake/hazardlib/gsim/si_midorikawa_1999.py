@@ -36,8 +36,7 @@ from openquake.hazardlib.geo import (
 # Subduction trench coordinates (table 3.5.2-1) page 3-150
 SUB_TRENCH_LONS = np.array([
     143.50, 143.00, 141.90, 142.40, 143.25, 143.80, 144.20, 144.30, 144.65,
-    146.80, 153.00
-])
+    146.80, 153.00])
 
 SUB_TRENCH_LATS = np.array([
     24.00, 29.00, 33.80, 35.80, 36.55, 37.70, 39.20, 40.10, 41.00, 42.00, 45.50
@@ -46,12 +45,10 @@ SUB_TRENCH_LATS = np.array([
 # Volcanic front coordinates (table 3.5.2-2, page 3-150)
 VOLCANIC_FRONT_LONS = np.array([
     122.00, 124.00, 128.30, 129.70, 130.80, 131.60, 132.00, 133.70, 134.90,
-    136.90
-])
+    136.90])
 
 VOLCANIC_FRONT_LATS = np.array([
-    24.50, 24.50, 27.90, 29.50, 31.50, 33.40, 34.90, 35.30, 35.30, 36.20
-])
+    24.50, 24.50, 27.90, 29.50, 31.50, 33.40, 34.90, 35.30, 35.30, 36.20])
 
 
 def _construct_surface(lons, lats, upper_depth, lower_depth):
@@ -89,8 +86,8 @@ def _get_min_distance_to_sub_trench(lons, lats):
     and return its absolute value.
     """
     trench = _construct_surface(SUB_TRENCH_LONS, SUB_TRENCH_LATS, 0., 10.)
-    sites = Mesh(lons, lats, None)
-    return np.abs(trench.get_rx_distance(sites))
+    ctx = Mesh(lons, lats, None)
+    return np.abs(trench.get_rx_distance(ctx))
 
 
 def _get_min_distance_to_volcanic_front(lons, lats):
@@ -101,12 +98,13 @@ def _get_min_distance_to_volcanic_front(lons, lats):
     Distance is negative if point is located east of the volcanic front,
     positive otherwise.
 
-    The method uses the same approach as :meth:`_get_min_distance_to_sub_trench`
+    The method uses the same approach as
+    :meth:`_get_min_distance_to_sub_trench`
     but final distance is returned without taking the absolute value.
     """
     vf = _construct_surface(VOLCANIC_FRONT_LONS, VOLCANIC_FRONT_LATS, 0., 10.)
-    sites = Mesh(lons, lats, None)
-    return vf.get_rx_distance(sites)
+    ctx = Mesh(lons, lats, None)
+    return vf.get_rx_distance(ctx)
 
 
 def _apply_subduction_trench_correction(mean, x_tr, H, rrup, imt):
@@ -174,68 +172,60 @@ def _apply_amplification_factor(AMP_F, mean, vs30):
             'Si and Midorikawa 1999 do not support this Vs30 value')
 
 
-def _get_mean(imt, mag, hypo_depth, rrup, d):
+def set_mean(imt, mag, hypo_depth, rrup, d, mean):
     """
     Return mean value as defined in equation 3.5.1-1 page 148
     """
     # clip magnitude at 8.3 as per note at page 3-36 in table Table 3.3.2-6
     # in "Technical Reports on National Seismic Hazard Maps for Japan"
-    mag = min(mag, 8.3)
+    mag = np.fmin(mag, 8.3)
     if imt.string == 'PGV':
-        mean = (
+        mean[:] = (
             0.58 * mag +
             0.0038 * hypo_depth +
             d -
             1.29 -
             np.log10(rrup + 0.0028 * 10 ** (0.5 * mag)) -
-            0.002 * rrup
-        )
+            0.002 * rrup)
     else:
-        mean = (
+        mean[:] = (
             0.50 * mag +
             0.0043 * hypo_depth +
             d +
             0.61 -
             np.log10(rrup + 0.0055 * 10 ** (0.5 * mag)) -
-            0.003 * rrup
-        )
-        mean = np.log10(10**(mean)/(g*100))
-
-    return mean
+            0.003 * rrup)
+        mean[:] = np.log10(10**mean / (g*100))
 
 
-_get_stddevs = CallableDict()
+set_sig = CallableDict()
 
 
-@_get_stddevs.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def _get_stddevs_asc(trt, stddev_types, rrup):
+@set_sig.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def set_sig_asc(trt, rrup, sig):
     """
-    Return standard deviations as defined in equation 3.5.5-2 page 151
+    Set standard deviation as defined in equation 3.5.5-2 page 151
     """
-    std = np.zeros_like(rrup)
-    std[rrup <= 20] = 0.23
+    sig[rrup <= 20] = 0.23
     idx = (rrup > 20) & (rrup <= 30)
-    std[idx] = 0.23 - 0.03 * np.log10(rrup[idx] / 20) / np.log10(30. / 20.)
-    std[rrup > 30] = 0.20
+    sig[idx] = 0.23 - 0.03 * np.log10(rrup[idx] / 20) / np.log10(30. / 20.)
+    sig[rrup > 30] = 0.20
     # convert from log10 to ln
-    std = np.log(10 ** std)
-    return [std for stddev_type in stddev_types]
+    sig[:] = np.log(10 ** sig)
 
 
-@_get_stddevs.add(const.TRT.SUBDUCTION_INTERFACE,
-                  const.TRT.SUBDUCTION_INTRASLAB)
-def _get_stddevs_sub(trt, stddev_types, pgv):
+@set_sig.add(const.TRT.SUBDUCTION_INTERFACE,
+             const.TRT.SUBDUCTION_INTRASLAB)
+def set_sig_sub(trt, pgv, sig):
     """
-    Return standard deviations as defined in equation 3.5.5-1 page 151
+    Set standard deviation as defined in equation 3.5.5-1 page 151
     """
-    std = np.zeros_like(pgv)
-    std[pgv <= 25] = 0.20
+    sig[pgv <= 25] = 0.20
     idx = (pgv > 25) & (pgv <= 50)
-    std[idx] = 0.20 - 0.05 * (pgv[idx] - 25) / 25
-    std[pgv > 50] = 0.15
+    sig[idx] = 0.20 - 0.05 * (pgv[idx] - 25) / 25
+    sig[pgv > 50] = 0.15
     # convert from log10 to ln
-    std = np.log(10 ** std)
-    return [std for stddev_type in stddev_types]
+    sig[:] = np.log(10 ** sig)
 
 
 class SiMidorikawa1999Asc(GMPE):
@@ -262,7 +252,7 @@ class SiMidorikawa1999Asc(GMPE):
     #: Supported standard deviation type is total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    #: No sites parameters are required
+    #: No ctx parameters are required
     # REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
@@ -276,20 +266,21 @@ class SiMidorikawa1999Asc(GMPE):
     #: see equation 3.5.1-1 page 148
     AMP_F = 1.41
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-2 page 151 for total standard deviation.
 
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        mean = _get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d=0)
-        stddevs = _get_stddevs(trt, stddev_types, dists.rrup)
-        mean = _apply_amplification_factor(self.AMP_F, mean, sites.vs30)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            set_mean(imt, ctx.mag, ctx.hypo_depth, ctx.rrup, 0, mean[m])
+            set_sig(trt, ctx.rrup, sig[m])
+            mean[m] = _apply_amplification_factor(
+                self.AMP_F, mean[m], ctx.vs30)
 
 
 class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
@@ -304,24 +295,25 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
 
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        if imt.string == 'PGV':
-            d = -0.02
-        else:
-            d = 0.01
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        mean = _get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d)
-        stddevs = _get_stddevs(trt, stddev_types, 10 ** mean)
-        mean = _apply_amplification_factor(self.AMP_F, mean, sites.vs30)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            if imt.string == 'PGV':
+                d = -0.02
+            else:
+                d = 0.01
+            set_mean(imt, ctx.mag, ctx.hypo_depth, ctx.rrup, d, mean[m])
+            set_sig(trt, 10 ** mean[m], sig[m])
+            mean[m] = _apply_amplification_factor(
+                self.AMP_F, mean[m], ctx.vs30)
 
 
 class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
@@ -331,21 +323,20 @@ class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
     """
     REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
 
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-        x_tr = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
-        mean = _apply_subduction_trench_correction(
-            mean, x_tr, rup.hypo_depth, dists.rrup, imt)
-        return mean, stddevs
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        x_tr = _get_min_distance_to_sub_trench(ctx.lon, ctx.lat)
+        for m, imt in enumerate(imts):
+            mean[m] = _apply_subduction_trench_correction(
+                mean[m], x_tr, ctx.hypo_depth, ctx.rrup, imt)
 
 
 class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
@@ -355,21 +346,20 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
     """
     REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
 
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-        x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
-        mean = _apply_volcanic_front_correction(
-            mean, x_vf, rup.hypo_depth, imt)
-        return mean, stddevs
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        x_vf = _get_min_distance_to_volcanic_front(ctx.lon, ctx.lat)
+        for m, imt in enumerate(imts):
+            mean[m] = _apply_volcanic_front_correction(
+                mean[m], x_vf, ctx.hypo_depth, imt)
 
 
 class SiMidorikawa1999SSlab(SiMidorikawa1999SInter):
@@ -384,24 +374,25 @@ class SiMidorikawa1999SSlab(SiMidorikawa1999SInter):
     #: Supported tectonic region type is subduction intraslab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
 
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        if imt.string == 'PGV':
-            d = 0.12
-        else:
-            d = 0.22
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        mean = _get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d)
-        stddevs = _get_stddevs(trt, stddev_types, 10 ** mean)
-        mean = _apply_amplification_factor(self.AMP_F, mean, sites.vs30)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            if imt.string == 'PGV':
+                d = 0.12
+            else:
+                d = 0.22
+            set_mean(imt, ctx.mag, ctx.hypo_depth, ctx.rrup, d, mean[m])
+            set_sig(trt, 10 ** mean[m], sig[m])
+            mean[m] = _apply_amplification_factor(
+                self.AMP_F, mean[m], ctx.vs30)
 
 
 class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
@@ -411,21 +402,20 @@ class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
     """
     REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
 
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-        x_tr = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
-        mean = _apply_subduction_trench_correction(
-            mean, x_tr, rup.hypo_depth, dists.rrup, imt)
-        return mean, stddevs
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        x_tr = _get_min_distance_to_sub_trench(ctx.lon, ctx.lat)
+        for m, imt in enumerate(imts):
+            mean[m] = _apply_subduction_trench_correction(
+                mean[m], x_tr, ctx.hypo_depth, ctx.rrup, imt)
 
 
 class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
@@ -435,18 +425,17 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
     """
     REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
         3.5.5-1 page 151 for total standard deviation.
 
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-        x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
-        mean = _apply_volcanic_front_correction(
-            mean, x_vf, rup.hypo_depth, imt)
-        return mean, stddevs
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        x_vf = _get_min_distance_to_volcanic_front(ctx.lon, ctx.lat)
+        for m, imt in enumerate(imts):
+            mean[m] = _apply_volcanic_front_correction(
+                mean[m], x_vf, ctx.hypo_depth, imt)
