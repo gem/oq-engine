@@ -3,14 +3,12 @@
 :class:`EasternCan15Mid`, :class:`EasterCnan15Low`,
 :class:`EasternCan15Upp`
 """
-
-import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.can15 import utils
 from openquake.hazardlib.gsim.can15.western import get_sigma
-
+from openquake.hazardlib import contexts
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.const import StdDev, IMC, TRT
 from openquake.hazardlib.gsim.pezeshk_2011 import PezeshkEtAl2011
@@ -21,20 +19,19 @@ from openquake.hazardlib.gsim.silva_2002 import (
     SilvaEtAl2002SingleCornerSaturation, SilvaEtAl2002DoubleCornerSaturation)
 
 
-def _get_delta(stds, dists):
+def _get_delta(stds, repi):
     """
     Computes the additional delta to be used for the computation of the
     upp and low models
     """
-    delta = np.fmax((0.1 - 0.001 * dists.repi), np.zeros_like(dists.repi))
-    return delta
+    return np.fmax(0.1 - 0.001 * repi, 0.)
 
 
-def apply_correction_to_BC(cff, mean, imt, dists):
+def apply_correction_to_BC(cff, mean, imt, ctx):
     if imt.period:
         tmp = cff['mf']
     elif imt in [PGA()]:
-        tmp = -0.3 + 0.15 * np.log10(dists.repi)
+        tmp = -0.3 + 0.15 * np.log10(ctx.repi)
     else:
         raise ValueError('Unsupported IMT', str(imt))
     return mean + np.log(10**tmp)
@@ -114,56 +111,59 @@ class EasternCan15Mid(GMPE):
              AtkinsonBoore2006Modified2011()]
     sgn = 0
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See documentation for method `GroundShakingIntensityModel` in
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
-        stddev_types = stddev_types or [StdDev.TOTAL]
-        g = self.gsims
-        cff = self.COEFFS_SITE[imt]
+        imtls = {imt.string: [0] for imt in imts}
+        mean_stds = []  # 5 arrays of shape (2, M, N)
+        ctxs = []
+        for gsim in self.gsims:
+            cmaker = contexts.ContextMaker(
+                self.DEFINED_FOR_TECTONIC_REGION_TYPE,
+                [gsim], {'imtls': imtls})
+            # add equivalent distances
+            if isinstance(gsim, AtkinsonBoore2006Modified2011):
+                c = utils.add_distances_east(ctx, ab06=True)
+            else:
+                c = utils.add_distances_east(ctx)
+            ctxs.append(c)
+            mean_stds.extend(cmaker.get_mean_stds([c], StdDev.TOTAL))
 
-        # add equivalent distances
-        ctx = utils.add_distances_east(rup)
+        for m, imt in enumerate(imts):
+            cff = self.COEFFS_SITE[imt]
 
-        # Pezeshk et al. 2011 - Rrup
-        mean1, stds1 = g[0].get_mean_and_stddevs(ctx, ctx, ctx, imt,
-                                                 stddev_types)
-        mean1 = apply_correction_to_BC(cff, mean1, imt, ctx)
-        #
-        # Atkinson 2008 - Rjb
-        mean2, stds2 = g[1].get_mean_and_stddevs(ctx, ctx, ctx, imt,
-                                                 stddev_types)
-        #
-        # Silva single corner
-        mean4, stds4 = g[2].get_mean_and_stddevs(ctx, ctx, ctx, imt,
-                                                 stddev_types)
-        mean4 = apply_correction_to_BC(cff, mean4, imt, ctx)
-        #
-        # Silva double corner
-        mean5, stds5 = g[3].get_mean_and_stddevs(ctx, ctx, ctx, imt,
-                                                 stddev_types)
-        mean5 = apply_correction_to_BC(cff, mean5, imt, ctx)
-        #
-        # distances
-        ctx06 = utils.add_distances_east(rup, ab06=True)
+            # Pezeshk et al. 2011 - Rrup
+            mean1, stds1 = mean_stds[0][:, m]
+            mean1 = apply_correction_to_BC(cff, mean1, imt, ctxs[0])
 
-        # Atkinson and Boore 2006 - Rrup
-        mean3, stds3 = g[3].get_mean_and_stddevs(ctx06, ctx06, ctx06, imt,
-                                                 stddev_types)
-        # Computing adjusted mean and stds
-        mean_adj = mean1*0.2 + mean2*0.2 + mean3*0.2 + mean4*0.2 + mean5*0.2
+            # Atkinson 2008 - Rjb
+            mean2, stds2 = mean_stds[1][:, m]
 
-        # Note that in this case we do not apply a triangular smoothing on
-        # distance as explained at page 996 of Atkinson and Adams (2013)
-        # for the calculation of the standard deviation
-        stds_adj = np.log(np.exp(stds1)*0.2 + np.exp(stds2)*0.2 +
+            # Silva single corner
+            mean4, stds4 = mean_stds[2][:, m]
+            mean4 = apply_correction_to_BC(cff, mean4, imt, ctxs[2])
+
+            # Silva double corner
+            mean5, stds5 = mean_stds[3][:, m]
+            mean5 = apply_correction_to_BC(cff, mean5, imt, ctx)
+
+            # Atkinson and Boore 2006 - Rrup
+            mean3, stds3 = mean_stds[4][:, m]
+
+            # Computing adjusted mean and stds
+            mean[m] = mean1*0.2 + mean2*0.2 + mean3*0.2 + mean4*0.2 + mean5*0.2
+
+            # Note that in this case we do not apply a triangular smoothing on
+            # distance as explained at page 996 of Atkinson and Adams (2013)
+            # for the calculation of the standard deviation
+            stds = np.log(np.exp(stds1)*0.2 + np.exp(stds2)*0.2 +
                           np.exp(stds3)*0.2 + np.exp(stds4)*0.2 +
                           np.exp(stds5)*0.2)[0]  # shape (1, N) -> N
-        stddevs = [np.ones(len(dists.repi)) * get_sigma(imt)]
-        if self.sgn:
-            mean_adj += self.sgn * (stds_adj + _get_delta(stds_adj, dists))
-        return mean_adj, stddevs
+            sig[m] = get_sigma(imt)
+            if self.sgn:
+                mean[m] += self.sgn * (stds + _get_delta(stds, ctx.repi))
 
     COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     IMT        mf
