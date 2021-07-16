@@ -140,13 +140,14 @@ def _get_hanging_wall_coeffs_rrup(dists):
     return fhngrrup
 
 
-def _get_hanging_wall_coeffs_rx(C, rup, r_x):
+def _get_hanging_wall_coeffs_rx(C, ctx):
     """
     Returns the hanging wall r-x caling term defined in equation 7 to 12
     """
+    r_x = ctx.rx
     # Define coefficients R1 and R2
-    r_1 = rup.width * cos(radians(rup.dip))
-    r_2 = 62.0 * rup.mag - 350.0
+    r_1 = ctx.width * cos(radians(ctx.dip))
+    r_2 = 62.0 * ctx.mag - 350.0
     fhngrx = np.zeros(len(r_x))
     # Case when 0 <= Rx <= R1
     idx = np.logical_and(r_x >= 0., r_x < r_1)
@@ -169,16 +170,16 @@ def _get_hanging_wall_coeffs_ztor(ztor):
         return 0.0
 
 
-def _get_hanging_wall_term(C, rup, dists):
+def _get_hanging_wall_term(C, ctx):
     """
     Returns the hanging wall scaling term defined in equations 7 to 16
     """
     return (C["c10"] *
-            _get_hanging_wall_coeffs_rx(C, rup, dists.rx) *
-            _get_hanging_wall_coeffs_rrup(dists) *
-            _get_hanging_wall_coeffs_mag(C, rup.mag) *
-            _get_hanging_wall_coeffs_ztor(rup.ztor) *
-            _get_hanging_wall_coeffs_dip(rup.dip))
+            _get_hanging_wall_coeffs_rx(C, ctx) *
+            _get_hanging_wall_coeffs_rrup(ctx) *
+            _get_hanging_wall_coeffs_mag(C, ctx.mag) *
+            _get_hanging_wall_coeffs_ztor(ctx.ztor) *
+            _get_hanging_wall_coeffs_dip(ctx.dip))
 
 
 def _get_hypocentral_depth_term(C, rup):
@@ -268,20 +269,20 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
         return f_site_g
 
 
-def _get_stddevs(C, C_PGA, rup, sites, pga1100, stddev_types):
+def _get_stddevs(C, C_PGA, ctx, pga1100, stddev_types):
     """
     Returns the inter- and intra-event and total standard deviations
     """
     # Get stddevs for PGA on basement rock
-    tau_lnpga_b, phi_lnpga_b = _get_stddevs_pga(C_PGA, rup)
-    num_sites = len(sites.vs30)
+    tau_lnpga_b, phi_lnpga_b = _get_stddevs_pga(C_PGA, ctx)
+    num_sites = len(ctx.vs30)
     # Get tau_lny on the basement rock
-    tau_lnyb = _get_taulny(C, rup.mag)
+    tau_lnyb = _get_taulny(C, ctx.mag)
     # Get phi_lny on the basement rock
-    phi_lnyb = np.sqrt(_get_philny(C, rup.mag) ** 2. -
+    phi_lnyb = np.sqrt(_get_philny(C, ctx.mag) ** 2. -
                        CONSTS["philnAF"] ** 2.)
     # Get site scaling term
-    alpha = _get_alpha(C, sites.vs30, pga1100)
+    alpha = _get_alpha(C, ctx.vs30, pga1100)
     # Evaluate tau according to equation 29
     tau = np.sqrt(
         (tau_lnyb ** 2.) +
@@ -297,7 +298,7 @@ def _get_stddevs(C, C_PGA, rup, sites, pga1100, stddev_types):
     stddevs = []
     for stddev_type in stddev_types:
         if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
+            stddevs.append(np.sqrt(tau**2 + phi**2) +
                            np.zeros(num_sites))
         elif stddev_type == const.StdDev.INTRA_EVENT:
             stddevs.append(phi + np.zeros(num_sites))
@@ -367,29 +368,29 @@ def _select_basin_model(SJ, vs30):
         return np.exp(7.089 - 1.144 * np.log(vs30))
 
 
-def get_mean_values(SJ, C, sites, rup, dists, a1100=None):
+def get_mean_values(SJ, C, ctx, a1100=None):
     """
     Returns the mean values for a specific IMT
     """
     if isinstance(a1100, np.ndarray):
         # Site model defined
-        temp_vs30 = sites.vs30
-        temp_z2pt5 = sites.z2pt5
+        temp_vs30 = ctx.vs30
+        temp_z2pt5 = ctx.z2pt5
     else:
         # Default site and basin model
-        temp_vs30 = 1100.0 * np.ones(len(sites.vs30))
+        temp_vs30 = 1100.0 * np.ones(len(ctx))
         temp_z2pt5 = _select_basin_model(SJ, 1100.0) * \
             np.ones_like(temp_vs30)
 
-    return (_get_magnitude_term(C, rup.mag) +
-            _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
-            _get_style_of_faulting_term(C, rup) +
-            _get_hanging_wall_term(C, rup, dists) +
+    return (_get_magnitude_term(C, ctx.mag) +
+            _get_geometric_attenuation_term(C, ctx.mag, ctx.rrup) +
+            _get_style_of_faulting_term(C, ctx) +
+            _get_hanging_wall_term(C, ctx) +
             _get_shallow_site_response_term(SJ, C, temp_vs30, a1100) +
             _get_basin_response_term(SJ, C, temp_z2pt5) +
-            _get_hypocentral_depth_term(C, rup) +
-            _get_fault_dip_term(C, rup) +
-            _get_anelastic_attenuation_term(C, dists.rrup))
+            _get_hypocentral_depth_term(C, ctx) +
+            _get_fault_dip_term(C, ctx) +
+            _get_anelastic_attenuation_term(C, ctx.rrup))
 
 
 class CampbellBozorgnia2014(GMPE):
@@ -442,18 +443,18 @@ class CampbellBozorgnia2014(GMPE):
         C_PGA = self.COEFFS[PGA()]
 
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
-        pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, sites, rup, dists))
+        pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, rup))
         # Get mean and standard deviations for IMT
-        mean = get_mean_values(self.SJ, C, sites, rup, dists, pga1100)
+        mean = get_mean_values(self.SJ, C, rup, pga1100)
         if imt.string[:2] == "SA" and imt.period < 0.25:
             # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
             # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
             # Get PGA on soil
-            pga = get_mean_values(self.SJ, C_PGA, sites, rup, dists, pga1100)
+            pga = get_mean_values(self.SJ, C_PGA, rup, pga1100)
             idx = mean <= pga
             mean[idx] = pga[idx]
         # Get standard deviations
-        stddevs = _get_stddevs(C, C_PGA, rup, sites, pga1100, stddev_types)
+        stddevs = _get_stddevs(C, C_PGA, rup, pga1100, stddev_types)
         return mean, stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
