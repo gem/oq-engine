@@ -82,7 +82,7 @@ def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
                       np.exp(stds3)*0.2 + np.exp(stds4)*0.2 +
                       np.exp(stds5)*0.2)
 
-    return mean_adj, stds_adj
+    return mean_adj, stds_adj[0]  # shape (1, N) -> N
 
 
 def apply_correction_to_BC(cff, mean, imt, dists):
@@ -144,6 +144,7 @@ class EasternCan15Mid(PezeshkEtAl2011):
 
     gsims = [Atkinson2008prime(), SilvaEtAl2002SingleCornerSaturation(),
              AtkinsonBoore2006Modified2011()]
+    sgn = 0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -151,8 +152,10 @@ class EasternCan15Mid(PezeshkEtAl2011):
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
         mean, stds = _get_mean_and_stddevs(
-            self, sites, rup, dists, imt, stddev_types)
+            self, sites, rup, dists, imt, stddev_types or [StdDev.TOTAL])
         stddevs = [np.ones(len(dists.repi)) * get_sigma(imt)]
+        if self.sgn:
+            mean += self.sgn * (stds + _get_delta(stds, dists))
         return mean, stddevs
 
     COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
@@ -169,38 +172,8 @@ class EasternCan15Mid(PezeshkEtAl2011):
 
 
 class EasternCan15Low(EasternCan15Mid):
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See documentation for method `GroundShakingIntensityModel` in
-        :class:~`openquake.hazardlib.gsim.base.GSIM`
-        """
-        # This is just used for testing purposes
-        if len(stddev_types) == 0:
-            stddev_types = [StdDev.TOTAL]
-        mean, stds = _get_mean_and_stddevs(
-            self, sites, rup, dists, imt, stddev_types)
-        stddevs = [np.ones(len(dists.repi)) * get_sigma(imt)]
-        delta = _get_delta(stds, dists)
-        mean = mean - stds - delta
-        mean = np.squeeze(mean)
-        return mean, stddevs
+    sgn = -1
 
 
 class EasternCan15Upp(EasternCan15Mid):
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See documentation for method `GroundShakingIntensityModel` in
-        :class:~`openquake.hazardlib.gsim.base.GSIM`
-        """
-        # This is just used for testing purposes
-        if len(stddev_types) == 0:
-            stddev_types = [StdDev.TOTAL]
-        mean, stds = _get_mean_and_stddevs(
-            self, sites, rup, dists, imt, stddev_types)
-        stddevs = [np.ones(len(dists.repi)) * get_sigma(imt)]
-        delta = _get_delta(stds, dists)
-        mean = mean + stds + delta
-        mean = np.squeeze(mean)
-        return mean, stddevs
+    sgn = +1
