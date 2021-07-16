@@ -130,13 +130,13 @@ def _get_hanging_wall_coeffs_mag(C, mag):
         return (mag - 5.5) * (1.0 + C["a2"] * (mag - 6.5))
 
 
-def _get_hanging_wall_coeffs_rrup(dists):
+def _get_hanging_wall_coeffs_rrup(ctx):
     """
     Returns the hanging wall rrup term defined in equation 13
     """
-    fhngrrup = np.ones(len(dists.rrup))
-    idx = dists.rrup > 0.0
-    fhngrrup[idx] = (dists.rrup[idx] - dists.rjb[idx]) / dists.rrup[idx]
+    fhngrrup = np.ones(len(ctx.rrup))
+    idx = ctx.rrup > 0.0
+    fhngrrup[idx] = (ctx.rrup[idx] - ctx.rjb[idx]) / ctx.rrup[idx]
     return fhngrrup
 
 
@@ -266,46 +266,6 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
         return f_site_g + fsite_j
     else:
         return f_site_g
-
-
-def _get_stddevs(C, C_PGA, ctx, pga1100, stddev_types):
-    """
-    Returns the inter- and intra-event and total standard deviations
-    """
-    # Get stddevs for PGA on basement rock
-    tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
-    phi_lnpga_b = np.sqrt(_get_philny(C_PGA, ctx.mag) ** 2. -
-                          CONSTS["philnAF"] ** 2.)
-    num_sites = len(ctx.vs30)
-    # Get tau_lny on the basement rock
-    tau_lnyb = _get_taulny(C, ctx.mag)
-    # Get phi_lny on the basement rock
-    phi_lnyb = np.sqrt(_get_philny(C, ctx.mag) ** 2. -
-                       CONSTS["philnAF"] ** 2.)
-    # Get site scaling term
-    alpha = _get_alpha(C, ctx.vs30, pga1100)
-    # Evaluate tau according to equation 29
-    tau = np.sqrt(
-        (tau_lnyb ** 2.) +
-        ((alpha ** 2.) * (tau_lnpga_b ** 2.)) +
-        (2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b))
-
-    # Evaluate phi according to equation 30
-    phi = np.sqrt(
-        (phi_lnyb ** 2.) +
-        (CONSTS["philnAF"] ** 2.) +
-        ((alpha ** 2.) * (phi_lnpga_b ** 2.)) +
-        (2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b))
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(tau**2 + phi**2) +
-                           np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(num_sites))
-    return stddevs
 
 
 def _get_style_of_faulting_term(C, ctx):
@@ -444,8 +404,37 @@ class CampbellBozorgnia2014(GMPE):
             pga = get_mean_values(self.SJ, C_PGA, rup, pga1100)
             idx = mean <= pga
             mean[idx] = pga[idx]
-        # Get standard deviations
-        stddevs = _get_stddevs(C, C_PGA, rup, pga1100, stddev_types)
+
+        # Get stddevs for PGA on basement rock
+        tau_lnpga_b = _get_taulny(C_PGA, rup.mag)
+        phi_lnpga_b = np.sqrt(_get_philny(C_PGA, rup.mag) ** 2. -
+                              CONSTS["philnAF"] ** 2.)
+        num_sites = len(rup.vs30)
+        # Get tau_lny on the basement rock
+        tau_lnyb = _get_taulny(C, rup.mag)
+        # Get phi_lny on the basement rock
+        phi_lnyb = np.sqrt(_get_philny(C, rup.mag) ** 2. -
+                           CONSTS["philnAF"] ** 2.)
+        # Get site scaling term
+        alpha = _get_alpha(C, rup.vs30, pga1100)
+        # Evaluate tau according to equation 29
+        t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
+                    2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
+
+        # Evaluate phi according to equation 30
+        p = np.sqrt(
+            phi_lnyb**2 + CONSTS["philnAF"]**2 + alpha**2 * phi_lnpga_b**2 +
+            2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
+        stddevs = []
+        for stddev_type in stddev_types:
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(np.sqrt(t**2 + p**2) +
+                               np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(p + np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(t + np.zeros(num_sites))
+
         return mean, stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
