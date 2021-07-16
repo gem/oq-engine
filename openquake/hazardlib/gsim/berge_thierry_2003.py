@@ -29,7 +29,7 @@ from openquake.hazardlib.imt import PGA, SA
 
 
 # TODO: Check whether lower validity bound is 4 or 7 km
-def _get_mean_and_stddevs(C, sites, rup, dists, imt, stddev_types,
+def _get_mean_and_stddevs(C, ctx, imt, stddev_types,
                           mag_conversion_sigma=0.0):
     """
     See :meth:`superclass method
@@ -39,33 +39,22 @@ def _get_mean_and_stddevs(C, sites, rup, dists, imt, stddev_types,
     # clip distance at 4 km, minimum distance for which the equation is
     # valid (see section 2.2.4, page 201). This also avoids singularity
     # in the equation
-    rhypo = np.array(dists.rhypo)  # make a copy
+    rhypo = np.array(ctx.rhypo)  # make a copy
     rhypo[rhypo < 4.] = 4.
 
-    mean = C['a'] * rup.mag + C['b'] * rhypo - np.log10(rhypo)
+    mean = C['a'] * ctx.mag + C['b'] * rhypo - np.log10(rhypo)
 
-    mean[sites.vs30 >= 800] += C['c1']
-    mean[sites.vs30 < 800] += C['c2']
+    mean[ctx.vs30 >= 800] += C['c1']
+    mean[ctx.vs30 < 800] += C['c2']
 
     # convert from log10 to ln, and from cm/s2 to g
     mean = mean * np.log(10) - 2 * np.log(10) - np.log(g)
 
-    stddevs = _get_stddevs(C, stddev_types, rhypo.shape[0],
-                           mag_conversion_sigma=mag_conversion_sigma)
-
-    return mean, stddevs
-
-
-def _get_stddevs(C, stddev_types, num_sites, mag_conversion_sigma):
-    """
-    Return total standard deviation.
-    """
-    sigma = np.zeros(num_sites) + C['sigma'] * np.log(10)
+    sigma = np.zeros_like(rhypo) + C['sigma'] * np.log(10)
     sigma = np.sqrt(sigma ** 2 + (C['a'] ** 2) * (
         mag_conversion_sigma ** 2))
     stddevs = [sigma for _ in stddev_types]
-
-    return stddevs
+    return mean, stddevs
 
 
 class BergeThierryEtAl2003Ms(GMPE):
@@ -108,7 +97,7 @@ class BergeThierryEtAl2003Ms(GMPE):
         # extract dictionaries of coefficients specific to required
         # intensity measure type
         C = self.COEFFS[imt]
-        return _get_mean_and_stddevs(C, sites, rup, dists, imt, stddev_types)
+        return _get_mean_and_stddevs(C, rup, imt, stddev_types)
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper. Original coefficients in function of frequency.
@@ -277,7 +266,7 @@ class BergeThierryEtAl2003SIGMA(BergeThierryEtAl2003Ms):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         C = self.COEFFS[imt]
         return _get_mean_and_stddevs(
-            C, sites, rup, dists, imt, stddev_types, mag_conversion_sigma=0.2)
+            C, rup, imt, stddev_types, mag_conversion_sigma=0.2)
 
 
 class BergeThierryEtAl2003MwW(BergeThierryEtAl2003Ms):
@@ -292,12 +281,12 @@ class BergeThierryEtAl2003MwW(BergeThierryEtAl2003Ms):
         if rup.mag <= 6.064:
             newrup.mag = (rup.mag - 2.369) / 0.616
             return _get_mean_and_stddevs(
-                C, sites, newrup, dists, imt, stddev_types,
+                C, newrup, imt, stddev_types,
                 mag_conversion_sigma=0.147/0.616)
         else:
             newrup.mag = (rup.mag - 0.100) / 0.994
             return _get_mean_and_stddevs(
-                C, sites, newrup, dists, imt, stddev_types,
+                C, newrup, imt, stddev_types,
                 mag_conversion_sigma=0.174/0.994)
 
 
@@ -315,7 +304,7 @@ class BergeThierryEtAl2003MwL_MED(BergeThierryEtAl2003Ms):
         newrup.mag = (np.log(rup.mag+6.205)-2.133)/0.063
         slope = 0.063*np.exp(2.133+0.063*newrup.mag)
         return _get_mean_and_stddevs(
-            C, sites, newrup, dists, imt, stddev_types,
+            C, newrup, imt, stddev_types,
             mag_conversion_sigma=0.1703/slope)
 
 
@@ -333,7 +322,7 @@ class BergeThierryEtAl2003MwL_ITA(BergeThierryEtAl2003Ms):
         newrup.mag = (np.log(rup.mag+1.863)-1.421)/0.108
         slope = 0.108*np.exp(1.421+0.108*newrup.mag)
         return _get_mean_and_stddevs(
-            C, sites, newrup, dists, imt, stddev_types,
+            C, newrup, imt, stddev_types,
             mag_conversion_sigma=0.1685/slope)
 
 
@@ -355,11 +344,11 @@ class BergeThierryEtAl2003MwL_GBL(BergeThierryEtAl2003Ms):
             newrup.mag = (np.log(rup.mag + 6.205) - 2.133) / 0.063
             slope = 0.063 * np.exp(2.133 + 0.063 * newrup.mag)
             return _get_mean_and_stddevs(
-                C, sites, newrup, dists, imt, stddev_types,
+                C, newrup, imt, stddev_types,
                 mag_conversion_sigma=0.1703/slope)
         else:
             newrup.mag = (np.log(rup.mag - 2.586) + 0.109) / 0.229
             slope = 0.229*np.exp(-0.109+0.229*newrup.mag)
             return _get_mean_and_stddevs(
-                C, sites, newrup, dists, imt, stddev_types,
+                C, newrup, imt, stddev_types,
                 mag_conversion_sigma=0.1462/slope)
