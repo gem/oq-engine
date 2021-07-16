@@ -20,7 +20,9 @@ import os
 from openquake.hazardlib.gsim.tem20.lin_2011_foot import Lin2011foot
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# Test data provided by Jia-Cian Gao (TEM) on June 9, 2021
+# Test data provided by Jia-Cian Gao (TEM) on June 9, 2021 - Revised and
+# updated by M. Pagani on July 16, 2021
+# Values of std compared against the ones published.
 
 BASE_PATH = os.path.dirname(__file__)
 DATA_PATH = os.path.join(BASE_PATH, '..', 'data', 'tem20')
@@ -30,9 +32,10 @@ class LinEtAl2011FootWallCase(BaseGSIMTestCase):
     GSIM_CLASS = Lin2011foot
 
     def test_mean(self):
-        self.check(os.path.join(DATA_PATH, 'Lin2011_MEAN_foot.csv'),
+        #self.check(os.path.join(DATA_PATH, 'Lin2011_MEAN_foot.csv'),
+        self.check(os.path.join(DATA_PATH, 'lin2011_mean_fw.csv'),
                    max_discrep_percentage=0.1)
 
     def test_total_std(self):
-        self.check(os.path.join(DATA_PATH, 'Lin2011_TOTAL_STDDEV_foot.csv'),
+        self.check(os.path.join(DATA_PATH, 'lin2011_std_fw.csv'),
                    max_discrep_percentage=0.1)

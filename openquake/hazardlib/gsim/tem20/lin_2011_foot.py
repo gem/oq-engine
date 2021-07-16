@@ -18,7 +18,6 @@
 
 """
 Module exports :class:`Lin2011foot`
-
 """
 import numpy as np
 
@@ -37,8 +36,7 @@ def _compute_mean(C, mag, rrup, mean, idx):
 
 def _compute_std(C, stddevs, idx):
     """
-    Compute total standard deviation, see tables 3 and 4, pages 227 and
-    228.
+    Compute total standard deviation, see tables 3 and 4, pages 227 and 228.
     """
     for stddev in stddevs:
         stddev[idx] += C['sigma']
@@ -74,8 +72,8 @@ class Lin2011foot(GMPE):
     #: equation 10 page 226.
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    #: Required distance measure is hypocentral distance, see equation 10
-    #: page 226.
+    #: Required distance measure is rrup distance, see equation 4
+    #: page 154.
     REQUIRES_DISTANCES = {'rrup'}
 
     #: Vs30 threshold value between rock sites (B, C) and soil sites (C, D).
