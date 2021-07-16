@@ -19,7 +19,7 @@ import numpy
 from openquake.hazardlib.source import AreaSource
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel import WC1994
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.atkinson_boore_2006 import BooreAtkinson2008
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.geo import Point, Polygon, NodalPlane
 from openquake.hazardlib.mfd import TruncatedGRMFD

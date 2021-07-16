@@ -20,7 +20,7 @@
 Module exports :class:`BooreAtkinson2011`,
                :class:`Atkinson2008prime`
 """
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.atkinson_boore_2006 import BooreAtkinson2008
 from openquake.hazardlib import const
 
 

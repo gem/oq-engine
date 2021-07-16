@@ -24,7 +24,7 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     _get_site_amplification_non_linear, _get_site_amplification_linear)
 from openquake.baselib.general import CallableDict
 

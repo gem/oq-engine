@@ -23,7 +23,7 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     GMPE, BooreAtkinson2008, _get_site_amplification_linear,
     _get_site_amplification_non_linear)
 from openquake.hazardlib.gsim.base import CoeffsTable

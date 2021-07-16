@@ -12,7 +12,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import add_alias
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     BooreAtkinson2008, _get_site_amplification_non_linear,
     _get_site_amplification_linear)
 
