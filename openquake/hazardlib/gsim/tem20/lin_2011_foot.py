@@ -30,8 +30,8 @@ def _compute_mean(C, mag, rrup, mean, idx):
     """
     Compute mean value according to equations 10 and 11 page 226.
     """
-    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rrup[idx] +
-                 C['C4'] * np.exp(C['C5'] * mag)))
+    mean[idx] = (C['C1'] + C['C2'] * mag[idx] + C['C3'] * np.log(rrup[idx] +
+                 C['C4'] * np.exp(C['C5'] * mag[idx])))
 
 
 def _compute_std(C, stddev, idx):
@@ -91,15 +91,14 @@ class Lin2011foot(GMPE):
         for m, imt in enumerate(imts):
 
             if idx_rock.any():
-                C = self.COEFFS_ROCK[imt]
-                _compute_mean(C, ctx.mag, ctx.rrup, mean[m], idx_rock)
-                _compute_std(C, sig[m], idx_rock)
+                CR = self.COEFFS_ROCK[imt]
+                _compute_mean(CR, ctx.mag, ctx.rrup, mean[m], idx_rock)
+                _compute_std(CR, sig[m], idx_rock)
 
             if idx_soil.any():
-                C = self.COEFFS_SOIL[imt]
-                _compute_mean(C, ctx.mag, ctx.rrup, mean[m], idx_soil)
-                _compute_std(C, sig[m], idx_soil)
-
+                CS = self.COEFFS_SOIL[imt]
+                _compute_mean(CS, ctx.mag, ctx.rrup, mean[m], idx_soil)
+                _compute_std(CS, sig[m], idx_soil)
 
     #: Coefficient table for rock sites, see table 3 page 153.
     COEFFS_ROCK = CoeffsTable(sa_damping=5, table="""\
