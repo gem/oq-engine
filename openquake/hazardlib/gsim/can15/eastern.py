@@ -27,13 +27,13 @@ def _get_delta(stds, repi):
     return np.fmax(0.1 - 0.001 * repi, 0.)
 
 
-def apply_correction_to_BC(cff, mean, imt, ctx):
+def apply_correction_to_BC(cff, mean, imt, repi):
     if imt.period:
         tmp = cff['mf']
     elif imt in [PGA()]:
-        tmp = -0.3 + 0.15 * np.log10(ctx.repi)
+        tmp = -0.3 + 0.15 * np.log10(repi)
     else:
-        raise ValueError('Unsupported IMT', str(imt))
+        raise ValueError('Unsupported IMT', imt.string)
     return mean + np.log(10**tmp)
 
 
@@ -118,7 +118,6 @@ class EasternCan15Mid(GMPE):
         """
         imtls = {imt.string: [0] for imt in imts}
         mean_stds = []  # 5 arrays of shape (2, M, N)
-        ctxs = []
         for gsim in self.gsims:
             cmaker = contexts.ContextMaker(
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE,
@@ -128,7 +127,6 @@ class EasternCan15Mid(GMPE):
                 c = utils.add_distances_east(ctx, ab06=True)
             else:
                 c = utils.add_distances_east(ctx)
-            ctxs.append(c)
             mean_stds.extend(cmaker.get_mean_stds([c], StdDev.TOTAL))
 
         for m, imt in enumerate(imts):
@@ -136,18 +134,18 @@ class EasternCan15Mid(GMPE):
 
             # Pezeshk et al. 2011 - Rrup
             mean1, stds1 = mean_stds[0][:, m]
-            mean1 = apply_correction_to_BC(cff, mean1, imt, ctxs[0])
+            mean1 = apply_correction_to_BC(cff, mean1, imt, ctx.repi)
 
             # Atkinson 2008 - Rjb
             mean2, stds2 = mean_stds[1][:, m]
 
             # Silva single corner
             mean4, stds4 = mean_stds[2][:, m]
-            mean4 = apply_correction_to_BC(cff, mean4, imt, ctxs[2])
+            mean4 = apply_correction_to_BC(cff, mean4, imt, ctx.repi)
 
             # Silva double corner
             mean5, stds5 = mean_stds[3][:, m]
-            mean5 = apply_correction_to_BC(cff, mean5, imt, ctx)
+            mean5 = apply_correction_to_BC(cff, mean5, imt, ctx.repi)
 
             # Atkinson and Boore 2006 - Rrup
             mean3, stds3 = mean_stds[4][:, m]
