@@ -26,24 +26,15 @@ def _get_delta(stds, dists):
     Computes the additional delta to be used for the computation of the
     upp and low models
     """
-    delta = np.maximum((0.1-0.001*dists.repi), np.zeros_like(dists.repi))
+    delta = np.fmax((0.1 - 0.001 * dists.repi), np.zeros_like(dists.repi))
     return delta
-
-
-def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-    """
-    Returns only the mean values.
-
-    See documentation for method `GroundShakingIntensityModel` in
-    :class:~`openquake.hazardlib.gsim.base.GSIM`
-    """
 
 
 def apply_correction_to_BC(cff, mean, imt, dists):
     if imt.period:
         tmp = cff['mf']
     elif imt in [PGA()]:
-        tmp = -0.3+0.15*np.log10(dists.repi)
+        tmp = -0.3 + 0.15 * np.log10(dists.repi)
     else:
         raise ValueError('Unsupported IMT', str(imt))
     return mean + np.log(10**tmp)
