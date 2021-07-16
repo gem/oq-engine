@@ -18,33 +18,15 @@
 
 """
 Module exports :class:`Lin2011hanging`
-
 """
-import numpy as np
-
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.tem20.lin_2011_foot import (
+    Lin2011foot, _compute_mean, _compute_std)
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-def _compute_mean(C, mag, rrup, mean, idx):
-    """
-    Compute mean value according to equations 10 and 11 page 226.
-    """
-    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rrup[idx] +
-                 C['C4'] * np.exp(C['C5'] * mag)))
-
-
-def _compute_std(C, stddevs, idx):
-    """
-    Compute total standard deviation, see tables 3 and 4, pages 227 and
-    228.
-    """
-    for stddev in stddevs:
-        stddev[idx] += C['sigma']
-
-
-class Lin2011hanging(GMPE):
+class Lin2011hanging(Lin2011foot):
     """
     Implements GMPE developed by Po-Shen Lin and others and published as
     "Response spectral attenuation relations for shallow crustal earthquakes
@@ -80,33 +62,6 @@ class Lin2011hanging(GMPE):
 
     #: Vs30 threshold value between rock sites (B, C) and soil sites (C, D).
     ROCK_VS30 = 360
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        mean = np.zeros_like(sites.vs30)
-        stddevs = [np.zeros_like(sites.vs30) for _ in stddev_types]
-
-        idx_rock = sites.vs30 >= self.ROCK_VS30
-        idx_soil = sites.vs30 < self.ROCK_VS30
-
-        if idx_rock.any():
-            C = self.COEFFS_ROCK[imt]
-            _compute_mean(C, rup.mag, dists.rrup, mean, idx_rock)
-            _compute_std(C, stddevs, idx_rock)
-
-        if idx_soil.any():
-            C = self.COEFFS_SOIL[imt]
-            _compute_mean(C, rup.mag, dists.rrup, mean, idx_soil)
-            _compute_std(C, stddevs, idx_soil)
-
-        return mean, stddevs
 
     #: Coefficient table for rock sites, see table 3 page 153.
     COEFFS_ROCK = CoeffsTable(sa_damping=5, table="""\

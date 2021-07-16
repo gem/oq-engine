@@ -34,12 +34,11 @@ def _compute_mean(C, mag, rrup, mean, idx):
                  C['C4'] * np.exp(C['C5'] * mag)))
 
 
-def _compute_std(C, stddevs, idx):
+def _compute_std(C, stddev, idx):
     """
     Compute total standard deviation, see tables 3 and 4, pages 227 and 228.
     """
-    for stddev in stddevs:
-        stddev[idx] += C['sigma']
+    stddev[idx] = C['sigma']
 
 
 class Lin2011foot(GMPE):
@@ -79,32 +78,34 @@ class Lin2011foot(GMPE):
     #: Vs30 threshold value between rock sites (B, C) and soil sites (C, D).
     ROCK_VS30 = 360
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
 
-        mean = np.zeros_like(sites.vs30)
-        stddevs = [np.zeros_like(sites.vs30) for _ in stddev_types]
+        for m, imt in enumerate(imts):
 
-        idx_rock = sites.vs30 >= self.ROCK_VS30
-        idx_soil = sites.vs30 < self.ROCK_VS30
+            imean = np.zeros_like(ctx.vs30)
+            stdtot = np.zeros_like(ctx.vs30)
 
-        if idx_rock.any():
-            C = self.COEFFS_ROCK[imt]
-            _compute_mean(C, rup.mag, dists.rrup, mean, idx_rock)
-            _compute_std(C, stddevs, idx_rock)
+            idx_rock = ctx.vs30 >= self.ROCK_VS30
+            idx_soil = ctx.vs30 < self.ROCK_VS30
 
-        if idx_soil.any():
-            C = self.COEFFS_SOIL[imt]
-            _compute_mean(C, rup.mag, dists.rrup, mean, idx_soil)
-            _compute_std(C, stddevs, idx_soil)
+            if idx_rock.any():
+                C = self.COEFFS_ROCK[imt]
+                _compute_mean(C, ctx.mag, ctx.rrup, imean, idx_rock)
+                _compute_std(C, stdtot, idx_rock)
 
-        return mean, stddevs
+            if idx_soil.any():
+                C = self.COEFFS_SOIL[imt]
+                _compute_mean(C, ctx.mag, ctx.rrup, imean, idx_soil)
+                _compute_std(C, stdtot, idx_soil)
+
+            mean[m] = imean
+            sig[m] = stdtot
+
 
     #: Coefficient table for rock sites, see table 3 page 153.
     COEFFS_ROCK = CoeffsTable(sa_damping=5, table="""\
