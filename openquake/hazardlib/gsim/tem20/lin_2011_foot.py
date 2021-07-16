@@ -85,26 +85,20 @@ class Lin2011foot(GMPE):
         for spec of input and result values.
         """
 
+        idx_rock = ctx.vs30 >= self.ROCK_VS30
+        idx_soil = ctx.vs30 < self.ROCK_VS30
+
         for m, imt in enumerate(imts):
-
-            imean = np.zeros_like(ctx.vs30)
-            stdtot = np.zeros_like(ctx.vs30)
-
-            idx_rock = ctx.vs30 >= self.ROCK_VS30
-            idx_soil = ctx.vs30 < self.ROCK_VS30
 
             if idx_rock.any():
                 C = self.COEFFS_ROCK[imt]
-                _compute_mean(C, ctx.mag, ctx.rrup, imean, idx_rock)
-                _compute_std(C, stdtot, idx_rock)
+                _compute_mean(C, ctx.mag, ctx.rrup, mean[m], idx_rock)
+                _compute_std(C, sig[m], idx_rock)
 
             if idx_soil.any():
                 C = self.COEFFS_SOIL[imt]
-                _compute_mean(C, ctx.mag, ctx.rrup, imean, idx_soil)
-                _compute_std(C, stdtot, idx_soil)
-
-            mean[m] = imean
-            sig[m] = stdtot
+                _compute_mean(C, ctx.mag, ctx.rrup, mean[m], idx_soil)
+                _compute_std(C, sig[m], idx_soil)
 
 
     #: Coefficient table for rock sites, see table 3 page 153.
