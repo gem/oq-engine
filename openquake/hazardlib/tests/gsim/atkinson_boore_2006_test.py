@@ -47,6 +47,7 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         # method should return values equal to the ones obtained by
         # replacing 0 values with 1
         ctx = RuptureContext()
+        ctx.sids = [0, 1]
         ctx.vs30 = numpy.array([500.0, 2500.0])
         ctx.mag = 5.0
         ctx.rrup = numpy.array([0.0, 0.2])

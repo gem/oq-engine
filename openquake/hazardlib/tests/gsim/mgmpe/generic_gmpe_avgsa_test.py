@@ -37,6 +37,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         sites = Dummy.get_site_collection(nsites, vs30=vs30)
         rup = Dummy.get_rupture(mag=6.0)
         ctx = RuptureContext()
+        ctx.sid = np.arange(nsites)
         vars(ctx).update(vars(rup))
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
@@ -71,7 +72,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         msg = 'The class name is incorrect'
         self.assertTrue(gmm.__class__.__name__ == 'GenericGmpeAvgSA', msg=msg)
 
-        ctx =self.ctx(4, vs30=760.)
+        ctx = self.ctx(4, vs30=760.)
         ctx.repi = np.array([1., 10., 30., 70.])
         imtype = PGA()
         stdt = [const.StdDev.TOTAL]
@@ -127,6 +128,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
             corr_func='akkar')
 
         ctx = gsim.base.RuptureContext()
+        ctx.sids = [0]
         P = imt.AvgSA
         S = [const.StdDev.TOTAL]
 
@@ -162,6 +164,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
             corr_func='baker_jayaram')
 
         ctx = RuptureContext()
+        ctx.sids = [0]
         P = imt.AvgSA
         S = [const.StdDev.TOTAL]
 
