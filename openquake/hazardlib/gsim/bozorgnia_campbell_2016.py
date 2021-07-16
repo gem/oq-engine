@@ -169,7 +169,7 @@ def get_mean_values(SJ, sgn, C, sites, rup, dists):
     return (_get_magnitude_term(C, rup.mag) +
             _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
             _get_style_of_faulting_term(C, rup) +
-            _get_hanging_wall_term(C, rup, dists) +
+            _get_hanging_wall_term(C, rup) +
             _get_shallow_site_response_term(SJ, C, sites.vs30) +
             _get_basin_response_term(SJ, C, temp_z2pt5) +
             _get_hypocentral_depth_term(C, rup) +

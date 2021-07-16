@@ -52,61 +52,61 @@ get_magnitude_scaling_term = CallableDict()
 
 @get_magnitude_scaling_term.add(
     const.TRT.ACTIVE_SHALLOW_CRUST, const.TRT.UPPER_MANTLE)
-def get_magnitude_scaling_term_asc(trt, C, rup):
+def get_magnitude_scaling_term_asc(trt, C, ctx):
     """
     Returns the magnitude scaling term in equations 1 and 2
     """
-    if rup.mag <= CONSTANTS["m_c"]:
-        return C["ccr"] * rup.mag
+    if ctx.mag <= CONSTANTS["m_c"]:
+        return C["ccr"] * ctx.mag
     else:
         return (C["ccr"] * CONSTANTS["m_c"]) +\
-            (C["dcr"] * (rup.mag - CONSTANTS["m_c"]))
+            (C["dcr"] * (ctx.mag - CONSTANTS["m_c"]))
 
 
 @get_magnitude_scaling_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_magnitude_scaling_term_SInter(trt, C, rup):
+def get_magnitude_scaling_term_SInter(trt, C, ctx):
     """
     Returns magnitude scaling term, which is dependent on top of rupture
     depth - as described in equations 1 and 2
     """
-    if rup.ztor > 25.0:
+    if ctx.ztor > 25.0:
         # Deep interface events
         c_int = C["cint"]
     else:
         c_int = C["cintS"]
 
-    if rup.mag <= CONSTANTS["m_c"]:
-        return c_int * rup.mag
+    if ctx.mag <= CONSTANTS["m_c"]:
+        return c_int * ctx.mag
     else:
         return (c_int * CONSTANTS["m_c"]) +\
-            (C["dint"] * (rup.mag - CONSTANTS["m_c"]))
+            (C["dint"] * (ctx.mag - CONSTANTS["m_c"]))
 
 
 @get_magnitude_scaling_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_magnitude_scaling_term_sslab(trt, C, rup):
+def get_magnitude_scaling_term_sslab(trt, C, ctx):
     """
     Returns the magnitude scaling defined in equation 1
     """
     m_c = CONSTANTS["m_c"]
-    if rup.mag <= m_c:
-        return C["cSL"] * rup.mag +\
-            C["cSL2"] * ((rup.mag - CONSTANTS["m_sc"]) ** 2.)
+    if ctx.mag <= m_c:
+        return C["cSL"] * ctx.mag +\
+            C["cSL2"] * ((ctx.mag - CONSTANTS["m_sc"]) ** 2.)
     else:
         return C["cSL"] * m_c +\
            C["cSL2"] * ((m_c - CONSTANTS["m_sc"]) ** 2.) +\
-           C["dSL"] * (rup.mag - m_c)
+           C["dSL"] * (ctx.mag - m_c)
 
 
 get_sof_term = CallableDict()
 
 
 @get_sof_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def get_sof_term_asc(trt, C, rup):
+def get_sof_term_asc(trt, C, ctx):
     """
     Shallow crustal faults have a style-of-faulting dependence as
     normal faulting is found to produce higher ground motion (equation 1)
     """
-    if rup.rake <= -45.0 and rup.rake >= -135.0:
+    if ctx.rake <= -45.0 and ctx.rake >= -135.0:
         # Normal faulting
         return C["FN_CR"]
     else:
@@ -116,15 +116,15 @@ def get_sof_term_asc(trt, C, rup):
 
 
 @get_sof_term.add(const.TRT.UPPER_MANTLE)
-def get_sof_term_um(trt, C, rup):
+def get_sof_term_um(trt, C, ctx):
     """
     In the case of the upper mantle events separate coefficients
     are considered for normal, reverse and strike-slip
     """
-    if rup.rake <= -45.0 and rup.rake >= -135.0:
+    if ctx.rake <= -45.0 and ctx.rake >= -135.0:
         # Normal faulting
         return C["FN_UM"]
-    elif rup.rake > 45.0 and rup.rake < 135.0:
+    elif ctx.rake > 45.0 and ctx.rake < 135.0:
         # Reverse faulting
         return C["FRV_UM"]
     else:
@@ -133,7 +133,7 @@ def get_sof_term_um(trt, C, rup):
 
 
 @get_sof_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_sof_term_SInter(trt, C, rup):
+def get_sof_term_SInter(trt, C, ctx):
     """
     No style of faulting dependence here
     """
@@ -141,7 +141,7 @@ def get_sof_term_SInter(trt, C, rup):
 
 
 @get_sof_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_sof_term_sslab(trt, C, rup):
+def get_sof_term_sslab(trt, C, ctx):
     """
     No style of faulting dependence here
     """
@@ -152,15 +152,15 @@ get_depth_term = CallableDict()
 
 
 @get_depth_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def get_depth_term_asc(trt, C, rup):
+def get_depth_term_asc(trt, C, ctx):
     """
     Returns the top-of-rupture depth scaling (equation 1)
     """
-    return C["bcr"] * rup.ztor
+    return C["bcr"] * ctx.ztor
 
 
 @get_depth_term.add(const.TRT.UPPER_MANTLE)
-def get_depth_term_um(trt, C, rup):
+def get_depth_term_um(trt, C, ctx):
     """
     No top of rupture depth is considered for upper mantle events
     """
@@ -168,16 +168,16 @@ def get_depth_term_um(trt, C, rup):
 
 
 @get_depth_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_depth_term_SInter(trt, C, rup):
+def get_depth_term_SInter(trt, C, ctx):
     """
     Returns depth term (dependent on top of rupture depth) as given
     in equations 1 and 2
     """
-    return (C["bint"] * rup.ztor)
+    return (C["bint"] * ctx.ztor)
 
 
 @get_depth_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_depth_term_sslab(trt, C, rup):
+def get_depth_term_sslab(trt, C, ctx):
     """
     Returns depth term (dependent on top of rupture depth) as given
     in equations 1
@@ -185,10 +185,10 @@ def get_depth_term_sslab(trt, C, rup):
     Note that there is a ztor cap of 100 km that is introduced in the
     Fortran code but not mentioned in the original paper!
     """
-    if rup.ztor > 100.0:
+    if ctx.ztor > 100.0:
         return C["bSLH"] * 100.0
     else:
-        return C["bSLH"] * rup.ztor
+        return C["bSLH"] * ctx.ztor
 
 
 get_distance_term = CallableDict()
@@ -275,7 +275,7 @@ def get_distance_term_sslab(trt, C, ctx):
         qslh = C["eSLH"] * (0.02 * ctx.ztor - 1.0)
     else:
         qslh = 0.0
-    # r_volc = np.copy(dists.rvolc)
+    # r_volc = np.copy(ctx.rvolc)
     # r_volc[np.logical_and(r_volc > 0.0, r_volc <= 12.0)] = 12.0
     # r_volc[r_volc >= 80.0] = 80.0
     # Get r_ij - distance for geometric spreading (equations 3 and 4)
@@ -287,7 +287,7 @@ def get_distance_term_sslab(trt, C, ctx):
         C["eSLV"] * ctx.rvolc + C["gamma"]
 
 
-def _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup):
+def _get_ln_sf(trt, C, C_SITE, idx, n_sites, ctx):
     """
     Returns the log SF term required for equation 9
 
@@ -298,7 +298,7 @@ def _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup):
     for i in range(1, 5):
         ln_sf_i = (C["lnSC1AM"] - C_SITE["LnAmax1D{:g}".format(i)])
         if i > 1:
-            if trt == const.TRT.SUBDUCTION_INTERFACE and rup.ztor > 25.0:
+            if trt == const.TRT.SUBDUCTION_INTERFACE and ctx.ztor > 25.0:
                 # For deep events site classes 5, 6, and 7 are used
                 loc = i + 3
             else:
@@ -309,7 +309,7 @@ def _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup):
     return ln_sf
 
 
-def _get_ln_a_n_max(trt, C, n_sites, idx, rup):
+def _get_ln_a_n_max(trt, C, n_sites, idx, ctx):
     """
     Defines the rock site amplification defined in equations 7a and 7b
 
@@ -320,7 +320,7 @@ def _get_ln_a_n_max(trt, C, n_sites, idx, rup):
     for i in [2, 3, 4]:
         if np.any(idx[i]):
             # For deep events site classes 5, 6 and 7 are used
-            if trt == const.TRT.SUBDUCTION_INTERFACE and rup.ztor > 25.0:
+            if trt == const.TRT.SUBDUCTION_INTERFACE and ctx.ztor > 25.0:
                 loc = i + 3
             else:
                 loc = i
@@ -328,16 +328,16 @@ def _get_ln_a_n_max(trt, C, n_sites, idx, rup):
     return ln_a_n_max
 
 
-def add_site_amplification(trt, C, C_SITE, sa_rock, idx, rup):
+def add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx):
     """
     Applies the site amplification scaling defined in equations from 10
     to 15
     """
-    n_sites = len(rup.vs30)
+    n_sites = len(ctx.vs30)
     # Convert from reference rock to hard rock
     hard_rock_sa = sa_rock - C["lnSC1AM"]
     # Gets the elastic site amplification ratio
-    ln_a_n_max = _get_ln_a_n_max(trt, C, n_sites, idx, rup)
+    ln_a_n_max = _get_ln_a_n_max(trt, C, n_sites, idx, ctx)
 
     # Retrieves coefficients needed to determine smr
     sreff, sreffc, f_sr = _get_smr_coeffs(C, C_SITE, idx, n_sites,
@@ -348,13 +348,13 @@ def add_site_amplification(trt, C, C_SITE, sa_rock, idx, rup):
     smr = np.zeros(n_sites)
     sa_soil = hard_rock_sa + ln_a_n_max
     # Get lnSF
-    ln_sf = _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup)
+    ln_sf = _get_ln_sf(trt, C, C_SITE, idx, n_sites, ctx)
     lnamax_idx = np.exp(ln_a_n_max) < 1.25
     not_lnamax_idx = np.logical_not(lnamax_idx)
     for i in range(1, 5):
         idx_i = idx[i]
         if not np.any(idx_i):
-            # No sites of the given site class
+            # No ctx of the given site class
             continue
         idx2 = np.logical_and(lnamax_idx, idx_i)
         if np.any(idx2):
@@ -423,22 +423,6 @@ def _get_site_classification(vs30):
     return site_class, idx
 
 
-def get_stddevs(C, phi, stddev_types):
-    """
-    Retuns the standard deviation
-    """
-    stddevs = []
-    tau = C["tau"] + np.zeros_like(phi)
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-    return stddevs
-
-
 class ZhaoEtAl2016Asc(GMPE):
     """
     Implements the GMPE of Zhao et al (2016a) for shallow crustal and upper
@@ -480,34 +464,32 @@ class ZhaoEtAl2016Asc(GMPE):
     #: Required distance measure is Rrup and Rvolc
     REQUIRES_DISTANCES = {'rrup', 'rvolc'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        C_SITE = self.COEFFS_SITE[imt]
-        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        s_c, idx = _get_site_classification(sites.vs30)
-        sa_rock = (get_magnitude_scaling_term(trt, C, rup) +
-                   get_sof_term(trt, C, rup) +
-                   get_depth_term(trt, C, rup) +
-                   get_distance_term(trt, C, rup))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            C_SITE = self.COEFFS_SITE[imt]
+            trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+            s_c, idx = _get_site_classification(ctx.vs30)
+            sa_rock = (get_magnitude_scaling_term(trt, C, ctx) +
+                       get_sof_term(trt, C, ctx) +
+                       get_depth_term(trt, C, ctx) +
+                       get_distance_term(trt, C, ctx))
 
-        sa_soil = add_site_amplification(trt, C, C_SITE,
-                                         sa_rock, idx, rup)
+            mean[m] = add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx)
 
-        if self.__class__.__name__.endswith('SiteSigma'):
-            phi = np.zeros_like(sites.vs30)
-            for i in range(1, 5):
-                phi[idx[i]] += C["sc{:g}_sigma_S".format(i)]
-        else:
-            phi = C["sigma"] + np.zeros_like(sites.vs30)
-        stddevs = get_stddevs(C, phi, stddev_types)
-        return sa_soil, stddevs
+            if self.__class__.__name__.endswith('SiteSigma'):
+                for i in range(1, 5):
+                    phi[m, idx[i]] += C["sc{:g}_sigma_S".format(i)]
+            else:
+                phi[m] = C["sigma"]
+
+            tau[m] = C["tau"]
+            sig[m] = np.sqrt(phi[m] ** 2. + tau[m] ** 2.)
 
     # Coefficients taken from Excel spreadsheet provided by the author
     COEFFS = CoeffsTable(sa_damping=5, table="""\
