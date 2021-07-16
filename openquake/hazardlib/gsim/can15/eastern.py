@@ -155,10 +155,10 @@ class EasternCan15Mid(GMPE):
         mean5 = apply_correction_to_BC(cff, mean5, imt, ctx)
         #
         # distances
-        ctx = utils.add_distances_east(rup, ab06=True)
+        ctx06 = utils.add_distances_east(rup, ab06=True)
 
         # Atkinson and Boore 2006 - Rrup
-        mean3, stds3 = g[3].get_mean_and_stddevs(ctx, ctx, ctx, imt,
+        mean3, stds3 = g[3].get_mean_and_stddevs(ctx06, ctx06, ctx06, imt,
                                                  stddev_types)
         # Computing adjusted mean and stds
         mean_adj = mean1*0.2 + mean2*0.2 + mean3*0.2 + mean4*0.2 + mean5*0.2
