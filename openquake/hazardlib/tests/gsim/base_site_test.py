@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim.base import _get_poes
 from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
-from openquake.hazardlib.gsim.atkinson_boore_2006 import BooreAtkinson2008
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import AmplFunction, get_poes_site

@@ -28,7 +28,7 @@ from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.probability_map import ProbabilityCurve
-from openquake.hazardlib.gsim.atkinson_boore_2006 import BooreAtkinson2008
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 aac = numpy.testing.assert_allclose
 
