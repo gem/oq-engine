@@ -19,8 +19,8 @@ import unittest
 
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.atkinson_boore_2006 import (
-    AtkinsonBoore2006, BooreAtkinson2008)
+from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.const import TRT, IMC
