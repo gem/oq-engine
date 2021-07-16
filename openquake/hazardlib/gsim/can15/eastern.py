@@ -158,7 +158,7 @@ class EasternCan15Mid(GMPE):
             # for the calculation of the standard deviation
             stds = np.log(np.exp(stds1)*0.2 + np.exp(stds2)*0.2 +
                           np.exp(stds3)*0.2 + np.exp(stds4)*0.2 +
-                          np.exp(stds5)*0.2)[0]  # shape (1, N) -> N
+                          np.exp(stds5)*0.2)
             sig[m] = get_sigma(imt)
             if self.sgn:
                 mean[m] += self.sgn * (stds + _get_delta(stds, ctx.repi))
