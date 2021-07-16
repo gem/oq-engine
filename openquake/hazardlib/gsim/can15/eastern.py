@@ -18,7 +18,7 @@ from openquake.hazardlib.gsim.boore_atkinson_2011 import Atkinson2008prime
 from openquake.hazardlib.gsim.boore_atkinson_2008 import \
     AtkinsonBoore2006Modified2011
 from openquake.hazardlib.gsim.silva_2002 import (
-    SilvaEtAl2002SingleCornerSaturation)
+    SilvaEtAl2002SingleCornerSaturation, SilvaEtAl2002DoubleCornerSaturation)
 
 
 def _get_delta(stds, dists):
@@ -119,6 +119,7 @@ class EasternCan15Mid(GMPE):
 
     gsims = [PezeshkEtAl2011(), Atkinson2008prime(),
              SilvaEtAl2002SingleCornerSaturation(),
+             SilvaEtAl2002DoubleCornerSaturation(),
              AtkinsonBoore2006Modified2011()]
     sgn = 0
 
@@ -143,14 +144,13 @@ class EasternCan15Mid(GMPE):
         mean2, stds2 = g[1].get_mean_and_stddevs(ctx, ctx, ctx, imt,
                                                  stddev_types)
         #
-        # Silva et al. 2002 - Rjb
-        gmpe = SilvaEtAl2002SingleCornerSaturation()
-        mean4, stds4 = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt,
+        # Silva single corner
+        mean4, stds4 = g[2].get_mean_and_stddevs(ctx, ctx, ctx, imt,
                                                  stddev_types)
         mean4 = apply_correction_to_BC(cff, mean4, imt, ctx)
         #
-        # Silva et al. 2002 - Rjb
-        mean5, stds5 = g[2].get_mean_and_stddevs(ctx, ctx, ctx, imt,
+        # Silva double corner
+        mean5, stds5 = g[3].get_mean_and_stddevs(ctx, ctx, ctx, imt,
                                                  stddev_types)
         mean5 = apply_correction_to_BC(cff, mean5, imt, ctx)
         #
