@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from openquake.hazardlib.gsim.tem20.lin_2011_hanging import Lin2011hanging
+from openquake.hazardlib.gsim.tem20.lin_2011 import Lin2011hanging
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data provided by Jia-Cian Gao (TEM) on June 9, 2021 - Revised and
