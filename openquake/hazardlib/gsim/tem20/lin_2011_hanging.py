@@ -19,11 +19,8 @@
 """
 Module exports :class:`Lin2011hanging`
 """
-from openquake.hazardlib.gsim.tem20.lin_2011_foot import (
-    Lin2011foot, _compute_mean, _compute_std)
+from openquake.hazardlib.gsim.tem20.lin_2011_foot import Lin2011foot
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, SA
 
 
 class Lin2011hanging(Lin2011foot):
@@ -33,35 +30,6 @@ class Lin2011hanging(Lin2011foot):
     in Taiwan", Engineering Geology, Vol. 121, Issues 3–4, 10 August 2011,
     Pages 150-164.
     """
-
-    #: Supported tectonic region type is active shallow crust.
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-
-    #: Supported intensity measure types are spectral acceleration,
-    #: and peak ground acceleration, see tables 3 and 4, pages 227 and 228.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
-
-    #: Supported intensity measure component is geometric mean
-    #: of two horiszontal components, see equation 10 page 226.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
-
-    #: Supported standard deviation types is total, see equation 10 page 226.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
-
-    #: Required site parameter is only Vs30 (used to distinguish rock
-    #: and deep soil).
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
-
-    #: Required rupture parameters are magnitude, and focal depth, see
-    #: equation 10 page 226.
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    #: Required distance measure is hypocentral distance, see equation 10
-    #: page 226.
-    REQUIRES_DISTANCES = {'rrup'}
-
-    #: Vs30 threshold value between rock sites (B, C) and soil sites (C, D).
-    ROCK_VS30 = 360
 
     #: Coefficient table for rock sites, see table 3 page 153.
     COEFFS_ROCK = CoeffsTable(sa_damping=5, table="""\
