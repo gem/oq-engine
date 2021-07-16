@@ -127,15 +127,15 @@ def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean,
                   _compute_stress_drop_adjustment(SC, mag, scale_fac))
 
 
-def _compute_ms(rup, C):
-    U, SS, NS, RS = _get_fault_type_dummy_variables(rup)
-    if rup.mag <= C['Mh']:
+def _compute_ms(ctx, C):
+    U, SS, NS, RS = _get_fault_type_dummy_variables(ctx)
+    if ctx.mag <= C['Mh']:
         return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-            C['e5'] * (rup.mag - C['Mh']) + \
-            C['e6'] * (rup.mag - C['Mh']) ** 2
+            C['e5'] * (ctx.mag - C['Mh']) + \
+            C['e6'] * (ctx.mag - C['Mh']) ** 2
     else:
         return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-            C['e7'] * (rup.mag - C['Mh'])
+            C['e7'] * (ctx.mag - C['Mh'])
 
 
 def _compute_non_linear_slope(vs30, C):
@@ -201,7 +201,7 @@ def _compute_non_linear_term(pga4nl, bnl):
 def _compute_soil_amplification(C, vs30, pga_bc, mean):
     """
     Compute soil amplification, that is S term in equation (5), p. 2191,
-    and add to mean values for non hard rock sites.
+    and add to mean values for non hard rock ctx.
     """
     # convert from base e (as defined in BA2008) to base 10 (as used in
     # AB2006)
@@ -249,7 +249,7 @@ def _extract_coeffs(self, imt):
     return C_HR, C_BC, C_SR, SC
 
 
-def _get_fault_type_dummy_variables(rup):
+def _get_fault_type_dummy_variables(ctx):
     """
     Get fault type dummy variables, see Table 2, pag 107.
     Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -262,12 +262,12 @@ def _get_fault_type_dummy_variables(rup):
     because rake is always given.
     """
     U, SS, NS, RS = 0, 0, 0, 0
-    if rup.rake == 'undefined':
+    if ctx.rake == 'undefined':
         U = 1
-    elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+    elif np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
         # strike-slip
         SS = 1
-    elif rup.rake > 30.0 and rup.rake < 150.0:
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
         # reverse
         RS = 1
     else:
@@ -292,8 +292,8 @@ def _get_mean(self, vs30, mag, rrup, imt, scale_fac):
     pga_bc = _get_pga_bc(
         self.COEFFS_BC[PGA()], f0, f1, f2, SC, mag, rrup, vs30, scale_fac)
 
-    # compute mean values for hard-rock sites (vs30 >= 2000),
-    # and non-hard-rock sites (vs30 < 2000) and add soil amplification
+    # compute mean values for hard-rock ctx (vs30 >= 2000),
+    # and non-hard-rock ctx (vs30 < 2000) and add soil amplification
     # term
     mean = np.zeros_like(vs30)
     _compute_mean(C_HR, f0, f1, f2, SC, mag, rrup,
@@ -323,7 +323,7 @@ def _get_pga_bc(C_pga_bc, f0, f1, f2, SC, mag, rrup, vs30, scale_fac):
     return (10 ** pga_bc) * 1e-2 / g
 
 
-def _get_pga_on_rock(C_pga, ctx, _C):
+def _get_pga_on_rock(C_pga, ctx):
     """
     Compute and return PGA on rock conditions (that is vs30 = 760.0 m/s).
     This is needed to compute non-linear site amplification term
@@ -362,27 +362,20 @@ def _get_site_amplification_non_linear(vs30, pga4nl, C):
     return _compute_non_linear_term(pga4nl, bnl)
 
 
-def _get_stddevs(clsname, C, stddev_types, num_sites):
+def set_sig(kind, C, sig, tau, phi):
     """
-    Return standard deviations as defined in table 8, pag 121.
+    Set standard deviations as defined in table 8, pag 121.
     """
-    if '2006' in clsname:
-        return [np.zeros(num_sites) + std_total for _ in stddev_types]
-    elif 'Hawaii' in clsname:
+    if kind == 'hawaii':
         # Using a frequency independent value of sigma as recommended
         # in the caption of Table 2 of Atkinson (2010)
-        return [0.26/np.log10(np.e) + np.zeros(num_sites)
-                for _ in stddev_types]
-
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['std'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
+        sig[:] = 0.26 / np.log10(np.e)
+    elif kind == '2006':
+        sig[:] = std_total
+    else:
+        sig[:] = C['std']
+        tau[:] = C['tau']
+        phi[:] = C['sigma']
 
 
 def _get_stress_drop_scaling_factor(magnitude):
@@ -395,15 +388,6 @@ def _get_stress_drop_scaling_factor(magnitude):
     if stress_drop > cap:
         stress_drop = cap
     return log10(stress_drop / 140.0) / log10(2.0)
-
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Using a frequency dependent correction for the mean ground motion.
-        Standard deviation is fixed.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
-                                                     imt, stddev_types)
 
 
 def hawaii_adjust(mean, ctx, imt):
@@ -478,63 +462,58 @@ class BooreAtkinson2008(GMPE):
     kind = 'base'
     sgn = 0
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        C_SR = self.COEFFS_SOIL_RESPONSE[imt]
-
         # horrible hack to fix the distance parameters; needed for the can15
         # subclasses; extra distances are add in can15.eastern
         # this also affects generic_gmpe_avgsa_test.py
-        vars(rup).update(contexts.get_dists(dists))
+        vars(ctx).update(contexts.get_dists(ctx))
 
         # compute PGA on rock conditions - needed to compute non-linear
         # site amplification term
-        pga4nl = _get_pga_on_rock(self.COEFFS[PGA()], rup, C)
+        pga4nl = _get_pga_on_rock(self.COEFFS[PGA()], ctx)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            C_SR = self.COEFFS_SOIL_RESPONSE[imt]
 
-        # equation 1, pag 106, without sigma term, that is only the first 3
-        # terms. The third term (site amplification) is computed as given in
-        # equation (6), that is the sum of a linear term - equation (7) - and
-        # a non-linear one - equations (8a) to (8c).
-        # Mref, Rref values are given in the caption to table 6, pag 119.
-        if imt == PGA():
-            # avoid recomputing PGA on rock, just add site terms
-            mean = np.log(pga4nl) + \
-                _get_site_amplification_linear(sites.vs30, C_SR) + \
-                _get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
-        else:
-            mean = _compute_magnitude_scaling(rup, C) + \
-                _compute_distance_scaling(rup, C) + \
-                _get_site_amplification_linear(sites.vs30, C_SR) + \
-                _get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
+            # equation 1, pag 106, without sigma term, that is only the first 3
+            # terms. The third term (site amplification) is computed as given
+            # in equation (6), that is the sum of a linear term - equation (7)
+            # - and a non-linear one - equations (8a) to (8c).
+            # Mref, Rref values are given in the caption to table 6, pag 119.
+            if imt == PGA():
+                # avoid recomputing PGA on rock, just add site terms
+                mean[m] = np.log(pga4nl) + \
+                    _get_site_amplification_linear(ctx.vs30, C_SR) + \
+                    _get_site_amplification_non_linear(ctx.vs30, pga4nl, C_SR)
+            else:
+                mean[m] = _compute_magnitude_scaling(ctx, C) + \
+                    _compute_distance_scaling(ctx, C) + \
+                    _get_site_amplification_linear(ctx.vs30, C_SR) + \
+                    _get_site_amplification_non_linear(ctx.vs30, pga4nl, C_SR)
 
-        if self.kind in ('2011', 'prime'):
-            # correction factor (see Atkinson and Boore, 2011; equation 5 at
-            # page 1126 and nga08_gm_tmr.for line 508
-            corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * rup.mag]) -
-                               (np.max([0, 2.933 - 0.510 * rup.mag]) *
-                                np.log10(dists.rjb + 10.)))
-            mean = np.log(np.exp(mean) * corr_fact)
+            if self.kind in ('2011', 'prime'):
+                # correction factor (see Atkinson and Boore, 2011; equation 5
+                # at page 1126 and nga08_gm_tmr.for line 508
+                corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * ctx.mag]) -
+                                   (np.max([0, 2.933 - 0.510 * ctx.mag]) *
+                                    np.log10(ctx.rjb + 10.)))
+                mean[m] = np.log(np.exp(mean[m]) * corr_fact)
 
-        if self.kind == 'hawaii':
-            hawaii_adjust(mean, rup, imt)
-        elif self.kind == 'prime':
-            # Implements the Boore & Atkinson (2011) adjustment to the
-            # Atkinson (2008) GMPE
-            A08 = self.COEFFS_A08[imt]
-            f_ena = 10.0 ** (A08["c"] + A08["d"] * dists.rjb)
-            mean = np.log(np.exp(mean) * f_ena)
+            if self.kind == 'hawaii':
+                hawaii_adjust(mean[m], ctx, imt)
+            elif self.kind == 'prime':
+                # Implements the Boore & Atkinson (2011) adjustment to the
+                # Atkinson (2008) GMPE
+                A08 = self.COEFFS_A08[imt]
+                f_ena = 10.0 ** (A08["c"] + A08["d"] * ctx.rjb)
+                mean[m] = np.log(np.exp(mean[m]) * f_ena)
 
-        stddevs = _get_stddevs(
-            self.__class__.__name__, C, stddev_types, len(sites.vs30))
-
-        return mean, stddevs
+            set_sig(self.kind, C, sig[m], tau[m], phi[m])
 
     #: Coefficient table is constructed from values in tables 6, 7 and 8
     #: (pages 119, 120, 121). Spectral acceleration is defined for damping
@@ -696,7 +675,7 @@ class AtkinsonBoore2006(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters is Vs30.
-    #: See paragraph 'Equations for soil sites', p. 2200
+    #: See paragraph 'Equations for soil ctx', p. 2200
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameter is magnitude (see
@@ -711,6 +690,8 @@ class AtkinsonBoore2006(GMPE):
 
     CUTOFF_RRUP = 0.
 
+    kind = '2006'
+
     def __init__(self, mag_eq="NA", scale_fac=0, **kwargs):
         assert mag_eq in "Mblg87 Mblg96 Mw NA", mag_eq
         super().__init__(**kwargs)
@@ -718,36 +699,33 @@ class AtkinsonBoore2006(GMPE):
         self.scale_fac = scale_fac
 
     # used in the "Modified" version
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         if self.CUTOFF_RRUP:  # for SGS subclass
-            dists.rrup[dists.rrup <= self.CUTOFF_RRUP] = self.CUTOFF_RRUP
-
-        if self.mag_eq == "NA":
-            if 'Modified' in self.__class__.__name__:
-                # stress drop scaling factor is now a property of magnitude
-                scale_fac = _get_stress_drop_scaling_factor(rup.mag)
+            ctx.rrup[ctx.rrup <= self.CUTOFF_RRUP] = self.CUTOFF_RRUP
+        for m, imt in enumerate(imts):
+            if self.mag_eq == "NA":
+                if 'Modified' in self.__class__.__name__:
+                    # stress drop scaling factor is now a property of magnitude
+                    scale_fac = _get_stress_drop_scaling_factor(ctx.mag)
+                else:
+                    scale_fac = 0
+                mean[m] = _get_mean(
+                    self, ctx.vs30, ctx.mag, ctx.rrup, imt,
+                    scale_fac=scale_fac)
+                set_sig(self.kind, None, sig[m], tau[m], phi[m])
             else:
-                scale_fac = 0
-            mean = _get_mean(
-                self, sites.vs30, rup.mag, dists.rrup, imt,
-                scale_fac=scale_fac)
-            stddevs = _get_stddevs(
-                self.__class__.__name__, None, stddev_types, sites.vs30.size)
-        else:
-            mag = _convert_magnitude(self.mag_eq, rup.mag)
-            # stress drop scaling factor defined in subroutine getAB06
-            mean = _get_mean(
-                self, sites.vs30, mag, dists.rrup, imt,
-                scale_fac=self.scale_fac)
-            stddevs = _get_stddevs(
-                self.__class__.__name__, None, stddev_types, sites.vs30.size)
-            mean = clip_mean(imt, mean)
-        return mean, stddevs
+                mag = _convert_magnitude(self.mag_eq, ctx.mag)
+                # stress drop scaling factor defined in subroutine getAB06
+                mean[m] = _get_mean(
+                    self, ctx.vs30, mag, ctx.rrup, imt,
+                    scale_fac=self.scale_fac)
+                mean[m] = clip_mean(imt, mean[m])
+                set_sig(self.kind, None, sig[m], tau[m], phi[m])
 
     # notice the presence of a dummy parameter `C` to keep the same
     # interface as the base class BooreAtkinson2008
