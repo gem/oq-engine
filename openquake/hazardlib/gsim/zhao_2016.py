@@ -328,12 +328,12 @@ def _get_ln_a_n_max(trt, C, n_sites, idx, rup):
     return ln_a_n_max
 
 
-def add_site_amplification(trt, C, C_SITE, sites, sa_rock, idx, rup):
+def add_site_amplification(trt, C, C_SITE, sa_rock, idx, rup):
     """
     Applies the site amplification scaling defined in equations from 10
     to 15
     """
-    n_sites = sites.vs30.shape
+    n_sites = len(rup.vs30)
     # Convert from reference rock to hard rock
     hard_rock_sa = sa_rock - C["lnSC1AM"]
     # Gets the elastic site amplification ratio
@@ -497,7 +497,7 @@ class ZhaoEtAl2016Asc(GMPE):
                    get_depth_term(trt, C, rup) +
                    get_distance_term(trt, C, rup))
 
-        sa_soil = add_site_amplification(trt, C, C_SITE, sites,
+        sa_soil = add_site_amplification(trt, C, C_SITE,
                                          sa_rock, idx, rup)
 
         if self.__class__.__name__.endswith('SiteSigma'):
