@@ -91,16 +91,16 @@ def _get_f2rx(C, r_x, r_1, r_2):
     return CONSTS["h4"] + (C["h5"] * drx) + (C["h6"] * (drx ** 2.))
 
 
-def _get_fault_dip_term(C, rup):
+def _get_fault_dip_term(C, ctx):
     """
     Returns the fault dip term, defined in equation 24
     """
-    if rup.mag < 4.5:
-        return C["c19"] * rup.dip
-    elif rup.mag > 5.5:
+    if ctx.mag < 4.5:
+        return C["c19"] * ctx.dip
+    elif ctx.mag > 5.5:
         return 0.0
     else:
-        return C["c19"] * (5.5 - rup.mag) * rup.dip
+        return C["c19"] * (5.5 - ctx.mag) * ctx.dip
 
 
 def _get_geometric_attenuation_term(C, mag, rrup):
@@ -182,23 +182,23 @@ def _get_hanging_wall_term(C, ctx):
             _get_hanging_wall_coeffs_dip(ctx.dip))
 
 
-def _get_hypocentral_depth_term(C, rup):
+def _get_hypocentral_depth_term(C, ctx):
     """
     Returns the hypocentral depth scaling term defined in equations 21 - 23
     """
-    if rup.hypo_depth <= 7.0:
+    if ctx.hypo_depth <= 7.0:
         fhyp_h = 0.0
-    elif rup.hypo_depth > 20.0:
+    elif ctx.hypo_depth > 20.0:
         fhyp_h = 13.0
     else:
-        fhyp_h = rup.hypo_depth - 7.0
+        fhyp_h = ctx.hypo_depth - 7.0
 
-    if rup.mag <= 5.5:
+    if ctx.mag <= 5.5:
         fhyp_m = C["c17"]
-    elif rup.mag > 6.5:
+    elif ctx.mag > 6.5:
         fhyp_m = C["c18"]
     else:
-        fhyp_m = C["c17"] + ((C["c18"] - C["c17"]) * (rup.mag - 5.5))
+        fhyp_m = C["c17"] + ((C["c18"] - C["c17"]) * (ctx.mag - 5.5))
     return fhyp_h * fhyp_m
 
 
@@ -251,11 +251,11 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
                    CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
             np.log(pga_rock[idx] + CONSTS["c"]))
 
-    # For Japan sites (SJ = 1) further scaling is needed (equation 19)
+    # For Japan ctx (SJ = 1) further scaling is needed (equation 19)
     if SJ:
         fsite_j = (C["c13"] + C["k2"] * CONSTS["n"]) * \
             np.log(vs_mod)
-        # additional term activated for soft sites (Vs30 <= 200m/s)
+        # additional term activated for soft ctx (Vs30 <= 200m/s)
         # in Japan data
         idx = vs30 <= 200.0
         add_soft = (C["c12"] + C["k2"] * CONSTS["n"]) * \
@@ -382,60 +382,50 @@ class CampbellBozorgnia2014(GMPE):
 
     SJ = 0  # 1 for Japan
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
-
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
-        pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, rup))
-        # Get mean and standard deviations for IMT
-        mean = get_mean_values(self.SJ, C, rup, pga1100)
-        if imt.string[:2] == "SA" and imt.period < 0.25:
-            # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
-            # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
-            # Get PGA on soil
-            pga = get_mean_values(self.SJ, C_PGA, rup, pga1100)
-            idx = mean <= pga
-            mean[idx] = pga[idx]
+        pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # Get mean and standard deviations for IMT
+            mean[m] = get_mean_values(self.SJ, C, ctx, pga1100)
+            if imt.string[:2] == "SA" and imt.period < 0.25:
+                # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
+                # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
+                # Get PGA on soil
+                pga = get_mean_values(self.SJ, C_PGA, ctx, pga1100)
+                idx = mean[m] <= pga
+                mean[m, idx] = pga[idx]
 
-        # Get stddevs for PGA on basement rock
-        tau_lnpga_b = _get_taulny(C_PGA, rup.mag)
-        phi_lnpga_b = np.sqrt(_get_philny(C_PGA, rup.mag) ** 2. -
-                              CONSTS["philnAF"] ** 2.)
-        num_sites = len(rup.vs30)
-        # Get tau_lny on the basement rock
-        tau_lnyb = _get_taulny(C, rup.mag)
-        # Get phi_lny on the basement rock
-        phi_lnyb = np.sqrt(_get_philny(C, rup.mag) ** 2. -
-                           CONSTS["philnAF"] ** 2.)
-        # Get site scaling term
-        alpha = _get_alpha(C, rup.vs30, pga1100)
-        # Evaluate tau according to equation 29
-        t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
-                    2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
+            # Get stddevs for PGA on basement rock
+            tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
+            phi_lnpga_b = np.sqrt(_get_philny(C_PGA, ctx.mag) ** 2. -
+                                  CONSTS["philnAF"] ** 2.)
 
-        # Evaluate phi according to equation 30
-        p = np.sqrt(
-            phi_lnyb**2 + CONSTS["philnAF"]**2 + alpha**2 * phi_lnpga_b**2 +
-            2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
-        stddevs = []
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(t**2 + p**2) +
-                               np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(p + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(t + np.zeros(num_sites))
+            # Get tau_lny on the basement rock
+            tau_lnyb = _get_taulny(C, ctx.mag)
+            # Get phi_lny on the basement rock
+            phi_lnyb = np.sqrt(_get_philny(C, ctx.mag) ** 2. -
+                               CONSTS["philnAF"] ** 2.)
+            # Get site scaling term
+            alpha = _get_alpha(C, ctx.vs30, pga1100)
+            # Evaluate tau according to equation 29
+            t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
+                        2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
 
-        return mean, stddevs
+            # Evaluate phi according to equation 30
+            p = np.sqrt(
+                phi_lnyb**2 + CONSTS["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
+                + 2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
+            sig[m] = np.sqrt(t**2 + p**2)
+            tau[m] = t
+            phi[m] = p
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0      c1       c2       c3       c4       c5      c6      c7       c9     c10      c11      c12     c13       c14      c15     c16       c17      c18       c19       c20     Dc20      a2      h1      h2       h3       h5       h6     k1       k2      k3    phi1    phi2    tau1    tau2    phiC   rholny
