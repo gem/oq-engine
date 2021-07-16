@@ -354,7 +354,7 @@ def add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx):
     for i in range(1, 5):
         idx_i = idx[i]
         if not np.any(idx_i):
-            # No ctx of the given site class
+            # No sites of the given site class
             continue
         idx2 = np.logical_and(lnamax_idx, idx_i)
         if np.any(idx2):
