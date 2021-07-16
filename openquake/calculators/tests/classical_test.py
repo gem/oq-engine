@@ -37,7 +37,8 @@ from openquake.qa_tests_data.classical import (
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
-    case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65)
+    case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
+    case_71)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -447,7 +448,7 @@ hazard_uhs-std.csv
         self.assertEqual(total, 780)  # 260 x 3
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['rup/mag']), 260)
+        self.assertEqual(len(self.calc.datastore['rup/mag']), 174)
 
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -653,7 +654,14 @@ hazard_uhs-std.csv
         aac(dst[0], exact[:, 0], atol=.5)  # site 0
         aac(dst[1], exact[:, 1], atol=.5)  # site 1
 
-        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
+        # This test shows in detail what happens to the distances in presence
+        # of a magnitude-dependent pointsource_distance.
+        self.run_calc(
+            case_48.__file__, 'job.ini', pointsource_distance=
+            '{"default": [(5.1, 42), (5.3, 47), (5.5, 52), (5.7, 58), '
+            '(5.9, 65), (6.1, 72), (6.3, 80), (6.5, 89), (6.7, 99), '
+            '(6.9, 110)]}')
+
         psdist = self.calc.oqparam.pointsource_distance
         psd = psdist.ddic['active shallow crust']
         dist_by_mag = {mag: int(psd[mag]) for mag in psd}
@@ -684,8 +692,6 @@ hazard_uhs-std.csv
         aac(dst[0], approx[:, 0], atol=.5)  # site 0
         aac(dst[1], approx[:, 1], atol=.5)  # site 1
 
-        # This test shows in detail what happens to the distances in presence
-        # of a magnitude-dependent pointsource_distance.
     def test_case_49(self):
         # serious test of amplification + uhs
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.21).csv',
@@ -795,22 +801,10 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
 
     def test_case_56(self):
-        # test with oversampling
-        # there are 6 potential paths 1A 1B 1C 2A 2B 2C
-        # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
-        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
+        # test with a discardable source model (#2)
         self.run_calc(case_56.__file__, 'job.ini', concurrent_tasks='0')
-        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurves.csv', fname)
-
-        self.calc.datastore['_poes'].shape
-        cmakers = contexts.read_cmakers(self.calc.datastore)
-        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
-        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
-        slc0, slc1 = cmakers[0].slc, cmakers[1].slc
-        self.assertEqual(slc0.stop - slc0.start, 3)
-        self.assertEqual(slc1.stop - slc1.start, 2)
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs.csv', fname)
 
     def test_case_57(self):
         # AvgPoeGMPE
@@ -901,3 +895,21 @@ hazard_uhs-std.csv
 
         files = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
+
+    def test_case_71(self):
+        # test with oversampling
+        # there are 6 potential paths 1A 1B 1C 2A 2B 2C
+        # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
+        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
+        self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurves.csv', fname)
+
+        self.calc.datastore['_poes'].shape
+        cmakers = contexts.read_cmakers(self.calc.datastore)
+        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
+        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
+        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
+        slc0, slc1 = cmakers[0].slc, cmakers[1].slc
+        self.assertEqual(slc0.stop - slc0.start, 3)
+        self.assertEqual(slc1.stop - slc1.start, 2)

@@ -20,10 +20,9 @@ Module exports :class:`MultiGMPE`, which can create a composite of
 multiple GMPEs for different IMTs when passed a dictionary of ground motion
 models organised by IMT type or by a string describing the association
 """
-import collections
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import imt as imt_module
 
 uppernames = '''
 DEFINED_FOR_INTENSITY_MEASURE_TYPES
@@ -34,7 +33,7 @@ REQUIRES_DISTANCES
 '''.split()
 
 
-class MultiGMPE(GMPE, collections.abc.Mapping):
+class MultiGMPE(GMPE):
     """
     The MultiGMPE can call ground motions for various IMTs when instantiated
     with a dictionary of ground motion models organised by IMT or a string
@@ -74,8 +73,9 @@ class MultiGMPE(GMPE, collections.abc.Mapping):
         for imt, gsim_dic in self.kwargs.items():
             [(gsim_name, kw)] = gsim_dic.items()
             self.kwargs[imt] = gsim = registry[gsim_name](**kw)
-            imt_class = from_string(imt).__class__
-            if imt_class not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+            name = "SA" if imt.startswith("SA") else imt
+            imt_factory = getattr(imt_module, name)
+            if imt_factory not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
                 raise ValueError("IMT %s not supported by %s" % (imt, gsim))
             for name in uppernames:
                 getattr(self, name).update(getattr(gsim, name))

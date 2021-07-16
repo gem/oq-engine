@@ -28,6 +28,14 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _get_stddevs(stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = [np.zeros(num_sites) + 0.69 for _ in stddev_types]
+    return stddevs
+
+
 class AtkinsonBoore1995GSCBest(GMPE):
     """
     Implement equation used by the Geological Survey of Canada (GSC) for
@@ -47,10 +55,7 @@ class AtkinsonBoore1995GSCBest(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is random horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.RANDOM_HORIZONTAL`,
@@ -58,9 +63,7 @@ class AtkinsonBoore1995GSCBest(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RANDOM_HORIZONTAL
 
     #: Supported standard deviation type is total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: site params are not required
     REQUIRES_SITES_PARAMETERS = set()
@@ -88,7 +91,7 @@ class AtkinsonBoore1995GSCBest(GMPE):
 
         # convert magnitude from Mblg to Mw
         mag = rup.mag * 0.98 - 0.39 if rup.mag <= 5.5 else \
-              2.715 - 0.277 * rup.mag + 0.127 * rup.mag * rup.mag
+            2.715 - 0.277 * rup.mag + 0.127 * rup.mag * rup.mag
 
         # functional form as explained in 'Youngs_fit_to_AB95lookup.doc'
         f1 = np.minimum(np.log(rhypo), np.log(70.))
@@ -97,21 +100,11 @@ class AtkinsonBoore1995GSCBest(GMPE):
             C['c1'] + C['c2'] * mag + C['c3'] * mag ** 2 +
             (C['c4'] + C['c5'] * mag) * f1 +
             (C['c6'] + C['c7'] * mag) * f2 +
-            C['c8'] * rhypo
-        )
+            C['c8'] * rhypo)
 
-        stddevs = self._get_stddevs(stddev_types,  dists.rhypo.shape[0])
+        stddevs = _get_stddevs(stddev_types,  dists.rhypo.shape[0])
 
         return mean, stddevs
-
-    def _get_stddevs(self, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        stddevs = [np.zeros(num_sites) + 0.69 for _ in stddev_types]
-        return stddevs
 
     #: coefficient table provided by GSC
     COEFFS = CoeffsTable(sa_damping=5, table="""\

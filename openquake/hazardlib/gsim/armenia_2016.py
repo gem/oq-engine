@@ -40,9 +40,9 @@ from openquake.hazardlib import const
 
 class AkkarEtAlRjb2014Armenia(AkkarEtAlRjb2014):
     """
-    A
+    Adjustment of Akkar et al based on Armenian data
     """
-    ADJUST = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT            a          b        tau_adj        sig_adj
     pga     -4.41108    0.67245    1.237606958    1.382804565
     0.01    -4.41108    0.67245    1.237606958    1.382804565
@@ -61,9 +61,7 @@ class AkkarEtAlRjb2014Armenia(AkkarEtAlRjb2014):
     """)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
-        C_ADJ = self.ADJUST[imt]
+        C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
                                      const.StdDev.INTRA_EVENT])
@@ -87,7 +85,7 @@ class BindiEtAl2014RjbArmenia(BindiEtAl2014Rjb):
     """
     Adjustment of Bindi et al based on Armenian data
     """
-    ADJUST = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT              a          b      tau_adj       sig_adj
     pga       -3.53175    0.51121  1.148988194   1.339231170
     0.01      -3.53175    0.51121  1.148988194   1.339231170
@@ -106,9 +104,7 @@ class BindiEtAl2014RjbArmenia(BindiEtAl2014Rjb):
     """)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
-        C_ADJ = self.ADJUST[imt]
+        C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
                                      const.StdDev.INTRA_EVENT])
@@ -131,7 +127,7 @@ class BooreEtAl2014LowQArmenia(BooreEtAl2014LowQ):
     """
     Adjustment of Boore et al for Low Q regions - adjusted for Armenian data
     """
-    ADJUST = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT             a          b        tau_adj        sig_adj
     pga      -5.45458    0.84260    1.633057382    1.315998086
     0.01     -5.45458    0.84260    1.633057382    1.315998086
@@ -150,9 +146,7 @@ class BooreEtAl2014LowQArmenia(BooreEtAl2014LowQ):
     """)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
-        C_ADJ = self.ADJUST[imt]
+        C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
                                      const.StdDev.INTRA_EVENT])
@@ -175,7 +169,7 @@ class CauzziEtAl2014Armenia(CauzziEtAl2014):
     """
     Adjustment of Cauzzi et al. (2014) for Armenia
     """
-    ADJUST = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT               a          b       tau_adj        sig_adj
     pga        -4.01091    0.54155   1.182557898    1.336230261
     0.01       -4.01091    0.54155   1.182557898    1.336230261
@@ -194,9 +188,7 @@ class CauzziEtAl2014Armenia(CauzziEtAl2014):
     """)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
-        C_ADJ = self.ADJUST[imt]
+        C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
                                      const.StdDev.INTRA_EVENT])
@@ -219,7 +211,7 @@ class KaleEtAl2015Armenia(KaleEtAl2015Turkey):
     """
     Adjustment of Kale et al (2015) - Turkish version, for use in Armenia
     """
-    ADJUST = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT             a          b       tau_adj        sig_adj
     pga       -3.81210   0.60842   1.211930412    1.380035424
     0.01      -3.81210   0.60842   1.211930412    1.380035424
@@ -240,7 +232,7 @@ class KaleEtAl2015Armenia(KaleEtAl2015Turkey):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         """
-        C_ADJ = self.ADJUST[imt]
+        C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
                                      const.StdDev.INTRA_EVENT])
@@ -264,7 +256,7 @@ class KothaEtAl2016Armenia(KothaEtAl2016Turkey):
     Adaptation of Kotha et al. (2016) - Turkey Regionalisation - for use in
     Armenia
     """
-    ADJUST = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT             a          b       tau_adj       sig_adj
     pga      -4.69043    0.75333   1.309083043   1.468617949
     0.01     -4.69043    0.75333   1.309083043   1.468617949
@@ -285,7 +277,7 @@ class KothaEtAl2016Armenia(KothaEtAl2016Turkey):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         """
-        C_ADJ = self.ADJUST[imt]
+        C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
                                      const.StdDev.INTRA_EVENT])
@@ -308,7 +300,7 @@ class ChiouYoungs2014Armenia(ChiouYoungs2014):
     """
     Adaptation of Chiou & Youngs (2014) for use in Armenia
     """
-    ADJUST = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT             a          b       tau_adj        sig_adj
     pga      -4.51489    0.57803   1.647935626    1.331572905
     0.01     -4.51489    0.57803   1.647935626    1.331572905
@@ -329,7 +321,7 @@ class ChiouYoungs2014Armenia(ChiouYoungs2014):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         """
-        C_ADJ = self.ADJUST[imt]
+        C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
                                      const.StdDev.INTRA_EVENT])

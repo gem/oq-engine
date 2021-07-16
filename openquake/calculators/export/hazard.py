@@ -24,15 +24,13 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib.general import (
-    group_array, deprecated, AccumDict, DictArray)
+from openquake.baselib.general import deprecated, DictArray
 from openquake.baselib import hdf5, writers
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
-from openquake.calculators.getters import get_rupture_getters
 from openquake.commonlib import hazard_writers, calc, util
 
 F32 = numpy.float32
@@ -313,9 +311,10 @@ def export_hcurves_xml(ekey, dstore):
             fname = name[:-len_ext] + '-' + im + '.' + fmt
             data = [HazardCurve(Location(site), poes[0])
                     for site, poes in zip(sitemesh, hcurves)]
+            imt_name = 'SA' if im.startswith('SA') else im
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
-                               imls=oq.imtls[im], imt=imt.name,
+                               imls=oq.imtls[im], imt=imt_name,
                                sa_period=getattr(imt, 'period', None) or None,
                                sa_damping=getattr(imt, 'damping', None),
                                smlt_path=smlt_path, gsimlt_path=gsimlt_path)
@@ -501,8 +500,9 @@ def export_disagg_csv_xml(ekey, dstore):
             'rlz-%d-%s-sid-%d-poe-%d.xml' % (r, imt, s, p))
         lon, lat = sitecol.lons[s], sitecol.lats[s]
         metadata = dstore.metadata
+        imt_name = 'SA' if imt.string.startswith('SA') else imt.string
         metadata.update(investigation_time=oq.investigation_time,
-                        imt=imt.name,
+                        imt=imt_name,
                         smlt_path='_'.join(rlz.sm_lt_path),
                         gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
                         mag_bin_edges=bins['Mag'].tolist(),

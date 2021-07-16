@@ -41,10 +41,11 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(poes, imtls, stat, weights):
+def build_stat_curve(pcurve, imtls, stat, weights):
     """
     Build statistics by taking into account IMT-dependent weights
     """
+    poes = pcurve.array.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
@@ -55,9 +56,9 @@ def build_stat_curve(poes, imtls, stat, weights):
             ws = [w[imt] for w in weights]
             if sum(ws) == 0:  # expect no data for this IMT
                 continue
-            array[slc] = stat(poes[:, slc], ws)
+            array[slc, 0] = stat(poes[:, slc], ws)
     else:
-        array = stat(poes, weights)
+        array[:, 0] = stat(poes, weights)
     return probability_map.ProbabilityCurve(array)
 
 
@@ -92,7 +93,6 @@ class PmapGetter(object):
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
-        self.sids = sids
 
     @property
     def imts(self):
@@ -138,26 +138,22 @@ class PmapGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: R probability curves for the given site
+        :returns: a probability curve of shape (L, R) for the given site
         """
-        return self.get_pcurves(self.sids[0])
+        return self.get_pcurve(self.sids[0])
 
-    def get_pcurves(self, sid):  # used in classical
+    def get_pcurve(self, sid):  # used in classical
         """
-        :returns: a list of R probability curves with shape L
+        :returns: a ProbabilityCurve of shape L, R
         """
         pmap = self.init()
-        pcurves = [probability_map.ProbabilityCurve(numpy.zeros((self.L, 1)))
-                   for _ in range(self.num_rlzs)]
+        pc0 = probability_map.ProbabilityCurve(
+            numpy.zeros((self.L, self.num_rlzs)))
         try:
-            pc = pmap[sid]
+            pc0.combine(pmap[sid], self.rlzs_by_g)
         except KeyError:  # no hazard for sid
-            return pcurves
-        for g, rlzis in enumerate(self.rlzs_by_g):
-            c = probability_map.ProbabilityCurve(pc.array[:, [g]])
-            for rlzi in rlzis:
-                pcurves[rlzi] |= c
-        return pcurves
+            pass
+        return pc0
 
     def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
         """
@@ -194,7 +190,7 @@ class PmapGetter(object):
         pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
         for sid in self.sids:
             pmap[sid] = build_stat_curve(
-                numpy.array([pc.array for pc in self.get_pcurves(sid)]),
+                self.get_pcurve(sid),
                 self.imtls, stats.mean_curve, self.weights)
         return pmap
 
@@ -266,7 +262,9 @@ class GmfGetter(object):
         md = (filters.MagDepDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
-        param = {'imtls': oqparam.imtls, 'maximum_distance': md}
+        param = {'imtls': oqparam.imtls, 'maximum_distance': md,
+                 'minimum_distance': oqparam.minimum_distance,
+                 'truncation_level': oqparam.truncation_level}
         self.cmaker = ContextMaker(
             rupgetter.trt, rupgetter.rlzs_by_gsim, param)
         self.correl_model = oqparam.correl_model
@@ -287,8 +285,7 @@ class GmfGetter(object):
                 sitecol = self.sitecol.filtered(sids)
                 try:
                     computer = gmf.GmfComputer(
-                        ebr, sitecol, self.cmaker,
-                        self.oqparam.truncation_level, self.correl_model,
+                        ebr, sitecol, self.cmaker, self.correl_model,
                         self.amplifier, self.sec_perils)
                 except FarAwayRupture:
                     continue
@@ -422,8 +419,12 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
             proxies, maxweight, operator.attrgetter('weight'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
+        if len(rlzs_by_gsim) == 1:
+            [rbg] = rlzs_by_gsim.values()
+        else:
+            rbg = rlzs_by_gsim[trt_smr]
         rg = RuptureGetter(block, dstore.filename, trt_smr,
-                           full_lt.trt_by(trt_smr), rlzs_by_gsim[trt_smr])
+                           full_lt.trt_by(trt_smr), rbg)
         rgetters.append(rg)
     return rgetters
 

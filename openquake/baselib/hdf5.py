@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import inspect
 import tempfile
 import warnings
@@ -45,15 +46,17 @@ INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
 
 
-def maybe_encode(value):
+def sanitize(value):
     """
-    If value is a sequence of strings, encode it
+    Sanitize the value so that it can be stored as an HDF5 attribute
     """
     if isinstance(value, bytes):
         return numpy.void(value)
-    if isinstance(value, (list, tuple)):
+    elif isinstance(value, (list, tuple)):
         if value and isinstance(value[0], str):
             return encode(value)
+    elif isinstance(value, int) and value > sys.maxsize:
+        return float(value)
     return value
 
 
@@ -77,7 +80,7 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
                                    compression=compression)
     if attrs:
         for k, v in attrs.items():
-            dset.attrs[k] = maybe_encode(v)
+            dset.attrs[k] = sanitize(v)
     return dset
 
 
@@ -404,7 +407,7 @@ class File(h5py.File):
             a = super().__getitem__(path).attrs
             for k, v in sorted(items):
                 try:
-                    a[k] = maybe_encode(v)
+                    a[k] = sanitize(v)
                 except Exception as exc:
                     raise TypeError(
                         'Could not store attribute %s=%s: %s' % (k, v, exc))

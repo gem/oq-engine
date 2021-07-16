@@ -21,36 +21,36 @@
 Check GSIM class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
 """
+import os
 import csv
 import math
 import sys
 import time
-import copy
-
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
-from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
-                                          DistancesContext)
-from openquake.hazardlib.imt import registry
+from openquake.hazardlib.contexts import (
+    RuptureContext, DistancesContext, ContextMaker)
 from openquake.hazardlib.imt import from_string
 
 
-def set_read_only(*ctxs):
-    for ctx in ctxs:
-        for slot in vars(ctx):
-            arr = getattr(ctx, slot)
-            if isinstance(arr, numpy.ndarray):
-                arr.flags.writeable = False
+def set_read_only(ctx):
+    n = 0
+    for slot in vars(ctx):
+        arr = getattr(ctx, slot)
+        if isinstance(arr, numpy.ndarray):
+            arr.flags.writeable = False
+            n = len(arr)
+    ctx.sids = numpy.arange(n)
 
 
-def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
+def check_gsim(gsim, datafile, max_discrep_percentage,
+               debug=os.environ.get('OQ_DEBUG')):
     """
     Test GSIM against the data file and return test result.
 
-    :param gsim_cls:
-        A subclass of :class:`~openquake.hazardlib.gsim.base.GMPE` to test.
+    :param gsim:
+        An instance of :class:`~openquake.hazardlib.gsim.base.GMPE` to test.
     :param datafile:
         A file object containing test data in csv format.
     :param max_discrep_percentage:
@@ -66,11 +66,6 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         A tuple of two elements: a number of errors and a string representing
         statistics about the test run.
     """
-
-    if isinstance(gsim_cls, GroundShakingIntensityModel):
-        gsim = copy.deepcopy(gsim_cls)
-    else:
-        gsim = gsim_cls()
     errors = 0
     linenum = 1
     discrepancies = []
@@ -78,45 +73,36 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     for testcase in _parse_csv(
             datafile, debug, gsim.REQUIRES_SITES_PARAMETERS):
         linenum += 1
-        (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
-            = testcase
-        for imt, expected_result in expected_results.items():
-            set_read_only(sctx, dctx, rctx)
-            mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
-                                                      imt, stddev_types)
+        ctx, stddev_type, expected_results, result_type = testcase
+        set_read_only(ctx)
+        imtls = {str(imt): [] for imt in expected_results}
+        cmaker = ContextMaker('*', [gsim], dict(imtls=imtls))
+        [ms] = cmaker.get_mean_stds([ctx], stddev_type)
+        for m, imt in enumerate(expected_results):
+            expected_result = expected_results[imt]
+            mean = ms[0, m]
             if result_type == 'MEAN':
-                if str(imt) == 'MMI':
-                    # For IPEs it is the values, not the logarithms returned
-                    result = mean
-                else:
-                    result = numpy.exp(mean)
+                # for IPEs the values, not the logarithms are returned
+                result = mean if str(imt) == 'MMI' else numpy.exp(mean)
             else:
-                [result] = stddevs
+                result = ms[1, m]
 
-            assert (isinstance(result, numpy.ndarray) or
-                    isinstance(result, numpy.float64) or
-                    isinstance(result, float)), \
-                '%s is %s instead of numpy.ndarray, numpy.float64 or float' % \
-                (result_type, type(result))
-
-            discrep_percentage = numpy.abs(
-                result / expected_result * 100 - 100)
-            discrepancies.extend(discrep_percentage)
-            errors += (discrep_percentage > max_discrep_percentage).sum()
+            discrep_percent = numpy.abs(result / expected_result * 100 - 100)
+            discrepancies.extend(discrep_percent)
+            errors += (discrep_percent > max_discrep_percentage).sum()
 
             if errors and debug:
                 msg = 'file %r line %r imt %r: expected %s %f != %f ' \
                       '(delta %.4f%%)' % (
                           datafile.name, linenum, imt, result_type.lower(),
-                          expected_result[0], result[0], discrep_percentage[0])
+                          expected_result[0], result[0], discrep_percent[0])
                 print(msg, file=sys.stderr)
                 break
 
         if debug and errors:
             break
     return (errors,
-            _format_stats(time.time() - started, discrepancies, errors),
-            sctx, rctx, dctx)
+            _format_stats(time.time() - started, discrepancies, errors))
 
 
 def _format_stats(time_spent, discrepancies, errors):
@@ -174,34 +160,30 @@ def _parse_csv(datafile, debug, req_site_params):
     """
     reader = iter(csv.reader(datafile))
     headers = [param_name.lower() for param_name in next(reader)]
-    sctx, rctx, dctx, stddev_types, expected_results, result_type \
-        = _parse_csv_line(headers, next(reader), req_site_params)
-    sattrs = sctx._slots_
-    dattrs = [slot for slot in DistancesContext._slots_
-              if hasattr(dctx, slot)]
+    ctx, stddev_type, expected_results, result_type = _parse_csv_line(
+        headers, next(reader), req_site_params)
+    slots = set(vars(ctx))
+    attrs = list(req_site_params) + [s for s in DistancesContext._slots_
+                                     if s in slots]
     for line in reader:
-        (sctx2, rctx2, dctx2, stddev_types2, expected_results2, result_type2) \
-            = _parse_csv_line(headers, line, req_site_params)
-        if not debug \
-                and stddev_types2 == stddev_types \
-                and result_type2 == result_type \
-                and all(getattr(rctx2, slot, None) == getattr(rctx, slot, None)
-                        for slot in RuptureContext._slots_):
-            for slot in sattrs:
-                setattr(sctx, slot, numpy.hstack((getattr(sctx, slot),
-                                                  getattr(sctx2, slot))))
-            for slot in dattrs:
-                setattr(dctx, slot, numpy.hstack((getattr(dctx, slot),
-                                                  getattr(dctx2, slot))))
+        ctx2, stddev_type2, expected_results2, result_type2 = _parse_csv_line(
+            headers, line, req_site_params)
+        rp_equal = [
+            numpy.all(getattr(ctx, slot, None) == getattr(ctx2, slot, None))
+            for slot in RuptureContext._slots_]
+        if not debug and stddev_type2 == stddev_type \
+           and result_type2 == result_type and all(rp_equal):
+            for slot in attrs:
+                setattr(ctx, slot, numpy.hstack((getattr(ctx, slot),
+                                                 getattr(ctx2, slot))))
             for imt in expected_results:
                 expected_results[imt] = numpy.hstack((expected_results[imt],
                                                       expected_results2[imt]))
         else:
-            yield sctx, rctx, dctx, stddev_types, expected_results, result_type
-            (sctx, rctx, dctx, stddev_types, expected_results,
-             result_type) = (sctx2, rctx2, dctx2, stddev_types2,
-                             expected_results2, result_type2)
-    yield sctx, rctx, dctx, stddev_types, expected_results, result_type
+            yield ctx, stddev_type, expected_results, result_type
+            ctx, stddev_type, expected_results, result_type = (
+                ctx2, stddev_type2, expected_results2, result_type2)
+    yield ctx, stddev_type, expected_results, result_type
 
 
 def _parse_csv_line(headers, values, req_site_params):
@@ -214,21 +196,12 @@ def _parse_csv_line(headers, values, req_site_params):
         A list of values of a single row to parse.
     :returns:
         A tuple of the following values (in specified order):
-
-        sctx
-            An instance of :class:`openquake.hazardlib.gsim.base.SitesContext`
-            with attributes populated by the information from in row in a form
-            of single-element numpy arrays.
-        rctx
+        ctx
             An instance of
             :class:`openquake.hazardlib.gsim.base.RuptureContext`.
-        dctx
-            An instance of
-            :class:`openquake.hazardlib.gsim.base.DistancesContext`.
-        stddev_types
-            An empty list, if the ``result_type`` column says "MEAN"
-            for that row, otherwise it is a list with one item --
-            a requested standard deviation type.
+        stddev_type
+            None if the ``result_type`` column says "MEAN"
+            for that row, otherwise the requested standard deviation type.
         expected_results
             A dictionary mapping IMT-objects to one-element arrays of expected
             result values. Those results represent either standard deviation
@@ -237,25 +210,20 @@ def _parse_csv_line(headers, values, req_site_params):
             A string literal, one of ``'STDDEV'`` or ``'MEAN'``. Value
             is taken from column ``result_type``.
     """
-    rctx = RuptureContext()
-    sctx = SitesContext(slots=req_site_params)
-    dctx = DistancesContext()
+    ctx = RuptureContext()
     expected_results = {}
-    stddev_types = result_type = damping = None
+    stddev_type = result_type = damping = None
 
     for param, value in zip(headers, values):
-
         if param == 'result_type':
             value = value.upper()
             if value.endswith('_STDDEV'):
                 # the row defines expected stddev results
                 result_type = 'STDDEV'
-                stddev_types = [getattr(const.StdDev,
-                                        value[:-len('_STDDEV')])]
+                stddev_type = getattr(const.StdDev, value[:-len('_STDDEV')])
             else:
                 # the row defines expected exponents of mean values
                 assert value == 'MEAN'
-                stddev_types = []
                 result_type = 'MEAN'
         elif param == 'damping':
             damping = float(value)
@@ -273,11 +241,11 @@ def _parse_csv_line(headers, values, req_site_params):
                 attr = param[len('site_'):-1]
             else:  # vs30s etc
                 attr = param[len('site_'):]
-            setattr(sctx, attr, numpy.array([value]))
+            setattr(ctx, attr, numpy.array([value]))
         elif param.startswith('dist_'):
             # value is a distance measure
             value = float(value)
-            setattr(dctx, param[len('dist_'):], numpy.array([value]))
+            setattr(ctx, param[len('dist_'):], numpy.array([value]))
         elif param.startswith('rup_'):
             # value is a rupture context attribute
             try:
@@ -285,86 +253,20 @@ def _parse_csv_line(headers, values, req_site_params):
             except ValueError:
                 if value != 'undefined':
                     raise
-
-            setattr(rctx, param[len('rup_'):], value)
+            setattr(ctx, param[len('rup_'):], value)
         elif param == 'component_type':
             pass
         else:
             # value is the expected result (of result_type type)
             value = float(value)
-
             if param == 'arias':  # ugly legacy corner case
                 param = 'ia'
             if param == 'avgsa':
                 imt = from_string('AvgSA')
-            else:
-                try:    # The title of the column should be IMT(args)
-                    imt = from_string(param.upper())
-                except KeyError:  # Then it is just a period for SA
-                    imt = registry['SA'](float(param), damping)
+            else:  # IMT or period column
+                imt = from_string(param.upper(), damping)
 
             expected_results[imt] = numpy.array([value])
 
     assert result_type is not None
-    return sctx, rctx, dctx, stddev_types, expected_results, result_type
-
-
-if __name__ == '__main__':
-    import argparse
-
-    def gsim_by_import_path(import_path):
-        if '.' not in import_path:
-            raise argparse.ArgumentTypeError(
-                '%r is not well-formed import path' % import_path)
-        module_name, class_name = import_path.rsplit('.', 1)
-        try:
-            module = __import__(module_name, fromlist=[class_name])
-        except ImportError:
-            raise argparse.ArgumentTypeError(
-                'can not import module %r, make sure '
-                'it is in your $PYTHONPATH' % module_name)
-        if not hasattr(module, class_name):
-            raise argparse.ArgumentTypeError(
-                "module %r doesn't export name %r" % (module_name, class_name))
-        gsim_class = getattr(module, class_name)
-        if not isinstance(gsim_class, type) \
-                or not issubclass(gsim_class, GroundShakingIntensityModel):
-            raise argparse.ArgumentTypeError(
-                "%r is not subclass of "
-                "openquake.hazardlib.gsim.base.GroundShakingIntensityModel"
-                % import_path)
-        return gsim_class
-
-    parser = argparse.ArgumentParser(description=' '.join(__doc__.split()))
-    parser.add_argument('gsim', type=gsim_by_import_path,
-                        help='an import path of the ground shaking '
-                        'intensity model class in a form '
-                        '"package.module.ClassName".')
-    parser.add_argument('datafile', type=argparse.FileType('r'),
-                        help='test data file in a csv format. use "-" for '
-                             'reading from standard input')
-    parser.add_argument('-p', '--max-discrepancy', type=float, metavar='prcnt',
-                        help='the maximum discrepancy allowed for result '
-                        'value to be considered matching, expressed '
-                             'in percentage points. default value is 0.5.',
-                        nargs='?', default=0.5, dest='max_discrep_percentage')
-    dbg_group = parser.add_mutually_exclusive_group()
-    dbg_group.add_argument('-d', '--debug', required=False,
-                           action='store_true',
-                           help='run unvectorized, stop on first error '
-                                'and print information about line containing '
-                                'failing test')
-    dbg_group.add_argument('-q', '--quiet', action='store_true',
-                           help="don't print stats at the end. use exit "
-                           "code to determine if test succeeded.")
-
-    args = parser.parse_args()
-
-    errors, stats, _, _, _, = check_gsim(
-        gsim_cls=args.gsim, datafile=args.datafile,
-        max_discrep_percentage=args.max_discrep_percentage,
-        debug=args.debug)
-    if not args.quiet:
-        print(stats, file=sys.stderr)
-    if errors:
-        exit(127)
+    return ctx, stddev_type, expected_results, result_type

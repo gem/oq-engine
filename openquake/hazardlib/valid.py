@@ -124,7 +124,6 @@ def gsim(value, basedir=''):
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))
-    minimum_distance = float(kwargs.pop('minimum_distance', 0))
     if gsim_name == 'FromFile':
         return FromFile()
     try:
@@ -137,7 +136,6 @@ def gsim(value, basedir=''):
         gs = object.__new__(gsim_class)
         gs.kwargs = kwargs
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
-    gs.minimum_distance = minimum_distance
     return gs
 
 
@@ -702,7 +700,7 @@ def intensity_measure_types(value):
       ...
     ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
     >>> intensity_measure_types('PGV, SA(1), PGA')
-    ['PGA', 'PGV', 'SA(1.0)']
+    ['PGV', 'PGA', 'SA(1.0)']
     """
     if not value:
         return []

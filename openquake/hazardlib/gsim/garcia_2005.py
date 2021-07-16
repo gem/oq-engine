@@ -30,6 +30,54 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA, PGV
 
 
+def _compute_mean(C, g, mag, hypo_depth, dists, imt):
+    """
+    Compute mean according to equation on Table 2, page 2275.
+    """
+
+    delta = 0.00750 * 10 ** (0.507 * mag)
+
+    # computing R for different values of mag
+    if mag < 6.5:
+        R = np.sqrt(dists.rhypo ** 2 + delta ** 2)
+    else:
+        R = np.sqrt(dists.rrup ** 2 + delta ** 2)
+
+    mean = (
+        # 1st term
+        C['c1'] + C['c2'] * mag +
+        # 2nd term
+        C['c3'] * R -
+        # 3rd term
+        C['c4'] * np.log10(R) +
+        # 4th term
+        C['c5'] * hypo_depth
+    )
+    # convert from base 10 to base e
+    if imt == PGV():
+        mean = np.log(10 ** mean)
+    else:
+        # convert from cm/s**2 to g
+        mean = np.log((10 ** mean) * 1e-2 / g)
+    return mean
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in table 2, pag 2275.
+    """
+    # the standard deviation values are converted from base 10 to base e
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.log(10 ** C['s_t']) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(np.log(10 ** C['s_r']) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(np.log(10 ** C['s_e']) + np.zeros(num_sites))
+    return stddevs
+
+
 class GarciaEtAl2005SSlab(GMPE):
     """
     Implements GMPE developed by Garcia, D., Singh, S. K., Harraiz, M,
@@ -56,11 +104,7 @@ class GarciaEtAl2005SSlab(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration. See Table 2 in page 1865
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        SA,
-        PGA,
-        PGV,
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA, PGA, PGV}
 
     #: Supported intensity measure component is the geometric average of
     #  the maximum of the two horizontal components
@@ -71,11 +115,8 @@ class GarciaEtAl2005SSlab(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
     #: See Tables 2 and 3, page 2275.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: No site parameters required
     #: All data from 51 hard (NEHRP B) sites.
@@ -103,62 +144,10 @@ class GarciaEtAl2005SSlab(GMPE):
         mag = rup.mag
         hypo_depth = rup.hypo_depth
 
-        mean = self._compute_mean(C, g, mag, hypo_depth, dists, imt)
-        stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
+        mean = _compute_mean(C, g, mag, hypo_depth, dists, imt)
+        stddevs = _get_stddevs(C, stddev_types, sites.vs30.shape[0])
 
         return mean, stddevs
-
-    def _compute_mean(self, C, g, mag, hypo_depth, dists, imt):
-        """
-        Compute mean according to equation on Table 2, page 2275.
-        """
-
-        delta = 0.00750 * 10 ** (0.507 * mag)
-
-        # computing R for different values of mag
-        if mag < 6.5:
-            R = np.sqrt(dists.rhypo ** 2 + delta ** 2)
-        else:
-            R = np.sqrt(dists.rrup ** 2 + delta ** 2)
-
-        mean = (
-            # 1st term
-            C['c1'] + C['c2'] * mag +
-            # 2nd term
-            C['c3'] * R -
-            # 3rd term
-            C['c4'] * np.log10(R) +
-            # 4th term
-            C['c5'] * hypo_depth
-        )
-        # convert from base 10 to base e
-        if imt == PGV():
-            mean = np.log(10 ** mean)
-        else:
-            # convert from cm/s**2 to g
-            mean = np.log((10 ** mean) * 1e-2 / g)
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 2, pag 2275.
-        """
-
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        # the standard deviation values are converted from base 10 to base e
-
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.log(10 ** C['s_t']) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.log(10 ** C['s_r']) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(np.log(10 ** C['s_e']) + np.zeros(num_sites))
-        return stddevs
 
     #: Equation coefficients for geometric average of the maximum of the two
     #: horizontal components, as described in Table 2 on pp. 2275, but
@@ -203,7 +192,6 @@ class GarciaEtAl2005SSlabVert(GarciaEtAl2005SSlab):
     motion (see last paragraph of Summary in pag. 2272
 
     The GMPE predicted values for Mexican inslab events and NEHRP B site
-
     """
 
     #: Equation coefficients for Vertical Component, as described in Table 3

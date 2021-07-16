@@ -23,11 +23,9 @@ the author's equivalent R implementation
 import unittest
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.kotha_2020 import (KothaEtAl2020,
-                                                 KothaEtAl2020ESHM20,
-                                                 KothaEtAl2020Site,
-                                                 KothaEtAl2020Slope,
-                                                 KothaEtAl2020ESHM20SlopeGeology)
+from openquake.hazardlib.gsim.kotha_2020 import (
+    KothaEtAl2020, KothaEtAl2020ESHM20, KothaEtAl2020Site,
+    KothaEtAl2020Slope, KothaEtAl2020ESHM20SlopeGeology)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 MAX_DISCREP = 0.01
@@ -113,7 +111,7 @@ class KothaEtAl2020InstantiationTestCase(unittest.TestCase):
 
     def test_instantiation_dl2l_non_dict(self):
         with self.assertRaises(IOError) as ioe:
-            gsim = KothaEtAl2020(dl2l=1.0)
+            KothaEtAl2020(dl2l=1.0)
         self.assertEqual(
             str(ioe.exception),
             "For Kotha et al. (2020) GMM, source-region scaling parameter "
@@ -121,7 +119,7 @@ class KothaEtAl2020InstantiationTestCase(unittest.TestCase):
 
     def test_instantiation_c3_non_dict(self):
         with self.assertRaises(IOError) as ioe:
-            gsim = KothaEtAl2020(c3=1.0)
+            KothaEtAl2020(c3=1.0)
         self.assertEqual(
             str(ioe.exception),
             "For Kotha et al. (2020) GMM, residual attenuation scaling (c3) "

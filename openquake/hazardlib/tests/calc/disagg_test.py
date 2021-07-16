@@ -17,7 +17,6 @@ import unittest
 import os.path
 import numpy
 
-from openquake.hazardlib.const import TRT
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib import nrml
@@ -46,7 +45,7 @@ class BuildDisaggDataTestCase(unittest.TestCase):
                     z1pt0=330)
         imt = SA(3.0)
         iml = 0.25612220
-        gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: Bradley2013()}
+        gsim_by_trt = {"Active Shallow Crust": Bradley2013()}
         truncation_level = 3.0
         n_epsilons = 1
         mag_bin_width = 0.1
@@ -94,7 +93,6 @@ class DisaggregateTestCase(unittest.TestCase):
         self.truncation_level = 1
         self.trt = 'Stable Continental Crust'
         gsim = Campbell2003()
-        gsim.minimum_distance = 10  # test minimum_distance
         self.gsims = {self.trt: gsim}
 
     def test(self):

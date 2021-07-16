@@ -21,17 +21,16 @@ import collections
 import unittest.mock as mock
 
 import numpy
-from copy import deepcopy
 
-from openquake.hazardlib import const
+from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.base import (
-    GMPE, CoeffsTable, SitesContext, RuptureContext,
+    GMPE, CoeffsTable, gsim_aliases, SitesContext, RuptureContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.gsim.base import ContextMaker, to_distribution_values
+from openquake.hazardlib.gsim.base import ContextMaker
 
 aac = numpy.testing.assert_allclose
 
@@ -70,13 +69,13 @@ class _FakeGSIMTestCase(unittest.TestCase):
 
 
 class TGMPE(GMPE):
-    DEFINED_FOR_TECTONIC_REGION_TYPE = None
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ()
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = ()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
-    REQUIRES_SITES_PARAMETERS = None
-    REQUIRES_RUPTURE_PARAMETERS = None
-    REQUIRES_DISTANCES = None
+    REQUIRES_SITES_PARAMETERS = ()
+    REQUIRES_RUPTURE_PARAMETERS = ()
+    REQUIRES_DISTANCES = ()
     get_mean_and_stddevs = None
 
 
@@ -312,47 +311,13 @@ class GsimInstantiationTestCase(unittest.TestCase):
             'the user is liable for their application')
 
 
-class CoeffsTableTestCase(unittest.TestCase):
-    def setUp(self):
-        self.coefficient_string = """\
-            imt      a     b
-            pgv   0.10   0.2
-            pga   0.05   0.1
-            0.10  1.00   2.0
-            1.00  5.00  10.0
-            10.0  10.0  20.0
-            """
-
-    def test_table_string_instantiation(self):
-        # Check that the table instantiates in the conventional way
-        table1 = CoeffsTable(sa_damping=5, table=self.coefficient_string)
-        self.assertDictEqual(
-            table1.non_sa_coeffs,
-            {PGV(): {"a": 0.1, "b": 0.2},
-             PGA(): {"a": 0.05, "b": 0.1}})
-        self.assertDictEqual(
-            table1.sa_coeffs,
-            {SA(period=0.1, damping=5): {"a": 1.0, "b": 2.0},
-             SA(period=1.0, damping=5): {"a": 5.0, "b": 10.0},
-             SA(period=10.0, damping=5): {"a": 10.0, "b": 20.0}}
-            )
-
-    def test_table_dict_instantiation(self):
-        # Check that the table instantiates with pre-defined dictionaries
-        table1 = CoeffsTable(sa_damping=5, table=self.coefficient_string)
-        # Create target dictionary
-        coeffs = deepcopy(table1.non_sa_coeffs)
-        coeffs.update(table1.sa_coeffs)
-        table2 = CoeffsTable(sa_damping=5,
-                             table=coeffs)
-        self.assertDictEqual(table1.sa_coeffs, table2.sa_coeffs)
-        self.assertDictEqual(table1.non_sa_coeffs, table2.non_sa_coeffs)
-
-    def test_table_bad_instantiation(self):
-        # If instantiated with anything other than string or tuple should
-        # raise a TypeError
-        with self.assertRaises(TypeError) as te:
-            CoeffsTable(sa_damping=5, table=5)
-        self.assertEqual(str(te.exception),
-                         "CoeffsTable cannot be constructed with "
-                         "inputs of the form 'int'")
+class AliasesTestCase(unittest.TestCase):
+    """
+    Check that all aliases are valid
+    """
+    def test_valid(self):
+        n = 0
+        for toml in gsim_aliases.values():
+            valid.gsim(toml)
+            n += 1
+        print('Checked %d valid aliases' % n)

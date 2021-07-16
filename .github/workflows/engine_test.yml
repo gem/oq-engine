@@ -49,4 +49,4 @@ jobs:
         pip install -r requirements-py38-linux64.txt && pip install -e .
     - name: hazardlib tests
       run: |
-        pytest -x openquake/hazardlib -k gsim --disable-warnings --color=yes --durations=10
+        pytest -x openquake/hazardlib --doctest-modules -k gsim --disable-warnings --color=yes --durations=10

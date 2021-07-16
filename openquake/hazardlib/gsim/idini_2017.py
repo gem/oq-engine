@@ -22,17 +22,114 @@ Module exports :class:`IdiniEtAl2017SInter`
 """
 import numpy as np
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
 
+CONSTS = {'Mr': 5,
+          'Vref': 1530,
+          'c4': 0.1,
+          'c6': 5,
+          'c7': 0.35,
+          'h0': 50}
+
+_get_distance_term = CallableDict()
+
+
+@_get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def _get_distance_term_1(trt, C, rup, dists):
+    """
+    Returns the magnitude dependent distance scaling term defined in
+    Equation (5)
+    """
+    mag = rup.mag
+    if mag < 7.7:
+        R = dists.rhypo
+    else:
+        R = dists.rrup
+
+    g = C['c3'] + CONSTS['c4'] * (mag - CONSTS['Mr'])
+    Ro = CONSTS['c6'] * 10 ** (
+        CONSTS['c7'] * (mag - CONSTS['Mr']))
+    return g * np.log10(R + Ro) + C['c5'] * R
+
+
+@_get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def _get_distance_term_2(trt, C, rup, dists):
+    """
+    Returns the magnitude dependent distance scaling term defined in
+    Equation (5)
+    """
+    mag = rup.mag
+    R = dists.rhypo
+    g = C['c3'] + CONSTS['c4'] * (mag - CONSTS['Mr']) + C['dc3']
+    return g * np.log10(R) + C['c5'] * R
+
+
+_get_magnitude_term = CallableDict()
+
+
+@_get_magnitude_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def _get_magnitude_term_1(trt, C, rup):
+    """
+    Returns the magnitude scaling term defined in Equation (3)
+    """
+    mag = rup.mag
+    return C['c1'] + C['c2'] * mag + C['c9'] * mag ** 2.0
+
+
+@_get_magnitude_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def _get_magnitude_term_2(trt, C, rup):
+    """
+    Returns the magnitude scaling term defined in Equation (3)
+    """
+    mag = rup.mag
+    H = rup.hypo_depth
+    return C['c1'] + C['c2'] * mag + C['c8'] * (H - CONSTS['h0']) + \
+        C['dc1'] + C['dc2'] * mag
+
+
+def _get_site_term(C, sites):
+    """
+    Returns the site scaling term defined in Equation (18)
+    """
+    soiltype = sites.soiltype
+    vs30 = sites.vs30
+
+    # sT* depends on the soil type.
+    # If soiltype > 6, use soiltype = 1 (rock)
+    sT = [C['s%i' % st] if st > 1 and st <= 6 else 0 for st in soiltype]
+
+    return sT * np.log10(vs30 / CONSTS['Vref'])
+
+
+def _get_stddevs(C, n_sites, stddev_types):
+    """
+    Returns the standard deviations
+    """
+    # sigma_e and sigma_r are in log10 base, so we need to transform them
+    tau = np.log(10 ** C['sigma_e']) + np.zeros(n_sites)
+    phi = np.log(10 ** C['sigma_r']) + np.zeros(n_sites)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            sigma = np.sqrt(tau ** 2.0 + phi ** 2.0)
+            stddevs.append(sigma)
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau)
+    return stddevs
+
+
 class IdiniEtAl2017SInter(GMPE):
     """
-    Implements the GMPE developed by Idini et al. (2017) for subduction 
+    Implements the GMPE developed by Idini et al. (2017) for subduction
     interface earthquakes, publised as:
-        
-    Idini, B., F. Rojas, S. Ruiz, and C. Pastén. 2017. “Ground motion 
-    prediction equations for the Chilean subduction zone.” Bull. Earthq. Eng. 
+
+    Idini, B., F. Rojas, S. Ruiz, and C. Pastén. 2017. “Ground motion
+    prediction equations for the Chilean subduction zone.” Bull. Earthq. Eng.
     15(5): 1853–1880.
     """
 
@@ -52,7 +149,7 @@ class IdiniEtAl2017SInter(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Site amplification is dependent on the Site Class and Vs30
-    REQUIRES_SITES_PARAMETERS = {'soiltype','vs30'}
+    REQUIRES_SITES_PARAMETERS = {'soiltype', 'vs30'}
 
     #: Required rupture parameters are only magnitude for the interface model
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
@@ -68,75 +165,21 @@ class IdiniEtAl2017SInter(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
 
-        mean = (self._get_magnitude_term(C, rup) +
-                self._get_distance_term(C, rup, dists) +
-                self._get_site_term(C, sites))
+        mean = (_get_magnitude_term(trt, C, rup) +
+                _get_distance_term(trt, C, rup, dists) +
+                _get_site_term(C, sites))
         # Convert from log10 to ln
         mean = np.log(10 ** mean)
-        
-        stddevs = self._get_stddevs(C, len(sites.vs30), stddev_types)
-        
+
+        stddevs = _get_stddevs(C, len(sites.vs30), stddev_types)
+
         return mean, stddevs
-
-    def _get_magnitude_term(self, C, rup):
-        """
-        Returns the magnitude scaling term defined in Equation (3)
-        """
-        mag = rup.mag
-        return C['c1'] + C['c2'] * mag + C['c9'] * mag ** 2.0
-
-
-    def _get_distance_term(self, C, rup, dists):
-        """
-        Returns the magnitude dependent distance scaling term defined in 
-        Equation (5)
-        """
-        mag = rup.mag
-        if mag < 7.7:
-            R = dists.rhypo
-        else:
-            R = dists.rrup
-            
-        g = C['c3'] + self.CONSTS['c4'] * (mag - self.CONSTS['Mr'])
-        Ro = self.CONSTS['c6'] * 10 ** (self.CONSTS['c7'] * (mag -\
-             self.CONSTS['Mr']))
-        return g * np.log10(R + Ro) + C['c5'] * R
-
-    def _get_site_term(self, C, sites):
-        """
-        Returns the site scaling term defined in Equation (18)
-        """
-        soiltype = sites.soiltype
-        vs30 = sites.vs30
-        
-        # sT* depends on the soil type.
-        # If soiltype > 6, use soiltype = 1 (rock)
-        sT = [C['s%i' % st] if st > 1 and st <= 6 else 0 for st in soiltype]
-
-        return sT * np.log10(vs30 / self.CONSTS['Vref'])
-
-    def _get_stddevs(self, C, n_sites, stddev_types):
-        """
-        Returns the standard deviations
-        """
-        # sigma_e and sigma_r are in log10 base, so we need to transform them
-        tau = np.log(10 ** C['sigma_e']) + np.zeros(n_sites)
-        phi = np.log(10 ** C['sigma_r']) + np.zeros(n_sites)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma = np.sqrt(tau ** 2.0 + phi ** 2.0)
-                stddevs.append(sigma)
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt	          c1	     c2	       c9	      c8	    dc1	      dc2	sigma_e	sigma_t	       c3	       c5	      dc3	sigma_r	     s2	     s3	     s4	     s5	     s6                         
@@ -165,46 +208,18 @@ class IdiniEtAl2017SInter(GMPE):
     """)
 
 
-    CONSTS = {'Mr': 5,
-              'Vref': 1530,
-              'c4': 0.1,
-              'c6': 5,
-              'c7': 0.35,
-              'h0': 50}
-
-
 class IdiniEtAl2017SSlab(IdiniEtAl2017SInter):
     """
-    Implements the GMPE developed by Idini et al. (2017) for subduction 
+    Implements the GMPE developed by Idini et al. (2017) for subduction
     inslab (intraslab) earthquakes, publised as:
-        
-    Idini, B., F. Rojas, S. Ruiz, and C. Pastén. 2017. “Ground motion 
-    prediction equations for the Chilean subduction zone.” Bull. Earthq. Eng. 
+
+    Idini, B., F. Rojas, S. Ruiz, and C. Pastén. 2017. “Ground motion
+    prediction equations for the Chilean subduction zone.” Bull. Earthq. Eng.
     15(5): 1853–1880.
     """
-
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Required rupture parameters for the in-slab model are magnitude and top
     # of rupture depth
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
-   
-    def _get_magnitude_term(self, C, rup):
-        """
-        Returns the magnitude scaling term defined in Equation (3)
-        """
-        mag = rup.mag
-        H = rup.hypo_depth
-        return C['c1'] + C['c2'] * mag + C['c8'] * (H - self.CONSTS['h0']) + \
-            C['dc1'] + C['dc2'] * mag
-
-    def _get_distance_term(self, C, rup, dists):
-        """
-        Returns the magnitude dependent distance scaling term defined in 
-        Equation (5)
-        """
-        mag = rup.mag
-        R = dists.rhypo
-        g = C['c3'] + self.CONSTS['c4'] * (mag - self.CONSTS['Mr']) + C['dc3']
-        return g * np.log10(R) + C['c5'] * R

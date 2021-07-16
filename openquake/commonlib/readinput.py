@@ -145,11 +145,23 @@ def unzip_rename(zpath, name):
     return xpath
 
 
+def normpath(fnames, base_path):
+    vals = []
+    for fname in fnames:
+        val = os.path.normpath(os.path.join(base_path, fname))
+        if not os.path.exists(val):
+            raise OSError('No such file: %s' % val)
+        vals.append(val)
+    return vals
+
+
 def normalize(key, fnames, base_path):
     input_type, _ext = key.rsplit('_', 1)
     filenames = []
     for val in fnames:
-        if '://' in val:
+        if isinstance(val, list):
+            val = normpath(val, base_path)
+        elif '://' in val:
             # get the data from an URL
             resp = requests.get(val)
             _, val = val.rsplit('/', 1)
@@ -157,7 +169,7 @@ def normalize(key, fnames, base_path):
                 f.write(resp.content)
         elif os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
-        if val.endswith('.zip'):
+        elif val.endswith('.zip'):
             zpath = os.path.normpath(os.path.join(base_path, val))
             if key == 'exposure_file':
                 name = 'exposure.xml'
@@ -168,7 +180,7 @@ def normalize(key, fnames, base_path):
             val = unzip_rename(zpath, name)
         else:
             val = os.path.normpath(os.path.join(base_path, val))
-        if not os.path.exists(val):
+        if isinstance(val, str) and not os.path.exists(val):
             # tested in archive_err_2
             raise OSError('No such file: %s' % val)
         filenames.append(val)
@@ -491,6 +503,25 @@ def get_site_model(oqparam):
     return numpy.concatenate(arrays)
 
 
+def count_old_style(gsim_lt):
+    # count the number of old style GMPEs
+    old = 0
+    for gsims in gsim_lt.values.values():
+        for gsim in gsims:
+            old += 'get_mean_and_stddevs' in gsim.__class__.__dict__
+    return old
+
+
+def count_no_vect(gsim_lt):
+    # count the number of not vectorize GMPEs
+    no = 0
+    for gsims in gsim_lt.values.values():
+        for gsim in gsims:
+            compute = getattr(gsim.__class__, 'compute')
+            no += 'ctx' not in compute.__annotations__
+    return no
+
+
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -572,6 +603,11 @@ def get_gsim_lt(oqparam, trts=('*',)):
         logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     gsim_lt_cache[key] = gsim_lt
+
+    old_style = count_old_style(gsim_lt)
+    no_vect = count_no_vect(gsim_lt)
+    logging.info('There are %d old style GMPEs', old_style)
+    logging.info('There are %d not vectorized GMPEs', no_vect)
     return gsim_lt
 
 
@@ -622,7 +658,7 @@ def get_ruptures(fname_csv):
         geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:
         return ()
-    dic = dict(geom=numpy.array(geoms, object))
+    dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
     # NB: PMFs for nonparametric ruptures are missing
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
@@ -714,6 +750,9 @@ def get_full_lt(oqparam):
 
 
 def save_source_info(csm, h5):
+    """
+    Creates source_info, source_wkt, trt_smrs, toms
+    """
     data = {}  # src_id -> row
     wkts = []
     lens = []
@@ -820,8 +859,7 @@ def get_composite_source_model(oqparam, h5=None):
                 csm.full_lt = full_lt
             if h5:
                 # avoid errors with --reuse_hazard
-                h5['trt_smrs'] = csm.get_trt_smrs()
-                hdf5.create(h5, 'source_info', source_info_dt)
+                save_source_info(csm, h5)
             _check_csm(csm, oqparam, h5)
             return csm
 
@@ -844,19 +882,8 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def get_amplification(oqparam):
-    """
-    :returns: a DataFrame (ampcode, level, PGA, SA() ...)
-    """
-    fname = oqparam.inputs['amplification']
-    df = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64},
-                       index='ampcode')
-    df.fname = fname
-    return df
-
-
-def _cons_coeffs(records, limit_states):
-    dtlist = [(lt, F32) for lt in records['loss_type']]
+def _cons_coeffs(records, loss_types, limit_states):
+    dtlist = [(lt, F32) for lt in loss_types]
     coeffs = numpy.zeros(len(limit_states), dtlist)
     for rec in records:
         coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
@@ -875,21 +902,31 @@ def get_crmodel(oqparam):
         oqparam.limit_states = risklist.limit_states
     elif 'damage' in oqparam.calculation_mode and risklist.limit_states:
         assert oqparam.limit_states == risklist.limit_states
+    loss_types = oqparam.loss_dt().names
     consdict = {}
     if 'consequence' in oqparam.inputs:
         # build consdict of the form consequence_by_tagname -> tag -> array
-        for by, fname in oqparam.inputs['consequence'].items():
+        for by, fnames in oqparam.inputs['consequence'].items():
+            if isinstance(fnames, str):  # single file
+                fnames = [fnames]
             dtypedict = {
                 by: str, 'consequence': str, 'loss_type': str, None: float}
-            dic = group_array(
-                hdf5.read_csv(fname, dtypedict).array, 'consequence')
+
+            # i.e. collapsed.csv, fatalities.csv, ...
+            array = numpy.concatenate([
+                hdf5.read_csv(fname, dtypedict).array for fname in fnames])
+
+            dic = group_array(array, 'consequence')
             for consequence, group in dic.items():
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
                     raise InvalidFile('Unknown consequence %s in %s' %
-                                      (consequence, fname))
-                bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
-                         for tag, grp in group_array(group, by).items()}
+                                      (consequence, fnames))
+                bytag = {
+                    tag: _cons_coeffs(grp, loss_types, risklist.limit_states)
+                    for tag, grp in group_array(group, by).items()}
                 consdict['%s_by_%s' % (consequence, by)] = bytag
+    # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
+    # is [(0.05,), (0.2 ,), (0.6 ,), (1.  ,)] for damage state and structural
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
@@ -1003,7 +1040,7 @@ def taxonomy_mapping(oqparam, taxonomies):
         lst = [[(taxo, 1)] for taxo in taxonomies]
         return {lt: lst for lt in oqparam.loss_names}
     dic = oqparam.inputs['taxonomy_mapping']
-    if isinstance(dic, str):  # filename
+    if isinstance(dic, str):  # same file for all loss_types
         dic = {lt: dic for lt in oqparam.loss_names}
     return {lt: _taxonomy_mapping(dic[lt], taxonomies)
             for lt in oqparam.loss_names}
@@ -1218,7 +1255,11 @@ def get_input_files(oqparam, hazard=False):
                 fnames.update(exp.datafiles)
             fnames.update(fname)
         elif isinstance(fname, dict):
-            fnames.update(fname.values())
+            for key, val in fname.items():
+                if isinstance(val, list):  # list of files
+                    fnames.update(val)
+                else:
+                    fnames.add(val)
         elif isinstance(fname, list):
             for f in fname:
                 if f == oqparam.input_dir:

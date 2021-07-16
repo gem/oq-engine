@@ -17,62 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from copy import deepcopy
-
 from openquake.hazardlib.gsim.base import CoeffsTable
-
 from openquake.hazardlib.gsim.nga_east import _at_percentile
-
-class CoeffsTableACME(CoeffsTable):
-
-    def __getitem__(self, imt):
-        """
-        Return a dictionary of coefficients corresponding to ``imt``
-        from this table (if there is a line for requested IMT in it),
-        or the dictionary of interpolated coefficients, if ``imt`` is
-        of type :class:`~openquake.hazardlib.imt.SA` and interpolation
-        is possible.
-
-        :raises KeyError:
-            If ``imt`` is not available in the table and no interpolation
-            can be done.
-        """
-        try:
-            return self._coeffs[imt]
-        except KeyError:
-            pass
-        if imt.name != 'SA':
-            self._coeffs[imt] = c = self.non_sa_coeffs[imt]
-            return c
-        try:
-            self._coeffs[imt] = c = self.sa_coeffs[imt]
-            return c
-        except KeyError:
-            pass
-
-        max_below = min_above = None
-        for unscaled_imt in list(self.sa_coeffs):
-            if unscaled_imt.damping != imt.damping:
-                continue
-            if unscaled_imt.period > imt.period:
-                if min_above is None or unscaled_imt.period < min_above.period:
-                    min_above = unscaled_imt
-            elif unscaled_imt.period < imt.period:
-                if max_below is None or unscaled_imt.period > max_below.period:
-                    max_below = unscaled_imt
-        if max_below is None or min_above is None:
-            raise KeyError(imt)
-
-        # ratio tends to 1 when target period tends to a minimum
-        # known period above and to 0 if target period is close
-        # to maximum period below.
-        ratio = (((imt.period) - (max_below.period))
-                 / ((min_above.period) - (max_below.period)))
-        max_below = self.sa_coeffs[max_below]
-        min_above = self.sa_coeffs[min_above]
-        self._coeffs[imt] = c = {
-            co: (min_above[co] - max_below[co]) * ratio + max_below[co]
-            for co in max_below}
-        return c
 
 
 def get_phi_ss_at_quantile_ACME(phi_model, quantile):
@@ -95,6 +41,5 @@ def get_phi_ss_at_quantile_ACME(phi_model, quantile):
                                     quantile),
                 "b": _at_percentile(phi_model[imt]["mean_b"],
                                     phi_model[imt]["var_b"],
-                                    quantile)
-                }
-    return CoeffsTableACME(sa_damping=5., table=coeffs)
+                                    quantile)}
+    return CoeffsTable.fromdict(coeffs, logratio=False)

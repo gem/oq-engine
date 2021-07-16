@@ -22,8 +22,7 @@
 
 import copy
 import numpy as np
-from openquake.hazardlib.gsim.can15.utils import \
-    get_equivalent_distances_west
+from openquake.hazardlib.gsim.can15.utils import get_equivalent_distances_west
 from openquake.hazardlib.gsim.boore_atkinson_2011 import BooreAtkinson2011
 from openquake.hazardlib.const import StdDev
 
@@ -52,7 +51,6 @@ class WesternCan15Mid(BooreAtkinson2011):
     calculation of hazard for the fifth generation of Canada's hazard maps,
     released in 2015.
     """
-
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
     non_verified = True
@@ -61,60 +59,80 @@ class WesternCan15Mid(BooreAtkinson2011):
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     #: Standard deviation types supported
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
 
     #: Required distance is only repi since rrup and rjb are obtained from repi
-    REQUIRES_DISTANCES = set(('repi',))
+    REQUIRES_DISTANCES = {'repi'}
+
+    delta_mag = 0.  # overridden in Oceanic subclass
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
-        # distances
-        distsl = copy.copy(dists)
-        distsl.rjb, distsl.rrup = \
-            get_equivalent_distances_west(rup.mag, dists.repi)
+        # first fix the magnitude for the Oceanic subclass
+        if self.delta_mag:
+            rup = copy.copy(rup)
+            rup.mag += self.delta_mag
+
+        # then possibly convert distances from repi to rjb
+        if self.REQUIRES_DISTANCES == {'repi'}:
+            dists = copy.copy(dists)
+            dists.rjb, dists.rrup = get_equivalent_distances_west(
+                rup.mag, dists.repi)
+
         # get original values
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, distsl, imt,
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        stds = [np.ones(len(distsl.rjb))*get_sigma(imt)]
+        if self.sgn:
+            # adjust mean values using the reccomended delta (see Atkinson and
+            # Adams, 2013)
+            tmp = 0.1+0.0007*dists.rjb
+            tmp = np.vstack((tmp, np.full_like(tmp, 0.3)))
+            delta = np.log(10.**(np.amin(tmp, axis=0)))
+            mean += self.sgn * delta
+        stds = [np.ones(len(dists.rjb))*get_sigma(imt)]
         return mean, stds
 
 
-class WesternCan15Low(WesternCan15Mid):
+# IMPORTANT! we must use subclasses and not aliases here because we would
+# break classical/case_59 that use the NRCanSiteTerm with the subclasses
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # distances
-        distsl = copy.copy(dists)
-        distsl.rjb, distsl.rrup = \
-            get_equivalent_distances_west(rup.mag, dists.repi)
-        # get original values
-        mean, _ = super().get_mean_and_stddevs(sites, rup, distsl, imt,
-                                               stddev_types)
-        # adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013)
-        tmp = 0.1+0.0007*distsl.rjb
-        tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
-        delta = np.log(10.**(np.amin(tmp, axis=0)))
-        mean_adj = mean - delta
-        stddevs = [np.ones(len(distsl.rjb))*get_sigma(imt)]
-        return mean_adj, stddevs
+class WesternCan15RjbMid(WesternCan15Mid):
+    """
+    Implements the Boore and Atkinson (2008) with adjustments proposed by
+    Boore and Atkinson (2011) and the modifications introduced for the
+    calculation of hazard for the fifth generation of Canada's hazard maps,
+    released in 2015.
+    """
+    #: Use rjb as the original BooreAtkinson
+    REQUIRES_DISTANCES = {'rjb'}
+
+
+# tested in ClassicalTestCase::test_case_59
+class OceanicCan15Mid(WesternCan15Mid):
+    """
+    Implements the GMPE for oceanic sources
+    """
+    delta_mag = -.5
 
 
 class WesternCan15Upp(WesternCan15Mid):
+    sgn = +1
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
-        # distances
-        distsl = copy.copy(dists)
-        distsl.rjb, distsl.rrup = \
-            get_equivalent_distances_west(rup.mag, dists.repi)
-        # get original values
-        mean, _ = super().get_mean_and_stddevs(sites, rup, distsl, imt,
-                                               stddev_types)
-        # Adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013)
-        tmp = 0.1+0.0007*distsl.rjb
-        tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
-        delta = np.log(10.**(np.amin(tmp, axis=0)))
-        mean_adj = mean + delta
-        stddevs = [np.ones(len(distsl.rjb))*get_sigma(imt)]
-        return mean_adj, stddevs
+
+class WesternCan15Low(WesternCan15Mid):
+    sgn = -1
+
+
+class WesternCan15RjbUpp(WesternCan15RjbMid):
+    sgn = +1
+
+
+class WesternCan15RjbLow(WesternCan15RjbMid):
+    sgn = -1
+
+
+class OceanicCan15Upp(OceanicCan15Mid):
+    sgn = +1
+
+
+class OceanicCan15Low(OceanicCan15Mid):
+    sgn = -1

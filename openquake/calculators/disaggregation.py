@@ -132,7 +132,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
         res = {'trti': cmaker.trti, 'magi': magi}
         with ms_mon:
             # compute mean and std (N * U * M * G * 16 bytes)
-            disagg.set_mean_std(ctxs, imts, cmaker.gsims)
+            disagg.set_mean_std(ctxs, cmaker)
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(hmap4):
@@ -233,9 +233,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         :returns: a list of Z arrays of PoEs
         """
         poes = []
-        pcurves = self.pgetter.get_pcurves(sid)
+        pcurve = self.pgetter.get_pcurve(sid)
         for z, rlz in enumerate(rlzs):
-            pc = pcurves[rlz]
+            pc = pcurve.extract(rlz)
             if z == 0:
                 self.curves.append(pc.array[:, 0])
             poes.append(pc.convert(self.oqparam.imtls))
@@ -265,12 +265,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in self.sitecol.sids:
-                    curves = numpy.array(
-                        [pc.array for pc in self.pgetter.get_pcurves(sid)])
+                    pcurve = self.pgetter.get_pcurve(sid)
                     mean = getters.build_stat_curve(
-                        curves, oq.imtls, stats.mean_curve, ws)
+                        pcurve, oq.imtls, stats.mean_curve, ws)
                     # get the closest realization to the mean
-                    rlzs[sid] = util.closest_to_ref(curves, mean.array)[:Z]
+                    rlzs[sid] = util.closest_to_ref(
+                        pcurve.array.T, mean.array)[:Z]
             self.datastore['best_rlzs'] = rlzs
         else:
             Z = len(oq.rlz_index)

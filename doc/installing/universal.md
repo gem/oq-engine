@@ -12,6 +12,7 @@ The script allows the user to select between three different kinds of installati
 1. `devel` installation (Windows, macOS, and Linux)
 2. `user` installation (Windows, macOS, and Linux)
 3. `server` installation (only available for Linux)
+4. `devel_server` installation (only available for Linux)
 
 ## `devel` installation
 
@@ -101,6 +102,16 @@ $ sudo -H /usr/bin/python3 install.py server
 
 The installation script will automatically create a user called `openquake` and will install the engine in the directory `/opt/openquake`.
 Calculation data will be stored in `/var/lib/openquake/oqdata`.
+
+## `devel_server` installation
+
+This method adds to `server` installation the possibility to run the engine from a git repository.
+If you are on a Linux machine _and_ you have root permissions
+
+```
+$ git clone https://github.com/gem/oq-engine.git
+$ cd oq-engine && sudo -H /usr/bin/python3 install.py devel_server
+```
 
 ## cluster installations
 

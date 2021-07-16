@@ -447,7 +447,7 @@ class HazardCalculator(BaseCalculator):
         if ('amplification' in oq.inputs and
                 oq.amplification_method == 'kernel'):
             logging.info('Reading %s', oq.inputs['amplification'])
-            df = readinput.get_amplification(oq)
+            df = AmplFunction.read_df(oq.inputs['amplification'])
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
@@ -466,6 +466,11 @@ class HazardCalculator(BaseCalculator):
                 for trt in mags_by_trt:
                     self.datastore['source_mags/' + trt] = numpy.array(
                         mags_by_trt[trt])
+                    it = list(oq.maximum_distance.ddic[trt].items())
+                    if len(it) > 2:
+                        md = '%s->%d, ... %s->%d, %s->%d' % (
+                            it[0] + it[-2] + it[-1])
+                        logging.info('max_dist %s: %s', trt, md)
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
@@ -800,7 +805,6 @@ class HazardCalculator(BaseCalculator):
                              len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
-            self.crmodel.reduce_cons_model(self.assetcol.tagcol)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:
@@ -814,15 +818,16 @@ class HazardCalculator(BaseCalculator):
         self.af = None
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
-            df = readinput.get_amplification(oq)
+            df = AmplFunction.read_df(oq.inputs['amplification'])
             check_amplification(df, self.sitecol)
-            self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
             if oq.amplification_method == 'kernel':
                 # TODO: need to add additional checks on the main calculation
                 # methodology since the kernel method is currently tested only
                 # for classical PSHA
                 self.af = AmplFunction.from_dframe(df)
                 self.amplifier = None
+            else:
+                self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
         else:
             self.amplifier = None
 
@@ -837,13 +842,13 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_asset_loss=%s', mal)
         self.param = dict(individual_curves=oq.individual_curves,
                           ps_grid_spacing=oq.ps_grid_spacing,
+                          minimum_distance=oq.minimum_distance,
                           collapse_level=int(oq.collapse_level),
                           split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
                           sec_perils=sec_perils,
                           ses_seed=oq.ses_seed)
-
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
@@ -879,19 +884,29 @@ class HazardCalculator(BaseCalculator):
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
+        if rel_ruptures:
+            self.check_discardable(rel_ruptures)
 
-        # check for gsim logic tree reduction
-        discard_trts = []
-        for trt in self.full_lt.gsim_lt.values:
-            if rel_ruptures.get(trt, 0) == 0:
-                discard_trts.append(trt)
-        if (discard_trts and 'scenario' not in oq.calculation_mode
-                and 'event_based' not in oq.calculation_mode
-                and 'ebrisk' not in oq.calculation_mode
-                and not oq.is_ucerf()):
+    def check_discardable(self, rel_ruptures):
+        """
+        Check if logic tree reduction is possible
+        """
+        n = len(self.full_lt.sm_rlzs)
+        keep_trts = set()
+        nrups = []
+        for grp_id, trt_smrs in enumerate(self.datastore['trt_smrs']):
+            trti, smrs = numpy.divmod(trt_smrs, n)
+            trt = self.full_lt.trts[trti[0]]
+            nr = rel_ruptures.get(grp_id, 0)
+            nrups.append(nr)
+            if nr:
+                keep_trts.add(trt)
+        self.datastore['est_rups_by_grp'] = U32(nrups)
+        discard_trts = set(self.full_lt.trts) - keep_trts
+        if discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
-                   'discard_trts = %s\nin %s') % (', '.join(discard_trts),
-                                                  oq.inputs['job_ini'])
+                   'discard_trts = %s\nin %s') % (
+                       ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
     def store_source_info(self, calc_times, nsites=False):

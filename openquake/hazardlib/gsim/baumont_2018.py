@@ -28,6 +28,28 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
 
 
+def _compute_mean(C, rup, dists):
+    """
+    Compute mean value defined by equation on 2293
+    """
+    term01 = C['beta'] * (np.log10(dists.rhypo))
+    term02 = C['gamma'] * dists.rhypo
+    mean = C['c1'] + C['c2'] * rup.mag + term01 + term02
+
+    return mean
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        stddevs.append(np.sqrt(C['be']**2+C['we']**2) + np.zeros(num_sites))
+
+    return stddevs
+
+
 class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
     """
     Implements "Intensity predictive attenuation models
@@ -84,30 +106,9 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
         # intensity measure type
         C = self.COEFFS[imt]
 
-        mean = self._compute_mean(C, rup, dists)
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
+        mean = _compute_mean(C, rup, dists)
+        stddevs = _get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
         return mean, stddevs
-
-    def _compute_mean(self, C, rup, dists):
-        """
-        Compute mean value defined by equation on 2293
-        """
-        term01 = C['beta'] * (np.log10(dists.rhypo))
-        term02 = C['gamma'] * dists.rhypo
-        mean = C['c1'] + C['c2'] * rup.mag + term01 + term02
-
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            stddevs.append(np.sqrt(C['be']**2+C['we']**2) + np.zeros(num_sites))
-
-        return stddevs
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper

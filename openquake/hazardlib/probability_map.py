@@ -16,11 +16,25 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
+from openquake.baselib.performance import numba, compile
 import numpy
 
 F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+
+if numba:
+    @compile("void(float64[:, :], float64[:], uint32[:])")
+    def combine_probs(array, other, rlzs):
+        for li in range(len(array)):
+            for ri in rlzs:
+                if other[li] != 0.:
+                    array[li, ri] = (
+                        1. - (1. - array[li, ri]) * (1. - other[li]))
+else:
+    def combine_probs(array, other, rlzs):
+        for r in rlzs:
+            array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
 
 
 class AllEmptyProbabilityMaps(ValueError):
@@ -92,6 +106,22 @@ class ProbabilityCurve(object):
     def __repr__(self):
         return '<ProbabilityCurve\n%s>' % self.array
 
+    def extract(self, inner_idx):
+        """
+        Extracts the component specified by the index `inner_idx`.
+        """
+        array = self.array[:, inner_idx].reshape(-1, 1)
+        return self.__class__(array)
+
+    def combine(self, other, rlz_groups):
+        """
+        Update a ProbabilityCurve with shape (L, R) with a pcurve with shape
+        (L, G), being G the number of realization groups, which are list
+        of integers in the range 0..R-1.
+        """
+        for g, rlz_group in enumerate(rlz_groups):
+            combine_probs(self.array, other.array[:, g], rlz_group)
+
     # used when exporting to HDF5
     def convert(self, imtls, idx=0):
         """
@@ -125,7 +155,7 @@ class ProbabilityMap(dict):
     L the total number of hazard levels and I the number of GSIMs.
     """
     @classmethod
-    def build(cls, shape_y, shape_z, sids, initvalue=0., dtype=F64):
+    def build(cls, shape_y, shape_z, sids=(), initvalue=0., dtype=F64):
         """
         :param shape_y: the total number of intensity measure levels
         :param shape_z: the number of inner levels
@@ -244,6 +274,15 @@ class ProbabilityMap(dict):
             array = curve.array[:, inner_idx].reshape(-1, 1)
             out[sid] = ProbabilityCurve(array)
         return out
+
+    def combine(self, pmap, rlz_groups):
+        """
+        Update a ProbabilityMap with shape (L, R) with a pmap with shape
+        (L, G), being G the number of realization groups, which are list
+        of integers in the range 0..R-1.
+        """
+        for sid in pmap:
+            self[sid].combine(pmap[sid], rlz_groups)
 
     def __ior__(self, other):
         if not other:
