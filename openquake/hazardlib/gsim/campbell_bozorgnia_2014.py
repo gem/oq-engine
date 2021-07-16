@@ -249,8 +249,7 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
         f_site_g[idx] = f_site_g[idx] + C["k2"] * (
             np.log(pga_rock[idx] +
                    CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
-            np.log(pga_rock[idx] + CONSTS["c"])
-            )
+            np.log(pga_rock[idx] + CONSTS["c"]))
 
     # For Japan sites (SJ = 1) further scaling is needed (equation 19)
     if SJ:
@@ -259,7 +258,7 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
         # additional term activated for soft sites (Vs30 <= 200m/s)
         # in Japan data
         idx = vs30 <= 200.0
-        add_soft = (C["c12"] + C["k2"] * CONSTS["n"])* \
+        add_soft = (C["c12"] + C["k2"] * CONSTS["n"]) * \
             (np.log(vs_mod) - np.log(200.0 / C["k1"]))
         # combine terms
         fsite_j[idx] += add_soft[idx]
@@ -307,24 +306,24 @@ def _get_stddevs(C, C_PGA, ctx, pga1100, stddev_types):
     return stddevs
 
 
-def _get_stddevs_pga(C, rup):
+def _get_stddevs_pga(C, ctx):
     """
     Returns the inter- and intra-event coefficients for PGA
     """
-    tau_lnpga_b = _get_taulny(C, rup.mag)
-    phi_lnpga_b = np.sqrt(_get_philny(C, rup.mag) ** 2. -
+    tau_lnpga_b = _get_taulny(C, ctx.mag)
+    phi_lnpga_b = np.sqrt(_get_philny(C, ctx.mag) ** 2. -
                           CONSTS["philnAF"] ** 2.)
     return tau_lnpga_b, phi_lnpga_b
 
 
-def _get_style_of_faulting_term(C, rup):
+def _get_style_of_faulting_term(C, ctx):
     """
     Returns the style-of-faulting scaling term defined in equations 4 to 6
     """
-    if (rup.rake > 30.0) and (rup.rake < 150.):
+    if (ctx.rake > 30.0) and (ctx.rake < 150.):
         frv = 1.0
         fnm = 0.0
-    elif (rup.rake > -150.0) and (rup.rake < -30.0):
+    elif (ctx.rake > -150.0) and (ctx.rake < -30.0):
         fnm = 1.0
         frv = 0.0
     else:
@@ -332,12 +331,12 @@ def _get_style_of_faulting_term(C, rup):
         frv = 0.0
 
     fflt_f = (CONSTS["c8"] * frv) + (C["c9"] * fnm)
-    if rup.mag <= 4.5:
+    if ctx.mag <= 4.5:
         fflt_m = 0.0
-    elif rup.mag > 5.5:
+    elif ctx.mag > 5.5:
         fflt_m = 1.0
     else:
-        fflt_m = rup.mag - 4.5
+        fflt_m = ctx.mag - 4.5
     return fflt_f * fflt_m
 
 
