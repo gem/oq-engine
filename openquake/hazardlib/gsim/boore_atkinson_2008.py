@@ -201,7 +201,7 @@ def _compute_non_linear_term(pga4nl, bnl):
 def _compute_soil_amplification(C, vs30, pga_bc, mean):
     """
     Compute soil amplification, that is S term in equation (5), p. 2191,
-    and add to mean values for non hard rock ctx.
+    and add to mean values for non hard rock sites.
     """
     # convert from base e (as defined in BA2008) to base 10 (as used in
     # AB2006)
@@ -292,8 +292,8 @@ def _get_mean(self, vs30, mag, rrup, imt, scale_fac):
     pga_bc = _get_pga_bc(
         self.COEFFS_BC[PGA()], f0, f1, f2, SC, mag, rrup, vs30, scale_fac)
 
-    # compute mean values for hard-rock ctx (vs30 >= 2000),
-    # and non-hard-rock ctx (vs30 < 2000) and add soil amplification
+    # compute mean values for hard-rock sites (vs30 >= 2000),
+    # and non-hard-rock sites (vs30 < 2000) and add soil amplification
     # term
     mean = np.zeros_like(vs30)
     _compute_mean(C_HR, f0, f1, f2, SC, mag, rrup,
@@ -675,7 +675,7 @@ class AtkinsonBoore2006(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters is Vs30.
-    #: See paragraph 'Equations for soil ctx', p. 2200
+    #: See paragraph 'Equations for soil sites', p. 2200
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameter is magnitude (see
