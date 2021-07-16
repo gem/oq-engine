@@ -132,36 +132,33 @@ class EasternCan15Mid(GMPE):
         cff = self.COEFFS_SITE[imt]
 
         # add equivalent distances
-        distsl = copy.copy(dists)
-        distsl.rjb, distsl.rrup = utils.get_equivalent_distances_east(
-            rup.mag, dists.repi)
+        ctx = utils.add_distances_east(rup)
 
         # Pezeshk et al. 2011 - Rrup
-        mean1, stds1 = g[0].get_mean_and_stddevs(sites, rup, distsl, imt,
+        mean1, stds1 = g[0].get_mean_and_stddevs(ctx, ctx, ctx, imt,
                                                  stddev_types)
-        mean1 = apply_correction_to_BC(cff, mean1, imt, distsl)
+        mean1 = apply_correction_to_BC(cff, mean1, imt, ctx)
         #
         # Atkinson 2008 - Rjb
-        mean2, stds2 = g[1].get_mean_and_stddevs(sites, rup, distsl, imt,
+        mean2, stds2 = g[1].get_mean_and_stddevs(ctx, ctx, ctx, imt,
                                                  stddev_types)
         #
         # Silva et al. 2002 - Rjb
         gmpe = SilvaEtAl2002SingleCornerSaturation()
-        mean4, stds4 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
+        mean4, stds4 = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt,
                                                  stddev_types)
-        mean4 = apply_correction_to_BC(cff, mean4, imt, distsl)
+        mean4 = apply_correction_to_BC(cff, mean4, imt, ctx)
         #
         # Silva et al. 2002 - Rjb
-        mean5, stds5 = g[2].get_mean_and_stddevs(sites, rup, distsl, imt,
+        mean5, stds5 = g[2].get_mean_and_stddevs(ctx, ctx, ctx, imt,
                                                  stddev_types)
-        mean5 = apply_correction_to_BC(cff, mean5, imt, distsl)
+        mean5 = apply_correction_to_BC(cff, mean5, imt, ctx)
         #
         # distances
-        distsl.rjb, distsl.rrup = utils.get_equivalent_distances_east(
-            rup.mag, dists.repi, ab06=True)
-        #
+        ctx = utils.add_distances_east(rup, ab06=True)
+
         # Atkinson and Boore 2006 - Rrup
-        mean3, stds3 = g[3].get_mean_and_stddevs(sites, rup, distsl, imt,
+        mean3, stds3 = g[3].get_mean_and_stddevs(ctx, ctx, ctx, imt,
                                                  stddev_types)
         # Computing adjusted mean and stds
         mean_adj = mean1*0.2 + mean2*0.2 + mean3*0.2 + mean4*0.2 + mean5*0.2
