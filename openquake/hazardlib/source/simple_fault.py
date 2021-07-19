@@ -81,8 +81,9 @@ class SimpleFaultSource(ParametricSeismicSource):
         for the lowest magnitude value.
     """
     code = b'S'
-    MODIFICATIONS = {'set_geometry', 'adjust_dip', 'set_dip',
-                     'adjust_mfd_from_slip'}
+    MODIFICATIONS = {'adjust_dip', 'adjust_mfd_from_slip',
+                     'set_dip', 'set_geometry', 'set_msr', 'set_slip_rate',
+                     'set_mmax_truncatedGR', }
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,

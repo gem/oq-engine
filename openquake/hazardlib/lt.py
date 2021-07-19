@@ -20,6 +20,7 @@ import copy
 import collections
 import numpy
 
+import openquake.hazardlib.scalerel as msr
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, source as ohs
 from openquake.hazardlib.sourceconverter import (
@@ -89,6 +90,17 @@ def trucMFDFromSlip_absolute(utype, node, filename):
                            node.faultActivityData["rigidity"])
     return slip_rate, rigidity
 
+
+@parse_uncertainty.add('setMSRAbsolute')
+def setMSR_absolute(utype, node, filename):
+    msr_txt = node.text
+    msr_instance = msr.get_available_area_scalerel()[msr_txt]
+    return msr_instance
+
+
+@parse_uncertainty.add('setSlipRateAbsolute')
+def set_slip_rate_absolute(utype, node, filename):
+    return float(node.text)
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
 def simpleGeom(utype, node, filename):
@@ -277,16 +289,16 @@ def _trucMFDFromSlip_absolute(utype, source, value):
     source.modify('adjust_mfd_from_slip', dict(slip_rate=slip_rate,
                                                rigidity=rigidity))
 
-@apply_uncertainty.add('setMSR')
+@apply_uncertainty.add('setMSRAbsolute')
 def _setMSR(utype, source, value):
     msr = value
-    source.modify('modify_msr', dict(new_msr=msr))
+    source.modify('set_msr', dict(new_msr=msr))
 
 
-@apply_uncertainty.add('setSlipRate')
+@apply_uncertainty.add('setSlipRateAbsolute')
 def _setSlipRate(utype, source, value):
     slip_rate = value
-    source.modify('modify_slip_rate', dict(slip_rate=slip_rate))
+    source.modify('set_slip_rate', dict(slip_rate=slip_rate))
 
 
 # ######################### apply_uncertainties ########################### #

@@ -359,7 +359,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
                 rup.idx = idx
                 return rup
 
-    def modify_msr(self, new_msr):
+    def modify_set_msr(self, new_msr):
         """
         Updates the MSR originally assigned to the source
 
@@ -368,7 +368,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         self.msr = new_msr
 
-    def modify_slip_rate(self, slip_rate: float):
+    def modify_set_slip_rate(self, slip_rate: float):
         """
         Updates the slip rate assigned to the source
 
@@ -377,7 +377,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         self.slip_rate = slip_rate
 
-    def modify_mmax_truncatedGR(self, mmax: float):
+    def modify_set_mmax_truncatedGR(self, mmax: float):
         """
         Updates the mmax assigned. This works on for parametric MFDs.s
 
