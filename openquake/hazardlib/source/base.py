@@ -20,6 +20,7 @@ seismic sources.
 import abc
 import zlib
 import numpy
+from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
@@ -281,8 +282,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         (if not None).
     """
 
-    MODIFICATIONS = {'modify_msr'}
-
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model):
@@ -360,6 +359,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
                 rup.idx = idx
                 return rup
 
+<<<<<<< HEAD
     def modify_msr(self, new_msr):
         """
         Updates the MSR originally assigned to the source
@@ -377,3 +377,28 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
             The value of slip rate [mm/yr]
         """
         self.slip_rate = slip_rate
+=======
+    def modify_adjust_mfd_from_slip(self, slip_rate, rigidity):
+        """
+        :slip_rate:
+            A float defining slip rate [in mm]
+        :rigidity:
+            A float defining material rigidity [in GPa]
+        """
+        # Check that the current src has a TruncatedGRMFD MFD
+        msg = 'This modification works only when the source MFD is a '
+        msg += 'TruncatedGRMFD'
+        assert self.mfd.__class__.__name__ == 'TruncatedGRMFD', msg
+        # Compute moment
+        area = self.get_fault_surface_area() * 1e6  # area in m^2
+        rigidity *= 1e9  # rigidity in Pa
+        slip_rate *= 1e-3  # slip rate in m
+        mo = rigidity * area * slip_rate
+        # Update the MFD
+        min_mag = self.mfd.min_mag
+        max_mag = self.mfd.max_mag
+        bin_w = self.mfd.bin_width
+        b_val = self.mfd.b_val
+        self.mfd = mfd.TruncatedGRMFD.from_moment(min_mag, max_mag, bin_w,
+                                                  b_val, mo)
+>>>>>>> lt_generalize
