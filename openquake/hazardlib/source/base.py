@@ -359,7 +359,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
                 rup.idx = idx
                 return rup
 
-<<<<<<< HEAD
     def modify_msr(self, new_msr):
         """
         Updates the MSR originally assigned to the source
@@ -377,7 +376,20 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
             The value of slip rate [mm/yr]
         """
         self.slip_rate = slip_rate
-=======
+
+    def modify_mmax_truncatedGR(self, mmax: float):
+        """
+        Updates the mmax assigned. This works on for parametric MFDs.s
+
+        :param mmax:
+            The value of the new maximum magnitude
+        """
+        # Check that the current src has a TruncatedGRMFD MFD
+        msg = 'This modification works only when the source MFD is a '
+        msg += 'TruncatedGRMFD'
+        assert self.mfd.__class__.__name__ == 'TruncatedGRMFD', msg
+        self.mfd.max_mag
+
     def modify_adjust_mfd_from_slip(self, slip_rate, rigidity):
         """
         :slip_rate:
@@ -401,4 +413,3 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         b_val = self.mfd.b_val
         self.mfd = mfd.TruncatedGRMFD.from_moment(min_mag, max_mag, bin_w,
                                                   b_val, mo)
->>>>>>> lt_generalize
