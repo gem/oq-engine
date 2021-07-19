@@ -280,6 +280,9 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         If either rupture aspect ratio or rupture mesh spacing is not positive
         (if not None).
     """
+
+    MODIFICATIONS = {'modify_msr'}
+
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model):
@@ -356,3 +359,21 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
                     rup.rup_id = self.rup_id
                 rup.idx = idx
                 return rup
+
+    def modify_msr(self, new_msr):
+        """
+        Updates the MSR originally assigned to the source
+
+        :param new_msr:
+            An instance of the :class:`openquake.hazardlib.scalerel.BaseMSR`
+        """
+        self.msr = new_msr
+
+    def modify_slip_rate(self, slip_rate: float):
+        """
+        Updates the slip rate assigned to the source
+
+        :param slip_rate:
+            The value of slip rate [mm/yr]
+        """
+        self.slip_rate = slip_rate

@@ -277,6 +277,17 @@ def _trucMFDFromSlip_absolute(utype, source, value):
     source.modify('adjust_mfd_from_slip', dict(slip_rate=slip_rate,
                                                rigidity=rigidity))
 
+@apply_uncertainty.add('setMSR')
+def _setMSR(utype, source, value):
+    msr = value
+    source.modify('modify_msr', dict(new_msr=msr))
+
+
+@apply_uncertainty.add('setSlipRate')
+def _setSlipRate(utype, source, value):
+    slip_rate = value
+    source.modify('modify_slip_rate', dict(slip_rate=slip_rate))
+
 
 # ######################### apply_uncertainties ########################### #
 
