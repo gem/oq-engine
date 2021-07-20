@@ -302,14 +302,11 @@ def get_basin_depth_scaling(C, region, vs30, z25):
     f_basin = np.zeros(vs30.shape)
     if region == "JPN":
         # Japan Basin (Equation 3.10)
-        #idx = ln_z25_prime > -2.0
-        #f_basin[idx] = C["a41"] * ln_z25_prime[idx]
         f_basin = C["a41"] * np.clip(ln_z25_prime, -2.0, np.inf)
     else:
         # Cascadia Basin (Equation 3.11)
         idx = ln_z25_prime > 0.0
         f_basin[idx] = C["a39"] * ln_z25_prime[idx]
-    #print(z25, z25_ref, ln_z25_prime, f_basin)
     return f_basin
 
 
@@ -509,7 +506,6 @@ def get_tau_phi(C, C_PGA, region, period, rrup, vs30, pga1000, ergodic):
     if not ergodic:
         # Need to update the nonlinear within-event variability term to remove
         # the site-to-site variability
-
         phi_ss = np.sqrt(phi_lin ** 2.0 - phi_s2s ** 2.0)
         phi_ss_pga = np.sqrt(phi_lin_pga ** 2.0 - phi_s2s_pga ** 2.0)
         phi_ss_b = np.sqrt(phi_ss[idx] ** 2.0 - CONSTS["phi_amp"] ** 2.0)
@@ -649,9 +645,6 @@ class AbrahamsonGulerce2020SInter(GMPE):
         
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            #print(mean[m])
-            #print(get_mean_acceleration(C, trt, self.region, ctx, pga1000))
-            
             mean[m] = get_mean_acceleration(C, trt, self.region, ctx, pga1000,
                                             self.apply_usa_adjustment)
             if self.sigma_mu_epsilon:
@@ -704,7 +697,7 @@ class AbrahamsonGulerce2020SSlab(AbrahamsonGulerce2020SInter):
 
     Abrahamson N. and Gulurce Z. (2020) "Regionalized Ground-Motion Models
     for Subduction Earthquakes based on the NGA-SUB Database", Pacific
-    Earthquake Engineerin gResearch Center (PEER) Technical Report,
+    Earthquake Engineering Research Center (PEER) Technical Report,
     PEER 2020/25
     """
     #: Required rupture parameters are only magnitude for the interface model
