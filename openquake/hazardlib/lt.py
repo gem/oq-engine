@@ -98,10 +98,6 @@ def setMSR_absolute(utype, node, filename):
     return msr_instance
 
 
-@parse_uncertainty.add('setSlipRateAbsolute')
-def set_slip_rate_absolute(utype, node, filename):
-    return float(node.text)
-
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
 def simpleGeom(utype, node, filename):
     if hasattr(node, 'simpleFaultGeometry'):
@@ -261,6 +257,12 @@ def _abGR_absolute(utype, source, value):
     source.mfd.modify('set_ab', dict(a_val=a, b_val=b))
 
 
+@apply_uncertainty.add('bGRAbsolute')
+def _bGR_absolute(utype, source, value):
+    b_val = float(value)
+    source.mfd.modify('set_bGR', dict(b_val=b_val))
+
+
 @apply_uncertainty.add('bGRRelative')
 def _abGR_relative(utype, source, value):
     source.mfd.modify('increment_b', dict(value=value))
@@ -289,16 +291,16 @@ def _trucMFDFromSlip_absolute(utype, source, value):
     source.modify('adjust_mfd_from_slip', dict(slip_rate=slip_rate,
                                                rigidity=rigidity))
 
+
 @apply_uncertainty.add('setMSRAbsolute')
 def _setMSR(utype, source, value):
     msr = value
     source.modify('set_msr', dict(new_msr=msr))
 
 
-@apply_uncertainty.add('setSlipRateAbsolute')
-def _setSlipRate(utype, source, value):
-    slip_rate = value
-    source.modify('set_slip_rate', dict(slip_rate=slip_rate))
+@apply_uncertainty.add('setLowerSeismDepthAbsolute')
+def _setLSD(utype, source, value):
+    source.modify('set_lower_seismogenic_depth', dict(lsd=float(value)))
 
 
 # ######################### apply_uncertainties ########################### #
