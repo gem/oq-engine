@@ -917,5 +917,5 @@ hazard_uhs-std.csv
     def test_case_72(self):
         # test LT
         self.run_calc(case_72.__file__, 'job.ini')
-        f1, f2 = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
