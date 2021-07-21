@@ -366,7 +366,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         :param new_msr:
             An instance of the :class:`openquake.hazardlib.scalerel.BaseMSR`
         """
-        self.msr = new_msr
+        self.magnitude_scaling_relationship = new_msr
 
     def modify_set_slip_rate(self, slip_rate: float):
         """
@@ -390,10 +390,23 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         assert self.mfd.__class__.__name__ == 'TruncatedGRMFD', msg
         self.mfd.max_mag
 
-    def modify_adjust_mfd_from_slip(self, slip_rate, rigidity):
+    def modify_recompute_mmax(self, epsilon: float = 0):
+        """
+        Updates the value of mmax using the msr and the area of the fault
+        """
+        msr = self.magnitude_scaling_relationship
+        area = self.get_fault_surface_area() * 1e6  # area in m^2
+        mag = msr.get_median_mag(area=area, rake=self.rake)
+        std = msr.get_std_dev_mag(rake=self.rake)
+        self.mfd.max_mag = mag + epsilon * std
+
+    def modify_adjust_mfd_from_slip(self, slip_rate: float, rigidity: float,
+                                    recompute_mmax: float = None):
         """
         :slip_rate:
             A float defining slip rate [in mm]
+        :rigidity:
+            A float defining material rigidity [in GPa]
         :rigidity:
             A float defining material rigidity [in GPa]
         """

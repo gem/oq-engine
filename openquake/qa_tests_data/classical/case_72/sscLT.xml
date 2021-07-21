@@ -32,14 +32,18 @@
         </logicTreeBranch>
     </logicTreeBranchSet>
 
-    <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute" branchSetID="bs3" applyToSources="src1">
-        <logicTreeBranch branchID="b31">
-            <uncertaintyModel>7.0</uncertaintyModel>
-            <uncertaintyWeight>0.6</uncertaintyWeight>
+    <logicTreeBranchSet uncertaintyType="recomputeMmax" branchSetID="bs2a" applyToSources="src1">
+        <logicTreeBranch branchID="b2a1">
+            <uncertaintyModel>0</uncertaintyModel>
+            <uncertaintyWeight>0.8</uncertaintyWeight>
         </logicTreeBranch>
-        <logicTreeBranch branchID="b32">
-            <uncertaintyModel>7.2</uncertaintyModel>
-            <uncertaintyWeight>0.4</uncertaintyWeight>
+        <logicTreeBranch branchID="b2a2">
+            <uncertaintyModel>-1</uncertaintyModel>
+            <uncertaintyWeight>0.1</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="b2a3">
+            <uncertaintyModel>+1</uncertaintyModel>
+            <uncertaintyWeight>0.1</uncertaintyWeight>
         </logicTreeBranch>
     </logicTreeBranchSet>
 
@@ -57,13 +61,13 @@
     <logicTreeBranchSet uncertaintyType="truncatedGRFromSlipAbsolute" branchSetID="bs9" applyToSources="src1">
         <logicTreeBranch branchID="b91">
             <uncertaintyModel>
-                <faultActivityData slipRate="5.0" rigidity="32"/>
+                <faultActivityData slipRate="5.0" rigidity="32" />
             </uncertaintyModel>
             <uncertaintyWeight>0.3</uncertaintyWeight>
         </logicTreeBranch>
         <logicTreeBranch branchID="b92">
             <uncertaintyModel>
-                <faultActivityData slipRate="20.0" rigidity="32"/>
+                <faultActivityData slipRate="20.0" rigidity="32" recompute_mmax=""/>
             </uncertaintyModel>
             <uncertaintyWeight>0.7</uncertaintyWeight>
         </logicTreeBranch>

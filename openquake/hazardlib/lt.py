@@ -25,6 +25,7 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, source as ohs
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
+from openquake.hazardlib import valid, InvalidFile
 
 
 class LogicTreeError(Exception):
@@ -93,9 +94,8 @@ def trucMFDFromSlip_absolute(utype, node, filename):
 
 @parse_uncertainty.add('setMSRAbsolute')
 def setMSR_absolute(utype, node, filename):
-    msr_txt = node.text
-    msr_instance = msr.get_available_area_scalerel()[msr_txt]
-    return msr_instance
+    tmps = valid.mag_scale_rel(node.text)
+    return valid.SCALEREL[tmps]()
 
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
@@ -296,6 +296,12 @@ def _trucMFDFromSlip_absolute(utype, source, value):
 def _setMSR(utype, source, value):
     msr = value
     source.modify('set_msr', dict(new_msr=msr))
+
+
+@apply_uncertainty.add('recomputeMmax')
+def _recompute_mmax_absolute(utype, source, value):
+    epsilon = value
+    source.modify('recompute_mmax', dict(epsilon=epsilon))
 
 
 @apply_uncertainty.add('setLowerSeismDepthAbsolute')
