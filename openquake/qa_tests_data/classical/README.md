@@ -65,3 +65,10 @@
 | case_63 | Test for GMM with soiltype |
 | case_64 | |
 | case_65 | Test for the multi fault source |
+| case_66 | |
+| case_67 | |
+| case_68 | |
+| case_69 | |
+| case_70 | |
+| case_71 | |
+| [case_72](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_72) | Tests some epistemic uncertainties in a source-specific LT | 
