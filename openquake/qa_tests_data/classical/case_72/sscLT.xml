@@ -54,7 +54,7 @@
         </logicTreeBranch>
     </logicTreeBranchSet>
 
-    <logicTreeBranchSet uncertaintyType="bGRAbsolute" branchSetID="bs4" applyToSources="src1">
+    <logicTreeBranchSet uncertaintyType="bGRAbsolute" branchSetID="bs4" applyToSources="src1" applyToBranches="b2a1 b2a2 b2a3 b2b1">
         <logicTreeBranch branchID="b41">
             <uncertaintyModel>1.0</uncertaintyModel>
             <uncertaintyWeight>0.5</uncertaintyWeight>
