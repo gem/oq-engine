@@ -60,6 +60,7 @@
   [Marco Pagani, Michele Simionato]
   * Implemented MultiFaultSources
   * Added method for computing rjb to kite surfaces
+  * Added support for new epistemic uncertainties in the SSC LT
 
   [Michele Simionato]
   * Fixed newlines in the CSV exports on Windows
