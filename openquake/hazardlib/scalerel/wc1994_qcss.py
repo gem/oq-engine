@@ -25,9 +25,9 @@ from openquake.hazardlib.scalerel.base import BaseMSRSigma
 
 class WC1994_QCSS(BaseMSRSigma):
     """
-    Local modification of WC1994 to mimic behaviour of GSCFRISK code for the 
+    Local modification of WC1994 to mimic behaviour of GSCFRISK code for the
     Queen Charlotte Strike-Slip (QCSS) fault based on rupture length for the
-    2015 Seismic Hazard Model of Canada as documented in Adams, J., S. Halchuk, 
+    2015 Seismic Hazard Model of Canada as documented in Adams, J., S. Halchuk,
     T. Allen, and G. Rogers (2015). Canada's 5th Generation seismic hazard
     model, as prepared for the 2015 National Building Code of Canada, 11th
     Canadian Conference on Earthquake Engineering, Victoria, Canada, Paper
@@ -35,9 +35,9 @@ class WC1994_QCSS(BaseMSRSigma):
 
     Implements magnitude-length scaling relationship for strike-slip faults
 
-    Coefficents taken from Table 2A (P990) of Wells, D. L., and K. J. 
-    Coppersmith (1994). New empirical relationships among magnitude, 
-    rupture length, rupture width, rupture area, and surface displacement, 
+    Coefficents taken from Table 2A (P990) of Wells, D. L., and K. J.
+    Coppersmith (1994). New empirical relationships among magnitude,
+    rupture length, rupture width, rupture area, and surface displacement,
     Bull. Seism. Soc. Am. 84, 974-1002.
     """
     def get_median_area(self, mag, rake):
@@ -51,8 +51,7 @@ class WC1994_QCSS(BaseMSRSigma):
         # estimate area based on length
         if length < seis_wid:
             return length ** 2.
-        else:
-            return length * seis_wid
+        return length * seis_wid
 
     def get_std_dev_area(self, mag, rake):
         """
