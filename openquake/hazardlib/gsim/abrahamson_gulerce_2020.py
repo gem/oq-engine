@@ -536,7 +536,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
 
     Abrahamson N. and Gulurce Z. (2020) "Regionalized Ground-Motion Models
     for Subduction Earthquakes based on the NGA-SUB Database", Pacific
-    Earthquake Engineerin gResearch Center (PEER) Technical Report,
+    Earthquake Engineering Research Center (PEER) Technical Report,
     PEER 2020/25
 
     The model is regionalised, defining specific adjustment factors for
@@ -595,15 +595,16 @@ class AbrahamsonGulerce2020SInter(GMPE):
     #: and peak ground acceleration
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
-    #: Supported intensity measure component is the geometric mean component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: Supported intensity measure component is RotD50
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see section 4.5
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    #: Site amplification is dependent only upon Vs30
+    #: Site amplification is dependent only upon Vs30 for the majority of cases
+    #: but Z2.5 is added for the JPN and CAS regions
     REQUIRES_SITES_PARAMETERS = {'vs30', }
 
     #: Required rupture parameters are only magnitude for the interface model
@@ -700,7 +701,7 @@ class AbrahamsonGulerce2020SSlab(AbrahamsonGulerce2020SInter):
     Earthquake Engineering Research Center (PEER) Technical Report,
     PEER 2020/25
     """
-    #: Required rupture parameters are only magnitude for the interface model
+    #: Required rupture parameters are magnitude and top-of-rupture depth
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     #: Supported tectonic region type is subduction inslab
