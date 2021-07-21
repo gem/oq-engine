@@ -162,7 +162,12 @@ site_param_dt = {
     'hwater': numpy.float64,
     'precip': numpy.float64,
     'fpeak': numpy.float64,
-
+    'freeface_ratio': numpy.float64,
+    'T_15': numpy.float64,
+    'D50_15': numpy.float64,
+    'F_15': numpy.float64,
+    'T_eq': numpy.float64,
+    
     # other parameters
     'custom_site_id': numpy.uint32,
     'region': numpy.uint32
