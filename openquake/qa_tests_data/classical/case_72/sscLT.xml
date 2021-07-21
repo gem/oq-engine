@@ -32,7 +32,7 @@
         </logicTreeBranch>
     </logicTreeBranchSet>
 
-    <logicTreeBranchSet uncertaintyType="recomputeMmax" branchSetID="bs2a" applyToSources="src1">
+    <logicTreeBranchSet uncertaintyType="recomputeMmax" branchSetID="bs2a" applyToSources="src1" applyToBranches="b21">
         <logicTreeBranch branchID="b2a1">
             <uncertaintyModel>0</uncertaintyModel>
             <uncertaintyWeight>0.8</uncertaintyWeight>
@@ -44,6 +44,13 @@
         <logicTreeBranch branchID="b2a3">
             <uncertaintyModel>+1</uncertaintyModel>
             <uncertaintyWeight>0.1</uncertaintyWeight>
+        </logicTreeBranch>
+    </logicTreeBranchSet>
+
+    <logicTreeBranchSet uncertaintyType="recomputeMmax" branchSetID="bs2b" applyToSources="src1" applyToBranches="b22">
+        <logicTreeBranch branchID="b2b1">
+            <uncertaintyModel>0</uncertaintyModel>
+            <uncertaintyWeight>1.0</uncertaintyWeight>
         </logicTreeBranch>
     </logicTreeBranchSet>
 

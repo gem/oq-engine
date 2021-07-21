@@ -393,11 +393,14 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     def modify_recompute_mmax(self, epsilon: float = 0):
         """
         Updates the value of mmax using the msr and the area of the fault
+
+        :param epsilon:
+            Number of standard deviations to be added or substracted
         """
         msr = self.magnitude_scaling_relationship
         area = self.get_fault_surface_area() * 1e6  # area in m^2
         mag = msr.get_median_mag(area=area, rake=self.rake)
-        std = msr.get_std_dev_mag(rake=self.rake)
+        std = msr.get_std_dev_mag(area=area, rake=self.rake)
         self.mfd.max_mag = mag + epsilon * std
 
     def modify_adjust_mfd_from_slip(self, slip_rate: float, rigidity: float,
