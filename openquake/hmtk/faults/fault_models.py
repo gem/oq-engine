@@ -153,7 +153,6 @@ class RecurrenceBranch(object):
         model = MFD_MAP[config['Model_Name']]()
         model.setUp(config)
         model.get_mmax(config, self.msr, self.rake, self.area)
-        print(self.msr_sigma, model.mmax_sigma)
         model.mmax = model.mmax + (self.msr_sigma * model.mmax_sigma)
         # As the Anderson & Luco arbitrary model requires the input of the
         # displacement to length ratio
