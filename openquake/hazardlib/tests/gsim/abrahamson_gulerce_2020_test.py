@@ -46,17 +46,17 @@ class AbrahamsonGulerce2020SInterTestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check(self.TOTAL_FILE, max_discrep_percentage=0.1,
-                   region=self.REG, apply_adjustment=self.ADJ,
+                   region=self.REG, apply_usa_adjustment=self.ADJ,
                    sigma_mu_epsilon = self.SIGMA_MU_EPSILON)
 
     def test_std_inter_event(self):
         self.check(self.INTER_FILE, max_discrep_percentage=0.1,
-                   region=self.REG, apply_adjustment=self.ADJ,
+                   region=self.REG, apply_usa_adjustment=self.ADJ,
                    sigma_mu_epsilon = self.SIGMA_MU_EPSILON)
 
     def test_std_intra_event(self):
         self.check(self.INTRA_FILE, max_discrep_percentage=0.1,
-                   region=self.REG, apply_adjustment=self.ADJ,
+                   region=self.REG, apply_usa_adjustment=self.ADJ,
                    sigma_mu_epsilon = self.SIGMA_MU_EPSILON)
 
 
@@ -86,15 +86,15 @@ class AbrahamsonGulerce2020SInterAlaskaTestCase(
 
 
 # Interface - Alaska (with adjustment)
-#class AbrahamsonGulerce2020SInterAlaskaAdjustTestCase(
-#        AbrahamsonGulerce2020SInterTestCase):
-#    GSIM_CLASS = AbrahamsonGulerce2020SInter
-#    MEAN_FILE = "ag2020/AG2020_INTERFACE_USA_AK_Adjust_MEAN.csv"
-#    TOTAL_FILE = "ag2020/AG2020_INTERFACE_USA_AK_Adjust_TOTAL_STDDEV.csv"
-#    INTER_FILE = "ag2020/AG2020_INTERFACE_USA_AK_Adjust_INTER_EVENT_STDDEV.csv"
-#    INTRA_FILE = "ag2020/AG2020_INTERFACE_USA_AK_Adjust_INTRA_EVENT_STDDEV.csv"
-#    REG = "USA-AK"
-#    ADJ = True
+class AbrahamsonGulerce2020SInterAlaskaAdjustTestCase(
+        AbrahamsonGulerce2020SInterTestCase):
+    GSIM_CLASS = AbrahamsonGulerce2020SInter
+    MEAN_FILE = "ag2020/AG2020_INTERFACE_USA_AK_Adjust_MEAN.csv"
+    TOTAL_FILE = "ag2020/AG2020_INTERFACE_USA_AK_Adjust_TOTAL_STDDEV.csv"
+    INTER_FILE = "ag2020/AG2020_INTERFACE_USA_AK_Adjust_INTER_EVENT_STDDEV.csv"
+    INTRA_FILE = "ag2020/AG2020_INTERFACE_USA_AK_Adjust_INTRA_EVENT_STDDEV.csv"
+    REG = "USA-AK"
+    ADJ = True
 
 
 # Interface - Cascadia
@@ -109,15 +109,15 @@ class AbrahamsonGulerce2020SInterCascadiaTestCase(
 
 
 # Interface - Cascadia (with adjustment)
-#class AbrahamsonGulerce2020SInterCascadiaAdjustTestCase(
-#        AbrahamsonGulerce2020SInterTestCase):
-#    GSIM_CLASS = AbrahamsonGulerce2020SInter
-#    MEAN_FILE = "ag2020/AG2020_INTERFACE_CAS_Adjust_MEAN.csv"
-#    TOTAL_FILE = "ag2020/AG2020_INTERFACE_CAS_Adjust_TOTAL_STDDEV.csv"
-#    INTER_FILE = "ag2020/AG2020_INTERFACE_CAS_Adjust_INTER_EVENT_STDDEV.csv"
-#    INTRA_FILE = "ag2020/AG2020_INTERFACE_CAS_Adjust_INTRA_EVENT_STDDEV.csv"
-#    REG = "CAS"
-#    ADJ = True
+class AbrahamsonGulerce2020SInterCascadiaAdjustTestCase(
+        AbrahamsonGulerce2020SInterTestCase):
+    GSIM_CLASS = AbrahamsonGulerce2020SInter
+    MEAN_FILE = "ag2020/AG2020_INTERFACE_CAS_Adjust_MEAN.csv"
+    TOTAL_FILE = "ag2020/AG2020_INTERFACE_CAS_Adjust_TOTAL_STDDEV.csv"
+    INTER_FILE = "ag2020/AG2020_INTERFACE_CAS_Adjust_INTER_EVENT_STDDEV.csv"
+    INTRA_FILE = "ag2020/AG2020_INTERFACE_CAS_Adjust_INTRA_EVENT_STDDEV.csv"
+    REG = "CAS"
+    ADJ = True
 
 
 # Interface - Central America & Mexico
@@ -202,17 +202,17 @@ class AbrahamsonGulerce2020SSlabAlaskaTestCase(
 
 
 ## In-slab - Alaska (with adjustment)
-#class AbrahamsonGulerce2020SSlabAlaskaAdjustTestCase(
-#        AbrahamsonGulerce2020SInterTestCase):
-#    GSIM_CLASS = AbrahamsonGulerce2020SSlab
-#    MEAN_FILE = "ag2020/AG2020_INSLAB_USA_AK_Adjust_MEAN.csv"
-#    TOTAL_FILE = "ag2020/AG2020_INSLAB_USA_AK_Adjust_TOTAL_STDDEV.csv"
-#    INTER_FILE = "ag2020/AG2020_INSLAB_USA_AK_Adjust_INTER_EVENT_STDDEV.csv"
-#    INTRA_FILE = "ag2020/AG2020_INSLAB_USA_AK_Adjust_INTRA_EVENT_STDDEV.csv"
-#    REG = "USA-AK"
-#    ADJ = True
-#
-#
+class AbrahamsonGulerce2020SSlabAlaskaAdjustTestCase(
+        AbrahamsonGulerce2020SInterTestCase):
+    GSIM_CLASS = AbrahamsonGulerce2020SSlab
+    MEAN_FILE = "ag2020/AG2020_INSLAB_USA_AK_Adjust_MEAN.csv"
+    TOTAL_FILE = "ag2020/AG2020_INSLAB_USA_AK_Adjust_TOTAL_STDDEV.csv"
+    INTER_FILE = "ag2020/AG2020_INSLAB_USA_AK_Adjust_INTER_EVENT_STDDEV.csv"
+    INTRA_FILE = "ag2020/AG2020_INSLAB_USA_AK_Adjust_INTRA_EVENT_STDDEV.csv"
+    REG = "USA-AK"
+    ADJ = True
+
+
 # In-slab - Cascadia
 class AbrahamsonGulerce2020SSlabCascadiaTestCase(
         AbrahamsonGulerce2020SInterTestCase):
@@ -224,18 +224,18 @@ class AbrahamsonGulerce2020SSlabCascadiaTestCase(
     REG = "CAS"
 
 
-## In-slab - Cascadia (with adjustment)
-#class AbrahamsonGulerce2020SSlabCascadiaAdjustTestCase(
-#        AbrahamsonGulerce2020SInterTestCase):
-#    GSIM_CLASS = AbrahamsonGulerce2020SSlab
-#    MEAN_FILE = "ag2020/AG2020_INSLAB_CAS_Adjust_MEAN.csv"
-#    TOTAL_FILE = "ag2020/AG2020_INSLAB_CAS_Adjust_TOTAL_STDDEV.csv"
-#    INTER_FILE = "ag2020/AG2020_INSLAB_CAS_Adjust_INTER_EVENT_STDDEV.csv"
-#    INTRA_FILE = "ag2020/AG2020_INSLAB_CAS_Adjust_INTRA_EVENT_STDDEV.csv"
-#    REG = "CAS"
-#    ADJ = True
-#
-#
+# In-slab - Cascadia (with adjustment)
+class AbrahamsonGulerce2020SSlabCascadiaAdjustTestCase(
+        AbrahamsonGulerce2020SInterTestCase):
+    GSIM_CLASS = AbrahamsonGulerce2020SSlab
+    MEAN_FILE = "ag2020/AG2020_INSLAB_CAS_Adjust_MEAN.csv"
+    TOTAL_FILE = "ag2020/AG2020_INSLAB_CAS_Adjust_TOTAL_STDDEV.csv"
+    INTER_FILE = "ag2020/AG2020_INSLAB_CAS_Adjust_INTER_EVENT_STDDEV.csv"
+    INTRA_FILE = "ag2020/AG2020_INSLAB_CAS_Adjust_INTRA_EVENT_STDDEV.csv"
+    REG = "CAS"
+    ADJ = True
+
+
 # In-slab - Central America & Mexico
 class AbrahamsonGulerce2020SSlabCAMTestCase(
         AbrahamsonGulerce2020SInterTestCase):
