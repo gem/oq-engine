@@ -175,7 +175,7 @@ class Campbell2003(GMPE):
     #: 30 page 1021.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -184,10 +184,9 @@ class Campbell2003(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(self.kind, C, ctx.mag, ctx.rrup)
-            if ctx.mag < 7.16:
-                sig[m] = C['c11'] + C['c12'] * ctx.mag
-            else:
-                sig[m] = C['c13']
+            sig[m] = np.where(ctx.mag < 7.16,
+                              C['c11'] + C['c12'] * ctx.mag,
+                              C['c13'])
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.
@@ -226,7 +225,7 @@ class Campbell2003SHARE(Campbell2003):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -274,12 +273,12 @@ def _compute_faulting_style_term(Frss, pR, Fnss, pN, rake):
     """
     Compute SHARE faulting style adjustment term.
     """
-    if rake > 30.0 and rake <= 150.0:
-        return np.power(Frss, 1 - pR) * np.power(Fnss, -pN)
-    elif rake > -120.0 and rake <= -60.0:
-        return np.power(Frss, - pR) * np.power(Fnss, 1 - pN)
-    else:
-        return np.power(Frss, - pR) * np.power(Fnss, - pN)
+    term = np.full_like(rake, np.power(Frss, - pR) * np.power(Fnss, - pN))
+    term[(rake > 30.0) & (rake <= 150.0)] = (
+        np.power(Frss, 1 - pR) * np.power(Fnss, -pN))
+    term[(rake > -120.0) & (rake <= -60.0)] = (
+        np.power(Frss, - pR) * np.power(Fnss, 1 - pN))
+    return term
 
 
 class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
@@ -309,7 +308,7 @@ class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -321,11 +320,7 @@ class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
 
             mean[m] = _compute_mean(self.kind, C, mag, ctx.rrup)
             mean[m] = clip_mean(imt, mean[m])
-
-            if mag < 7.16:
-                sig[m] = C['c11'] + C['c12'] * mag
-            else:
-                sig[m] = C['c13']
+            sig[m] = np.where(mag < 7.16, C['c11'] + C['c12'] * mag, C['c13'])
 
     #: Coefficient tables extracted from ``subroutine getCampCEUS`` in
     #: ``hazgridXnga2.f``

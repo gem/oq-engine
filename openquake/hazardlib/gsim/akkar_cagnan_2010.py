@@ -23,10 +23,10 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
-    BooreAtkinson2008, _get_site_amplification_linear,
-    _get_site_amplification_non_linear)
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
+     _get_site_amplification_linear, _get_site_amplification_non_linear)
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -106,16 +106,14 @@ def _get_stddevs(C, stddev_types, num_sites):
     return stddevs
 
 
-class AkkarCagnan2010(BooreAtkinson2008):
+class AkkarCagnan2010(GMPE):
     """
     Implements GMPE developed by Sinnan Akkar and Zehra Cagnan and
     published as "A Local Ground-Motion Predictive Model for Turkey,
     and Its Comparison with Other Regional and Global Ground-Motion
     Models" (2010, Bulletin of the Seismological Society of America,
-    Volume 100, No. 6, pages 2978-2995). It extends
-    :class:`openquake.hazardlib.gsim.boore_atkinson_2008.BooreAtkinson2008`
-    because the linear and non-linear site effects are described by
-    the same site response function used in Boore and Atkinson 2008.
+    Volume 100, No. 6, pages 2978-2995). It uses the same site response
+    function used in Boore and Atkinson 2008.
     """
     #: Supported tectonic region type is active shallow crust (the
     #: equations being developed for Turkey, see paragraph 'Strong Motion
@@ -210,3 +208,5 @@ class AkkarCagnan2010(BooreAtkinson2008):
     1.50  7.20427  -0.513 -0.695 -0.39858 -0.70134  0.11219  3.46535 -0.02618  0.21977  0.6300  0.6751
     2.00  6.70845  -0.513 -0.695 -0.39528 -0.70766  0.12032  3.8822  -0.03215  0.20584  0.6243  0.6574
     """)
+
+    COEFFS_SOIL_RESPONSE = BooreAtkinson2008.COEFFS_SOIL_RESPONSE

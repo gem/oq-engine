@@ -511,7 +511,17 @@ def count_old_style(gsim_lt):
             old += 'get_mean_and_stddevs' in gsim.__class__.__dict__
     return old
 
-    
+
+def count_no_vect(gsim_lt):
+    # count the number of not vectorize GMPEs
+    no = 0
+    for gsims in gsim_lt.values.values():
+        for gsim in gsims:
+            compute = getattr(gsim.__class__, 'compute')
+            no += 'ctx' not in compute.__annotations__
+    return no
+
+
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -595,7 +605,9 @@ def get_gsim_lt(oqparam, trts=('*',)):
     gsim_lt_cache[key] = gsim_lt
 
     old_style = count_old_style(gsim_lt)
+    no_vect = count_no_vect(gsim_lt)
     logging.info('There are %d old style GMPEs', old_style)
+    logging.info('There are %d not vectorized GMPEs', no_vect)
     return gsim_lt
 
 
@@ -870,8 +882,8 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def _cons_coeffs(records, limit_states):
-    dtlist = [(lt, F32) for lt in records['loss_type']]
+def _cons_coeffs(records, loss_types, limit_states):
+    dtlist = [(lt, F32) for lt in loss_types]
     coeffs = numpy.zeros(len(limit_states), dtlist)
     for rec in records:
         coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
@@ -890,6 +902,7 @@ def get_crmodel(oqparam):
         oqparam.limit_states = risklist.limit_states
     elif 'damage' in oqparam.calculation_mode and risklist.limit_states:
         assert oqparam.limit_states == risklist.limit_states
+    loss_types = oqparam.loss_dt().names
     consdict = {}
     if 'consequence' in oqparam.inputs:
         # build consdict of the form consequence_by_tagname -> tag -> array
@@ -908,8 +921,9 @@ def get_crmodel(oqparam):
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
                     raise InvalidFile('Unknown consequence %s in %s' %
                                       (consequence, fnames))
-                bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
-                         for tag, grp in group_array(group, by).items()}
+                bytag = {
+                    tag: _cons_coeffs(grp, loss_types, risklist.limit_states)
+                    for tag, grp in group_array(group, by).items()}
                 consdict['%s_by_%s' % (consequence, by)] = bytag
     # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
     # is [(0.05,), (0.2 ,), (0.6 ,), (1.  ,)] for damage state and structural

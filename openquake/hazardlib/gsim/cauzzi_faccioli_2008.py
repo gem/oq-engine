@@ -33,12 +33,10 @@ def _compute_faulting_style_term(C, rake):
     Compute faulting style term as a function of rake angle value as given
     in equation 5 page 465.
     """
-    if rake > -120.0 and rake <= -60.0:
-        return C['aN']
-    elif rake > 30.0 and rake <= 150.0:
-        return C['aR']
-    else:
-        return C['aS']
+    term = np.full_like(rake, C['aS'])
+    term[(rake > -120.0) & (rake <= -60.0)] = C['aN']
+    term[(rake > 30.0) & (rake <= 150.0)] = C['aR']
+    return term
 
 
 def _compute_mean(kind, C, mag, ctx, vs30, rake, imt):
@@ -165,7 +163,7 @@ class CauzziFaccioli2008(GMPE):
 
     kind = "2008"
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
