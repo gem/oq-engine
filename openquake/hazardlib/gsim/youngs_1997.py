@@ -109,7 +109,7 @@ class YoungsEtAl1997SInter(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     #: Vs30 value representing typical rock conditions in California.
-    ROCK_VS30 = 760
+    ROCK_VS30 = 800
 
     delta = 0  # changed in subclasses
 

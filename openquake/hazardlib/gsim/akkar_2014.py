@@ -173,6 +173,8 @@ class AkkarEtAlRjb2014(GMPE):
     #: coefficients in table 4.a, pages 22-23, are used.
     REQUIRES_DISTANCES = {'rjb'}
 
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
+
     def __init__(self, adjustment_factor=1.0, **kwargs):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         [self.kind] = self.REQUIRES_DISTANCES
