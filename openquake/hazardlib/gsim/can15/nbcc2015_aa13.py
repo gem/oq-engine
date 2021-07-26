@@ -11,38 +11,13 @@ from openquake.hazardlib.gsim.gmpe_table import (
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.gsim.base import gsim_aliases
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
-    BooreAtkinson2008, _get_site_amplification_non_linear,
-    _get_site_amplification_linear)
+from openquake.hazardlib.gsim.base import add_alias
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
+    _get_site_amplification_non_linear, _get_site_amplification_linear)
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 dirname = os.path.dirname(__file__)
 BASE_PATH_AA13 = os.path.join(dirname, 'nbcc2015_tables')
-
-# populating `gsim_aliases` so that the engine can associate a string
-# to a specific gsim; for instance the string "NBCC2015_AA13_offshore_high"
-# is associated to the gsim (in TOML representation)
-# [NBCC2015_AA13]
-# REQUIRES_DISTANCES = ["rhypo"]
-# DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
-# gmpe_table = "Woffshore_high_clC.hdf5"
-arguments = [
-    ['stablecrust', 'rhypo', 'Stable Crust', 'ENA_%s_clC'],
-    ['activecrust', 'rhypo', 'Active Crust', 'Wcrust_%s_clC'],
-    ['activecrustFRjb', 'rjb', 'Active Crust Fault', 'WcrustFRjb_%s_clC'],
-    ['inslab30', 'rhypo', 'Subduction Inslab 30', 'WinslabD30_%s_clC'],
-    ['inslab50', 'rhypo', 'Subduction Inslab 50', 'WinslabD50_%s_clC'],
-    ['interface', 'rrup', 'Subduction Interface', 'WinterfaceCombo_%sclC'],
-    ['offshore', 'rhypo', 'Offshore', 'Woffshore_%s_clC']]
-for key, dist, trt, hdf5 in arguments:
-    for kind in ('low', 'med', 'high'):
-        name = f"NBCC2015_AA13_{key}_" + ("central" if kind == "med" else kind)
-        gsim_aliases[name] = f'''[NBCC2015_AA13]
-REQUIRES_DISTANCES = ["{dist}"]
-DEFINED_FOR_TECTONIC_REGION_TYPE = "{trt}"
-gmpe_table = "{hdf5}.hdf5"
-''' % kind
-
 BA08 = BooreAtkinson2008
 
 
@@ -181,3 +156,27 @@ class NBCC2015_AA13(GMPETable):
     5.0 1.148
     10.0 1.072
     """)
+
+
+# populating `gsim_aliases` so that the engine can associate a string
+# to a specific gsim; for instance the string "NBCC2015_AA13_offshore_high"
+# is associated to the gsim (in TOML representation)
+# [NBCC2015_AA13]
+# REQUIRES_DISTANCES = ["rhypo"]
+# DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
+# gmpe_table = "Woffshore_high_clC.hdf5"
+arguments = [
+    ['stablecrust', 'rhypo', 'Stable Crust', 'ENA_%s_clC'],
+    ['activecrust', 'rhypo', 'Active Crust', 'Wcrust_%s_clC'],
+    ['activecrustFRjb', 'rjb', 'Active Crust Fault', 'WcrustFRjb_%s_clC'],
+    ['inslab30', 'rhypo', 'Subduction Inslab 30', 'WinslabD30_%s_clC'],
+    ['inslab50', 'rhypo', 'Subduction Inslab 50', 'WinslabD50_%s_clC'],
+    ['interface', 'rrup', 'Subduction Interface', 'WinterfaceCombo_%sclC'],
+    ['offshore', 'rhypo', 'Offshore', 'Woffshore_%s_clC']]
+for key, dist, trt, hdf5 in arguments:
+    for kind in ('low', 'med', 'high'):
+        name = f"NBCC2015_AA13_{key}_" + ("central" if kind == "med" else kind)
+        add_alias(name, NBCC2015_AA13,
+                  REQUIRES_DISTANCES=[dist],
+                  DEFINED_FOR_TECTONIC_REGION_TYPE=trt,
+                  gmpe_table=f"{hdf5}.hdf5" % kind)

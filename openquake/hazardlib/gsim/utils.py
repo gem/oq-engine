@@ -20,7 +20,7 @@
 Module :mod:`openquake.hazardlib.gsim.utils` contains functions that are common
 to several GMPEs.
 """
-from openquake.hazardlib.imt import PGA, SA
+
 
 def mblg_to_mw_johnston_96(mag):
     """

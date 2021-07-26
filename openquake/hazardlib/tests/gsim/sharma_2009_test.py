@@ -75,27 +75,21 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         """
         Warning should be thrown for normal faulting
         """
-
-        rctx = gsim.base.RuptureContext()
-        sctx = gsim.base.SitesContext()
-        dctx = gsim.base.DistancesContext()
-
+        ctx = gsim.base.RuptureContext()
         # set reasonable default values
         gmpe = self.GSIM_CLASS()
-        rctx.mag = np.array([6.5])
-        dctx.rjb = np.array([100.])
-        sctx.vs30 = np.array([2000.])
+        ctx.mag = np.array([6.5])
+        ctx.rjb = np.array([100.])
+        ctx.vs30 = np.array([2000.])
         im_type = sorted(gmpe.COEFFS.sa_coeffs)[0]
         std_types = list(gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 
         # set critical value to trigger warning
-        rctx.rake = np.array([-90.])
+        ctx.rake = np.array([-90.])
 
         with warnings.catch_warnings(record=True) as warning_stream:
             warnings.simplefilter('always')
-
-            gmpe.get_mean_and_stddevs(sctx, rctx, dctx, im_type, std_types)
-
+            gmpe.get_mean_and_stddevs(ctx, ctx, ctx, im_type, std_types)
             # confirm type and content of warning
             assert len(warning_stream) == 1
             assert issubclass(warning_stream[-1].category, UserWarning)

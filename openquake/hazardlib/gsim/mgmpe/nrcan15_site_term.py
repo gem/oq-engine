@@ -24,7 +24,7 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     _get_site_amplification_non_linear, _get_site_amplification_linear)
 from openquake.baselib.general import CallableDict
 
@@ -180,15 +180,15 @@ class NRCan15SiteTerm(GMPE):
         for spec of input and result values.
         """
         # Prepare sites
-        sites_rock = copy.copy(sites)
-        sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 760.
+        ctx = copy.copy(rup)
+        ctx.vs30 = np.ones_like(ctx.vs30) * 760.
         # compute mean and standard deviation
-        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
+        mean, stddvs = self.gmpe.get_mean_and_stddevs(ctx, ctx, ctx,
                                                       imt, stds_types)
         if imt.string != 'PGA':
             # compute mean and standard deviation on rock
             mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(
-                sites_rock, rup, dists, imt, stds_types)
+                ctx, ctx, ctx, imt, stds_types)
         else:
             mean_rock = mean
 

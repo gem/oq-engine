@@ -28,12 +28,12 @@ import warnings
 import functools
 import numpy
 
-from openquake.baselib.general import DeprecationWarning
+from openquake.baselib.general import DeprecationWarning, gen_slices
 from openquake.baselib.performance import compile, numba
 from openquake.hazardlib import const
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
-from openquake.hazardlib.contexts import KNOWN_DISTANCES
+from openquake.hazardlib.contexts import KNOWN_DISTANCES, RuptureContext
 from openquake.hazardlib.contexts import *  # for backward compatibility
 
 
@@ -47,8 +47,18 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_SITES_PARAMETERS',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
+ONE_MB = 1024 ** 2
 registry = {}  # GSIM name -> GSIM class
-gsim_aliases = {}  # populated for instance in nbcc2015_AA13.py
+gsim_aliases = {}  # GSIM alias -> TOML representation
+
+
+def add_alias(name, cls, **kw):
+    """
+    Add a GSIM alias to both gsim_aliases and the registry.
+    """
+    text = '\n'.join('%s = %r' % it for it in kw.items())
+    gsim_aliases[name] = '[%s]\n%s' % (cls.__name__, text)
+    registry[name] = cls
 
 
 class NotVerifiedWarning(UserWarning):
@@ -353,16 +363,23 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         sig = numpy.zeros((1, N))
         tau = numpy.zeros((1, N))
         phi = numpy.zeros((1, N))
+        if not isinstance(rup, RuptureContext):
+            ctx = RuptureContext()
+            vars(ctx).update(vars(rup))
+            vars(ctx).update(vars(sites))
+            vars(ctx).update(vars(dists))
+        else:
+            ctx = rup
         self.compute(rup, [imt], mean, sig, tau, phi)
         stddevs = []
         for stddev_type in stddev_types:
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sig)
+                stddevs.append(sig[0])
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
+                stddevs.append(tau[0])
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-        return mean, stddevs
+                stddevs.append(phi[0])
+        return mean[0], stddevs
 
     def __lt__(self, other):
         """
@@ -456,6 +473,10 @@ class GMPE(GroundShakingIntensityModel):
         """
         loglevels = cmaker.loglevels
         trunclevel = cmaker.trunclevel
+        N = mean_std.shape[2]  # 2, M, N
+        L = loglevels.size
+        maxsize = int(numpy.ceil(ONE_MB / L / 8))
+        arr = numpy.zeros((N, L))
         if trunclevel is not None and trunclevel < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
@@ -467,18 +488,17 @@ class GMPE(GroundShakingIntensityModel):
                 for m in range(len(loglevels)):
                     ms[0, m] += s * self.adjustment
                 outs.append(_get_poes(ms, loglevels, trunclevel))
-            arr = numpy.average(outs, weights=weights, axis=0)
+            arr[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
-            N = mean_std.shape[2]  # 2, M, N
-            shp = (N, loglevels.size)  # L
-            arr = numpy.zeros(shp)
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):
                 mean_stdi = numpy.array(mean_std)  # a copy
                 mean_stdi[1] *= f  # multiply stddev by factor
-                arr += w * _get_poes(mean_stdi, loglevels, trunclevel)
+                arr[:] += w * _get_poes(mean_stdi, loglevels, trunclevel)
         else:  # regular case
-            arr = _get_poes(mean_std, loglevels, trunclevel)
+            # split large arrays in slices < 1 MB to fit inside the CPU cache
+            for sl in gen_slices(0, N, maxsize):
+                arr[sl] = _get_poes(mean_std[:, :, sl], loglevels, trunclevel)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for imt in loglevels:
             if imtweight and imtweight.dic.get(imt) == 0:

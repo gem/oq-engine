@@ -25,7 +25,7 @@ Module exports :class:`BozorgniaCampbell2016`
                :class:`BozorgniaCampbell2016LowQJapanSite`
 """
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
     _select_basin_model, _get_magnitude_term, _get_geometric_attenuation_term,
     _get_hanging_wall_term, _get_fault_dip_term,
@@ -169,7 +169,7 @@ def get_mean_values(SJ, sgn, C, sites, rup, dists):
     return (_get_magnitude_term(C, rup.mag) +
             _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
             _get_style_of_faulting_term(C, rup) +
-            _get_hanging_wall_term(C, rup, dists) +
+            _get_hanging_wall_term(C, rup) +
             _get_shallow_site_response_term(SJ, C, sites.vs30) +
             _get_basin_response_term(SJ, C, temp_z2pt5) +
             _get_hypocentral_depth_term(C, rup) +
@@ -285,13 +285,10 @@ class BozorgniaCampbell2016(GMPE):
     """)
 
 
-gsim_aliases['BozorgniaCampbell2016HighQ'] = (
-    '[BozorgniaCampbell2016]\nsgn=1')
-gsim_aliases['BozorgniaCampbell2016LowQ'] = (
-    '[BozorgniaCampbell2016]\nsgn=-1')
-gsim_aliases['BozorgniaCampbell2016AveQJapanSite'] = (
-    '[BozorgniaCampbell2016]\nSJ=1')
-gsim_aliases['BozorgniaCampbell2016HighQJapanSite'] = (
-    '[BozorgniaCampbell2016]\nSJ=1, sgn=+1')
-gsim_aliases['BozorgniaCampbell2016LowQJapanSite'] = (
-    '[BozorgniaCampbell2016]\nSJ=1, sgn=-1')
+add_alias('BozorgniaCampbell2016HighQ', BozorgniaCampbell2016, sgn=1)
+add_alias('BozorgniaCampbell2016LowQ', BozorgniaCampbell2016, sgn=-1)
+add_alias('BozorgniaCampbell2016AveQJapanSite', BozorgniaCampbell2016, SJ=1)
+add_alias('BozorgniaCampbell2016HighQJapanSite', BozorgniaCampbell2016,
+          SJ=1, sgn=+1)
+add_alias('BozorgniaCampbell2016LowQJapanSite', BozorgniaCampbell2016,
+          SJ=1, sgn=-1)

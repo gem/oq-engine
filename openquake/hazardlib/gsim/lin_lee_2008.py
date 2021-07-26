@@ -30,17 +30,11 @@ def _compute_mean(C, mag, rhypo, hypo_depth, mean, idx):
     """
     Compute mean value according to equations 10 and 11 page 226.
     """
+    if isinstance(mag, np.ndarray):
+        mag = mag[idx]
+        hypo_depth = hypo_depth[idx]
     mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo[idx] +
                  C['C4'] * np.exp(C['C5'] * mag)) + C['C6'] * hypo_depth)
-
-
-def _compute_std(C, stddevs, idx):
-    """
-    Compute total standard deviation, see tables 3 and 4, pages 227 and
-    228.
-    """
-    for stddev in stddevs:
-        stddev[idx] += C['sigma']
 
 
 class LinLee2008SInter(GMPE):
@@ -81,39 +75,38 @@ class LinLee2008SInter(GMPE):
     #: page 226.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    #: Vs30 threshold value between rock sites (B, C) and soil sites (C, D).
+    #: Vs30 threshold value between rock ctx (B, C) and soil ctx (C, D).
     ROCK_VS30 = 360
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
+        idx_rock = ctx.vs30 >= self.ROCK_VS30
+        idx_soil = ctx.vs30 < self.ROCK_VS30
+        for m, imt in enumerate(imts):
+            if idx_rock.any():
+                C = self.COEFFS_ROCK[imt]
+                _compute_mean(C, ctx.mag, ctx.rhypo, ctx.hypo_depth, mean[m],
+                              idx_rock)
+                sig[m, idx_rock] += C['sigma']
 
-        mean = np.zeros_like(sites.vs30)
-        stddevs = [np.zeros_like(sites.vs30) for _ in stddev_types]
+                if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                        const.TRT.SUBDUCTION_INTRASLAB):  # in subclass
+                    mean[m, idx_rock] += 0.275
+            if idx_soil.any():
+                C = self.COEFFS_SOIL[imt]
+                _compute_mean(C, ctx.mag, ctx.rhypo, ctx.hypo_depth, mean[m],
+                              idx_soil)
+                sig[m, idx_soil] += C['sigma']
 
-        idx_rock = sites.vs30 >= self.ROCK_VS30
-        idx_soil = sites.vs30 < self.ROCK_VS30
+                if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                        const.TRT.SUBDUCTION_INTRASLAB):  # in subclass
+                    mean[m, idx_soil] += 0.31
 
-        if idx_rock.any():
-            C = self.COEFFS_ROCK[imt]
-            _compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
-                          idx_rock)
-            _compute_std(C, stddevs, idx_rock)
-
-        if idx_soil.any():
-            C = self.COEFFS_SOIL[imt]
-            _compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
-                          idx_soil)
-            _compute_std(C, stddevs, idx_soil)
-
-        return mean, stddevs
-
-    #: Coefficient table for rock sites, see table 3 page 227.
+    #: Coefficient table for rock ctx, see table 3 page 227.
     COEFFS_ROCK = CoeffsTable(sa_damping=5, table="""\
     IMT      C1       C2        C3         C4         C5         C6        C7        sigma
     pga     -2.5000    1.205    -1.90499    0.51552    0.63255    0.0075    0.275    0.5268
@@ -146,7 +139,7 @@ class LinLee2008SInter(GMPE):
     5.00    -13.200    1.805    -1.13500    0.51550    0.63260    0.0075    0.275    0.7913
     """)
 
-     #: Coefficient table for soil sites, see table 4 page 228.
+     #: Coefficient table for soil ctx, see table 4 page 228.
     COEFFS_SOIL = CoeffsTable(sa_damping=5, table="""\
     IMT      C1        C2         C3        C4         C5         C6       C7      sigma
     pga     -0.9000    1.00000    -1.900    0.99178    0.52632    0.004    0.31    0.48763
@@ -189,23 +182,5 @@ class LinLee2008SSlab(LinLee2008SInter):
     This class implements the equations for 'Subduction IntraSlab' (that's why
     the class name ends with 'SSlab').
     """
-
     #: Supported tectonic region type is Subduction IntraSlab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        idx_rock = sites.vs30 >= self.ROCK_VS30
-        idx_soil = sites.vs30 < self.ROCK_VS30
-
-        mean[idx_rock] += 0.275
-        mean[idx_soil] += 0.31
-
-        return mean, stddevs

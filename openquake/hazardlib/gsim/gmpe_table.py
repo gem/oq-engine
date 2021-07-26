@@ -162,7 +162,7 @@ class AmplificationTable(object):
         for stddev_type in [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
                             const.StdDev.INTRA_EVENT]:
             level = next(iter(amplification_group))
-            if stddev_type.value in amplification_group[level]:
+            if stddev_type in amplification_group[level]:
                 self.sigma[stddev_type] = deepcopy(self.mean)
 
         for iloc, (level, amp_model) in enumerate(amplification_group.items()):
@@ -178,7 +178,7 @@ class AmplificationTable(object):
                     for stddev_type in self.sigma:
                         self.sigma[stddev_type][imt][
                             :, :, :, self.argrp_id[iloc]] = \
-                            amp_model["/".join([stddev_type.value, imt])][:]
+                            amp_model["/".join([stddev_type, imt])][:]
         self.shape = (n_d, n_p, n_m, n_levels)
 
     def get_set(self):
@@ -489,9 +489,9 @@ class GMPETable(GMPE):
                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
             for stddev_type in [const.StdDev.INTER_EVENT,
                                 const.StdDev.INTRA_EVENT]:
-                if stddev_type.value in fle:
+                if stddev_type in fle:
                     self.stddevs[stddev_type] = hdf_arrays_to_dict(
-                        fle[stddev_type.value])
+                        fle[stddev_type])
                     self.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(stddev_type)
 
             if "Amplification" in fle:

@@ -23,7 +23,7 @@ import os
 import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
-from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.gmpe_table import (
     GMPETable, _return_tables, _get_mean)
 from openquake.hazardlib import const
@@ -1022,6 +1022,7 @@ HollenbackEtAl2015NGAEastEX PEER_EX
 '''.splitlines()
 for line in lines:
     alias, key = line.split()
-    gsim_aliases[alias] = f'[NGAEastGMPE]\ngmpe_table="NGAEast_{key}.hdf5"'
-    gsim_aliases[alias + 'TotalSigma'] = (
-        f'[NGAEastGMPETotalSigma]\ngmpe_table="NGAEast_{key}.hdf5"')
+    add_alias(alias, NGAEastGMPE,
+              gmpe_table=f"NGAEast_{key}.hdf5")
+    add_alias(alias + 'TotalSigma', NGAEastGMPETotalSigma,
+              gmpe_table=f"NGAEast_{key}.hdf5")

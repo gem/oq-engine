@@ -466,6 +466,11 @@ class HazardCalculator(BaseCalculator):
                 for trt in mags_by_trt:
                     self.datastore['source_mags/' + trt] = numpy.array(
                         mags_by_trt[trt])
+                    it = list(oq.maximum_distance.ddic[trt].items())
+                    if len(it) > 2:
+                        md = '%s->%d, ... %s->%d, %s->%d' % (
+                            it[0] + it[-2] + it[-1])
+                        logging.info('max_dist %s: %s', trt, md)
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
@@ -800,7 +805,6 @@ class HazardCalculator(BaseCalculator):
                              len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
-            self.crmodel.reduce_cons_model(self.assetcol.tagcol)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:

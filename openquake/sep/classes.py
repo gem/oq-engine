@@ -23,7 +23,8 @@ from openquake.sep.landslide.newmark import (
     newmark_critical_accel, newmark_displ_from_pga_M,
     prob_failure_given_displacement)
 from openquake.sep.liquefaction.liquefaction import (
-    hazus_liquefaction_probability, zhu_liquefaction_probability_general)
+    hazus_liquefaction_probability, zhu_liquefaction_probability_general,
+    LIQUEFACTION_PGA_THRESHOLD_TABLE)
 from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement)
 from openquake.sep.liquefaction.vertical_settlement import (
@@ -140,10 +141,16 @@ class HazusDeformation(SecondaryPeril):
     """
     Computes PGDMax or PGDGeomMean from PGA
     """
-    def __init__(self, return_unit='m', deformation_component='PGDMax'):
+    def __init__(self, return_unit='m', deformation_component='PGDMax',
+        pga_threshold_table=LIQUEFACTION_PGA_THRESHOLD_TABLE):
         self.return_unit = return_unit
         self.deformation_component = getattr(imt, deformation_component)
         self.outputs = [deformation_component]
+
+        if pga_threshold_table != LIQUEFACTION_PGA_THRESHOLD_TABLE:
+            pga_threshold_table = {bytes(str(k), 'utf-8'): v
+                for k, v in pga_threshold_table.items()}
+        self.pga_threshold_table=pga_threshold_table
 
     def prepare(self, sites):
         pass
@@ -154,6 +161,7 @@ class HazusDeformation(SecondaryPeril):
             if im.string == 'PGA':
                 ls = hazus_lateral_spreading_displacement(
                     mag=mag, pga=gmf, liq_susc_cat=sites.liq_susc_cat,
+                    pga_threshold_table=self.pga_threshold_table,
                     return_unit=self.return_unit)
                 vs = hazus_vertical_settlement(
                     sites.liq_susc_cat, return_unit=self.return_unit)

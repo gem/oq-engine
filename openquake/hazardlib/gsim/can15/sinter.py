@@ -1,3 +1,20 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2014-2021, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 :module:`openquake.hazardlib.gsim.sinter` implements
 :class:`SInterCan15Mid`, :class:`SInterCan15Upp`, :class:`SInterCan15Low`
@@ -5,63 +22,82 @@
 
 import numpy as np
 
-from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import gsim_aliases
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.can15.western import get_sigma
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
+from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SInter
 from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
 from openquake.hazardlib.gsim.abrahamson_2015 import AbrahamsonEtAl2015SInter
-from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import \
-    GhofraniAtkinson2014
+from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import (
+    GhofraniAtkinson2014)
 
 
-def _get_mean(self, sites, rup, dists, imt, stddev_types):
+class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
     """
-    See :meth:`superclass method
-    <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-    for spec of input and result values.
+    Implements an adjusted version of the Atkinson and Macias (2009) GMPE.
+    The motion is scaled B/C conditions following the approach described in
+    Atkinson and Adams (2013) and implemented in
+    :mod:`openquake.hazardlib.gsim.can15.sinter`.
     """
-    g = self.gsims
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    # Computing adjusted mean and stds
-    cff = self.COEFFS_SITE[imt]
+    #: GMPE not tested against independent implementation so raise
+    #: not verified warning
+    non_verified = True
 
-    # Zhao et al. 2006 - Vs30 + Rrup
-    mean_zh06, stds1 = ZhaoEtAl2006SInter.get_mean_and_stddevs(
-        self, sites, rup, dists, imt, stddev_types)
-    #
-    # Atkinson and Macias (2009) - Rrup
-    mean_am09, stds2 = g[0].get_mean_and_stddevs(
-        sites, rup, dists, imt, stddev_types)
-    #
-    # Abrahamson et al. (2015) - Rrup + vs30 + backarc
-    mean_ab15, stds3 = g[1].get_mean_and_stddevs(
-        sites, rup, dists, imt, stddev_types)
-    #
-    # Ghofrani and Atkinson (2014) - Rrup + vs30
-    mean_ga14, stds4 = g[2].get_mean_and_stddevs(
-        sites, rup, dists, imt,  stddev_types)
-    mean_adj = (np.log(np.exp(mean_zh06)*cff['mf'])*0.1 +
-                mean_am09*0.5 + mean_ab15*0.2 +
-                np.log(np.exp(mean_ga14)*cff['mf'])*0.2)
-    return mean_adj
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            mean[m] += np.log(SInterCan15Mid.COEFFS_SITE[imt]['mf'])
 
 
-class SInterCan15Mid(ZhaoEtAl2006SInter):
+class SInterCan15Mid(GMPE):
     """
     Implements the Interface backbone model used for computing hazard for t
     the 2015 version of the Canada national hazard model developed by NRCan.
     """
+    #: Supported intensity measure types are spectral acceleration,
+    #: and peak ground acceleration, see paragraph 'Development of Base Model'
+    #: p. 901.
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+
+    #: Supported intensity measure component is geometric mean
+    #: of two horizontal components :
+    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see paragraph
+    #: 'Development of Base Model', p. 901.
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+
+    #: Required site parameters is Vs30.
+    #: See table 2, p. 901.
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
+
+    #: Required rupture parameters are magnitude, rake, and focal depth.
+    #: See paragraph 'Development of Base Model', p. 901.
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
+
+    #: Required distance measure is Rrup.
+    #: See paragraph 'Development of Base Model', p. 902.
+    REQUIRES_DISTANCES = {'rrup'}
+
+    #: Supported tectonic region type is subduction interface, this means
+    #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    #: Required rupture parameters are magnitude and focal depth.
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
+
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Required site parameters
     REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
-
-    #: GMPE not tested against independent implementation so raise
-    #: not verified warning
-    non_verified = True
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
@@ -71,22 +107,38 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
 
     REQUIRES_ATTRIBUTES = {'sgn'}
 
-    gsims = [AtkinsonMacias2009(), AbrahamsonEtAl2015SInter(),
-             GhofraniAtkinson2014()]  # underlying GSIMs
+    #: GMPE not tested against independent implementation so raise
+    #: not verified warning
+    non_verified = True
+
+    # underlying GSIMs
+    gsims = [ZhaoEtAl2006SInter(), AtkinsonMacias2009(),
+             AbrahamsonEtAl2015SInter(), GhofraniAtkinson2014()]
     sgn = 0
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean = _get_mean(self, sites, rup, dists, imt, stddev_types)
-        if self.sgn:
-            delta = np.minimum((0.15-0.0007*dists.rrup), 0.35)
-            mean += self.sgn * delta
-        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        return mean, stddevs
+        imtls = {imt.string: [0] for imt in imts}
+        cmaker = contexts.ContextMaker(
+            self.DEFINED_FOR_TECTONIC_REGION_TYPE,
+            self.gsims, {'imtls': imtls})
+        mean_zh06, mean_am09, mean_ab15, mean_ga14 = cmaker.get_mean_stds(
+            [ctx], None)  # 4 arrays of shape (1, M, N)
+
+        # Computing adjusted means
+        for m, imt in enumerate(imts):
+            cff = self.COEFFS_SITE[imt]
+            mean[m] = (np.log(np.exp(mean_zh06[0, m]) * cff['mf']) * 0.1 +
+                       mean_am09[0, m] * 0.5 + mean_ab15[0, m] * 0.2 +
+                       np.log(np.exp(mean_ga14[0, m]) * cff['mf']) * 0.2)
+            if self.sgn:
+                delta = np.minimum((0.15-0.0007 * ctx.rrup), 0.35)
+                mean[m] += self.sgn * delta
+            sig[m] = get_sigma(imt)
 
     COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     IMT        mf

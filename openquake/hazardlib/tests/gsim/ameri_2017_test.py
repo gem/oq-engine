@@ -83,7 +83,6 @@ class AmeriEtAl2017RepiTestCase(AmeriEtAl2017RjbTestCase):
     INTRA_FILE = "AMERI2017/A17_Repi_Heteroscedastic_INTRA_EVENT_STDDEV.csv"
 
 
-
 class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
     """
     Tests the Ameri et al (2017) GMPE for the case in which Joyner-Boore
@@ -95,28 +94,27 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
         DATA_FILE = data / "AMERI2017/A17_Rjb_Homoscedastic_MEAN.csv"
         stddev_types = [const.StdDev.TOTAL]  # Unused here
-
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
+        ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
 
             # Read periods from header:
             header = f.readline()
-            periods = header.strip().split(',')[7:] # Periods in s.
+            periods = header.strip().split(',')[7:]  # Periods in s.
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
-                setattr(rctx, 'mag', arr[0])
-                setattr(rctx, 'rake', arr[1])
+                setattr(ctx, 'mag', arr[0])
+                setattr(ctx, 'rake', arr[1])
                 stress_drop = arr[2]
-                setattr(dctx, 'rjb', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                setattr(ctx, 'rjb', arr[3])
+                setattr(ctx, 'vs30', np.array([arr[4]]))
+                ctx.sids = [0]
                 damp = arr[6]
 
                 # Compute ground-motion:
@@ -124,23 +122,22 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                     norm_stress_drop=stress_drop)
                 for k in range(len(periods)):
                     per = periods[k]
-                    value = np.log(arr[7+k])  # convert value to ln(SA) with SA in units of g
-                    if per=='pga':
+                    value = np.log(arr[7+k])
+                    # convert value to ln(SA) with SA in units of g
+                    if per == 'pga':
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    mean = gmpe.get_mean_and_stddevs(sctx, rctx, dctx, P,
+                    mean = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                      stddev_types)[0]
-                    np.testing.assert_almost_equal(mean, value, decimal=MEAN_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        mean, value, decimal=MEAN_DECIMAL)
 
     def test_calculation_std_total(self):
 
         DATA_FILE = data/"AMERI2017/A17_Rjb_Homoscedastic_TOTAL_STDDEV.csv"
         stddev_types = [const.StdDev.TOTAL]
-
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
+        ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
 
@@ -150,15 +147,17 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
-                setattr(rctx, 'mag', arr[0])
-                setattr(rctx, 'rake', arr[1])
+                setattr(ctx, 'mag', arr[0])
+                setattr(ctx, 'rake', arr[1])
                 stress_drop = arr[2]
-                setattr(dctx, 'rjb', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                setattr(ctx, 'rjb', arr[3])
+                setattr(ctx, 'vs30', np.array([arr[4]]))
+                ctx.sids = [0]
                 damp = arr[6]
 
                 # Compute ground-motion:
@@ -171,18 +170,17 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(sctx, rctx, dctx, P,
+                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
     def test_calculation_std_intra(self):
 
         DATA_FILE = data/"AMERI2017/A17_Rjb_Homoscedastic_INTRA_EVENT_STDDEV.csv"
         stddev_types = [const.StdDev.INTRA_EVENT]
 
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
+        ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
 
@@ -192,16 +190,18 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
-                setattr(rctx, 'mag', arr[0])
-                setattr(rctx, 'rake', arr[1])
+                setattr(ctx, 'mag', arr[0])
+                setattr(ctx, 'rake', arr[1])
                 stress_drop = arr[2]
-                setattr(dctx, 'rjb', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                setattr(ctx, 'rjb', arr[3])
+                setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RjbStressDrop(
@@ -213,18 +213,17 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(sctx, rctx, dctx, P,
+                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
     def test_calculation_std_inter(self):
 
         DATA_FILE = data/"AMERI2017/A17_Rjb_Homoscedastic_INTER_EVENT_STDDEV.csv"
         stddev_types = [const.StdDev.INTER_EVENT]
 
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
+        ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
 
@@ -234,16 +233,18 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
-                setattr(rctx, 'mag', arr[0])
-                setattr(rctx, 'rake', arr[1])
+                setattr(ctx, 'mag', arr[0])
+                setattr(ctx, 'rake', arr[1])
                 stress_drop = arr[2]
-                setattr(dctx, 'rjb', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                setattr(ctx, 'rjb', arr[3])
+                setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RjbStressDrop(
@@ -255,10 +256,10 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(sctx, rctx, dctx, P,
+                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
-
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
 
 class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
@@ -273,9 +274,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
         DATA_FILE = data / "AMERI2017/A17_Repi_Homoscedastic_MEAN.csv"
         stddev_types = [const.StdDev.TOTAL]  # Unused here
 
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
+        ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
 
@@ -285,39 +284,41 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
-                setattr(rctx, 'mag', arr[0])
-                setattr(rctx, 'rake', arr[1])
+                setattr(ctx, 'mag', arr[0])
+                setattr(ctx, 'rake', arr[1])
                 stress_drop = arr[2]
-                setattr(dctx, 'repi', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                setattr(ctx, 'repi', arr[3])
+                setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
                     norm_stress_drop=stress_drop)
                 for k in range(len(periods)):
                     per = periods[k]
-                    value = np.log(arr[7+k])  # convert value to ln(SA) with SA in units of g
+                    value = np.log(arr[7+k])
+                    # convert value to ln(SA) with SA in units of g
                     if per=='pga':
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    mean = gmpe.get_mean_and_stddevs(sctx, rctx, dctx, P,
+                    mean = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                      stddev_types)[0]
-                    np.testing.assert_almost_equal(mean, value, decimal=MEAN_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        mean, value, decimal=MEAN_DECIMAL)
 
     def test_calculation_std_total(self):
 
         DATA_FILE = data/"AMERI2017/A17_Repi_Homoscedastic_TOTAL_STDDEV.csv"
         stddev_types = [const.StdDev.TOTAL]
 
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
+        ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
 
@@ -327,16 +328,18 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
-                setattr(rctx, 'mag', arr[0])
-                setattr(rctx, 'rake', arr[1])
+                setattr(ctx, 'mag', arr[0])
+                setattr(ctx, 'rake', arr[1])
                 stress_drop = arr[2]
-                setattr(dctx, 'repi', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                setattr(ctx, 'repi', arr[3])
+                setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
@@ -348,18 +351,17 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(sctx, rctx, dctx, P,
+                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
     def test_calculation_std_intra(self):
 
         DATA_FILE = data/"AMERI2017/A17_Repi_Homoscedastic_INTRA_EVENT_STDDEV.csv"
         stddev_types = [const.StdDev.INTRA_EVENT]
 
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
+        ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
 
@@ -369,16 +371,18 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
-                setattr(rctx, 'mag', arr[0])
-                setattr(rctx, 'rake', arr[1])
+                setattr(ctx, 'mag', arr[0])
+                setattr(ctx, 'rake', arr[1])
                 stress_drop = arr[2]
-                setattr(dctx, 'repi', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                setattr(ctx, 'repi', arr[3])
+                setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
@@ -390,18 +394,17 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(sctx, rctx, dctx, P,
+                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
     def test_calculation_std_inter(self):
 
         DATA_FILE = data/"AMERI2017/A17_Repi_Homoscedastic_INTER_EVENT_STDDEV.csv"
         stddev_types = [const.StdDev.INTER_EVENT]
 
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
+        ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
 
@@ -411,16 +414,18 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
-                setattr(rctx, 'mag', arr[0])
-                setattr(rctx, 'rake', arr[1])
+                setattr(ctx, 'mag', arr[0])
+                setattr(ctx, 'rake', arr[1])
                 stress_drop = arr[2]
-                setattr(dctx, 'repi', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                setattr(ctx, 'repi', arr[3])
+                setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
@@ -432,10 +437,11 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(sctx, rctx, dctx, P,
+                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
                     np.testing.assert_almost_equal(std, value,
                                                    decimal=STDDEV_DECIMAL)
+
 
 # Discrepancy percentages to be applied to all tests
 MEAN_DISCREP = 0.01

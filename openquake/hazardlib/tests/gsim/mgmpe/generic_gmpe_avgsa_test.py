@@ -19,8 +19,7 @@ import unittest
 import numpy as np
 
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.contexts import (DistancesContext, RuptureContext,
-                                          SitesContext)
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib import gsim, imt, const
 from openquake.hazardlib.gsim.mgmpe.generic_gmpe_avgsa import GenericGmpeAvgSA
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
@@ -34,6 +33,16 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
     Testing instantiation and usage of the  GenericGmpeAvgSA class
     """
 
+    def ctx(self, nsites, vs30):
+        sites = Dummy.get_site_collection(nsites, vs30=vs30)
+        rup = Dummy.get_rupture(mag=6.0)
+        ctx = RuptureContext()
+        ctx.sid = np.arange(nsites)
+        vars(ctx).update(vars(rup))
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
+        return ctx
+
     def test01(self):
         avg_periods = [0.05, 0.15, 1.0, 2.0, 4.0]
         gmm = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
@@ -43,15 +52,13 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         msg = 'The class name is incorrect'
         self.assertTrue(gmm.__class__.__name__ == 'GenericGmpeAvgSA', msg=msg)
 
-        sites = Dummy.get_site_collection(4, vs30=760.)
-        rup = Dummy.get_rupture(mag=6.0)
-        rup.hypo_depth = 10.
-        dists = DistancesContext()
-        dists.rrup = np.array([1., 10., 30., 70.])
+        ctx = self.ctx(4, vs30=760.)
+        ctx.hypo_depth = 10.
+        ctx.rrup = np.array([1., 10., 30., 70.])
         imtype = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, _ = gmm.get_mean_and_stddevs(sites, rup, dists, imtype, stdt)
+        mean, _ = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imtype, stdt)
         expected = np.array([-1.33735637, -2.62649473, -3.64500654,
                              -4.60067093])
         np.testing.assert_almost_equal(mean, expected)
@@ -65,14 +72,12 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         msg = 'The class name is incorrect'
         self.assertTrue(gmm.__class__.__name__ == 'GenericGmpeAvgSA', msg=msg)
 
-        sites = Dummy.get_site_collection(4, vs30=760.)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.repi = np.array([1., 10., 30., 70.])
+        ctx = self.ctx(4, vs30=760.)
+        ctx.repi = np.array([1., 10., 30., 70.])
         imtype = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, _ = gmm.get_mean_and_stddevs(sites, rup, dists, imtype, stdt)
+        mean, _ = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imtype, stdt)
         expected = np.array([-2.0383581, -2.6548699, -3.767237, -4.7775653])
         np.testing.assert_almost_equal(mean, expected)
 
@@ -82,24 +87,19 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
                                avg_periods=avg_periods,
                                corr_func="akkar", sigma_mu_epsilon=1.0)
 
-        rctx = RuptureContext()
-        rctx.mag = 6.
-        rctx.hypo_depth = 15.
-        dctx = DistancesContext()
-        dctx.rjb = np.array([1., 10., 30., 70.])
-
-        sctx = SitesContext()
-        sctx.vs30 = 500.0 * np.ones(4)
-        sctx.vs30measured = np.ones(4, dtype="bool")
-        sctx.region = np.zeros(4, dtype=int)
+        ctx = self.ctx(4, vs30=500.)
+        ctx.hypo_depth = 15.
+        ctx.rjb = np.array([1., 10., 30., 70.])
+        ctx.vs30measured = np.ones(4, dtype="bool")
+        ctx.region = np.zeros(4, dtype=int)
         stdt = [const.StdDev.TOTAL]
         expected_mean = np.array([-1.72305707, -2.2178751,
                                   -3.20100306, -4.19948242])
         expected_stddev = np.array([0.5532021, 0.5532021,
                                     0.5532021, 0.5532021])
         imtype = imt.AvgSA()
-        mean, [stddev] = gmm.get_mean_and_stddevs(sctx, rctx, dctx,
-                                                  imtype, stdt)
+        mean, [stddev] = gmm.get_mean_and_stddevs(
+            ctx, ctx, ctx, imtype, stdt)
         np.testing.assert_almost_equal(mean, expected_mean)
         np.testing.assert_almost_equal(stddev, expected_stddev)
 
@@ -127,10 +127,8 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
             avg_periods=avg_periods,
             corr_func='akkar')
 
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
-
+        ctx = gsim.base.RuptureContext()
+        ctx.sids = [0]
         P = imt.AvgSA
         S = [const.StdDev.TOTAL]
 
@@ -144,15 +142,14 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
                 arr = np.float_(line.strip().split(','))
 
                 # Setting ground motion attributes
-                setattr(rctx, 'mag', arr[0])
-                setattr(dctx, 'rjb', np.array([arr[1]]))
-                setattr(rctx, 'rake', arr[2])
-                setattr(rctx, 'hypo_depth', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                ctx.mag = arr[0]
+                ctx.rjb = np.array([arr[1]])
+                ctx.rake = arr[2]
+                ctx.hypo_depth = arr[3]
+                ctx.vs30 = np.array([arr[4]])
 
                 # Compute ground motion
-                mean, stdv = mgmpe.get_mean_and_stddevs(sctx, rctx,
-                                                        dctx, P, S)
+                mean, stdv = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, P, S)
                 np.testing.assert_almost_equal(mean, arr[6])
                 np.testing.assert_almost_equal(stdv, arr[7])
 
@@ -166,10 +163,8 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
             avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
             corr_func='baker_jayaram')
 
-        sctx = gsim.base.SitesContext()
-        rctx = gsim.base.RuptureContext()
-        dctx = gsim.base.DistancesContext()
-
+        ctx = RuptureContext()
+        ctx.sids = [0]
         P = imt.AvgSA
         S = [const.StdDev.TOTAL]
 
@@ -183,14 +178,14 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
                 arr = np.float_(line.strip().split(','))
 
                 # Setting ground motion attributes
-                setattr(rctx, 'mag', arr[0])
-                setattr(dctx, 'rjb', np.array([arr[1]]))
-                setattr(rctx, 'rake', arr[2])
-                setattr(rctx, 'hypo_depth', arr[3])
-                setattr(sctx, 'vs30', np.array([arr[4]]))
+                ctx.mag = arr[0]
+                ctx.rjb = np.array([arr[1]])
+                ctx.rake = arr[2]
+                ctx.hypo_depth = arr[3]
+                ctx.vs30 = np.array([arr[4]])
 
                 # Compute ground motion
-                mean, stdv = mgmpe.get_mean_and_stddevs(sctx, rctx, dctx, P, S)
+                mean, stdv = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, P, S)
                 np.testing.assert_almost_equal(mean, arr[6])
                 np.testing.assert_almost_equal(stdv, arr[7])
 

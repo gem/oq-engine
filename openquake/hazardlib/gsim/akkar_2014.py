@@ -56,71 +56,71 @@ _compute_logarithmic_distance_term = CallableDict()
 
 
 @_compute_logarithmic_distance_term.add("rjb")
-def _compute_logarithmic_distance_term_1(kind, C, c1, mag, dists):
+def _compute_logarithmic_distance_term_1(kind, C, c1, ctx):
     """
     Compute and return fourth term in equations (2a)
     and (2b), page 20.
     """
-    return ((C['a4'] + C['a5'] * (mag - c1)) *
-            np.log(np.sqrt(dists.rjb ** 2 + C['a6'] ** 2)))
+    return ((C['a4'] + C['a5'] * (ctx.mag - c1)) *
+            np.log(np.sqrt(ctx.rjb ** 2 + C['a6'] ** 2)))
 
 
 @_compute_logarithmic_distance_term.add("repi")
-def _compute_logarithmic_distance_term_2(kind, C, c1, mag, dists):
+def _compute_logarithmic_distance_term_2(kind, C, c1, ctx):
     """
     Compute and return fourth term in equations (2a)
     and (2b), page 20.
     """
-    return ((C['a4'] + C['a5'] * (mag - c1)) *
-            np.log(np.sqrt(dists.repi ** 2 + C['a6'] ** 2)))
+    return ((C['a4'] + C['a5'] * (ctx.mag - c1)) *
+            np.log(np.sqrt(ctx.repi ** 2 + C['a6'] ** 2)))
 
 
 @_compute_logarithmic_distance_term.add("rhypo")
-def _compute_logarithmic_distance_term_3(kind, C, c1, mag, dists):
+def _compute_logarithmic_distance_term_3(kind, C, c1, ctx):
     """
     Compute and return fourth term in equations (2a)
     and (2b), page 20.
     """
-    return ((C['a4'] + C['a5'] * (mag - c1)) *
-            np.log(np.sqrt(dists.rhypo ** 2 + C['a6'] ** 2)))
+    return ((C['a4'] + C['a5'] * (ctx.mag - c1)) *
+            np.log(np.sqrt(ctx.rhypo ** 2 + C['a6'] ** 2)))
 
 
-def _compute_mean(kind, C, c1, mag, dists, rake):
+def _compute_mean(kind, C, c1, ctx):
     """
     Compute and return mean value without site conditions,
     that is equations (1a) and (1b), p.2981-2982.
     """
     mean = (C['a1'] +
-            _compute_linear_magnitude_term(C, c1, mag) +
-            _compute_quadratic_magnitude_term(C, mag) +
-            _compute_logarithmic_distance_term(kind, C, c1, mag, dists) +
-            _compute_faulting_style_term(C, rake))
+            _compute_linear_magnitude_term(C, c1, ctx.mag) +
+            _compute_quadratic_magnitude_term(C, ctx.mag) +
+            _compute_logarithmic_distance_term(kind, C, c1, ctx) +
+            _compute_faulting_style_term(C, ctx.rake))
     return mean
 
 
-def _compute_non_linear_term(C, pga_only, sites):
+def _compute_non_linear_term(C, pga_only, ctx):
     """
     Compute non-linear term, equation (3a) to (3c), page 20.
     """
     Vref = 750.0
     Vcon = 1000.0
-    lnS = np.zeros_like(sites.vs30)
+    lnS = np.zeros_like(ctx.vs30)
 
     # equation (3a)
-    idx = sites.vs30 < Vref
+    idx = ctx.vs30 < Vref
     lnS[idx] = (
-        C['b1'] * np.log(sites.vs30[idx] / Vref) +
+        C['b1'] * np.log(ctx.vs30[idx] / Vref) +
         C['b2'] * np.log(
-            (pga_only[idx] + C['c'] * (sites.vs30[idx] / Vref) ** C['n']) /
-            ((pga_only[idx] + C['c']) * (sites.vs30[idx] / Vref) ** C['n'])
+            (pga_only[idx] + C['c'] * (ctx.vs30[idx] / Vref) ** C['n']) /
+            ((pga_only[idx] + C['c']) * (ctx.vs30[idx] / Vref) ** C['n'])
         ))
 
     # equation (3b)
-    idx = (sites.vs30 >= Vref) & (sites.vs30 <= Vcon)
-    lnS[idx] = C['b1'] * np.log(sites.vs30[idx]/Vref)
+    idx = (ctx.vs30 >= Vref) & (ctx.vs30 <= Vcon)
+    lnS[idx] = C['b1'] * np.log(ctx.vs30[idx]/Vref)
 
     # equation (3c)
-    idx = sites.vs30 > Vcon
+    idx = ctx.vs30 > Vcon
     lnS[idx] = C['b1'] * np.log(Vcon/Vref)
 
     return lnS
@@ -132,22 +132,6 @@ def _compute_quadratic_magnitude_term(C, mag):
     and (2b), page  20.
     """
     return C['a3'] * (8.5 - mag) ** 2
-
-
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return standard deviations as defined in table 4a, p. 22.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma_t = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
-            stddevs.append(sigma_t + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
 
 
 class AkkarEtAlRjb2014(GMPE):
@@ -194,10 +178,10 @@ class AkkarEtAlRjb2014(GMPE):
         [self.kind] = self.REQUIRES_DISTANCES
         self.adjustment_factor = np.log(adjustment_factor)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
 
         Implement equation 1, page 20.
@@ -205,17 +189,17 @@ class AkkarEtAlRjb2014(GMPE):
         # compute median PGA on rock, needed to compute non-linear site
         # amplification
         C_pga = self.COEFFS[PGA()]
-        median_pga = np.exp(
-            _compute_mean(self.kind, C_pga, self.c1, rup.mag, dists, rup.rake))
+        median_pga = np.exp(_compute_mean(self.kind, C_pga, self.c1, ctx))
+        for m, imt in enumerate(imts):
+            # compute mean value by adding nonlinear site amplification terms
+            C = self.COEFFS[imt]
+            mean[m] = (_compute_mean(self.kind, C, self.c1, ctx)
+                       + _compute_non_linear_term(C, median_pga, ctx))
 
-        # compute full mean value by adding nonlinear site amplification terms
-        C = self.COEFFS[imt]
-        mean = (_compute_mean(self.kind, C, self.c1, rup.mag, dists, rup.rake)
-                + _compute_non_linear_term(C, median_pga, sites))
-
-        stddevs = _get_stddevs(C, stddev_types, num_sites=sites.vs30.size)
-
-        return mean + self.adjustment_factor, stddevs
+            mean[m] += self.adjustment_factor
+            sig[m] = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
+            tau[m] = C['tau']
+            phi[m] = C['sigma']
 
     #: c1 is the reference magnitude, fixed to 6.75Mw (which happens to be the
     #: same value used in Boore and Atkinson, 2008)

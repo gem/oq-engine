@@ -142,11 +142,12 @@ Ground Accelation (PGA) of 0.1g by using the ToroEtAl2002SHARE GMPE:
 
 >>> from openquake.commonlib import readinput
 >>> oq = readinput.get_oqparam(dict(
-... calculation_mode='scenario',
+... calculation_mode='classical',
 ... sites='15.0 45.2',
 ... reference_vs30_type='measured',
 ... reference_vs30_value='600.0',
 ... intensity_measure_types_and_levels="{'PGA': [0.1]}",
+... investigation_time='50.0',
 ... gsim='ToroEtAl2002SHARE',
 ... maximum_distance='200.0'))
 
@@ -206,3 +207,113 @@ Then the hazard curve can be computed as follows:
 >>> calc_hazard_curve(sitecol, src, gsims, oq)
 <ProbabilityCurve
 [[0.00508693]]>
+
+
+Working with GMPEs directly: the ContextMaker
+---------------------------------------------------
+
+If you are an hazard scientist, you will likely want to interact
+with the GMPE library in ``openquake.hazardlib.gsim``.
+The recommended way to do so is in terms of a ``ContextMaker`` object.
+
+>>> from openquake.hazardlib.contexts import ContextMaker
+
+In order to instantiate a ``ContextMaker`` you first need to populate
+a dictionary of parameters:
+
+>>> param = dict(maximum_distance=oq.maximum_distance, imtls=oq.imtls,
+...              truncation_level=oq.truncation_level,
+...              investigation_time=oq.investigation_time)
+>>> cmaker = ContextMaker(src.tectonic_region_type, gsims, param)
+
+Then you can use the ``ContextMaker`` to generate context objects
+from the sources:
+
+>>> ctxs = cmaker.from_srcs([src], sitecol)
+
+There is a context for each rupture in the source. In our example, there
+are 15 magnitudes
+
+>>> len(src.get_annual_occurrence_rates())
+15
+
+and the area source contains 47 point sources
+
+>>> len(list(src))
+47
+
+so in total there are 15 x 47 = 705 ruptures:
+
+>>> len(ctxs)
+705
+
+The ``ContextMaker`` takes care of the maximum_distance filtering, so in
+general the number of contexts is lower than the total number of ruptures,
+since some ruptures are normally discarded, being distant from the sites.
+
+The contexts contains all the rupture, site and distance parameters.
+Consider for instance the first context:
+
+>>> ctx = ctxs[0]
+
+Then you have
+
+>>> ctx.mag
+4.7
+>>> ctx.rrup
+array([106.40112646])
+>>> ctx.rjb
+array([105.8963247])
+
+In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site
+parameters, so calling ``ctx.vs30`` will raise an ``AttributeError``m
+but in general the contexts contains also arrays of site parameters.
+There is also an array of indices telling which are the sites affected
+by the rupture associated to the context:
+
+>>> ctx.sids
+array([0], dtype=uint32)
+
+Once you have the contexts, the ``ContextMaker`` is able to compute
+means and standard deviations from the underlying GMPEs on each context.
+For instance, suppose you are only interested in the total standard
+deviation:
+
+>>> from openquake.hazardlib.const import StdDev
+
+Then you can get a list of arrays containing mean and total standard
+deviation, with an array for each underlying gsim:
+
+>>> all_mean_std = cmaker.get_mean_stds(ctxs, StdDev.TOTAL)
+
+Since in this example there is a single gsim you can do the following:
+
+>>> mean, std = all_mean_std[0]
+>>> mean.shape
+(1, 705)
+>>> std.shape
+(1, 705)
+
+The shape of the arrays is (M, C) where M is the number of intensity
+measure types (in this example there is only one, PGA) and C is the
+total size of the contexts. Since this is an example with a single
+site, each context has size 1, therefore C = 705 * 1 = 705. In general
+if there are multiple sites a context C is the total number of affected
+sites. For instance if there are two contexts and the first affect
+1 sites and the second 2 sites then C would be 1 + 2 = 3. This
+example correspond to 1 + 1 + ... + 1 = 705.
+
+From the mean and standard deviation is possible to compute the
+probabilities of exceedence. The ``ContextMaker`` provides a method
+to compute directly the probability map, which internally calls
+``cmaker.get_mean_stds(ctxs, StdDev.TOTAL)``:
+
+>>> cmaker.get_pmap(ctxs)
+{0: <ProbabilityCurve
+[[0.00508693]]>}
+
+This is exactly the result provided by
+``calc_hazard_curve(sitecol, src, gsims, oq)`` in the section before.
+
+If you want to know exactly how ``get_pmap`` works you are invited to
+look at the source code in ``openquake.hazardlib.contexts``.

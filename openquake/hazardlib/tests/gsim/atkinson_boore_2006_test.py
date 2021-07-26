@@ -16,10 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     AtkinsonBoore2006, AtkinsonBoore2006Modified2011)
-from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
-                                           DistancesContext)
+from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 
@@ -47,17 +46,16 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         # the equations have a singularity). In this case the
         # method should return values equal to the ones obtained by
         # replacing 0 values with 1
-        sctx = SitesContext()
-        rctx = RuptureContext()
-        dctx = DistancesContext()
-        setattr(sctx, 'vs30', numpy.array([500.0, 2500.0]))
-        setattr(rctx, 'mag', 5.0)
-        setattr(dctx, 'rrup', numpy.array([0.0, 0.2]))
+        ctx = RuptureContext()
+        ctx.sids = [0, 1]
+        ctx.vs30 = numpy.array([500.0, 2500.0])
+        ctx.mag = 5.0
+        ctx.rrup = numpy.array([0.0, 0.2])
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
-        setattr(dctx, 'rrup', numpy.array([1.0, 0.2]))
+            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
+        ctx.rrup = numpy.array([1.0, 0.2])
         mean_01, stds_01 = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
+            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_array_equal(mean_0, mean_01)
         numpy.testing.assert_array_equal(stds_0, stds_01)
 

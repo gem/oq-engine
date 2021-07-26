@@ -15,13 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
+import copy
 import unittest
 import numpy as np
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib import const
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import (RuptureContext, DistancesContext,
-                                           SitesContext)
+from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014RhypoGermany
 from openquake.hazardlib.gsim.derras_2014 import DerrasEtAl2014RhypoGermany
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRhyp2014
@@ -94,10 +94,10 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
         self.imts = [PGA(), SA(0.1), SA(0.2), SA(0.5), SA(1.0), SA(2.0)]
         self.mags = [4.5, 5.5, 6.5, 7.5]
         self.rakes = [-90., 0., 90.]
-        self.dctx = DistancesContext()
-        self.dctx.rhypo = np.array([5., 10., 20., 50., 100.])
-        self.sctx = SitesContext()
-        self.sctx.vs30 = 800.0 * np.ones(5)
+        self.ctx = RuptureContext()
+        self.ctx.sids = np.arange(5)
+        self.ctx.rhypo = np.array([5., 10., 20., 50., 100.])
+        self.ctx.vs30 = 800.0 * np.ones(5)
 
     def check_gmpe_adjustments(self, adj_gmpe_set, original_gmpe):
         """
@@ -111,34 +111,30 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
         for imt in self.imts:
             for mag in self.mags:
                 for rake in self.rakes:
-                    rctx = RuptureContext()
-                    rctx.mag = mag
-                    rctx.rake = rake
-                    rctx.hypo_depth = 10.
-                    rctx.width = 0.0001
+                    ctx = copy.copy(self.ctx)
+                    ctx.mag = mag
+                    ctx.rake = rake
+                    ctx.hypo_depth = 10.
+                    ctx.width = 0.0001
                     # Get "original" values
-                    mean = original_gmpe.get_mean_and_stddevs(self.sctx, rctx,
-                                                              self.dctx, imt,
-                                                              tot_std)[0]
+                    mean = original_gmpe.get_mean_and_stddevs(
+                        ctx, ctx, ctx, imt, tot_std)[0]
                     mean = np.exp(mean)
                     # Get "low" adjustments (0.75 times the original)
-                    low_mean = low_gsim.get_mean_and_stddevs(self.sctx, rctx,
-                                                             self.dctx, imt,
-                                                             tot_std)[0]
+                    low_mean = low_gsim.get_mean_and_stddevs(
+                        ctx, ctx, ctx, imt, tot_std)[0]
                     np.testing.assert_array_almost_equal(
                         np.exp(low_mean) / mean, 0.75 * np.ones_like(low_mean))
 
                     # Get "middle" adjustments (1.25 times the original)
-                    mid_mean = mid_gsim.get_mean_and_stddevs(self.sctx, rctx,
-                                                             self.dctx, imt,
-                                                             tot_std)[0]
+                    mid_mean = mid_gsim.get_mean_and_stddevs(
+                        ctx, ctx, ctx, imt, tot_std)[0]
                     np.testing.assert_array_almost_equal(
                         np.exp(mid_mean) / mean, 1.25 * np.ones_like(mid_mean))
 
                     # Get "high" adjustments (1.5 times the original)
-                    high_mean = high_gsim.get_mean_and_stddevs(self.sctx, rctx,
-                                                               self.dctx, imt,
-                                                               tot_std)[0]
+                    high_mean = high_gsim.get_mean_and_stddevs(
+                        ctx, ctx, ctx, imt, tot_std)[0]
                     np.testing.assert_array_almost_equal(
                         np.exp(high_mean) / mean,
                         1.5 * np.ones_like(high_mean))
