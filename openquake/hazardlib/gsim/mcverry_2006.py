@@ -379,47 +379,14 @@ def _get_site_class_2(kind, sites):
 _get_stddevs = CallableDict()
 
 
-@_get_stddevs.add("asc", "sinter", "slab", "vol")
-def _get_stddevs_1(kind, C, mag, stddev_types, sites):
-    """
-    Return standard deviation as defined on page 29 in
-    equation 8a,b,c and 9.
-    """
-    num_sites = sites.vs30.size
-    sigma_intra = np.zeros(num_sites)
-
-    # interevent stddev
-    tau = sigma_intra + C['tau']
-
-    # intraevent std (equations 8a-8c page 29)
-    if mag < 5.0:
-        sigma_intra += C['sigmaM6'] - C['sigSlope']
-    elif 5.0 <= mag < 7.0:
-        sigma_intra += C['sigmaM6'] + C['sigSlope'] * (mag - 6)
-    else:
-        sigma_intra += C['sigmaM6'] + C['sigSlope']
-
-    std = []
-
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # equation 9 page 29
-            std += [np.sqrt(sigma_intra**2 + tau**2)]
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            std.append(sigma_intra)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            std.append(tau)
-
-    return std
-
-
-@_get_stddevs.add("asc_sc", "sinter_sc", "slab_sc", "vol_sc")
+@_get_stddevs.add("asc", "sinter", "slab", "vol", "asc_sc", "sinter_sc",
+                  "slab_sc", "vol_sc")
 def _get_stddevs_2(kind, C, mag, stddev_types, sites, additional_sigma=0.):
     """
     Return standard deviation as defined on page 29 in
     equation 8a,b,c and 9.
     """
-    num_sites = sites.siteclass.size
+    num_sites = sites.sids.size
     sigma_intra = np.zeros(num_sites)
 
     # interevent stddev
@@ -453,7 +420,7 @@ def _get_stddevs_3(kind, C, mag, stddev_types, sites, additional_sigma):
     Add additional 'epistemic' uncertainty to the total uncertainty, as
     specified in the Canterbury Seismic Hazard Model.
     """
-    num_sites = sites.siteclass.size
+    num_sites = sites.sids.size
     sigma_intra = np.zeros(num_sites)
 
     # interevent stddev
