@@ -57,10 +57,10 @@ def _get_site_amplification(ctx, imt, C):
 
 def _get_site_type_dummy_variables(ctx):
     """
-    Get site type dummy variables, ``S`` (for rock and soil ctx)
+    Get site type dummy variables, ``S`` (for rock and soil sites)
     """
     S = np.zeros_like(ctx.vs30)
-    # S=0 for rock ctx, S=1 otherwise pag 1.
+    # S=0 for rock sites, S=1 otherwise pag 1.
     idxS = (ctx.vs30 < 760.0)
     S[idxS] = 1
     return S
@@ -85,8 +85,8 @@ def _compute_mean(C, ctx, imt):
     if imt.string == "PGA":
         mean = (np.exp(mean) / g) / C['r_SA']
     else:
-        W = (2. * np.pi)/imt.period
-        mean = ((np.exp(mean) * W) / g) / C['r_SA']
+        W = (2. * np.pi) / imt.period
+        mean = np.exp(mean) * W / g / C['r_SA']
     return np.log(mean)
 
 
