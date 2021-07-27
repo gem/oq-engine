@@ -155,6 +155,24 @@ def build_complex_fault_geometry(fault_source):
     return Node("complexFaultGeometry", nodes=edge_nodes)
 
 
+def build_kite_fault_geometry(fault_source):
+    """
+    Returns the complex fault source geometry as a Node
+    :param fault_source:
+        Kite fault source model as an instance of the :class:
+        `openquake.hazardlib.source.kite_fault.KiteFaultSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    num_profiles = len(fault_source.profiles)
+    profile_nodes = []
+    for iloc, profile in enumerate(fault_source.profiles):
+        profile_nodes.append(
+            Node("profile", nodes=[build_linestring_node(profile, with_depth=True)]))
+    return Node("kiteFaultGeometry", nodes=profile_nodes)
+
+
+
 @obj_to_node.add('EvenlyDiscretizedMFD')
 def build_evenly_discretised_mfd(mfd):
     """
@@ -577,7 +595,7 @@ def build_complex_fault_source_node(fault_source):
     Parses a complex fault source to a Node class
 
     :param fault_source:
-        Simple fault source as instance of :class:
+        Complex fault source as instance of :class:
         `openquake.hazardlib.source.complex_fault.ComplexFaultSource`
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
@@ -589,6 +607,27 @@ def build_complex_fault_source_node(fault_source):
     # Parse common fault source attributes
     source_nodes.extend(get_fault_source_nodes(fault_source))
     return Node("complexFaultSource",
+                get_source_attributes(fault_source),
+                nodes=source_nodes)
+
+
+@obj_to_node.add('KiteFaultSource')
+def build_kite_fault_source_node(fault_source):
+    """
+    Parses a kite fault source to a Node class
+
+    :param fault_source:
+        Kite fault source as instance of :class:
+        `openquake.hazardlib.source.kite_fault.KiteFaultSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+
+    # Parse geometry
+    source_nodes = [build_kite_fault_geometry(fault_source)]
+    # Parse common fault source attributes
+    source_nodes.extend(get_fault_source_nodes(fault_source))
+    return Node("kiteFaultSource",
                 get_source_attributes(fault_source),
                 nodes=source_nodes)
 
