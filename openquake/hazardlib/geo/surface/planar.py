@@ -166,12 +166,21 @@ class PlanarSurface(BaseSurface):
     def from_hypocenter(cls, hypoc, msr, mag, aratio, strike, dip, rake):
         """
         :param hypoc:
-            A :class:`openquake.hazardlib.geo.point.Point` instance
+            An instance of :class: `openquake.hazardlib.geo.point.Point`
         :param msr:
+            The magnitude scaling relationship
+            e.g. an instance of :class: `openquake.hazardlib.scalerel.WC1994`
         :param mag:
+            The magnitude
         :param aratio:
+            The rupture aspect ratio
         :param strike:
-        :param aratio:
+            The rupture strike
+        :param dip:
+            The rupture dip
+        :param rake:
+            The rupture rake
+
         """
         area = msr.get_median_area(mag, rake)
         width = (area / aratio)**0.5
