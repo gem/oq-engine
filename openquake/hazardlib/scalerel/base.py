@@ -56,7 +56,7 @@ class BaseASRSigma(BaseASR, metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def get_std_dev_mag(self, rake):
+    def get_std_dev_mag(self, area, rake):
         """
         Return the standard deviation on the magnitude.
 

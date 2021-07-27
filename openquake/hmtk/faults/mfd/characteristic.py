@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -147,8 +147,8 @@ class Characteristic(BaseMFDfromSlip):
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        self.mmax_sigma = mfd_conf.get(
-            'Maximum_Magnitude_Uncertainty', None) or msr.get_std_dev_mag(rake)
+        self.mmax_sigma = (mfd_conf.get('Maximum_Magnitude_Uncertainty', None)
+                           or msr.get_std_dev_mag(None, rake))
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
         '''
