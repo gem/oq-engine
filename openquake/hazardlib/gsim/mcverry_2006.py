@@ -287,13 +287,13 @@ _get_deltas = CallableDict()
 
 
 @_get_deltas.add("asc", "sinter", "slab", "vol")
-def _get_deltas_1(kind, sites):
+def _get_deltas_1(kind, ctx):
     """
     Return delta's for equation 4
     delta_C = 1 for site class C (360<=Vs30<760), 0 otherwise
     delta_D = 1 for site class D (Vs30<=360), 0 otherwise
     """
-    vs30 = sites.vs30
+    vs30 = ctx.vs30
     delta_C = np.zeros(len(vs30))
     delta_C[(vs30 >= 360) & (vs30 < 760)] = 1
 
@@ -304,13 +304,13 @@ def _get_deltas_1(kind, sites):
 
 
 @_get_deltas.add("asc_sc", "sinter_sc", "slab_sc", "vol_sc", "chch", "drop")
-def _get_deltas_2(kind, sites):
+def _get_deltas_2(kind, ctx):
     """
     Return delta's for equation 4
     delta_C = 1 for site class C, 0 otherwise
     delta_D = 1 for site class D, 0 otherwise
     """
-    siteclass = sites.siteclass
+    siteclass = ctx.siteclass
     delta_C = np.zeros_like(siteclass, dtype=np.float)
     delta_C[siteclass == b'C'] = 1
 
@@ -349,12 +349,12 @@ _get_site_class = CallableDict()
 
 
 @_get_site_class.add("asc", "sinter", "slab", "vol")
-def _get_site_class_1(kind, sites):
+def _get_site_class_1(kind, ctx):
     """
     Return site class flag (0 if vs30 > 760, that is rock, or 1 if vs30 <=
     760, that is deep soil)
     """
-    vs30 = sites.vs30
+    vs30 = ctx.vs30
     S = np.zeros_like(vs30)
     S[vs30 <= 760] = 1
 
@@ -363,28 +363,25 @@ def _get_site_class_1(kind, sites):
 
 @_get_site_class.add(
     "asc_sc", "sinter_sc", "slab_sc", "vol_sc", "chch", "drop")
-def _get_site_class_2(kind, sites):
+def _get_site_class_2(kind, ctx):
     """
     Return site class flag (0 if class A or B, that is rock, or 1 if
     class C or D).
     """
-    siteclass = sites.siteclass
+    siteclass = ctx.siteclass
     S = np.zeros_like(siteclass, dtype=np.float)
     S[(siteclass == b'C') | (siteclass == b'D')] = 1
 
     return S
 
 
-_get_stddevs = CallableDict()
-
-
-@_get_stddevs.add("asc", "sinter", "slab", "vol")
-def _get_stddevs_1(kind, C, mag, stddev_types, sites):
+def _get_stddevs(kind, C, ctx, additional_sigma=0.):
     """
     Return standard deviation as defined on page 29 in
     equation 8a,b,c and 9.
     """
-    num_sites = sites.vs30.size
+    mag = ctx.mag
+    num_sites = ctx.sids.size
     sigma_intra = np.zeros(num_sites)
 
     # interevent stddev
@@ -398,86 +395,7 @@ def _get_stddevs_1(kind, C, mag, stddev_types, sites):
     else:
         sigma_intra += C['sigmaM6'] + C['sigSlope']
 
-    std = []
-
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # equation 9 page 29
-            std += [np.sqrt(sigma_intra**2 + tau**2)]
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            std.append(sigma_intra)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            std.append(tau)
-
-    return std
-
-
-@_get_stddevs.add("asc_sc", "sinter_sc", "slab_sc", "vol_sc")
-def _get_stddevs_2(kind, C, mag, stddev_types, sites, additional_sigma=0.):
-    """
-    Return standard deviation as defined on page 29 in
-    equation 8a,b,c and 9.
-    """
-    num_sites = sites.siteclass.size
-    sigma_intra = np.zeros(num_sites)
-
-    # interevent stddev
-    tau = sigma_intra + C['tau']
-
-    # intraevent std (equations 8a-8c page 29)
-    if mag < 5.0:
-        sigma_intra += C['sigmaM6'] - C['sigSlope']
-    elif 5.0 <= mag < 7.0:
-        sigma_intra += C['sigmaM6'] + C['sigSlope'] * (mag - 6)
-    else:
-        sigma_intra += C['sigmaM6'] + C['sigSlope']
-
-    std = []
-
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # equation 9 page 29
-            std += [np.sqrt(sigma_intra**2 + tau**2)]
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            std.append(sigma_intra)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            std.append(tau)
-
-    return std
-
-
-@_get_stddevs.add("chch", "drop")
-def _get_stddevs_3(kind, C, mag, stddev_types, sites, additional_sigma):
-    """
-    Add additional 'epistemic' uncertainty to the total uncertainty, as
-    specified in the Canterbury Seismic Hazard Model.
-    """
-    num_sites = sites.siteclass.size
-    sigma_intra = np.zeros(num_sites)
-
-    # interevent stddev
-    tau = sigma_intra + C['tau']
-
-    # intraevent std (equations 8a-8c page 29)
-    if mag < 5.0:
-        sigma_intra += C['sigmaM6'] - C['sigSlope']
-    elif 5.0 <= mag < 7.0:
-        sigma_intra += C['sigmaM6'] + C['sigSlope'] * (mag - 6)
-    else:
-        sigma_intra += C['sigmaM6'] + C['sigSlope']
-
-    std = []
-
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # equation 9 page 29
-            std += [np.sqrt(sigma_intra**2 + tau**2 + additional_sigma**2)]
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            std.append(np.sqrt(sigma_intra + (additional_sigma**2)/2))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            std.append(np.sqrt(tau + (additional_sigma**2)/2))
-
-    return std
+    return [np.sqrt(sigma_intra**2 + tau**2), tau, sigma_intra]
 
 
 class McVerry2006Asc(GMPE):
@@ -544,58 +462,58 @@ class McVerry2006Asc(GMPE):
     # defined as nearest distance to the source.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         # Compute SA with primed coeffs and PGA with both unprimed and
         # primed coeffs
-        C = self.COEFFS_PRIMED[imt]
         C_PGA = self.COEFFS_PRIMED[PGA()]
         C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS_PRIMED[imt]
 
-        # Get S term to determine if consider site term is applied
-        S = _get_site_class(self.kind, sites)
-        # Abrahamson and Silva (1997) hanging wall term. This is not used
-        # in the latest version of GMPE but is defined in functional form in
-        # the paper so we keep it here as a placeholder
-        f4HW = _compute_f4(C, rup.mag, dists.rrup)
+            # Get S term to determine if consider site term is applied
+            S = _get_site_class(self.kind, ctx)
+            # Abrahamson and Silva (1997) hanging wall term. This is not used
+            # in the latest version of GMPE but is defined in functional form
+            # in the paper so we keep it here as a placeholder
+            f4HW = _compute_f4(C, ctx.mag, ctx.rrup)
 
-        # Flags for rake angles
-        CN, CR = _get_fault_mechanism_flags(rup.rake)
+            # Flags for rake angles
+            CN, CR = _get_fault_mechanism_flags(ctx.rake)
 
-        # Get volcanic path distance
-        rvol = dists.rrup if self.kind.startswith("vol") else 0.
+            # Get volcanic path distance
+            rvol = ctx.rrup if self.kind.startswith("vol") else 0.
 
-        # Get delta_C and delta_D terms for site class
-        delta_C, delta_D = _get_deltas(self.kind, sites)
-        # Compute lnPGA_ABCD primed
-        lnPGAp_ABCD = _compute_mean(
-            self.kind, C_PGA, S, rup.mag, dists.rrup, rvol,
-            rup.hypo_depth, CN, CR, f4HW, delta_C, delta_D)
+            # Get delta_C and delta_D terms for site class
+            delta_C, delta_D = _get_deltas(self.kind, ctx)
+            # Compute lnPGA_ABCD primed
+            lnPGAp_ABCD = _compute_mean(
+                self.kind, C_PGA, S, ctx.mag, ctx.rrup, rvol,
+                ctx.hypo_depth, CN, CR, f4HW, delta_C, delta_D)
 
-        # Compute lnPGA_ABCD unprimed
-        lnPGA_ABCD = _compute_mean(
-            self.kind, C_PGA_unprimed, S, rup.mag, dists.rrup,
-            rvol, rup.hypo_depth, CN, CR, f4HW,  delta_C, delta_D)
+            # Compute lnPGA_ABCD unprimed
+            lnPGA_ABCD = _compute_mean(
+                self.kind, C_PGA_unprimed, S, ctx.mag, ctx.rrup,
+                rvol, ctx.hypo_depth, CN, CR, f4HW,  delta_C, delta_D)
 
-        # Compute lnSA_ABCD
-        lnSAp_ABCD = _compute_mean(
-            self.kind, C, S, rup.mag, dists.rrup, rvol,
-            rup.hypo_depth, CN, CR, f4HW,  delta_C, delta_D)
+            # Compute lnSA_ABCD
+            lnSAp_ABCD = _compute_mean(
+                self.kind, C, S, ctx.mag, ctx.rrup, rvol,
+                ctx.hypo_depth, CN, CR, f4HW,  delta_C, delta_D)
 
-        # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
-        # need to calculate final lnSA_ABCD from non-log values but return log
-        mean = np.log(np.exp(lnSAp_ABCD) *
-                      (np.exp(lnPGA_ABCD) / np.exp(lnPGAp_ABCD)))
+            # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
+            # need to calculate final lnSA_ABCD from non-log values but
+            # return log
+            mean[m] = np.log(np.exp(lnSAp_ABCD) *
+                             (np.exp(lnPGA_ABCD) / np.exp(lnPGAp_ABCD)))
 
-        # Compute standard deviations
-        C_STD = self.COEFFS_STD[imt]
-        stddevs = _get_stddevs(self.kind, C_STD, rup.mag, stddev_types, sites)
-
-        return mean, stddevs
+            # Compute standard deviations
+            C_STD = self.COEFFS_STD[imt]
+            sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C_STD, ctx)
 
     #: Coefficient table (table 3, page 108)
     COEFFS_PRIMED = CoeffsTable(sa_damping=5, table="""\
@@ -806,75 +724,75 @@ class McVerry2006Chch(McVerry2006AscSC):
     non_verified = True
     additional_sigma = 0
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         # Compute SA with primed coeffs and PGA with both unprimed and
         # primed coeffs
-        C = self.COEFFS_PRIMED[imt]
         C_PGA = self.COEFFS_PRIMED[PGA()]
         C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
-        SC = self.COEFFS_STRESS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS_PRIMED[imt]
+            SC = self.COEFFS_STRESS[imt]
 
-        # Get S term to determine if consider site term is applied
-        S = _get_site_class(self.kind, sites)
+            # Get S term to determine if consider site term is applied
+            S = _get_site_class(self.kind, ctx)
 
-        # Abrahamson and Silva (1997) hanging wall term. This is not used
-        # in the latest version of GMPE but is defined in functional form in
-        # the paper so we keep it here as a placeholder
-        f4HW = _compute_f4(C, rup.mag, dists.rrup)
+            # Abrahamson and Silva (1997) hanging wall term. This is not used
+            # in the latest version of GMPE but is defined in functional form
+            # in the paper so we keep it here as a placeholder
+            f4HW = _compute_f4(C, ctx.mag, ctx.rrup)
 
-        # Flags for rake angles
-        CN, CR = _get_fault_mechanism_flags(rup.rake)
+            # Flags for rake angles
+            CN, CR = _get_fault_mechanism_flags(ctx.rake)
 
-        # Get volcanic path distance
-        rvol = dists.rrup if self.kind.startswith("vol") else 0.
+            # Get volcanic path distance
+            rvol = ctx.rrup if self.kind.startswith("vol") else 0.
 
-        # Get delta_C and delta_D terms for site class
-        delta_C, delta_D = _get_deltas(self.kind, sites)
+            # Get delta_C and delta_D terms for site class
+            delta_C, delta_D = _get_deltas(self.kind, ctx)
 
-        # Get Atkinson and Boore (2006) stress drop factors or additional
-        # standard deviation adjustment. Only apply these factors to sources
-        # located within the boundaries of the CSHM.
-        in_cshm = _check_in_cshm_polygon(rup)
-        if in_cshm is True:
-            stress_drop_factor = _compute_stress_drop_adjustment(
-                self.kind, SC, rup.mag)
-            additional_sigma = self.additional_sigma
-        else:
-            stress_drop_factor = 0
-            additional_sigma = 0
+            # Get Atkinson and Boore (2006) stress drop factors or additional
+            # standard deviation adjustment. Only apply these factors to
+            # sources located within the boundaries of the CSHM.
+            in_cshm = _check_in_cshm_polygon(ctx)
+            if in_cshm is True:
+                stress_drop_factor = _compute_stress_drop_adjustment(
+                    self.kind, SC, ctx.mag)
+                additional_sigma = self.additional_sigma
+            else:
+                stress_drop_factor = 0
+                additional_sigma = 0
 
-        # Compute lnPGA_ABCD primed
-        lnPGAp_ABCD = _compute_mean(
-            self.kind, C_PGA, S, rup.mag, dists.rrup, rvol,
-            rup.hypo_depth, CN, CR, f4HW, delta_C, delta_D)
+            # Compute lnPGA_ABCD primed
+            lnPGAp_ABCD = _compute_mean(
+                self.kind, C_PGA, S, ctx.mag, ctx.rrup, rvol,
+                ctx.hypo_depth, CN, CR, f4HW, delta_C, delta_D)
 
-        # Compute lnPGA_ABCD unprimed
-        lnPGA_ABCD = _compute_mean(
-            self.kind, C_PGA_unprimed, S, rup.mag, dists.rrup,
-            rvol, rup.hypo_depth, CN, CR, f4HW, delta_C, delta_D)
+            # Compute lnPGA_ABCD unprimed
+            lnPGA_ABCD = _compute_mean(
+                self.kind, C_PGA_unprimed, S, ctx.mag, ctx.rrup,
+                rvol, ctx.hypo_depth, CN, CR, f4HW, delta_C, delta_D)
 
-        # Compute lnSA_ABCD
-        lnSAp_ABCD = _compute_mean(
-            self.kind, C, S, rup.mag, dists.rrup, rvol,
-            rup.hypo_depth, CN, CR, f4HW, delta_C, delta_D)
+            # Compute lnSA_ABCD
+            lnSAp_ABCD = _compute_mean(
+                self.kind, C, S, ctx.mag, ctx.rrup, rvol,
+                ctx.hypo_depth, CN, CR, f4HW, delta_C, delta_D)
 
-        # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
-        # need to calculate final lnSA_ABCD from non-log values but return log
-        mean = np.log(np.exp(lnSAp_ABCD) *
-                      (np.exp(lnPGA_ABCD) /
-                       np.exp(lnPGAp_ABCD))) + stress_drop_factor
+            # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
+            # need to calculate final lnSA_ABCD from non-log values
+            # but return log
+            mean[m] = np.log(np.exp(lnSAp_ABCD) *
+                             (np.exp(lnPGA_ABCD) /
+                              np.exp(lnPGAp_ABCD))) + stress_drop_factor
 
-        # Compute standard deviations
-        C_STD = self.COEFFS_STD[imt]
-        stddevs = _get_stddevs(
-            self.kind, C_STD, rup.mag, stddev_types, sites, additional_sigma)
-
-        return mean, stddevs
+            # Compute standard deviations
+            C_STD = self.COEFFS_STD[imt]
+            sig[m], tau[m], phi[m] = _get_stddevs(
+                self.kind, C_STD, ctx, additional_sigma)
 
     #: Coefficient table (Atkinson and Boore, 2006, table 7, page 2201)
     COEFFS_STRESS = CoeffsTable(sa_damping=5, table="""\

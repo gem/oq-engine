@@ -146,7 +146,7 @@ class ComplexFaultSource(ParametricSeismicSource):
     """
     code = b'C'
     # a slice of the rupture_slices, thus splitting the source
-    MODIFICATIONS = {'set_geometry'}
+    MODIFICATIONS = {'set_geometry', 'adjust_mfd_from_slip'}
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
