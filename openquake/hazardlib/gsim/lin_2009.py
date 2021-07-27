@@ -68,17 +68,6 @@ def _get_site_response_term(C, vs30):
     return C['C8'] * np.log(vs30 / 1130.0)
 
 
-def _get_stddevs(C, stddev_types, nsites):
-    """
-    Compute total standard deviation, see table 4.2, page 50.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['sigma'] + np.zeros(nsites, dtype=float))
-    return stddevs
-
-
 def _get_style_of_faulting_term(C, rake):
     """
     Returns the style of faulting factor
@@ -120,23 +109,22 @@ class Lin2009(GMPE):
     #: page 46.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = (
-            _get_magnitude_term(C, rup.mag) +
-            _get_distance_term(C, rup.mag, dists.rrup) +
-            _get_style_of_faulting_term(C, rup.rake) +
-            _get_site_response_term(C, sites.vs30))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (
+                _get_magnitude_term(C, ctx.mag) +
+                _get_distance_term(C, ctx.mag, ctx.rrup) +
+                _get_style_of_faulting_term(C, ctx.rake) +
+                _get_site_response_term(C, ctx.vs30))
+            sig[m] = C['sigma']
 
-        stddevs = _get_stddevs(C, stddev_types, len(sites.vs30))
-        return mean, stddevs
-
-    #: Coefficient table for rock sites, see table 3 page 227.
+    #: Coefficient table for rock ctx, see table 3 page 227.
     COEFFS = CoeffsTable(sa_damping=5.0, table="""\
     IMT       C1      C2       C3       C4      C5       H       C6      C7       C8  sigma
     pga   1.0109  0.3822   0.0000  -1.1634  0.1722  1.5184  -0.1907  0.1322  -0.4741  0.5363
@@ -181,7 +169,7 @@ class Lin2009AdjustedSigma(Lin2009):
     C. -T. Cheng, P. -S. Hsieh, P. -S. Lin, Y. -T. Yen, C. -H. Chan (2013)
     Probability Seismic Hazard Mapping of Taiwan
     """
-    #: Coefficient table for rock sites, see table 3 page 227.
+    #: Coefficient table for rock ctx, see table 3 page 227.
     COEFFS = CoeffsTable(sa_damping=5.0, table="""\
     IMT       C1      C2       C3       C4      C5       H       C6      C7       C8  sigma
     pga   1.0109  0.3822   0.0000  -1.1634  0.1722  1.5184  -0.1907  0.1322  -0.4741  0.627
