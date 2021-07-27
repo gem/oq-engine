@@ -13,9 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.convertito_2012 import (
-    ConvertitoEtAl2012Geysers
-)
+from openquake.hazardlib.gsim.convertito_2012 import ConvertitoEtAl2012Geysers
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
