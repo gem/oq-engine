@@ -29,54 +29,44 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-def _compute_term_1_2(rup, C):
+def _compute_term_1_2(ctx, C):
     """
     Compute terms 1 and 2 in equation 1 page 1.
     """
-    return C['c1'] + C['c2'] * rup.mag
+    return C['c1'] + C['c2'] * ctx.mag
 
 
-def _compute_term_3_4(dists, C):
+def _compute_term_3_4(ctx, C):
     """
     Compute term 3 and 4 in equation 1 page 1.
     """
     cutoff = 6.056877878
-    rhypo = dists.rhypo.copy()
+    rhypo = ctx.rhypo.copy()
     rhypo[rhypo <= cutoff] = cutoff
     return C['c3'] * np.log(rhypo) + C['c4'] * rhypo
 
 
-def _get_site_amplification(sites, imt, C):
+def _get_site_amplification(ctx, imt, C):
     """
     Compute the fith term of the equation (1), p. 1:
     ``c5 * S``
     """
-    S = _get_site_type_dummy_variables(sites)
+    S = _get_site_type_dummy_variables(ctx)
     return (C['c5'] * S)
 
 
-def _get_site_type_dummy_variables(sites):
+def _get_site_type_dummy_variables(ctx):
     """
-    Get site type dummy variables, ``S`` (for rock and soil sites)
+    Get site type dummy variables, ``S`` (for rock and soil ctx)
     """
-    S = np.zeros_like(sites.vs30)
-    # S=0 for rock sites, S=1 otherwise pag 1.
-    idxS = (sites.vs30 < 760.0)
+    S = np.zeros_like(ctx.vs30)
+    # S=0 for rock ctx, S=1 otherwise pag 1.
+    idxS = (ctx.vs30 < 760.0)
     S[idxS] = 1
     return S
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return total standard deviation.
-    """
-    stddevs = []
-    stddevs = [np.zeros(num_sites) + C['SigmaB'] / C['r_std']
-               for _ in stddev_types]
-    return stddevs
-
-
-def _compute_mean(C, rup, dists, sites, imt):
+def _compute_mean(C, ctx, imt):
     """
     Compute mean value for PGA and pseudo-velocity response spectrum,
     as given in equation 1. Converts also pseudo-velocity response
@@ -86,10 +76,9 @@ def _compute_mean(C, rup, dists, sites, imt):
        W = (2 * pi / T)
        T = period (sec)
     """
-
-    mean = (_compute_term_1_2(rup, C) +
-            _compute_term_3_4(dists, C) +
-            _get_site_amplification(sites, imt, C))
+    mean = (_compute_term_1_2(ctx, C) +
+            _compute_term_3_4(ctx, C) +
+            _get_site_amplification(ctx, imt, C))
 
     # convert from m/s**2 to g for PGA and from m/s to g for PSV
     # and divided this value for the ratio(SA_larger/SA_geo_mean)
@@ -135,7 +124,8 @@ class ClimentEtAl1994(GMPE):
     #: two horizontal components
     #: :attr:`openquake.hazardlib.const.IMC.GREATER_OF_TWO_HORIZONTAL`,
     #: see paragraph before table on Summary, page 1.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GREATER_OF_TWO_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.GREATER_OF_TWO_HORIZONTAL)
 
     #: Supported standard deviation types is total.
     #: See equation 1 on the Summary and Table 4.1, page 22.
@@ -153,19 +143,16 @@ class ClimentEtAl1994(GMPE):
     #: Required distance measure is Rhypo, explained in page 1(eq. 1)
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        mean = _compute_mean(C, rup, dists, sites, imt)
-        stddevs = _get_stddevs(C, stddev_types, sites.vs30.shape[0])
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, ctx, imt)
+            sig[m] = C['SigmaB'] / C['r_std']
 
     #: Equation coefficients, described in Table 4.1 on pp. 22
     #: the original imt values are defined as frequencies values
