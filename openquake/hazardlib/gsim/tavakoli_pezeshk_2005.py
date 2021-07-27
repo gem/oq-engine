@@ -74,19 +74,6 @@ def _compute_magnitude_scaling_term(C, mag):
     return C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
 
 
-def _get_stddevs(C, stddev_types, num_sites, mag):
-    """
-    Returns standard deviation as defined in equation 23, page 2291
-    (Tavakoli and Pezeshk, 2005)
-    """
-    stddevs = []
-    sigma = (C['c14'] + C['c15'] * mag) if mag < 7.2 else C['c16']
-    vals = sigma * np.ones((num_sites))
-    for _ in stddev_types:
-        stddevs.append(vals)
-    return stddevs
-
-
 class TavakoliPezeshk2005(GMPE):
     """
     Implements the GMPE developed by B. Tavakoli and S. Pezeshk in 2005
@@ -108,7 +95,7 @@ class TavakoliPezeshk2005(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: This GMPE doesn't require site parameters since it has been developed
-    #: for hard rock sites (see page 2290)
+    #: for hard rock ctx (see page 2290)
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters is magnitude
@@ -121,42 +108,39 @@ class TavakoliPezeshk2005(GMPE):
 
     kind = 'base'
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        if self.kind == 'Mblg':
-            mag = mblg_to_mw_johnston_96(rup.mag)
-        elif self.kind == 'Mblg2008':
-            mag = mblg_to_mw_atkinson_boore_87(rup.mag)
-        else:
-            mag = rup.mag
+            if self.kind == 'Mblg':
+                mag = mblg_to_mw_johnston_96(ctx.mag)
+            elif self.kind == 'Mblg2008':
+                mag = mblg_to_mw_atkinson_boore_87(ctx.mag)
+            else:
+                mag = ctx.mag
 
-        # computing the magnitude term. Equation 19, page 2291
-        f1 = _compute_magnitude_scaling_term(C, mag)
+            # computing the magnitude term. Equation 19, page 2291
+            f1 = _compute_magnitude_scaling_term(C, mag)
 
-        # computing the geometrical spreading term. Equation 20, page 2291
-        f2 = _compute_geometrical_spreading_term(C, dists.rrup)
+            # computing the geometrical spreading term. Equation 20, page 2291
+            f2 = _compute_geometrical_spreading_term(C, ctx.rrup)
 
-        # computing the anelastic attenuation term. Equation 21, page 2291
-        f3 = _compute_anelastic_attenuation_term(C, dists.rrup, mag)
+            # computing the anelastic attenuation term. Equation 21, page 2291
+            f3 = _compute_anelastic_attenuation_term(C, ctx.rrup, mag)
 
-        # computing the mean ln(IMT) using equation 18 at page 2290
-        mean = f1 + f2 + f3
+            # computing the mean ln(IMT) using equation 18 at page 2290
+            mean[m] = f1 + f2 + f3
 
-        if self.kind != 'base':  # in subclasses
-            mean = clip_mean(imt, mean)
+            if self.kind != 'base':  # in subclasses
+                mean[m] = clip_mean(imt, mean[m])
 
-        # computing the total standard deviation
-        stddevs = _get_stddevs(C, stddev_types, num_sites=len(dists.rrup),
-                               mag=mag)
-
-        return mean, stddevs
+            # computing the total standard deviation
+            sig[m] = (C['c14'] + C['c15'] * mag) if mag < 7.2 else C['c16']
 
     #: Coefficient table is constructed from an excel spreadsheet available
     #: on Pezeshk's website http://www.ce.memphis.edu/pezeshk

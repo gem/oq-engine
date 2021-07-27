@@ -30,4 +30,3 @@ class PankowPechmann2004TestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('PP2004/PP2004_MEAN.csv',
                    max_discrep_percentage=0.1)
-

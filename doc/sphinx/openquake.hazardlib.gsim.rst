@@ -721,6 +721,14 @@ kanno_2006
     :undoc-members:
     :show-inheritance:
 
+kuehn_2020
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.kuehn_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 kotha_2016
 ------------------------------------------
 
