@@ -42,7 +42,7 @@ def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
     dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
     # If the site is in the CBD polygon, get dL2L and dS2S terms
     if in_cshm is True:
-        # Only apply the dL2L term only to ctx located in the CBD.
+        # Only apply the dL2L term only to sites located in the CBD.
         dL2L[in_cbd == 1] = _get_dL2L(imt_per)
         dS2S[in_cbd == 1] = _get_dS2S(region, imt_per)
 
@@ -71,15 +71,15 @@ def _check_in_cbd_polygon(lons, lats):
     return in_cbd
 
 
-def _check_in_cshm_polygon(ctx):
+def _check_in_cshm_polygon(rup):
     """
     Checks if any part of the rupture surface mesh is located within the
     intended boundaries of the Canterbury Seismic Hazard Model in
     Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
     of Christchurch, Earthquake Spectra, 30(1), 17-29.
     """
-    lats = np.ravel(ctx.surface.mesh.array[1])
-    lons = np.ravel(ctx.surface.mesh.array[0])
+    lats = np.ravel(rup.surface.mesh.array[1])
+    lons = np.ravel(rup.surface.mesh.array[0])
     # These coordinates are provided by M Gerstenberger (personal
     # communication, 10 August 2018)
     polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
@@ -202,7 +202,7 @@ def set_adjusted_stddevs(
     # Add 'additional sigma' specified in the Canterbury Seismic
     # Hazard Model to total sigma. This equals zero for the base model.
     # eq. 21
-    scaled_sigma = np.sqrt(((1 + NL) ** 2) * t**2 + sigma**2) * srf_sigma
+    scaled_sigma = np.sqrt((1 + NL) ** 2 * t**2 + sigma**2) * srf_sigma
     sig[:] += np.sqrt(scaled_sigma ** 2 + additional_sigma ** 2)
     scaled_phi = sigma * srf_phi
     phi[:] += np.sqrt(scaled_phi ** 2 + additional_sigma ** 2 / 2)
@@ -453,12 +453,10 @@ def _get_v1(imt):
     """
     if imt == PGA():
         v1 = 1800.
-
     else:
         T = imt.period
         v1a = np.clip((1130 * (T / 0.75)**-0.11), 1130, np.inf)
         v1 = np.clip(v1a, -np.inf, 1800.)
-
     return v1
 
 
