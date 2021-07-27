@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     AtkinsonBoore2006, AtkinsonBoore2006Modified2011)
 from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.imt import PGA
@@ -47,6 +47,7 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         # method should return values equal to the ones obtained by
         # replacing 0 values with 1
         ctx = RuptureContext()
+        ctx.sids = [0, 1]
         ctx.vs30 = numpy.array([500.0, 2500.0])
         ctx.mag = 5.0
         ctx.rrup = numpy.array([0.0, 0.2])

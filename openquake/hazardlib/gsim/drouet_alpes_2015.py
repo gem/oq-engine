@@ -71,22 +71,6 @@ def _compute_term2(C, mag, r):
         np.log(np.sqrt(r**2 + C['c6']**2)) + C['c7'] * r
 
 
-def _get_stddevs(C, stddev_types, mag, num_sites):
-    """
-    Return total standard deviation as for equation 35, page 1021.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma_t = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
-            stddevs.append(sigma_t + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
-
-
 class DrouetAlpes2015Rjb(GMPE):
     """
     Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
@@ -129,22 +113,24 @@ class DrouetAlpes2015Rjb(GMPE):
     #: 30 page 1021.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = _compute_mean(C, rup.mag, dists.rjb)
-        if imt.string.startswith(("PGA", "SA")):
-            # Convert from m/s**2 to g
-            mean = mean - np.log(g)
-        elif imt.string == 'PGV':  # Convert from m/s to cm/s
-            mean = mean + np.log(100.0)
-        stddevs = _get_stddevs(C, stddev_types, rup.mag,
-                               dists.rjb.shape[0])
-        return mean, stddevs
+        [dist_type] = self.REQUIRES_DISTANCES
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, ctx.mag, getattr(ctx, dist_type))
+            if imt.string.startswith(("PGA", "SA")):
+                # Convert from m/s**2 to g
+                mean[m] -= np.log(g)
+            elif imt.string == 'PGV':  # Convert from m/s to cm/s
+                mean[m] += np.log(100.0)
+            sig[m] = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
+            phi[m] = C['sigma']
+            tau[m] = C['tau']
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.
@@ -183,24 +169,7 @@ class DrouetAlpes2015Rrup(DrouetAlpes2015Rjb):
     """
     #: Required distance measure is rupture distance, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('rrup', ))
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        C = self.COEFFS[imt]
-        mean = _compute_mean(C, rup.mag, dists.rrup)
-        if imt.string.startswith(("PGA", "SA")):
-            # Convert from m/s**2 to g
-            mean = mean - np.log(g)
-        elif imt.string == 'PGV':  # Convert from m/s to cm/s
-            mean = mean + np.log(100.0)
-        stddevs = _get_stddevs(C, stddev_types, rup.mag,
-                               dists.rrup.shape[0])
-        return mean, stddevs
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.
@@ -241,23 +210,6 @@ class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
     #: 30 page 1021.
     REQUIRES_DISTANCES = {'repi'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        C = self.COEFFS[imt]
-        mean = _compute_mean(C, rup.mag, dists.repi)
-        if imt.string.startswith(("PGA", "SA")):
-            # Convert from m/s**2 to g
-            mean = mean - np.log(g)
-        elif imt.string == 'PGV':  # Convert from m/s to cm/s
-            mean = mean + np.log(100.0)
-        stddevs = _get_stddevs(C, stddev_types, rup.mag,
-                               dists.repi.shape[0])
-        return mean, stddevs
-
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -296,22 +248,6 @@ class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = {'rhypo'}
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        C = self.COEFFS[imt]
-        mean = _compute_mean(C, rup.mag, dists.rhyp)
-        if imt.string.startswith(('PGA', 'SA')):  # Convert from m/s**2 to g
-            mean = mean - np.log(g)
-        elif imt.string == 'PGV':  # Convert from m/s to cm/s
-            mean = mean + np.log(100.0)
-        stddevs = _get_stddevs(C, stddev_types, rup.mag,
-                               dists.rhyp.shape[0])
-        return mean, stddevs
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.

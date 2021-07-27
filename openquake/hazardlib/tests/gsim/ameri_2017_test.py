@@ -100,11 +100,12 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
             # Read periods from header:
             header = f.readline()
-            periods = header.strip().split(',')[7:] # Periods in s.
+            periods = header.strip().split(',')[7:]  # Periods in s.
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
@@ -113,6 +114,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                 stress_drop = arr[2]
                 setattr(ctx, 'rjb', arr[3])
                 setattr(ctx, 'vs30', np.array([arr[4]]))
+                ctx.sids = [0]
                 damp = arr[6]
 
                 # Compute ground-motion:
@@ -120,14 +122,16 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                     norm_stress_drop=stress_drop)
                 for k in range(len(periods)):
                     per = periods[k]
-                    value = np.log(arr[7+k])  # convert value to ln(SA) with SA in units of g
-                    if per=='pga':
+                    value = np.log(arr[7+k])
+                    # convert value to ln(SA) with SA in units of g
+                    if per == 'pga':
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
                     mean = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                      stddev_types)[0]
-                    np.testing.assert_almost_equal(mean, value, decimal=MEAN_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        mean, value, decimal=MEAN_DECIMAL)
 
     def test_calculation_std_total(self):
 
@@ -143,7 +147,8 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
@@ -152,6 +157,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                 stress_drop = arr[2]
                 setattr(ctx, 'rjb', arr[3])
                 setattr(ctx, 'vs30', np.array([arr[4]]))
+                ctx.sids = [0]
                 damp = arr[6]
 
                 # Compute ground-motion:
@@ -166,7 +172,8 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.SA(period=np.float_(per), damping=damp)
                     std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
     def test_calculation_std_intra(self):
 
@@ -183,7 +190,8 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
@@ -193,6 +201,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'rjb', arr[3])
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RjbStressDrop(
@@ -206,7 +215,8 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.SA(period=np.float_(per), damping=damp)
                     std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
     def test_calculation_std_inter(self):
 
@@ -223,7 +233,8 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
@@ -233,6 +244,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'rjb', arr[3])
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RjbStressDrop(
@@ -246,8 +258,8 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.SA(period=np.float_(per), damping=damp)
                     std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
-
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
 
 class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
@@ -272,7 +284,8 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
@@ -282,20 +295,23 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'repi', arr[3])
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
                     norm_stress_drop=stress_drop)
                 for k in range(len(periods)):
                     per = periods[k]
-                    value = np.log(arr[7+k])  # convert value to ln(SA) with SA in units of g
+                    value = np.log(arr[7+k])
+                    # convert value to ln(SA) with SA in units of g
                     if per=='pga':
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
                     mean = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                      stddev_types)[0]
-                    np.testing.assert_almost_equal(mean, value, decimal=MEAN_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        mean, value, decimal=MEAN_DECIMAL)
 
     def test_calculation_std_total(self):
 
@@ -312,7 +328,8 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
@@ -322,6 +339,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'repi', arr[3])
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
@@ -335,7 +353,8 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.SA(period=np.float_(per), damping=damp)
                     std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
     def test_calculation_std_intra(self):
 
@@ -352,7 +371,8 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
@@ -362,6 +382,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'repi', arr[3])
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
@@ -375,7 +396,8 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.SA(period=np.float_(per), damping=damp)
                     std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
+                    np.testing.assert_almost_equal(
+                        std, value, decimal=STDDEV_DECIMAL)
 
     def test_calculation_std_inter(self):
 
@@ -392,7 +414,8 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
             for line in f:
                 arr_str = line.strip().split(',')
-                arr_str[5] = "9999" # Replace result_type string by any float-convertible value
+                arr_str[5] = "9999"
+                # Replace result_type string by any float-convertible value
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
@@ -402,6 +425,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'repi', arr[3])
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
+                ctx.sids = [0]
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(

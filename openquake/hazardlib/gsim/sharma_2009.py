@@ -38,7 +38,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 NEHRP_BC_BOUNDARY = 760.
 
 #: Rake threshhold of 30 degrees was selected, same as
-#: :mod:`openquake.hazardlib.gsim.boore_atkinson_2008` and
+#: :mod:`openquake.hazardlib.gsim.atkinson_boore_2006` and
 #: :mod:`openquake.hazardlib.gsim.campbell_bozorgnia_2008`.
 #: Contrast with 45 degree threshhold used by 30 degree
 #: threshhold used in :mod:`openquake.hazardlib.gsim.zhao_2006`.

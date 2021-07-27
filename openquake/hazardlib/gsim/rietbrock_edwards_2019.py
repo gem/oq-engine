@@ -72,25 +72,6 @@ def _get_magnitude_term(C, mag):
     return (C["c2"] * mag) + (C["c3"] * (mag ** 2.0))
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Returns the standard deviation. Original standard deviations are in
-    logarithms of base 10. Converts to natural logarithm.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.log(10.0 **
-                                  (C["total"] + np.zeros(num_sites))))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.log(10.0 **
-                                  (C["phi"] + np.zeros(num_sites))))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(np.log(10.0 **
-                                  (C["tau"] + np.zeros(num_sites))))
-    return stddevs
-
-
 class RietbrockEdwards2019Mean(GMPE):
     """
     Implements the ground motion prediction equation of Rietbrock et al
@@ -125,27 +106,24 @@ class RietbrockEdwards2019Mean(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
-        imean = C["c1"] + (_get_magnitude_term(C, rup.mag) +
-                           _get_distance_term(C, dists.rjb, rup.mag))
-        # Converting from log10 to log
-        if imt.string.startswith(("SA", "PGA")):
-            mean = np.log(10.0**(imean) / 980.665)
-        else:
-            mean = np.log(10 ** imean)
-
-        stddevs = _get_stddevs(C, stddev_types, dists.rjb.shape[0])
-
-        return mean, stddevs
-
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = C["c1"] + (_get_magnitude_term(C, ctx.mag) +
+                               _get_distance_term(C, ctx.rjb, ctx.mag))
+            # Converting from log10 to log
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log(10.0**(imean) / 980.665)
+            else:
+                mean[m] = np.log(10 ** imean)
+            sig[m] = np.log(10.0 ** C["total"])
+            phi[m] = np.log(10.0 ** C["phi"])
+            tau[m] = np.log(10.0 ** C["tau"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
   IMT      c1      c2      c3      c4      c5      c6      c7      c8      c9       c10     c11   total     tau     phi

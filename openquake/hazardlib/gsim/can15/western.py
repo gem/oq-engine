@@ -66,31 +66,29 @@ class WesternCan15Mid(BooreAtkinson2011):
 
     delta_mag = 0.  # overridden in Oceanic subclass
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         # first fix the magnitude for the Oceanic subclass
         if self.delta_mag:
-            rup = copy.copy(rup)
-            rup.mag += self.delta_mag
+            ctx = copy.copy(ctx)
+            ctx.mag += self.delta_mag
 
         # then possibly convert distances from repi to rjb
         if self.REQUIRES_DISTANCES == {'repi'}:
-            dists = copy.copy(dists)
-            dists.rjb, dists.rrup = get_equivalent_distances_west(
-                rup.mag, dists.repi)
+            ctx = copy.copy(ctx)
+            ctx.rjb, ctx.rrup = get_equivalent_distances_west(
+                ctx.mag, ctx.repi)
 
-        # get original values
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sgn:
-            # adjust mean values using the reccomended delta (see Atkinson and
-            # Adams, 2013)
-            tmp = 0.1+0.0007*dists.rjb
-            tmp = np.vstack((tmp, np.full_like(tmp, 0.3)))
-            delta = np.log(10.**(np.amin(tmp, axis=0)))
-            mean += self.sgn * delta
-        stds = [np.ones(len(dists.rjb))*get_sigma(imt)]
-        return mean, stds
-
+        # set original values
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            if self.sgn:
+                # adjust mean values using the reccomended delta
+                # (see Atkinson and Adams, 2013)
+                tmp = 0.1 + 0.0007 * ctx.rjb
+                tmp = np.vstack((tmp, np.full_like(tmp, 0.3)))
+                delta = np.log(10. ** np.amin(tmp, axis=0))
+                mean[m] += self.sgn * delta
+            sig[m] = get_sigma(imt)
 
 # IMPORTANT! we must use subclasses and not aliases here because we would
 # break classical/case_59 that use the NRCanSiteTerm with the subclasses
