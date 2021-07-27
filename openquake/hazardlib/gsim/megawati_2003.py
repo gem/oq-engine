@@ -27,14 +27,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _compute_std(coe, stddev_types, shape):
-    """
-    Returns the total standard deviation according to table III at page
-    2257. Table obtained via http://www.onlineocr.net/
-    """
-    return [np.zeros(shape)*coe['sigma']]
-
-
 def _get_azimuth_correction(coe, azimuth):
     """
     This is the azimuth correction defined in the functional form (see
@@ -91,24 +83,24 @@ class MegawatiEtAl2003(GMPE):
     #: Required distance measure is hypocentral distance, and azimuth
     REQUIRES_DISTANCES = {'rhypo', 'azimuth'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        coe = self.COEFFS[imt]
-        mean = (_get_magnitude_scaling(coe, rup.mag) +
-                _get_distance_scaling(coe, dists.rhypo) +
-                _get_azimuth_correction(coe, dists.azimuth))
-        # Convert to g
-        if imt.string.startswith(("PGA", "SA")):
-            mean = np.log(np.exp(mean) / (100.0 * g))
-        # Compute std
-        stddevs = _compute_std(coe, stddev_types, dists.azimuth.shape)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            coe = self.COEFFS[imt]
+            mean[m] = (_get_magnitude_scaling(coe, ctx.mag) +
+                       _get_distance_scaling(coe, ctx.rhypo) +
+                       _get_azimuth_correction(coe, ctx.azimuth))
+            # Convert to g
+            if imt.string.startswith(("PGA", "SA")):
+                mean[m] = np.log(np.exp(mean[m]) / (100.0 * g))
+            # Compute std
+            sig[m] = coe['sigma']
 
-    #: Coefficient table for rock sites, see table 3 page 2257
+    #: Coefficient table for rock ctx, see table 3 page 2257
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT             a0       a1          a2        a3          a4      a5    sigma
 PGV        -13.512   3.8980   -0.129363   -1.0000   -0.000887  0.1286   0.3740
