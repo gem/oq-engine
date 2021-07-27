@@ -28,6 +28,7 @@ Module exports :class:`Bradley2013`, :class:`Bradley2013Volc`,
 :class:`Bradley2013ChchMaps`.
 :class:`Bradley2013ChchMapsAdditionalSigma`.
 """
+import copy
 import numpy as np
 import shapely
 
@@ -38,17 +39,13 @@ from openquake.hazardlib.imt import PGA, SA
 
 
 def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
-
     dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
     # If the site is in the CBD polygon, get dL2L and dS2S terms
     if in_cshm is True:
         # Only apply the dL2L term only to sites located in the CBD.
         dL2L[in_cbd == 1] = _get_dL2L(imt_per)
         dS2S[in_cbd == 1] = _get_dS2S(region, imt_per)
-
-    mean = b13_mean + dL2L + dS2S
-
-    return mean
+    return b13_mean + dL2L + dS2S
 
 
 def _check_in_cbd_polygon(lons, lats):
@@ -146,7 +143,7 @@ def _get_SRF_tau(imt_per):
 
 
 def set_adjusted_stddevs(
-        clsname, additional_sigma, ctx, C, stddev_types, ln_y_ref,
+        clsname, additional_sigma, ctx, C, ln_y_ref,
         exp1, exp2, in_cshm, in_cbd, imt_per, sig, tau, phi):
 
     # aftershock flag is zero, we consider only main shock.
@@ -167,19 +164,16 @@ def set_adjusted_stddevs(
     NL = b * y_ref / (y_ref + c)
     sigma = (
         # first line of eq. 20
-        (C['sig1']
-         + 0.5 * (C['sig2'] - C['sig1']) * mag_test
-         + C['sig4'] * AS)
+        (C['sig1'] + 0.5 * (C['sig2'] - C['sig1']) * mag_test + C['sig4'] * AS)
         # second line
-        * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
-                  + (1 + NL) ** 2))
+        * np.sqrt(C['sig3'] * Finferred + 0.7 * Fmeasured + (1 + NL) ** 2))
     if "Maps" in clsname:
 
         # Get sigma reduction factors if site is in CBD polygon.
         srf_sigma = np.array(np.ones(np.shape(in_cbd)))
         srf_phi = np.array(np.ones(np.shape(in_cbd)))
         srf_tau = np.array(np.ones(np.shape(in_cbd)))
-        if in_cshm is True:
+        if in_cshm == 1:
             srf_sigma[in_cbd == 1] = _get_SRF_sigma(imt_per)
             srf_phi[in_cbd == 1] = _get_SRF_phi(imt_per)
             # The tau reduction term is not used in this implementation
@@ -480,7 +474,7 @@ class Bradley2013(GMPE):
     1) small magnitude scaling;
     2) scaling of short period ground motion from normal faulting events in
     volcanic crust;
-    3) scaling of ground motions on very hard rock ctx;
+    3) scaling of ground motions on very hard rock sites;
     4) anelastic attenuation in the New Zealand crust;
     5) consideration of the increates anelastic attenuation in the Taupo
     Volcanic Zone (not implemented in this model, use Bradley2013Volc)
@@ -587,7 +581,7 @@ class Bradley2013Volc(Bradley2013):
     1) small magnitude scaling;
     2) scaling of short period ground motion from normal faulting events in
     volcanic crust;
-    3) scaling of ground motions on very hard rock ctx;
+    3) scaling of ground motions on very hard rock sites;
     4) anelastic attenuation in the New Zealand crust;
     5) consideration of the increates anelastic attenuation in the Taupo
     Volcanic Zone (rtvz is equal to rrup)
@@ -693,12 +687,13 @@ class Bradley2013bChchCBD(Bradley2013LHC):
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+        ctx = copy.copy(ctx)
+        # Fix site parameters for consistent dS2S application.
+        ctx.vs30 = np.array([250])
+        ctx.z1pt0 = np.array([330])
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imt_per = imt.period
-            # Fix site parameters for consistent dS2S application.
-            ctx.vs30 = np.array([250])
-            ctx.z1pt0 = np.array([330])
             # intensity on a reference soil is used for both mean
             # and stddev calculations.
             ln_y_ref = _get_ln_y_ref(trt, ctx, C)
@@ -838,18 +833,19 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        ctx = copy.copy(ctx)
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         name = self.__class__.__name__
+        # Check if any part of source is located within CSHM region
+        in_cshm = _check_in_cshm_polygon(ctx)
+        # Check if site is located in the CBD polygon
+        in_cbd = _check_in_cbd_polygon(ctx.lon, ctx.lat)
+        # Fix CBD site terms before dS2S modification.
+        ctx.vs30[in_cbd == 1] = 250
+        ctx.z1pt0[in_cbd == 1] = 330
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imt_per = imt.period
-            # Check if any part of source is located within CSHM region
-            in_cshm = _check_in_cshm_polygon(ctx)
-            # Check if site is located in the CBD polygon
-            in_cbd = _check_in_cbd_polygon(ctx.lon, ctx.lat)
-            # Fix CBD site terms before dS2S modification.
-            ctx.vs30[in_cbd == 1] = 250
-            ctx.z1pt0[in_cbd == 1] = 330
             # intensity on a reference soil is used for both mean
             # and stddev calculations.
             ln_y_ref = _get_ln_y_ref(trt, ctx, C)
@@ -866,9 +862,8 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
                 self.region, in_cshm, in_cbd, imt_per, b13_mean)
             mean[m] += convert_to_LHC(imt)
             set_adjusted_stddevs(
-                name, self.additional_sigma, ctx,
-                C, ln_y_ref, exp1, exp2, in_cshm, in_cbd, imt_per,
-                sig[m], tau[m], phi[m])
+                name, self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
+                in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
 
 
 class Bradley2013bChchMapsAdditionalSigma(Bradley2013bChchMaps):
