@@ -27,6 +27,9 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+# assign constant
+LOG10E = np.log10(np.e)
+
 
 class MunsonThurber1997(GMPE):
     """
@@ -42,16 +45,14 @@ class MunsonThurber1997(GMPE):
 
     #: Supported intensity measure types is spectral acceleration,
     #: see table 3, pag. 110
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
 
     #: Supported intensity measure component is maximum horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.VECTORIAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation type is total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Predictor Variables', pag 103
@@ -64,39 +65,30 @@ class MunsonThurber1997(GMPE):
     #: see page 18 in Atkinson and Boore's manuscript
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
         # Distance term
-        R = np.sqrt(dists.rjb ** 2 + 11.29 ** 2)
+        R = np.sqrt(ctx.rjb ** 2 + 11.29 ** 2)
 
         # Magnitude term
-        M = rup.mag - 6
+        M = ctx.mag - 6
 
         # Site term only distinguishes between lava and ash;
-        # since ash sites have Vs30 in the range 60-200m/s,
+        # since ash ctx have Vs30 in the range 60-200m/s,
         # we use this upper value as class separator
-        S = np.zeros(R.shape)
-        S[sites.vs30 <= 200] = 1
-
-        # Mean ground motion (log10)
-        mean = (0.518 + 0.387*M - np.log10(R) - 0.00256*R + 0.335*S)
-
-        # Converting to natural log
-        mean /= np.log10(np.e)
-
-        # Check for standard deviation type
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        # Constant (total) standard deviation
-        stddevs = [0.237/np.log10(np.e) + np.zeros(R.shape)]
-
-        return mean, stddevs
+        S = np.zeros_like(R)
+        S[ctx.vs30 <= 200] = 1
+        for m, imt in enumerate(imts):
+            # Mean ground motion (log10)
+            mean[m] = (0.518 + 0.387*M - np.log10(R) - 0.00256*R + 0.335*S)
+            # Converting to natural log
+            mean[m] /= np.log10(np.e)
+            # Constant (total) standard deviation
+            sig[m] = 0.237 / LOG10E
 
 
 class MunsonThurber1997Hawaii(MunsonThurber1997):
@@ -105,48 +97,34 @@ class MunsonThurber1997Hawaii(MunsonThurber1997):
     hazard map of Klein FW, Frankel AD,Mueller CS, Wesson RL, Okubo PG.
     Seismic-hazard maps for Hawaii. US Geological Survey; 2000.
     """
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        super().compute(ctx, imts, mean, sig, tau, phi)
 
-        # assign constant
-        log10e = np.log10(np.e)
-
-        # Distance term
-        R = np.sqrt(dists.rjb ** 2 + 11.29 ** 2)
         # Magnitude term
-        M = rup.mag - 6
+        M = ctx.mag - 6
+        if ctx.mag > 7. and ctx.mag <= 7.7:
+            mean[:] = (0.171 * (1 - M)) / LOG10E + mean
+        elif ctx.mag > 7.7:
+            mean[:] = (0.1512 + 0.387 * (1 - M)) / LOG10E + mean
 
-        # Site term only distinguishes between lava and ash;
-        # since ash sites have Vs30 in the range 60-200m/s,
-        # we use this upper value as class separator
-        S = np.zeros(R.shape)
-        S[sites.vs30 <= 200] = 1
-
-        # Mean ground motion (natural log)
-        # call super
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
-                                                     imt, stddev_types)
-
-        if rup.mag > 7. and rup.mag <= 7.7:
-            mean = (0.171 * (1 - M)) / log10e + mean
-
-        elif rup.mag > 7.7:
-            mean = (0.1512 + 0.387 * (1 - M)) / log10e + mean
-
-        # define natural log of SA 0.3 sec and 0.2 sec
-        if imt.period == 0.3:
-            mean = np.log(2.2) + mean
-        elif imt.period == 0.2:
-            mean = np.log(2.5) + mean
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            # define natural log of SA 0.3 sec and 0.2 sec
+            if imt.period == 0.3:
+                mean[m] += np.log(2.2)
+            elif imt.period == 0.2:
+                mean[m] += np.log(2.5)
+            if (self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
+                    const.IMC.VECTORIAL):
+                # Conversion to geometric mean of horizontal components
+                # using the coefficient in Beyer and Bommer, 2006
+                mean[m] += np.log(1.1)
 
 
 class MunsonThurber1997Vector(MunsonThurber1997):
@@ -154,17 +132,6 @@ class MunsonThurber1997Vector(MunsonThurber1997):
     Modification of the original base class to correct mean ground motion
     to geometric mean of horizontal components (Beyer and Bommer, 2006)
     """
-
     #: Supported intensity measure component is geometric mean of horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.VECTORIAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VECTORIAL
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
-                                                     imt, stddev_types)
-
-        # Conversion to geometric mean of horizontal components
-        # using the coefficient in Beyer and Bommer, 2006
-        mean += np.log(1.1)
-
-        return mean, stddevs
