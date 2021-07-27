@@ -175,48 +175,44 @@ def _get_f_z(C, imt, rrup, m):
     return np.log(z) + (C['b3'] + C['b4']*m)*np.log(ratio_b)
 
 
-def _get_mean_on_rock(region, focal_depth, C2, C3, C4, sctx, rctx, dctx,
-                      imt, stddev_types):
+def _get_mean_on_rock(region, focal_depth, C2, C3, C4, ctx, imt):
     # Get coefficients
     # Magnitude effect
-    f_m = _get_f_m(C2, imt, rctx.mag)
+    f_m = _get_f_m(C2, imt, ctx.mag)
     # Stress adjustment
     f_delta_sigma = _get_stress_drop_adjstment(
-        region, focal_depth, C3, imt, rctx.mag)
+        region, focal_depth, C3, imt, ctx.mag)
     # Geometrical spreading
-    f_z = _get_f_z(C2, imt, dctx.rrup, rctx.mag)
+    f_z = _get_f_z(C2, imt, ctx.rrup, ctx.mag)
     # Anelastic attenuation function
-    f_gamma = _get_f_gamma(region, C4, imt, dctx.rrup)
+    f_gamma = _get_f_gamma(region, C4, imt, ctx.rrup)
     # Regional term for stress drop
     c_e = _get_c_e(region, imt)
     # Regional term for path duration
-    c_p = _get_c_p(region, imt, dctx.rrup, rctx.mag)
+    c_p = _get_c_p(region, imt, ctx.rrup, ctx.mag)
     # Compute mean using equation 26
     mean = f_m + f_delta_sigma + f_z + f_gamma + c_e + c_p
     return mean
 
 
-def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4,
-                      sctx, rctx, dctx, imt, stddev_types):
+def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4, ctx, imt):
     # Get PGA on rock
     tmp = PGA()
-    pga_rock = _get_mean_on_rock(
-        region, focal_depth, C2, C3, C4, sctx, rctx, dctx, tmp, stddev_types)
+    pga_rock = _get_mean_on_rock(region, focal_depth, C2, C3, C4, ctx, tmp)
     pga_rock = np.exp(pga_rock)
     if adapted:  # in acme_2019
         # Site-effect model: always evaluated for 760 (see HID 2.6.2)
-        vs30 = np.ones_like(sctx.vs30) * 760.
+        vs30 = np.ones_like(ctx.vs30) * 760.
     else:
-        vs30 = sctx.vs30
+        vs30 = ctx.vs30
     # Compute the mean on soil
-    mean = _get_mean_on_rock(
-        region, focal_depth, C2, C3, C4, sctx, rctx, dctx, imt, stddev_types)
+    mean = _get_mean_on_rock(region, focal_depth, C2, C3, C4, ctx, imt)
     # coefficients of BooreEtAl2014
     C = gmm.COEFFS[imt]
     mean += get_fs_SeyhanStewart2014(C, imt, pga_rock, vs30)
     if adapted:
         # acme_2019 considers the SoF correction
-        famp = get_sof_adjustment(rctx.rake, imt)
+        famp = get_sof_adjustment(ctx.rake, imt)
         mean += np.log(famp)
     return mean
 
@@ -316,22 +312,20 @@ class YenierAtkinson2015BSSA(GMPE):
         self.region = region
         self.gmpe = BooreEtAl2014()
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-        # Get coefficients
-        C2 = self.COEFFS_TAB2[imt]
-        C3 = self.COEFFS_TAB3[imt]
-        C4 = self.COEFFS_TAB4[imt]
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        for m, imt in enumerate(imts):
+            C2 = self.COEFFS_TAB2[imt]
+            C3 = self.COEFFS_TAB3[imt]
+            C4 = self.COEFFS_TAB4[imt]
 
-        # Compute focal depth if not set at the initialization level
-        if self.focal_depth is None:
-            self.focal_depth = rctx.hypo_depth
+            # Compute focal depth if not set at the initialization level
+            if self.focal_depth is None:
+                self.focal_depth = ctx.hypo_depth
 
-        # Compute mean and std
-        mean = _get_mean_on_soil(
-            self.adapted, self.region, self.focal_depth, self.gmpe, C2, C3, C4,
-            sctx, rctx, dctx, imt, stddev_types)
-        stddevs = np.zeros_like(sctx.vs30)
-        return mean, stddevs
+            # Compute mean and std
+            mean[m] = _get_mean_on_soil(
+                self.adapted, self.region, self.focal_depth, self.gmpe,
+                C2, C3, C4, ctx, imt)
 
     COEFFS_TAB2 = CoeffsTable(sa_damping=5, table="""\
    imt    Mh        e0      e1       e2      e3      b3        b4
