@@ -651,26 +651,10 @@ class Bradley2013LHC(Bradley2013):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        # intensity on a reference soil is used for both mean
-        # and stddev calculations.
-        ln_y_ref = _get_ln_y_ref(trt, rup, dists, C)
-        # exp1 and exp2 are parts of eq. 7
-        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-        # v1 is the period dependent site term. The Vs30 above which, the
-        # amplification is constant
-        v1 = _get_v1(imt)
-
-        mean = _get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
         mean += convert_to_LHC(imt)
 
-        stddevs = _get_stddevs(self.__class__.__name__, self.additional_sigma,
-                               sites, rup, C, stddev_types,
-                               ln_y_ref, exp1, exp2)
         return mean, stddevs
 
 
