@@ -149,7 +149,7 @@ def set_adjusted_stddevs(
     # aftershock flag is zero, we consider only main shock.
     AS = 0
     Fmeasured = ctx.vs30measured
-    Finferred = 1 - ctx.vs30measured
+    Finferred = ~ctx.vs30measured
 
     # eq. 19 to calculate inter-event standard error
     mag_test = min(max(ctx.mag, 5.0), 7.0) - 5.0
@@ -187,6 +187,7 @@ def set_adjusted_stddevs(
         phi[:] = np.sqrt(scaled_phi ** 2 + additional_sigma ** 2 / 2)
         scaled_tau = np.abs((1 + NL) * t) * srf_tau
         tau[:] = np.sqrt(scaled_tau ** 2 + additional_sigma ** 2 / 2)
+        return
 
     # Get sigma reduction factors
     srf_sigma = _get_SRF_sigma(imt_per)
