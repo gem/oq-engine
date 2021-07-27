@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -44,7 +44,6 @@ class Dummy:
 
     @classmethod
     def get_surface(self):
-        """ """
         hyp = Line([Point(0, 0.5)])
         trc = Line([Point(0, 0), Point(0, 1)])
         sfc = SimpleFaultSurface.from_fault_data(fault_trace=trc,

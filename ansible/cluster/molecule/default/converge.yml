@@ -1,0 +1,5 @@
+---
+- name: Converge
+  hosts: all
+
+- import_playbook: ../../oq_cluster.yaml

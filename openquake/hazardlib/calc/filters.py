@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,22 +18,22 @@
 
 import ast
 import sys
-import time
-import logging
+import copy
 import operator
+import itertools
 from contextlib import contextmanager
 import numpy
-from scipy.spatial import cKDTree, distance
+from scipy.spatial import cKDTree
 
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib import site
+from openquake.hazardlib import site, mfd
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
-et_id = operator.attrgetter('et_id')
+trt_smr = operator.attrgetter('trt_smr')
 
 
 @contextmanager
@@ -120,16 +120,16 @@ class MagDepDistance(dict):
         >>> md.interp(dict(default=[5.0, 5.1, 5.2])); md.ddic
         {'default': {'5.00': 50.0, '5.10': 50.0, '5.20': 50.0}}
         """
-        items_by_trt = floatdict(value.replace('?', '-1'))
+        items_by_trt = floatdict(value)
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):
-                self[trt] = unique_sorted(items)
+                self[trt] = unique_sorted([tuple(it) for it in items])
                 for mag, dist in self[trt]:
                     if mag < 1 or mag > 10:
                         raise ValueError('Invalid magnitude %s' % mag)
             else:  # assume scalar distance
-                assert items == -1 or items >= 0, items
+                assert items >= 0, items
                 self[trt] = [(1., items), (10., items)]
         return self
 
@@ -166,12 +166,6 @@ class MagDepDistance(dict):
         """
         return {trt: self[trt][-1][1] for trt in self}
 
-    def suggested(self):
-        """
-        :returns: True if there is a ? for any TRT
-        """
-        return any(self[trt][-1][1] == -1 for trt in self)
-
     def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """
         Build a bounding box around the given lon, lat by computing the
@@ -191,20 +185,6 @@ class MagDepDistance(dict):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
-    def get_affected_box(self, src):
-        """
-        Get the enlarged bounding box of a source.
-
-        :param src: a source object
-        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
-        """
-        maxdist = self(src.tectonic_region_type)
-        try:
-            bbox = get_bounding_box(src, maxdist)
-        except Exception as exc:
-            raise exc.__class__('source %s: %s' % (src.source_id, exc))
-        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
-
     def get_dist_bins(self, trt, nbins=51):
         """
         :returns: an array of distance bins, from 10m to maxdist
@@ -212,66 +192,54 @@ class MagDepDistance(dict):
         return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
 
-def split_sources(srcs):
+def split_source(src):
     """
-    :param srcs: sources
-    :returns: a pair (split sources, split time) or just the split_sources
+    :param src: a splittable (or not splittable) source
+    :returns: the underlying sources (or the source itself)
     """
-    from openquake.hazardlib.source import splittable
-    sources = []
-    split_time = {}  # src.id -> time
-    for src in srcs:
-        if not splittable(src):
-            sources.append(src)
-            continue
-        t0 = time.time()
-        if not src.num_ruptures:  # not set yet
-            src.num_ruptures = src.count_ruptures()
-        mag_a, mag_b = src.get_min_max_mag()
-        min_mag = src.min_mag
-        if mag_b < min_mag:  # discard the source completely
-            continue
-        if min_mag:
-            splits = []
-            for s in src:
-                s.min_mag = min_mag
-                mag_a, mag_b = s.get_min_max_mag()
-                if mag_b < min_mag:
-                    continue
-                s.num_ruptures = s.count_ruptures()
-                if s.num_ruptures:
-                    splits.append(s)
-        else:
-            splits = list(src)
-        try:
-            split_time[src.id] = time.time() - t0
-        except AttributeError as exc:  # missing .id, should never happen
-            raise AttributeError('%s: %s' % (exc, src.source_id))
-        sources.extend(splits)
-        has_samples = hasattr(src, 'samples')
-        has_scaling_rate = hasattr(src, 'scaling_rate')
-        grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
-        if len(splits) > 1:
-            for i, split in enumerate(splits):
-                split.source_id = '%s:%s' % (src.source_id, i)
-                split.et_id = src.et_id
-                split.grp_id = grp_id
-                split.id = src.id
-                if has_samples:
-                    split.samples = src.samples
-                if has_scaling_rate:
-                    s.scaling_rate = src.scaling_rate
-        elif splits:  # single source
-            [s] = splits
-            s.source_id = src.source_id
-            s.et_id = src.et_id
-            s.grp_id = grp_id
-            s.id = src.id
+    from openquake.hazardlib.source import splittable  # avoid circular import
+    if not splittable(src):
+        return [src]
+    mag_a, mag_b = src.get_min_max_mag()
+    min_mag = src.min_mag
+    if mag_b < min_mag:  # discard the source completely
+        return [src]
+    if min_mag:
+        splits = []
+        for s in src:
+            s.min_mag = min_mag
+            mag_a, mag_b = s.get_min_max_mag()
+            if mag_b >= min_mag:
+                splits.append(s)
+    else:
+        splits = list(src)
+    has_samples = hasattr(src, 'samples')
+    has_scaling_rate = hasattr(src, 'scaling_rate')
+    grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
+    if len(splits) > 1:
+        for i, split in enumerate(splits):
+            split.source_id = '%s:%s' % (src.source_id, i)
+            split.trt_smr = src.trt_smr
+            split.grp_id = grp_id
+            split.id = src.id
             if has_samples:
-                s.samples = src.samples
+                split.samples = src.samples
             if has_scaling_rate:
                 s.scaling_rate = src.scaling_rate
-    return sources, split_time
+    elif splits:  # single source
+        [s] = splits
+        s.source_id = src.source_id
+        s.trt_smr = src.trt_smr
+        s.grp_id = grp_id
+        s.id = src.id
+        if has_samples:
+            s.samples = src.samples
+        if has_scaling_rate:
+            s.scaling_rate = src.scaling_rate
+    for split in splits:
+        if not split.num_ruptures:
+            split.num_ruptures = split.count_ruptures()
+    return splits
 
 
 class SourceFilter(object):
@@ -315,13 +283,28 @@ class SourceFilter(object):
         sc.complete = self.sitecol.complete
         return self.__class__(sc, self.integration_distance)
 
+    def get_enlarged_box(self, src, maxdist=None):
+        """
+        Get the enlarged bounding box of a source.
+
+        :param src: a source object
+        :param maxdist: a scalar maximum distance (or None)
+        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
+        """
+        if maxdist is None:
+            maxdist = self.integration_distance(src.tectonic_region_type)
+        try:
+            bbox = get_bounding_box(src, maxdist)
+        except Exception as exc:
+            raise exc.__class__('source %s: %s' % (src.source_id, exc))
+        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
+
     def get_rectangle(self, src):
         """
         :param src: a source object
         :returns: ((min_lon, min_lat), width, height), useful for plotting
         """
-        min_lon, min_lat, max_lon, max_lat = (
-            self.integration_distance.get_affected_box(src))
+        min_lon, min_lat, max_lon, max_lat = self.get_enlarged_box(src)
         return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
 
     def get_close_sites(self, source):
@@ -329,30 +312,52 @@ class SourceFilter(object):
         Returns the sites within the integration distance from the source,
         or None.
         """
-        source_indices = list(self.filter([source]))
-        if source_indices:
-            return self.sitecol.filtered(source_indices[0][1])
+        source_sites = list(self.filter([source]))
+        if source_sites:
+            return source_sites[0][1]
 
-    def split(self, sources, mon):
+    def split(self, sources):
         """
-        :yields: pairs ([split], sites)
+        :yields: pairs (split, sites)
         """
-        for src in sources:
-            with mon:
-                split, dt = split_sources(src)
-            for s in split:
-                with mon:
-                    sites = self.get_close_sites(s)
+        for src, _sites in self.filter(sources):
+            for s in split_source(src):
+                sites = self.get_close_sites(s)
                 if sites is not None:
-                    yield [s], sites
+                    yield s, sites
 
-    # used in the rupture prefiltering: it should not discard too much
-    def close_sids(self, rec, trt):
+    def split_less(self, sources):
         """
-        :param rec:
-           a record with fields mag, minlon, minlat, maxlon, maxlat, hypo
-        :param trt:
-           tectonic region type string
+        :yields: pairs (split, sites)
+        """
+        for src, _sites in self.filter(sources):
+            if src.__class__.__name__.startswith(('Multi', 'Collapsed')):
+                # do not split
+                yield src, _sites
+            elif hasattr(src, 'get_annual_occurrence_rates'):
+                for mag, rate in src.get_annual_occurrence_rates():
+                    new = copy.copy(src)
+                    new.mfd = mfd.ArbitraryMFD([mag], [rate])
+                    new.num_ruptures = new.count_ruptures()
+                    sites = self.get_close_sites(new)
+                    if sites is not None:
+                        yield new, sites
+            else:  # nonparametric source
+                # data is a list of pairs (rup, pmf)
+                for mag, group in itertools.groupby(
+                        src.data, lambda pair: pair[0].mag):
+                    new = src.__class__(src.source_id, src.name,
+                                        src.tectonic_region_type, list(group))
+                    vars(new).update(vars(src))
+                    sites = self.get_close_sites(new)
+                    if sites is not None:
+                        yield new, sites
+
+    # used in source and rupture prefiltering: it should not discard too much
+    def close_sids(self, src_or_rec, trt=None, maxdist=None):
+        """
+        :param src_or_rec: a source or a rupture record
+        :param trt: passed only if src_or_rec is a rupture record
         :returns:
            the site indices within the maximum_distance of the hypocenter,
            plus the maximum size of the bounding box
@@ -361,75 +366,47 @@ class SourceFilter(object):
             return []
         elif not self.integration_distance:  # do not filter
             return self.sitecol.sids
+        if trt:  # rupture, called by GmfGetter.gen_computers
+            dlon = get_longitudinal_extent(
+                src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
+            dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.
+            lon, lat, dep = src_or_rec['hypo']
+            dist = self.integration_distance(trt) + numpy.sqrt(
+                dlon**2 + dlat**2) / KM_TO_DEGREES
+            dist += 10  # added 10 km of buffer to guard against numeric errors
+            # the test most sensitive to the buffer effect is in oq-risk-tests,
+            # case_ucerf/job_eb.ini; without buffer, sites can be discarded
+            # even if within the maximum_distance
+            return self._close_sids(lon, lat, dep, dist)
+        else:  # source
+            trt = src_or_rec.tectonic_region_type
+            try:
+                bbox = self.get_enlarged_box(src_or_rec, maxdist)
+            except BBoxError:  # do not filter
+                return self.sitecol.sids
+            return self.sitecol.within_bbox(bbox)
+
+    def _close_sids(self, lon, lat, dep, dist):
         if not hasattr(self, 'kdt'):
             self.kdt = cKDTree(self.sitecol.xyz)
-        xyz = spherical_to_cartesian(*rec['hypo'])
-        dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
-        dlat = rec['maxlat'] - rec['minlat']
-        delta = max(dlon, dlat) / KM_TO_DEGREES
-        maxradius = self.integration_distance(trt) + delta
-        sids = U32(self.kdt.query_ball_point(xyz, maxradius, eps=.001))
+        xyz = spherical_to_cartesian(lon, lat, dep)
+        sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
         sids.sort()
         return sids
-
-    # used for debugging purposes
-    def get_cdist(self, rec):
-        """
-        :returns: array of N euclidean distances from rec['hypo']
-        """
-        xyz = spherical_to_cartesian(*rec['hypo']).reshape(1, 3)
-        return distance.cdist(self.sitecol.xyz, xyz)[:, 0]
 
     def filter(self, sources):
         """
         :param sources: a sequence of sources
-        :yields: sources with indices
+        :yields: pairs (sources, sites)
         """
         if self.sitecol is None:  # nofilter
             for src in sources:
                 yield src, None
             return
         for src in sources:
-            try:
-                box = self.integration_distance.get_affected_box(src)
-            except BBoxError:  # too large, don't filter
-                src.nsites = len(self.sitecol)
-                yield src, self.sitecol.sids
-                continue
-            indices = self.sitecol.within_bbox(box)
-            if len(indices):
-                src.nsites = len(indices)
-                yield src, indices
-
-    def within_bbox(self, srcs):
-        """
-        :param srcs: a list of source objects
-        :returns: the site IDs within the enlarged bounding box of the sources
-        """
-        if self.sitecol is None:  # for test_case_1_ruptures
-            return [0]
-        lons = []
-        lats = []
-        for src in srcs:
-            try:
-                box = self.integration_distance.get_affected_box(src)
-            except BBoxError as exc:
-                logging.error(exc)
-                continue
-            lons.append(box[0])
-            lats.append(box[1])
-            lons.append(box[2])
-            lats.append(box[3])
-        if cross_idl(*(list(self.sitecol.lons) + lons)):
-            lons = numpy.array(lons) % 360
-        else:
-            lons = numpy.array(lons)
-        bbox = (lons.min(), min(lats), lons.max(), max(lats))
-        if bbox[2] - bbox[0] > 180:
-            raise BBoxError(
-                'The bounding box of the sources is larger than half '
-                'the globe: %d degrees' % (bbox[2] - bbox[0]))
-        return self.sitecol.within_bbox(bbox)
+            sids = self.close_sids(src)
+            if len(sids):
+                yield src, self.sitecol.filtered(sids)
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:

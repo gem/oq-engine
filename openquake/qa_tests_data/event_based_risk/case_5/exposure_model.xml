@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+  <exposureModel category="buildings" id="exposure" taxonomySource="GEM taxonomy">
+    <description>exposure model</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" type="aggregated" unit="EUR"/>
+        <costType name="nonstructural" type="aggregated" unit="EUR"/>
+        <costType name="business_interruption" type="aggregated" unit="days"/>
+      </costTypes>
+    </conversions>
+    <tagNames>NAME_1 NAME_2 NAME_3 NAME_4</tagNames>
+    <assets>
+      <asset id="a1" number="1"  taxonomy="Wood/Res" >
+				<location lon="83.31382" lat="29.46117" />
+				<costs>
+					<cost type="structural" value="11340"/>
+					<cost type="nonstructural" value="19845"/>
+					<cost type="business_interruption" value="19845"/>
+				</costs>
+				<occupancies>
+					<occupancy occupants="5" period="night"/>
+				</occupancies>
+				<tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Dolpa" NAME_4="Tinje" />
+			</asset>
+			<asset id="a2" number="1"  taxonomy="Wood/Com" >
+				<location lon="83.31382" lat="29.23617" />
+				<costs>
+					<cost type="structural" value="11340"/>
+					<cost type="nonstructural" value="19845"/>
+					<cost type="business_interruption" value="19845"/>
+				</costs>
+				<occupancies>
+					<occupancy occupants="5" period="night"/>
+				</occupancies>
+				<tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Dolpa" NAME_4="Tinje" />
+			</asset>
+      <asset id="a3" number="1"  taxonomy="Adobe/Res" >
+        <location lon="83.53882" lat="29.08617" />
+        <costs>
+          <cost type="structural" value="11340"/>
+          <cost type="nonstructural" value="19845"/>
+          <cost type="business_interruption" value="19845"/>
+        </costs>
+        <occupancies>
+          <occupancy occupants="5" period="night"/>
+        </occupancies>
+        <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Dolpa" NAME_4="Chharka" />
+      </asset>
+      <asset id="a4" number="1"  taxonomy="Adobe/Com" >
+        <location lon="80.68882" lat="28.93617" />
+        <costs>
+          <cost type="structural" value="11340"/>
+          <cost type="nonstructural" value="19845"/>
+          <cost type="business_interruption" value="19845"/>
+        </costs>
+        <occupancies>
+          <occupancy occupants="5" period="night"/>
+        </occupancies>
+        <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Kailali" NAME_4="Nigali" />
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>

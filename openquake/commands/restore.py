@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,13 +24,11 @@ import os.path
 import zipfile
 import sqlite3
 import requests
-from openquake.baselib import sap
 from openquake.baselib.general import safeprint
 from openquake.server.dbapi import Db
 
 
-@sap.script
-def restore(archive, oqdata):
+def main(archive, oqdata):
     """
     Build a new oqdata directory from the data contained in the zip archive
     """
@@ -68,5 +66,5 @@ def restore(archive, oqdata):
               % (n, oqdata, dt))
 
 
-restore.arg('archive', 'path to a zip file')
-restore.arg('oqdata', 'path to an oqdata directory')
+main.archive = 'path to a zip file'
+main.oqdata = 'path to an oqdata directory'

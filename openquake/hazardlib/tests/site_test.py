@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -34,7 +34,6 @@ class SiteModelParam(object):
         self.reference_vs30_type = 'measured'
         self.reference_depth_to_1pt0km_per_sec = 3.4
         self.reference_depth_to_2pt5km_per_sec = 5.6
-        self.reference_siteclass = b'C'
         self.reference_backarc = False
 
 
@@ -236,19 +235,11 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         # is on the boundary i.e. out, (1, 1) is in
         self.assertEqual(len(reducedcol), 1)
 
-    def test_split(self):
+    def test_reduce(self):
         col = SiteCollection(self.SITES)
-        close_sites, far_sites = col.split(Point(10, 19), distance=200)
-        self.assertEqual(len(close_sites), 1)
-        self.assertEqual(len(far_sites), 3)
-
-        close_sites, far_sites = col.split(Point(10, 19), distance=0)
-        self.assertIsNone(close_sites)
-        self.assertEqual(len(far_sites), 4)
-
-        close_sites, far_sites = col.split(Point(10, 19), distance=None)
-        self.assertEqual(len(close_sites), 4)
-        self.assertIsNone(far_sites)
+        self.assertEqual(len(col.reduce(1)), 1)
+        self.assertEqual(len(col.reduce(2)), 2)
+        self.assertEqual(len(col.reduce(3)), 2)
 
 
 class WithinBBoxTestCase(unittest.TestCase):

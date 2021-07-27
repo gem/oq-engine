@@ -2,8 +2,8 @@
 from openquake.baselib import sap
 from openquake.baselib.node import node_from_xml
 
-@sap.Script
-def print_slowest(xunit_fname, numtests=20):
+
+def print_slowest(xunit_fname, numtests: int = 20):
     """
     Print the names and times of the slowest tests
     """
@@ -16,8 +16,8 @@ def print_slowest(xunit_fname, numtests=20):
     for row in data[:numtests]:
         print(row[1], row[0])
 
-print_slowest.arg('xunit_fname', 'the file nosetests.xml')
-print_slowest.arg('numtests', 'maximum number of times to print', type=int)
+print_slowest.xunit_fname = 'the file nosetests.xml'
+print_slowest.numtests = 'maximum number of times to print'
 
 if __name__ == '__main__':
-    print_slowest.callfunc()
+    sap.run(print_slowest)

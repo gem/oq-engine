@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,9 +18,7 @@ from openquake.hazardlib.gsim.zhao_2006_swiss import (
     ZhaoEtAl2006AscSWISS05,
     ZhaoEtAl2006AscSWISS03,
     ZhaoEtAl2006AscSWISS08)
-from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-import numpy
 
 
 class ZhaoEtAl2006AscSWISS05TestCase(BaseGSIMTestCase):

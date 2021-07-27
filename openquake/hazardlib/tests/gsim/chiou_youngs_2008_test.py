@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,7 @@ class ChiouYoungs2008TestCase(BaseGSIMTestCase):
 
     def test_total_stddev_hanging_wall_strike_slip_measured(self):
         self.check('NGA/CY08/CY08_SIGMEAS_MS_HW_SS.csv',
-                    max_discrep_percentage=0.015)
+                   max_discrep_percentage=0.015)
 
     def test_total_stddev_hanging_wall_strike_slip_inferred(self):
         self.check('NGA/CY08/CY08_SIGINFER_MS_HW_SS.csv',

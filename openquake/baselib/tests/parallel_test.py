@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,10 +69,6 @@ class StarmapTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         parallel.Starmap.init()  # initialize the pool
-        if parallel.oq_distribute() == 'zmq':
-            err = workerpool.check_status()
-            if err:
-                raise unittest.SkipTest(err)
 
     def test_apply(self):
         res = parallel.Starmap.apply(

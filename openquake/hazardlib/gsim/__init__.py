@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ Package :mod:`openquake.hazardlib.gsim` contains base and specific
 implementations of ground shaking intensity models. See
 :mod:`openquake.hazardlib.gsim.base`.
 """
+import inspect
 from openquake.baselib.general import import_all
 from openquake.hazardlib.gsim.base import registry
 
@@ -33,3 +34,23 @@ def get_available_gsims():
     by class name.
     '''
     return dict(sorted(registry.items()))
+
+
+def count_methods(cls):
+    """
+    Return the number of directly defined methods inside the class
+    """
+    return sum(1 for key, val in vars(cls).items()
+               if inspect.isfunction(val) and key != '__init__')
+
+
+def get_portable_gsims():
+    '''
+    Return an ordered dictionary with the portable GSIM classes, keyed
+    by class name.
+    '''
+    portable = {}
+    for cls in registry.values():
+        if 'get_mean_and_stddevs' in cls.__dict__:
+            portable[cls.__name__] = cls
+    return portable

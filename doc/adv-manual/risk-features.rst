@@ -88,7 +88,7 @@ coefficients depends on the taxonomy and the consequence model can be
 represented as a CSV file like the following:
 
 ===================	========	============	========	==========	===========	==========	
- taxonomy          	 cname  	 loss_type  	 slight 	 moderate 	 extensive 	 complete 	
+ taxonomy          	 consequence  	 loss_type  	 slight 	 moderate 	 extensive 	 complete 	
 -------------------	--------	------------	--------	----------	-----------	----------	
  CR_LFINF-DUH_H2   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
  CR_LFINF-DUH_H4   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
@@ -109,17 +109,10 @@ The framework is meant to be used for generic consequences,
 not necessarily limited to earthquakes, because since version 3.6 the engine
 provides a multi-hazard risk calculator.
 
-The second field of the header, the ``cname``, is a string identifying
-the kind of consequence we are considering. It is important because it
-is associated to the name of the plugin function to use to compute the
-consequence; right now (engine 3.8) we only support
-``cname="losses"``, but this will change in the future. The `cname` is
-also used when saving the consequence outputs in the datastore; right
-now we are storing only ``losses_by_event`` and ``losses_by_asset``
-but additional outputs  ``<cname>_by_event`` and ``<cname>_by_asset``
-will be stored in the future, should the CSV file contain references
-to additional plugin functions. For instance we could have outputs
-``fatalities_by_event`` and ``fatalities_by_asset``.
+The second field of the header, the ``consequence``, is a string
+identifying the kind of consequence we are considering. It is
+important because it is associated to the name of the plugin function
+to use to compute the consequence.
 
 The other fields in the header are the loss_type and the damage states.
 For instance the coefficient 0.25 for "moderate" means that the cost to
@@ -132,9 +125,14 @@ Scenarios from ShakeMaps
 
 Beginning with version 3.1, the engine is able to perform `scenario_risk`
 and `scenario_damage` calculations starting from the GeoJSON feed for
-ShakeMaps_ provided by the United States Geological Survey (USGS).
+ShakeMaps_ provided by the United States Geological Survey (USGS). 
+Furthermore, starting from version 3.12 it is possible to use 
+ShakeMaps from other sources like the local filesystem or a custom URL.
 
 .. _ShakeMaps: https://earthquake.usgs.gov/data/shakemap/
+
+Running the Calculation
+.......................
 
 In order to enable this functionality one has to prepare a parent
 calculation containing the exposure and risk functions for the
@@ -160,8 +158,8 @@ or fragility functions if damage calculations are of interest.
 
 It is essential that each fragility/vulnerability function in the risk
 model should be conditioned on one of the intensity measure types that 
-are supported by the ShakeMap service – PGV, PGA, SA(0.3), SA(1.0), and SA(3.0).
-If your fragility/vulnerability functions involves an intensity
+are supported by the ShakeMap service – MMI, PGV, PGA, SA(0.3), SA(1.0), 
+and SA(3.0). If your fragility/vulnerability functions involves an intensity
 measure type which is not supported by the ShakeMap system
 (for instance SA(0.6)) the calculation will terminate with an error.
 
@@ -175,7 +173,6 @@ For that, one need a `job.ini` file like the following::
    number_of_ground_motion_fields = 10
    truncation_level = 3
    shakemap_id = usp000fjta
-   hazard_calculation_id = 1000  # ID of the pre-calculation
    spatial_correlation = yes
    cross_correlation = yes
 
@@ -184,11 +181,62 @@ This example refers to the 2007 Mw8.0 Pisco earthquake in Peru
 The risk can be computed by running the risk job file against the prepared
 calculation::
 
-  $ oq engine --run job.ini
+  $ oq engine --run job.ini --hc 1000
 
-The engine will perform the following operations:
+Starting from version 3.12 it is also possible to specify the following sources
+instead of a `shakemap_id`::
 
-1. download the ShakeMap from the USGS web service and convert it into a format
+   # (1) from local files:
+   shakemap_uri = {
+         "kind": "usgs_xml",
+         "grid_url": "relative/path/file.xml",
+         "uncertainty_url": "relative/path/file.xml"
+         }
+
+   # (2) from remote files:
+   shakemap_uri = {
+         "kind": "usgs_xml",
+         "grid_url": "https://url.to/grid.xml",
+         "uncertainty_url": "https://url.to/uncertainty.zip"
+         }
+   
+   # (3) both files in a single archive
+   # containing grid.xml, uncertainty.xml:
+   shakemap_uri = {
+         "kind": "usgs_xml",
+         "grid_url": "relative/path/grid.zip" 
+         }
+
+While it is also possible to define absolute paths, it is advised not to do
+so since using absolute paths will make your calculation not portable
+across different machines.
+
+The files must be valid `.xml` USGS ShakeMaps `(1)`. One or both files can
+also be passed as `.zip` archives containing a single valid xml ShakeMap
+`(2)`. If both files are in the same `.zip`, the archived files `must` be
+named ``grid.xml`` and ``uncertainty.xml``.
+
+Also starting from version 3.12 it is possible to use ESRI Shapefiles
+in the same manner as ShakeMaps. Polygons define areas with the same
+intensity levels and assets/sites will be associated to a polygon if
+contained by the latter. Sites outside of a polygon will be
+discarded. Shapefile inputs can be specified similar to ShakeMaps::
+
+   shakemap_uri = {
+      "kind": "shapefile",
+      "fname": "path_to/file.shp"
+   }
+
+It is only necessary to specify one of the available files, and the rest of the files
+will be expected to be in the same location. It is also possible to have them
+contained together in a `*.zip` file.
+There are at least a `*.shp`-main file and a `*.dbf`-dBASE file required. The 
+record field names, intensity measure types and units all need to be the same 
+as with regular USGS ShakeMaps.
+
+Irrespective of the input, the engine will perform the following operations:
+
+1. download the ShakeMap and convert it into a format
    suitable for further processing, i.e. a ShakeMaps array with lon, lat fields
 2. the ShakeMap array will be associated to the hazard sites in the region
    covered by the ShakeMap
@@ -198,24 +246,17 @@ The engine will perform the following operations:
    in the datastore
 4. a regular risk calculation will be performed by using such GMFs and the
    assets within the region covered by the shakemap.
-   
-The performance of the calculation will be crucially determined by the number
-of hazard sites. For instance, in the case of the Pisco earthquake
-the ShakeMap has 506,142 sites, which is a significantly large number of sites.
-However, the extent of the ShakeMap in longitude and latitude is about 6
-degrees, with a step of 10 km the grid contains around 65 x 65 sites;
-most of the sites are without assets because most of the
-grid is on the sea or on high mountains, so actually there are
-around ~500 effective sites. Computing a correlation matrix of size
-500 x 500 is feasible, so the risk computation can be performed.
-Clearly in situations in which the number of hazard sites is too large,
-approximations will have to be made, such as neglecting the spatial or cross
-correlation effects, or using a larger `region_grid_spacing`.
+
+Correlation
+...........
 
 By default the engine tries to compute both the spatial correlation and the
-cross correlation between different intensity measure types. For each kind
-of correlation you have three choices, that you can set in the `job.ini`,
-for a total of nine combinations::
+cross correlation between different intensity measure types. Please note that 
+if you are using MMI as intensity measure type in your vulnerability model,
+it is not possible to apply correlations since those are based on physical measures.
+
+For each kind of correlation you have three choices, that you can set in the 
+`job.ini`, for a total of nine combinations::
 
 - spatial_correlation = yes, cross_correlation = yes  # the default
 - spatial_correlation = no, cross_correlation = no   # disable everything
@@ -227,15 +268,15 @@ for a total of nine combinations::
 - spatial_correlation = full, cross_correlation = no
 - spatial_correlation = full, cross_correlation = yes
 
-`yes` means using the correlation matrix of the Silva-Horspool paper;
-`no` mean using a unity correlation matrix; `full` means using an 
+`yes` means using the correlation matrix of the Silva-Horspool_ paper;
+`no` mean using no correlation; `full` means using an 
 all-ones correlation matrix.
 
-Disabling either the spatial correlation or the cross correlation (or both)
-might be useful to see how significant the effect of the correlation is on the
-damage/loss estimates; sometimes it is also made necessary because the
-calculation simply cannot be performed otherwise due to the large size of the
-resulting correlation matrices.
+.. _Silva-Horspool: https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154
+
+Apart from performance considerations, disabling either the spatial correlation 
+or the cross correlation (or both) might be useful to see how significant the 
+effect of the correlation is on the damage/loss estimates.
 
 In particular, due to numeric errors, the spatial correlation matrix - that
 by construction contains only positive numbers - can still produce small
@@ -250,6 +291,32 @@ go away. The easiest way to reduce the number of sites is setting a
 engine will automatically put the assets on a grid. The larger the grid
 spacing, the fewer the number of points, and the closer the calculation
 will be to tractability.
+
+Performance Considerations
+..........................
+
+The performance of the calculation will be crucially determined by the number
+of hazard sites. For instance, in the case of the Pisco earthquake
+the ShakeMap has 506,142 sites, which is a significantly large number of sites.
+However, the extent of the ShakeMap in longitude and latitude is about 6
+degrees, with a step of 10 km the grid contains around 65 x 65 sites;
+most of the sites are without assets because most of the
+grid is on the sea or on high mountains, so actually there are
+around ~500 effective sites. Computing a correlation matrix of size
+500 x 500 is feasible, so the risk computation can be performed.
+
+Clearly in situations in which the number of hazard sites is too large,
+approximations will have to be made such as using a larger `region_grid_spacing`.
+Disabling spatial AND cross correlation makes it possible run much larger 
+calculations. The performance can be further increased by not using a 
+``truncation_level``.
+
+When applying correlation, a soft cap on the size of the calculations is 
+defined. This is done and modifiable through the parameter ``cholesky_limit`` which
+refers to the number of sites multiplied by the number of intensity measure types 
+used in the vulnerability model. Raising that limit is at your own peril, as you 
+might run out of memory during calculation or may encounter instabilities in the 
+calculations as described above.
 
 If the ground motion values or the standard deviations are particularly
 large, the user will get a warning about suspicious GMFs.

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,10 +18,8 @@ import unittest
 import numpy as np
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.can15.western import get_sigma
-from openquake.hazardlib.gsim.can15.western_rjb import (WesternCan15RjbMid,
-                                                        WesternCan15RjbLow,
-                                                        WesternCan15RjbUpp)
+from openquake.hazardlib.gsim.can15.western import (
+    get_sigma, WesternCan15RjbMid, WesternCan15RjbLow, WesternCan15RjbUpp)
 
 
 class GetSigmaTestCase(unittest.TestCase):

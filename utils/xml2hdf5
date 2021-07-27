@@ -21,7 +21,6 @@ from openquake.baselib import hdf5, sap
 from openquake.hazardlib import nrml, sourceconverter
 
 
-@sap.Script
 def xml2hdf5(fname):
     sc = sourceconverter.SourceConverter(
         area_source_discretization=10, width_of_mfd_bin=.1)
@@ -32,7 +31,7 @@ def xml2hdf5(fname):
     print('Saved %s' % hdf5path)
 
 
-xml2hdf5.arg('fname', 'source model file in XML format')
+xml2hdf5.fname = 'source model file in XML format'
 
 if __name__ == '__main__':
-    xml2hdf5.callfunc()
+    sap.run(xml2hdf5)

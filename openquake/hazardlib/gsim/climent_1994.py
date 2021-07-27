@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,78 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+
+def _compute_term_1_2(rup, C):
+    """
+    Compute terms 1 and 2 in equation 1 page 1.
+    """
+    return C['c1'] + C['c2'] * rup.mag
+
+
+def _compute_term_3_4(dists, C):
+    """
+    Compute term 3 and 4 in equation 1 page 1.
+    """
+    cutoff = 6.056877878
+    rhypo = dists.rhypo.copy()
+    rhypo[rhypo <= cutoff] = cutoff
+    return C['c3'] * np.log(rhypo) + C['c4'] * rhypo
+
+
+def _get_site_amplification(sites, imt, C):
+    """
+    Compute the fith term of the equation (1), p. 1:
+    ``c5 * S``
+    """
+    S = _get_site_type_dummy_variables(sites)
+    return (C['c5'] * S)
+
+
+def _get_site_type_dummy_variables(sites):
+    """
+    Get site type dummy variables, ``S`` (for rock and soil sites)
+    """
+    S = np.zeros_like(sites.vs30)
+    # S=0 for rock sites, S=1 otherwise pag 1.
+    idxS = (sites.vs30 < 760.0)
+    S[idxS] = 1
+    return S
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    stddevs = [np.zeros(num_sites) + C['SigmaB'] / C['r_std']
+               for _ in stddev_types]
+    return stddevs
+
+
+def _compute_mean(C, rup, dists, sites, imt):
+    """
+    Compute mean value for PGA and pseudo-velocity response spectrum,
+    as given in equation 1. Converts also pseudo-velocity response
+    spectrum values to SA, using:
+
+      SA = (PSV * W)/ratio(SA_larger/SA_geo_mean)
+       W = (2 * pi / T)
+       T = period (sec)
+    """
+
+    mean = (_compute_term_1_2(rup, C) +
+            _compute_term_3_4(dists, C) +
+            _get_site_amplification(sites, imt, C))
+
+    # convert from m/s**2 to g for PGA and from m/s to g for PSV
+    # and divided this value for the ratio(SA_larger/SA_geo_mean)
+    if imt.string == "PGA":
+        mean = (np.exp(mean) / g) / C['r_SA']
+    else:
+        W = (2. * np.pi)/imt.period
+        mean = ((np.exp(mean) * W) / g) / C['r_SA']
+    return np.log(mean)
 
 
 class ClimentEtAl1994(GMPE):
@@ -57,10 +129,7 @@ class ClimentEtAl1994(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration. See Table 2 in page 1865
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the largest component of
     #: two horizontal components
@@ -70,9 +139,7 @@ class ClimentEtAl1994(GMPE):
 
     #: Supported standard deviation types is total.
     #: See equation 1 on the Summary and Table 4.1, page 22.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters. The GMPE was developed for rock and soil
     #: site conditions. The parameter S in eq. 1 (see Summary) define the
@@ -95,81 +162,10 @@ class ClimentEtAl1994(GMPE):
         # Extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
-
-        mean = self._compute_mean(C, rup, dists, sites, imt)
-
-        stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
+        mean = _compute_mean(C, rup, dists, sites, imt)
+        stddevs = _get_stddevs(C, stddev_types, sites.vs30.shape[0])
 
         return mean, stddevs
-
-    def _compute_term_1_2(self, rup, C):
-        """
-        Compute terms 1 and 2 in equation 1 page 1.
-        """
-        return C['c1'] + C['c2'] * rup.mag
-
-    def _compute_term_3_4(self, dists, C):
-        """
-        Compute term 3 and 4 in equation 1 page 1.
-        """
-        cutoff = 6.056877878
-        rhypo = dists.rhypo.copy()
-        rhypo[rhypo <= cutoff] = cutoff
-        return C['c3'] * np.log(rhypo) + C['c4'] * rhypo
-
-    def _get_site_amplification(self, sites, imt, C):
-        """
-        Compute the fith term of the equation (1), p. 1:
-        ``c5 * S``
-        """
-        S = self._get_site_type_dummy_variables(sites)
-        return (C['c5'] * S)
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables, ``S`` (for rock and soil sites)
-        """
-        S = np.zeros_like(sites.vs30)
-        # S=0 for rock sites, S=1 otherwise pag 1.
-        idxS = (sites.vs30 < 760.0)
-        S[idxS] = 1
-        return S
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        stddevs = [np.zeros(num_sites) + C['SigmaB'] / C['r_std']
-                   for _ in stddev_types]
-        return stddevs
-
-    def _compute_mean(self, C, rup, dists, sites, imt):
-        """
-        Compute mean value for PGA and pseudo-velocity response spectrum,
-        as given in equation 1. Converts also pseudo-velocity response
-        spectrum values to SA, using:
-
-          SA = (PSV * W)/ratio(SA_larger/SA_geo_mean)
-           W = (2 * pi / T)
-           T = period (sec)
-        """
-
-        mean = (self._compute_term_1_2(rup, C) +
-                self._compute_term_3_4(dists, C) +
-                self._get_site_amplification(sites, imt, C))
-
-        # convert from m/s**2 to g for PGA and from m/s to g for PSV
-        # and divided this value for the ratio(SA_larger/SA_geo_mean)
-        if imt.name == "PGA":
-            mean = (np.exp(mean) / g) / C['r_SA']
-        else:
-            W = (2. * np.pi)/imt.period
-            mean = ((np.exp(mean) * W) / g) / C['r_SA']
-        return np.log(mean)
 
     #: Equation coefficients, described in Table 4.1 on pp. 22
     #: the original imt values are defined as frequencies values

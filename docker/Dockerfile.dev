@@ -1,0 +1,48 @@
+# Copyright (C) 2020 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+FROM python:3.8 AS compile-image
+LABEL maintainer="GEM Foundation <devops@openquake.org>" \
+       vendor="GEM Foundation"
+RUN apt-get update &&  \
+    apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet netbase net-tools lsof tcpdump sudo strace time && \
+    useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
+ARG oq_branch
+ENV LANG en_US.UTF-8
+WORKDIR /usr/src
+
+# Create venv
+ENV VIRTUAL_ENV=/opt/openquake
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Install dependencies and engine
+RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \ 
+    pip --disable-pip-version-check install -e . -r requirements-py38-linux64.txt --no-warn-script-location
+#
+USER openquake
+ENV HOME /home/openquake
+#
+#ENV OQ_CONFIG_FILE /opt/openquake/openquake.cfg
+#ADD openquake.cfg /opt/openquake/openquake.cfg
+#
+WORKDIR ${HOME}
+RUN mkdir oqdata 
+#
+ADD scripts/oq-db_start.sh ${HOME}
+ADD scripts/oq-start.sh ${HOME}
+EXPOSE 8800:8800
+STOPSIGNAL SIGINT
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["./oq-start.sh"]  

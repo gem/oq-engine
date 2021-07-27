@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,6 +81,15 @@ class Polygon(object):
         # are the same
         pairs.append(pairs[0])
         return 'POLYGON((%s))' % ', '.join(pairs)
+
+    @property
+    def centroid(self):
+        """
+        :returns: the centroid of the underlying 2D polygon
+        """
+        if self._polygon2d is None:
+            self._init_polygon2d()
+        return self._polygon2d.centroid
 
     @classmethod
     def from_wkt(cls, wkt_string):

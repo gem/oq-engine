@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,8 @@ from openquake.hazardlib.gsim.cauzzi_2014 import (
     CauzziEtAl2014FixedVs30,
     CauzziEtAl2014FixedVs30NoSOF,
     CauzziEtAl2014Eurocode8,
-    CauzziEtAl2014Eurocode8NoSOF)
+    CauzziEtAl2014Eurocode8NoSOF,
+    CauzziEtAl2014Eurocode8scaled)
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1
@@ -129,3 +130,34 @@ class CauzziEtAl2014Eurocode8NoSOF(CauzziEtAl2014TestCase):
     STD_FILE = "C14/CAUZZI_NoSOF_EC8_TOTAL_STD.csv"
     INTER_FILE = "C14/CAUZZI_NoSOF_EC8_INTER_STD.csv"
     INTRA_FILE = "C14/CAUZZI_NoSOF_EC8_INTRA_STD.csv"
+
+
+class CauzziEtAl2014Eurocode8scaledTestCase(BaseGSIMTestCase):
+    """
+    Implements the test case for the class with required style of faulting
+    and period-dependent reference Vs30
+    """
+    GSIM_CLASS = CauzziEtAl2014Eurocode8scaled
+
+    # File containing the mean data
+    MEAN_FILE = "C14scaled/CAUZZI_EC8_MEAN.csv"
+    STD_FILE = "C14scaled/CAUZZI_EC8_TOTAL_STD.csv"
+    INTER_FILE = "C14scaled/CAUZZI_EC8_INTER_STD.csv"
+    INTRA_FILE = "C14scaled/CAUZZI_EC8_INTRA_STD.csv"
+
+    def test_mean(self):
+        self.check(self.MEAN_FILE,
+                   max_discrep_percentage=MEAN_DISCREP)
+
+    def test_std_total(self):
+        self.check(self.STD_FILE,
+                   max_discrep_percentage=STDDEV_DISCREP)
+
+    def test_std_inter(self):
+        self.check(self.INTER_FILE,
+                   max_discrep_percentage=STDDEV_DISCREP)
+
+    def test_std_intra(self):
+        self.check(self.INTRA_FILE,
+                   max_discrep_percentage=STDDEV_DISCREP)
+

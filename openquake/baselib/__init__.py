@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.11.0'
+__version__ = '3.12.0'
 __version__ += git_suffix(__file__)
 
 version = dict(engine=__version__,
@@ -103,7 +103,7 @@ def read(*paths, **validators):
             try:
                 sec[k] = validators.get(k, lambda x: x)(v)
             except ValueError as err:
-                raise ValueError('%s for %s in %s' % (err, k, found[0]))
+                raise ValueError('%s for %s in %s' % (err, k, found[-1]))
 
 
 config.read = read
@@ -124,7 +124,7 @@ def positiveint(flag):
     return i
 
 
-config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
+config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
             multi_user=positiveint, serialize_jobs=positiveint,
             strict=positiveint, code=exec)
 

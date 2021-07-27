@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@
 """
 This module includes the scientific API of the oq-risklib
 """
-import abc
 import copy
 import bisect
 import itertools
@@ -27,15 +26,16 @@ import collections
 from functools import lru_cache
 
 import numpy
+import pandas
 from numpy.testing import assert_equal
-from scipy import interpolate, stats, random
-
-from openquake.baselib.general import CallableDict, cached_property
-from openquake.hazardlib.stats import compute_stats2
+from scipy import interpolate, stats
 
 F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
+U16 = numpy.uint16
+U8 = numpy.uint8
+KNOWN_CONSEQUENCES = 'losses collapsed injured fatalities homeless'
 
 
 def pairwise(iterable):
@@ -69,6 +69,50 @@ def fine_graining(points, steps):
     ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
                             for x, y in pairwise(points)])
     return numpy.concatenate([ls, [points[-1]]])
+
+
+# sampling functions
+class Sampler(object):
+    def __init__(self, distname, rng, lratios=(), cols=None):
+        self.distname = distname
+        self.rng = rng
+        self.arange = numpy.arange(len(lratios))  # for the PM distribution
+        self.lratios = lratios  # for the PM distribution
+        self.cols = cols  # for the PM distribution
+
+    def get_losses(self, df, covs):
+        vals = df['val'].to_numpy()
+        if not self.rng or not covs:  # fast lane
+            losses = vals * df['mean'].to_numpy()
+        else:  # slow lane
+            losses = vals * getattr(self, 'sample' + self.distname)(df)
+        return losses
+
+    def sampleLN(self, df):
+        means = df['mean'].to_numpy()
+        covs = df['cov'].to_numpy()
+        eids = df['eid'].to_numpy()
+        return self.rng.lognormal(eids, means, covs)
+
+    def sampleBT(self, df):
+        means = df['mean'].to_numpy()
+        covs = df['cov'].to_numpy()
+        eids = df['eid'].to_numpy()
+        return self.rng.beta(eids, means, covs)
+
+    def samplePM(self, df):
+        eids = df['eid'].to_numpy()
+        allprobs = df[self.cols].to_numpy()
+        pmf = []
+        for eid, probs in zip(eids, allprobs):  # probs by asset
+            if probs.sum() == 0:  # oq-risk-tests/case_1g
+                # means are zeros for events below the threshold
+                pmf.append(0)
+            else:
+                pmf.append(stats.rv_discrete(
+                    name='pmf', values=(self.arange, probs),
+                    seed=self.rng.master_seed + eid).rvs())
+        return self.lratios[pmf]
 
 #
 # Input models
@@ -122,86 +166,106 @@ class VulnerabilityFunction(object):
             self.covs = numpy.zeros(self.imls.shape)
 
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
-            if lr == 0.0 and cov > 0.0:
-                msg = ("It is not valid to define a loss ratio = 0.0 with a "
-                       "corresponding coeff. of variation > 0.0")
+            if lr == 0 and cov > 0:
+                msg = ("It is not valid to define a mean loss ratio = 0 "
+                       "with a corresponding coefficient of variation > 0")
                 raise ValueError(msg)
+            if cov < 0:
+                raise ValueError(
+                    'Found a negative coefficient of variation in %s' %
+                    self.covs)
             if distribution == 'BT':
                 if lr == 0:  # possible with cov == 0
                     pass
                 elif lr > 1:
-                    raise ValueError('The meanLRs must be <= 1, got %s' % lr)
+                    raise ValueError(
+                        'The meanLRs must be below 1, got %s' % lr)
                 elif cov ** 2 > 1 / lr - 1:
                     # see https://github.com/gem/oq-engine/issues/4841
                     raise ValueError(
-                        'The coefficient of variation %s > %s is too large '
-                        'in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
+                        'The coefficient of variation %s > %s does not '
+                        'satisfy the requirement 0 < sig < sqrt[mu × (1 - mu)]'
+                        ' in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
 
         self.distribution_name = distribution
 
     def init(self):
         # called by CompositeRiskModel and by __setstate__
+        self.covs = F64(self.covs)
+        self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
-        self.set_distribution(None)
 
-    def set_distribution(self, epsilons=None):
-        if (self.covs > 0).any():
-            self._distribution = DISTRIBUTIONS[self.distribution_name]()
-        else:
-            self._distribution = DegenerateDistribution()
-        self._distribution.epsilons = (numpy.array(epsilons)
-                                       if epsilons is not None else None)
-        assert self.seed is not None, self
-        numpy.random.seed(self.seed)  # set by CompositeRiskModel.init
-
-    def interpolate(self, gmvs):
+    def interpolate(self, gmf_df, col):
         """
-        :param gmvs:
-           array of intensity measure levels
+        :param gmf_df:
+           DataFrame of GMFs
         :returns:
-           (interpolated loss ratios, interpolated covs, indices > min)
+           DataFrame of interpolated loss ratios and covs
         """
+        gmvs = gmf_df[col].to_numpy()
+        dic = dict(eid=gmf_df.eid.to_numpy(),
+                   mean=numpy.zeros(len(gmvs)),
+                   cov=numpy.zeros(len(gmvs)))
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
-        idxs = gmvs_curve >= self.imls[0]  # indices over the minimum
-        gmvs_curve = gmvs_curve[idxs]
-        return self._mlr_i1d(gmvs_curve), self._cov_for(gmvs_curve), idxs
+        ok = gmvs_curve >= self.imls[0]  # indices over the minimum
+        curve_ok = gmvs_curve[ok]
+        dic['mean'][ok] = self._mlr_i1d(curve_ok)
+        dic['cov'][ok] = self._cov_for(curve_ok)
+        return pandas.DataFrame(dic, gmf_df.sid)
 
-    def sample(self, means, covs, idxs, epsilons=None):
+    def survival(self, loss_ratio, mean, stddev):
         """
-        Sample the epsilons and apply the corrections to the means.
-        This method is called only if there are nonzero covs.
+        Compute the survival probability based on the underlying
+        distribution.
+        """
+        if self.distribution_name == 'LN':
+            # scipy does not handle correctly the limit case stddev = 0.
+            # In that case, when `mean` > 0 the survival function
+            # approaches to a step function, otherwise (`mean` == 0) we
+            # returns 0
+            if stddev == 0:
+                return numpy.piecewise(
+                    loss_ratio, [loss_ratio > mean or not mean], [0, 1])
+            variance = stddev ** 2.0
+            sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
+            mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
+            return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
+        elif self.distribution_name == 'BT':
+            return stats.beta.sf(loss_ratio, *_alpha_beta(mean, stddev))
+        else:
+            raise NotImplementedError(self.distribution_name)
 
-        :param means:
-           array of E' loss ratios
-        :param covs:
-           array of E' floats
-        :param idxs:
-           array of E booleans with E >= E'
-        :param epsilons:
-           array of E floats (or None)
-        :returns:
-           array of E' loss ratios
+    def __call__(self, asset_df, gmf_df, col, rng=None, minloss=0):
         """
-        if self.distribution_name == 'LN' and epsilons is None:
-            return means
-        self.set_distribution(epsilons)
-        res = self._distribution.sample(means, covs, means * covs, idxs)
-        return res
-
-    # this is used in the tests, not in the engine code base
-    def __call__(self, gmvs, epsilons):
+        :param asset_df: a DataFrame with A assets
+        :param gmf_df: a DataFrame of GMFs for the given assets
+        :param rng: a MultiEventRNG or None
+        :returns: a DataFrame with columns eid, aid, loss
         """
-        A small wrapper around .interpolate and .apply_to
-        """
-        means, covs, idxs = self.interpolate(gmvs)
-        # for gmvs < min(iml) we return a loss of 0 (default)
-        ratios = numpy.zeros(len(gmvs))
-        ratios[idxs] = self.sample(means, covs, idxs, epsilons)
-        return ratios
+        if asset_df is None:  # in the tests
+            asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
+        ratio_df = self.interpolate(gmf_df, col)  # really fast
+        if self.distribution_name == 'PM':  # special case
+            lratios = F64(self.loss_ratios)
+            cols = [col for col in ratio_df.columns if isinstance(col, int)]
+        else:
+            lratios = ()
+            cols = None
+        df = ratio_df.join(asset_df, how='inner')
+        sampler = Sampler(self.distribution_name, rng, lratios, cols)
+        covs = not hasattr(self, 'covs') or self.covs.any()
+        losses = sampler.get_losses(df, covs)
+        ok = losses > minloss
+        if self.distribution_name == 'PM':  # special case
+            variances = numpy.zeros(len(losses))
+        else:
+            variances = (losses * df['cov'].to_numpy())**2
+        return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
+                                     loss=losses[ok], variance=variances[ok]))
 
     def strictly_increasing(self):
         """
@@ -268,7 +332,7 @@ class VulnerabilityFunction(object):
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.mean_loss_ratios,
-                self.covs, self.distribution_name, self.seed)
+                self.covs, self.distribution_name)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -277,7 +341,6 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = state[3]
         self.covs = state[4]
         self.distribution_name = state[5]
-        self.seed = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
@@ -287,7 +350,7 @@ class VulnerabilityFunction(object):
         assert len(loss_ratios) == len(imls)
         assert all(x >= 0.0 for x in loss_ratios)
         assert covs is None or all(x >= 0.0 for x in covs)
-        assert distribution in ["LN", "BT"]
+        assert distribution in ["LN", "BT", "PM"]
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
@@ -300,7 +363,7 @@ class VulnerabilityFunction(object):
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
                     zip(self.mean_loss_ratios, self._stddevs)):
-                lrem[row, col] = self._distribution.survival(
+                lrem[row, col] = self.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
 
@@ -321,23 +384,6 @@ class VulnerabilityFunction(object):
             [numpy.mean(pair) for pair in pairwise(self.imls)] +
             [self.imls[-1] + (self.imls[-1] - self.imls[-2]) / 2.])
 
-    def __toh5__(self):
-        """
-        :returns: a pair (array, attrs) suitable for storage in HDF5 format
-        """
-        array = numpy.zeros(len(self.imls), self.dtype)
-        array['iml'] = self.imls
-        array['loss_ratio'] = self.mean_loss_ratios
-        array['cov'] = self.covs
-        return array, {'id': self.id, 'imt': self.imt,
-                       'distribution_name': self.distribution_name}
-
-    def __fromh5__(self, array, attrs):
-        vars(self).update(attrs)
-        self.imls = array['iml']
-        self.mean_loss_ratios = array['loss_ratio']
-        self.covs = array['cov']
-
     def __repr__(self):
         return '<VulnerabilityFunction(%s, %s)>' % (self.id, self.imt)
 
@@ -352,8 +398,6 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     :param ratios: an array of mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    seed = None
-
     def __init__(self, vf_id, imt, imls, loss_ratios, probs):
         self.id = vf_id
         self.imt = imt
@@ -368,21 +412,14 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.init()
 
         ls = [('iml', F32)] + [('prob-%s' % lr, F32) for lr in loss_ratios]
-        self.dtype = numpy.dtype(ls)
+        self._dtype = numpy.dtype(ls)
 
     def init(self):
-        # the seed is reset in CompositeRiskModel.__init__
         self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
-        self.set_distribution(None)
-
-    def set_distribution(self, epsilons=None):
-        self._distribution = DISTRIBUTIONS[self.distribution_name]()
-        self._distribution.epsilons = epsilons
-        self._distribution.seed = self.seed  # needed only for PM
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
-                self.probs, self.distribution_name, self.seed)
+                self.probs, self.distribution_name)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -391,7 +428,6 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.loss_ratios = state[3]
         self.probs = state[4]
         self.distribution_name = state[5]
-        self.seed = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, probs):
@@ -402,38 +438,26 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         assert probs.shape[1] == len(imls)
 
     # MN: in the test gmvs_curve is of shape (5,), self.probs of shape (7, 8)
-    # self.imls of shape (8,) and the returned means have shape (7, 5)
-    def interpolate(self, gmvs):
+    # self.imls of shape (8,) and the returned means have shape (5, 7)
+    def interpolate(self, gmf_df, col):
         """
         :param gmvs:
-           array of intensity measure levels
+           DataFrame of GMFs
+        :param col:           name of the column to consider
         :returns:
-           (interpolated probabilities, zeros, indices > min)
+           DataFrame of interpolated probabilities
         """
         # gmvs are clipped to max(iml)
+        M = len(self.probs)
+        gmvs = gmf_df[col].to_numpy()
+        dic = {m: numpy.zeros_like(gmvs) for m in range(M)}
+        dic['eid'] = gmf_df.eid.to_numpy()
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
-        idxs = gmvs_curve >= self.imls[0]  # indices over the minimum
-        gmvs_curve = gmvs_curve[idxs]
-        return self._probs_i1d(gmvs_curve), numpy.zeros_like(gmvs_curve), idxs
-
-    def sample(self, probs, _covs, idxs, epsilons):
-        """
-        Sample the .loss_ratios with the given probabilities.
-
-        :param probs:
-           array of E' floats
-        :param _covs:
-           ignored, it is there only for API consistency
-        :param idxs:
-           array of E booleans with E >= E'
-        :param epsilons:
-           array of E floats
-        :returns:
-           array of E' probabilities
-        """
-        self.set_distribution(epsilons)
-        return self._distribution.sample(self.loss_ratios, probs)
+        ok = gmvs_curve >= self.imls[0]  # indices over the minimum
+        for m, probs in enumerate(self._probs_i1d(gmvs_curve[ok])):
+            dic[m][ok] = probs
+        return pandas.DataFrame(dic, gmf_df.sid)
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
@@ -448,24 +472,6 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         """
         # TODO: to be implemented if the classical risk calculator
         # needs to support the pmf vulnerability format
-
-    def __toh5__(self):
-        """
-        :returns: a pair (array, attrs) suitable for storage in HDF5 format
-        """
-        array = numpy.zeros(len(self.imls), self.dtype)
-        array['iml'] = self.imls
-        for i, lr in enumerate(self.loss_ratios):
-            array['prob-%s' % lr] = self.probs[i]
-        return array, {'id': self.id, 'imt': self.imt,
-                       'distribution_name': self.distribution_name}
-
-    def __fromh5__(self, array, attrs):
-        lrs = [n.split('-')[1] for n in array.dtype.names if '-' in n]
-        self.loss_ratios = map(float, lrs)
-        self.imls = array['iml']
-        self.probs = array
-        vars(self).update(attrs)
 
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
@@ -612,6 +618,7 @@ class FragilityFunctionList(list):
         :returns: a populated FragilityFunctionList instance
         """
         new = copy.copy(self)
+        new.clear()
         add_zero = (self.format == 'discrete' and
                     self.nodamage and self.nodamage <= self.imls[0])
         new.imls = build_imls(new, discretization)
@@ -622,26 +629,21 @@ class FragilityFunctionList(list):
             data = self.array[i]
             if self.format == 'discrete':
                 if add_zero:
+                    if len(self.imls) == len(data):  # add no_damage
+                        imls = [self.nodamage] + self.imls
+                    else:  # already added
+                        imls = self.imls
                     new.append(FragilityFunctionDiscrete(
-                        ls, [self.nodamage] + self.imls,
-                        numpy.concatenate([[0.], data]),
+                        ls, imls, numpy.concatenate([[0.], data]),
                         self.nodamage))
                 else:
                     new.append(FragilityFunctionDiscrete(
                         ls, self.imls, data, self.nodamage))
             else:  # continuous
                 new.append(FragilityFunctionContinuous(
-                    ls, data['mean'], data['stddev'],
+                    ls, data[0], data[1],  # mean and stddev
                     self.minIML, self.maxIML, self.nodamage))
         return new
-
-    def __toh5__(self):
-        return self.array, {k: v for k, v in vars(self).items()
-                            if k != 'array' and v is not None}
-
-    def __fromh5__(self, array, attrs):
-        self.array = array
-        vars(self).update(attrs)
 
     def __repr__(self):
         kvs = ['%s=%s' % item for item in vars(self).items()]
@@ -728,159 +730,111 @@ class FragilityModel(dict):
             self.__class__.__name__, self.lossCategory,
             self.limitStates, sorted(self))
 
-
-#
-# Distribution & Sampling
-#
-
-DISTRIBUTIONS = CallableDict()
+# ########################### random generators  ###########################
 
 
-class Distribution(metaclass=abc.ABCMeta):
+def _alpha_beta(mean, stddev):
+    c = (1 - mean) / stddev ** 2 - 1 / mean
+    return c * mean ** 2, c * (mean - mean ** 2)
+
+
+class MultiEventRNG(object):
     """
-    A Distribution class models continuous probability distribution of
-    random variables used to sample losses of a set of assets. It is
-    usually registered with a name (e.g. LN, BT, PM) by using
-    :class:`openquake.baselib.general.CallableDict`
-    """
+    An object ``MultiEventRNG(master_seed, eids, asset_correlation=0)``
+    has a method ``.get(A, eids)`` which returns a matrix of (A, E)
+    normally distributed random numbers.
+    If the ``asset_correlation`` is 1 the numbers are the same.
 
-    @abc.abstractmethod
-    def sample(self, means, covs, stddevs, idxs):
+    >>> rng = MultiEventRNG(
+    ...     master_seed=42, eids=[0, 1, 2], asset_correlation=1)
+    >>> eids = numpy.array([1] * 3)
+    >>> means = numpy.array([.5] * 3)
+    >>> covs = numpy.array([.1] * 3)
+    >>> rng.lognormal(eids, means, covs)
+    array([0.38892466, 0.38892466, 0.38892466])
+    >>> rng.beta(eids, means, covs)
+    array([0.4372343 , 0.57308132, 0.56392573])
+    >>> fractions = numpy.array([[[.8, .1, .1]]])
+    >>> rng.discrete_dmg_dist([0], fractions, [10])
+    array([[[8, 2, 0]]], dtype=uint32)
+    """
+    def __init__(self, master_seed, eids, asset_correlation=0):
+        self.master_seed = master_seed
+        self.asset_correlation = asset_correlation
+        self.rng = {}
+        for eid in eids:
+            # NB: int below is necessary for totally mysterious reasons:
+            # a calculation on cluster1 #41904 failed with a floating
+            # point seed, but I cannot reproduce the issue
+            ph = numpy.random.Philox(int(self.master_seed + eid))
+            self.rng[eid] = numpy.random.Generator(ph)
+
+    def _get_eps(self, eid, corrcache):
+        if self.asset_correlation:
+            try:
+                return corrcache[eid]
+            except KeyError:
+                corrcache[eid] = eps = self.rng[eid].normal()
+                return eps
+        return self.rng[eid].normal()
+
+    def lognormal(self, eids, means, covs):
         """
-        :returns: sample a set of losses
-        :param means: an array of mean losses
-        :param covs: an array of covariances
-        :param stddevs: an array of stddevs
+        :param eids: event IDs
+        :param means: array of floats in the range 0..1
+        :param covs: array of floats with the same shape
+        :returns: array of floats
         """
-        raise NotImplementedError
+        corrcache = {}
+        eps = numpy.array([self._get_eps(eid, corrcache) for eid in eids])
+        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+        div = numpy.sqrt(1 + covs ** 2)
+        return means * numpy.exp(eps * sigma) / div
 
-    @abc.abstractmethod
-    def survival(self, loss_ratio, mean, stddev):
+    def beta(self, eids, means, covs):
         """
-        Return the survival function of the distribution with `mean`
-        and `stddev` applied to `loss_ratio`
+        :param eids: event IDs
+        :param means: array of floats in the range 0..1
+        :param covs: array of floats with the same shape
+        :returns: array of floats following the beta distribution
+
+        This function works properly even when some or all of the stddevs
+        are zero: in that case it returns the means since the distribution
+        becomes extremely peaked. It also works properly when some one or
+        all of the means are zero, returning zero in that case.
         """
-        raise NotImplementedError
-
-
-class DegenerateDistribution(Distribution):
-    """
-    The degenerate distribution. E.g. a distribution with a delta
-    corresponding to the mean.
-    """
-    def sample(self, means, _covs, _stddev, _idxs):
-        return means
-
-    def survival(self, loss_ratio, mean, _stddev):
-        return numpy.piecewise(
-            loss_ratio, [loss_ratio > mean or not mean], [0, 1])
-
-
-def make_epsilons(matrix, seed, correlation):
-    """
-    Given a matrix N * R returns a matrix of the same shape N * R
-    obtained by applying the multivariate_normal distribution to
-    N points and R samples, by starting from the given seed and
-    correlation.
-    """
-    if seed is not None:
-        numpy.random.seed(seed)
-    asset_count = len(matrix)
-    samples = len(matrix[0])
-    if not correlation:  # avoid building the covariance matrix
-        return numpy.random.normal(size=(samples, asset_count)).transpose()
-    means_vector = numpy.zeros(asset_count)
-    covariance_matrix = (
-        numpy.ones((asset_count, asset_count)) * correlation +
-        numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
-    return numpy.random.multivariate_normal(
-        means_vector, covariance_matrix, samples).transpose()
-
-
-@DISTRIBUTIONS.add('LN')
-class LogNormalDistribution(Distribution):
-    """
-    Model a distribution of a random variable whoose logarithm are
-    normally distributed.
-
-    :attr epsilons: An array of random numbers generated with
-                    :func:`numpy.random.multivariate_normal` with size E
-    """
-    def __init__(self, epsilons=None):
-        self.epsilons = epsilons
-
-    def sample(self, means, covs, _stddevs, idxs):
-        if self.epsilons is None:
-            raise ValueError("A LogNormalDistribution must be initialized "
-                             "before you can use it")
-        eps = self.epsilons[idxs]
-        sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
-        probs = means / numpy.sqrt(1 + covs ** 2) * numpy.exp(eps * sigma)
-        return probs
-
-    def survival(self, loss_ratio, mean, stddev):
-        # scipy does not handle correctly the limit case stddev = 0.
-        # In that case, when `mean` > 0 the survival function
-        # approaches to a step function, otherwise (`mean` == 0) we
-        # returns 0
-        if stddev == 0:
-            return numpy.piecewise(
-                loss_ratio, [loss_ratio > mean or not mean], [0, 1])
-
-        variance = stddev ** 2.0
-
-        sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
-        mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
-        return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
-
-
-@DISTRIBUTIONS.add('BT')
-class BetaDistribution(Distribution):
-    def sample(self, means, _covs, stddevs, _idxs=None):
-        alpha = self._alpha(means, stddevs)
-        beta = self._beta(means, stddevs)
-        res = numpy.random.beta(alpha, beta, size=None)
+        # NB: you should not expect a smooth limit for the case of on cov->0
+        # since the random number generator will advance of a different number
+        # of steps with cov == 0 and cov != 0
+        res = numpy.array(means)
+        ok = (means != 0) & (covs != 0)  # nonsingular values
+        alpha, beta = _alpha_beta(means[ok], means[ok] * covs[ok])
+        res[ok] = [self.rng[eid].beta(alpha[i], beta[i])
+                   for i, eid in enumerate(eids[ok])]
         return res
 
-    def survival(self, loss_ratio, mean, stddev):
-        return stats.beta.sf(loss_ratio,
-                             self._alpha(mean, stddev),
-                             self._beta(mean, stddev))
-
-    @staticmethod
-    def _alpha(mean, stddev):
-        return ((1 - mean) / stddev ** 2 - 1 / mean) * mean ** 2
-
-    @staticmethod
-    def _beta(mean, stddev):
-        return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
-
-
-@DISTRIBUTIONS.add('PM')
-class DiscreteDistribution(Distribution):
-    seed = None  # to be set
-
-    def sample(self, loss_ratios, probs):
-        ret = []
-        r = numpy.arange(len(loss_ratios))
-        for i in range(probs.shape[1]):
-            random.seed(self.seed + i)
-            # the seed is set inside the loop to avoid block-size dependency
-            pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
-            ret.append(loss_ratios[pmf])
-        return ret
-
-    def survival(self, loss_ratios, probs):
+    def discrete_dmg_dist(self, eids, fractions, numbers):
         """
-        Required for the Classical Risk and BCR Calculators.
-        Currently left unimplemented as the PMF format is used only for the
-        Scenario and Event Based Risk Calculators.
+        Converting fractions into discrete damage distributions using bincount
+        and rng.choice.
 
-        :param int steps: number of steps between loss ratios.
+        :param eids: E event IDs
+        :param fractions: array of shape (A, E, D)
+        :param numbers: A asset numbers
+        :returns: array of integers of shape (A, E, D)
         """
-        # TODO: to be implemented if the classical risk calculator
-        # needs to support the pmf vulnerability format
-        return
+        A, E, D = fractions.shape
+        assert len(eids) == E, (len(eids), E)
+        assert len(numbers) == A, (len(eids), A)
+        ddd = numpy.zeros(fractions.shape, U32)
+        for e, eid in enumerate(eids):
+            choice = self.rng[eid].choice
+            for a, n in enumerate(numbers):
+                frac = fractions[a, e]  # shape D
+                states = choice(D, n, p=frac/frac.sum())  # n states
+                # ex. [0, 0, 0, 1, 0, 0, 0, 1, 0, 0], 8 times 0, 2 times 1
+                ddd[a, e] = numpy.bincount(states, minlength=D)
+        return ddd
 
 
 #
@@ -930,7 +884,7 @@ def annual_frequency_of_exceedence(poe, t_haz):
 def classical_damage(
         fragility_functions, hazard_imls, hazard_poes,
         investigation_time, risk_investigation_time,
-        steps_per_interval=1, debug=False):
+        steps_per_interval=1):
     """
     :param fragility_functions:
         a list of fragility functions for each damage state
@@ -964,8 +918,6 @@ def classical_damage(
     poes_per_damage_state = []
     for ff in fragility_functions:
         fx = annual_frequency_of_occurrence @ ff(imls)
-        if debug:
-            print(fx)
         poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
         poes_per_damage_state.append(poe_per_damage_state)
     poos = pairwise_diff([1] + poes_per_damage_state + [0])
@@ -1013,6 +965,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
     return numpy.array([loss_ratios, lrem_po.sum(axis=1)])
 
 
+# used in classical_risk only
 def conditional_loss_ratio(loss_ratios, poes, probability):
     """
     Return the loss ratio corresponding to the given PoE (Probability
@@ -1262,7 +1215,7 @@ def return_periods(eff_time, num_losses):
     """
     :param eff_time: ses_per_logic_tree_path * investigation_time
     :param num_losses: used to determine the minimum period
-    :returns: an array of 32 bit periods
+    :returns: an array of periods of dtype uint32
 
     Here are a few examples:
 
@@ -1302,48 +1255,52 @@ def return_periods(eff_time, num_losses):
 
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     """
-    :param losses: array of simulated losses
+    :param losses: simulated losses
     :param return_periods: return periods of interest
-    :param num_events: the number of events (>= to the number of losses)
+    :param num_events: the number of events (>= number of losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
     :returns: interpolated losses for the return periods, possibly with NaN
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
     where min_time = eff_time /num_events. On the right of the interval they
-    have NaN values and on the left zero values. Here is an example:
+    have NaN values; on the left zero values.
+    If num_events is not passed, it is inferred from the number of losses;
+    if eff_time is not passed, it is inferred from the longest return period.
+    Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
     array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])
-
-    If num_events is not passed, it is inferred from the number of losses;
-    if eff_time is not passed, it is inferred from the longest return period.
     """
     P = len(return_periods)
-    if len(losses) == 0:  # zero-curve
-        return numpy.zeros(P)
+    assert len(losses)
+    if isinstance(losses, list):
+        losses = numpy.array(losses)
+    num_losses = len(losses)
     if num_events is None:
-        num_events = len(losses)
-    elif num_events < len(losses):
+        num_events = num_losses
+    elif num_events < num_losses:
         raise ValueError(
-            'There are not enough events (%d) to compute the loss curve'
-            % num_events)
+            'There are not enough events (%d<%d) to compute the loss curve'
+            % (num_events, num_losses))
     if eff_time is None:
         eff_time = return_periods[-1]
     losses = numpy.sort(losses)
-    num_zeros = num_events - len(losses)
+    # num_losses < num_events: just add zeros
+    num_zeros = num_events - num_losses
     if num_zeros:
-        losses = numpy.concatenate(
-            [numpy.zeros(num_zeros, losses.dtype), losses])
+        newlosses = numpy.zeros(num_events, losses.dtype)
+        newlosses[num_events - num_losses:num_events] = losses
+        losses = newlosses
     periods = eff_time / numpy.arange(num_events, 0., -1)
     num_left = sum(1 for rp in return_periods if rp < periods[0])
     num_right = sum(1 for rp in return_periods if rp > periods[-1])
     rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
-    curve = numpy.zeros(len(return_periods))
-    c = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
-    curve[num_left:P-num_right] = c
-    curve[P-num_right:] = numpy.nan
+    curve = numpy.zeros(len(return_periods), losses.dtype)
+    logr, logp = numpy.log(rperiods), numpy.log(periods)
+    curve[num_left:P - num_right] = numpy.interp(logr, logp, losses)
+    curve[P - num_right:] = numpy.nan
     return curve
 
 
@@ -1372,170 +1329,112 @@ class LossCurvesMapsBuilder(object):
             self.poes = 1. - numpy.exp(
                 - risk_investigation_time / return_periods)
 
-    def pair(self, array, stats):
-        """
-        :return (array, array_stats) if stats, else (array, None)
-        """
-        if len(self.weights) > 1 and stats:
-            statnames, statfuncs = zip(*stats)
-            array_stats = compute_stats2(array, statfuncs, self.weights)
-        else:
-            array_stats = None
-        return array, array_stats
-
-    # used in event_based_risk postproc
-    def build(self, losses_by_event, stats=()):
-        """
-        :param losses_by_event:
-            the aggregate loss table with shape R -> (E, L)
-        :param stats:
-            list of pairs [(statname, statfunc), ...]
-        :returns:
-            two arrays with shape (P, R, L) and (P, S, L)
-        """
-        P, R = len(self.return_periods), len(self.weights)
-        L = len(self.loss_dt.names)
-        array = numpy.zeros((P, R, L), F32)
-        for r in losses_by_event:
-            num_events = self.num_events.get(r, 0)
-            losses = losses_by_event[r]
-            for l, lt in enumerate(self.loss_dt.names):
-                ls = losses[:, l].flatten()  # flatten only in ucerf
-                # NB: do not use squeeze or the gmf_ebrisk tests will break
-                try:
-                    lbp = losses_by_period(
-                        ls, self.return_periods, num_events, self.eff_time)
-                except ValueError as exc:
-                    raise exc.__class__('%s for %s, rlz=' % (exc, lt, r))
-                array[:, r, l] = lbp
-        return self.pair(array, stats)
-
-    # used in event_based_risk
-    def build_curve(self, asset_value, loss_ratios, rlzi):
-        return asset_value * losses_by_period(
-            loss_ratios, self.return_periods,
-            self.num_events.get(rlzi, 0), self.eff_time)
-
-    # used in event_based_risk
-    def build_maps(self, curves, clp, stats=()):
-        """
-        :param curves: a composite array of shape (A, R, P)
-        :param clp: a list of C conditional loss poes
-        :param stats: list of pairs [(statname, statfunc), ...]
-        :returns: an array of loss_maps of shape (A, R, C, LI)
-        """
-        shp = curves.shape[:2] + (len(clp), len(curves.dtype))  # (A, R, C, LI)
-        array = numpy.zeros(shp, F32)
-        for lti, lt in enumerate(curves.dtype.names):
-            for a, curves_ in enumerate(curves[lt]):
-                for r, ls in enumerate(curves_):
-                    for c, poe in enumerate(clp):
-                        clratio = conditional_loss_ratio(ls, self.poes, poe)
-                        array[a, r, c, lti] = clratio
-        return self.pair(array, stats)
-
-    # used in ebrisk
-    def build_curves(self, loss_arrays, rlzi):
-        if len(loss_arrays) == 0:
-            return ()
-        shp = loss_arrays[0].shape  # (L, T...)
-        P = len(self.return_periods)
-        curves = numpy.zeros((P,) + shp, F32)
-        num_events = self.num_events.get(rlzi, 0)
-        acc = collections.defaultdict(list)
-        for loss_array in loss_arrays:
-            for idx, loss in numpy.ndenumerate(loss_array):
-                acc[idx].append(loss)
-        for idx, losses in acc.items():
-            curves[(slice(None),) + idx] = losses_by_period(
-                losses, self.return_periods, num_events, self.eff_time)
-        return curves
+    # used in post_risk
+    def build_curve(self, losses, rlzi=0):
+        return losses_by_period(
+            losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
-class LossesByAsset(object):
+class InsuredLosses(object):
     """
-    A class to compute losses by asset.
-
-    :param assetcol: an AssetCollection instance
-    :param policy_name: the name of the policy field (can be empty)
-    :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
+    There is an insured loss for each loss type in the policy dictionary.
     """
-    alt = None  # set by the ebrisk calculator
-    losses_by_E = None  # set by the ebrisk calculator
-
-    @cached_property
-    def losses_by_A(self):
-        """
-        :returns: an array of shape (A, L)
-        """
-        return numpy.zeros((self.A, len(self.loss_names)), F32)
-
-    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
-        self.A = len(assetcol)
+    def __init__(self, policy_name, policy_dict):
         self.policy_name = policy_name
         self.policy_dict = policy_dict
-        self.loss_names = loss_names
-        self.lni = {ln: i for i, ln in enumerate(loss_names)}
+        self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def gen_losses(self, out):
+    def update(self, lt, out, asset_df):
         """
-        :yields: pairs (loss_name_index, losses array of shape (A, E))
+        :param lt: a loss type string
+        :param out: a dictionary of dataframes keyed by loss_type
+        :param asset_df: a DataFrame of assets with index "ordinal"
         """
-        for lt in out.loss_types:
-            lratios = out[lt]  # shape (A, E)
-            losses = numpy.zeros_like(lratios)
-            avalues = (out.assets['occupants_None'] if lt == 'occupants'
-                       else out.assets['value-' + lt])
-            for a, avalue in enumerate(avalues):
-                losses[a] = avalue * lratios[a]
-            yield self.lni[lt], losses  # shape (A, E)
-            if lt in self.policy_dict:
-                ins_losses = numpy.zeros_like(lratios)
-                for a, asset in enumerate(out.assets):
-                    ded, lim = self.policy_dict[lt][asset[self.policy_name]]
-                    ins_losses[a] = insured_losses(
-                        losses[a], ded * avalues[a], lim * avalues[a])
-                yield self.lni[lt + '_ins'], ins_losses
+        o = out[lt]
+        if lt in self.policy_dict and len(o):
+            policy = self.policy_dict[lt]
+            eid_aids, ilosses = [], []
+            for aid, df in o.groupby('aid'):
+                asset = asset_df.loc[aid]
+                avalue = asset['value-' + lt]
+                policy_idx = asset[self.policy_name]
+                ded, lim = policy[policy_idx]
+                ins = insured_losses(
+                    df.loss.to_numpy(), ded * avalue, lim * avalue)
+                eid_aids.extend(df.index)
+                ilosses.extend(ins)
+            eids, aids = zip(*eid_aids)
+            out[lt + '_ins'] = pandas.DataFrame(
+                dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
+                     variance=numpy.zeros_like(ilosses)))
 
-    def aggregate(self, out, eids, minimum_loss, tagidxs, ws):
-        """
-        Populate .losses_by_A, .losses_by_E and .alt
-        """
-        numlosses = numpy.zeros(2, int)
-        for lni, losses in self.gen_losses(out):
-            if ws is not None:  # compute avg_losses, really fast
-                aids = out.assets['ordinal']
-                self.losses_by_A[aids, lni] += losses @ ws
-            for eid, loss in zip(eids, losses.sum(axis=0)):
-                self.losses_by_E[eid][lni] += loss
-            if tagidxs is not None:
-                # this is the slow part, depending on minimum_loss
-                for a, asset in enumerate(out.assets):
-                    ls = losses[a]
-                    ok = ls > minimum_loss[lni]
-                    if not ok.sum():
-                        continue
-                    idx = ','.join(map(str, tagidxs[a])) + ','
-                    kept = 0
-                    for loss, eid in zip(ls[ok], out.eids[ok]):
-                        self.alt[idx][eid][lni] += loss
-                        kept += 1
-                    numlosses += numpy.array([kept, len(losses[a])])
-        return numlosses
+
+# not used anymore
+def make_epsilons(matrix, seed, correlation):
+    """
+    Given a matrix of shape (A, E) returns a matrix of the same shape
+    obtained by applying the multivariate_normal distribution to
+    A points and E samples, by starting from the given seed and
+    correlation.
+    """
+    if seed is not None:
+        numpy.random.seed(seed)
+    A = len(matrix)
+    E = len(matrix[0])
+    if not correlation:  # avoid building the covariance matrix
+        return numpy.random.normal(size=(E, A)).transpose()
+    means_vector = numpy.zeros(A)
+    covariance_matrix = (numpy.ones((A, A)) * correlation +
+                         numpy.diag(numpy.ones(A)) * (1 - correlation))
+    return numpy.random.multivariate_normal(
+        means_vector, covariance_matrix, E).transpose()
 
 
 # ####################### Consequences ##################################### #
 
-consequence = CallableDict()
-
-
-@consequence.add('losses')
-def economic_losses(coeffs, asset, dmgdist, loss_type):
+def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     """
+    :param consequence: kind of consequence
     :param coeffs: coefficients per damage state
     :param asset: asset record
     :param dmgdist: an array of probabilies of shape (E, D - 1)
     :param loss_type: loss type string
-    :returns: array of economic losses of length E
+    :returns: array of shape E
     """
-    return dmgdist @ coeffs * asset['value-' + loss_type]
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
+    elif consequence == 'losses':
+        return dmgdist @ coeffs * asset['value-' + loss_type]
+    elif consequence == 'collapsed':
+        return dmgdist @ coeffs * asset['number']
+    elif consequence == 'injured':
+        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence == 'fatalities':
+        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence == 'homeless':
+        return dmgdist @ coeffs * asset['occupants_night']
+
+
+if __name__ == '__main__':
+    # plots of the beta distribution in terms of mean and stddev
+    # see https://en.wikipedia.org/wiki/Beta_distribution
+    import matplotlib.pyplot as plt
+    x = numpy.arange(0, 1, .01)
+
+    def beta(mean, stddev):
+        a, b = _alpha_beta(numpy.array([mean]*100),
+                           numpy.array([stddev]*100))
+        return stats.beta.pdf(x, a, b)
+
+    rng = MultiEventRNG(42, [1])
+    ones = numpy.ones(100)
+    vals = rng.beta(1, .5 * ones, .05 * ones)
+    print(vals.mean(), vals.std())
+    # print(vals)
+    vals = rng.beta(1, .5 * ones, .01 * ones)
+    print(vals.mean(), vals.std())
+    # print(vals)
+    plt.plot(x, beta(.5, .05), label='.5[.05]')
+    plt.plot(x, beta(.5, .01), label='.5[.01]')
+    plt.legend()
+    plt.show()

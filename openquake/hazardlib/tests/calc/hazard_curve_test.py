@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,11 +17,13 @@ import unittest
 import numpy
 
 import openquake.hazardlib
-from openquake.baselib.parallel import Starmap, sequential_apply
-from openquake.hazardlib import const
+from openquake.baselib.general import DictArray
+from openquake.baselib.parallel import Starmap, sequential_apply, Monitor
+from openquake.hazardlib import nrml
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
+from openquake.hazardlib.calc.hazard_curve import (
+    calc_hazard_curve, calc_hazard_curves)
 from openquake.hazardlib.calc.filters import SourceFilter, MagDepDistance
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
@@ -31,8 +33,9 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, ArbitraryMFD
 from openquake.hazardlib.source import PointSource, SimpleFaultSource
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.akkar_bommer_2010 import AkkarBommer2010
-from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
+from openquake.hazardlib.gsim.example_a_2021 import ExampleA2021
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014PEER
+from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
@@ -41,7 +44,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         sources = [
             openquake.hazardlib.source.PointSource(
                 source_id='point1', name='point1',
-                tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+                tectonic_region_type="Active Shallow Crust",
                 mfd=openquake.hazardlib.mfd.EvenlyDiscretizedMFD(
                     min_mag=4, bin_width=1, occurrence_rates=[5]
                 ),
@@ -62,7 +65,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
             ),
             openquake.hazardlib.source.PointSource(
                 source_id='point2', name='point2',
-                tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+                tectonic_region_type="Active Shallow Crust",
                 mfd=openquake.hazardlib.mfd.EvenlyDiscretizedMFD(
                     min_mag=4, bin_width=2, occurrence_rates=[5, 6, 7]
                 ),
@@ -87,7 +90,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                  openquake.hazardlib.site.Site(Point(10, 10.6, 1), 3, 2, 3),
                  openquake.hazardlib.site.Site(Point(10, 10.7, -1), 4, 2, 3)]
         sitecol = openquake.hazardlib.site.SiteCollection(sites)
-        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        gsims = {"Active Shallow Crust": SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
         s_filter = SourceFilter(sitecol, MagDepDistance.new('30'))
@@ -127,11 +130,6 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         self.assertEqual(result.shape, (4, 3))  # 4 sites, 3 levels
         numpy.testing.assert_allclose(result[0], 0)  # no contrib to site 1
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
-
-        # test that depths are kept after filtering (sites 3 and 4 remain)
-        s_filter = SourceFilter(sitecol, MagDepDistance.new('100'))
-        numpy.testing.assert_array_equal(
-            s_filter.get_close_sites(sources[0]).depths, ([1, -1]))
 
 
 # this example originally came from the Hazard Modeler Toolkit
@@ -231,3 +229,86 @@ class MixtureModelGMPETestCase(unittest.TestCase):
         perc_diff = 100.0 * ((hcm_lnpga / expected) - 1.0)
         numpy.testing.assert_allclose(perc_diff, numpy.zeros(len(perc_diff)),
                                       atol=0.04)
+
+
+# an area source with 388 point sources and 4656 ruptures
+asource = nrml.get('''\
+<areaSource
+  id="1"
+  name="Area Source"
+  tectonicRegion="Stable Continental Crust">
+  <areaGeometry>
+      <gml:Polygon>
+          <gml:exterior>
+              <gml:LinearRing>
+                  <gml:posList>
+                    -1.5 -1.5 -1.3 -1.1 1.1 .2 1.3 -1.8
+                  </gml:posList>
+              </gml:LinearRing>
+          </gml:exterior>
+      </gml:Polygon>
+      <upperSeismoDepth>0</upperSeismoDepth>
+      <lowerSeismoDepth>10 </lowerSeismoDepth>
+  </areaGeometry>
+  <magScaleRel>WC1994</magScaleRel>
+  <ruptAspectRatio>1</ruptAspectRatio>
+  <truncGutenbergRichterMFD aValue="4.5" bValue="1" maxMag="7" minMag="5"/>
+  <nodalPlaneDist>
+    <nodalPlane dip="90" probability=".33" rake="0" strike="0"/>
+    <nodalPlane dip="60" probability=".33" rake="0" strike="0"/>
+    <nodalPlane dip="30" probability=".34" rake="0" strike="0"/>
+  </nodalPlaneDist>
+  <hypoDepthDist>
+     <hypoDepth depth="5" probability=".5"/>
+     <hypoDepth depth="10" probability=".5"/>
+  </hypoDepthDist>
+</areaSource>''')
+
+
+class NewApiTestCase(unittest.TestCase):
+    """
+    Test the 2021 new API for hazarlib.gsim
+    """
+    def test_single_site(self):
+        # NB: the performance of get_mean_std is totally dominated by two
+        # concomitant factors:
+        # 1) source splitting (do not split the area source)
+        # 2) collect the contexts in a single array
+        # together they give a 200x speedup
+        # numba is totally useless
+        site = Site(Point(0, 0), vs30=760., z1pt0=48.0, z2pt5=0.607,
+                    vs30measured=True)
+        sitecol = SiteCollection([site])
+        imtls = {"PGA": [.123]}
+        for period in numpy.arange(.1, 1.3, .1):
+            imtls['SA(%.2f)' % period] = [.123]
+        assert len(imtls) == 13  # 13 periods
+        oq = unittest.mock.Mock(
+            imtls=DictArray(imtls),
+            maximum_distance=MagDepDistance.new('300'))
+        mon = Monitor()
+        hcurve = calc_hazard_curve(
+            sitecol, asource, [ExampleA2021()], oq, mon)
+        for child in mon.children:
+            print(child)
+        got = hcurve.array[:, 0]
+        exp = [0.103379, 0.468937, 0.403896, 0.278772, 0.213645, 0.142985,
+               0.103438, 0.079094, 0.062861, 0.051344, 0.04066, 0.031589,
+               0.024935]
+        numpy.testing.assert_allclose(got, exp, atol=1E-5)
+
+    def test_two_sites(self):
+        site1 = Site(Point(0, 0), vs30=760., z1pt0=48.0, z2pt5=0.607,
+                     vs30measured=True)
+        site2 = Site(Point(0, 0.5), vs30=760., z1pt0=48.0, z2pt5=0.607,
+                     vs30measured=True)
+        sitecol = SiteCollection([site1, site2])
+        srcfilter = SourceFilter(sitecol, MagDepDistance.new('200'))
+        imtls = {"PGA": [.123]}
+        for period in numpy.arange(.1, .5, .1):
+            imtls['SA(%.2f)' % period] = [.123]
+        assert len(imtls) == 5  # 5 periods
+        gsim_by_trt = {'Stable Continental Crust': ExampleA2021()}
+        hcurves = calc_hazard_curves(
+            [asource], srcfilter, DictArray(imtls), gsim_by_trt)
+        print(hcurves)

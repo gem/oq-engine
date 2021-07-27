@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -68,7 +68,6 @@ class TruncatedGRMFD(BaseMFD):
         self.bin_width = bin_width
         self.a_val = a_val
         self.b_val = b_val
-
         self.check_constraints()
 
     def check_constraints(self):
@@ -94,8 +93,10 @@ class TruncatedGRMFD(BaseMFD):
                              'bin width %g at least'
                              % (self.max_mag, self.min_mag, self.bin_width))
 
-        if not 0 < self.b_val:
+        if self.b_val <= 0:
             raise ValueError('b-value %g must be non-negative' % self.b_val)
+        if not np.isfinite(self.a_val):
+            raise ValueError(self.a_val)
 
     def _get_rate(self, mag):
         """
@@ -295,4 +296,36 @@ class TruncatedGRMFD(BaseMFD):
                 (b_val * mou * term2))
         a_val = np.log10(rate)
         self = cls(min_mag, max_mag, bin_width, a_val, b_val)
+        return self
+
+    @classmethod
+    def from_slip_rate(cls, min_mag, max_mag, bin_width, b_val,
+                       slip_rate, rigidity, area):
+        """
+        Calls .from_moment with moment = slip_rate * rigidity * area
+
+        :param min_mag:
+            The lowest possible magnitude for this MFD. The first bin in the
+            :meth:`result histogram <get_annual_occurrence_rates>` will be
+            aligned  to make its left border match this value.
+        :param max_mag:
+            The highest possible magnitude. The same as for ``min_mag``: the
+            last bin in the histogram will correspond to the magnitude value
+            equal to ``max_mag - bin_width / 2``.
+        :param bin_width:
+            A positive float value -- the width of a single histogram bin.
+        :param b_val:
+            The slope of the GR relationship
+        :param slip_rate:
+            A float defining the slip rate [mm/yr]
+        :param rigidity:
+            A float defining the rigidity [GPa]
+        :param area:
+            A float defining the area of the fault surface [km^2]
+        """
+        mm = 1E-3  # conversion millimiters -> meters
+        moment_rate = (slip_rate * mm) * (rigidity * 1e9) * (area * 1e6)
+        self = cls.from_moment(min_mag, max_mag, bin_width, b_val, moment_rate)
+        self.slip_rate = slip_rate
+        self.rigidity = rigidity
         return self

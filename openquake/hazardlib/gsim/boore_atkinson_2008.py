@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -14,16 +14,45 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Module exports :class:`BooreAtkinson2008`.
-"""
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib import const
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
+    AtkinsonBoore2006, _get_pga_on_rock, _get_site_amplification_linear,
+    _get_site_amplification_non_linear, _compute_magnitude_scaling,
+    _compute_distance_scaling, set_sig)
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+
+def hawaii_adjust(mean, ctx, imt):
+    # Defining frequency
+    if imt == PGA():
+        freq = 50.0
+    elif imt == PGV():
+        freq = 2.0
+    else:
+        freq = 1./imt.period
+
+    # Equation 3 of Atkinson (2010)
+    x1 = np.min([-0.18+0.17*np.log10(freq), 0])
+
+    # Equation 4 a-b-c of Atkinson (2010)
+    if ctx.hypo_depth < 20.0:
+        x0 = np.max([0.217 - 0.321 * np.log10(freq), 0])
+    elif ctx.hypo_depth > 35.0:
+        x0 = np.min([0.263 + 0.0924 * np.log10(freq), 0.35])
+    else:
+        x0 = 0.2
+
+    # Limiting calculation distance to 1km
+    # (as suggested by C. Bruce Worden)
+    rjb = [d if d > 1 else 1 for d in ctx.rjb]
+
+    # Equation 2 and 5 of Atkinson (2010)
+    mean += (x0 + x1*np.log10(rjb)) / np.log10(np.e)
 
 
 class BooreAtkinson2008(GMPE):
@@ -37,15 +66,10 @@ class BooreAtkinson2008(GMPE):
     #: Supported tectonic region type is active shallow crust, see
     #: paragraph 'Introduction', page 99.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see table 3
     #: pag. 110
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~openquake.hazardlib.const.IMC.GMRotI50`, see paragraph
@@ -54,11 +78,8 @@ class BooreAtkinson2008(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, pag 106.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Predictor Variables', pag 103
@@ -75,202 +96,61 @@ class BooreAtkinson2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    kind = 'base'
+    sgn = 0
+
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        C_SR = self.COEFFS_SOIL_RESPONSE[imt]
+        # horrible hack to fix the distance parameters; needed for the can15
+        # subclasses; extra distances are add in can15.eastern
+        # this also affects generic_gmpe_avgsa_test.py
+        vars(ctx).update(contexts.get_dists(ctx))
 
         # compute PGA on rock conditions - needed to compute non-linear
         # site amplification term
-        pga4nl = self._get_pga_on_rock(rup, dists, C)
+        pga4nl = _get_pga_on_rock(self.COEFFS[PGA()], ctx)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            C_SR = self.COEFFS_SOIL_RESPONSE[imt]
 
-        # equation 1, pag 106, without sigma term, that is only the first 3
-        # terms. The third term (site amplification) is computed as given in
-        # equation (6), that is the sum of a linear term - equation (7) - and
-        # a non-linear one - equations (8a) to (8c).
-        # Mref, Rref values are given in the caption to table 6, pag 119.
-        if imt == PGA():
-            # avoid recomputing PGA on rock, just add site terms
-            mean = np.log(pga4nl) + \
-                self._get_site_amplification_linear(sites.vs30, C_SR) + \
-                self._get_site_amplification_non_linear(sites.vs30, pga4nl,
-                                                        C_SR)
-        else:
-            mean = self._compute_magnitude_scaling(rup, C) + \
-                self._compute_distance_scaling(rup, dists, C) + \
-                self._get_site_amplification_linear(sites.vs30, C_SR) + \
-                self._get_site_amplification_non_linear(sites.vs30, pga4nl,
-                                                        C_SR)
+            # equation 1, pag 106, without sigma term, that is only the first 3
+            # terms. The third term (site amplification) is computed as given
+            # in equation (6), that is the sum of a linear term - equation (7)
+            # - and a non-linear one - equations (8a) to (8c).
+            # Mref, Rref values are given in the caption to table 6, pag 119.
+            if imt == PGA():
+                # avoid recomputing PGA on rock, just add site terms
+                mean[m] = np.log(pga4nl) + \
+                    _get_site_amplification_linear(ctx.vs30, C_SR) + \
+                    _get_site_amplification_non_linear(ctx.vs30, pga4nl, C_SR)
+            else:
+                mean[m] = _compute_magnitude_scaling(ctx, C) + \
+                    _compute_distance_scaling(ctx, C) + \
+                    _get_site_amplification_linear(ctx.vs30, C_SR) + \
+                    _get_site_amplification_non_linear(ctx.vs30, pga4nl, C_SR)
 
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+            if self.kind in ('2011', 'prime'):
+                # correction factor (see Atkinson and Boore, 2011; equation 5
+                # at page 1126 and nga08_gm_tmr.for line 508
+                corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * ctx.mag]) -
+                                   (np.max([0, 2.933 - 0.510 * ctx.mag]) *
+                                    np.log10(ctx.rjb + 10.)))
+                mean[m] = np.log(np.exp(mean[m]) * corr_fact)
 
-        return mean, stddevs
+            if self.kind == 'hawaii':
+                hawaii_adjust(mean[m], ctx, imt)
+            elif self.kind == 'prime':
+                # Implements the Boore & Atkinson (2011) adjustment to the
+                # Atkinson (2008) GMPE
+                A08 = self.COEFFS_A08[imt]
+                f_ena = 10.0 ** (A08["c"] + A08["d"] * ctx.rjb)
+                mean[m] = np.log(np.exp(mean[m]) * f_ena)
 
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 8, pag 121.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['std'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_distance_scaling(self, rup, dists, C):
-        """
-        Compute distance-scaling term, equations (3) and (4), pag 107.
-        """
-        Mref = 4.5
-        Rref = 1.0
-        R = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
-        return (C['c1'] + C['c2'] * (rup.mag - Mref)) * np.log(R / Rref) + \
-            C['c3'] * (R - Rref)
-
-    def _compute_magnitude_scaling(self, rup, C):
-        """
-        Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
-        """
-        U, SS, NS, RS = self._get_fault_type_dummy_variables(rup)
-        if rup.mag <= C['Mh']:
-            return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-                C['e5'] * (rup.mag - C['Mh']) + \
-                C['e6'] * (rup.mag - C['Mh']) ** 2
-        else:
-            return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-                C['e7'] * (rup.mag - C['Mh'])
-
-    def _get_fault_type_dummy_variables(self, rup):
-        """
-        Get fault type dummy variables, see Table 2, pag 107.
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal. See paragraph 'Predictor Variables'
-        pag 103.
-        Note that the 'Unspecified' case is not considered,
-        because rake is always given.
-        """
-        U, SS, NS, RS = 0, 0, 0, 0
-        if rup.rake == 'undefined':
-            U = 1
-        elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-            # strike-slip
-            SS = 1
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            RS = 1
-        else:
-            # normal
-            NS = 1
-
-        return U, SS, NS, RS
-
-    def _get_site_amplification_linear(self, vs30, C):
-        """
-        Compute site amplification linear term,
-        equation (7), pag 107.
-        """
-        return C['blin'] * np.log(vs30 / 760.0)
-
-    def _get_pga_on_rock(self, rup, dists, _C):
-        """
-        Compute and return PGA on rock conditions (that is vs30 = 760.0 m/s).
-        This is needed to compute non-linear site amplification term
-        """
-        # Median PGA in g for Vref = 760.0, without site amplification,
-        # that is equation (1) pag 106, without the third and fourth terms
-        # Mref and Rref values are given in the caption to table 6, pag 119
-        # Note that in the original paper, the caption reads:
-        # "Distance-scaling coefficients (Mref=4.5 and Rref=1.0 km for all
-        # periods, except Rref=5.0 km for pga4nl)". However this is a mistake
-        # as reported in http://www.daveboore.com/pubs_online.php:
-        # ERRATUM: 27 August 2008. Tom Blake pointed out that the caption to
-        # Table 6 should read "Distance-scaling coefficients (Mref=4.5 and
-        # Rref=1.0 km for all periods)".
-        C_pga = self.COEFFS[PGA()]
-        pga4nl = np.exp(self._compute_magnitude_scaling(rup, C_pga) +
-                        self._compute_distance_scaling(rup, dists, C_pga))
-
-        return pga4nl
-
-    def _get_site_amplification_non_linear(self, vs30, pga4nl, C):
-        """
-        Compute site amplification non-linear term,
-        equations (8a) to (13d), pag 108-109.
-        """
-        # non linear slope
-        bnl = self._compute_non_linear_slope(vs30, C)
-        # compute the actual non-linear term
-        return self._compute_non_linear_term(pga4nl, bnl)
-
-    def _compute_non_linear_slope(self, vs30, C):
-        """
-        Compute non-linear slope factor,
-        equations (13a) to (13d), pag 108-109.
-        """
-        V1 = 180.0
-        V2 = 300.0
-        Vref = 760.0
-
-        # equation (13d), values are zero for vs30 >= Vref = 760.0
-        bnl = np.zeros(vs30.shape)
-
-        # equation (13a)
-        idx = vs30 <= V1
-        bnl[idx] = C['b1']
-
-        # equation (13b)
-        idx = np.where((vs30 > V1) & (vs30 <= V2))
-        bnl[idx] = (C['b1'] - C['b2']) * \
-                   np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
-
-        # equation (13c)
-        idx = np.where((vs30 > V2) & (vs30 < Vref))
-        bnl[idx] = C['b2'] * np.log(vs30[idx] / Vref) / np.log(V2 / Vref)
-        return bnl
-
-    def _compute_non_linear_term(self, pga4nl, bnl):
-        """
-        Compute non-linear term,
-        equation (8a) to (8c), pag 108.
-        """
-
-        fnl = np.zeros(pga4nl.shape)
-        a1 = 0.03
-        a2 = 0.09
-        pga_low = 0.06
-
-        # equation (8a)
-        idx = pga4nl <= a1
-        fnl[idx] = bnl[idx] * np.log(pga_low / 0.1)
-
-        # equation (8b)
-        idx = np.where((pga4nl > a1) & (pga4nl <= a2))
-        delta_x = np.log(a2 / a1)
-        delta_y = bnl[idx] * np.log(a2 / pga_low)
-        c = (3 * delta_y - bnl[idx] * delta_x) / delta_x ** 2
-        d = -(2 * delta_y - bnl[idx] * delta_x) / delta_x ** 3
-        fnl[idx] = bnl[idx] * np.log(pga_low / 0.1) +\
-            c * (np.log(pga4nl[idx] / a1) ** 2) + \
-            d * (np.log(pga4nl[idx] / a1) ** 3)
-
-        # equation (8c)
-        idx = pga4nl > a2
-        fnl[idx] = np.squeeze(bnl[idx]) * np.log(pga4nl[idx] / 0.1)
-
-        return fnl
+            set_sig(self.kind, C, sig[m], tau[m], phi[m])
 
     #: Coefficient table is constructed from values in tables 6, 7 and 8
     #: (pages 119, 120, 121). Spectral acceleration is defined for damping
@@ -310,47 +190,23 @@ class BooreAtkinson2008(GMPE):
     10.0   -0.09824 -0.13800 -0.00191 3.04 -2.15446 -2.16137 -2.53323 -2.14635 0.40387 -0.48492 0.00000 8.50 0.645 0.477 0.801
     """)
 
-    #: Table 3, pag. 110. + coefficient values for additional frequencies
-    #: extracted from Fortran code implementing soil response function
-    #: developed by the original author (ab06_fmrvs_evaluate_gmpes.for
-    #: available at http://www.daveboore.com/pubs_online.html - see code
-    #: available for Atkinson, G. M. and D. M. Boore (2006). Earthquake ground
-    #: -motion prediction equations for eastern North America)
-    COEFFS_SOIL_RESPONSE = CoeffsTable(sa_damping=5, table="""\
-    IMT     blin    b1      b2
-    pgv    -0.60   -0.50   -0.06
-    pga    -0.36   -0.64   -0.14
-    0.010  -0.36   -0.64   -0.14
-    0.020  -0.34   -0.63   -0.12
-    0.030  -0.33   -0.62   -0.11
-    0.040  -0.31   -0.61   -0.11
-    0.050  -0.29   -0.64   -0.11
-    0.060  -0.25   -0.64   -0.11
-    0.075  -0.23   -0.64   -0.11
-    0.090  -0.23   -0.64   -0.12
-    0.100  -0.25   -0.60   -0.13
-    0.120  -0.26   -0.56   -0.14
-    0.150  -0.28   -0.53   -0.18
-    0.170  -0.29   -0.53   -0.19
-    0.200  -0.31   -0.52   -0.19
-    0.240  -0.38   -0.52   -0.16
-    0.250  -0.39   -0.52   -0.16
-    0.300  -0.44   -0.52   -0.14
-    0.360  -0.48   -0.51   -0.11
-    0.400  -0.50   -0.51   -0.10
-    0.460  -0.55   -0.50   -0.08
-    0.500  -0.60   -0.50   -0.06
-    0.600  -0.66   -0.49   -0.03
-    0.750  -0.69   -0.47   -0.00
-    0.850  -0.69   -0.46   -0.00
-    1.000  -0.70   -0.44   -0.00
-    1.500  -0.72   -0.40   -0.00
-    2.000  -0.73   -0.38   -0.00
-    3.000  -0.74   -0.34   -0.00
-    4.000  -0.75   -0.31   -0.00
-    5.000  -0.75   -0.291  -0.00
-    7.500  -0.692  -0.247  -0.00
-    10.00  -0.650  -0.215  -0.00
+    COEFFS_SOIL_RESPONSE = AtkinsonBoore2006.COEFFS_SOIL_RESPONSE
+
+    COEFFS_A08 = CoeffsTable(sa_damping=5, table="""\
+    IMT         c         d
+    pgv     0.450   0.00211
+    pga     0.419   0.00039
+    0.005   0.417   0.00192
+    0.050   0.417   0.00192
+    0.100   0.245   0.00273
+    0.200   0.042   0.00232
+    0.300  -0.078   0.00190
+    0.500  -0.180   0.00180
+    1.000  -0.248   0.00153
+    2.000  -0.214   0.00117
+    3.030  -0.084   0.00091
+    5.000   0.000   0.00000
+    10.00   0.000   0.00000
     """)
 
 
@@ -362,6 +218,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
     from a Referenced Empirical Approach", Bulletin of the Seismological
     Society of America, Vol. 100, No. 2, pp. 751–761
     """
+    kind = 'hawaii'
 
     #: Supported tectonic region type is active volcanic, see
     #: paragraph 'Introduction', page 99.
@@ -373,57 +230,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
 
     #: Supported standard deviation types is total
     #: see equation 2, pag 106.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     # Adding hypocentral depth as required rupture parameter
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Using a frequency dependent correction for the mean ground motion.
-        Standard deviation is fixed.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
-                                                     imt, stddev_types)
-        # Defining frequency
-        if imt == PGA():
-            freq = 50.0
-        elif imt == PGV():
-            freq = 2.0
-        else:
-            freq = 1./imt.period
-
-        # Equation 3 of Atkinson (2010)
-        x1 = np.min([-0.18+0.17*np.log10(freq), 0])
-
-        # Equation 4 a-b-c of Atkinson (2010)
-        if rup.hypo_depth < 20.0:
-            x0 = np.max([0.217-0.321*np.log10(freq), 0])
-        elif rup.hypo_depth > 35.0:
-            x0 = np.min([0.263+0.0924*np.log10(freq), 0.35])
-        else:
-            x0 = 0.2
-
-        # Limiting calculation distance to 1km
-        # (as suggested by C. Bruce Worden)
-        rjb = [d if d > 1 else 1 for d in dists.rjb]
-
-        # Equation 2 and 5 of Atkinson (2010)
-        mean += (x0 + x1*np.log10(rjb))/np.log10(np.e)
-
-        return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        # Using a frequency independent value of sigma as recommended
-        # in the caption of Table 2 of Atkinson (2010)
-        stddevs = [0.26/np.log10(np.e) + np.zeros(num_sites)]
-
-        return stddevs

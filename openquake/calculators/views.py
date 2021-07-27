@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,29 +16,33 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import io
 import ast
 import os.path
 import numbers
 import operator
 import functools
+import itertools
 import collections
+import logging
 import numpy
 import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg, fast_agg3)
+    get_array, group_array, fast_agg)
+from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util
-from openquake.commonlib.writers import (
-    build_header, scientificformat, write_csv)
-from openquake.calculators.extract import extract, FLOAT, INT
+from openquake.commonlib import util, logictree
+from openquake.risklib.scientific import losses_by_period, return_periods
+from openquake.baselib.writers import build_header, scientificformat
+from openquake.calculators.getters import get_rupture_getters
+from openquake.calculators.extract import extract
 
 F32 = numpy.float32
 U32 = numpy.uint32
+U8 = numpy.uint8
 
 # a dictionary of views datastore -> array
 view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
@@ -58,8 +62,8 @@ def form(value):
     '1.000E-04'
     >>> form(1003.4)
     '1_003'
-    >>> form(103.4)
-    '103'
+    >>> form(103.41)
+    '103.4'
     >>> form(9.3)
     '9.30000'
     >>> form(-1.2)
@@ -77,7 +81,7 @@ def form(value):
         elif numpy.isnan(value):
             return 'NaN'
         else:  # in the range 10-1000
-            return str(int(value))
+            return str(round(value, 1))
     elif isinstance(value, bytes):
         return decode(value)
     elif isinstance(value, str):
@@ -89,19 +93,36 @@ def form(value):
     return str(value)
 
 
-def rst_table(data, header=None, fmt=None):
+def dt(names):
     """
-    Build a .rst table from a matrix.
-    
+    :param names: list or a string with space-separated names
+    :returns: a numpy structured dtype
+    """
+    if isinstance(names, str):
+        names = names.split()
+    return numpy.dtype([(name, object) for name in names])
+
+
+def text_table(data, header=None, fmt=None, ext='rst'):
+    """
+    Build a .rst (or .org) table from a matrix or a DataFrame
+
     >>> tbl = [['a', 1], ['b', 2]]
-    >>> print(rst_table(tbl, header=['Name', 'Value']))
-    ==== =====
-    Name Value
-    ==== =====
-    a    1    
-    b    2    
-    ==== =====
+    >>> print(text_table(tbl, header=['Name', 'Value']))
+    +------+-------+
+    | Name | Value |
+    +------+-------+
+    | a    | 1     |
+    +------+-------+
+    | b    | 2     |
+    +------+-------+
     """
+    assert ext in 'rst org', ext
+    if isinstance(data, pandas.DataFrame):
+        if data.index.name:
+            data = data.reset_index()
+        header = header or list(data.columns)
+        data = data.to_numpy()
     if header is None and hasattr(data, '_fields'):
         header = data._fields
     try:
@@ -128,26 +149,20 @@ def rst_table(data, header=None, fmt=None):
                              % (len(col_sizes), len(tup)))
         body.append(tup)
 
-    sepline = ' '.join(('=' * size for size in col_sizes))
-    templ = ' '.join(('%-{}s'.format(size) for size in col_sizes))
-    if header:
+    wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
+    sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
+    templ = '| %s |' % ' | '.join('%-{}s'.format(size) for size in col_sizes)
+    if header and ext == 'rst':
         lines = [sepline, templ % tuple(header), sepline]
+    elif header and ext == 'org':
+        lines = [templ % tuple(header), sepline]
     else:
         lines = [sepline]
     for row in body:
         lines.append(templ % row)
-    lines.append(sepline)
+        if ext == 'rst':
+            lines.append(sepline)
     return '\n'.join(lines)
-
-
-@view.add('times_by_source_class')
-def view_times_by_source_class(token, dstore):
-    """
-    Returns the calculation times depending on the source typology
-    """
-    totals = fast_agg3(dstore['source_info']['code', 'calc_time'],
-                       'code', ['calc_time'])
-    return rst_table(totals)
 
 
 @view.add('slow_sources')
@@ -159,10 +174,10 @@ def view_slow_sources(token, dstore, maxrows=20):
                                  'calc_time', 'num_sites', 'eff_ruptures']
     info = info[info['eff_ruptures'] > 0]
     info.sort(order='calc_time')
-    data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names])
+    data = numpy.zeros(len(info), dt(info.dtype.names))
     for name in info.dtype.names:
         data[name] = info[name]
-    return rst_table(data[::-1][:maxrows])
+    return data[::-1][:maxrows]
 
 
 @view.add('slow_ruptures')
@@ -170,13 +185,13 @@ def view_slow_ruptures(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
-    fields = ['code', 'n_occ', 'mag', 'et_id']
+    fields = ['code', 'n_occ', 'mag', 'trt_smr']
     rups = dstore['ruptures'][()][fields]
     time = dstore['gmf_data/time_by_rup'][()]
     arr = util.compose_arrays(rups, time)
     arr = arr[arr['nsites'] > 0]
     arr.sort(order='time')
-    return rst_table(arr[-maxrows:])
+    return arr[-maxrows:]
 
 
 @view.add('contents')
@@ -184,43 +199,38 @@ def view_contents(token, dstore):
     """
     Returns the size of the contents of the datastore and its total size
     """
-    try:
-        desc = dstore['oqparam'].description
-    except KeyError:
-        desc = ''
+    tot = (dstore.filename, humansize(os.path.getsize(dstore.filename)))
     data = sorted((dstore.getsize(key), key) for key in dstore)
-    rows = [(key, humansize(nbytes)) for nbytes, key in data]
-    total = '\n%s : %s' % (
-        dstore.filename, humansize(os.path.getsize(dstore.filename)))
-    return rst_table(rows, header=(desc, '')) + total
+    rows = [(key, humansize(nbytes)) for nbytes, key in data] + [tot]
+    return numpy.array(rows, dt('dataset size'))
 
 
 @view.add('full_lt')
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
     try:
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['et_ids'])
-    except KeyError:  # for scenario et_ids is missing
-        rlzs_by_gsim_list = [full_lt.get_rlzs_by_gsim(0)]
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
+    except KeyError:  # for scenario trt_smrs is missing
+        rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
     rows = []
     for grp_id, rbg in enumerate(rlzs_by_gsim_list):
         for gsim, rlzs in rbg.items():
-            rows.append([grp_id, repr(str(gsim)), str(list(rlzs))])
-    return rst_table(rows, header)
+            rows.append((grp_id, repr(str(gsim)), str(list(rlzs))))
+    return numpy.array(rows, dt(header))
 
 
 @view.add('eff_ruptures')
 def view_eff_ruptures(token, dstore):
-    header = ['num_ruptures', 'eff_ruptures']
-    info = dstore['source_info']['num_ruptures', 'eff_ruptures']
-    return rst_table([[info['num_ruptures'].sum(),
-                       info['eff_ruptures'].sum()]], header)
+    info = dstore.read_df('source_info', 'source_id')
+    df = info.groupby('code').sum()
+    del df['grp_id'], df['trti'], df['task_no']
+    return text_table(df)
 
 
 @view.add('short_source_info')
 def view_short_source_info(token, dstore, maxrows=20):
-    return rst_table(dstore['source_info'][:maxrows])
+    return dstore['source_info'][:maxrows]
 
 
 @view.add('params')
@@ -236,8 +246,8 @@ def view_params(token, dstore):
               'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
-    return rst_table([(param, repr(getattr(oq, param, None)))
-                      for param in params])
+    return numpy.array([(param, repr(getattr(oq, param, None)))
+                        for param in params], dt('parameter value'))
 
 
 def rst_links(*fnames):
@@ -265,7 +275,7 @@ def build_links(items):
 @view.add('inputs')
 def view_inputs(token, dstore):
     inputs = dstore['oqparam'].inputs.items()
-    return rst_table(build_links(inputs), ['Name', 'File'])
+    return numpy.array(build_links(inputs), dt('Name File'))
 
 
 def _humansize(literal):
@@ -284,15 +294,15 @@ def view_job_info(token, dstore):
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    data = [['task', 'sent', 'received']]
+    data = []
     task_info = dstore['task_info'][()]
-    task_sent = ast.literal_eval(dstore['task_sent'][()])
+    task_sent = ast.literal_eval(decode(dstore['task_sent'][()]))
     for task, dic in task_sent.items():
         sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
         recv = get_array(task_info, taskname=encode(task))['received'].sum()
         data.append((task, ' '.join(sent), humansize(recv)))
-    return rst_table(data)
+    return numpy.array(data, dt('task sent received'))
 
 
 @view.add('avglosses_data_transfer')
@@ -304,7 +314,7 @@ def avglosses_data_transfer(token, dstore):
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
     R = dstore['full_lt'].get_num_rlzs()
-    L = len(dstore.get_attr('risk_model', 'loss_types'))
+    L = len(dstore.get_attr('crm', 'loss_types'))
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * 8 * ct  # 8 byte floats
     return (
@@ -323,17 +333,38 @@ def view_totlosses(token, dstore):
     """
     oq = dstore['oqparam']
     tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
-    return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
+    return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
+
+
+def alt_to_many_columns(alt, loss_names):
+    # convert an risk_by_event in the format
+    # (event_id, agg_id, loss_id, loss) =>
+    # (event_id, agg_id, structural, nonstructural, ...)
+    dic = dict(event_id=[])
+    for ln in loss_names:
+        dic[ln] = []
+    for (eid, kid), df in alt.groupby(['event_id', 'agg_id']):
+        dic['event_id'].append(eid)
+        arr = numpy.zeros(len(loss_names))
+        arr[df.loss_id.to_numpy()] = df.loss.to_numpy()
+        for li, ln in enumerate(loss_names):
+            dic[ln].append(arr[li])
+    return pandas.DataFrame(dic)
 
 
 def _portfolio_loss(dstore):
+    oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_rlzs()
-    array = dstore['losses_by_event'][()]
-    rlzs = dstore['events']['rlz_id'][array['event_id']]
-    L, = array.dtype['loss'].shape  # loss has shape L
-    data = numpy.zeros((R, L), F32)
-    for row, rlz in zip(array, rlzs):
-        data[rlz] += row['loss']
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    alt = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
+    df = alt_to_many_columns(alt, oq.loss_names)
+    eids = df.pop('event_id').to_numpy()
+    loss = df.to_numpy()
+    rlzs = dstore['events']['rlz_id'][eids]
+    L = loss.shape[1]
+    data = numpy.zeros((R, L))
+    for row, rlz in zip(loss, rlzs):
+        data[rlz] += row
     return data
 
 
@@ -345,34 +376,50 @@ def view_portfolio_losses(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    data = _portfolio_loss(dstore).view(loss_dt)[:, 0]
+    data = _portfolio_loss(dstore).view(loss_dt)[:, 0]  # shape R
     rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision
-    return rst_table(array, fmt='%.5E')
-
-
-def _indices(N, n):
-    # returns n blocks of indices in the range 0 .. N-1
-    for i in range(n):
-        yield numpy.arange(i, N, n)
+    return text_table(array, fmt='%.5E')
 
 
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
-    The mean full portfolio loss for each loss type,
+    The mean portfolio loss for each loss type,
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    G = getattr(oq, 'number_of_ground_motion_fields', 1)
     R = dstore['full_lt'].get_num_rlzs()
-    loss = dstore['losses_by_event']['loss']  # shape (E, L)
-    means = loss.sum(axis=0) / R / G
-    sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]
-    errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
-    rows = [['mean'] + list(means), ['error'] + list(errors)]
-    return(rst_table(rows, ['loss'] + oq.loss_names))
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    alt_df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
+    weights = dstore['weights'][:]
+    rlzs = dstore['events']['rlz_id']
+    E = len(rlzs)
+    ws = weights[rlzs]
+    avgs = []
+    for li, ln in enumerate(oq.loss_names):
+        df = alt_df[alt_df.loss_id == li]
+        eids = df.pop('event_id').to_numpy()
+        avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
+    return text_table([['avg'] + avgs], ['loss'] + oq.loss_names)
+
+
+@view.add('portfolio_dmgdist')
+def portfolio_dmgdist(token, dstore):
+    """
+    The portfolio damages extracted from the first realization of damages-rlzs
+    """
+    oq = dstore['oqparam']
+    dstates = ['no_damage'] + oq.limit_states
+    D = len(dstates)
+    arr = dstore['damages-rlzs'][:, 0, :, :D].sum(axis=0)  # shape (L, D)
+    tbl = numpy.zeros(len(arr), dt(['loss_type', 'total'] + dstates))
+    tbl['loss_type'] = oq.loss_names
+    tbl['total'] = arr.sum(axis=1)
+    for dsi, ds in enumerate(dstates):
+        tbl[ds] = arr[:, dsi]
+    return tbl
 
 
 @view.add('portfolio_damage')
@@ -381,15 +428,24 @@ def view_portfolio_damage(token, dstore):
     The mean full portfolio damage for each loss type,
     extracted from the average damages
     """
+    if 'aggcurves' in dstore:  # event_based_damage
+        K = dstore.get_attr('risk_by_event', 'K')
+        df = dstore.read_df('aggcurves', sel=dict(agg_id=K, return_period=0))
+        lnames = numpy.array(dstore['oqparam'].loss_names)
+        df['loss_type'] = lnames[df.loss_id.to_numpy()]
+        del df['loss_id']
+        del df['agg_id']
+        del df['return_period']
+        return df.set_index('loss_type')
     # dimensions assets, stat, loss_types, dmg_state
     if 'damages-stats' in dstore:
-        attrs = dstore.getitem('damages-stats').attrs
+        attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
         arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
     else:
-        attrs = dstore.getitem('damages-rlzs').attrs
+        attrs = get_shape_descr(dstore['damages-rlzs'].attrs['json'])
         arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
-    rows = [[lt] + list(row) for lt, row in zip(attrs['loss_type'], arr)]
-    return rst_table(rows, ['loss_type'] + list(attrs['dmg_state']))
+    rows = [(lt,) + tuple(row) for lt, row in zip(attrs['loss_type'], arr)]
+    return numpy.array(rows, dt(['loss_type'] + list(attrs['dmg_state'])))
 
 
 def sum_table(records):
@@ -421,7 +477,7 @@ def view_exposure_info(token, dstore):
     taxonomies = sorted(set(dstore['assetcol'].taxonomies))
     data = [('#assets', len(assetcol)),
             ('#taxonomies', len(taxonomies))]
-    return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
+    return text_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
 
 @view.add('ruptures_events')
@@ -434,7 +490,7 @@ def view_ruptures_events(token, dstore):
            ('Total number of events', num_events),
            ('Rupture multiplicity', mult),
            ('Events by rlz', events_by_rlz.values())]
-    return rst_table(lst)
+    return text_table(lst)
 
 
 @view.add('fullreport')
@@ -452,7 +508,7 @@ def view_performance(token, dstore):
     """
     Display performance information
     """
-    return rst_table(performance_view(dstore))
+    return performance_view(dstore)
 
 
 def stats(name, array, *extras):
@@ -479,7 +535,7 @@ def view_num_units(token, dstore):
         counts[taxo[asset['taxonomy']]] += asset['number']
     data = sorted(counts.items())
     data.append(('*ALL*', sum(d[1] for d in data)))
-    return rst_table(data, header=['taxonomy', 'num_units'])
+    return numpy.array(data, dt('taxonomy num_units'))
 
 
 @view.add('assets_by_site')
@@ -489,7 +545,7 @@ def view_assets_by_site(token, dstore):
     """
     taxonomies = dstore['assetcol/tagcol/taxonomy'][()]
     assets_by_site = dstore['assetcol'].assets_by_site()
-    data = ['taxonomy num_assets mean stddev min max num_sites'.split()]
+    data = ['taxonomy num_sites mean stddev min max num_assets'.split()]
     num_assets = AccumDict()
     for assets in assets_by_site:
         num_assets += {k: [len(v)] for k, v in group_array(
@@ -500,7 +556,7 @@ def view_assets_by_site(token, dstore):
     if len(num_assets) > 1:  # more than one taxonomy, add a summary
         n_assets = numpy.array([len(assets) for assets in assets_by_site])
         data.append(stats('*ALL*', n_assets, n_assets.sum()))
-    return rst_table(data)
+    return text_table(data)
 
 
 @view.add('required_params_per_trt')
@@ -510,16 +566,16 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for et_id, trt in enumerate(full_lt.trt_by_et):
+    for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((et_id, ' '.join(map(repr, map(repr, gsims))),
+        tbl.append((trt, ' '.join(map(repr, map(repr, gsims))),
                     distances, siteparams, ruptparams))
-    return rst_table(
-        tbl, header='et_id gsims distances siteparams ruptparams'.split(),
+    return text_table(
+        tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
 
 
@@ -541,16 +597,17 @@ def view_task_info(token, dstore):
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
-        return rst_table(data)
+        return data
 
-    data = ['operation-duration counts mean stddev min max'.split()]
+    data = []
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):
             data.append(stats(task, val))
-    if len(data) == 1:
+    if not data:
         return 'Not available'
-    return rst_table(data)
+    return numpy.array(
+        data, dt('operation-duration counts mean stddev min max'))
 
 
 @view.add('task_durations')
@@ -607,7 +664,7 @@ def view_task_ebrisk(token, dstore):
     ds = dstore.parent if dstore.parent else dstore
     rups = ds['ruptures']['id', 'code', 'n_occ', 'mag'][times['rup_id']]
     codeset = set('code_%d' % code for code in numpy.unique(rups['code']))
-    tbl = rst_table(util.compose_arrays(rups, extra))
+    tbl = text_table(util.compose_arrays(rups, extra))
     codes = ['%s: %s' % it for it in ds.getitem('ruptures').attrs.items()
              if it[0] in codeset]
     msg = '%s\n%s\nHazard time for task %d: %d of %d s, ' % (
@@ -628,28 +685,10 @@ def view_global_hazard(token, dstore):
     """
     imtls = dstore['oqparam'].imtls
     arr = dstore.sel('hcurves-stats', stat='mean')  # shape N, S, M, L
-    res = arr.mean(axis=(0, 1, 3))  # shape M
-    return rst_table([res], imtls)
+    res = tuple(arr.mean(axis=(0, 1, 3)))  # length M
+    return numpy.array([res], dt(imtls))
 
 
-@view.add('global_poes')
-def view_global_poes(token, dstore):
-    """
-    Display global probabilities averaged on all sites and all GMPEs
-    """
-    tbl = []
-    imtls = dstore['oqparam'].imtls
-    header = ['et_id'] + [str(poe) for poe in imtls.array]
-    for grp in sorted(dstore['poes']):
-        poes = dstore['poes/' + grp]
-        nsites = len(poes)
-        site_avg = sum(poes[sid].array for sid in poes) / nsites
-        gsim_avg = site_avg.sum(axis=1) / poes.shape_z
-        tbl.append([grp] + list(gsim_avg))
-    return rst_table(tbl, header=header)
-
-
-@view.add('global_hmaps')
 def view_global_hmaps(token, dstore):
     """
     Display the global hazard maps for the calculation. They are
@@ -660,11 +699,9 @@ def view_global_hmaps(token, dstore):
     oq = dstore['oqparam']
     dt = numpy.dtype([('%s-%s' % (imt, poe), F32)
                       for imt in oq.imtls for poe in oq.poes])
-    array = dstore['hmaps/mean'][()].view(dt)[:, 0]
-    res = numpy.zeros(1, array.dtype)
-    for name in array.dtype.names:
-        res[name] = array[name].mean()
-    return rst_table(res)
+    hmaps = dstore.sel('hmaps-stats', stat='mean')
+    means = hmaps.mean(axis=(0, 1))  # shape M, P
+    return numpy.array([tuple(means.flatten())], dt)
 
 
 @view.add('global_gmfs')
@@ -675,7 +712,7 @@ def view_global_gmfs(token, dstore):
     imtls = dstore['oqparam'].imtls
     row = [dstore[f'gmf_data/gmv_{m}'][:].mean(axis=0)
            for m in range(len(imtls))]
-    return rst_table([row], header=imtls)
+    return text_table([row], header=imtls)
 
 
 @view.add('gmf')
@@ -697,30 +734,40 @@ def get_gmv0(dstore):
     return df
 
 
+def binning_error(values, eids, nbins=10):
+    """
+    :param values: E values
+    :param eids: E integer event indices
+    :returns: std/mean for the sums of the values
+
+    Group the values in nbins depending on the eids and returns the
+    variability of the sums relative to the mean.
+    """
+    df = pandas.DataFrame({'val': values}, eids)
+    res = df.groupby(eids % nbins).val.sum()
+    return res.std() / res.mean()
+
+
 @view.add('gmf_error')
 def view_gmf_error(token, dstore):
     """
     Display a gmf relative error for seed dependency
     """
-    df = get_gmv0(dstore)
-    numpy.random.seed(42)  # default_rng does not work with numpy 1.16
-    eids = numpy.array(df.index)
-    numpy.random.shuffle(eids)
-    res = df.groupby(eids % 10)['gmv_0'].sum()
-    return res.std() / res.mean()
+    return binning_error(
+        dstore['gmf_data/gmv_0'][:], dstore['gmf_data/eid'][:])
 
 
 class GmpeExtractor(object):
     def __init__(self, dstore):
         full_lt = dstore['full_lt']
-        self.trt_by_et = full_lt.trt_by_et
+        self.trt_by = full_lt.trt_by
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
 
-    def extract(self, et_ids, rlz_ids):
+    def extract(self, trt_smrs, rlz_ids):
         out = []
-        for et_id, rlz_id in zip(et_ids, rlz_ids):
-            trt = self.trt_by_et[et_id]
+        for trt_smr, rlz_id in zip(trt_smrs, rlz_ids):
+            trt = self.trt_by(trt_smr)
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
 
@@ -742,8 +789,8 @@ def view_extreme_gmvs(token, dstore):
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
-        et_ids = dstore['ruptures']['et_id'][extreme_df.rup]
-        extreme_df['gmpe'] = gmpe.extract(et_ids, ev['rlz_id'])
+        trt_smrs = dstore['ruptures']['trt_smr'][extreme_df.rup]
+        extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id'])
         return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
     return 'Could not do anything for ' + imt0
 
@@ -764,8 +811,8 @@ def view_mean_disagg(token, dstore):
                 row = ['%s-sid-%d-poe-%s' % (imt, s, p)]
                 for k, d in kd.items():
                     row.append(d[s, m, p].mean())
-                tbl.append(row)
-    return rst_table(sorted(tbl), header=['key'] + list(kd))
+                tbl.append(tuple(row))
+    return numpy.array(sorted(tbl), dt(['key'] + list(kd)))
 
 
 @view.add('disagg_times')
@@ -779,25 +826,7 @@ def view_disagg_times(token, dstore):
     for duration, task_no in zip(info['duration'], info['task_no']):
         tbl.append((duration, task_no) + tuple(data[task_no]))
     header = ('duration', 'task_no') + data.dtype.names
-    return rst_table(sorted(tbl), header=header)
-
-
-@view.add('elt')
-def view_elt(token, dstore):
-    """
-    Display the event loss table averaged by event
-    """
-    oq = dstore['oqparam']
-    R = len(dstore['full_lt'].rlzs)
-    dic = group_array(dstore['losses_by_event'][()], 'rlzi')
-    header = oq.loss_dt().names
-    tbl = []
-    for rlzi in range(R):
-        if rlzi in dic:
-            tbl.append(dic[rlzi]['loss'].mean(axis=0))
-        else:
-            tbl.append([0.] * len(header))
-    return rst_table(tbl, header)
+    return numpy.array(sorted(tbl), dt(header))
 
 
 @view.add('bad_ruptures')
@@ -809,7 +838,7 @@ def view_bad_ruptures(token, dstore):
                               'minlon', 'maxlon', 'minlat', 'maxlat']
     bad = data[numpy.logical_and(data['minlon'] == data['maxlon'],
                                  data['minlat'] == data['maxlat'])]
-    return rst_table(bad)
+    return bad
 
 
 Source = collections.namedtuple(
@@ -823,7 +852,7 @@ def view_extreme_groups(token, dstore):
     """
     data = dstore['disagg_by_grp'][()]
     data.sort(order='extreme_poe')
-    return rst_table(data[::-1])
+    return text_table(data[::-1])
 
 
 @view.add('gmvs_to_hazard')
@@ -831,28 +860,24 @@ def view_gmvs_to_hazard(token, dstore):
     """
     Show the number of GMFs over the highest IML
     """
-    args = token.split(':')[1:]  # called as view_gmvs_to_hazard:sid:rlz
+    args = token.split(':')[1:]  # called as view_gmvs_to_hazard:sid
     if not args:
-        sid, rlz = 0, 0
+        sid = 0
     elif len(args) == 1:  # only sid specified
-        sid, rlz = int(args[0]), 0
-    else:
-        sid, rlz = int(args[0]), int(args[1])
+        sid = int(args[0])
     assert sid in dstore['sitecol'].sids
-    assert rlz < dstore['full_lt'].get_num_rlzs()
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
     data = dstore.read_df('gmf_data', 'sid').loc[sid]
-    data = data['rlzi'] == rlz
     tbl = []
-    gmv = data['gmv']
     for imti, (imt, imls) in enumerate(oq.imtls.items()):
+        gmv = data['gmv_%d' % imti].to_numpy()
         for iml in imls:
             # same algorithm as in _gmvs_to_haz_curve
-            exceeding = numpy.sum(gmv[:, imti] >= iml)
+            exceeding = numpy.sum(gmv >= iml)
             poe = 1 - numpy.exp(- exceeding / num_ses)
-            tbl.append((sid, rlz, imt, iml, exceeding, poe))
-    return rst_table(tbl, ['sid', 'rlz', 'imt', 'iml', 'num_exceeding', 'poe'])
+            tbl.append((sid, imt, iml, exceeding, poe))
+    return numpy.array(tbl, dt('sid imt iml num_exceeding poe'))
 
 
 @view.add('gmvs')
@@ -863,8 +888,7 @@ def view_gmvs(token, dstore):
     sid = int(token.split(':')[1])  # called as view_gmvs:sid
     assert sid in dstore['sitecol'].sids
     data = dstore.read_df('gmf_data', 'sid')
-    gmvs = data.loc[sid]['gmv']
-    return rst_table(gmvs)
+    return data.loc[sid]
 
 
 @view.add('events_by_mag')
@@ -877,7 +901,7 @@ def view_events_by_mag(token, dstore):
     counts = {}
     for mag, grp in group_array(rups, 'mag').items():
         counts[mag] = sum(num_evs[rup_id] for rup_id in grp['id'])
-    return rst_table(counts.items(), ['mag', 'num_events'])
+    return numpy.array(list(counts.items()), dt('mag num_events'))
 
 
 @view.add('ebrups_by_mag')
@@ -887,7 +911,7 @@ def view_ebrups_by_mag(token, dstore):
     """
     mags = dstore['ruptures']['mag']
     uniq, counts = numpy.unique(mags, return_counts=True)
-    return rst_table(zip(uniq, counts), ['mag', 'num_ruptures'])
+    return text_table(zip(uniq, counts), ['mag', 'num_ruptures'])
 
 
 @view.add('maximum_intensity')
@@ -897,7 +921,7 @@ def view_maximum_intensity(token, dstore):
     """
     effect = extract(dstore, 'effect')
     data = zip(dstore['full_lt'].trts, effect[-1, -1], effect[-1, 0])
-    return rst_table(data, ['trt', 'intensity1', 'intensity2'])
+    return text_table(data, ['trt', 'intensity1', 'intensity2'])
 
 
 @view.add('extreme_sites')
@@ -907,7 +931,202 @@ def view_extreme(token, dstore):
     """
     mean = dstore.sel('hmaps-stats', stat='mean')[:, 0, 0, -1]  # shape N1MP
     site_ids, = numpy.where(mean == mean.max())
-    arr = dstore['sitecol'][site_ids]
-    sio = io.StringIO()
-    write_csv(sio, arr)
-    return sio.getvalue()
+    return dstore['sitecol'][site_ids]
+
+
+@view.add('zero_losses')
+def view_zero_losses(token, dstore):
+    """
+    Sanity check on avg_losses and avg_gmf
+    """
+    R = len(dstore['weights'])
+    oq = dstore['oqparam']
+    avg_gmf = dstore['avg_gmf'][0]
+    asset_df = dstore.read_df('assetcol/array', 'site_id')
+    for col in asset_df.columns:
+        if not col.startswith('value-'):
+            del asset_df[col]
+    values_df = asset_df.groupby(asset_df.index).sum()
+    avglosses = dstore['avg_losses-rlzs'][:].sum(axis=1) / R  # shape (A, L)
+    dic = dict(site_id=dstore['assetcol']['site_id'])
+    for lti, lname in enumerate(oq.loss_names):
+        dic[lname] = avglosses[:, lti]
+    losses_df = pandas.DataFrame(dic).groupby('site_id').sum()
+    sids = losses_df.index.to_numpy()
+    avg_gmf = avg_gmf[sids]
+    nonzero_gmf = (avg_gmf > oq.min_iml).any(axis=1)
+    nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
+    bad, = numpy.where(nonzero_gmf != nonzero_losses)
+    # this happens in scenario_risk/case_shakemap and case_3
+    msg = 'Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s\nvalues=%s'
+    for idx in bad:
+        sid = sids[idx]
+        logging.warning(msg, sid, dict(zip(oq.all_imts(), avg_gmf[sid])),
+                        _get(losses_df, sid), _get(values_df, sid))
+    return bad
+
+
+def _get(df, sid):
+    return df.loc[sid].to_dict()
+
+
+@view.add('gsim_for_event')
+def view_gsim_for_event(token, dstore):
+    """
+    Display the GSIM used when computing the GMF for the given event
+
+    $ oq show gsim_for_event:123 -1
+    [BooreAtkinson2008]
+    """
+    eid = int(token.split(':')[1])
+    full_lt = dstore['full_lt']
+    rup_id, rlz_id = dstore['events'][eid][['rup_id', 'rlz_id']]
+    trt_smr = dstore['ruptures'][rup_id]['trt_smr']
+    trti = trt_smr // len(full_lt.sm_rlzs)
+    gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
+    return gsim
+
+
+@view.add('event_loss_table')
+def view_event_loss_table(token, dstore):
+    """
+    Display the top 20 losses of the event loss table for the first loss type
+
+    $ oq show event_loss_table
+    """
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('risk_by_event', 'event_id',
+                        dict(agg_id=K, loss_id=0))
+    df['std'] = numpy.sqrt(df.variance)
+    df.sort_values('loss', ascending=False, inplace=True)
+    del df['agg_id']
+    del df['loss_id']
+    del df['variance']
+    return df[:20]
+
+
+@view.add('delta_loss')
+def view_delta_loss(token, dstore):
+    """
+    Estimate the stocastic error on the loss curve by splitting the events
+    in odd and even. Example:
+
+    $ oq show delta_loss  # consider the first loss type
+    """
+    if ':' in token:
+        _, li = token.split(':')
+        li = int(li)
+    else:
+        li = 0
+    oq = dstore['oqparam']
+    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
+        dstore['weights'])
+    num_events = len(dstore['events'])
+    num_events0 = num_events // 2 + (num_events % 2)
+    num_events1 = num_events // 2
+    periods = return_periods(efftime, num_events)[1:-1]
+
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('risk_by_event', 'event_id',
+                        dict(agg_id=K, loss_id=li))
+    if len(df) == 0:  # for instance no fatalities
+        return {'delta': numpy.zeros(1)}
+    mod2 = df.index % 2
+    losses0 = df['loss'][mod2 == 0]
+    losses1 = df['loss'][mod2 == 1]
+    c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
+    c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
+    ok = (c0 != 0) & (c1 != 0)
+    c0 = c0[ok]
+    c1 = c1[ok]
+    losses = losses_by_period(df['loss'], periods, num_events, efftime)[ok]
+    dic = dict(loss=losses, even=c0, odd=c1,
+               delta=numpy.abs(c0 - c1) / (c0 + c1))
+    return pandas.DataFrame(dic, periods[ok])
+
+
+def to_str(arr):
+    return ' '.join(map(str, numpy.unique(arr)))
+
+
+@view.add('composite_source_model')
+def view_composite_source_model(token, dstore):
+    """
+    Show the structure of the CompositeSourceModel in terms of grp_id
+    """
+    lst = []
+    n = len(dstore['full_lt'].sm_rlzs)
+    trt_smrs = dstore['trt_smrs'][:]
+    for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
+        srcs = ' '.join(df['source_id'])
+        trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
+        lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), srcs))
+    return numpy.array(lst, dt('grp_id trt smrs sources'))
+
+
+@view.add('branch_ids')
+def view_branch_ids(token, dstore):
+    """
+    Show the branch IDs
+    """
+    full_lt = dstore['full_lt']
+    tbl = []
+    for k, v in full_lt.source_model_lt.shortener.items():
+        tbl.append(('source_model_lt', v, k))
+    for k, v in full_lt.gsim_lt.shortener.items():
+        tbl.append(('gsim_lt', v, k))
+    return numpy.array(tbl, dt('logic_tree abbrev branch_id'))
+
+
+@view.add('rupture')
+def view_rupture(token, dstore):
+    """
+    Show a rupture with its geometry
+    """
+    rup_id = int(token.split(':')[1])
+    slc = slice(rup_id, rup_id + 1)
+    dicts = []
+    for rgetter in get_rupture_getters(dstore, slc=slc):
+        dicts.append(rgetter.get_rupdict())
+    return str(dicts)
+
+
+@view.add('event_rates')
+def view_event_rates(token, dstore):
+    """
+    Show the number of events per realization multiplied by risk_time/eff_time
+    """
+    oq = dstore['oqparam']
+    R = dstore['full_lt'].get_num_rlzs()
+    if oq.calculation_mode != 'event_based_damage':
+        return numpy.ones(R)
+    time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (
+        oq.ses_per_logic_tree_path * oq.investigation_time)
+    if oq.collect_rlzs:
+        return numpy.array([len(dstore['events']) * time_ratio / R])
+    else:
+        rlzs = dstore['events']['rlz_id']
+        return numpy.bincount(rlzs, minlength=R) * time_ratio
+
+
+def tup2str(tups):
+    return ['_'.join(map(str, t)) for t in tups]
+
+
+@view.add('sum')
+def view_sum(token, dstore):
+    """
+    Show the sum of an array of shape (A, R, L, ...) on the first axis
+    """
+    _, arrayname = token.split(':')  # called as sum:damages-rlzs
+    dset = dstore[arrayname]
+    A, R, L, *D = dset.shape
+    cols = ['RL'] + tup2str(itertools.product(*[range(d) for d in D]))
+    arr = dset[:].sum(axis=0)  # shape R, L, *D
+    z = numpy.zeros(R * L, dt(cols))
+    for r, ar in enumerate(arr):
+        for li, a in enumerate(ar):
+            a = a.flatten()
+            for c, col in enumerate(cols):
+                z[r * L + li][col] = a[c-1] if c > 0 else (r, li)
+    return z

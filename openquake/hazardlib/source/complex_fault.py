@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,6 @@ import numpy
 
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture_collection import split
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -147,7 +146,7 @@ class ComplexFaultSource(ParametricSeismicSource):
     """
     code = b'C'
     # a slice of the rupture_slices, thus splitting the source
-    MODIFICATIONS = {'set_geometry'}
+    MODIFICATIONS = {'set_geometry', 'adjust_mfd_from_slip'}
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
@@ -247,18 +246,18 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.rupture_mesh_spacing = spacing
 
     def __iter__(self):
+        mag_rates = self.get_annual_occurrence_rates()
+        if len(mag_rates) == 1:  # not splittable
+            yield self
+            return
         if not hasattr(self, '_nr'):
             self.count_ruptures()
-        if self.num_ruptures <= MINWEIGHT:
-            yield self  # not splittable
-            return
-        mag_rates = self.get_annual_occurrence_rates()
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
-            for s in split(src):
-                yield s
+            src.source_id = '%s:%d' % (self.source_id, i)
+            yield src
 
     @property
     def polygon(self):

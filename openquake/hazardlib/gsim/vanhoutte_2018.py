@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,38 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import RSD575
 
 
+def get_magnitude_term(C, mag):
+    """
+    Returns linear magnitude scaling term
+    """
+    return C["b0"] + C["b1"] * (mag - 6) + C["b2"] * (mag - 6) ** 2
+
+
+def get_distance_term(C, rrup, mag):
+    """
+    Returns distance scaling term
+    """
+    fac = rrup > 100
+    rmax100 = rrup.copy()
+    rmax100[rmax100 > 100] = 100
+    fr = C["b3"] * np.log(np.sqrt(
+        rmax100 ** 2 + (np.exp(C["b4"] + C["b5"] * (mag - 6))) ** 2)) + \
+        fac * (
+        C["b6"] * np.log(np.sqrt(
+             rrup ** 2 + (np.exp(C["b4"] + C["b5"] * (mag - 6))) ** 2)) -
+        C["b6"] * np.log(np.sqrt(
+            100 ** 2 + (np.exp(C["b4"] + C["b5"] * (mag - 6))) ** 2))
+        )
+    return fr
+
+
+def get_site_amplification(C, vs30):
+    """
+    Returns linear site amplification term
+    """
+    return C["b7"] * np.log(vs30 / 1000)
+
+
 class VanHoutteEtAl2018RSD(GMPE):
     """
     Implements the GMPE of Van Houtte et al. (2018) for significant duration
@@ -43,11 +75,8 @@ class VanHoutteEtAl2018RSD(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types are total, inter and intra-event
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Requires vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -58,64 +87,20 @@ class VanHoutteEtAl2018RSD(GMPE):
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = (self.get_magnitude_term(C, rup.mag) +
-                self.get_distance_term(C, dists.rrup, rup.mag) +
-                self.get_site_amplification(C, sites.vs30))
-        stddevs = self.get_stddevs(C, dists.rrup.shape, stddev_types)
-        return mean, stddevs
-
-    def get_magnitude_term(self, C, mag):
-        """
-        Returns linear magnitude scaling term
-        """
-        return C["b0"] + C["b1"] * (mag - 6) + C["b2"] * (mag - 6) ** 2
-
-    def get_distance_term(self, C, rrup, mag):
-        """
-        Returns distance scaling term
-        """
-        fac = rrup > 100
-        rmax100 = rrup.copy()
-        rmax100[rmax100 > 100] = 100
-        fr = C["b3"] * np.log(np.sqrt(
-            rmax100 ** 2 + (np.exp(C["b4"] + C["b5"] * (mag - 6))) ** 2)) + \
-            fac * (
-            C["b6"] * np.log(np.sqrt(
-                 rrup ** 2 + (np.exp(C["b4"] + C["b5"] * (mag - 6))) ** 2)) -
-            C["b6"] * np.log(np.sqrt(
-                100 ** 2 + (np.exp(C["b4"] + C["b5"] * (mag - 6))) ** 2))
-            )
-        return fr
-
-    def get_site_amplification(self, C, vs30):
-        """
-        Returns linear site amplification term
-        """
-        return C["b7"] * np.log(vs30 / 1000)
-
-    def get_stddevs(self, C, nsites, stddev_types):
-        """
-        Returns the standard deviations
-        """
-        stddevs = []
-        zeros_array = np.zeros(nsites)
-        for stddev in stddev_types:
-            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C["tau"] ** 2. + C["phi"] ** 2.) +
-                               zeros_array)
-            elif stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(C["tau"] + zeros_array)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(C["phi"] + zeros_array)
-        return stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (get_magnitude_term(C, ctx.mag) +
+                       get_distance_term(C, ctx.rrup, ctx.mag) +
+                       get_site_amplification(C, ctx.vs30))
+            sig[m] = np.sqrt(C["tau"] ** 2. + C["phi"] ** 2.)
+            tau[m] = C["tau"]
+            phi[m] = C["phi"]
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          b0       b1      b2       b3      b4       b5       b6      b7     tau     phi

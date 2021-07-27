@@ -141,113 +141,116 @@ ratio conditioned on the shaking intensity and ignoring the uncertainty.
 This tradeoff of not propagating the vulnerabilty uncertainty to the loss
 estimates can lead to a significant boost in performance and tractability.
 
+The asset loss table
+-------------------------------------------
 
-The ebrisk calculator
----------------------
+When performing an event based risk calculation the engine
+keeps in memory a table with the losses for each asset and each event,
+for each loss type. It is usually impossible to fully store such table,
+because it is extremely large; for instance, for 1 million assets, 1
+million events, 2 loss types and 4 bytes per loss ~8 TB of disk space
+would be required. It is true that many events will produce zero losses
+because of the `maximum_distance` and `minimum_intensity` parameters,
+but still the asset loss table is prohibitively large and for many years
+could not be stored. In engine 3.8 we made a breakthrough: we decided to
+store a partial asset loss table, obtained by discarding small losses,
+by leveraging on the fact that loss curves for long enough return periods
+are dominated by extreme events, i.e. there is no point in saving all
+the small losses.
 
-Even with all the tricks in the book, some problems cannot be solved
-with the traditional ``event_based_risk`` calculator, in particular
-when there are too many hazard sites. Suppose for instance that you
-have a very detailed exposure for Canada with 462,000 hazard sites,
-and a corresponding site model covering all of the sites. 
-It would be a pity to lose such detailed information by aggregating 
-the assets onto a coarser grid, but this may be the only viable option 
-for the traditional ``event_based_risk`` calculator.
+To that aim,the engine honors a parameter called
+``minimum_asset_loss`` which determine how many losses are discarded
+when storing the asset loss table. The rule is simple: losses below
+``minimum_asset_loss`` are discarded. By choosing the threshold
+properly in an ideal world
 
-The issue is that the ``event_based_risk`` cannot work well with
-so many sites, unless you reduce your investigation_time considerably. 
-If the investigation_time is long enough for a reasonable computation,
-you will most likely run into issues such as:
+1. the vast majority of the losses would be discarded, thus making the
+   asset loss table storable;
+2. the loss curves would still be nearly identical to the ones without
+   discarding any loss, except for small return periods.
 
-1. running out of memory when computing the GMFs
-2. running out of disk space when saving the GMFs
-3. running out of memory when reading the GMFs
-4. having an impossibly slow risk calculation
+It is the job of the user to verify if 1 and 2 are true in the real world.
+He can assess that by playing with the ``minimum_asset_loss`` in a small
+calculation, finding a good value for it, and then extending to the large
+calculation. Clearly it is a matter of compromise: by sacrificing precision
+it is possible to reduce enourmously the size of the stored asset loss table
+and to make an impossible calculation possible.
 
-The solution - in theory - would be to split Canada in regions, but this comes
-with its own problems. For instance,
+Starting from engine 3.11 the asset loss table is stored if the user
+specifies
 
-1. one has to compute the ruptures for all Canada in a single run, to
-   make sure that the random seeds are consistent for all regions
-2. then one has to run several calculations starting from the
-   ruptures, one per sub-region
-3. finally one has to carefully aggregate the results from the different
-   calculations
+``aggregate_by = id``
 
-Such steps are tedious, time consuming and very much error prone.
+in the job.ini file. In large calculations it extremely easy to run out of
+memory or the make the calculation extremely slow, so we recommend
+not to store the asset loss table. The functionality is there for the sole
+purpose of debugging small calculations, for instance to see the effect
+of the ``minimum_asset_loss`` approximation at the asset level.
 
-In order to solve such issues a new calculator, tentatively called ``ebrisk``,
-has been introduced in engine 3.4. For small calculations the ``ebrisk`` calculator
-will not be much better than the ``event_based_risk`` calculator, but
-the larger your calculation is, the better it will work, and in situations
-like the Canada example here it can be orders of
-magnitude more efficient, both in speed and memory consumption.
-The reason why the ``ebrisk`` calculator is so efficient is that
-it computes the GMFs in memory instead of reading them from the datastore.
+For large calculations usually one is interested in the aggregate loss
+table, which contains the losses per event and per aggregation tag (or
+multi-tag). For instance, the tag ``occupancy`` has the three values
+"Residential", "Industrial" and "Commercial" and by setting
 
-The older ``event_based_risk`` calculator
-works by storing the GMFs in the hazard phase of the calculation and
-by reading them in the risk phase. For small to medium sized risk
-calculations, this approach has the following advantages:
+``aggregate_by = occupancy``
 
-1. if the GMFs calculation is expensive, it is good to avoid repeating
-   it when you change a risk parameter without changing the hazard parameters
-2. it is convenient to have the GMFs saved on disk to debug issues
-   with the calculation
-3. except for huge calculations, writing and reading the GMFs is fast,
-   since they stored in a very optimized HDF5 format
-   
-On the other hand, there are other considerations for large national or 
-continental risk calculations:
+the engine will store a pandas DataFrame called ``risk_by_event` with a
+field ``agg_id`` with 4 possible value: 0 for "Residential", 1 for
+"Industrial", 2 for "Commercial" and 3 for the full aggregation.
 
-1. these larger risk calculations are typically dominated by the
-   reading time of the GMFs, which happens concurrently
-2. saving disk space matters, as such large calculations can generate
-   hundreds of gigabytes or even terabytes of GMFs that cannot be stored
-   conveniently
+NB: if the parameter ``aggregate_by`` is not specified, the engine will
+still compute the aggregate loss table but then the ``agg_id`` field will
+have a single value 0 corresponding to the total portfolio losses.
 
-So, in practice, in very large calculations the strategy of computing the
-GMFs on-the-fly wins over over the strategy of saving them to disk and this is
-why the ``ebrisk`` calculator exists.
+The Probable Maximum Loss (PML) and the loss curves
+---------------------------------------------------
 
-Differences with the event_based_risk calculator
-------------------------------------------------
+Given an effective investigation time and a return period,
+the engine is able to compute a PML for each
+aggregation tag. It does so by using the function
+``openquake.risklib.scientific.losses_by_period`` which takes in input
+an array of cumulative losses associated to the aggregation tag, a
+list of or return periods, and the effective investigation time. If
+there is a single return period the function returns the PML; if there are
+multiple return periods it returns the loss curve. The two concepts
+are essentially the same thing, since a loss curve is just an array of
+PMLs, one for each return period. For instance
 
-The ``event_based_risk`` calculator parallelizes by hazard sites: it splits
-the exposure in spatial blocks and then each task reads the GMFs for each site
-in the block it gets.
+.. code-block:: python
 
-The ``ebrisk`` calculator instead parallelizes by ruptures: it splits
-the ruptures in blocks and then each task generates the corresponding GMFs
-on the fly.
+   >>> from openquake.risklib.scientific import losses_by_period
+   >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13, 0]
+   >>> [PML_500y] = losses_by_period(losses, [500], eff_time=1000)
+   >>> PML_500y
+   13.0
 
-Since the amount of data in ruptures form is typically two orders of
-magnitude smaller than the amount of data in GMFs, and since the GMF-generation
-is fast, the ``ebrisk`` calculator is able to beat the ``event_based_risk``
-calculator.
+computes the Probably Maximum Loss at 500 years for the given losses
+with an effective investigation time of 1000 years. The algorithm works
+by ordering the losses (suppose there are E > 1 losses) generating E time
+periods ``eff_time/E, eff_time/(E-1), ... eff_time/1`` and log-interpolating
+the loss at the return period. Of course this works only if the condition
 
-Moreover, since each task in the ``ebrisk`` calculator gets sent the entire
-exposure, it is able to aggregate the losses without problems, while the
-``event_based_risk`` calculator cannot do that — even if each task has access to
-all events, it only receives a subset of the exposure, so it cannot aggregate
-on the assets. 
+``eff_time/E < return_period < eff_time``
 
-The ``event_based_risk`` can produce the loss curves for the individual
-assets in the exposure, but it cannot compute aggregate loss curves (say for
-all assets of a particular occupancy class or for administrative divisions), 
-because loss curves are not additive::
+is respected. In this example there are E=16 losses, so the return period
+must be in the range 62.5 .. 1000 years. If the return period is too
+small the PML will be zero
 
-  loss_curve([asset1]) + loss_curve([asset2]) != loss_curve([asset1, asset2])
+>>> losses_by_period(losses, [50], eff_time=1000)
+array([0.])
 
-On the other hand the ``ebrisk`` calculator has no problem with aggregated
-loss curves, so you *must* use it if you are interested in such outputs.
+while if the return period is outside the investigation range we will
+refuse the temptation to extrapolate and we will return NaN instead:
 
-Aggregation of average annual losses, instead, is computed simply by 
-summing the component values. This algorithm is linear and both the 
-``event_based_risk`` calculator and the ``ebrisk`` calculator are capable of
-this aggregation.
+>>> losses_by_period(losses, [1500], eff_time=1000)
+array([nan])
 
-In order to compute aggregate loss curves with the ``ebrisk`` you must
+The rules above are the reason while you will see zeros or NaNs in the
+loss curves generated by the engine sometimes, especially when there are
+too few events: the valid range will be small and some return periods
+may slip outside the range.
+
+In order to compute aggregate loss curves you must
 set the ``aggregate_by`` parameter in the ``job.ini`` to one or more tags
 over which you wish to perform the aggregation. Your exposure must contain 
 the specified tags with values for each asset. 
@@ -301,56 +304,87 @@ you the mean and quantile loss curves in a format like the following one::
     1.00000E-03,1000,nonstructural,6.92401E+06,6.48308E-05
     1.00000E-03,1000,structural,1.15148E+07,4.38439E-01
     
-If you do not set the ``aggregate_by`` parameter for an ``ebrisk`` calculation, 
+If you do not set the ``aggregate_by`` parameter
 you will still able to compute the total loss curve 
 (for the entire portfolio of assets), and the total average losses.
 
+Aggregating by multiple tags
+----------------------------
 
-The asset loss table
----------------------
+The engine also supports aggregation my multiple tags. For instance
+the second event based risk demo (the file ``job_eb.ini``) has a line
 
-When performing an event based risk (or ebrisk) calculation the engine
-keeps in memory a table with the losses for each asset and each event,
-for each loss type. It is impossible to fully store such table,
-because it is extremely large; for instance, for 1 million assets, 1
-million events, 2 loss types and 4 bytes per loss ~8 TB of disk space
-would be required. It is true that many events will produce zero losses
-because of the `maximum_distance` and `minimum_intensity` parameters,
-but still the asset loss table is prohibitively large and for many years
-could not be stored. In engine 3.8 we made a breakthrough: we decided to
-store a partial asset loss table, obtained by discarding small losses,
-by leveraging on the fact that loss curves for long enough return periods
-are dominated by extreme events, i.e. there is no point in saving all
-the small losses.
+   ``aggregate_by = NAME_1, taxonomy``
 
-To that aim, since version 3.8 the engine honors a parameter called
-``minimum_loss_fraction``, with a default value of 0.05,
-which determine how many losses are discarded when storing the
-asset loss table. The rule is simple: losses below
+and it is able to aggregate both on geographic region (``NAME_1``) and
+on taxonomy. There are 25 possible combinations, that you can see with
+the command::
 
- ``mean_value_per_asset * minimum_loss_fraction``
+   $ oq show agg_keys
+   | NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
+   +---------+-----------+-------------+----------------------------+
+   | 1       | 1         | Mid-Western | Wood                       |
+   | 1       | 2         | Mid-Western | Adobe                      |
+   | 1       | 3         | Mid-Western | Stone-Masonry              |
+   | 1       | 4         | Mid-Western | Unreinforced-Brick-Masonry |
+   | 1       | 5         | Mid-Western | Concrete                   |
+   | 2       | 1         | Far-Western | Wood                       |
+   | 2       | 2         | Far-Western | Adobe                      |
+   | 2       | 3         | Far-Western | Stone-Masonry              |
+   | 2       | 4         | Far-Western | Unreinforced-Brick-Masonry |
+   | 2       | 5         | Far-Western | Concrete                   |
+   | 3       | 1         | West        | Wood                       |
+   | 3       | 2         | West        | Adobe                      |
+   | 3       | 3         | West        | Stone-Masonry              |
+   | 3       | 4         | West        | Unreinforced-Brick-Masonry |
+   | 3       | 5         | West        | Concrete                   |
+   | 4       | 1         | East        | Wood                       |
+   | 4       | 2         | East        | Adobe                      |
+   | 4       | 3         | East        | Stone-Masonry              |
+   | 4       | 4         | East        | Unreinforced-Brick-Masonry |
+   | 4       | 5         | East        | Concrete                   |
+   | 5       | 1         | Central     | Wood                       |
+   | 5       | 2         | Central     | Adobe                      |
+   | 5       | 3         | Central     | Stone-Masonry              |
+   | 5       | 4         | Central     | Unreinforced-Brick-Masonry |
+   | 5       | 5         | Central     | Concrete                   |
 
-are discarded. The mean value per asset is simply the total value of the
-portfolio divided by the number of assets (notice that there a value for each
-loss type, ``mean_value_per_asset`` is a vector). By default losses below 5% of
-the mean value are discarded and in an ideal world with this value
+The lines in this table are associated to the *generalized aggregation ID*,
+``agg_id`` which is an index going from ``0`` (meaning aggregate assets with
+NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets
+with NAME_1=*Mid-Western* and taxonomy=*Wood*); moreover ``agg_id=25`` means
+full aggregation.
 
-1. the vast majority of the losses would be discarded, thus making the
-   asset loss table storable;
-2. the loss curves would still be nearly identical to the ones without
-   discarding any loss, except for small return periods.
+The ``agg_id`` field enters in ``risk_by_event`` and in outputs like
+the aggregate losses; for instance::
 
-It is the job of the user to verify if 1 and 2 are true in the real world.
-He can assess that by playing with the ``minimum_loss_fraction`` in a small
-calculation, finding a good value for it, and then extending to the large
-calculation. Clearly it is a matter of compromise: by sacrificing precision
-it is possible to reduce enourmously the size of the stored asset loss table
-and to make an impossible calculation possible.
+   $ oq show agg_losses-rlzs
+   | agg_id | rlz | loss_type     | value       |
+   +--------+-----+---------------+-------------+
+   | 0      | 0   | nonstructural | 2_327_008   |
+   | 0      | 0   | structural    | 937_852     |
+   +--------+-----+---------------+-------------+
+   | ...    + ... + ...           + ...         +
+   +--------+-----+---------------+-------------+
+   | 25     | 1   | nonstructural | 100_199_448 |
+   | 25     | 1   | structural    | 157_885_648 |
 
-NB: the asset loss table is interesting only when computing the aggregate
-loss curves by tag: if there are no tags the total loss curve can be
-computed from the event loss table (i.e.  the asset loss table
-aggregated by asset *without discarding anything*) which is always
-stored. Thanks to that it is always possible to compare the total loss curve
-with the approximated loss curve, to assess the goodness
-of the approximation.
+The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id``
+to the proper combination of tags; ``agg_id=25``, i.e. full aggregation,
+is replaced with the string ``*total*``.
+
+By knowing the number of events, the number of aggregation keys and the
+number of loss types, it is possible to give an upper limit to the size
+of ``risk_by_event``. In the demo there are 1703 events, 26 aggregation
+keys and 2 loss types, so ``risk_by_event`` contains at most
+
+  1703 * 26 * 2 = 88,556 rows
+
+This is an upper limit, since some combination can produce zero losses
+and are not stored, especially if the ``minimum_asset_loss`` feature is
+used. In the case of the demo actually only 20,877 rows are nonzero::
+
+   $ oq show risk_by_event
+          event_id  agg_id  loss_id           loss      variance
+   ...
+   [20877 rows x 5 columns]

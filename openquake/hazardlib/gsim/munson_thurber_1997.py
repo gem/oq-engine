@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -141,12 +141,10 @@ class MunsonThurber1997Hawaii(MunsonThurber1997):
             mean = (0.1512 + 0.387 * (1 - M)) / log10e + mean
 
         # define natural log of SA 0.3 sec and 0.2 sec
-        if isinstance(imt, SA):
-            if imt.period == 0.3:
-                mean = np.log(2.2) + mean
-
-            if imt.period == 0.2:
-                mean = np.log(2.5) + mean
+        if imt.period == 0.3:
+            mean = np.log(2.2) + mean
+        elif imt.period == 0.2:
+            mean = np.log(2.5) + mean
 
         return mean, stddevs
 

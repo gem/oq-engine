@@ -16,11 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import numpy
+from scipy.stats import norm
 import pandas as pd
 
-from openquake.hazardlib.stats import norm_cdf
+from openquake.baselib import hdf5
+from openquake.hazardlib.stats import norm_cdf, _truncnorm_sf
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import ProbabilityCurve
@@ -57,13 +58,8 @@ class AmplFunction():
             A :class:`openquake.hazardlib.site_amplification.AmplFunction`
             instance
         """
-        # Get IMTs
-        imts = []
-        # example of df.keys():
-        # ampcode  from_mag  from_rrup  level  PGA sigma_PGA
-        for key in df.keys():
-            if re.search('^SA', key) or re.search('^PGA', key):
-                imts.append(key)
+        # Get IMTs for keys ampcode, from_mag, from_rrup, level, PGA, sigma_PGA
+        imts = [key for key in df.keys() if key.startswith(('PGA', 'SA'))]
 
         # Create the temporary list of lists
         out = []
@@ -78,6 +74,17 @@ class AmplFunction():
                   'median': float, 'std': float}
         df = pd.DataFrame(out, columns=dtypes).astype(dtypes)
         return AmplFunction(df, soil)  # requires reset_index
+
+    @classmethod
+    def read_df(cls, csvfname):
+        """
+        :param csvfname: CSV file name
+        :returns: a pandas DataFrame
+        """
+        df = hdf5.read_csv(csvfname, {'ampcode': ampcode_dt, None: float},
+                           index='ampcode')
+        df.fname = csvfname
+        return df
 
     def get_mean_std(self, site, imt, iml, mags, dsts):
         """
@@ -277,8 +284,16 @@ class Amplifier(object):
         if ampl_code == b'' and len(self.ampcodes) == 1:
             ampl_code = self.ampcodes[0]
 
-        ialphas = self.ialphas[ampl_code, imt]
-        isigmas = self.isigmas[ampl_code, imt]
+        min_gm = numpy.amin(self.imtls[imt])
+        max_gm = numpy.amax(self.imtls[imt])
+
+        min_ratio = numpy.amin(numpy.array(self.amplevels[1:]) /
+                               numpy.array(self.amplevels[:-1]))*0.9
+        min_ratio = min(max(min_ratio, 1.05), 1.1)
+        allimls = [min_gm]
+        while allimls[-1] < max_gm:
+            allimls.append(allimls[-1]*min_ratio)
+        allimls = numpy.array(allimls)
 
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
@@ -287,8 +302,21 @@ class Amplifier(object):
         for g in range(G):
 
             # Compute the probability of occurrence of GM within a number of
-            # intervals
-            p_occ = -numpy.diff(poes[:, g])
+            # intervals by interpolating the hazard curve
+            idx = numpy.nonzero(poes[:, g].flatten() > 1e-100)
+            simls = allimls[allimls <= numpy.amax(self.imtls[imt][idx])]
+            ipoes = numpy.interp(numpy.log10(simls),
+                                 numpy.log10(self.imtls[imt][idx]),
+                                 numpy.log10(poes[:, g].flatten()[idx]))
+            ipoes = 10.0**ipoes
+            p_occ = -numpy.diff(ipoes)
+
+            # Calculate the amplification factor and sigma for the selected
+            # IMLs
+            self.levels = simls
+            self._set_alpha_sigma(mag=None, dst=None)
+            ialphas = self.ialphas[ampl_code, imt]
+            isigmas = self.isigmas[ampl_code, imt]
 
             for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 #
@@ -310,21 +338,15 @@ class Amplifier(object):
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
-    def amplify(self, ampl_code, pcurves):
+    def amplify(self, ampl_code, pcurve):
         """
         :param ampl_code: 2-letter code for the amplification function
-        :param pcurves: a list of ProbabilityCurves containing PoEs
-        :returns: amplified ProbabilityCurves
+        :param pcurve: a ProbabilityCurve of shape (L*M, R)
+        :returns: amplified ProbabilityCurve of shape (A*M, R)
         """
-        out = []
-        for pcurve in pcurves:
-            lst = []
-            for imt in self.imtls:
-                slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
-                lst.append(new)
-            out.append(ProbabilityCurve(numpy.concatenate(lst)))
-        return out
+        new = [self.amplify_one(ampl_code, imt, pcurve.array[self.imtls(imt)])
+               for imt in self.imtls]
+        return ProbabilityCurve(numpy.concatenate(new))
 
     def _interp(self, ampl_code, imt_str, imls, coeff=None):
         # returns ialpha, isigma for the given levels
@@ -368,3 +390,98 @@ class Amplifier(object):
         for m, imt in enumerate(imts):
             for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs[m])):
                 gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt))
+
+
+def get_poes_site(mean_std, cmaker, ctxs):
+    """
+    NOTE: this works for a single site
+
+    :param mean_std:
+        See :function:`openquake.hazardlib.gsim.base.get_poes`
+    :param cmaker:
+        A :class:`openquake.hazardlib.contexts.ContextMaker` instance
+    :param truncation_level:
+        The level of truncation of the normal distribution of ground-motion
+        on rock
+    :param ampl:
+        Site amplification function instance of
+        :class:openquake.hazardlib.site_amplification.AmpFunction
+    :param ctxs:
+        Context objects with attributes .mag, .sites, .rrup
+    """
+    # Mean and std of ground motion for the IMTs considered in this analysis
+    # C - Number of contexts
+    # L - Number of intensity measure levels
+    loglevels = cmaker.loglevels
+    trunclevel = cmaker.trunclevel
+    mean, stddev = mean_std  # shape (C, M)
+    C, L = mean.shape[1], loglevels.size
+    for ctx in ctxs:
+        assert len(ctx.sids) == 1  # 1 site
+    M = len(loglevels)
+    L1 = L // M
+
+    # This is the array where we store the output results i.e. poes on soil
+    out_s = numpy.zeros((C, L))
+
+    # `nsamp` is the number of IMLs per IMT used to compute the hazard on rock
+    # while 'L' is total number of ground-motion values
+    nsamp = 40
+
+    # Compute the probability of exceedance for each in intensity
+    # measure type IMT
+    sigma = cmaker.af.get_max_sigma()
+    mags = [ctx.mag for ctx in ctxs]
+    rrups = [ctx.rrup for ctx in ctxs]
+    ampcode = ctxs[0].sites['ampcode'][0]
+    for m, imt in enumerate(loglevels):
+
+        # Get the values of ground-motion used to compute the probability
+        # of exceedance on soil.
+        soillevels = loglevels[imt]  # shape L1
+
+        # Here we set automatically the IMLs that will be used to compute
+        # the probability of occurrence of GM on rock within discrete
+        # intervals
+        ll = numpy.linspace(min(soillevels) - sigma * 4.,
+                            max(soillevels) + sigma * 4.,
+                            num=nsamp)
+
+        # Calculate for each ground motion interval the probability
+        # of occurrence on rock for all the sites
+        for iml_l, iml_u in zip(ll[:-1], ll[1:]):
+
+            # Set the arguments of the truncated normal distribution
+            # function
+            if trunclevel == 0:
+                out_l = iml_l <= mean[m]
+                out_u = iml_u <= mean[m]
+            else:
+                out_l = (iml_l - mean[m]) / stddev[m]
+                out_u = (iml_u - mean[m]) / stddev[m]
+
+            # Probability of occurrence on rock
+            pocc_rock = (_truncnorm_sf(trunclevel, out_l) -
+                         _truncnorm_sf(trunclevel, out_u))  # shape C
+
+            # Skipping cases where the pocc on rock is negligible
+            if numpy.all(pocc_rock < 1e-10):
+                continue
+
+            # Ground-motion value in the middle of each interval
+            iml_mid = (numpy.exp(iml_l) + numpy.exp(iml_u)) / 2.
+
+            # Get mean and std of the amplification function for this
+            # magnitude, distance and IML
+            median_af, std_af = cmaker.af.get_mean_std(  # shape C
+                ampcode, imt, iml_mid, mags, rrups)
+
+            # Computing the probability of exceedance of the levels of
+            # ground-motion loglevels on soil
+            logaf = numpy.log(numpy.exp(soillevels) / iml_mid)  # shape L1
+            for li in range(L1):
+                poex_af = 1. - norm.cdf(
+                    logaf[li], numpy.log(median_af), std_af)  # shape C
+                out_s[:, m * L1 + li] += poex_af * pocc_rock  # shape C
+
+    return out_s

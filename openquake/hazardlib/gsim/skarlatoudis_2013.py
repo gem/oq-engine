@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,125 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in table 1.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(C['epsilon'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['sigma'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
+
+
+def _compute_distance(rup, dists, C):
+    """
+    equation 3 pag 1960:
+
+    ``c31 * logR + c32 * (R-Rref)``
+    """
+    rref = 1.0
+    c31 = -1.7
+    return (c31 * np.log10(dists.rhypo) + C['c32'] * (dists.rhypo - rref))
+
+
+def _compute_magnitude(rup, C):
+    """
+    equation 3 pag 1960:
+
+    c1 + c2(M-5.5)
+    """
+    m_h = 5.5
+    return C['c1'] + (C['c2'] * (rup.mag - m_h))
+
+
+def _get_site_amplification(sites, C):
+    """
+    Compute the fourth term of the equation 3:
+    The functional form Fs in Eq. (1) represents the site amplification and
+    it is given by FS = c61*S + c62*SS , where c61 and c62 are the
+    coefficients to be determined through the regression analysis,
+    while S and SS are dummy variables used to denote NEHRP site category
+    C and D respectively
+    Coefficents for categories A and B are set to zero
+    """
+    S, SS = _get_site_type_dummy_variables(sites)
+
+    return (C['c61'] * S) + (C['c62'] * SS)
+
+
+def _get_site_type_dummy_variables(sites):
+    """
+    Get site type dummy variables, three different site classes,
+    based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
+    according to the NEHRP:
+    class A-B: Vs30 > 760 m/s
+    class C: Vs30 = 360 − 760 m/s
+    class D: Vs30 < 360 m/s
+
+    """
+    S = np.zeros(len(sites.vs30))
+    SS = np.zeros(len(sites.vs30))
+
+    # Class C; 180 m/s <= Vs30 <= 360 m/s.
+    idx = (sites.vs30 < 360.0)
+    SS[idx] = 1.0
+    # Class B; 360 m/s <= Vs30 <= 760 m/s. (NEHRP)
+    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 760)
+    S[idx] = 1.0
+
+    return S, SS
+
+
+def _compute_forearc_backarc_term(C, sites, dists, rup):
+    """
+    Compute back-arc term of Equation 3
+
+    """
+    # flag 1 (R < 335 & R >= 205)
+    flag1 = np.zeros(len(dists.rhypo))
+    ind1 = np.logical_and((dists.rhypo < 335), (dists.rhypo >= 205))
+    flag1[ind1] = 1.0
+    # flag 2 (R >= 335)
+    flag2 = np.zeros(len(dists.rhypo))
+    ind2 = (dists.rhypo >= 335)
+    flag2[ind2] = 1.0
+    # flag 3 (R < 240 & R >= 140)
+    flag3 = np.zeros(len(dists.rhypo))
+    ind3 = np.logical_and((dists.rhypo < 240), (dists.rhypo >= 140))
+    flag3[ind3] = 1.0
+    # flag 4 (R >= 240)
+    flag4 = np.zeros(len(dists.rhypo))
+    ind4 = (dists.rhypo >= 240)
+    flag4[ind4] = 1.0
+
+    A = flag1 * ((205 - dists.rhypo)/150) + flag2
+    B = flag3 * ((140 - dists.rhypo)/100) + flag4
+    if (rup.hypo_depth < 80):
+        FHR = A
+    else:
+        FHR = B
+
+    H0 = 100
+    # Heaviside function
+    if (rup.hypo_depth >= H0):
+        H = 1
+    else:
+        H = 0
+
+    # ARC = 0 for back-arc - ARC = 1 for forearc
+    ARC = np.zeros(len(sites.backarc))
+    idxarc = (sites.backarc == 1)
+    ARC[idxarc] = 1.0
+
+    return ((C['c41'] * (1 - ARC) * H) + (C['c42'] * (1 - ARC) * H * FHR) +
+            (C['c51'] * ARC * H) + (C['c52'] * ARC * H * FHR))
+
+
 class SkarlatoudisEtAlSSlab2013(GMPE):
     """
     Implements GMPEs developed by A.A.Skarlatoudis, C.B.Papazachos,
@@ -46,11 +165,7 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the RotD50 of two
     #: horizontal components
@@ -58,11 +173,8 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1961
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is Vs30 and  backarc flag
     REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
@@ -83,18 +195,16 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
         # intensity measure type.
 
         C = self.COEFFS[imt]
-        imean = (self._compute_magnitude(rup, C) +
-                 self._compute_distance(rup, dists, C) +
-                 self._get_site_amplification(sites, C) +
-                 self._compute_forearc_backarc_term(C, sites, dists, rup))
+        imean = (_compute_magnitude(rup, C) +
+                 _compute_distance(rup, dists, C) +
+                 _get_site_amplification(sites, C) +
+                 _compute_forearc_backarc_term(C, sites, dists, rup))
 
-        istddevs = self._get_stddevs(C,
-                                     stddev_types,
-                                     num_sites=len(sites.vs30))
+        istddevs = _get_stddevs(C, stddev_types, len(sites.vs30))
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
-        if imt.name in "SA PGA":
+        if imt.string.startswith(("SA", "PGA")):
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             # PGV:
@@ -103,121 +213,6 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
         stddevs = np.log(10.0 ** np.array(istddevs))
         # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 1.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['epsilon'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_distance(self, rup, dists, C):
-        """
-        equation 3 pag 1960:
-
-        ``c31 * logR + c32 * (R-Rref)``
-        """
-        rref = 1.0
-        c31 = -1.7
-        return (c31 * np.log10(dists.rhypo) + C['c32'] * (dists.rhypo - rref))
-
-    def _compute_magnitude(self, rup, C):
-        """
-        equation 3 pag 1960:
-
-        c1 + c2(M-5.5)
-        """
-        m_h = 5.5
-        return C['c1'] + (C['c2'] * (rup.mag - m_h))
-
-    def _get_site_amplification(self, sites, C):
-        """
-        Compute the fourth term of the equation 3:
-        The functional form Fs in Eq. (1) represents the site amplification and
-        it is given by FS = c61*S + c62*SS , where c61 and c62 are the
-        coefficients to be determined through the regression analysis,
-        while S and SS are dummy variables used to denote NEHRP site category
-        C and D respectively
-        Coefficents for categories A and B are set to zero
-        """
-        S, SS = self._get_site_type_dummy_variables(sites)
-
-        return (C['c61'] * S) + (C['c62'] * SS)
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables, three different site classes,
-        based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
-        according to the NEHRP:
-        class A-B: Vs30 > 760 m/s
-        class C: Vs30 = 360 − 760 m/s
-        class D: Vs30 < 360 m/s
-
-        """
-        S = np.zeros(len(sites.vs30))
-        SS = np.zeros(len(sites.vs30))
-
-        # Class C; 180 m/s <= Vs30 <= 360 m/s.
-        idx = (sites.vs30 < 360.0)
-        SS[idx] = 1.0
-        # Class B; 360 m/s <= Vs30 <= 760 m/s. (NEHRP)
-        idx = (sites.vs30 >= 360.0) & (sites.vs30 < 760)
-        S[idx] = 1.0
-
-        return S, SS
-
-    def _compute_forearc_backarc_term(self, C, sites, dists, rup):
-        """
-        Compute back-arc term of Equation 3
-
-        """
-        # flag 1 (R < 335 & R >= 205)
-        flag1 = np.zeros(len(dists.rhypo))
-        ind1 = np.logical_and((dists.rhypo < 335), (dists.rhypo >= 205))
-        flag1[ind1] = 1.0
-        # flag 2 (R >= 335)
-        flag2 = np.zeros(len(dists.rhypo))
-        ind2 = (dists.rhypo >= 335)
-        flag2[ind2] = 1.0
-        # flag 3 (R < 240 & R >= 140)
-        flag3 = np.zeros(len(dists.rhypo))
-        ind3 = np.logical_and((dists.rhypo < 240), (dists.rhypo >= 140))
-        flag3[ind3] = 1.0
-        # flag 4 (R >= 240)
-        flag4 = np.zeros(len(dists.rhypo))
-        ind4 = (dists.rhypo >= 240)
-        flag4[ind4] = 1.0
-
-        A = flag1 * ((205 - dists.rhypo)/150) + flag2
-        B = flag3 * ((140 - dists.rhypo)/100) + flag4
-        if (rup.hypo_depth < 80):
-            FHR = A
-        else:
-            FHR = B
-
-        H0 = 100
-        # Heaviside function
-        if (rup.hypo_depth >= H0):
-            H = 1
-        else:
-            H = 0
-
-        # ARC = 0 for back-arc - ARC = 1 for forearc
-        ARC = np.zeros(len(sites.backarc))
-        idxarc = (sites.backarc == 1)
-        ARC[idxarc] = 1.0
-
-        return ((C['c41'] * (1 - ARC) * H) + (C['c42'] * (1 - ARC) * H * FHR) +
-                (C['c51'] * ARC * H) + (C['c52'] * ARC * H * FHR))
-
     #: Coefficients from SA from Table 1
     #: Coefficients from PGA e PGV from Table 5
 

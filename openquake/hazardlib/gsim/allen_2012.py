@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,49 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA
 
 
+def _compute_mean(C, mag, rrup):
+    """
+    Compute mean value according to equation 18, page 32.
+    """
+    # see table 3, page 14
+    R1 = 90.
+    R2 = 150.
+    # see equation 19, page 32
+    m_ref = mag - 4
+    r1 = R1 + C['c8'] * m_ref
+    r2 = R2 + C['c11'] * m_ref
+    assert r1 > 0
+    assert r2 > 0
+    g0 = np.log10(
+        np.sqrt(np.minimum(rrup, r1) ** 2 + (1 + C['c5'] * m_ref) ** 2)
+    )
+    g1 = np.maximum(np.log10(rrup / r1), 0)
+    g2 = np.maximum(np.log10(rrup / r2), 0)
+
+    mean = (C['c0'] + C['c1'] * m_ref + C['c2'] * m_ref ** 2 +
+            (C['c3'] + C['c4'] * m_ref) * g0 +
+            (C['c6'] + C['c7'] * m_ref) * g1 +
+            (C['c9'] + C['c10'] * m_ref) * g2)
+
+    # convert from log10 to ln and units from cm/s2 to g
+    mean = np.log((10 ** mean) * 1e-2 / g)
+
+    return mean
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    # standard deviation is converted from log10 to ln
+    std_total = np.log(10 ** C['sigma'])
+    stddevs = []
+    for _ in stddev_types:
+        stddevs.append(np.zeros(num_sites) + std_total)
+
+    return stddevs
+
+
 class Allen2012(GMPE):
     """
     Implements GMPE developed by T. Allen and published as "Stochastic ground-
@@ -41,19 +84,14 @@ class Allen2012(GMPE):
 
     #: Supported intensity measure types is spectral acceleration, see table 7,
     #: page 35, and PGA (coefficients assumed to be the same of SA(0.01))
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the median horizontal component
     #: see table 7, page 35
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
 
     #: Supported standard deviation type is only total, see table 7, page 35
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No site parameters are needed, the GMPE is calibrated for average South
     #: East Australia site conditions (assumed consistent to Vs30 = 820 m/s)
@@ -77,59 +115,15 @@ class Allen2012(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         if rup.hypo_depth < 10:
             C = self.COEFFS_SHALLOW[imt]
         else:
             C = self.COEFFS_DEEP[imt]
 
-        mean = self._compute_mean(C, rup.mag, dists.rrup)
-        stddevs = self._get_stddevs(C, stddev_types, dists.rrup.shape[0])
+        mean = _compute_mean(C, rup.mag, dists.rrup)
+        stddevs = _get_stddevs(C, stddev_types, dists.rrup.shape[0])
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, rrup):
-        """
-        Compute mean value according to equation 18, page 32.
-        """
-        # see table 3, page 14
-        R1 = 90.
-        R2 = 150.
-        # see equation 19, page 32
-        m_ref = mag - 4
-        r1 = R1 + C['c8'] * m_ref
-        r2 = R2 + C['c11'] * m_ref
-        assert r1 > 0
-        assert r2 > 0
-        g0 = np.log10(
-            np.sqrt(np.minimum(rrup, r1) ** 2 + (1 + C['c5'] * m_ref) ** 2)
-        )
-        g1 = np.maximum(np.log10(rrup / r1), 0)
-        g2 = np.maximum(np.log10(rrup / r2), 0)
-
-        mean = (C['c0'] + C['c1'] * m_ref + C['c2'] * m_ref ** 2 +
-                (C['c3'] + C['c4'] * m_ref) * g0 +
-                (C['c6'] + C['c7'] * m_ref) * g1 +
-                (C['c9'] + C['c10'] * m_ref) * g2)
-
-        # convert from log10 to ln and units from cm/s2 to g
-        mean = np.log((10 ** mean) * 1e-2 / g)
-
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        # standard deviation is converted from log10 to ln
-        std_total = np.log(10 ** C['sigma'])
-        stddevs = []
-        for _ in stddev_types:
-            stddevs.append(np.zeros(num_sites) + std_total)
-
-        return stddevs
 
     #: Coefficients for shallow events taken from Excel file produced by Trevor
     #: Allen and provided by Geoscience Australia (20120821.GMPE_coeffs.xls)

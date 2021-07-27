@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -30,4 +30,3 @@ class PankowPechmann2004TestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('PP2004/PP2004_MEAN.csv',
                    max_discrep_percentage=0.1)
-

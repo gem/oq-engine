@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Source model XML Writer
 """
@@ -156,6 +155,24 @@ def build_complex_fault_geometry(fault_source):
     return Node("complexFaultGeometry", nodes=edge_nodes)
 
 
+def build_kite_fault_geometry(fault_source):
+    """
+    Returns the complex fault source geometry as a Node
+    :param fault_source:
+        Kite fault source model as an instance of the :class:
+        `openquake.hazardlib.source.kite_fault.KiteFaultSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    num_profiles = len(fault_source.profiles)
+    profile_nodes = []
+    for iloc, profile in enumerate(fault_source.profiles):
+        profile_nodes.append(
+            Node("profile", nodes=[build_linestring_node(profile, with_depth=True)]))
+    return Node("kiteFaultGeometry", nodes=profile_nodes)
+
+
+
 @obj_to_node.add('EvenlyDiscretizedMFD')
 def build_evenly_discretised_mfd(mfd):
     """
@@ -184,9 +201,35 @@ def build_truncated_gr_mfd(mfd):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
+    if hasattr(mfd, 'slip_rate'):
+        return Node("truncGutenbergRichterMFD",
+                    {"bValue": mfd.b_val, "slipRate": mfd.slip_rate,
+                     "rigidity": mfd.rigidity,
+                     "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
     return Node("truncGutenbergRichterMFD",
                 {"aValue": mfd.a_val, "bValue": mfd.b_val,
                  "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
+
+
+@obj_to_node.add('TaperedGRMFD')
+def build_tapered_gr_mfd(mfd):
+    """
+    Parses the truncated Gutenberg Richter MFD as a Node
+
+    :param mfd:
+        MFD as instance of :class:
+        `openquake.hazardlib.mfd.tapered_gr_mfd.TaperedGRMFD`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    return Node(
+        "taperedGutenbergRichterMFD", {
+            "aValue": mfd.a_val,
+            "bValue": mfd.b_val,
+            "cornerMag": mfd.corner_mag,
+            "minMag": mfd.min_mag,
+            "maxMag": mfd.max_mag
+        })
 
 
 @obj_to_node.add('ArbitraryMFD')
@@ -467,6 +510,8 @@ def build_rupture_node(rupt, probs_occur):
         name = 'complexFaultRupture'
     elif geom == 'griddedSurface':
         name = 'griddedRupture'
+    elif geom == 'kiteSurface':
+        name = 'kiteSurface'
     return Node(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
 
 
@@ -550,7 +595,7 @@ def build_complex_fault_source_node(fault_source):
     Parses a complex fault source to a Node class
 
     :param fault_source:
-        Simple fault source as instance of :class:
+        Complex fault source as instance of :class:
         `openquake.hazardlib.source.complex_fault.ComplexFaultSource`
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
@@ -564,6 +609,56 @@ def build_complex_fault_source_node(fault_source):
     return Node("complexFaultSource",
                 get_source_attributes(fault_source),
                 nodes=source_nodes)
+
+
+@obj_to_node.add('KiteFaultSource')
+def build_kite_fault_source_node(fault_source):
+    """
+    Parses a kite fault source to a Node class
+
+    :param fault_source:
+        Kite fault source as instance of :class:
+        `openquake.hazardlib.source.kite_fault.KiteFaultSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+
+    # Parse geometry
+    source_nodes = [build_kite_fault_geometry(fault_source)]
+    # Parse common fault source attributes
+    source_nodes.extend(get_fault_source_nodes(fault_source))
+    return Node("kiteFaultSource",
+                get_source_attributes(fault_source),
+                nodes=source_nodes)
+
+
+@obj_to_node.add('MultiFaultSource')
+def build_multi_fault_source_node(multi_fault_source):
+    """
+    Parses a MultiFaultSource to a Node class
+
+    :param multi_fault_source:
+        Multi fault source as instance of :class:
+        `openquake.hazardlib.source.multi_fault.MultiFaultSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    rup_nodes = []  # multiPlanesRupture
+    for rup_idxs, pmf_, mag, rake in zip(
+            multi_fault_source.rupture_idxs,
+            multi_fault_source.pmfs,
+            multi_fault_source.mags,
+            multi_fault_source.rakes):
+        probs = ' '.join(map(str, [pair[0] for pair in pmf_.data]))
+        nodes = [Node('magnitude', text=str(mag)),
+                 Node('sectionIndexes', {'indexes': ','.join(rup_idxs)}),
+                 Node('rake', text=str(rake))]
+        rup_node = Node('multiPlanesRupture', {'probs_occur': probs},
+                        nodes=nodes)
+        rup_nodes.append(rup_node)
+    return Node("multiFaultSource",
+                get_source_attributes(multi_fault_source),
+                nodes=rup_nodes)
 
 
 @obj_to_node.add('SourceGroup')

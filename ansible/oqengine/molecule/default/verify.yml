@@ -1,0 +1,29 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: all
+  become: yes
+  become_user: openquake
+  gather_facts: false
+
+  tasks:
+  - name: Copy job.zip to instance
+    copy:
+      src: job.zip
+      dest: /home/openquake/
+      owner: openquake
+      group: openquake
+      mode: '0644'
+
+  - name: Run a Demo calc for EventBasedRisk
+    command: /usr/bin/oq engine --run job.zip
+    args:
+      chdir: /home/openquake
+  
+  - name: Display outputs of last calculcation 
+    command: /usr/bin/oq engine --list-outputs -1
+    args:
+      chdir: /home/openquake
+    register: calc
+  - debug: msg="{{ calc.stdout }}"

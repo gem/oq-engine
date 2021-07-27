@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2020 GEM Foundation
+# Copyright (C) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,8 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.baselib import datastore, general
+from openquake.baselib import general
+from openquake.commonlib import datastore
 from openquake.calculators.export import export
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
@@ -86,20 +87,32 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
-def create_job(db, datadir):
+def create_job(db, datadir, calculation_mode='to be set',
+               description='just created', user_name=None, hc_id=None):
     """
     Create job for the given user, return it.
 
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param datadir:
-        Data directory of the user who owns/started this job.
+        data directory of the user who owns/started this job.
+    :param calculation_mode:
+        job kind
+    :param description:
+        description of the job
+    :param user_name:
+        name of the user running the job
+    :param hc_id:
+        ID of the parent job (if any)
     :returns:
         the job ID
     """
     calc_id = get_calc_id(db, datadir) + 1
-    job = dict(id=calc_id, is_running=1, description='just created',
-               user_name=getpass.getuser(), calculation_mode='to be set',
+    # NB: is_running=1 is needed to make views_test.py happy on Jenkins
+    job = dict(id=calc_id, is_running=1, description=description,
+               user_name=user_name or getpass.getuser(),
+               calculation_mode=calculation_mode,
+               hazard_calculation_id=hc_id,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     return db('INSERT INTO job (?S) VALUES (?X)',
               job.keys(), job.values()).lastrowid
@@ -258,10 +271,9 @@ def get_outputs(db, job_id):
 DISPLAY_NAME = {
     'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
-    'damages-rlzs': 'Asset Damage Distributions',
-    'damages-stats': 'Asset Damage Statistics',
-    'dmg_by_event': 'Aggregate Event Damages',
-    'losses_by_event': 'Aggregate Event Losses',
+    'damages-rlzs': 'Asset Risk Distributions',
+    'damages-stats': 'Asset Risk Statistics',
+    'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
@@ -275,10 +287,8 @@ DISPLAY_NAME = {
     'agg_losses-stats': 'Aggregate Losses Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
-    'tot_losses-rlzs': 'Total Losses',
-    'tot_losses-stats': 'Total Losses Statistics',
-    'tot_curves-rlzs': 'Total Loss Curves',
-    'tot_curves-stats': 'Total Loss Curves Statistics',
+    'aggcurves': 'Aggregate Risk Curves',
+    'avg_gmf': 'Average Ground Motion Field',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'ruptures': 'Earthquake Ruptures',

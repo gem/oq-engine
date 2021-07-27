@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,134 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _compute_mean_on_rock(C, mag, rrup, F, HW):
+    """
+    Compute mean value on rock (that is eq.1, page 105 with S = 0)
+    """
+    f1 = _compute_f1(C, mag, rrup)
+    f3 = _compute_f3(C, mag)
+    f4 = _compute_f4(C, mag, rrup)
+    return f1 + F * f3 + HW * f4
+
+
+def _get_stddevs(C, mag, stddev_types, num_sites):
+    """
+    Return standard deviation as defined in eq.13 page 106.
+    """
+    std = np.zeros(num_sites)
+
+    if mag <= 5:
+        std += C['b5']
+    elif 5.0 < mag < 7.0:
+        std += C['b5'] - C['b6'] * (mag - 5)
+    else:
+        std += C['b5'] - 2 * C['b6']
+
+    # only the 'total' standard deviation is supported, therefore the
+    # std is always the same for all types
+    stddevs = [std for _ in stddev_types]
+    return stddevs
+
+
+def _get_fault_type_hanging_wall(rake):
+    """
+    Return fault type (F) and hanging wall (HW) flags depending on rake
+    angle.
+
+    The method assumes 'reverse' (F = 1) if 45 <= rake <= 135, 'other'
+    (F = 0) if otherwise. Hanging-wall flag is set to 1 if 'reverse',
+    and 0 if 'other'.
+    """
+    F, HW = 0, 0
+
+    if 45 <= rake <= 135:
+        F, HW = 1, 1
+
+    return F, HW
+
+
+def _get_site_class(vs30):
+    """
+    Return site class flag (0 if vs30 > 600, that is rock, or 1 if vs30 <
+    600, that is deep soil)
+    """
+    S = np.zeros_like(vs30)
+    S[vs30 < 600] = 1
+    return S
+
+
+def _compute_f1(C, mag, rrup):
+    """
+    Compute f1 term (eq.4, page 105)
+    """
+    r = np.sqrt(rrup ** 2 + C['c4'] ** 2)
+
+    f1 = (
+        C['a1'] +
+        C['a12'] * (8.5 - mag) ** C['n'] +
+        (C['a3'] + C['a13'] * (mag - C['c1'])) * np.log(r)
+    )
+
+    if mag <= C['c1']:
+        f1 += C['a2'] * (mag - C['c1'])
+    else:
+        f1 += C['a4'] * (mag - C['c1'])
+
+    return f1
+
+
+def _compute_f3(C, mag):
+    """
+    Compute f3 term (eq.6, page 106)
+
+    NOTE: In the original manuscript, for the case 5.8 < mag < c1,
+    the term in the numerator '(mag - 5.8)' is missing, while is
+    present in the software used for creating the verification tables
+    """
+    if mag <= 5.8:
+        return C['a5']
+    elif 5.8 < mag < C['c1']:
+        return (
+            C['a5'] +
+            (C['a6'] - C['a5']) * (mag - 5.8) / (C['c1'] - 5.8)
+        )
+    else:
+        return C['a6']
+
+
+def _compute_f4(C, mag, rrup):
+    """
+    Compute f4 term (eq. 7, 8, and 9, page 106)
+    """
+    fhw_m = 0
+    fhw_r = np.zeros_like(rrup)
+
+    if mag <= 5.5:
+        fhw_m = 0
+    elif 5.5 < mag < 6.5:
+        fhw_m = mag - 5.5
+    else:
+        fhw_m = 1
+
+    idx = (rrup > 4) & (rrup <= 8)
+    fhw_r[idx] = C['a9'] * (rrup[idx] - 4.) / 4.
+
+    idx = (rrup > 8) & (rrup <= 18)
+    fhw_r[idx] = C['a9']
+
+    idx = (rrup > 18) & (rrup <= 24)
+    fhw_r[idx] = C['a9'] * (1 - (rrup[idx] - 18.) / 7.)
+
+    return fhw_m * fhw_r
+
+
+def _compute_f5(C, pga_rock):
+    """
+    Compute f5 term (non-linear soil response)
+    """
+    return C['a10'] + C['a11'] * np.log(pga_rock + C['c5'])
+
+
 class AbrahamsonSilva1997(GMPE):
     """
     Implements GMPE developed by N. A. Abrahamson and W. J. Silva and published
@@ -44,10 +172,7 @@ class AbrahamsonSilva1997(GMPE):
 
     #: Supported intensity measure types are PGA and SA. PGA is assumed to
     #: have same coefficients as SA(0.01)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components (see paragraph 'Regression Model', page 105)
@@ -55,9 +180,7 @@ class AbrahamsonSilva1997(GMPE):
 
     #: Supported standard deviation type is Total (see equations 13 pp. 106
     #: and table 4, page 109).
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: The only site parameter is vs30 used to distinguish between rock
     #: (vs30 > 600 m/s) and deep soil (see table 2, page 95)
@@ -78,158 +201,26 @@ class AbrahamsonSilva1997(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        F, HW = self._get_fault_type_hanging_wall(rup.rake)
-        S = self._get_site_class(sites.vs30)
+        F, HW = _get_fault_type_hanging_wall(rup.rake)
+        S = _get_site_class(sites.vs30)
 
         # compute pga on rock (used then to compute site amplification factor)
         C = self.COEFFS[PGA()]
-        pga_rock = np.exp(
-            self._compute_mean_on_rock(C, rup.mag, dists.rrup, F, HW)
-        )
+        pga_rock = np.exp(_compute_mean_on_rock(C, rup.mag, dists.rrup, F, HW))
 
         # compute mean for the given imt (do not repeat the calculation if
         # imt is PGA, just add the site amplification term)
         if imt == PGA():
-            mean = np.log(pga_rock) + S * self._compute_f5(C, pga_rock)
+            mean = np.log(pga_rock) + S * _compute_f5(C, pga_rock)
         else:
             C = self.COEFFS[imt]
-            mean = (
-                self._compute_mean_on_rock(C, rup.mag, dists.rrup, F, HW) +
-                S * self._compute_f5(C, pga_rock)
-            )
+            mean = (_compute_mean_on_rock(C, rup.mag, dists.rrup, F, HW) +
+                    S * _compute_f5(C, pga_rock))
 
         C_STD = self.COEFFS_STD[imt]
-        stddevs = self._get_stddevs(
-            C_STD, rup.mag, stddev_types, sites.vs30.size
-        )
+        stddevs = _get_stddevs(C_STD, rup.mag, stddev_types, sites.vs30.size)
 
         return mean, stddevs
-
-    def _compute_mean_on_rock(self, C, mag, rrup, F, HW):
-        """
-        Compute mean value on rock (that is eq.1, page 105 with S = 0)
-        """
-        f1 = self._compute_f1(C, mag, rrup)
-        f3 = self._compute_f3(C, mag)
-        f4 = self._compute_f4(C, mag, rrup)
-
-        return f1 + F * f3 + HW * f4
-
-    def _get_stddevs(self, C, mag, stddev_types, num_sites):
-        """
-        Return standard deviation as defined in eq.13 page 106.
-        """
-        std = np.zeros(num_sites)
-
-        if mag <= 5:
-            std += C['b5']
-        elif 5.0 < mag < 7.0:
-            std += C['b5'] - C['b6'] * (mag - 5)
-        else:
-            std += C['b5'] - 2 * C['b6']
-
-        # only the 'total' standard deviation is supported, therefore the
-        # std is always the same for all types
-        stddevs = [std for _ in stddev_types]
-
-        return stddevs
-
-    def _get_fault_type_hanging_wall(self, rake):
-        """
-        Return fault type (F) and hanging wall (HW) flags depending on rake
-        angle.
-
-        The method assumes 'reverse' (F = 1) if 45 <= rake <= 135, 'other'
-        (F = 0) if otherwise. Hanging-wall flag is set to 1 if 'reverse',
-        and 0 if 'other'.
-        """
-        F, HW = 0, 0
-
-        if 45 <= rake <= 135:
-            F, HW = 1, 1
-
-        return F, HW
-
-    def _get_site_class(self, vs30):
-        """
-        Return site class flag (0 if vs30 > 600, that is rock, or 1 if vs30 <
-        600, that is deep soil)
-        """
-        S = np.zeros_like(vs30)
-        S[vs30 < 600] = 1
-
-        return S
-
-    def _compute_f1(self, C, mag, rrup):
-        """
-        Compute f1 term (eq.4, page 105)
-        """
-        r = np.sqrt(rrup ** 2 + C['c4'] ** 2)
-
-        f1 = (
-            C['a1'] +
-            C['a12'] * (8.5 - mag) ** C['n'] +
-            (C['a3'] + C['a13'] * (mag - C['c1'])) * np.log(r)
-        )
-
-        if mag <= C['c1']:
-            f1 += C['a2'] * (mag - C['c1'])
-        else:
-            f1 += C['a4'] * (mag - C['c1'])
-
-        return f1
-
-    def _compute_f3(self, C, mag):
-        """
-        Compute f3 term (eq.6, page 106)
-
-        NOTE: In the original manuscript, for the case 5.8 < mag < c1,
-        the term in the numerator '(mag - 5.8)' is missing, while is
-        present in the software used for creating the verification tables
-        """
-        if mag <= 5.8:
-            return C['a5']
-        elif 5.8 < mag < C['c1']:
-            return (
-                C['a5'] +
-                (C['a6'] - C['a5']) * (mag - 5.8) / (C['c1'] - 5.8)
-            )
-        else:
-            return C['a6']
-
-    def _compute_f4(self, C, mag, rrup):
-        """
-        Compute f4 term (eq. 7, 8, and 9, page 106)
-        """
-        fhw_m = 0
-        fhw_r = np.zeros_like(rrup)
-
-        if mag <= 5.5:
-            fhw_m = 0
-        elif 5.5 < mag < 6.5:
-            fhw_m = mag - 5.5
-        else:
-            fhw_m = 1
-
-        idx = (rrup > 4) & (rrup <= 8)
-        fhw_r[idx] = C['a9'] * (rrup[idx] - 4.) / 4.
-
-        idx = (rrup > 8) & (rrup <=18)
-        fhw_r[idx] = C['a9']
-
-        idx = (rrup > 18) & (rrup <= 24)
-        fhw_r[idx] = C['a9'] * (1 - (rrup[idx] - 18.) / 7.)
-
-        return fhw_m * fhw_r
-
-    def _compute_f5(self, C, pga_rock):
-        """
-        Compute f5 term (non-linear soil response)
-        """
-        return C['a10'] + C['a11'] * np.log(pga_rock + C['c5'])
 
     #: Coefficient table (table 3, page 108)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,9 @@ Utilities to build a report writer generating a .rst report for a calculation
 import os
 import sys
 import logging
-from openquake.baselib import parallel
+import numpy
+import pandas
+
 from openquake.baselib.python3compat import encode, decode
 from openquake.commonlib import readinput, logs
 from openquake.calculators import views
@@ -49,10 +51,10 @@ class ReportWriter(object):
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
         'slow_sources': 'Slowest sources',
-        'task:classical_split_filter:0': 'Fastest task',
-        'task:classical_split_filter:-1': 'Slowest task',
+        'task:start_classical:0': 'Fastest task',
+        'task:start_classical:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
-        'times_by_source_class': 'Computation times by source typology',
+        'eff_ruptures': 'Computation times by source typology',
         'performance': 'Slowest operations',
     }
 
@@ -65,16 +67,20 @@ class ReportWriter(object):
         except KeyError:
             num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
-        self.text += '\n\n' + views.rst_table(versions)
+        self.text += '\n\n' + views.text_table(versions)
         self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
-            len(dstore['sitecol']), len(oq.imtls.array), num_rlzs)
+            len(dstore['sitecol']), oq.imtls.size, num_rlzs)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
-            text = views.view(name, self.dstore)
+            res = views.view(name, self.dstore)
+            if isinstance(res, (numpy.ndarray, pandas.DataFrame)):
+                text = views.text_table(res)
+            else:
+                text = res
         if text:
             title = self.title[name]
             line = '-' * len(title)
@@ -98,13 +104,13 @@ class ReportWriter(object):
             self.add('exposure_info')
         if 'source_info' in ds:
             self.add('slow_sources')
-            self.add('times_by_source_class')
+            self.add('eff_ruptures')
         if 'task_info' in ds:
             self.add('task_info')
             tasks = set(ds['task_info']['taskname'])
-            if 'classical_split_filter' in tasks:
-                self.add('task:classical_split_filter:0')
-                self.add('task:classical_split_filter:-1')
+            if 'start_classical' in tasks:
+                self.add('task:start_classical:0')
+                self.add('task:start_classical:-1')
             self.add('job_info')
         if 'performance_data' in ds:
             self.add('performance')
@@ -126,27 +132,24 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
-    calc_id = logs.init()
-    oq = readinput.get_oqparam(job_ini)
-    if 'source_model_logic_tree' in oq.inputs:
-        oq.calculation_mode = 'preclassical'
-    oq.ground_motion_fields = False
-    output_dir = output_dir or os.path.dirname(job_ini)
-    from openquake.calculators import base  # ugly
-    calc = base.calculators(oq, calc_id)
-    calc.save_params()  # needed to save oqparam
+    with logs.init('calc', job_ini) as log:
+        oq = log.get_oqparam()
+        if 'source_model_logic_tree' in oq.inputs:
+            oq.calculation_mode = 'preclassical'
+        oq.ground_motion_fields = False
+        output_dir = output_dir or os.path.dirname(job_ini)
+        from openquake.calculators import base  # ugly
+        calc = base.calculators(oq, log.calc_id)
+        calc.save_params()  # needed to save oqparam
 
-    # some taken is care so that the real calculation is not run:
-    # the goal is to extract information about the source management only
-    calc.pre_execute()
-    if oq.calculation_mode == 'preclassical':
-        calc.execute()
-    logging.info('Making the .rst report')
-    rw = ReportWriter(calc.datastore)
-    try:
+        # some taken is care so that the real calculation is not run:
+        # the goal is to extract information about the source management only
+        calc.pre_execute()
+        if oq.calculation_mode == 'preclassical':
+            calc.execute()
+        logging.info('Making the .rst report')
+        rw = ReportWriter(calc.datastore)
         rw.make_report()
-    finally:
-        parallel.Starmap.shutdown()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
               else calc.datastore.export_path('report.rst'))
     try:

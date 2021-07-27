@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5" xmlns:gml="http://www.opengis.net/gml">
+   <exposureModel category="buildings" id="exposure" taxonomySource="SPG (EPFL)">
+      <description>Exposure Model</description>
+      <conversions>
+         <costTypes>
+            <costType name="structural" type="aggregated" unit="CHF"/>
+         </costTypes>
+      </conversions>
+      <tagNames>Canton CantonGemeinde CantonGemeindePC</tagNames>
+      <occupancyPeriods>day</occupancyPeriods>
+      <assets>exposure.csv</assets>
+   </exposureModel>
+</nrml>

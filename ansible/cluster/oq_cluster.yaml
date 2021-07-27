@@ -1,0 +1,60 @@
+---
+#
+- import_playbook: check_py_ver.yaml
+
+- hosts: all
+  #
+  serial: 1
+  order: sorted
+  become: yes
+  vars:
+    venv_dir: /opt/openquake
+    venv_bin: "{{ venv_dir }}/bin"
+    server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
+    worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(' -1,') }} -1"
+
+  pre_tasks:
+    - name: ping hosts
+      ping:
+
+    - name: check OS
+      debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_python_version}}
+
+    - name: check server host IP
+      debug: msg={{ server_host }}
+
+    - name: check workers host_cores
+      debug: msg={{ worker_nodes_zmq }}
+
+    - name: Ensure user openquake exist and generate ssh key
+      user:
+        name: openquake
+        home: /home.dev/openquake
+        shell: /bin/bash
+        state: present
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+        ssh_key_file: .ssh/id_rsa
+
+  tasks:
+
+    - name: Download installation scripts only on master node
+      get_url:
+        url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+        dest: /tmp/install.py
+        mode: '0644'
+      when: "'master' in group_names" 
+
+    - name: Run install script from github repo  only on master node
+      shell: cd /home.dev/openquake && git clone https://github.com/gem/oq-engine.git && cd oq-engine && python3.8 ./install.py devel_server
+      changed_when: false
+      register: oq_install
+      when: "'master' in group_names" 
+   
+- import_playbook: inst_nfs.yaml
+  when: "'master' in group_names" 
+
+- import_playbook: inst_nfs.yaml
+  when: "'worker' in group_names" 
+
+- import_playbook: oq_zmq.yaml

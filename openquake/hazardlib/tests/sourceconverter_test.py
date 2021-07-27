@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ import unittest.mock
 import numpy
 from openquake.baselib import hdf5
 from openquake.hazardlib import nrml
+from openquake.hazardlib.geo import Point
 from openquake.hazardlib.sourceconverter import update_source_model, \
     SourceConverter
 
@@ -260,6 +261,11 @@ class SourceConverterTestCase(unittest.TestCase):
         self.assertEqual(
             'There were repeated values %s in %s:%s', w.call_args[0][0])
 
+    def test_mfd_with_slip_rate(self):
+        testfile = os.path.join(testdir, 'source_with_slip_rate.xml')
+        src = nrml.to_python(testfile).src_groups[0][0]
+        self.assertAlmostEqual(src.mfd.a_val, 3.97184573434)
+
 
 class SourceGroupHDF5TestCase(unittest.TestCase):
     def test_serialization(self):
@@ -272,3 +278,33 @@ class SourceGroupHDF5TestCase(unittest.TestCase):
             f['grp'] = grp
         with hdf5.File(f.path, 'r') as f:
             print(f['grp'])
+
+
+class MultiFaultSourceModelTestCase(unittest.TestCase):
+    """ Tests reading a multi fault model """
+
+    def test_load_mfs(self):
+        datadir = os.path.join(os.path.dirname(__file__), 'data', 'sections')
+        sec_xml = os.path.join(datadir, 'sections_kite.xml')
+        src_xml = os.path.join(datadir, 'sources.xml')
+        conv = SourceConverter()
+        sec = nrml.to_python(sec_xml, conv).sections
+        expected = [Point(11, 45, 0), Point(11, 45.5, 10)]
+        # Check geometry info
+        self.assertEqual(expected[0], sec[1].surface.profiles[0].points[0])
+        self.assertEqual(expected[1], sec[1].surface.profiles[0].points[1])
+        self.assertEqual(sec[1].sec_id, 's2')
+        ssm = nrml.to_python(src_xml, conv)
+        self.assertIsInstance(ssm, nrml.SourceModel)
+        ssm[0][0].create_inverted_index(sec)   # fix sections
+        rups = list(ssm[0][0].iter_ruptures())
+
+        # Check data for the second rupture
+        msg = 'Rake for rupture #0 is wrong'
+        self.assertEqual(rups[0].rake, 90.0, msg)
+        # Check data for the second rupture
+        msg = 'Rake for rupture #1 is wrong'
+        self.assertEqual(rups[1].rake, -90.0, msg)
+        # Check mfd
+        expected = numpy.array([0.9, 0.1])
+        numpy.testing.assert_almost_equal(rups[1].probs_occur, expected)

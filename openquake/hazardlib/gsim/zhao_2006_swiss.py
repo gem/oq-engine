@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,6 +22,7 @@ Module exports
 :class:`ZhaoEtAl2006AscSWISS03`,
 :class:`ZhaoEtAl2006AscSWISS08`.
 """
+import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -29,9 +30,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006Asc
 from openquake.hazardlib.gsim.zhao_2006_swiss_coeffs import (
-    COEFFS_FS_ROCK_SWISS05,
-    COEFFS_FS_ROCK_SWISS03,
-    COEFFS_FS_ROCK_SWISS08)
+    COEFFS_FS_ROCK_SWISS05, COEFFS_FS_ROCK_SWISS03, COEFFS_FS_ROCK_SWISS08)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
@@ -45,7 +44,7 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
     #. kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[0.01s]
-       the model applies to a fixed value of vs30=700m/s to match the 
+       the model applies to a fixed value of vs30=700m/s to match the
        reference vs30=1100m/s
 
     #. small-magnitude correction
@@ -62,38 +61,32 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
 
     # Supported standard deviation type is only total, but reported as a
     # combination of mean and magnitude/distance single station sigma
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
-        sites.vs30 = 700 * np.ones(len(sites.vs30))
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
+        ctx = copy.copy(ctx)
+        ctx.vs30 = 700 * np.ones(len(ctx.vs30))
+        super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tauC'
         log_phi_ss = 1.00
         C = ZhaoEtAl2006AscSWISS05.COEFFS_ASC
-        mean, stddevs = _apply_adjustments(
-            C, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rrup, imt, stddev_types,
-            log_phi_ss)
+        for m, imt in enumerate(imts):
+            _apply_adjustments(
+                C, self.COEFFS_FS_ROCK[imt], tau_ss,
+                mean[m], sig[m], tau[m], phi[m],
+                ctx, ctx.rrup, imt, log_phi_ss)
 
-        return mean, stddevs
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS05
     #: Original Coefficient table
     COEFFS_ASC = CoeffsTable(sa_damping=5, table="""\

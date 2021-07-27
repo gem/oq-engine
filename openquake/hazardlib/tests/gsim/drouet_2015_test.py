@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -14,10 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.drouet_2015_brazil import (
-    DrouetBrazil2015,
-    DrouetBrazil2015withDepth
-    )
+    DrouetBrazil2015, DrouetBrazil2015withDepth)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+
 
 class DrouetEtAl2015TestCase(BaseGSIMTestCase):
     """
@@ -45,6 +44,7 @@ class DrouetEtAl2015TestCase(BaseGSIMTestCase):
     def test_std_intra(self):
         self.check(self.INTRA_FILE,
                    max_discrep_percentage=0.1)
+
 
 class DrouetEtAl2015withDepthTestCase(DrouetEtAl2015TestCase):
     """

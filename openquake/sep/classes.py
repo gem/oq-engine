@@ -17,15 +17,17 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import abc
 import inspect
+from openquake.hazardlib import imt
 from openquake.sep.landslide.common import static_factor_of_safety
 from openquake.sep.landslide.newmark import (
     newmark_critical_accel, newmark_displ_from_pga_M,
     prob_failure_given_displacement)
 from openquake.sep.liquefaction.liquefaction import (
-    hazus_liquefaction_probability, zhu_liquefaction_probability_general)
+    hazus_liquefaction_probability, zhu_liquefaction_probability_general,
+    LIQUEFACTION_PGA_THRESHOLD_TABLE)
 from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement)
-from openquake.sep.liquefaction.vertical_settlement import(
+from openquake.sep.liquefaction.vertical_settlement import (
     hazus_vertical_settlement)
 
 
@@ -45,19 +47,25 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
     The ``compute`` method will return a tuple with ``O`` arrays where ``O``
     is the number of outputs.
     """
+    outputs = []
+
+    @classmethod
+    def __init_subclass__(cls):
+        # make sure the name of the outputs are valid IMTs
+        for out in cls.outputs:
+            imt.from_string(out)
+
     @classmethod
     def instantiate(cls, secondary_perils, sec_peril_params):
         inst = []
         for clsname in secondary_perils:
             c = globals()[clsname]
-            lst = []
+            kw = {}
             for param in inspect.signature(c).parameters:
                 if param in sec_peril_params:
-                    lst.append(sec_peril_params[param])
-            inst.append(c(*lst))
+                    kw[param] = sec_peril_params[param]
+            inst.append(c(**kw))
         return inst
-
-    outputs = abc.abstractproperty()
 
     @abc.abstractmethod
     def prepare(self, sites):
@@ -72,23 +80,11 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
         """
 
     def __repr__(self):
-        return '<%s %s>' % self.__class__.__name__
-
-
-class _FakePeril(SecondaryPeril):
-    # useful to test the framework
-    outputs = ['fake']
-
-    def prepare(self, sites):
-        pass
-
-    def compute(self, mag, imt_gmf, sites):
-        # gmv is an array with (N, M) elements
-        return [imt_gmf[0][1] * .1]  # fake formula
+        return '<%s>' % self.__class__.__name__
 
 
 class NewmarkDisplacement(SecondaryPeril):
-    outputs = ['newmark_disp', 'prob_disp']
+    outputs = ["Disp", "DispProb"]
 
     def __init__(self, c1=-2.71, c2=2.335, c3=-1.478, c4=0.424,
                  crit_accel_threshold=0.05):
@@ -110,8 +106,8 @@ class NewmarkDisplacement(SecondaryPeril):
 
     def compute(self, mag, imt_gmf, sites):
         out = []
-        for imt, gmf in imt_gmf:
-            if imt.name == 'PGA':
+        for im, gmf in imt_gmf:
+            if im.string == 'PGA':
                 nd = newmark_displ_from_pga_M(
                     gmf, sites.crit_accel, mag,
                     self.c1, self.c2, self.c3, self.c4,
@@ -122,7 +118,7 @@ class NewmarkDisplacement(SecondaryPeril):
 
 
 class HazusLiquefaction(SecondaryPeril):
-    outputs = ['liq_prob']
+    outputs = ["LiqProb"]
 
     def __init__(self, map_proportion_flag=True):
         self.map_proportion_flag = map_proportion_flag
@@ -132,8 +128,8 @@ class HazusLiquefaction(SecondaryPeril):
 
     def compute(self, mag, imt_gmf, sites):
         out = []
-        for imt, gmf in imt_gmf:
-            if imt.name == 'PGA':
+        for im, gmf in imt_gmf:
+            if im.string == 'PGA':
                 out.append(hazus_liquefaction_probability(
                     pga=gmf, mag=mag, liq_susc_cat=sites.liq_susc_cat,
                     groundwater_depth=sites.gwd,
@@ -141,41 +137,43 @@ class HazusLiquefaction(SecondaryPeril):
         return out
 
 
-class HazusLateralSpreading(SecondaryPeril):
-    outputs = ['lat_spread']
-
-    def __init__(self, return_unit='m'):
+class HazusDeformation(SecondaryPeril):
+    """
+    Computes PGDMax or PGDGeomMean from PGA
+    """
+    def __init__(self, return_unit='m', deformation_component='PGDMax',
+        pga_threshold_table=LIQUEFACTION_PGA_THRESHOLD_TABLE):
         self.return_unit = return_unit
+        self.deformation_component = getattr(imt, deformation_component)
+        self.outputs = [deformation_component]
+
+        if pga_threshold_table != LIQUEFACTION_PGA_THRESHOLD_TABLE:
+            pga_threshold_table = {bytes(str(k), 'utf-8'): v
+                for k, v in pga_threshold_table.items()}
+        self.pga_threshold_table=pga_threshold_table
 
     def prepare(self, sites):
         pass
 
     def compute(self, mag, imt_gmf, sites):
         out = []
-        for imt, gmf in imt_gmf:
-            if imt.name == 'PGA':
-                out.append(hazus_lateral_spreading_displacement(
+        for im, gmf in imt_gmf:
+            if im.string == 'PGA':
+                ls = hazus_lateral_spreading_displacement(
                     mag=mag, pga=gmf, liq_susc_cat=sites.liq_susc_cat,
-                    return_unit=self.return_unit))
+                    pga_threshold_table=self.pga_threshold_table,
+                    return_unit=self.return_unit)
+                vs = hazus_vertical_settlement(
+                    sites.liq_susc_cat, return_unit=self.return_unit)
+                out.append(self.deformation_component(ls, vs))
         return out
 
 
-class HazusVerticalSettlement(SecondaryPeril):
-    outputs = ['vert_settlement']
-
-    def __init__(self, return_unit='m'):
-        self.return_unit = return_unit
-
-    def prepare(self, sites):
-        pass
-
-    def compute(self, mag, imt_gmf, sites):
-        return [hazus_vertical_settlement(sites.liq_susc_cat,
-                return_unit=self.return_unit)]
-
-
 class ZhuLiquefactionGeneral(SecondaryPeril):
-    outputs = ['liq_prob']
+    """
+    Computes the liquefaction probability from PGA
+    """
+    outputs = ["LiqProb"]
 
     def __init__(self, intercept=24.1, cti_coeff=0.355, vs30_coeff=-4.784):
         self.intercept = intercept
@@ -187,10 +185,11 @@ class ZhuLiquefactionGeneral(SecondaryPeril):
 
     def compute(self, mag, imt_gmf, sites):
         out = []
-        for imt, gmf in imt_gmf:
-            if imt.name == 'PGA':
+        for im, gmf in imt_gmf:
+            if im.string == 'PGA':
                 out.append(zhu_liquefaction_probability_general(
                     pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
         return out
+
 
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]

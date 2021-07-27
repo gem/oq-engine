@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,9 +23,11 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 import numpy
 from copy import deepcopy
 from scipy.spatial.distance import pdist, squareform
+from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.geo.surface.base import BaseSurface, downsample_trace
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
+from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
     PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
@@ -86,13 +88,33 @@ class MultiSurface(BaseSurface):
         configuration
     """
 
+    @classmethod
+    def from_csv(cls, fname):
+        """
+        :param fname:
+            path to a CSV file with header (lon, lat, dep) and 4 x P
+            rows describing planes in terms of corner points in the order
+            topleft, topright, bottomright, bottomleft
+        :returns:
+            a MultiSurface made of P planar surfaces
+        """
+        surfaces = []
+        array = read_csv(fname).array.reshape(4, -1)  # shape (4, P)
+        for plane in array.T:
+            arr = plane.view((float, 3))  # shape (4, 3)
+            surfaces.append(PlanarSurface.from_ucerf(arr))
+        return cls(surfaces)
+
     @property
     def surface_nodes(self):
         """
         :returns:
             a list of surface nodes from the underlying single node surfaces
         """
-        return [surf.surface_nodes[0] for surf in self.surfaces]
+        if type(self.surfaces[0]).__name__ == 'PlanarSurface':
+            return [surf.surface_nodes[0] for surf in self.surfaces]
+        else:
+            return [surf.surface_nodes for surf in self.surfaces]
 
     @property
     def mesh(self):
@@ -100,10 +122,16 @@ class MultiSurface(BaseSurface):
         :returns: mesh corresponding to the whole multi surface
         """
         meshes = [surface.mesh for surface in self.surfaces]
-        lons = numpy.concatenate([m.lons for m in meshes])
-        lats = numpy.concatenate([m.lats for m in meshes])
-        depths = numpy.concatenate([m.depths for m in meshes])
-        return Mesh(lons, lats, depths)
+        lons = []
+        lats = []
+        deps = []
+        for m in meshes:
+            for lo, la, de in zip(m.lons, m.lats, m.depths):
+                if numpy.isfinite(lo) and numpy.isfinite(la):
+                    lons.append(lo)
+                    lats.append(la)
+                    deps.append(de)
+        return Mesh(numpy.array(lons), numpy.array(lats), numpy.array(deps))
 
     def __init__(self, surfaces, tol=0.1):
         """
@@ -143,6 +171,23 @@ class MultiSurface(BaseSurface):
         for surface in self.surfaces:
             if isinstance(surface, GriddedSurface):
                 return edges.append(surface.mesh)
+            elif isinstance(surface, geo.surface.kite_fault.KiteSurface):
+                edge = []
+                mesh = surface.mesh
+                lons = mesh.lons
+                # We extract the top edge of the rupture from the
+                # corresponding 2D mesh.
+                # The calculation of indexes below is needed because we want
+                # on each 'profile' of the mesh the uppermost node that is
+                # finite (i.e. on the real grid)
+                for icol in range(lons.shape[1]):
+                    if numpy.all(numpy.isnan(lons[:, icol])):
+                        continue
+                    tmp = numpy.nonzero(numpy.isfinite(lons[:, icol]))[0]
+                    irow = tmp.argmax(axis=0)
+                    edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
+                                 mesh.depths[irow, icol]])
+                edges.append(numpy.array(edge))
             elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points
                 edge = []
@@ -168,7 +213,6 @@ class MultiSurface(BaseSurface):
         for spec of input and result values.
         """
         dists = [surf.get_min_distance(mesh) for surf in self.surfaces]
-
         return numpy.min(dists, axis=0)
 
     def get_closest_points(self, mesh):
@@ -212,7 +256,6 @@ class MultiSurface(BaseSurface):
         lats = lats.reshape(mesh.lats.shape)
         if depths is not None:
             depths = depths.reshape(mesh.depths.shape)
-
         return Mesh(lons, lats, depths)
 
     def get_joyner_boore_distance(self, mesh):
@@ -236,9 +279,11 @@ class MultiSurface(BaseSurface):
         average value (in km).
         """
         areas = self._get_areas()
-        depths = numpy.array(
-            [surf.get_top_edge_depth() for surf in self.surfaces])
-        return numpy.sum(areas * depths) / numpy.sum(areas)
+        depths = numpy.array([numpy.mean(surf.get_top_edge_depth()) for surf
+                              in self.surfaces])
+        ted = numpy.sum(areas * depths) / numpy.sum(areas)
+        assert numpy.isfinite(ted).all()
+        return ted
 
     def get_strike(self):
         """
@@ -251,12 +296,10 @@ class MultiSurface(BaseSurface):
         """
         areas = self._get_areas()
         strikes = numpy.array([surf.get_strike() for surf in self.surfaces])
-
         v1 = (numpy.sum(areas * numpy.sin(numpy.radians(strikes))) /
               numpy.sum(areas))
         v2 = (numpy.sum(areas * numpy.cos(numpy.radians(strikes))) /
               numpy.sum(areas))
-
         return numpy.degrees(numpy.arctan2(v1, v2)) % 360
 
     def get_dip(self):
@@ -268,9 +311,16 @@ class MultiSurface(BaseSurface):
         formula for weighted mean is used.
         """
         areas = self._get_areas()
-        dips = numpy.array([surf.get_dip() for surf in self.surfaces])
+        dips = numpy.array([numpy.mean(surf.get_dip()) for surf in
+                            self.surfaces])
 
-        return numpy.sum(areas * dips) / numpy.sum(areas)
+        ok = numpy.logical_and(numpy.isfinite(dips), numpy.isfinite(areas))
+        dips = dips[ok]
+        areas = areas[ok]
+
+        dip = numpy.sum(areas * dips) / numpy.sum(areas)
+        assert numpy.isfinite(dip).all()
+        return dip
 
     def get_width(self):
         """
@@ -367,7 +417,6 @@ class MultiSurface(BaseSurface):
             for surf in self.surfaces:
                 self.areas.append(surf.get_area())
             self.areas = numpy.array(self.areas)
-
         return self.areas
 
     def _get_cartesian_edge_set(self):
@@ -525,8 +574,14 @@ class MultiSurface(BaseSurface):
         on_segment = numpy.zeros_like(lons, dtype=bool)
         # Loop over the traces
         for j, edges in enumerate(self.cartesian_edges):
+
+            # import pdb; pdb.set_trace()
+            ok = numpy.isfinite(edges)
+            if not ok.all():
+                edges = edges[ok]
+                edges = edges.reshape((-1, 3))
+
             # Loop over segments in trace
-            # s_ij_total = 0.0
             for i in range(edges.shape[0] - 1):
                 # Get u_i and t_i
                 u_i, t_i = self._get_ut_i(edges[i:(i + 2), :], sx, sy)
@@ -587,14 +642,21 @@ class MultiSurface(BaseSurface):
         <.base.BaseSurface.get_rx_distance>`
         for spec of input and result values.
         """
+        from openquake.hazardlib.site import SiteCollection
+        if isinstance(mesh, SiteCollection):
+            coo = numpy.array([[p.location.longitude, p.location.latitude]
+                              for p in mesh])
+            mesh = Mesh(coo[:, 0], coo[:, 1])
+
         # If the GC2 calculations have already been computed (by invoking Ry0
         # first) and the mesh is identical then class has GC2 attributes
         # already pre-calculated
-        if not self.tmp_mesh or (self.tmp_mesh == mesh):
+        if not self.tmp_mesh or self.tmp_mesh != mesh:
             self.gc2t, self.gc2u = self.get_generalised_coordinates(mesh.lons,
                                                                     mesh.lats)
             # Update mesh
             self.tmp_mesh = deepcopy(mesh)
+
         # Rx coordinate is taken directly from gc2t
         return self.gc2t
 
@@ -607,10 +669,16 @@ class MultiSurface(BaseSurface):
         <.base.BaseSurface.get_ry0_distance>`
         for spec of input and result values.
         """
+        from openquake.hazardlib.site import SiteCollection
+        if isinstance(mesh, SiteCollection):
+            coo = numpy.array([[p.location.longitude, p.location.latitude]
+                              for p in mesh])
+            mesh = Mesh(coo[:, 0], coo[:, 1])
+
         # If the GC2 calculations have already been computed (by invoking Ry0
         # first) and the mesh is identical then class has GC2 attributes
         # already pre-calculated
-        if not self.tmp_mesh or (self.tmp_mesh == mesh):
+        if not self.tmp_mesh or self.tmp_mesh != mesh:
             # If that's not the case, or the mesh is different then
             # re-compute GC2 configuration
             self.gc2t, self.gc2u = self.get_generalised_coordinates(mesh.lons,

@@ -25,49 +25,6 @@ from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SSlabLow, AbrahamsonEtAl2015SSlabHigh)
 
 
-# Total epistemic uncertainty factors from Abrahamson et al. (2018)
-BCHYDRO_SIGMA_MU = CoeffsTable(sa_damping=5, table="""
-    imt     SIGMA_MU_SINTER    SIGMA_MU_SSLAB
-    pga                 0.3              0.50
-    0.010               0.3              0.50
-    0.020               0.3              0.50
-    0.030               0.3              0.50
-    0.050               0.3              0.50
-    0.075               0.3              0.50
-    0.100               0.3              0.50
-    0.150               0.3              0.50
-    0.200               0.3              0.50
-    0.250               0.3              0.46
-    0.300               0.3              0.42
-    0.400               0.3              0.38
-    0.500               0.3              0.34
-    0.600               0.3              0.30
-    0.750               0.3              0.30
-    1.000               0.3              0.30
-    1.500               0.3              0.30
-    2.000               0.3              0.30
-    2.500               0.3              0.30
-    3.000               0.3              0.30
-    4.000               0.3              0.30
-    5.000               0.3              0.30
-    6.000               0.3              0.30
-    7.500               0.3              0.30
-    10.00               0.3              0.30
-    """)
-
-
-def get_stress_factor(imt, slab=False):
-    """
-    Returns the stress adjustment factor for the BC Hydro GMPE according to
-    Abrahamson et al. (2018)
-    """
-    if slab:
-        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SSLAB"]
-    else:
-        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SINTER"]
-    return sigma_mu / 1.65
-
-
 class FABATaperStep(object):
     """
     General class for a tapering function, in this case
@@ -191,7 +148,8 @@ class FABATaperSigmoid(FABATaperStep):
 
 
 # Get Gaussian cdf of a standard normal distribution
-phix = lambda x: 0.5 * (1.0 + erf(x / np.sqrt(2.)))
+def phix(x):
+    return 0.5 * (1.0 + erf(x / np.sqrt(2.)))
 
 
 class FABATaperGaussian(FABATaperStep):
@@ -231,12 +189,12 @@ class FABATaperGaussian(FABATaperStep):
         return y
 
 
-FABA_ALL_MODELS = {
+AbrahamsonEtAl2015SInter.FABA_ALL_MODELS = {
     "Step": FABATaperStep,
     "Linear": FABATaperLinear,
     "SFunc": FABATaperSFunc,
     "Sigmoid": FABATaperSigmoid,
-    "Gaussian": FABATaperGaussian
+    "Gaussian": FABATaperGaussian,
 }
 
 
@@ -264,45 +222,7 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
-
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=False)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return (C['theta2'] + self.CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
-                   self.CONSTS['theta9'])) +\
-            ((self.theta6_adj + C['theta6']) * dists.rrup)
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4)
-        """
-        max_dist = np.copy(dists.rrup)
-        max_dist[max_dist < 100.0] = 100.0
-        f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -340,45 +260,7 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
     """
     experimental = True
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
-
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=False)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return (C['theta2'] + self.CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
-                   self.CONSTS['theta9'])) +\
-            ((self.theta6_adj + C['theta6']) * dists.rrup)
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4)
-        """
-        max_dist = np.copy(dists.rrup)
-        max_dist[max_dist < 100.0] = 100.0
-        f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -414,49 +296,10 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
     with theta6 calibrated to Mediterranean data, for the high
     magnitude scaling branch.
     """
-
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
-
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=False)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return (C['theta2'] + self.CONSTS['theta3'] * (mag - 7.8)) *\
-            np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
-                   self.CONSTS['theta9'])) +\
-            ((self.theta6_adj + C['theta6']) * dists.rrup)
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4)
-        """
-        max_dist = np.copy(dists.rrup)
-        max_dist[max_dist < 100.0] = 100.0
-        f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -499,49 +342,10 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     sigma_mu_epsilon - number of standard deviations above or below the mean
     to apply the statistical uncertainty sigma_mu term.
     """
-
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
-
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=True)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return ((C['theta2'] + C['theta14'] + self.CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
-                np.exp((mag - 6.) * self.CONSTS['theta9'])) +
-                ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4).
-        """
-        max_dist = np.copy(dists.rhypo)
-        max_dist[max_dist < 85.0] = 85.0
-        f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -577,49 +381,10 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
-
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
-
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=True)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return ((C['theta2'] + C['theta14'] + self.CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
-                np.exp((mag - 6.) * self.CONSTS['theta9'])) +
-                ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4).
-        """
-        max_dist = np.copy(dists.rhypo)
-        max_dist[max_dist < 85.0] = 85.0
-        f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -655,49 +420,10 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     with theta6 calibrated to Mediterranean data, for the high magnitude
     scaling branch.
     """
-
     experimental = True
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
-
-    def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
-        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Returns mean and stddevs applying the statistical uncertainty if
-        needed
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        if self.sigma_mu_epsilon:
-            sigma_mu = get_stress_factor(imt, slab=True)
-            return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
-        else:
-            return mean, stddevs
-
-    def _compute_distance_term(self, C, mag, dists):
-        """
-        Computes the distance scaling term, as contained within equation (1)
-        """
-        return ((C['theta2'] + C['theta14'] + self.CONSTS['theta3'] *
-                (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
-                np.exp((mag - 6.) * self.CONSTS['theta9'])) +
-                ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
-
-    def _compute_forearc_backarc_term(self, C, sites, dists):
-        """
-        Computes the forearc/backarc scaling term given by equation (4).
-        """
-        max_dist = np.copy(dists.rhypo)
-        max_dist[max_dist < 85.0] = 85.0
-        f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(-sites.xvf)
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
