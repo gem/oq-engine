@@ -31,15 +31,15 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
 
 
-def _check_in_cshm_polygon(ctx):
+def _check_in_cshm_polygon(rup):
     """
     Checks if any part of the rupture surface mesh is located within the
     intended boundaries of the Canterbury Seismic Hazard Model in
     Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
     of Christchurch, Earthquake Spectra, 30(1), 17-29.
     """
-    lats = np.ravel(ctx.surface.mesh.array[1])
-    lons = np.ravel(ctx.surface.mesh.array[0])
+    lats = np.ravel(rup.surface.mesh.array[1])
+    lons = np.ravel(rup.surface.mesh.array[0])
     # These coordinates are provided by M Gerstenberger (personal
     # communication, 10 August 2018)
     polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
@@ -376,11 +376,12 @@ def _get_site_class_2(kind, ctx):
     return S
 
 
-def _get_stddevs(kind, C, mag, ctx, additional_sigma=0.):
+def _get_stddevs(kind, C, ctx, additional_sigma=0.):
     """
     Return standard deviation as defined on page 29 in
     equation 8a,b,c and 9.
     """
+    mag = ctx.mag
     num_sites = ctx.sids.size
     sigma_intra = np.zeros(num_sites)
 
@@ -468,12 +469,12 @@ class McVerry2006Asc(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        # Compute SA with primed coeffs and PGA with both unprimed and
+        # primed coeffs
+        C_PGA = self.COEFFS_PRIMED[PGA()]
+        C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
         for m, imt in enumerate(imts):
-            # Compute SA with primed coeffs and PGA with both unprimed and
-            # primed coeffs
             C = self.COEFFS_PRIMED[imt]
-            C_PGA = self.COEFFS_PRIMED[PGA()]
-            C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
 
             # Get S term to determine if consider site term is applied
             S = _get_site_class(self.kind, ctx)
@@ -513,8 +514,7 @@ class McVerry2006Asc(GMPE):
 
             # Compute standard deviations
             C_STD = self.COEFFS_STD[imt]
-            sig[m], tau[m], phi[m] = _get_stddevs(
-                self.kind, C_STD, ctx.mag, ctx)
+            sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C_STD, ctx)
 
     #: Coefficient table (table 3, page 108)
     COEFFS_PRIMED = CoeffsTable(sa_damping=5, table="""\
@@ -731,21 +731,20 @@ class McVerry2006Chch(McVerry2006AscSC):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        # Compute SA with primed coeffs and PGA with both unprimed and
+        # primed coeffs
+        C_PGA = self.COEFFS_PRIMED[PGA()]
+        C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
         for m, imt in enumerate(imts):
-
-            # Compute SA with primed coeffs and PGA with both unprimed and
-            # primed coeffs
             C = self.COEFFS_PRIMED[imt]
-            C_PGA = self.COEFFS_PRIMED[PGA()]
-            C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
             SC = self.COEFFS_STRESS[imt]
 
             # Get S term to determine if consider site term is applied
             S = _get_site_class(self.kind, ctx)
 
             # Abrahamson and Silva (1997) hanging wall term. This is not used
-            # in the latest version of GMPE but is defined in functional form in
-            # the paper so we keep it here as a placeholder
+            # in the latest version of GMPE but is defined in functional form
+            # in the paper so we keep it here as a placeholder
             f4HW = _compute_f4(C, ctx.mag, ctx.rrup)
 
             # Flags for rake angles
@@ -794,8 +793,7 @@ class McVerry2006Chch(McVerry2006AscSC):
             # Compute standard deviations
             C_STD = self.COEFFS_STD[imt]
             sig[m], tau[m], phi[m] = _get_stddevs(
-                self.kind, C_STD, ctx.mag, ctx, additional_sigma)
-
+                self.kind, C_STD, ctx, additional_sigma)
 
     #: Coefficient table (Atkinson and Boore, 2006, table 7, page 2201)
     COEFFS_STRESS = CoeffsTable(sa_damping=5, table="""\
