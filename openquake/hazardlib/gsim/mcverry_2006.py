@@ -252,8 +252,7 @@ def _compute_nonlinear_soil_term(C, lnSA_AB, delta_C, delta_D):
         # line 1 equation 4 without first term (lnSA_AB)
         C['c29'] * delta_C +
         # line 2 and 3
-        (C['c30as'] * np.log(np.exp(lnSA_AB) + 0.03) + C['c43']) * delta_D
-        )
+        (C['c30as'] * np.log(np.exp(lnSA_AB) + 0.03) + C['c43']) * delta_D)
 
     return lnSA_CD
 
@@ -278,10 +277,10 @@ def _compute_stress_drop_adjustment_2(kind, SC, mag):
     convert from log10 to natural log (G McVerry, personal communication).
     """
     scale_fac = 1.5
-    return np.log(10 ** ((np.log(scale_fac) / np.log(2)) * np.minimum(
-        SC['delta'] + 0.05,
-        0.05 + SC['delta'] * (
-            np.maximum(mag - SC['M1'], 0) / (SC['Mh'] - SC['M1'])))))
+    fac = np.maximum(mag - SC['M1'], 0) / (SC['Mh'] - SC['M1'])
+    return np.log(10 ** ((np.log(scale_fac) / np.log(2)) *
+                         np.minimum(0.05 + SC['delta'],
+                                    0.05 + SC['delta'] * fac)))
 
 
 _get_deltas = CallableDict()
