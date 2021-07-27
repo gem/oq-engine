@@ -78,7 +78,7 @@ class MunsonThurber1997(GMPE):
         M = ctx.mag - 6
 
         # Site term only distinguishes between lava and ash;
-        # since ash ctx have Vs30 in the range 60-200m/s,
+        # since ash sites have Vs30 in the range 60-200m/s,
         # we use this upper value as class separator
         S = np.zeros_like(R)
         S[ctx.vs30 <= 200] = 1
