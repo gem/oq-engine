@@ -49,7 +49,7 @@ def _compute_site_scaling(C, vs30):
     Returns the site scaling term as a simple coefficient
     """
     site_term = np.zeros(len(vs30), dtype=float)
-    # For soil ctx add on the site coefficient
+    # For soil sites add on the site coefficient
     site_term[vs30 < 760.0] = C["e"]
     return site_term
 
