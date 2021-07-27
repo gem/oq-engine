@@ -124,7 +124,7 @@ class Lin2009(GMPE):
                 _get_site_response_term(C, ctx.vs30))
             sig[m] = C['sigma']
 
-    #: Coefficient table for rock ctx, see table 3 page 227.
+    #: Coefficient table for rock sites, see table 3 page 227.
     COEFFS = CoeffsTable(sa_damping=5.0, table="""\
     IMT       C1      C2       C3       C4      C5       H       C6      C7       C8  sigma
     pga   1.0109  0.3822   0.0000  -1.1634  0.1722  1.5184  -0.1907  0.1322  -0.4741  0.5363
@@ -169,7 +169,7 @@ class Lin2009AdjustedSigma(Lin2009):
     C. -T. Cheng, P. -S. Hsieh, P. -S. Lin, Y. -T. Yen, C. -H. Chan (2013)
     Probability Seismic Hazard Mapping of Taiwan
     """
-    #: Coefficient table for rock ctx, see table 3 page 227.
+    #: Coefficient table for rock sites, see table 3 page 227.
     COEFFS = CoeffsTable(sa_damping=5.0, table="""\
     IMT       C1      C2       C3       C4      C5       H       C6      C7       C8  sigma
     pga   1.0109  0.3822   0.0000  -1.1634  0.1722  1.5184  -0.1907  0.1322  -0.4741  0.627

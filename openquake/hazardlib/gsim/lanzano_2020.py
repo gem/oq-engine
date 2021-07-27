@@ -113,7 +113,7 @@ def _get_site_type_dummy_variables_1(kind, ctx):
 def _get_site_type_dummy_variables_2(kind, ctx):
     """
     Get site type dummy variables.
-    The recording ctx are classified into 9 different clusters.
+    The recording sites are classified into 9 different clusters.
     """
     cl2 = np.zeros(len(ctx.siteclass))
     cl3 = np.zeros(len(ctx.siteclass))
@@ -147,12 +147,12 @@ def _get_site_type_dummy_variables_2(kind, ctx):
 class LanzanoEtAl2020_ref(GMPE):
     """
     Implements the GMM proposed in Lanzano et al (2020):
-    "Methodology to identify the reference rock ctx in regions of
+    "Methodology to identify the reference rock sites in regions of
     medium-to-high seismicity: an application in Central Italy" by
     Lanzano G, Felicetta C, Pacor F, Spallarossa D, and Traversa P.
 
     The site term for Reference Rock Sites is zero,
-    whereas for other ctx, the site term is provided.
+    whereas for other sites, the site term is provided.
     """
     kind = "ref"
 
