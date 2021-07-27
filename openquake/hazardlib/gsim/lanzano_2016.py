@@ -31,7 +31,7 @@ _compute_distance = CallableDict()
 
 
 @_compute_distance.add('rjb')
-def _compute_distance_rjb(dist_type, rup, dists, C, sites):
+def _compute_distance_rjb(dist_type, ctx, C):
     """
     Compute the third term of the equation 1:
     FD(Mw,R) = [c1j + c2j(M-Mr)] * log10(R/Rh) con j=1,...4 (eq 4)
@@ -40,23 +40,23 @@ def _compute_distance_rjb(dist_type, rup, dists, C, sites):
     Mr = 5.0
     Rh = 70
 
-    LATref = -0.33 * sites.lon + 48.3
-    diff = sites.lat - LATref
-    R = np.sqrt(dists.rjb**2 + C['h']**2)
+    LATref = -0.33 * ctx.lon + 48.3
+    diff = ctx.lat - LATref
+    R = np.sqrt(ctx.rjb**2 + C['h']**2)
 
-    dist_term = (diff >= 0) * (C['c11'] + C['c21'] * (rup.mag - Mr)) *\
+    dist_term = (diff >= 0) * (C['c11'] + C['c21'] * (ctx.mag - Mr)) *\
                 (R <= Rh) * np.log10(R/Rh) +\
-                (diff >= 0) * (C['c12'] + C['c22'] * (rup.mag - Mr)) *\
+                (diff >= 0) * (C['c12'] + C['c22'] * (ctx.mag - Mr)) *\
                 (R > Rh) * np.log10(R/Rh) +\
-                (diff < 0) * (C['c13'] + C['c23'] * (rup.mag - Mr)) *\
+                (diff < 0) * (C['c13'] + C['c23'] * (ctx.mag - Mr)) *\
                 (R <= Rh) * np.log10(R/Rh) +\
-                (diff < 0) * (C['c14'] + C['c24'] * (rup.mag - Mr)) *\
+                (diff < 0) * (C['c14'] + C['c24'] * (ctx.mag - Mr)) *\
                 (R > Rh) * np.log10(R/Rh)
     return dist_term
 
 
 @_compute_distance.add('rhypo')
-def _compute_distance_rhypo(dist_type, rup, dists, C, sites):
+def _compute_distance_rhypo(dist_type, ctx, C):
     """
     Compute the third term of the equation 1:
     FD(Mw,R) = [c1j + c2j(M-Mr)] * log10(R/Rh) con j=1,...4 (eq 4)
@@ -65,44 +65,44 @@ def _compute_distance_rhypo(dist_type, rup, dists, C, sites):
     Mr = 5.0
     Rh = 70
 
-    LATref = -0.33 * sites.lon + 48.3
-    diff = sites.lat - LATref
-    R = dists.rhypo
+    LATref = -0.33 * ctx.lon + 48.3
+    diff = ctx.lat - LATref
+    R = ctx.rhypo
 
-    dist_term = (diff >= 0) * (C['c11'] + C['c21'] * (rup.mag - Mr)) *\
+    dist_term = (diff >= 0) * (C['c11'] + C['c21'] * (ctx.mag - Mr)) *\
                 (R <= Rh) * np.log10(R/Rh) +\
-                (diff >= 0) * (C['c12'] + C['c22'] * (rup.mag - Mr)) *\
+                (diff >= 0) * (C['c12'] + C['c22'] * (ctx.mag - Mr)) *\
                 (R > Rh) * np.log10(R/Rh) +\
-                (diff < 0) * (C['c13'] + C['c23'] * (rup.mag - Mr)) *\
+                (diff < 0) * (C['c13'] + C['c23'] * (ctx.mag - Mr)) *\
                 (R <= Rh) * np.log10(R/Rh) +\
-                (diff < 0) * (C['c14'] + C['c24'] * (rup.mag - Mr)) *\
+                (diff < 0) * (C['c14'] + C['c24'] * (ctx.mag - Mr)) *\
                 (R > Rh) * np.log10(R/Rh)
     return dist_term
 
 
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     Compute the second term of the equation 1:
     Fm(M) = b1(M-Mr) + b2(M-Mr)^2   Eq (5)
     """
     Mr = 5
-    return C['a'] + C['b1'] * (rup.mag - Mr) + C['b2'] * (rup.mag - Mr)**2
+    return C['a'] + C['b1'] * (ctx.mag - Mr) + C['b2'] * (ctx.mag - Mr)**2
 
 
-def _get_basin_effect_term(sites, C):
+def _get_basin_effect_term(ctx, C):
     """
-    Get basin correction for sites in the Po Plain.
-    if sites.bas == 0 the correction is not necessary,
-    otherwise if sites.bas == 1 the site is in the Po Plain
+    Get basin correction for ctx in the Po Plain.
+    if ctx.bas == 0 the correction is not necessary,
+    otherwise if ctx.bas == 1 the site is in the Po Plain
     and the correction is applied.
     """
-    delta = np.zeros(len(sites.vs30))
-    delta[sites.bas == 1] = 1.0
+    delta = np.zeros(len(ctx.vs30))
+    delta[ctx.bas == 1] = 1.0
 
     return C['dbas'] * delta
 
 
-def _get_fault_type_dummy_variables(rup):
+def _get_fault_type_dummy_variables(ctx):
     """
     Fault type (Strike-slip, Normal, Thrust/reverse) is
     derived from rake angle.
@@ -111,10 +111,10 @@ def _get_fault_type_dummy_variables(rup):
     -30 to -150 are normal.
     """
     UN, TF, NF = 0, 0, 0
-    if rup.rake < -30 and rup.rake > -150:
+    if ctx.rake < -30 and ctx.rake > -150:
         # normal
         NF = 1
-    elif rup.rake > 30.0 and rup.rake < 150.0:
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
         # reverse
         TF = 1
     else:
@@ -123,16 +123,16 @@ def _get_fault_type_dummy_variables(rup):
     return UN, TF, NF
 
 
-def _get_mechanism(rup, C):
+def _get_mechanism(ctx, C):
     """
     Compute the part of the second term of the equation 1 (FM(SoF)):
     Get fault type dummy variables
     """
-    UN, TF, NF = _get_fault_type_dummy_variables(rup)
+    UN, TF, NF = _get_fault_type_dummy_variables(ctx)
     return C['fNF'] * NF + C['fTF'] * TF + C['fUN'] * UN
 
 
-def _get_site_amplification(sites, C):
+def _get_site_amplification(ctx, C):
     """
     Compute the fourth term of the equation 1 described on paragraph :
     The functional form Fs in Eq. (1) represents the site amplification and
@@ -141,50 +141,35 @@ def _get_site_amplification(sites, C):
     while Cj are dummy variables used to denote the five different EC8
     site classes
     """
-    ssa, ssb, ssc = _get_site_type_dummy_variables(sites)
+    ssa, ssb, ssc = _get_site_type_dummy_variables(ctx)
 
     return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc)
 
 
-def _get_site_type_dummy_variables(sites):
+def _get_site_type_dummy_variables(ctx):
     """
     Get site type dummy variables, five different EC8 site classes
-    The recording sites are classified into 3 classes,
+    The recording ctx are classified into 3 classes,
     based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
     according to the EC8 (CEN 2003):
     class A: Vs30 > 800 m/s
     class B: Vs30 = 360 - 800 m/s
     class C: Vs30 < 360 m/s
     """
-    ssa = np.zeros(len(sites.vs30))
-    ssb = np.zeros(len(sites.vs30))
-    ssc = np.zeros(len(sites.vs30))
+    ssa = np.zeros(len(ctx.vs30))
+    ssb = np.zeros(len(ctx.vs30))
+    ssc = np.zeros(len(ctx.vs30))
 
     # Class C; 180 m/s <= Vs30 <= 360 m/s.
-    idx = sites.vs30 < 360.0
+    idx = ctx.vs30 < 360.0
     ssc[idx] = 1.0
     # Class B; 360 m/s <= Vs30 <= 800 m/s.
-    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800)
+    idx = (ctx.vs30 >= 360.0) & (ctx.vs30 < 800)
     ssb[idx] = 1.0
     # Class A; Vs30 > 800 m/s.
-    idx = (sites.vs30 >= 800.0)
+    idx = (ctx.vs30 >= 800.0)
     ssa[idx] = 1.0
     return ssa, ssb, ssc
-
-
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return standard deviations as defined in table 1.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['SigmaTot'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['phi'] + np.zeros(num_sites))
-    return stddevs
 
 
 class LanzanoEtAl2016_RJB(GMPE):
@@ -226,37 +211,33 @@ class LanzanoEtAl2016_RJB(GMPE):
     #: Required distance measure is R Joyner-Boore distance (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            [dist_type] = self.REQUIRES_DISTANCES
 
-        C = self.COEFFS[imt]
-        [dist_type] = self.REQUIRES_DISTANCES
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(dist_type, ctx, C) +
+                     _get_site_amplification(ctx, C) +
+                     _get_basin_effect_term(ctx, C) +
+                     _get_mechanism(ctx, C))
 
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_distance(dist_type, rup, dists, C, sites) +
-                 _get_site_amplification(sites, C) +
-                 _get_basin_effect_term(sites, C) +
-                 _get_mechanism(rup, C))
+            # Convert units to g, but only for PGA and SA (not PGV):
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV
+                mean[m] = np.log(10.0 ** imean)
 
-        istddevs = _get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
-
-        # Convert units to g, but only for PGA and SA (not PGV):
-        if imt.string.startswith(("SA", "PGA")):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
-
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-
-        return mean, stddevs
+            # Return stddevs in terms of natural log scaling
+            sig[m] = np.log(10.0 ** C['SigmaTot'])
+            tau[m] = np.log(10.0 ** C['tau'])
+            phi[m] = np.log(10.0 ** C['phi'])
 
     #: Coefficients from SA PGA and PGV from Table S2
 
