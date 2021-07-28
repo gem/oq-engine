@@ -26,14 +26,14 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _compute_anelestic_attenuation_term(C, dists):
+def _compute_anelestic_attenuation_term(C, ctx):
     """
     Compute and return anelastic attenuation term in equation 5,
     page 970.
     """
-    f_aat = np.zeros_like(dists.rjb)
-    idx = dists.rjb > 80.0
-    f_aat[idx] = C["b10"] * (dists.rjb[idx] - 80.0)
+    f_aat = np.zeros_like(ctx.rjb)
+    idx = ctx.rjb > 80.0
+    f_aat[idx] = C["b10"] * (ctx.rjb[idx] - 80.0)
     return f_aat
 
 
@@ -48,14 +48,14 @@ def _compute_faulting_style_term(C, rake):
     return C['b8'] * Fn + C['b9'] * Fr
 
 
-def _compute_geometric_decay_term(c1, C, mag, dists):
+def _compute_geometric_decay_term(c1, C, mag, ctx):
     """
     Compute and return geometric decay term in equation 3,
     page 970.
     """
     return (
         (C['b4'] + C['b5'] * (mag - c1)) *
-        np.log(np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))
+        np.log(np.sqrt(ctx.rjb ** 2.0 + C['b6'] ** 2.0)))
 
 
 def _compute_magnitude_scaling_term(c1, C, mag):
@@ -69,7 +69,7 @@ def _compute_magnitude_scaling_term(c1, C, mag):
         return C['b1'] + C['b7'] * (mag - c1) + C['b3'] * (8.5 - mag) ** 2
 
 
-def _compute_mean(CONSTS, C, mag, dists, rake):
+def _compute_mean(CONSTS, C, mag, ctx, rake):
     """
     Compute and return mean value without site conditions,
     that is equations 2-5, page 970.
@@ -77,14 +77,14 @@ def _compute_mean(CONSTS, C, mag, dists, rake):
     c1 = CONSTS['c1']
     mean = (
         _compute_magnitude_scaling_term(c1, C, mag) +
-        _compute_geometric_decay_term(c1, C, mag, dists) +
+        _compute_geometric_decay_term(c1, C, mag, ctx) +
         _compute_faulting_style_term(C, rake) +
-        _compute_anelestic_attenuation_term(C, dists))
+        _compute_anelestic_attenuation_term(C, ctx))
 
     return mean
 
 
-def _compute_non_linear_term(CONSTS, C, pga_only, sites):
+def _compute_non_linear_term(CONSTS, C, pga_only, ctx):
     """
     Compute non-linear term, equation 6, page 970.
     """
@@ -92,19 +92,19 @@ def _compute_non_linear_term(CONSTS, C, pga_only, sites):
     Vcon = CONSTS['Vcon']
     c = CONSTS['c']
     n = CONSTS['n']
-    lnS = np.zeros_like(sites.vs30)
+    lnS = np.zeros_like(ctx.vs30)
 
     # equation (6a)
-    idx = sites.vs30 < Vref
+    idx = ctx.vs30 < Vref
     lnS[idx] = (
-        C['sb1'] * np.log(sites.vs30[idx] / Vref) +
+        C['sb1'] * np.log(ctx.vs30[idx] / Vref) +
         C['sb2'] * np.log(
-            (pga_only[idx] + c * (sites.vs30[idx] / Vref) ** n) /
-            ((pga_only[idx] + c) * (sites.vs30[idx] / Vref) ** n)))
+            (pga_only[idx] + c * (ctx.vs30[idx] / Vref) ** n) /
+            ((pga_only[idx] + c) * (ctx.vs30[idx] / Vref) ** n)))
 
     # equation (6b)
-    idx = sites.vs30 >= Vref
-    new_sites = sites.vs30[idx]
+    idx = ctx.vs30 >= Vref
+    new_sites = ctx.vs30[idx]
     new_sites[new_sites > Vcon] = Vcon
     lnS[idx] = C['sb1'] * np.log(new_sites / Vref)
 
@@ -121,25 +121,6 @@ def _compute_weight_std(C, mag):
         return C['a1'] + (C['a2'] - C['a1']) * ((mag - 6.0) / 0.5)
     else:
         return C['a2']
-
-
-def _get_stddevs(C, rup, shape, stddev_types):
-    """
-    Return standard deviations as defined in p. 971.
-    """
-    weight = _compute_weight_std(C, rup.mag)
-    std_intra = weight * C["sd1"] * np.ones(shape)
-    std_inter = weight * C["sd2"] * np.ones(shape)
-
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(std_intra ** 2. + std_inter ** 2.))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(std_intra)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(std_inter)
-    return stddevs
 
 
 class KaleEtAl2015Turkey(GMPE):
@@ -181,10 +162,10 @@ class KaleEtAl2015Turkey(GMPE):
     #: equation 3, page 970.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
 
         Implement equation 1, page 970.
@@ -193,16 +174,21 @@ class KaleEtAl2015Turkey(GMPE):
         # amplification
         C_pga = self.COEFFS[PGA()]
         median_pga = np.exp(
-            _compute_mean(self.CONSTS, C_pga, rup.mag, dists, rup.rake))
+            _compute_mean(self.CONSTS, C_pga, ctx.mag, ctx, ctx.rake))
+        for m, imt in enumerate(imts):
+            # compute mean value by adding nonlinear site amplification terms
+            C = self.COEFFS[imt]
+            mean[m] = (
+                _compute_mean(self.CONSTS, C, ctx.mag, ctx, ctx.rake) +
+                _compute_non_linear_term(self.CONSTS, C, median_pga, ctx))
 
-        # compute full mean value by adding nonlinear site amplification terms
-        C = self.COEFFS[imt]
-        mean = (_compute_mean(self.CONSTS, C, rup.mag, dists, rup.rake) +
-                _compute_non_linear_term(self.CONSTS, C, median_pga, sites))
-
-        stddevs = _get_stddevs(C, rup, sites.vs30.shape, stddev_types)
-
-        return mean, stddevs
+            # Return standard deviations as defined in p. 971.
+            weight = _compute_weight_std(C, ctx.mag)
+            std_intra = weight * C["sd1"]
+            std_inter = weight * C["sd2"]
+            sig[m] = np.sqrt(std_intra ** 2. + std_inter ** 2.)
+            tau[m] = std_inter
+            phi[m] = std_intra
 
     #: Coefficient tables obtained by joining tables 2, 3, 4, 5
     #: and electronic supplementary
