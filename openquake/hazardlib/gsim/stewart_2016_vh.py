@@ -39,30 +39,25 @@ def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
     """
     C_V = cls.VGMPE.COEFFS[imt]
     C_H = cls.HGMPE.COEFFS[imt]
-    inter_std = [const.StdDev.INTER_EVENT]
-    intra_std = [const.StdDev.INTRA_EVENT]
     num_sites = len(sites.vs30)
 
-    tau_v = boore_2014._get_stddevs("stewart", C_V, rup, dists, sites,
-                                    inter_std)
-    tau_h = boore_2014._get_stddevs("base", C_H, rup, dists, sites, inter_std)
-    phi_v = boore_2014._get_stddevs("stewart", C_V, rup, dists, sites,
-                                    intra_std)
-    phi_h = boore_2014._get_stddevs("base", C_H, rup, dists, sites, intra_std)
+    tau_v, phi_v = boore_2014._get_stddevs("stewart", C_V, rup)[1:]
+    tau_h, phi_h = boore_2014._get_stddevs("base", C_H, rup)[1:]
     tau = bozorgnia_campbell_2016_vh._get_tau_vh(C, rup.mag, tau_v, tau_h)
     phi = bozorgnia_campbell_2016_vh._get_phi_vh(C, rup.mag, phi_v, phi_h)
 
     stddevs = []
     for stddev_type in stddev_types:
         if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
-                            np.zeros(num_sites))
+            stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
+                           np.zeros(num_sites))
         elif stddev_type == const.StdDev.INTRA_EVENT:
             stddevs.append(phi + np.zeros(num_sites))
         elif stddev_type == const.StdDev.INTER_EVENT:
             stddevs.append(tau + np.zeros(num_sites))
     # return std dev values for each stddev type in site collection
     return stddevs
+
 
 class StewartEtAl2016VH(GMPE):
     """
@@ -151,6 +146,7 @@ class StewartEtAl2016RegCHNVH(StewartEtAl2016VH):
     """
     VGMPE = boore_2014.StewartEtAl2016(region='CHN')
     HGMPE = boore_2014.BooreEtAl2014HighQ()
+
 
 class StewartEtAl2016RegJPNVH(StewartEtAl2016VH):
     """

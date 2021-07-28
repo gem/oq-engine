@@ -61,7 +61,7 @@ def _get_magnitude_scaling_term(C, mag):
         return C["e1"] + (C["b3"] * dmag)
 
 
-def _get_mean(kind, sof, C, dists, ctx):
+def _get_mean(kind, sof, C, ctx, dists):
     """
     Returns the mean ground motion
     """
@@ -190,7 +190,7 @@ class BindiEtAl2014Rjb(GMPE):
         dists = getattr(ctx, self.dist_type)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            imean = _get_mean(self.kind, self.sof, C, dists, ctx)
+            imean = _get_mean(self.kind, self.sof, C, ctx, dists)
             if imt.string.startswith(('PGA', 'SA')):
                 # Convert units to g,
                 # but only for PGA and SA (not PGV)

@@ -138,6 +138,7 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
         self.ctx.rake = 0.
         self.ctx.rjb = np.array([5., 10., 20., 50., 100.])
         self.ctx.vs30 = 500. * np.ones(5)
+        self.ctx.sids = np.arange(5)
 
     def _compare_arrays(self, arr1, arr2, diffs):
         """
@@ -190,14 +191,13 @@ class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
     Tests the Tromans et al (2019) GMPE with the sigma mu adjustment
     """
     def setUp(self):
-        """
-        """
         self.gsim = TromansEtAl2019SigmaMu
         self.ctx = RuptureContext()
         self.ctx.mag = 6.5
         self.ctx.rake = 0.
         self.ctx.rjb = np.array([5., 10., 20., 50., 100.])
         self.ctx.vs30 = 500. * np.ones(5)
+        self.ctx.sids = np.arange(5)
 
     def test_alatik_youngs_factors(self):
         self.assertAlmostEqual(
