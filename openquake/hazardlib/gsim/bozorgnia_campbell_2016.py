@@ -86,10 +86,10 @@ def _get_shallow_site_response_term(SJ, C, vs30):
     # Get linear global site response term
     f_site_g = C["c11"] * np.log(vs_mod)
 
-    # For Japan sites (SJ = 1) further scaling is needed (equation 19)
+    # For Japan ctx (SJ = 1) further scaling is needed (equation 19)
     if SJ:
         fsite_j = C["c13"] * np.log(vs_mod)
-        # additional term activated for soft sites (Vs30 <= 200m/s)
+        # additional term activated for soft ctx (Vs30 <= 200m/s)
         # in Japan data
         idx = vs30 <= 200.0
         add_soft = C["c12"] * (np.log(vs_mod) - np.log(200.0 / C["k1"]))
@@ -100,7 +100,7 @@ def _get_shallow_site_response_term(SJ, C, vs30):
         return f_site_g
 
 
-def _get_stddevs(C, rup, sites, stddev_types):
+def _get_stddevs(C, ctx):
     """
     Returns the inter-event, intra-event, and total standard deviations
 
@@ -110,33 +110,22 @@ def _get_stddevs(C, rup, sites, stddev_types):
     vertical component is much simpler than in the horizontal component,
     since the site response- and IMT-correlation functions are neglected.
     """
-    num_sites = len(sites.vs30)
     # Evaluate tau according to equation 27
-    tau = _get_taulny(C, rup.mag)
+    tau = _get_taulny(C, ctx.mag)
     # Evaluate phi according to equation 28
-    phi = _get_philny(C, rup.mag)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
-                           np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(num_sites))
-    # return std dev values for each stddev type in site collection
-    return stddevs
+    phi = _get_philny(C, ctx.mag)
+    return [np.sqrt(tau ** 2 + phi ** 2), tau, phi]
 
 
-def _get_style_of_faulting_term(C, rup):
+def _get_style_of_faulting_term(C, ctx):
     """
     Returns the style-of-faulting scaling term, f_flt, defined in
     equations 4 to 6
     """
-    if (rup.rake > 30.0) and (rup.rake < 150.):
+    if (ctx.rake > 30.0) and (ctx.rake < 150.):
         frv = 1.0
         fnm = 0.0
-    elif (rup.rake > -150.0) and (rup.rake < -30.0):
+    elif (ctx.rake > -150.0) and (ctx.rake < -30.0):
         fnm = 1.0
         frv = 0.0
     else:
@@ -145,36 +134,36 @@ def _get_style_of_faulting_term(C, rup):
     # Re-defined this method to replace c8, which is now
     # IMT-dependent in BC15
     fflt_f = (C["c8"] * frv) + (C["c9"] * fnm)
-    if rup.mag <= 4.5:
+    if ctx.mag <= 4.5:
         fflt_m = 0.0
-    elif rup.mag > 5.5:
+    elif ctx.mag > 5.5:
         fflt_m = 1.0
     else:
-        fflt_m = rup.mag - 4.5
+        fflt_m = ctx.mag - 4.5
     return fflt_f * fflt_m
 
 
-def get_mean_values(SJ, sgn, C, sites, rup, dists):
+def get_mean_values(SJ, sgn, C, ctx):
     """
     Returns the mean values for a specific IMT
     """
-    if isinstance(sites.z2pt5, np.ndarray):
+    if isinstance(ctx.z2pt5, np.ndarray):
         # Site model defined
-        temp_z2pt5 = sites.z2pt5
+        temp_z2pt5 = ctx.z2pt5
     else:
         # Estimate unspecified sediment depth according to
         # equations 33 and 34 of CB14
-        temp_z2pt5 = _select_basin_model(SJ, sites.vs30)
+        temp_z2pt5 = _select_basin_model(SJ, ctx.vs30)
 
-    return (_get_magnitude_term(C, rup.mag) +
-            _get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
-            _get_style_of_faulting_term(C, rup) +
-            _get_hanging_wall_term(C, rup) +
-            _get_shallow_site_response_term(SJ, C, sites.vs30) +
+    return (_get_magnitude_term(C, ctx.mag) +
+            _get_geometric_attenuation_term(C, ctx.mag, ctx.rrup) +
+            _get_style_of_faulting_term(C, ctx) +
+            _get_hanging_wall_term(C, ctx) +
+            _get_shallow_site_response_term(SJ, C, ctx.vs30) +
             _get_basin_response_term(SJ, C, temp_z2pt5) +
-            _get_hypocentral_depth_term(C, rup) +
-            _get_fault_dip_term(C, rup) +
-            _get_anelastic_attenuation_term(sgn, C, dists.rrup))
+            _get_hypocentral_depth_term(C, ctx) +
+            _get_fault_dip_term(C, ctx) +
+            _get_anelastic_attenuation_term(sgn, C, ctx.rrup))
 
 
 class BozorgniaCampbell2016(GMPE):
@@ -234,26 +223,26 @@ class BozorgniaCampbell2016(GMPE):
         self.SJ = SJ
         self.sgn = sgn
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         # Extract dictionary of coefficients specific to required IMT and PGA
-        C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
-        # Get mean and standard deviations for IMT
-        mean = get_mean_values(self.SJ, self.sgn, C, sites, rup, dists)
-        if imt.string[:2] == "SA" and imt.period < 0.25:
-            # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
-            # Get PGA on given sites
-            pga = get_mean_values(self.SJ, self.sgn, C_PGA, sites, rup, dists)
-            idx = mean < pga
-            mean[idx] = pga[idx]
-        # Get standard deviations
-        stddevs = _get_stddevs(C, rup, sites, stddev_types)
-        return mean, stddevs
+        # Get PGA on given ctx
+        pga = get_mean_values(self.SJ, self.sgn, C_PGA, ctx)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # Get mean and standard deviations for IMT
+            mean[m] = get_mean_values(self.SJ, self.sgn, C, ctx)
+            if imt.string[:2] == "SA" and imt.period < 0.25:
+                # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
+                idx = mean[m] < pga
+                mean[m, idx] = pga[idx]
+            # Get standard deviations
+            sig[m], tau[m], phi[m] = _get_stddevs(C, ctx)
 
     #: Table of regression coefficients obtained from supplementary material
     #: published together with the EQS paper

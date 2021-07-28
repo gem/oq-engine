@@ -172,7 +172,7 @@ class ZalachorisRathje2019(BooreEtAl2014):
 
         imt_per = 0 if imt.string == 'PGV' else imt.period
         pga_rock = _get_pga_on_rock(self.kind, self.region, self.sof,
-                                    C_PGA, rup, dists)
+                                    C_PGA, rup)
         mean_BSSA14 = (
             _get_magnitude_scaling_term(self.sof, C, rup) +
             _get_path_scaling(self.kind, self.region, C, dists, rup.mag) +

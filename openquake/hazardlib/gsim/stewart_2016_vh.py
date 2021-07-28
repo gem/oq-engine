@@ -49,7 +49,7 @@ def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
     stddevs = []
     for stddev_type in stddev_types:
         if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
+            stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
                            np.zeros(num_sites))
         elif stddev_type == const.StdDev.INTRA_EVENT:
             stddevs.append(phi + np.zeros(num_sites))
