@@ -132,7 +132,7 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
         # No regionalisation - take the default C3 and multiply tau_c3
         # by the original epsilon
         return (c3_ + c3_epsilon * tau_c3) + np.zeros(sctx.region.shape)
-    # Some sites belong to the calibrated regions - loop through them
+    # Some ctx belong to the calibrated regions - loop through them
     C3_R = C3_REGIONS[imt]
     for i in range(1, 6):
         idx = sctx.region == i
@@ -141,15 +141,15 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
     return c3_ + c3_epsilon * tau_c3
 
 
-def get_distance_term(kind, c3, c3_epsilon, C, rup, rjb, imt, sites):
+def get_distance_term(kind, c3, c3_epsilon, C, ctx, rjb, imt):
     """
     Returns the distance attenuation factor
     """
-    h = _get_h(C, rup.hypo_depth)
+    h = _get_h(C, ctx.hypo_depth)
     rval = np.sqrt(rjb ** 2. + h ** 2.)
     rref_val = np.sqrt(CONSTANTS["Rref"] ** 2. + h ** 2.)
-    c3 = get_distance_coefficients(kind, c3, c3_epsilon, C, imt, sites)
-    f_r = (C["c1"] + C["c2"] * (rup.mag - CONSTANTS["Mref"])) *\
+    c3 = get_distance_coefficients(kind, c3, c3_epsilon, C, imt, ctx)
+    f_r = (C["c1"] + C["c2"] * (ctx.mag - CONSTANTS["Mref"])) *\
         np.log(rval / rref_val) + (c3 * (rval - rref_val) / 100.)
     return f_r
 
@@ -165,7 +165,7 @@ def get_magnitude_scaling(C, mag):
         return C["e1"] + C["b3"] * d_m
 
 
-def get_sigma_mu_adjustment(C, imt, rup):
+def get_sigma_mu_adjustment(C, imt, ctx):
     """
     Returns the sigma_mu adjusment factor, which is taken as the
     maximum of tau_L2L and the sigma_mu. For M < 7.4
@@ -174,27 +174,27 @@ def get_sigma_mu_adjustment(C, imt, rup):
     so we interpolate between the two values and cap sigma statistical
     at M 8.0
     """
-    if rup.mag < 7.4:
+    if ctx.mag < 7.4:
         # Below M 7.4 tau_L2L is always larger than sigma mu
         return C["tau_l2l"]
 
     C_SIG_MU = SIGMA_MU_COEFFS[imt]
-    if rup.hypo_depth < 10.0:
+    if ctx.hypo_depth < 10.0:
         uf, lf = C_SIG_MU["sigma_mu_m8_shallow"],\
             C_SIG_MU["sigma_mu_m7p4_shallow"]
-    elif rup.hypo_depth >= 20.0:
+    elif ctx.hypo_depth >= 20.0:
         uf, lf = C_SIG_MU["sigma_mu_m8_deep"],\
             C_SIG_MU["sigma_mu_m7p4_deep"]
     else:
         uf, lf = C_SIG_MU["sigma_mu_m8_intermediate"],\
             C_SIG_MU["sigma_mu_m7p4_intermediate"]
-    if rup.mag >= 8.0:
+    if ctx.mag >= 8.0:
         # Cap the sigma mu as the value for M 8.0
         return max(C["tau_l2l"], uf)
-    return max(C["tau_l2l"], ITPL(rup.mag, uf, lf, 7.4, 0.6))
+    return max(C["tau_l2l"], ITPL(ctx.mag, uf, lf, 7.4, 0.6))
 
 
-def get_site_amplification(kind, extra, C, sites, imt):
+def get_site_amplification(kind, extra, C, ctx, imt):
     """
     Apply the correct site amplification depending on the kind of GMPE
     """
@@ -202,36 +202,36 @@ def get_site_amplification(kind, extra, C, sites, imt):
         ampl = 0.
     elif kind == "site":
         # Render with respect to 800 m/s reference Vs30
-        sref = np.log(sites.vs30 / 800.)
+        sref = np.log(ctx.vs30 / 800.)
         ampl = (C["g0_vs30"] + C["g1_vs30"] * sref +
                 C["g2_vs30"] * (sref ** 2.))
     elif kind == "slope":
         # Render with respect to 0.1 m/m reference slope
-        sref = np.log(sites.slope / 0.1)
+        sref = np.log(ctx.slope / 0.1)
         ampl = (C["g0_slope"] + C["g1_slope"] * sref +
                 C["g2_slope"] * (sref ** 2.))
     elif kind == "ESHM20":
-        vs30 = np.copy(sites.vs30)
+        vs30 = np.copy(ctx.vs30)
         vs30[vs30 > 1100.] = 1100.
         ampl = np.zeros(vs30.shape)
-        # For observed vs30 sites
-        ampl[sites.vs30measured] = (C["d0_obs"] + C["d1_obs"] *
-                                    np.log(vs30[sites.vs30measured]))
-        # For inferred Vs30 sites
-        idx = np.logical_not(sites.vs30measured)
+        # For observed vs30 ctx
+        ampl[ctx.vs30measured] = (C["d0_obs"] + C["d1_obs"] *
+                                    np.log(vs30[ctx.vs30measured]))
+        # For inferred Vs30 ctx
+        idx = np.logical_not(ctx.vs30measured)
         ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
     elif kind == "geology":
         C_AMP_FIXED = extra['COEFFS_FIXED'][imt]
         C_AMP_RAND_INT = extra['COEFFS_RANDOM_INT'][imt]
         C_AMP_RAND_GRAD = extra['COEFFS_RANDOM_GRAD'][imt]
-        ampl = np.zeros(sites.slope.shape)
-        geol_units = np.unique(sites.geology)
-        t_slope = np.copy(sites.slope)
+        ampl = np.zeros(ctx.slope.shape)
+        geol_units = np.unique(ctx.geology)
+        t_slope = np.copy(ctx.slope)
         t_slope[t_slope > 0.3] = 0.3
         # Slope lower than 0.0005 m/m takes value for 0.0005 m/m
         t_slope[t_slope < 0.0005] = 0.0005
         for geol_unit in geol_units:
-            idx = sites.geology == geol_unit
+            idx = ctx.geology == geol_unit
             if geol_unit in extra['GEOLOGICAL_UNITS']:
                 unit = geol_unit.decode()
                 # Supported geological unit, use the random effects model
@@ -245,12 +245,11 @@ def get_site_amplification(kind, extra, C, sites, imt):
     return ampl
 
 
-def get_stddevs(kind, ergodic, phi_s2s, C, stddev_shape, stddev_types,
-                sites, imt, mag):
+def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
     """
     Returns the homoskedastic standard deviation model
     """
-    stddevs = []
+    mag = ctx.mag
     if kind in {"ESHM20", "geology"}:
         # Get the heteroskedastic tau and phi0
         tau = get_tau(imt, mag)
@@ -260,9 +259,9 @@ def get_stddevs(kind, ergodic, phi_s2s, C, stddev_shape, stddev_types,
         phi = C["phi_0"]
     if ergodic:
         if kind == 'ESHM20':
-            phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
-            phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
-            phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
+            phi_s2s = np.zeros(ctx.vs30measured.shape, dtype=float)
+            phi_s2s[ctx.vs30measured] += C["phi_s2s_obs"]
+            phi_s2s[np.logical_not(ctx.vs30measured)] += C["phi_s2s_inf"]
             phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
         elif kind == 'site':
             phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
@@ -272,15 +271,7 @@ def get_stddevs(kind, ergodic, phi_s2s, C, stddev_shape, stddev_types,
             phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
         else:
             phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                           np.zeros(stddev_shape))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(stddev_shape))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(stddev_shape))
-    return stddevs
+    return [np.sqrt(tau ** 2. + phi ** 2.), tau, phi]
 
 
 class KothaEtAl2020(GMPE):
@@ -407,49 +398,47 @@ class KothaEtAl2020(GMPE):
         else:
             self.c3 = None
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        extra = {}
-        if self.kind == 'ESHM20':
-            phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
-            phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
-            phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
-        elif self.kind == 'geology':
-            phi_s2s = self.COEFFS_FIXED[imt]["phi_s2s"]
-            extra['COEFFS_FIXED'] = self.COEFFS_FIXED
-            extra['COEFFS_RANDOM_INT'] = self.COEFFS_RANDOM_INT
-            extra['COEFFS_RANDOM_GRAD'] = self.COEFFS_RANDOM_GRAD
-            extra['GEOLOGICAL_UNITS'] = self.GEOLOGICAL_UNITS
-        else:
-            phi_s2s = None
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            extra = {}
+            if self.kind == 'ESHM20':
+                phi_s2s = np.zeros(ctx.vs30measured.shape, dtype=float)
+                phi_s2s[ctx.vs30measured] += C["phi_s2s_obs"]
+                phi_s2s[np.logical_not(ctx.vs30measured)] += C["phi_s2s_inf"]
+            elif self.kind == 'geology':
+                phi_s2s = self.COEFFS_FIXED[imt]["phi_s2s"]
+                extra['COEFFS_FIXED'] = self.COEFFS_FIXED
+                extra['COEFFS_RANDOM_INT'] = self.COEFFS_RANDOM_INT
+                extra['COEFFS_RANDOM_GRAD'] = self.COEFFS_RANDOM_GRAD
+                extra['GEOLOGICAL_UNITS'] = self.GEOLOGICAL_UNITS
+            else:
+                phi_s2s = None
 
-        mean = (get_magnitude_scaling(C, rup.mag) +
-                get_distance_term(self.kind, self.c3, self.c3_epsilon,
-                                  C, rup, dists.rjb, imt, sites) +
-                get_site_amplification(self.kind, extra, C, sites, imt))
-        # GMPE originally in cm/s/s - convert to g
-        if imt.string.startswith(('PGA', 'SA')):
-            mean -= np.log(100.0 * g)
-        stddevs = get_stddevs(self.kind, self.ergodic, phi_s2s,
-                              C, dists.rjb.shape, stddev_types,
-                              sites, imt, rup.mag)
-        if self.dl2l:
-            # The source-region parameter is specified explicity
-            return mean + self.dl2l[imt]["dl2l"], stddevs
+            mean[m] = (get_magnitude_scaling(C, ctx.mag) +
+                       get_distance_term(self.kind, self.c3, self.c3_epsilon,
+                                         C, ctx, ctx.rjb, imt) +
+                       get_site_amplification(self.kind, extra, C, ctx, imt))
+            # GMPE originally in cm/s/s - convert to g
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] -= np.log(100.0 * g)
+            sig[m], tau[m], phi[m] = get_stddevs(
+                self.kind, self.ergodic, phi_s2s, C, ctx, imt)
+            if self.dl2l:
+                # The source-region parameter is specified explicity
+                mean[m] += self.dl2l[imt]["dl2l"]
+                return
 
-        if self.sigma_mu_epsilon:
-            # Apply the epistemic uncertainty factor (sigma_mu) multiplied by
-            # the number of standard deviations
-            sigma_mu = get_sigma_mu_adjustment(C, imt, rup)
-            mean += (self.sigma_mu_epsilon * sigma_mu)
-        return mean, stddevs
+            if self.sigma_mu_epsilon:
+                # epistemic uncertainty factor (sigma_mu) multiplied by
+                # the number of standard deviations
+                sigma_mu = get_sigma_mu_adjustment(C, imt, ctx)
+                mean[m] += self.sigma_mu_epsilon * sigma_mu
 
     # Coefficients obtained direclty from the regression outputs of
     # Kotha et al. (2020)
