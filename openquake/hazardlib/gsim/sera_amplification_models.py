@@ -276,22 +276,22 @@ class PitilakisEtAl2018(GMPE):
         ctx_r = copy.copy(sctx)
         ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, PGA(),
+        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, PGA(),
                                                stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, SA(1.0),
+        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, SA(1.0),
                                                 stddev_types)[0]
         s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
         s_1_rp = np.exp(s_1_rp)
         # Get the short and long period amplification factors
         f_s, f_l = get_amplification_factor(
-            self.kind, self.F1, self.FS, s_s_rp, s_1_rp, sctx)
+            self.kind, self.F1, self.FS, s_s_rp, s_1_rp, rctx)
         s_1 = f_l * s_1_rp
         s_s = f_s * s_s_rp
         # Get the mean ground motion at the IMT using the design code spectrum
         mean = get_amplified_mean(s_s, s_1, s_1_rp, imt)
         # Call the original GMPE to return the standard deviation for the
         # IMT in question
-        stddevs = self.gmpe.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+        stddevs = self.gmpe.get_mean_and_stddevs(rctx, rctx, rctx, imt,
                                                  stddev_types)[1]
         return mean, stddevs
 
@@ -405,12 +405,12 @@ class Eurocode8Amplification(PitilakisEtAl2018):
         desired site class, with the standard deviations taken from the
         original GMPE at the desired IMT
         """
-        ctx_r = copy.copy(sctx)
+        ctx_r = copy.copy(rctx)
         ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, PGA(),
+        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, PGA(),
                                                stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, SA(1.0),
+        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, SA(1.0),
                                                 stddev_types)[0]
         s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
         s_1_rp = np.exp(s_1_rp)
@@ -420,7 +420,7 @@ class Eurocode8Amplification(PitilakisEtAl2018):
         s_1 = f_l * s_1_rp
         s_s = f_s * s_s_rp
         mean = get_amplified_mean(s_s, s_1, s_1_rp, imt)
-        stddevs = self.gmpe.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+        stddevs = self.gmpe.get_mean_and_stddevs(rctx, rctx, rctx, imt,
                                                  stddev_types)[1]
         return mean, stddevs
 
@@ -457,9 +457,9 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
         ctx_r = copy.copy(sctx)
         ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, PGA(),
+        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, PGA(),
                                                stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, SA(1.0),
+        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, SA(1.0),
                                                 stddev_types)[0]
         s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
         s_1_rp = np.exp(s_1_rp)
@@ -468,7 +468,7 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
         s_1 = f_l * s_1_rp
         s_s = f_s * s_s_rp
         mean = get_amplified_mean(s_s, s_1, s_1_rp, imt)
-        stddevs = self.gmpe.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+        stddevs = self.gmpe.get_mean_and_stddevs(rctx, rctx, rctx, imt,
                                                  stddev_types)[1]
         return mean, stddevs
 
@@ -626,17 +626,17 @@ class SandikkayaDinsever2018(GMPE):
         ctx_r = copy.copy(sctx)
         ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
         mean, stddevs = self.gmpe.get_mean_and_stddevs(
-            ctx_r, rctx, dctx, imt, [const.StdDev.INTER_EVENT,
-                                     const.StdDev.INTRA_EVENT])
+            ctx_r, ctx_r, ctx_r, imt, [const.StdDev.INTER_EVENT,
+                                       const.StdDev.INTRA_EVENT])
         psarock = np.exp(mean)
         C = self.COEFFS_SITE[imt]
         if self.region:
             ck = self.COEFFS_REG[imt][self.region]
         else:
             ck = 0.0
-        ampl = get_site_amplification(C, psarock, sctx, ck)
+        ampl = get_site_amplification(C, psarock, rctx, ck)
         mean += ampl
-        stddevs = get_stddevs(self.phi_0, C, stddevs, psarock, sctx.vs30, imt,
+        stddevs = get_stddevs(self.phi_0, C, stddevs, psarock, rctx.vs30, imt,
                               stddev_types)
         return mean, stddevs
 
