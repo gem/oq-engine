@@ -265,8 +265,7 @@ class GmfGetter(object):
         param = {'imtls': oqparam.imtls, 'maximum_distance': md,
                  'minimum_distance': oqparam.minimum_distance,
                  'truncation_level': oqparam.truncation_level}
-        self.cmaker = ContextMaker(
-            rupgetter.trt, rupgetter.rlzs_by_gsim, param)
+        self.cmaker = ContextMaker(rupgetter.rlzs_by_gsim, param)
         self.correl_model = oqparam.correl_model
 
     def gen_computers(self, mon):

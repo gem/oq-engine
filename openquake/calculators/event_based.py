@@ -268,10 +268,10 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.inputs['rupture_model'].endswith('.xml'):
             self.gsims = [gsim_rlz.value[0] for gsim_rlz in gsim_lt]
             self.cmaker = ContextMaker(
-                '*', self.gsims, {'maximum_distance': oq.maximum_distance,
-                                  'minimum_distance': oq.minimum_distance,
-                                  'truncation_level': oq.truncation_level,
-                                  'imtls': oq.imtls})
+                self.gsims, {'maximum_distance': oq.maximum_distance,
+                             'minimum_distance': oq.minimum_distance,
+                             'truncation_level': oq.truncation_level,
+                             'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),

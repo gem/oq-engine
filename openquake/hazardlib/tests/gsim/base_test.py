@@ -24,7 +24,7 @@ import numpy
 
 from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.base import (
-    GMPE, CoeffsTable, gsim_aliases, SitesContext, RuptureContext,
+    GMPE, gsim_aliases, SitesContext, RuptureContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA
@@ -56,7 +56,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
         super().setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
-        self.cmaker = ContextMaker('faketrt', [self.gsim])
+        self.cmaker = ContextMaker([self.gsim])
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
             self.DEFAULT_COMPONENT
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES = frozenset(
@@ -159,7 +159,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.fake_surface = FakeSurface
 
     def make_contexts(self, site_collection, rupture):
-        return ContextMaker('faketrt', [self.gsim_class]).make_contexts(
+        return ContextMaker([self.gsim_class]).make_contexts(
             site_collection, rupture)
 
     def test_unknown_distance_error(self):

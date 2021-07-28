@@ -369,7 +369,7 @@ def disaggregation(
     for trt, srcs in by_trt.items():
         tom = srcs[0].temporal_occurrence_model
         cmaker[trt] = ContextMaker(
-            trt, rlzs_by_gsim,
+            rlzs_by_gsim,
             {'truncation_level': truncation_level,
              'maximum_distance': source_filter.integration_distance,
              'imtls': {str(imt): [iml]}})

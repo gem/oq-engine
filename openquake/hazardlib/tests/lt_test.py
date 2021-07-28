@@ -98,8 +98,7 @@ class CollapseTestCase(unittest.TestCase):
         time_span = srcs[0].temporal_occurrence_model.time_span
         params = dict(imtls=self.imtls, truncation_level2=2,
                       collapse_level=2, investigation_time=time_span)
-        cmaker = contexts.ContextMaker(
-            srcs[0].tectonic_region_type, self.gsims, params)
+        cmaker = contexts.ContextMaker(self.gsims, params)
         res = classical(srcs, self.srcfilter, cmaker)
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())

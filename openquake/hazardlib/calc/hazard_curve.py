@@ -196,7 +196,7 @@ def calc_hazard_curves(
     mon = Monitor()
     for group in groups:
         trt = group.trt
-        cmaker = ContextMaker(trt, [gsim_by_trt[trt]], param, mon)
+        cmaker = ContextMaker([gsim_by_trt[trt]], param, mon)
         for src in group:
             if not src.nsites:  # not set
                 src.nsites = 1
@@ -223,8 +223,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     :returns: a ProbabilityCurve object
     """
     assert len(site1) == 1, site1
-    trt = src.tectonic_region_type
-    cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
+    cmaker = ContextMaker(gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
     pmap, rup_data, calc_times = PmapMaker(cmaker, srcfilter, [src]).make()

@@ -152,12 +152,13 @@ class ContextMaker(object):
     rup_indep = True
     tom = None
 
-    def __init__(self, trt, gsims, param=None, monitor=Monitor()):
+    def __init__(self, gsims, param=None, monitor=Monitor()):
         param = param or {}  # empty in the gmpe-smtk
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
-        self.trt = trt
+        [trt] = {gsim.DEFINED_FOR_TECTONIC_REGION_TYPE for gsim in gsims}
+        self.trt = trt.value  # string
         self.gsims = gsims
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
@@ -1060,7 +1061,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     param = dict(maximum_distance=maximum_distance, imtls=imtls)
     for t, trt in enumerate(trts):
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
-        cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
+        cmaker = ContextMaker(gsims_by_trt[trt], param)
         gmv[:, :, t] = cmaker.max_intensity(
             sitecol1, [float(mag) for mag in mags], dist_bins)
     return dict(zip(mags, gmv))
@@ -1131,7 +1132,7 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     nbins = len(dist_bins)
     mags = set('%.2f' % mag for src in sources for mag in src.get_mags())
     dic = {mag: numpy.zeros(len(dist_bins), int) for mag in sorted(mags)}
-    cmaker = ContextMaker(trt, gsims, params, monitor)
+    cmaker = ContextMaker(gsims, params, monitor)
     for src, indices in srcfilter.filter(sources):
         sites = srcfilter.sitecol.filtered(indices)
         for rup in src.iter_ruptures(shift_hypo=cmaker.shift_hypo):
@@ -1159,7 +1160,6 @@ def read_cmakers(dstore, full_lt=None):
     trt_smrs = dstore['trt_smrs'][:]
     toms = dstore['toms'][:]
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
-    trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
     # some ugly magic on the pointsource_distance
@@ -1170,7 +1170,6 @@ def read_cmakers(dstore, full_lt=None):
         oq.pointsource_distance = psd
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
-        trt = trts[trti]
         if ('amplification' in oq.inputs and
                 oq.amplification_method == 'kernel'):
             df = AmplFunction.read_df(oq.inputs['amplification'])
@@ -1178,7 +1177,7 @@ def read_cmakers(dstore, full_lt=None):
         else:
             af = None
         cmaker = ContextMaker(
-            trt, rlzs_by_gsim,
+            rlzs_by_gsim,
             {'truncation_level': oq.truncation_level,
              'collapse_level': int(oq.collapse_level),
              'num_epsilon_bins': oq.num_epsilon_bins,

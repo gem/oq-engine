@@ -119,9 +119,7 @@ class EasternCan15Mid(GMPE):
         imtls = {imt.string: [0] for imt in imts}
         mean_stds = []  # 5 arrays of shape (2, M, N)
         for gsim in self.gsims:
-            cmaker = contexts.ContextMaker(
-                self.DEFINED_FOR_TECTONIC_REGION_TYPE,
-                [gsim], {'imtls': imtls})
+            cmaker = contexts.ContextMaker([gsim], {'imtls': imtls})
             # add equivalent distances
             if isinstance(gsim, AtkinsonBoore2006Modified2011):
                 c = utils.add_distances_east(ctx, ab06=True)

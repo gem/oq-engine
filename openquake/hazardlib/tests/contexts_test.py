@@ -221,7 +221,7 @@ class CollapseTestCase(unittest.TestCase):
             ctx.rjb = numpy.array([99.])
             ctxs.append(ctx)
         cmaker = ContextMaker(
-            'TRT', gsims, dict(imtls=imtls, truncation_level=trunclevel))
+            gsims, dict(imtls=imtls, truncation_level=trunclevel))
         cmaker.tom = PoissonTOM(time_span=50)
         pmap = cmaker.get_pmap(ctxs)
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)

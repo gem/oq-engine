@@ -568,7 +568,7 @@ def view_required_params_per_trt(token, dstore):
     tbl = []
     for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.get_gsims(trt)
-        maker = ContextMaker(trt, gsims)
+        maker = ContextMaker(gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)

@@ -224,7 +224,7 @@ a dictionary of parameters:
 >>> param = dict(maximum_distance=oq.maximum_distance, imtls=oq.imtls,
 ...              truncation_level=oq.truncation_level,
 ...              investigation_time=oq.investigation_time)
->>> cmaker = ContextMaker(src.tectonic_region_type, gsims, param)
+>>> cmaker = ContextMaker(gsims, param)
 
 Then you can use the ``ContextMaker`` to generate context objects
 from the sources:
