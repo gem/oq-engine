@@ -52,42 +52,7 @@ def _compute_magnitude_term_2(kind, C, mag):
     """
     Returns the magnitude scaling term
     """
-    return C["c0"] + (C["c1"] * mag) + (C["c1e"] * ((mag - 4.5) ** 2.0))
-
-
-_get_stddevs = CallableDict()
-
-
-@_get_stddevs.add("base")
-def _get_stddevs_1(kind, C, num_sites, stddev_types):
-    """
-    Returns the total standard deviation
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(
-                np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-    return stddevs
-
-
-@_get_stddevs.add("bommer")
-def _get_stddevs_2(kind, C, num_sites, stddev_types):
-    """
-    Returns the the total, inter-event and intra-event standard deviation
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(
-                np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-        if stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(
-                np.log(10.0 ** C["tau"]) + np.zeros(num_sites))
-        if stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(
-                np.log(10.0 ** C["phi"]) + np.zeros(num_sites))
-    return stddevs
+    return C["c0"] + C["c1"] * mag + C["c1e"] * (mag - 4.5) ** 2
 
 
 class DostEtAl2004(GMPE):
@@ -126,22 +91,26 @@ class DostEtAl2004(GMPE):
     #: not verified warning
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        imean = (_compute_magnitude_term(self.kind, C, rup.mag) +
-                 _compute_distance_term(C, dists.rhypo))
-        # Convert mean from cm/s and cm/s/s
-        if imt.string == "PGA":
-            mean = np.log((10.0 ** (imean)) / g)
-        else:
-            mean = np.log(10.0 ** imean)
-        stddevs = _get_stddevs(self.kind, C, len(dists.rhypo), stddev_types)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude_term(self.kind, C, ctx.mag) +
+                     _compute_distance_term(C, ctx.rhypo))
+            # Convert mean from cm/s and cm/s/s
+            if imt.string == "PGA":
+                mean[m] = np.log(10.0 ** imean / g)
+            else:
+                mean[m] = np.log(10.0 ** imean)
+
+            sig[m] = np.log(10.0 ** C["sigma"])
+            if self.kind == "bommer":
+                tau[m] = np.log(10.0 ** C["tau"])
+                phi[m] = np.log(10.0 ** C["phi"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     c0     c1        c2      c3   sigma

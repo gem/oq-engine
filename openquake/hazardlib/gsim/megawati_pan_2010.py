@@ -41,18 +41,6 @@ def _get_distance_scaling(C, mag, rhypo):
     return (C["a3"] * np.log(rhypo)) + (C["a4"] + C["a5"] * mag) * rhypo
 
 
-def _compute_std(C, stddev_types, num_sites):
-    """
-    Compute total standard deviation, see tables 3 and 4, pages 227 and
-    228.
-    """
-    std_total = C['sigma']
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + std_total)
-    return stddevs
-
-
 class MegawatiPan2010(GMPE):
     """
     Implements GMPE developed by Kusnowidjaja Megawati and Tso-Chien Pan
@@ -72,7 +60,7 @@ class MegawatiPan2010(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components,
-    #####: PLEASE CONFIRM!!!!! 140709
+    #: ####: PLEASE CONFIRM!!!!! 140709
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total, see equation IV page 837.
@@ -92,21 +80,21 @@ class MegawatiPan2010(GMPE):
     #: see equation 1 page 834.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = (_get_magnitude_scaling(C, rup.mag) +
-                _get_distance_scaling(C, rup.mag, dists.rhypo))
-        if imt.string.startswith(('PGA', 'SA')):
-            mean = np.log(np.exp(mean) / (100.0 * g))
-        stddevs = _compute_std(C, stddev_types, len(dists.rhypo))
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (_get_magnitude_scaling(C, ctx.mag) +
+                       _get_distance_scaling(C, ctx.mag, ctx.rhypo))
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] = np.log(np.exp(mean[m]) / (100.0 * g))
+            sig[m] = C['sigma']
 
-    #: Coefficient table for rock sites, see table 3 page 227.
+    #: Coefficient table for rock ctx, see table 3 page 227.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
         IMT          a0       a1         a2         a3          a4          a5    sigma
         PGV       2.369   2.0852   -0.23564   -0.87906   -0.001363   0.0001189   0.3478

@@ -84,7 +84,7 @@ get_pn = CallableDict()  # overridden in germany_2008
 
 
 @get_pn.add("base")
-def get_pn_base(region, rup, sites, dists, sof):
+def get_pn_base(region, ctx, sof):
     """
     Normalise the input parameters within their upper and lower
     defined range
@@ -93,21 +93,21 @@ def get_pn_base(region, rup, sites, dists, sof):
     p_n = []
     # Rjb
     # Note that Rjb must be clipped at 0.1 km
-    rjb = np.copy(dists.rjb)
+    rjb = np.copy(ctx.rjb)
     rjb[rjb < 0.1] = 0.1
     p_n.append(_get_normalised_term(np.log10(rjb),
                                     CONSTANTS["logMaxR"],
                                     CONSTANTS["logMinR"]))
     # Magnitude
-    p_n.append(_get_normalised_term(rup.mag,
+    p_n.append(_get_normalised_term(ctx.mag,
                                     CONSTANTS["maxMw"],
                                     CONSTANTS["minMw"]))
     # Vs30
-    p_n.append(_get_normalised_term(np.log10(sites.vs30),
+    p_n.append(_get_normalised_term(np.log10(ctx.vs30),
                                     CONSTANTS["logMaxVs30"],
                                     CONSTANTS["logMinVs30"]))
     # Depth
-    p_n.append(_get_normalised_term(rup.hypo_depth,
+    p_n.append(_get_normalised_term(ctx.hypo_depth,
                                     CONSTANTS["maxD"],
                                     CONSTANTS["minD"]))
     # Style of Faulting
@@ -118,7 +118,7 @@ def get_pn_base(region, rup, sites, dists, sof):
 
 
 @get_pn.add("germany")
-def get_pn_germany(region, rup, sites, dists, sof):
+def get_pn_germany(region, ctx, sof):
     """
     Normalise the input parameters within their upper and lower
     defined range
@@ -127,24 +127,24 @@ def get_pn_germany(region, rup, sites, dists, sof):
     p_n = []
     # Rjb
     # Note that Rjb must be clipped at 0.1 km
-    if rup.width > 1.0E-3:
-        rjb = np.copy(dists.rjb)
+    if ctx.width > 1.0E-3:
+        rjb = np.copy(ctx.rjb)
     else:
-        rjb = rhypo_to_rjb(dists.rhypo, rup.mag)
+        rjb = rhypo_to_rjb(ctx.rhypo, ctx.mag)
     rjb[rjb < 0.1] = 0.1
     p_n.append(_get_normalised_term(np.log10(rjb),
                                     CONSTANTS["logMaxR"],
                                     CONSTANTS["logMinR"]))
     # Magnitude
-    p_n.append(_get_normalised_term(rup.mag,
+    p_n.append(_get_normalised_term(ctx.mag,
                                     CONSTANTS["maxMw"],
                                     CONSTANTS["minMw"]))
     # Vs30
-    p_n.append(_get_normalised_term(np.log10(sites.vs30),
+    p_n.append(_get_normalised_term(np.log10(ctx.vs30),
                                     CONSTANTS["logMaxVs30"],
                                     CONSTANTS["logMinVs30"]))
     # Depth
-    p_n.append(_get_normalised_term(rup.hypo_depth,
+    p_n.append(_get_normalised_term(ctx.hypo_depth,
                                     CONSTANTS["maxD"],
                                     CONSTANTS["minD"]))
     # Style of Faulting
@@ -154,7 +154,7 @@ def get_pn_germany(region, rup, sites, dists, sof):
     return p_n
 
 
-def get_mean(region, W_1, B_1, C, rup, sites, dists):
+def get_mean(region, W_1, B_1, C, ctx):
     """
     Returns the mean ground motion in terms of log10 m/s/s, implementing
     equation 2 (page 502)
@@ -163,11 +163,11 @@ def get_mean(region, W_1, B_1, C, rup, sites, dists):
     w_2 = np.array([
         [C["W_21"], C["W_22"], C["W_23"], C["W_24"], C["W_25"]]])
     # Gets the style of faulting dummy variable
-    sof = _get_sof_dummy_variable(rup.rake)
+    sof = _get_sof_dummy_variable(ctx.rake)
     # Get the normalised coefficients
-    p_n = get_pn(region,  rup, sites, dists, sof)
-    mean = np.zeros_like(dists.rhypo if region == "germany" else dists.rjb)
-    # Need to loop over sites - maybe this can be improved in future?
+    p_n = get_pn(region,  ctx, sof)
+    mean = np.zeros_like(ctx.rhypo if region == "germany" else ctx.rjb)
+    # Need to loop over ctx - maybe this can be improved in future?
     # ndenumerate is used to allow for application to 2-D arrays
     for idx, rval in np.ndenumerate(p_n[0]):
         # Place normalised coefficients into a single array
@@ -177,25 +177,6 @@ def get_mean(region, W_1, B_1, C, rup, sites, dists):
         mean[idx] = (0.5 * (mean_i + C["B_2"] + 1.0) *
                      (C["tmax"] - C["tmin"])) + C["tmin"]
     return mean
-
-
-def get_stddevs(C, n_sites, stddev_types):
-    """
-    Returns the standard deviations - originally given
-    in terms of log_10, so converting to log_e
-    """
-    tau = C["tau"] + np.zeros(n_sites)
-    phi = C["phi"] + np.zeros(n_sites)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma = np.log(10.0 ** (np.sqrt(tau ** 2. + phi ** 2.)))
-            stddevs.append(sigma)
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.log(10.0 ** phi))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(np.log(10.0 ** tau))
-    return stddevs
 
 
 class DerrasEtAl2014(GMPE):
@@ -212,7 +193,7 @@ class DerrasEtAl2014(GMPE):
     to the vector of normalised predictor variables. As a consequence the
     expected ground motion for each site is derived from a set of matrix
     products from the respective weighting and bias vectors. This means that
-    vectorisation by sites cannot be achieved and a loop is implemented
+    vectorisation by ctx cannot be achieved and a loop is implemented
     instead.
     """
     region = "base"
@@ -239,26 +220,33 @@ class DerrasEtAl2014(GMPE):
     #: The required distance parameter is 'Joyner-Boore' distance
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    adjustment_factor = 0.
+
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        # Get the mean
-        mean = get_mean(self.region, self.W_1, self.B_1,
-                        C, rup, sites, dists)
-        if imt.string == "PGV":
-            # Convert from log10 m/s to ln cm/s
-            mean = np.log((10.0 ** mean) * 100.)
-        else:
-            # convert from log10 m/s/s to ln g
-            mean = np.log((10.0 ** mean) / g)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # Get the mean
+            mean[m] = get_mean(self.region, self.W_1, self.B_1, C, ctx)
+            if imt.string == "PGV":
+                # Convert from log10 m/s to ln cm/s
+                mean[m] = np.log(10.0 ** mean[m] * 100.)
+            else:
+                # convert from log10 m/s/s to ln g
+                mean[m] = np.log(10.0 ** mean[m] / g)
+            mean[m] += self.adjustment_factor
 
-        # Get the standard deviations
-        stddevs = get_stddevs(C, mean.shape, stddev_types)
-        return mean, stddevs
+            # Get the standard deviations, originally given
+            # in terms of log_10, so converting to log_e
+            t = C["tau"]
+            p = C["phi"]
+            sig[m] = np.log(10.0 ** np.sqrt(t ** 2 + p ** 2))
+            tau[m] = np.log(10.0 ** t),
+            phi[m] = np.log(10.0 ** p)
 
     # Coefficients for the normalised output parameters and the standard
     # deviations. The former are taken from the Electronic Supplement to the
@@ -363,24 +351,3 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
     def __init__(self, adjustment_factor=1.0, **kwargs):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        C = self.COEFFS[imt]
-        # Get the mean
-        mean = get_mean(self.region, self.W_1, self.B_1,
-                        C, rup, sites, dists)
-        if imt.string == "PGV":
-            # Convert from log10 m/s to ln cm/s
-            mean = np.log((10.0 ** mean) * 100.)
-        else:
-            # convert from log10 m/s/s to ln g
-            mean = np.log((10.0 ** mean) / g)
-
-        # Get the standard deviations
-        stddevs = get_stddevs(C, mean.shape, stddev_types)
-        return mean + self.adjustment_factor, stddevs

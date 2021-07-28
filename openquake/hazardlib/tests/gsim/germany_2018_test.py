@@ -95,6 +95,7 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
         self.mags = [4.5, 5.5, 6.5, 7.5]
         self.rakes = [-90., 0., 90.]
         self.ctx = RuptureContext()
+        self.ctx.sids = np.arange(5)
         self.ctx.rhypo = np.array([5., 10., 20., 50., 100.])
         self.ctx.vs30 = 800.0 * np.ones(5)
 

@@ -35,35 +35,35 @@ _compute_distance = CallableDict()
 
 
 @_compute_distance.add("BA08SE", "BA08DE")
-def _compute_distance1(kind, rup, dists, C):
+def _compute_distance1(kind, ctx, C):
     """
     Compute the distance function, equation (9):
     """
     mref = 3.6
     rref = 1.0
-    rval = np.sqrt(dists.repi ** 2 + C['h'] ** 2)
-    return (C['c1'] + C['c2'] * (rup.mag - mref)) *\
+    rval = np.sqrt(ctx.repi ** 2 + C['h'] ** 2)
+    return (C['c1'] + C['c2'] * (ctx.mag - mref)) *\
         np.log10(rval / rref) + C['c3'] * (rval - rref)
 
 
 @_compute_distance.add("SP87SE", "SP87DE")
-def _compute_distance2(kind, rup, dists, C):
+def _compute_distance2(kind, ctx, C):
     """
     Compute the distance function, equation (5).
     """
-    rval = np.sqrt(dists.repi ** 2 + C['h'] ** 2)
+    rval = np.sqrt(ctx.repi ** 2 + C['h'] ** 2)
     return C['c1'] * np.log10(rval)
 
 
 @_compute_distance.add("Rhypo")
-def _compute_distance3(kind, rup, dists, C):
+def _compute_distance3(kind, ctx, C):
     """
     Compute the distance function, equation (9):
     """
     mref = 3.6
     rref = 1.0
-    rval = np.sqrt(dists.rhypo ** 2 + C['h'] ** 2)
-    return (C['c1'] + C['c2'] * (rup.mag - mref)) *\
+    rval = np.sqrt(ctx.rhypo ** 2 + C['h'] ** 2)
+    return (C['c1'] + C['c2'] * (ctx.mag - mref)) *\
         np.log10(rval / rref) + C['c3'] * (rval - rref)
 
 
@@ -71,36 +71,36 @@ _compute_magnitude = CallableDict()
 
 
 @_compute_magnitude.add("BA08SE", "BA08DE", "Rhypo")
-def _compute_magnitude1(kind, rup, C):
+def _compute_magnitude1(kind, ctx, C):
     """
     Compute the magnitude function, equation (9):
     """
-    return C['a'] + (C['b1'] * (rup.mag)) + (C['b2'] * (rup.mag) ** 2)
+    return C['a'] + (C['b1'] * (ctx.mag)) + (C['b2'] * (ctx.mag) ** 2)
 
 
 @_compute_magnitude.add("SP87SE", "SP87DE")
-def _compute_magnitude2(kind, rup, C):
+def _compute_magnitude2(kind, ctx, C):
     """
     Compute the magnitude function, equation (5).
     """
-    return C['a'] + (C['b1'] * (rup.mag))
+    return C['a'] + C['b1'] * ctx.mag
 
 
-def _get_site_amplification(sites, C):
+def _get_site_amplification(ctx, C):
     """
     Compute the site amplification function given by FS = eiSi, for
     i = 1,2,3 where Si are the coefficients determined through regression
     analysis, and ei are dummy variables (0 or 1) used to denote the
     different EC8 site classes.
     """
-    ssa, ssb, ssd = _get_site_type_dummy_variables(sites)
+    ssa, ssb, ssd = _get_site_type_dummy_variables(ctx)
 
-    return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sD'] * ssd)
+    return C['sA'] * ssa + C['sB'] * ssb + C['sD'] * ssd
 
 
-def _get_site_type_dummy_variables(sites):
+def _get_site_type_dummy_variables(ctx):
     """
-    Get site type dummy variables, which classified the sites into
+    Get site type dummy variables, which classified the ctx into
     different site classes based on the shear wave velocity in the
     upper 30 m (Vs30) according to the EC8 (CEN 2003):
     class A: Vs30 > 800 m/s
@@ -109,33 +109,25 @@ def _get_site_type_dummy_variables(sites):
     class D: Vs30 < 180 m/s
     *Not computed by this GMPE
     """
-    ssa = np.zeros(len(sites.vs30))
-    ssb = np.zeros(len(sites.vs30))
-    ssd = np.zeros(len(sites.vs30))
+    ssa = np.zeros(len(ctx.vs30))
+    ssb = np.zeros(len(ctx.vs30))
+    ssd = np.zeros(len(ctx.vs30))
     # Class D; Vs30 < 180 m/s.
-    idx = (sites.vs30 < 180.0)
+    idx = (ctx.vs30 < 180.0)
     ssd[idx] = 1.0
     # Class B; 360 m/s <= Vs30 <= 800 m/s.
-    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800.0)
+    idx = (ctx.vs30 >= 360.0) & (ctx.vs30 < 800.0)
     ssb[idx] = 1.0
     # Class A; Vs30 > 800 m/s.
-    idx = (sites.vs30 >= 800.0)
+    idx = (ctx.vs30 >= 800.0)
     ssa[idx] = 1.0
 
-    for value in sites.vs30:
+    for value in ctx.vs30:
         if 180 <= value < 360:
             raise Exception(
                 'GMPE does not consider site class C (Vs30 = 180-360 m/s)')
 
     return ssa, ssb, ssd
-
-
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return standard deviations as defined in tables below
-    """
-    stddevs = [np.zeros(num_sites) + C['SigmaTot'] for _ in stddev_types]
-    return stddevs
 
 
 class TusaLanger2016RepiBA08SE(GMPE):
@@ -190,29 +182,23 @@ class TusaLanger2016RepiBA08SE(GMPE):
     #: Required distance measure is Repi
     REQUIRES_DISTANCES = {'repi'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        imean = (_compute_magnitude(self.kind, rup, C) +
-                 _compute_distance(self.kind, rup, dists, C) +
-                 _get_site_amplification(sites, C))
+            imean = (_compute_magnitude(self.kind, ctx, C) +
+                     _compute_distance(self.kind, ctx, C) +
+                     _get_site_amplification(ctx, C))
 
-        istddevs = _get_stddevs(C, stddev_types,
-                                num_sites=sites.vs30.size)
-
-        # convert from log10 to ln and from cm/s**2 to g
-        mean = np.log((10.0 ** (imean - 2.0)) / g)
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-
-        return mean, stddevs
+            # convert from log10 to ln and from cm/s**2 to g
+            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            # Return stddevs in terms of natural log scaling
+            sig[m] = np.log(10.0 ** C['SigmaTot'])
 
     # Coefficients from Table 9 (PGA) and Table 12 (SA); sigma values in log
     # Correction made to coeff b2 (0.14s) by Giuseppina Tusa in email (Jan 15, 2019)
