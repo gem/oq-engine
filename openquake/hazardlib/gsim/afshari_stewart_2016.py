@@ -113,59 +113,51 @@ def get_distance_term(C, rrup):
     return f_p
 
 
-def get_magnitude_term(C, rup):
+def get_magnitude_term(C, ctx):
     """
     Returns the magnitude scaling term in equation 3
     """
-    b0, stress_drop = _get_sof_terms(C, rup.rake)
-    if rup.mag <= C["m1"]:
+    b0, stress_drop = _get_sof_terms(C, ctx.rake)
+    if ctx.mag <= C["m1"]:
         return b0
     else:
         # Calculate moment (equation 5)
-        m_0 = 10.0 ** (1.5 * rup.mag + 16.05)
+        m_0 = 10.0 ** (1.5 * ctx.mag + 16.05)
         # Get stress-drop scaling (equation 6)
-        if rup.mag > C["m2"]:
+        if ctx.mag > C["m2"]:
             stress_drop += (C["b2"] * (C["m2"] - CONSTANTS["mstar"]) +
-                            (C["b3"] * (rup.mag - C["m2"])))
+                            (C["b3"] * (ctx.mag - C["m2"])))
         else:
-            stress_drop += (C["b2"] * (rup.mag - CONSTANTS["mstar"]))
+            stress_drop += (C["b2"] * (ctx.mag - CONSTANTS["mstar"]))
         stress_drop = np.exp(stress_drop)
         # Get corner frequency (equation 4)
         f0 = 4.9 * 1.0E6 * 3.2 * ((stress_drop / m_0) ** (1. / 3.))
         return 1. / f0
 
 
-def get_site_amplification(region, C, sites):
+def get_site_amplification(region, C, ctx):
     """
     Returns the site amplification term
     """
     # Gets delta normalised z1
-    dz1 = sites.z1pt0 - np.exp(_get_lnmu_z1(region, sites.vs30))
+    dz1 = ctx.z1pt0 - np.exp(_get_lnmu_z1(region, ctx.vs30))
     f_s = C["c5"] * dz1
     # Calculates site amplification term
     f_s[dz1 > CONSTANTS["dz1ref"]] = (C["c5"] * CONSTANTS["dz1ref"])
-    idx = sites.vs30 > CONSTANTS["v1"]
+    idx = ctx.vs30 > CONSTANTS["v1"]
     f_s[idx] += (C["c4"] * np.log(CONSTANTS["v1"] / C["vref"]))
     idx = np.logical_not(idx)
-    f_s[idx] += (C["c4"] * np.log(sites.vs30[idx] / C["vref"]))
+    f_s[idx] += (C["c4"] * np.log(ctx.vs30[idx] / C["vref"]))
     return f_s
 
 
-def get_stddevs(C, nsites, mag, stddev_types):
+def get_stddevs(C, mag):
     """
     Returns the standard deviations
     """
-    tau = _get_tau(C, mag) + np.zeros(nsites)
-    phi = _get_phi(C, mag) + np.zeros(nsites)
-    stddevs = []
-    for stddev in stddev_types:
-        if stddev == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(tau ** 2. + phi ** 2.))
-        elif stddev == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-        elif stddev == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-    return stddevs
+    tau = _get_tau(C, mag)
+    phi = _get_phi(C, mag)
+    return [np.sqrt(tau ** 2. + phi ** 2.), tau, phi]
 
 
 class AfshariStewart2016(GMPE):
@@ -203,18 +195,18 @@ class AfshariStewart2016(GMPE):
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = (np.log(get_magnitude_term(C, rup) +
-                       get_distance_term(C, dists.rrup)) +
-                get_site_amplification(self.region, C, sites))
-        stddevs = get_stddevs(C, sites.vs30.shape, rup.mag, stddev_types)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (np.log(get_magnitude_term(C, ctx) +
+                              get_distance_term(C, ctx.rrup)) +
+                       get_site_amplification(self.region, C, ctx))
+            sig[m], tau[m], phi[m] = get_stddevs(C, ctx.mag)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt        m1     m2    b0N     b0R    b0SS     b0U    b1N    b1R   b1SS    b1U      b2      b3      c1      c2      c3       c4      c5   vref  tau1  tau2  phi1  phi2

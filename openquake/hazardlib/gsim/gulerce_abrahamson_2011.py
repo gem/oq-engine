@@ -41,7 +41,7 @@ CONSTS = {
 
 def _compute_base_term(C, rup, dists):
     """
-    Compute and return base model term, that is the first term, f1, in 
+    Compute and return base model term, that is the first term, f1, in
     Equation 6, page 1028. The calculation of this term is described in
     Equation 1, page 1027.
     """
@@ -49,14 +49,15 @@ def _compute_base_term(C, rup, dists):
     R = np.sqrt(dists.rrup ** 2 + CONSTS['c4'] ** 2)
 
     base_term = (C['a1'] +
-                    C['a8'] * ((8.5 - rup.mag) ** 2) +
-                    (C['a2'] + CONSTS['a3'] * (rup.mag - c1)) *
-                    np.log(R))
+                 C['a8'] * ((8.5 - rup.mag) ** 2) +
+                 (C['a2'] + CONSTS['a3'] * (rup.mag - c1)) *
+                 np.log(R))
 
     if rup.mag <= c1:
         return base_term + CONSTS['a4'] * (rup.mag - c1)
     else:
         return base_term + CONSTS['a5'] * (rup.mag - c1)
+
 
 def _compute_faulting_style_term(C, rup):
     """
@@ -68,6 +69,7 @@ def _compute_faulting_style_term(C, rup):
     frv = float(30 < rup.rake < 150)
     fnm = float(-120 < rup.rake < -60)
     return C['a6'] * frv + C['a7'] * fnm
+
 
 def _compute_site_response_term(C, imt, sites, pga1100):
     """
@@ -84,13 +86,14 @@ def _compute_site_response_term(C, imt, sites, pga1100):
     idx = vs30_star < vlin
     arg = vs30_star[idx] / vlin
     site_resp_term[idx] = (a10 * np.log(arg) +
-                            b * np.log(pga1100[idx] + c) -
-                            b * np.log(pga1100[idx] + c * (arg ** n)))
+                           b * np.log(pga1100[idx] + c) -
+                           b * np.log(pga1100[idx] + c * (arg ** n)))
 
     idx = ~idx
     site_resp_term[idx] = (a10 - b * n) * np.log(vs30_star[idx] / vlin)
 
     return site_resp_term
+
 
 def _get_stddevs(C, rup, stddev_types):
     """
@@ -108,6 +111,7 @@ def _get_stddevs(C, rup, stddev_types):
             stddevs.append(std_inter)
     return stddevs
 
+
 def _compute_intra_event_std(C, mag):
     """
     Equation 7, page 1029.
@@ -120,6 +124,7 @@ def _compute_intra_event_std(C, mag):
         sigma_0 = C['s2']
 
     return sigma_0
+
 
 def _compute_inter_event_std(C, mag):
     """
@@ -134,6 +139,7 @@ def _compute_inter_event_std(C, mag):
 
     return tau_0
 
+
 def _compute_vs30_star_factor(imt, vs30):
     """
     Compute and return vs30 star factor, Equation 4, page 1028.
@@ -143,6 +149,7 @@ def _compute_vs30_star_factor(imt, vs30):
     vs30_star[vs30_star >= v1] = v1
 
     return vs30_star, v1
+
 
 def _compute_v1_factor(imt):
     """
@@ -165,6 +172,8 @@ def _compute_v1_factor(imt):
         v1 = 862.0
 
     return v1
+
+
 class GulerceAbrahamson2011(GMPE):
     """
     Implements the GMPE by Gulerce & Abrahamson (2011) for the
@@ -172,9 +181,9 @@ class GulerceAbrahamson2011(GMPE):
     the PEER NGA-West1 Project.
 
     Developing of the vertical spectra is applicable only to nonlinear
-    horizontal ground-motion models. 
+    horizontal ground-motion models.
 
-    This model follows the same functional form as in AS08 by Abrahamson &    
+    This model follows the same functional form as in AS08 by Abrahamson &
     Silva (2008) with minor modifications to the underlying parameters.
 
     **Reference:**
@@ -191,24 +200,17 @@ class GulerceAbrahamson2011(GMPE):
     #: Supported intensity measure types are peak ground acceleration, peak
     #: ground velocity, and spectral acceleration at T=0.01 to 10.0 s; see
     #: Table 3, page 1030
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
-        PGA,
-        PGV,
-        SA
-    }
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the
     #: :attr:`~openquake.hazardlib.const.IMC.VERTICAL_TO_HORIZONTAL_RATIO`
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
-                                        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO)
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see Equations 7 to 9, page 1029.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is Vs30 only. Unlike in AS08, the nonlinear
     #: site response and Z1.0 scaling is not available for the vertical
@@ -255,10 +257,10 @@ class GulerceAbrahamson2011(GMPE):
         # intensity measure types
         C = self.COEFFS[imt]
 
-        sites_rock = copy.copy(sites)
-        sites_rock.vs30 = np.full_like(sites_rock.vs30, 1100, dtype=np.double)
+        ctx_rock = copy.copy(rup)
+        ctx_rock.vs30 = np.full_like(ctx_rock.vs30, 1100.)
         pga1100 = np.exp(self.gmpe.get_mean_and_stddevs(
-            sites_rock, rup, dists, PGA(), stddev_types)[0])
+            ctx_rock, ctx_rock, ctx_rock, PGA(), stddev_types)[0])
         mean = (_compute_base_term(C, rup, dists) +
                 _compute_faulting_style_term(C, rup) +
                 _compute_site_response_term(C, imt, sites, pga1100))
@@ -266,7 +268,6 @@ class GulerceAbrahamson2011(GMPE):
         stddevs = _get_stddevs(C, rup, stddev_types)
 
         return mean, stddevs
-
 
     #: Coefficients obtained from Table 3, page 1030
     #: Note the atypical periods 0.029 s and 0.260 s used.

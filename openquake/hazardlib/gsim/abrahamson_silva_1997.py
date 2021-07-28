@@ -36,25 +36,6 @@ def _compute_mean_on_rock(C, mag, rrup, F, HW):
     return f1 + F * f3 + HW * f4
 
 
-def _get_stddevs(C, mag, stddev_types, num_sites):
-    """
-    Return standard deviation as defined in eq.13 page 106.
-    """
-    std = np.zeros(num_sites)
-
-    if mag <= 5:
-        std += C['b5']
-    elif 5.0 < mag < 7.0:
-        std += C['b5'] - C['b6'] * (mag - 5)
-    else:
-        std += C['b5'] - 2 * C['b6']
-
-    # only the 'total' standard deviation is supported, therefore the
-    # std is always the same for all types
-    stddevs = [std for _ in stddev_types]
-    return stddevs
-
-
 def _get_fault_type_hanging_wall(rake):
     """
     Return fault type (F) and hanging wall (HW) flags depending on rake
@@ -195,32 +176,37 @@ class AbrahamsonSilva1997(GMPE):
     #: Required distance measure is RRup (eq. 3, page 105).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        F, HW = _get_fault_type_hanging_wall(rup.rake)
-        S = _get_site_class(sites.vs30)
+        F, HW = _get_fault_type_hanging_wall(ctx.rake)
+        S = _get_site_class(ctx.vs30)
 
         # compute pga on rock (used then to compute site amplification factor)
         C = self.COEFFS[PGA()]
-        pga_rock = np.exp(_compute_mean_on_rock(C, rup.mag, dists.rrup, F, HW))
+        pga_rock = np.exp(_compute_mean_on_rock(C, ctx.mag, ctx.rrup, F, HW))
 
-        # compute mean for the given imt (do not repeat the calculation if
-        # imt is PGA, just add the site amplification term)
-        if imt == PGA():
-            mean = np.log(pga_rock) + S * _compute_f5(C, pga_rock)
-        else:
-            C = self.COEFFS[imt]
-            mean = (_compute_mean_on_rock(C, rup.mag, dists.rrup, F, HW) +
-                    S * _compute_f5(C, pga_rock))
+        for m, imt in enumerate(imts):
+            # compute mean for the given imt (do not repeat the calculation if
+            # imt is PGA, just add the site amplification term)
+            if imt == PGA():
+                mean[m] = np.log(pga_rock) + S * _compute_f5(C, pga_rock)
+            else:
+                C = self.COEFFS[imt]
+                mean[m] = (_compute_mean_on_rock(C, ctx.mag, ctx.rrup, F, HW) +
+                           S * _compute_f5(C, pga_rock))
 
-        C_STD = self.COEFFS_STD[imt]
-        stddevs = _get_stddevs(C_STD, rup.mag, stddev_types, sites.vs30.size)
-
-        return mean, stddevs
+            C_STD = self.COEFFS_STD[imt]
+            # standard deviation as defined in eq.13 page 106.
+            if ctx.mag <= 5:
+                sig[m] += C_STD['b5']
+            elif 5.0 < ctx.mag < 7.0:
+                sig[m] += C_STD['b5'] - C_STD['b6'] * (ctx.mag - 5)
+            else:
+                sig[m] += C_STD['b5'] - 2 * C_STD['b6']
 
     #: Coefficient table (table 3, page 108)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
