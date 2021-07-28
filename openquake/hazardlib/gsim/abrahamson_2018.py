@@ -40,17 +40,17 @@ CONSTANTS = {"n": 1.18,
              "phiamp": 0.3}
 
 
-def _compute_pga_rock(slab, C_PGA, rup, dists):
+def _compute_pga_rock(slab, C_PGA, ctx):
     """
     Returns the PGA on rock (vs30 = 1000 m / s)
     """
     lpga1000 = (compute_base_term(slab, C_PGA) +
-                compute_magnitude_term(slab, C_PGA, rup.mag) +
-                compute_depth_term(slab, C_PGA, rup) +
-                compute_distance_term(slab, C_PGA, dists.rrup, rup.mag))
+                compute_magnitude_term(slab, C_PGA, ctx.mag) +
+                compute_depth_term(slab, C_PGA, ctx) +
+                compute_distance_term(slab, C_PGA, ctx.rrup, ctx.mag))
     # Get linear site term for the case where vs30 = 1000.0
     flin = _get_linear_site_term(
-        C_PGA, 1000.0 * np.ones_like(dists.rrup))
+        C_PGA, 1000.0 * np.ones_like(ctx.rrup))
     return lpga1000 + flin
 
 
@@ -106,13 +106,13 @@ def _get_magnitude_scale(slab, C, mag):
     return C["a2"] + CONSTANTS["a3"] * (mag - 7.8)
 
 
-def compute_depth_term(slab, C, rup):
+def compute_depth_term(slab, C, ctx):
     """
     No top of rupture depth term for interface events
     """
     if slab:  # Equation on P11
-        if rup.ztor <= 100.0:
-            return C["a11"] * (rup.ztor - 60.0)
+        if ctx.ztor <= 100.0:
+            return C["a11"] * (ctx.ztor - 60.0)
         else:
             return C["a11"] * (100.0 - 60.0)
 
@@ -152,22 +152,14 @@ def _get_linear_site_term(C, vsstar):
         np.log(vsstar / C["vlin"])
 
 
-def get_stddevs(C, C_PGA, pga1000, vs30, stddev_types):
+def get_stddevs(C, C_PGA, pga1000, vs30):
     """
     Returns the standard deviations
     """
     dln = _get_dln_amp(C, pga1000, vs30)
     tau = get_inter_event_stddev(C, C_PGA, dln)
     phi = get_within_event_stddev(C, C_PGA, dln)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(tau ** 2. + phi ** 2.))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-    return stddevs
+    return [np.sqrt(tau ** 2 + phi ** 2), tau, phi]
 
 
 def _get_dln_amp(C, pga1000, vs30):
@@ -263,35 +255,33 @@ class AbrahamsonEtAl2018SInter(GMPE):
     #: Adjustment variable to match Cascadia to global average
     CASCADIA_ADJUSTMENT = "adj_int"
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
         slab = self.CASCADIA_ADJUSTMENT == "adj_slab"
-        # compute median pga on rock (vs30=1000), needed for site response
-        # term calculation
-        pga1000 = np.exp(_compute_pga_rock(slab, C_PGA, rup, dists) +
-                         C_PGA[self.CASCADIA_ADJUSTMENT])
-        # Get full model
-        mean = (compute_base_term(slab, C) +
-                compute_magnitude_term(slab, C, rup.mag) +
-                compute_depth_term(slab, C, rup) +
-                compute_distance_term(slab, C, dists.rrup, rup.mag) +
-                compute_site_term(C, sites.vs30, pga1000))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # compute median pga on rock (vs30=1000), needed for site response
+            # term calculation
+            pga1000 = np.exp(_compute_pga_rock(slab, C_PGA, ctx) +
+                             C_PGA[self.CASCADIA_ADJUSTMENT])
+            # Get full model
+            mean[m] = (compute_base_term(slab, C) +
+                       compute_magnitude_term(slab, C, ctx.mag) +
+                       compute_depth_term(slab, C, ctx) +
+                       compute_distance_term(slab, C, ctx.rrup, ctx.mag) +
+                       compute_site_term(C, ctx.vs30, pga1000))
 
-        stddevs = get_stddevs(C, C_PGA, pga1000, sites.vs30, stddev_types)
-        if self.EPISTEMIC_ADJUSTMENT:
-            adjustment = C[self.CASCADIA_ADJUSTMENT] +\
-                C[self.EPISTEMIC_ADJUSTMENT]
-            return mean + adjustment, stddevs
-        else:
-            return mean + C[self.CASCADIA_ADJUSTMENT], stddevs
+            sig[m], tau[m], phi[m] = get_stddevs(C, C_PGA, pga1000, ctx.vs30)
+            if self.EPISTEMIC_ADJUSTMENT:
+                mean[m] += (C[self.CASCADIA_ADJUSTMENT] +
+                            C[self.EPISTEMIC_ADJUSTMENT])
+            else:
+                mean[m] += C[self.CASCADIA_ADJUSTMENT]
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt    C1inter     vlin        b       a1      a2     a4        a6     a11     a12      a13     a14            adj_int           adj_slab   phi0   tau0   rho_w   rho_b  SINTER_LOW  SINTER_HIGH  SSLAB_LOW  SSLAB_HIGH
