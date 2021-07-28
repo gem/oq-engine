@@ -364,13 +364,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         tau = numpy.zeros((1, N))
         phi = numpy.zeros((1, N))
         if not isinstance(rup, RuptureContext):
-            ctx = RuptureContext()
-            vars(ctx).update(vars(rup))
-            vars(ctx).update(vars(sites))
-            vars(ctx).update(vars(dists))
+            ctx = RuptureContext.from_(sites, rup, dists)
         else:
             ctx = rup
-        self.compute(rup, [imt], mean, sig, tau, phi)
+        self.compute(ctx, [imt], mean, sig, tau, phi)
         stddevs = []
         for stddev_type in stddev_types:
             if stddev_type == const.StdDev.TOTAL:

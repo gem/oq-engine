@@ -895,7 +895,7 @@ class RuptureContext(BaseContext):
         'hypo_depth', 'width', 'hypo_loc')
 
     @classmethod
-    def full(cls, rup, sites, dctx=None):
+    def from_(cls, sites, rup, dctx=None):
         """
         :returns: a full context with all the relevant attributes
         """
