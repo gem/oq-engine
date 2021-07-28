@@ -30,13 +30,13 @@ from openquake.hazardlib.imt import PGA, SA
 CONSTANTS = {"mref": 4.5, "mh": 6.5,  "rref": 1.0}
 
 
-def _get_distance_scaling(dist_type, C, dists, mag):
+def _get_distance_scaling(dist_type, C, ctx, mag):
     """
     Implements the distance scaling function F(M, R) presented in equations
     2 and 3. In the case of Joyner-Boore distance then the fixed-depth
     term h is required
     """
-    r_h = _get_rh(dist_type, C, dists)
+    r_h = _get_rh(dist_type, C, ctx)
     return (C["c1"] + C["c2"] * (mag - CONSTANTS["mref"])) *\
         np.log(r_h / CONSTANTS["rref"]) +\
         C["c3"] * (r_h - CONSTANTS["rref"])
@@ -59,20 +59,20 @@ _get_rh = CallableDict()
 
 
 @_get_rh.add("rjb")
-def _get_rh_1(kind, C, dists):
+def _get_rh_1(kind, C, ctx):
     """
     Returns the distance incorporating the fixed depth term, h
     """
-    return np.sqrt(dists.rjb ** 2. + C["h"] ** 2.)
+    return np.sqrt(ctx.rjb ** 2. + C["h"] ** 2.)
 
 
 @_get_rh.add("rhypo")
-def _get_rh_2(kind, C, dists):
+def _get_rh_2(kind, C, ctx):
     """
     In this case only the hypocentral distance is needed - return this
     directly
     """
-    return dists.rhypo
+    return ctx.rhypo
 
 
 def _get_site_term(C, vs30):
@@ -80,24 +80,6 @@ def _get_site_term(C, vs30):
     Returns the linear site amplification term given in equation 5
     """
     return C["sA"] * np.log(vs30 / 800.0)
-
-
-def get_stddevs(C, n_sites, stddev_types):
-    """
-    Returns the standard deviations
-    """
-    tau = C["tau"] + np.zeros(n_sites)
-    phi = C["phi"] + np.zeros(n_sites)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma = np.sqrt(tau ** 2. + phi ** 2.)
-            stddevs.append(sigma)
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-    return stddevs
 
 
 class BindiEtAl2017Rjb(GMPE):
@@ -140,26 +122,27 @@ class BindiEtAl2017Rjb(GMPE):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(float(adjustment_factor))
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         [dist_type] = self.REQUIRES_DISTANCES
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
+            mean[m] = (_get_magnitude_scaling(C, ctx.mag) +
+                       _get_distance_scaling(dist_type, C, ctx, ctx.mag) +
+                       _get_site_term(C, ctx.vs30))
 
-        mean = (_get_magnitude_scaling(C, rup.mag) +
-                _get_distance_scaling(dist_type, C, dists, rup.mag) +
-                _get_site_term(C, sites.vs30))
+            # Mean is returned in terms of m/s^2. Need to convert to g
+            mean[m] -= np.log(g)
+            mean[m] += self.adjustment_factor
 
-        # Mean is returned in terms of m/s^2. Need to convert to g
-        mean -= np.log(g)
-        stddevs = get_stddevs(C, sites.vs30.shape, stddev_types)
-        return mean + self.adjustment_factor, stddevs
+            tau[m] = C["tau"]
+            phi[m] = C["phi"]
+            sig[m] = np.sqrt(C['tau'] ** 2 + C['phi'] ** 2)
 
     # Joyner-Boore
     COEFFS = CoeffsTable(sa_damping=5, table="""\
