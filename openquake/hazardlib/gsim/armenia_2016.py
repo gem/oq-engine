@@ -45,7 +45,7 @@ def compute(self, ctx, imts, mean, sig, tau, phi):
     for m, imt in enumerate(imts):
         C_ADJ = self.COEFFS_ADJUST[imt]
         # Offset factor is dependent on magnitude and inter-event residual
-        mean[m] += (C_ADJ["a"] + C_ADJ["b"] * ctx.mag) * sig[m]
+        mean[m] += (C_ADJ["a"] + C_ADJ["b"] * ctx.mag) * tau[m]
         tau[m] = tau[m] * C_ADJ["tau_adj"]
         phi[m] = phi[m] * C_ADJ["sig_adj"]
         sig[m] = np.sqrt(tau[m] ** 2 + phi[m] ** 2)
