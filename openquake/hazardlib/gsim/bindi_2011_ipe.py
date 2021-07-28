@@ -35,17 +35,6 @@ def _compute_mean(C, mag, repi, hypo_depth):
             _get_term01(C, repi, hypo_depth))
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return total standard deviation.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        stddevs.append(C['sigma'] + np.zeros(num_sites))
-
-    return stddevs
-
-
 def _get_term01(C, repi, hypo_depth):
     h = hypo_depth
     term_repi = np.sqrt((repi**2+h**2)/h**2)
@@ -77,22 +66,18 @@ class BindiEtAl2011Repi(GMPE):
 
     fixedh = None
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
-        if self.fixedh:
-            rup.hypo_depth = self.fixedh
-
-        mean = _compute_mean(C, rup.mag, dists.repi, rup.hypo_depth)
-        stddevs = _get_stddevs(C, stddev_types, dists.repi.shape)
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            if self.fixedh:
+                ctx.hypo_depth = self.fixedh
+            mean[m] = _compute_mean(C, ctx.mag, ctx.repi, ctx.hypo_depth)
+            sig[m] = C['sigma']
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.Table 1 .page 331

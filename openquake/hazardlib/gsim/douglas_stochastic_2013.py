@@ -80,7 +80,7 @@ def get_magnitude_scaling_term(C, mag):
         C['b4'] * (mval ** 3.0)
 
 
-def get_stddevs(C_SIG, stddev_types, num_sites):
+def get_stddevs(C_SIG):
     """
     Returns the standard deviations
 
@@ -94,18 +94,10 @@ def get_stddevs(C_SIG, stddev_types, num_sites):
     therefore taken as the ordinary mean of the two inter-event
     sigma terms
     """
-    stddevs = []
     intra = C_SIG['phi']
     inter = (C_SIG['tau_s'] + C_SIG['tau_b']) / 2.0
     total = sqrt(intra ** 2.0 + inter ** 2.0)
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(total + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(inter + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(intra + np.zeros(num_sites))
-    return stddevs
+    return [total, inter, intra]
 
 
 class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
@@ -182,27 +174,24 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
     #: Definined for a reference velocity of 1100 m/s (Table 4)
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        C_SIG = self.COEFFS_SIGMA[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            C_SIG = self.COEFFS_SIGMA[imt]
+            mean[m] = (get_magnitude_scaling_term(C, ctx.mag) +
+                       get_distance_scaling_term(C, ctx.rhypo))
+            sig[m], tau[m], phi[m] = get_stddevs(C_SIG)
 
-        mean = (get_magnitude_scaling_term(C, rup.mag) +
-                get_distance_scaling_term(C, dists.rhypo))
-
-        std_devs = get_stddevs(C_SIG, stddev_types, len(dists.rhypo))
-
-        #: Mean ground motions initially returned in cm/s/s (for PGA, SA)
-        #: and cm/s for PGV
-        if not imt.string == "PGV":
-            # Convert mean from log(cm/s/s) to g
-            mean = np.log(np.exp(mean) / (100. * g))
-
-        return mean, std_devs
+            #: Mean ground motions initially returned in cm/s/s (for PGA, SA)
+            #: and cm/s for PGV
+            if not imt.string == "PGV":
+                # Convert mean from log(cm/s/s) to g
+                mean[m] = np.log(np.exp(mean[m]) / (100. * g))
 
     # IMT > 0.5 seconds removed from the present implementation
     # For median values, PGA is assumed equivalent to Sa (0.005 s)

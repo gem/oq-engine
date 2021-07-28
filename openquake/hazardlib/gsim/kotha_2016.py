@@ -94,24 +94,6 @@ def _get_site_term(kind, C, vs30):
     return (C["g1"] + dg1) + (C["g2"] + dg2) * np.log(vs30)
 
 
-def _get_stddevs(C, stddev_types, stddev_shape):
-    """
-    Returns a total standard deviation
-    Intra-event standard deviation should be treated here as
-    sqrt(phi0 ** 2. + phiS2S ** 2.)
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['sigma'] + np.zeros(stddev_shape))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            phi = np.sqrt(C['phi0'] ** 2. + C["phiS2S"] ** 2.)
-            stddevs.append(phi + np.zeros(stddev_shape))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(stddev_shape))
-    return stddevs
-
-
 class KothaEtAl2016(GMPE):
     """
     Implements unregionalised form of the European GMPE of:
@@ -147,32 +129,31 @@ class KothaEtAl2016(GMPE):
 
     kind = "base"
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        C = self.COEFFS[imt]
+            mean[m] = (_get_magnitude_term(C, ctx.mag) +
+                       _get_distance_term(self.kind, C, ctx.rjb, ctx.mag) +
+                       _get_site_term(self.kind, C, ctx.vs30))
 
-        mean = (_get_magnitude_term(C, rup.mag) +
-                _get_distance_term(self.kind, C, dists.rjb, rup.mag) +
-                _get_site_term(self.kind, C, sites.vs30))
+            # Units of GMPE are in terms of m/s (corrected in an Erratum)
+            # Convert to g
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] = np.log(np.exp(mean[m]) / g)
+            else:
+                # For PGV convert from m/s to cm/s/s
+                mean[m] = np.log(np.exp(mean[m]) * 100.)
 
-        # Units of GMPE are in terms of m/s (corrected in an Erratum)
-        # Convert to g
-        if imt.string.startswith(('PGA', 'SA')):
-            mean = np.log(np.exp(mean) / g)
-        else:
-            # For PGV convert from m/s to cm/s/s
-            mean = np.log(np.exp(mean) * 100.)
-
-        # Get standard deviations
-        stddevs = _get_stddevs(C, stddev_types, dists.rjb.shape)
-        return mean, stddevs
+            # Get standard deviations
+            sig[m] = C['sigma']
+            tau[m] = C['tau']
+            phi[m] = np.sqrt(C['phi0'] ** 2. + C["phiS2S"] ** 2.)
 
     COEFFS = CoeffsTable(sa_damping=5, table=open(KOTHA_CSV).read())
 

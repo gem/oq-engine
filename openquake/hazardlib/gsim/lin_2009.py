@@ -68,17 +68,6 @@ def _get_site_response_term(C, vs30):
     return C['C8'] * np.log(vs30 / 1130.0)
 
 
-def _get_stddevs(C, stddev_types, nsites):
-    """
-    Compute total standard deviation, see table 4.2, page 50.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['sigma'] + np.zeros(nsites, dtype=float))
-    return stddevs
-
-
 def _get_style_of_faulting_term(C, rake):
     """
     Returns the style of faulting factor
@@ -120,21 +109,20 @@ class Lin2009(GMPE):
     #: page 46.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = (
-            _get_magnitude_term(C, rup.mag) +
-            _get_distance_term(C, rup.mag, dists.rrup) +
-            _get_style_of_faulting_term(C, rup.rake) +
-            _get_site_response_term(C, sites.vs30))
-
-        stddevs = _get_stddevs(C, stddev_types, len(sites.vs30))
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (
+                _get_magnitude_term(C, ctx.mag) +
+                _get_distance_term(C, ctx.mag, ctx.rrup) +
+                _get_style_of_faulting_term(C, ctx.rake) +
+                _get_site_response_term(C, ctx.vs30))
+            sig[m] = C['sigma']
 
     #: Coefficient table for rock sites, see table 3 page 227.
     COEFFS = CoeffsTable(sa_damping=5.0, table="""\
