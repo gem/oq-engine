@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 
-from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.sera_amplification_models import (
     PitilakisEtAl2018, PitilakisEtAl2020, Eurocode8Amplification,
     Eurocode8AmplificationDefault, SandikkayaDinsever2018)
@@ -71,7 +70,8 @@ class SandikkayaDinsever2018TestCase(BaseGSIMTestCase):
                    gmpe_name="BindiEtAl2014Rjb")
 
     def test_std_intra(self):
-        self.check("sera_site/SandikkayaDinsever2018_DEFAULT_PHI0_INTRA_EVENT_STDDEV.csv",
+        self.check("sera_site/SandikkayaDinsever2018_"
+                   "DEFAULT_PHI0_INTRA_EVENT_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
 
@@ -96,6 +96,7 @@ class SandikkayaDinsever2018InputPhi0TestCase(BaseGSIMTestCase):
         input_phi0 = {"PGA": 1.0, "SA(0.03)": 0.9, "SA(0.2)": 0.8,
                       "SA(0.5)": 0.7, "SA(1.0)": 0.6, "SA(1.25)": 0.55,
                       "SA(3.0)": 0.5}
-        self.check("sera_site/SandikkayaDinsever2018_INPUT_PHI0_INTRA_EVENT_STDDEV.csv",
+        self.check("sera_site/"
+                   "SandikkayaDinsever2018_INPUT_PHI0_INTRA_EVENT_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb", phi_0=input_phi0)
