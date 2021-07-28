@@ -30,7 +30,6 @@ def _get_stddevs(ctx, arias):
     """
     Return standard deviations as defined in table 1, p. 200.
     """
-    stddevs = []
     # Magnitude dependent inter-event term (Eq. 13)
     if ctx.mag < 4.7:
         tau = 0.611
