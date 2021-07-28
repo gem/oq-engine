@@ -24,7 +24,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import _get_poes
 from openquake.baselib.general import gettemp, DictArray
-from openquake.hazardlib.contexts import RuptureContext, ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, full_context
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
@@ -55,7 +55,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         sites = Dummy.get_site_collection(len(dsts), vs30=760.0)
         self.mag = 5.5
         rup = Dummy.get_rupture(mag=self.mag)
-        ctx = RuptureContext.from_(sites, rup)
+        ctx = full_context(sites, rup)
         ctx.rjb = numpy.array(dsts)
         ctx.rrup = numpy.array(dsts)
         self.rrup = ctx.rrup

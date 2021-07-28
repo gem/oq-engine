@@ -34,7 +34,7 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, block_splitter, RecordBuilder)
+    AccumDict, DictArray, groupby, RecordBuilder)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -877,6 +877,21 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
+def full_context(sites, rup, dctx=None):
+    """
+    :returns: a full RuptureContext with all the relevant attributes
+    """
+    self = RuptureContext()
+    for par, val in vars(rup).items():
+        setattr(self, par, val)
+    for par in sites.array.dtype.names:
+        setattr(self, par, sites[par])
+    if dctx:
+        for par, val in vars(dctx).items():
+            setattr(self, par, val)
+    return self
+
+
 # mock of a rupture used in the tests and in the SMTK
 class RuptureContext(BaseContext):
     """
@@ -893,21 +908,6 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
-
-    @classmethod
-    def from_(cls, sites, rup, dctx=None):
-        """
-        :returns: a full context with all the relevant attributes
-        """
-        self = cls()
-        for par, val in vars(rup).items():
-            setattr(self, par, val)
-        for par in sites.array.dtype.names:
-            setattr(self, par, sites[par])
-        if dctx:
-            for par, val in vars(dctx).items():
-                setattr(self, par, val)
-        return self
 
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
