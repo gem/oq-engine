@@ -27,7 +27,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _compute_distance(rup, dists, C):
+def _compute_distance(ctx, C):
     """
     Compute the second term of the equation 1 described on paragraph 3:
 
@@ -36,12 +36,12 @@ def _compute_distance(rup, dists, C):
     """
     mref = 5.0
     rref = 1.0
-    rval = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
-    return (C['c1'] + C['c2'] * (rup.mag - mref)) *\
+    rval = np.sqrt(ctx.rjb ** 2 + C['h'] ** 2)
+    return (C['c1'] + C['c2'] * (ctx.mag - mref)) *\
         np.log10(rval / rref) - C['c3'] * (rval - rref)
 
 
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     Compute the third term of the equation 1:
 
@@ -50,11 +50,11 @@ def _compute_magnitude(rup, C):
     """
     m_h = 6.75
     b_3 = 0.0
-    if rup.mag <= m_h:
-        return C["e1"] + (C['b1'] * (rup.mag - m_h)) +\
-            (C['b2'] * (rup.mag - m_h) ** 2)
+    if ctx.mag <= m_h:
+        return C["e1"] + (C['b1'] * (ctx.mag - m_h)) +\
+            (C['b2'] * (ctx.mag - m_h) ** 2)
     else:
-        return C["e1"] + (b_3 * (rup.mag - m_h))
+        return C["e1"] + (b_3 * (ctx.mag - m_h))
 
 
 def _get_delta(coeffs, imt, mag):
@@ -63,7 +63,7 @@ def _get_delta(coeffs, imt, mag):
     return tmp
 
 
-def _get_fault_type_dummy_variables(rup):
+def _get_fault_type_dummy_variables(ctx):
     """
     Fault type (Strike-slip, Normal, Thrust/reverse) is
     derived from rake angle.
@@ -74,10 +74,10 @@ def _get_fault_type_dummy_variables(rup):
     because rake is always given.
     """
     U, SS, NS, RS = 0, 0, 0, 0
-    if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+    if np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
         # strike-slip
         SS = 1
-    elif rup.rake > 30.0 and rup.rake < 150.0:
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
         # reverse
         RS = 1
     else:
@@ -86,17 +86,17 @@ def _get_fault_type_dummy_variables(rup):
     return U, SS, NS, RS
 
 
-def _get_mechanism(rup, C):
+def _get_mechanism(ctx, C):
     """
     Compute the fifth term of the equation 1 described on paragraph :
     Get fault type dummy variables, see Table 1
     """
-    U, SS, NS, RS = _get_fault_type_dummy_variables(rup)
+    U, SS, NS, RS = _get_fault_type_dummy_variables(ctx)
 
     return C['f1'] * NS + C['f2'] * RS + C['f3'] * SS
 
 
-def _get_site_amplification(sites, C):
+def _get_site_amplification(ctx, C):
     """
     Compute the fourth term of the equation 1 described on paragraph :
     The functional form Fs in Eq. (1) represents the site amplification and
@@ -105,16 +105,16 @@ def _get_site_amplification(sites, C):
     while Cj are dummy variables used to denote the five different EC8
     site classes
     """
-    ssa, ssb, ssc, ssd, sse = _get_site_type_dummy_variables(sites)
+    ssa, ssb, ssc, ssd, sse = _get_site_type_dummy_variables(ctx)
 
     return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc) + \
         (C['sD'] * ssd) + (C['sE'] * sse)
 
 
-def _get_site_type_dummy_variables(sites):
+def _get_site_type_dummy_variables(ctx):
     """
     Get site type dummy variables, five different EC8 site classes
-    he recording sites are classified into 5 classes,
+    he recording ctx are classified into 5 classes,
     based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
     according to the EC8 (CEN 2003):
     class A: Vs30 > 800 m/s
@@ -124,43 +124,28 @@ def _get_site_type_dummy_variables(sites):
     class E: 5 to 20 m of C- or D-type alluvium underlain by
     stiffer material with Vs30 > 800 m/s.
     """
-    ssa = np.zeros(len(sites.vs30))
-    ssb = np.zeros(len(sites.vs30))
-    ssc = np.zeros(len(sites.vs30))
-    ssd = np.zeros(len(sites.vs30))
-    sse = np.zeros(len(sites.vs30))
+    ssa = np.zeros(len(ctx.vs30))
+    ssb = np.zeros(len(ctx.vs30))
+    ssc = np.zeros(len(ctx.vs30))
+    ssd = np.zeros(len(ctx.vs30))
+    sse = np.zeros(len(ctx.vs30))
 
     # Class E Vs30 = 0 m/s. We fixed this value to define class E
-    idx = (np.fabs(sites.vs30) < 1E-10)
+    idx = (np.fabs(ctx.vs30) < 1E-10)
     sse[idx] = 1.0
     # Class D;  Vs30 < 180 m/s.
-    idx = (sites.vs30 >= 1E-10) & (sites.vs30 < 180.0)
+    idx = (ctx.vs30 >= 1E-10) & (ctx.vs30 < 180.0)
     ssd[idx] = 1.0
     # SClass C; 180 m/s <= Vs30 <= 360 m/s.
-    idx = (sites.vs30 >= 180.0) & (sites.vs30 < 360.0)
+    idx = (ctx.vs30 >= 180.0) & (ctx.vs30 < 360.0)
     ssc[idx] = 1.0
     # Class B; 360 m/s <= Vs30 <= 800 m/s.
-    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800)
+    idx = (ctx.vs30 >= 360.0) & (ctx.vs30 < 800)
     ssb[idx] = 1.0
     # Class A; Vs30 > 800 m/s.
-    idx = (sites.vs30 >= 800.0)
+    idx = (ctx.vs30 >= 800.0)
     ssa[idx] = 1.0
     return ssa, ssb, ssc, ssd, sse
-
-
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return standard deviations as defined in table 1.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['SigmaTot'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['SigmaW'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['SigmaB'] + np.zeros(num_sites))
-    return stddevs
 
 
 class BindiEtAl2011(GMPE):
@@ -203,39 +188,35 @@ class BindiEtAl2011(GMPE):
 
     sgn = 0
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(ctx, C) +
+                     _get_site_amplification(ctx, C) +
+                     _get_mechanism(ctx, C))
 
-        C = self.COEFFS[imt]
+            # Convert units to g,
+            # but only for PGA and SA (not PGV):
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV
+                mean[m] = np.log(10.0 ** imean)
 
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_distance(rup, dists, C) +
-                 _get_site_amplification(sites, C) +
-                 _get_mechanism(rup, C))
+            # Return stddevs in terms of natural log scaling
+            sig[m] = np.log(10.0 ** C['SigmaTot'])
+            tau[m] = np.log(10.0 ** C['SigmaB'])
+            phi[m] = np.log(10.0 ** C['SigmaW'])
 
-        istddevs = _get_stddevs(C, stddev_types, len(sites.vs30))
-
-        # Convert units to g,
-        # but only for PGA and SA (not PGV):
-        if imt.string.startswith(('PGA', 'SA')):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
-
-        if self.sgn:
-            mean += self.sgn * _get_delta(self.COEFFS_DELTA[imt], imt, rup.mag)
-
-        return mean, stddevs
+            if self.sgn:
+                mean[m] += self.sgn * _get_delta(
+                    self.COEFFS_DELTA[imt], imt, ctx.mag)
 
     #: Coefficients from SA from Table 1
     #: Coefficients from PGA e PGV from Table 5

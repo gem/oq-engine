@@ -61,18 +61,18 @@ CONSTS = {
     "v2": 300.0}
 
 
-def _get_basin_depth_term(region, C, sites, period):
+def _get_basin_depth_term(region, C, ctx, period):
     """
     In the case of the base model the basin depth term is switched off.
     Therefore we return an array of zeros.
     """
     if region == "nobasin" or period < 0.65:  # switched off
-        return np.zeros(len(sites.vs30), dtype=float)
-    bmodel = (japan_basin_model(sites.vs30) if region == "JPN"
-              else california_basin_model(sites.vs30))
-    f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
+        return np.zeros(len(ctx.vs30), dtype=float)
+    bmodel = (japan_basin_model(ctx.vs30) if region == "JPN"
+              else california_basin_model(ctx.vs30))
+    f_dz1 = C["f7"] + np.zeros(len(ctx.vs30), dtype=float)
     f_ratio = C["f7"] / C["f6"]
-    dz1 = (sites.z1pt0 / 1000.0) - bmodel
+    dz1 = (ctx.z1pt0 / 1000.0) - bmodel
     idx = dz1 <= f_ratio
     f_dz1[idx] = C["f6"] * dz1[idx]
     return f_dz1
@@ -96,12 +96,12 @@ _get_intra_event_phi = CallableDict()
 
 
 @_get_intra_event_phi.add("base")
-def _get_intra_event_phi_1(kind, C, mag, rjb, vs30, num_sites):
+def _get_intra_event_phi_1(kind, C, mag, rjb, vs30):
     """
     Returns the intra-event standard deviation (phi), dependent on
     magnitude, distance and vs30
     """
-    base_vals = np.zeros(num_sites)
+    base_vals = np.zeros_like(rjb)
     # Magnitude Dependent phi (Equation 17)
     if mag <= 4.5:
         base_vals += C["f1"]
@@ -127,7 +127,7 @@ def _get_intra_event_phi_1(kind, C, mag, rjb, vs30, num_sites):
 
 
 @_get_intra_event_phi.add("stewart")
-def _get_intra_event_phi_2(kind, C, mag, rjb, vs30, num_sites):
+def _get_intra_event_phi_2(kind, C, mag, rjb, vs30):
     """
     Returns the intra-event standard deviation (phi)
 
@@ -151,16 +151,16 @@ def _get_linear_site_term(C, vs30):
     return C["c"] * np.log(flin)
 
 
-def _get_magnitude_scaling_term(sof, C, rup):
+def _get_magnitude_scaling_term(sof, C, ctx):
     """
     Returns the magnitude scling term defined in equation (2)
     """
-    dmag = rup.mag - C["Mh"]
-    if rup.mag <= C["Mh"]:
+    dmag = ctx.mag - C["Mh"]
+    if ctx.mag <= C["Mh"]:
         mag_term = (C["e4"] * dmag) + (C["e5"] * (dmag ** 2.0))
     else:
         mag_term = C["e6"] * dmag
-    return _get_style_of_faulting_term(sof, C, rup) + mag_term
+    return _get_style_of_faulting_term(sof, C, ctx) + mag_term
 
 
 def _get_nonlinear_site_term(C, vs30, pga_rock):
@@ -181,23 +181,23 @@ _get_path_scaling = CallableDict()
 
 
 @_get_path_scaling.add("base")
-def _get_path_scaling_1(kind, region, C, dists, mag):
+def _get_path_scaling_1(kind, region, C, ctx, mag):
     """
     Returns the path scaling term given by equation (3)
     """
-    rval = np.sqrt((dists.rjb ** 2.0) + (C["h"] ** 2.0))
+    rval = np.sqrt((ctx.rjb ** 2.0) + (C["h"] ** 2.0))
     scaling = (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *\
         np.log(rval / CONSTS["Rref"])
     return scaling + ((C["c3"] + C["Dc3"]) * (rval - CONSTS["Rref"]))
 
 
 @_get_path_scaling.add("stewart")
-def _get_path_scaling_2(kind, region, C, dists, mag):
+def _get_path_scaling_2(kind, region, C, ctx, mag):
     """
     Returns the path scaling term defined in Equation 3
     """
     # Calculate R in Equation 4
-    rval = np.sqrt((dists.rjb ** 2.0) + (C["h"] ** 2.0))
+    rval = np.sqrt((ctx.rjb ** 2.0) + (C["h"] ** 2.0))
     if region == "CAL":
         delta_c3 = 0
     elif region == "CHN":
@@ -216,50 +216,40 @@ def _get_path_scaling_2(kind, region, C, dists, mag):
     return fp_geom + fp_atten
 
 
-def _get_pga_on_rock(kind, region, sof, C, rup, dists):
+def _get_pga_on_rock(kind, region, sof, C, ctx):
     """
     Returns the median PGA on rock, which is a sum of the
     magnitude and distance scaling
     """
-    return np.exp(_get_magnitude_scaling_term(sof, C, rup) +
-                  _get_path_scaling(kind, region, C, dists, rup.mag))
+    return np.exp(_get_magnitude_scaling_term(sof, C, ctx) +
+                  _get_path_scaling(kind, region, C, ctx, ctx.mag))
 
 
-def _get_site_scaling(kind, region, C, pga_rock, sites, period, rjb):
+def _get_site_scaling(kind, region, C, pga_rock, ctx, period, rjb):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling term
     """
-    flin = _get_linear_site_term(C, sites.vs30)
-    fnl = _get_nonlinear_site_term(C, sites.vs30, pga_rock)
+    flin = _get_linear_site_term(C, ctx.vs30)
+    fnl = _get_nonlinear_site_term(C, ctx.vs30, pga_rock)
     if kind == 'stewart':
         fbd = 0.  # there is no basin term in the Stewart models
     else:
-        fbd = _get_basin_depth_term(region, C, sites, period)
+        fbd = _get_basin_depth_term(region, C, ctx, period)
     return flin + fnl + fbd
 
 
-def _get_stddevs(kind, C, rup, dists, sites, stddev_types):
+def _get_stddevs(kind, C, ctx):
     """
     Returns the aleatory uncertainty terms described in equations (13) to
     (17)
     """
-    stddevs = []
-    num_sites = len(sites.vs30)
-    tau = _get_inter_event_tau(C, rup.mag)
-    phi = _get_intra_event_phi(
-        kind, C, rup.mag, dists.rjb, sites.vs30, num_sites)
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt((tau ** 2.0) + (phi ** 2.0)))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(np.full_like(dists.rjb, tau))
-    return stddevs
+    tau = _get_inter_event_tau(C, ctx.mag)
+    phi = _get_intra_event_phi(kind, C, ctx.mag, ctx.rjb, ctx.vs30)
+    return [np.sqrt(tau**2 + phi**2), tau, phi]
 
 
-def _get_style_of_faulting_term(sof, C, rup):
+def _get_style_of_faulting_term(sof, C, ctx):
     """
     Get fault type dummy variables
     Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -272,10 +262,10 @@ def _get_style_of_faulting_term(sof, C, rup):
     """
     if not sof:
         return C["e0"]  # Unspecified style-of-faulting
-    elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+    elif np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
         # strike-slip
         return C["e1"]
-    elif rup.rake > 30.0 and rup.rake < 150.0:
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
         # reverse
         return C["e3"]
     else:
@@ -319,25 +309,24 @@ class BooreEtAl2014(GMPE):
     kind = "base"
     sof = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
-        imt_per = 0 if imt.string == 'PGV' else imt.period
-        pga_rock = _get_pga_on_rock(
-            self.kind, self.region, self.sof, C_PGA, rup, dists)
-        mean = (_get_magnitude_scaling_term(self.sof, C, rup) +
-                _get_path_scaling(self.kind, self.region, C, dists, rup.mag) +
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imt_per = 0 if imt.string == 'PGV' else imt.period
+            pga_rock = _get_pga_on_rock(
+                self.kind, self.region, self.sof, C_PGA, ctx)
+            mean[m] = (
+                _get_magnitude_scaling_term(self.sof, C, ctx) +
+                _get_path_scaling(self.kind, self.region, C, ctx, ctx.mag) +
                 _get_site_scaling(self.kind, self.region,
-                                  C, pga_rock, sites, imt_per, dists.rjb))
-        stddevs = _get_stddevs(self.kind, C, rup, dists, sites, stddev_types)
-        return mean, stddevs
+                                  C, pga_rock, ctx, imt_per, ctx.rjb))
+            sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2         tau1         tau2
@@ -941,28 +930,6 @@ class StewartEtAl2016(BooreEtAl2014):
         super().__init__(**kwargs)
         self.region = region
         self.sof = sof
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        C_PGA = self.COEFFS[PGA()]
-        # Retrieve PGAr case
-        pga_rock = _get_pga_on_rock(
-            self.kind, self.region, self.sof, C_PGA, rup, dists)
-        # SBSA15 Functional Form, Equation 1 (in natural log units)
-        mean = (_get_magnitude_scaling_term(self.sof, C, rup) +
-                _get_path_scaling(self.kind, self.region, C, dists, rup.mag) +
-                _get_site_scaling(self.kind, self.region,
-                                  C, pga_rock, sites, None, dists.rjb))
-        # SBSA15 Std Dev Model, Equations 9 to 11 (in natural log units)
-        stddevs = _get_stddevs(self.kind, C, rup, dists, sites, stddev_types)
-        return mean, stddevs
 
     #: Table of period-dependent regression coefficients obtained from the
     #: supplementary material in EQS paper
