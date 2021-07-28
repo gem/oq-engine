@@ -19,9 +19,8 @@ import unittest
 
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib import const
-from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.const import TRT, IMC, StdDev
+from openquake.hazardlib.const import TRT, IMC
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import CY14SiteTerm
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
@@ -37,14 +36,12 @@ class CY14SiteTermTestCase(unittest.TestCase):
         rup = Dummy.get_rupture(mag=6.0)
         rup.dip = 90.
         rup.ztor = 0.
-        dists = DistancesContext()
-        dists.rrup = np.array([1., 10., 30., 70.])
-        dists.rx = np.array([1., 10., 30., 70.])
-        dists.rjb = np.array([1., 10., 30., 70.])
+        rup.rrup = np.array([1., 10., 30., 70.])
+        rup.rx = np.array([1., 10., 30., 70.])
+        rup.rjb = np.array([1., 10., 30., 70.])
         stdt = [const.StdDev.TOTAL]
 
         self.rup = rup
-        self.dists = dists
         self.stdt = stdt
         self.sites = sites
 
@@ -78,21 +75,19 @@ class CY14SiteTermTestCase(unittest.TestCase):
         rup = Dummy.get_rupture(mag=6.0)
         rup.dip = 90.
         rup.ztor = 0.
-        dists = DistancesContext()
-        dists.rrup = np.array([1., 10., 30., 70.])
-        dists.rx = np.array([1., 10., 30., 70.])
-        dists.rjb = np.array([1., 10., 30., 70.])
+        rup.rrup = np.array([1., 10., 30., 70.])
+        rup.rx = np.array([1., 10., 30., 70.])
+        rup.rjb = np.array([1., 10., 30., 70.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
 
         # Compute results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, rup, imt, stdt)
 
         # Compute the expected results
         gmpe = ChiouYoungs2014()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
-                                                                 stdt)
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
+            sites, rup, rup, imt, stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
         np.testing.assert_almost_equal(mean, mean_expected)
@@ -108,21 +103,19 @@ class CY14SiteTermTestCase(unittest.TestCase):
         rup = Dummy.get_rupture(mag=6.0)
         rup.dip = 90.
         rup.ztor = 0.
-        dists = DistancesContext()
-        dists.rrup = np.array([1., 10., 30., 70.])
-        dists.rx = np.array([1., 10., 30., 70.])
-        dists.rjb = np.array([1., 10., 30., 70.])
+        rup.rrup = np.array([1., 10., 30., 70.])
+        rup.rx = np.array([1., 10., 30., 70.])
+        rup.rjb = np.array([1., 10., 30., 70.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
 
         # Compute results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, rup, imt, stdt)
 
         # Compute the expected results
         gmpe = ChiouYoungs2014()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
-                                                                 stdt)
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
+            sites, rup, rup, imt, stdt)
 
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
@@ -136,18 +129,12 @@ class CY14SiteTermTestCase(unittest.TestCase):
         imt = PGA()
 
         # Compute results
-        mean, stds = mgmpe.get_mean_and_stddevs(self.sites,
-                                                self.rup,
-                                                self.dists,
-                                                imt,
-                                                self.stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(
+            self.sites, self.rup, self.rup, imt, self.stdt)
 
         # Compute the expected results
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(self.sites,
-                                                                 self.rup,
-                                                                 self.dists,
-                                                                 imt,
-                                                                 self.stdt)
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
+            self.sites, self.rup, self.rup, imt, self.stdt)
 
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
@@ -165,20 +152,13 @@ class CY14SiteTermTestCase(unittest.TestCase):
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
         imt = SA(1.0)
 
-
         # Compute results
-        mean, stds = mgmpe.get_mean_and_stddevs(self.sites,
-                                                self.rup,
-                                                self.dists,
-                                                imt,
-                                                self.stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(
+            self.sites, self.rup, self.rup, imt, self.stdt)
 
         # Compute the expected results
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(self.sites,
-                                                                 self.rup,
-                                                                 self.dists,
-                                                                 imt,
-                                                                 self.stdt)
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
+            self.sites, self.rup, self.rup, imt, self.stdt)
 
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
