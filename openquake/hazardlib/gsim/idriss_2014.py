@@ -63,7 +63,7 @@ def _get_style_of_faulting_term(C, rake):
 
 def _get_site_scaling_term(C, vs30):
     """
-    Returns the site scaling. For sites with Vs30 > 1200 m/s the site
+    Returns the site scaling. For ctx with Vs30 > 1200 m/s the site
     amplification for Vs30 = 1200 is used
     """
     site_amp = C["xi"] * np.log(1200.0) * np.ones(len(vs30))
@@ -72,7 +72,7 @@ def _get_site_scaling_term(C, vs30):
     return site_amp
 
 
-def _get_stddevs(imt, mag, n_sites, stddev_types):
+def _get_stddev(imt, mag):
     """
     The standard error (assumed equivalent to total standard deviation)
     is defined as a function of magnitude and period (equation 4,
@@ -94,11 +94,7 @@ def _get_stddevs(imt, mag, n_sites, stddev_types):
         total_sigma = 1.18 + 0.035 * np.log(3.0) - 0.06 * stddev_mag
     else:
         total_sigma = 1.18 + 0.035 * np.log(imt.period) - 0.06 * stddev_mag
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(total_sigma + np.zeros(n_sites, dtype=float))
-    return stddevs
+    return total_sigma
 
 
 class Idriss2014(GMPE):
@@ -110,7 +106,7 @@ class Idriss2014(GMPE):
 
     Idriss (2014) defines the GMPE only for the case in which Vs30 >= 450 m/s.
     In the present implementation no check is made for the use of this model
-    for sites with Vs30 < 450 m/s
+    for ctx with Vs30 < 450 m/s
     """
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -138,26 +134,21 @@ class Idriss2014(GMPE):
     #: The reference Vs30. See paper.
     DEFINED_FOR_REFERENCE_VELOCITY = 2000
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        mean = (_get_magnitude_scaling_term(C, rup.mag) +
-                _get_distance_scaling_term(C, rup.mag, dists.rrup) +
-                _get_style_of_faulting_term(C, rup.rake) +
-                _get_site_scaling_term(C, sites.vs30))
+            mean[m] = (_get_magnitude_scaling_term(C, ctx.mag) +
+                       _get_distance_scaling_term(C, ctx.mag, ctx.rrup) +
+                       _get_style_of_faulting_term(C, ctx.rake) +
+                       _get_site_scaling_term(C, ctx.vs30))
 
-        stddevs = _get_stddevs(imt,
-                                    rup.mag,
-                                    len(dists.rrup),
-                                    stddev_types)
-        return mean, stddevs
+            sig[m] = _get_stddev(imt, ctx.mag)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT       a1_lo    a2_lo    b1_lo     b2_lo     a1_hi     a2_hi    b1_hi    b2_hi         a3        xi     gamma      phi
