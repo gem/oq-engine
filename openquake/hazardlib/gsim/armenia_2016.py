@@ -35,7 +35,20 @@ from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014
 from openquake.hazardlib.gsim.kale_2015 import KaleEtAl2015Turkey
 from openquake.hazardlib.gsim.kotha_2016 import KothaEtAl2016Turkey
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
-from openquake.hazardlib import const
+
+
+def compute(self, ctx, imts, mean, sig, tau, phi):
+    """
+    Adjustments for Armenia
+    """
+    self.__class__.__base__.compute(self, ctx, imts, mean, sig, tau, phi)
+    for m, imt in enumerate(imts):
+        C_ADJ = self.COEFFS_ADJUST[imt]
+        # Offset factor is dependent on magnitude and inter-event residual
+        mean[m] += (C_ADJ["a"] + C_ADJ["b"] * ctx.mag) * tau[m]
+        tau[m] = tau[m] * C_ADJ["tau_adj"]
+        phi[m] = phi[m] * C_ADJ["sig_adj"]
+        sig[m] = np.sqrt(tau[m] ** 2 + phi[m] ** 2)
 
 
 class AkkarEtAlRjb2014Armenia(AkkarEtAlRjb2014):
@@ -59,26 +72,7 @@ class AkkarEtAlRjb2014Armenia(AkkarEtAlRjb2014):
     3.0     -1.90646    0.28960    0.924211474    1.139651450
     4.0     -1.90646    0.28960    0.924211474    1.139651450
     """)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        C_ADJ = self.COEFFS_ADJUST[imt]
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
-                                     const.StdDev.INTRA_EVENT])
-        # Offset factor is dependent on magnitude and inter-event residual
-        adj_factor = (C_ADJ["a"] + C_ADJ["b"] * rup.mag) * stddevs[0]
-        adj_tau = stddevs[0] * C_ADJ["tau_adj"]
-        adj_sigma = stddevs[1] * C_ADJ["sig_adj"]
-        stddevs = []
-        for stddev in stddev_types:
-            if stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(adj_tau)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(adj_sigma)
-            elif stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
-
-        return mean + adj_factor, stddevs
+    compute = compute
 
 
 class BindiEtAl2014RjbArmenia(BindiEtAl2014Rjb):
@@ -102,25 +96,7 @@ class BindiEtAl2014RjbArmenia(BindiEtAl2014Rjb):
     3.00      -0.91307    0.09874  0.873047313   1.096061687
     4.00      -0.91307    0.09874  0.873047313   1.096061687
     """)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        C_ADJ = self.COEFFS_ADJUST[imt]
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
-                                     const.StdDev.INTRA_EVENT])
-        # Offset factor is dependent on magnitude and inter-event residual
-        adj_factor = (C_ADJ["a"] + C_ADJ["b"] * rup.mag) * stddevs[0]
-        adj_tau = stddevs[0] * C_ADJ["tau_adj"]
-        adj_sigma = stddevs[1] * C_ADJ["sig_adj"]
-        stddevs = []
-        for stddev in stddev_types:
-            if stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(adj_tau)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(adj_sigma)
-            elif stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
-        return mean + adj_factor, stddevs
+    compute = compute
 
 
 class BooreEtAl2014LowQArmenia(BooreEtAl2014LowQ):
@@ -144,25 +120,7 @@ class BooreEtAl2014LowQArmenia(BooreEtAl2014LowQ):
     3.00     -2.58421    0.48516    1.121100923    1.357550507
     4.00     -2.58421    0.48516    1.121100923    1.357550507
     """)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        C_ADJ = self.COEFFS_ADJUST[imt]
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
-                                     const.StdDev.INTRA_EVENT])
-        # Offset factor is dependent on magnitude and inter-event residual
-        adj_factor = (C_ADJ["a"] + C_ADJ["b"] * rup.mag) * stddevs[0]
-        adj_tau = stddevs[0] * C_ADJ["tau_adj"]
-        adj_sigma = stddevs[1] * C_ADJ["sig_adj"]
-        stddevs = []
-        for stddev in stddev_types:
-            if stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(adj_tau)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(adj_sigma)
-            elif stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
-        return mean + adj_factor, stddevs
+    compute = compute
 
 
 class CauzziEtAl2014Armenia(CauzziEtAl2014):
@@ -186,25 +144,7 @@ class CauzziEtAl2014Armenia(CauzziEtAl2014):
     3.00       -3.61081    0.65005   0.992899354    1.186719473
     4.00       -3.61081    0.65005   0.992899354    1.186719473
     """)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        C_ADJ = self.COEFFS_ADJUST[imt]
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
-                                     const.StdDev.INTRA_EVENT])
-        # Offset factor is dependent on magnitude and inter-event residual
-        adj_factor = (C_ADJ["a"] + C_ADJ["b"] * rup.mag) * stddevs[0]
-        adj_tau = stddevs[0] * C_ADJ["tau_adj"]
-        adj_sigma = stddevs[1] * C_ADJ["sig_adj"]
-        stddevs = []
-        for stddev in stddev_types:
-            if stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(adj_tau)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(adj_sigma)
-            elif stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
-        return mean + adj_factor, stddevs
+    compute = compute
 
 
 class KaleEtAl2015Armenia(KaleEtAl2015Turkey):
@@ -228,27 +168,7 @@ class KaleEtAl2015Armenia(KaleEtAl2015Turkey):
     3.00      -1.27746   0.17166   0.899017934    1.125281264
     4.00      -1.27746   0.17166   0.899017934    1.125281264
     """)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
-        C_ADJ = self.COEFFS_ADJUST[imt]
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
-                                     const.StdDev.INTRA_EVENT])
-        # Offset factor is dependent on magnitude and inter-event residual
-        adj_factor = (C_ADJ["a"] + C_ADJ["b"] * rup.mag) * stddevs[0]
-        adj_tau = stddevs[0] * C_ADJ["tau_adj"]
-        adj_sigma = stddevs[1] * C_ADJ["sig_adj"]
-        stddevs = []
-        for stddev in stddev_types:
-            if stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(adj_tau)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(adj_sigma)
-            elif stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
-        return mean + adj_factor, stddevs
+    compute = compute
 
 
 class KothaEtAl2016Armenia(KothaEtAl2016Turkey):
@@ -273,27 +193,7 @@ class KothaEtAl2016Armenia(KothaEtAl2016Turkey):
     3.00     -2.55008    0.39507   0.965496258   1.178953103
     4.00     -2.55008    0.39507   0.965496258   1.178953103
     """)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
-        C_ADJ = self.COEFFS_ADJUST[imt]
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
-                                     const.StdDev.INTRA_EVENT])
-        # Offset factor is dependent on magnitude and inter-event residual
-        adj_factor = (C_ADJ["a"] + C_ADJ["b"] * rup.mag) * stddevs[0]
-        adj_tau = stddevs[0] * C_ADJ["tau_adj"]
-        adj_sigma = stddevs[1] * C_ADJ["sig_adj"]
-        stddevs = []
-        for stddev in stddev_types:
-            if stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(adj_tau)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(adj_sigma)
-            elif stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
-        return mean + adj_factor, stddevs
+    compute = compute
 
 
 class ChiouYoungs2014Armenia(ChiouYoungs2014):
@@ -317,24 +217,4 @@ class ChiouYoungs2014Armenia(ChiouYoungs2014):
     3.00     -1.94949    0.28219   1.223141696    1.318344654
     4.00     -1.94949    0.28219   1.223141696    1.318344654
     """)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
-        C_ADJ = self.COEFFS_ADJUST[imt]
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
-                                     const.StdDev.INTRA_EVENT])
-        # Offset factor is dependent on magnitude and inter-event residual
-        adj_factor = (C_ADJ["a"] + C_ADJ["b"] * rup.mag) * stddevs[0]
-        adj_tau = stddevs[0] * C_ADJ["tau_adj"]
-        adj_sigma = stddevs[1] * C_ADJ["sig_adj"]
-        stddevs = []
-        for stddev in stddev_types:
-            if stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(adj_tau)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(adj_sigma)
-            elif stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
-        return mean + adj_factor, stddevs
+    compute = compute
