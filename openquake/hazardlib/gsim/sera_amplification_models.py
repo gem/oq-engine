@@ -273,12 +273,12 @@ class PitilakisEtAl2018(GMPE):
         input GMPE once more in order to return the standard deviations for the
         required IMT.
         """
-        sctx_r = copy.copy(sctx)
-        sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
+        ctx_r = copy.copy(sctx)
+        ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
+        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, PGA(),
                                                stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, SA(1.0),
+        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, SA(1.0),
                                                 stddev_types)[0]
         s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
         s_1_rp = np.exp(s_1_rp)
@@ -405,12 +405,12 @@ class Eurocode8Amplification(PitilakisEtAl2018):
         desired site class, with the standard deviations taken from the
         original GMPE at the desired IMT
         """
-        sctx_r = copy.copy(sctx)
-        sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
+        ctx_r = copy.copy(sctx)
+        ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
+        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, PGA(),
                                                stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, SA(1.0),
+        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, SA(1.0),
                                                 stddev_types)[0]
         s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
         s_1_rp = np.exp(s_1_rp)
@@ -454,12 +454,12 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
         Returns the mean and standard deviations following the approach
         in :class:`Eurocode8Amplification`
         """
-        sctx_r = copy.copy(sctx)
-        sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
+        ctx_r = copy.copy(sctx)
+        ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
+        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, PGA(),
                                                stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, SA(1.0),
+        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, rctx, dctx, SA(1.0),
                                                 stddev_types)[0]
         s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
         s_1_rp = np.exp(s_1_rp)
@@ -623,11 +623,11 @@ class SandikkayaDinsever2018(GMPE):
         """
         Returns the mean and standard deviations
         """
-        sctx_r = copy.copy(sctx)
-        sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
+        ctx_r = copy.copy(sctx)
+        ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
         mean, stddevs = self.gmpe.get_mean_and_stddevs(
-            sctx_r, rctx, dctx, imt, [const.StdDev.INTER_EVENT,
-                                      const.StdDev.INTRA_EVENT])
+            ctx_r, rctx, dctx, imt, [const.StdDev.INTER_EVENT,
+                                     const.StdDev.INTRA_EVENT])
         psarock = np.exp(mean)
         C = self.COEFFS_SITE[imt]
         if self.region:
