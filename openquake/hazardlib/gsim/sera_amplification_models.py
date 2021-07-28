@@ -51,7 +51,7 @@ get_amplification_factor = CallableDict()
 
 
 @get_amplification_factor.add("base")
-def get_amplification_factor_1(kind, F1, FS, s_s, s_1, sctx):
+def get_amplification_factor_1(kind, F1, FS, s_s, s_1, sctx, ec8=None):
     """
     Returns the short and long-period amplification factors given the
     input Pitilakis et al. (2018) site class and the short and long-period
@@ -76,24 +76,21 @@ def get_amplification_factor_1(kind, F1, FS, s_s, s_1, sctx):
             f_ss[ub] = FS[ec8][-1]
             f_ls[ub] = F1[ec8][-1]
             for j in range(1, len(IMLS) - 1):
-                jdx = np.logical_and(s_ss >= IMLS[j],
-                                     s_ss < IMLS[j + 1])
+                jdx = np.logical_and(s_ss >= IMLS[j], s_ss < IMLS[j + 1])
                 if not np.any(jdx):
                     continue
                 dfs = FS[ec8][j + 1] - FS[ec8][j]
                 dfl = F1[ec8][j + 1] - F1[ec8][j]
                 diml = IMLS[j + 1] - IMLS[j]
-                f_ss[jdx] = FS[ec8][j] + (s_ss[jdx] - IMLS[j]) *\
-                    (dfs / diml)
-                f_ls[jdx] = F1[ec8][j] + (s_ss[jdx] - IMLS[j]) *\
-                    (dfl / diml)
+                f_ss[jdx] = FS[ec8][j] + (s_ss[jdx] - IMLS[j]) * (dfs / diml)
+                f_ls[jdx] = F1[ec8][j] + (s_ss[jdx] - IMLS[j]) * (dfl / diml)
             f_s[idx] = f_ss
             f_l[idx] = f_ls
     return f_s, f_l
 
 
 @get_amplification_factor.add("euro8")
-def get_amplification_factor_2(kind, F1, FS, s_s_rp, s_1_rp, ec8, sctx):
+def get_amplification_factor_2(kind, F1, FS, s_s_rp, s_1_rp, sctx, ec8):
     """
     Returns the amplification factors based on the proposed EC8 formulation
     in Table 3.4
@@ -127,7 +124,7 @@ def get_amplification_factor_2(kind, F1, FS, s_s_rp, s_1_rp, ec8, sctx):
 
 
 @get_amplification_factor.add("euro8default")
-def get_amplification_factor_3(kind, F1, FS, s_s_rp, s_1_rp, sctx):
+def get_amplification_factor_3(kind, F1, FS, s_s_rp, s_1_rp, sctx, ec8=None):
     """
     Returns the default amplification factor dependent upon the site class
     """
@@ -135,9 +132,8 @@ def get_amplification_factor_3(kind, F1, FS, s_s_rp, s_1_rp, sctx):
     f_l = np.ones(sctx.ec8.shape)
     for key in EC8_FS_default:
         idx = sctx.ec8 == key
-        if np.any(idx):
-            f_s[idx] = EC8_FS_default[key]
-            f_l[idx] = EC8_FL_default[key]
+        f_s[idx] = EC8_FS_default[key]
+        f_l[idx] = EC8_FL_default[key]
     return f_s, f_l
 
 
@@ -157,20 +153,16 @@ def get_amplified_mean(s_s, s_1, s_1_rp, imt):
     t_b[t_b > 0.1] = 0.1
     t_d = 2.0 + np.zeros_like(s_1_rp)
     idx = s_1_rp > 0.1
-    if np.any(idx):
-        t_d[idx] = 1.0 + (10. * s_1_rp[idx])
+    t_d[idx] = 1.0 + (10. * s_1_rp[idx])
     idx = np.logical_and(CONSTANTS["TA"] < imt.period,
                          t_b >= imt.period)
-    if np.any(idx):
-        mean[idx] = (s_s[idx] / (t_b[idx] - CONSTANTS["TA"])) *\
-            ((imt.period - CONSTANTS["TA"]) +
-             (t_b[idx] - imt.period) / CONSTANTS["F0"])
+    mean[idx] = (s_s[idx] / (t_b[idx] - CONSTANTS["TA"])) *\
+        ((imt.period - CONSTANTS["TA"]) +
+         (t_b[idx] - imt.period) / CONSTANTS["F0"])
     idx = np.logical_and(t_c < imt.period, t_d >= imt.period)
-    if np.any(idx):
-        mean[idx] = s_1[idx] / imt.period
+    mean[idx] = s_1[idx] / imt.period
     idx = t_d < imt.period
-    if np.any(idx):
-        mean[idx] = t_d[idx] * s_1[idx] / (imt.period ** 2.)
+    mean[idx] = t_d[idx] * s_1[idx] / (imt.period ** 2.)
     return np.log(mean)
 
 
@@ -424,7 +416,7 @@ class Eurocode8Amplification(PitilakisEtAl2018):
         s_1_rp = np.exp(s_1_rp)
         ec8 = get_ec8_class(sctx.vs30, sctx.h800)
         f_s, f_l = get_amplification_factor(
-            self.kind, self.F1, self.FS, s_s_rp, s_1_rp, ec8, sctx)
+            self.kind, self.F1, self.FS, s_s_rp, s_1_rp, sctx, ec8)
         s_1 = f_l * s_1_rp
         s_s = f_s * s_s_rp
         mean = get_amplified_mean(s_s, s_1, s_1_rp, imt)
