@@ -129,10 +129,8 @@ class Sgobba2020Test(unittest.TestCase):
                         bedrock = True
                 ctx = get_ctx(row, rjb, locs)
                 # Instantiate the GMM
-                if i == 0:
-                    gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=False)  # cluster=None because cluster has to be automatically detected
-                else:
-                    gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=True)
+                gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
+                # cluster=None because cluster has to be automatically detected
                 # Computes results for the non-ergodic model
                 periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407), SA(period=1.0), SA(period=2.0)]
                 tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
@@ -192,10 +190,8 @@ class Sgobba2020Test(unittest.TestCase):
                         bedrock = True
                 ctx = get_ctx(row, rjb, locs)
                 # Instantiate the GMM
-                if i == 0:
-                    gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=False)  # cluster=None because cluster has to be automatically detected
-                else:
-                    gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=True)
+                gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
+                # cluster=None because cluster has to be automatically detected
                 # Computes results for the non-ergodic model
                 periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407), SA(period=1.0), SA(period=2.0)]
                 tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
@@ -208,4 +204,3 @@ class Sgobba2020Test(unittest.TestCase):
                     expected = np.log(10.0**subset_df[tag].to_numpy())  # in VerifTable are in log10
                     computed = stdr  # in ln
                     np.testing.assert_allclose(computed, expected, rtol=1e-5)
-# THE END!
