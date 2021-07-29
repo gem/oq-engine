@@ -65,12 +65,12 @@ def check(gmm, tags, ctx, subset_df, sigma):
     for i in range(len(periods)):
         imt = periods[i]
         tag = tags[i]
-        mean, stdr = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
-        if sigma:
+        mean, [std] = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
+        if sigma:  # checking the total stddev
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
-            computed = stdr  # in ln
-        else:
+            computed = std  # in ln
+        else:  # checking the mean
             expected = subset_df[tag].to_numpy()  # Verif Table in g unit
             computed = np.exp(mean)  # in OQ are computed in g Units in ln
         np.testing.assert_allclose(computed, expected, rtol=1e-5)
