@@ -173,30 +173,21 @@ class NRCan15SiteTerm(GMPE):
             assert (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 760 and
                     self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 800)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Prepare sites
-        ctx = copy.copy(rup)
-        ctx.vs30 = np.ones_like(ctx.vs30) * 760.
-        # compute mean and standard deviation
-        mean, stddvs = self.gmpe.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                      imt, stds_types)
-        if imt.string != 'PGA':
-            # compute mean and standard deviation on rock
-            mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(
-                ctx, ctx, ctx, imt, stds_types)
-        else:
-            mean_rock = mean
-
-        C = self.COEFFS_BA08[imt]
-        C2 = self.COEFFS_AB06r[imt]
-        fa = BA08_AB06(self.kind, C, C2, sites.vs30, imt, np.exp(mean_rock))
-        mean = np.log(np.exp(mean) * fa)
-        return mean, stddvs
+        # compute mean and standard deviations on rock
+        ctx_rock = copy.copy(ctx)
+        ctx_rock.vs30 = np.full_like(ctx.vs30, 760.)
+        self.gmpe.compute(ctx_rock, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS_BA08[imt]
+            C2 = self.COEFFS_AB06r[imt]
+            fa = BA08_AB06(self.kind, C, C2, ctx.vs30, imt, np.exp(mean[m]))
+            mean[m] = np.log(np.exp(mean[m]) * fa)
 
     COEFFS_AB06r = CoeffsTable(sa_damping=5, table="""\
     IMT  c
