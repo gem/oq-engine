@@ -49,6 +49,27 @@ M1 = 5.00
 M2 = 4.70
 
 
+def _compute_term_d(C, mag, rrup):
+    """
+    Compute distance term: original implementation from Carlo Cauzzi
+    if M > 5.5     rmin = 0.55;
+    elseif M > 4.7 rmin = -2.067.*M +11.92;
+    else           rmin = -0.291.*M + 3.48;
+    end
+    d = log10(max(R,rmin));
+    """
+    if mag > M1:
+        rrup_min = 0.55
+    elif mag > M2:
+        rrup_min = -2.067 * mag + 11.92
+    else:
+        rrup_min = -0.291 * mag + 3.48
+
+    R = np.maximum(rrup_min, rrup)
+
+    return np.log10(R)
+
+
 def _compute_mean(C, mag, term_dist_r):
     """
     compute mean
@@ -185,7 +206,10 @@ class EdwardsFah2013Alpine10Bars(GMPE):
         """
         for m, imt in enumerate(imts):
             COEFFS = self.COEFFS[imt]
-            R = _compute_term_r(COEFFS, ctx.mag, ctx.rrup)
+            if 'Foreland' in self.__class__.__name__:
+                R = _compute_term_d(COEFFS, ctx.mag, ctx.rrup)
+            else:
+                R = _compute_term_r(COEFFS, ctx.mag, ctx.rrup)
 
             mean[m] = 10 ** _compute_mean(COEFFS, ctx.mag, R)
 

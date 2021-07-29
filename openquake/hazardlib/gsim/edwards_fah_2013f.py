@@ -40,31 +40,6 @@ from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
     COEFFS_FORELAND_90Bars,
     COEFFS_FORELAND_120Bars)
 
-#: Fixed magnitude terms
-M1 = 5.00
-M2 = 4.70
-
-
-def _compute_term_d(C, mag, rrup):
-    """
-    Compute distance term: original implementation from Carlo Cauzzi
-    if M > 5.5     rmin = 0.55;
-    elseif M > 4.7 rmin = -2.067.*M +11.92;
-    else           rmin = -0.291.*M + 3.48;
-    end
-    d = log10(max(R,rmin));
-    """
-    if mag > M1:
-        rrup_min = 0.55
-    elif mag > M2:
-        rrup_min = -2.067 * mag + 11.92
-    else:
-        rrup_min = -0.291 * mag + 3.48
-
-    R = np.maximum(rrup_min, rrup)
-
-    return np.log10(R)
-
 
 class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
     """
