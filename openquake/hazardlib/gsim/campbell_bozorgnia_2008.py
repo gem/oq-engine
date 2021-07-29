@@ -69,7 +69,7 @@ def _compute_imt1100(C, ctx, get_pga_site=False):
     """
     Computes the PGA on reference (Vs30 = 1100 m/s) rock.
     """
-    # Calculates simple site response term assuming all ctx 1100 m/s
+    # Calculates simple site response term assuming all sites 1100 m/s
     fsite = (C['c10'] + (C['k2'] * C['n'])) * log(1100. / C['k1'])
     # Calculates the PGA on rock
     pga1100 = np.exp(_compute_magnitude_term(C, ctx.mag) +
@@ -142,7 +142,7 @@ def _compute_shallow_site_response(C, ctx, pga1100):
     Returns the shallow site response term (equation 11, page 146)
     """
     stiff_factor = C['c10'] + (C['k2'] * C['n'])
-    # Initially default all ctx to intermediate rock value
+    # Initially default all sites to intermediate rock value
     fsite = stiff_factor * np.log(ctx.vs30 / C['k1'])
     # Check for soft soil ctx
     idx = ctx.vs30 < C['k1']

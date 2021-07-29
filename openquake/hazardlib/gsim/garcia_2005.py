@@ -113,7 +113,7 @@ class GarciaEtAl2005SSlab(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: No site parameters required
-    #: All data from 51 hard (NEHRP B) ctx.
+    #: All data from 51 hard (NEHRP B) sites
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and focal depth
