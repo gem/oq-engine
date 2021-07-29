@@ -127,28 +127,12 @@ def _compute_term_r(C, mag, rrup):
     return np.log10(R)
 
 
-def _get_stddevs(C, stddev_types, num_sites, mag, c1_rrup,
-                 log_phi_ss, mean_phi_ss):
+def _get_stddevs(C, mag, c1_rrup, log_phi_ss, mean_phi_ss):
     """
     Return standard deviations
     """
     phi_ss = _compute_phi_ss(C, mag, c1_rrup, log_phi_ss, mean_phi_ss)
-
-    stddevs = []
-    for stddev_type in stddev_types:
-
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(
-                           C['tau'] * C['tau'] +
-                           phi_ss * phi_ss) +
-                           np.zeros(num_sites))
-
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi_ss + np.zeros(num_sites))
-
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
+    return [np.sqrt(C['tau'] ** 2 + phi_ss ** 2), C['tau'], phi_ss]
 
 
 class EdwardsFah2013Alpine10Bars(GMPE):
@@ -193,34 +177,32 @@ class EdwardsFah2013Alpine10Bars(GMPE):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        for m, imt in enumerate(imts):
+            COEFFS = self.COEFFS[imt]
+            R = _compute_term_r(COEFFS, ctx.mag, ctx.rrup)
 
-        COEFFS = self.COEFFS[imt]
-        R = _compute_term_r(COEFFS, rup.mag, dists.rrup)
+            mean[m] = 10 ** _compute_mean(COEFFS, ctx.mag, R)
 
-        mean = 10 ** _compute_mean(COEFFS, rup.mag, R)
+            # Convert units to g,
+            # but only for PGA and SA (not PGV):
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log(mean[m] / (g*100.))
+            else:
+                # PGV:
+                mean[m] = np.log(mean[m])
 
-        # Convert units to g,
-        # but only for PGA and SA (not PGV):
-        if imt.string.startswith(("SA", "PGA")):
-            mean = np.log(mean / (g*100.))
-        else:
-            # PGV:
-            mean = np.log(mean)
+            c1_rrup = _compute_C1_term(COEFFS, ctx.rrup)
+            log_phi_ss = 1.00
 
-        c1_rrup = _compute_C1_term(COEFFS, dists.rrup)
-        log_phi_ss = 1.00
-
-        stddevs = _get_stddevs(
-            COEFFS, stddev_types, sites.vs30.shape[0], rup.mag, c1_rrup,
-            log_phi_ss, COEFFS['mean_phi_ss'])
-
-        return mean, stddevs
+            sig[m], tau[m], phi[m] = _get_stddevs(
+                COEFFS, ctx.mag, c1_rrup,
+                log_phi_ss, COEFFS['mean_phi_ss'])
 
     COEFFS = COEFFS_ALPINE_10Bars
 
