@@ -46,8 +46,8 @@ def _compute_magnitude_scaling(C, mag):
 
 def _compute_site_scaling(vs30, mean):
     """
-    Scales the ground motions by increasing 40 % on NEHRP class D/E ctx,
-    and decreasing by 40 % on NEHRP class A/B ctx
+    Scales the ground motions by increasing 40 % on NEHRP class D/E sites,
+    and decreasing by 40 % on NEHRP class A/B sites
     """
     site_factor = np.ones(len(vs30), dtype=float)
     idx = vs30 <= 360.
@@ -79,7 +79,7 @@ class FukushimaTanaka1990(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters. The GMPE was developed for an ''average''
-    #: site conditions. The authors specify that for rock ctx the
+    #: site conditions. The authors specify that for rock sites the
     #: values should be lowered by 40 % and for soil site they should be
     #: raised by 40 %. For greatest consistencty the site condition is
     #: neglected currently but a site-dependent GMPE may be implemented
@@ -122,10 +122,10 @@ class FukushimaTanakaSite1990(FukushimaTanaka1990):
     """
     Implements the Fukushima and Tanaka (1990) model correcting for
     site class. The authors specify that the ground motions should
-    be raised by 40 % on soft soil ctx and reduced by 40 % on rock ctx.
+    be raised by 40 % on soft soil sites and reduced by 40 % on rock sites.
     The specific site classification is not known, so it is assumed that
     in this context "average" site conditions refer to NEHRP C, rock conditions
     to NEHRP A and B, and soft soil conditions to NEHRP D and E
     """
-    #: Input ctx as vs30 although only three classes considered
+    #: Input sites as vs30 although only three classes considered
     REQUIRES_SITES_PARAMETERS = {"vs30"}
