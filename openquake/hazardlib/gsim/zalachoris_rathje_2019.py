@@ -20,12 +20,12 @@
 Module exports :class:'ZalachorisRathje2019'
 """
 import numpy as np
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.boore_2014 import (
-    BooreEtAl2014, _get_magnitude_scaling_term,
-    _get_path_scaling, _get_site_scaling, _get_pga_on_rock)
+    _get_magnitude_scaling_term, _get_path_scaling, _get_site_scaling,
+    _get_pga_on_rock)
 
 
 def _get_C2_term(Cadj, rjb):
@@ -116,7 +116,7 @@ def get_FENA(Cadj, rup, dists, imt):
     return FENA
 
 
-class ZalachorisRathje2019(BooreEtAl2014):
+class ZalachorisRathje2019(GMPE):
     """
     Implements the Induced Seismicity GMPE of Zalachoris & Rathje (2019)
     for Texas, Oklahoma and Kansas.
@@ -155,6 +155,10 @@ class ZalachorisRathje2019(BooreEtAl2014):
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
     non_verified = False
+
+    region = "nobasin"
+    kind = "base"
+    sof = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
