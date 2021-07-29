@@ -70,17 +70,8 @@ class Sgobba2020Test(unittest.TestCase):
             # Instantiate the GMM
             gmmref = SgobbaEtAl2020(cluster=0)
             # Computes results for the non-ergodic model
-            periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407), SA(period=1.0), SA(period=2.0)]
             tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
-            stdt = [const.StdDev.TOTAL]
-            # Compute and check results for the ergodic model
-            for i in range(len(periods)):
-                imt = periods[i]
-                tag = tags[i]
-                mr, stdr = gmmref.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
-                expected_ref = subset_df[tag].to_numpy()  # Verif Table in g unit
-                computed_ref = np.exp(mr)  # in OQ are computed in g Units in ln
-                np.testing.assert_allclose(computed_ref, expected_ref, rtol=1e-5)
+            check(gmmref, tags, ctx, subset_df, sigma=False)
 
     def test_NON_ERGODIC(self):
 
@@ -132,17 +123,9 @@ class Sgobba2020Test(unittest.TestCase):
                 gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
                 # cluster=None because cluster has to be automatically detected
                 # Computes results for the non-ergodic model
-                periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407), SA(period=1.0), SA(period=2.0)]
-                tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
-                stdt = [const.StdDev.TOTAL]
-                # Compute and check results for the NON ergodic model
-                for i in range(len(periods)):
-                    imt = periods[i]
-                    tag = tags[i]
-                    mean, stdr = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
-                    expected = subset_df[tag].to_numpy()  # Verif Table in g unit
-                    computed = np.exp(mean)  # in OQ are computed in g Units in ln
-                    np.testing.assert_allclose(computed, expected, rtol=1e-5)
+                tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10',
+                        'gmm_SA20']
+                check(gmm, tags, ctx, subset_df, sigma=False)
 
     def test_SIGMA(self):
 
@@ -193,14 +176,26 @@ class Sgobba2020Test(unittest.TestCase):
                 gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
                 # cluster=None because cluster has to be automatically detected
                 # Computes results for the non-ergodic model
-                periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407), SA(period=1.0), SA(period=2.0)]
                 tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
-                stdt = [const.StdDev.TOTAL]
-                # Compute and check results for the NON ergodic model
-                for i in range(len(periods)):
-                    imt = periods[i]
-                    tag = tags[i]
-                    mean, stdr = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
-                    expected = np.log(10.0**subset_df[tag].to_numpy())  # in VerifTable are in log10
-                    computed = stdr  # in ln
-                    np.testing.assert_allclose(computed, expected, rtol=1e-5)
+                check(gmm, tags, ctx, subset_df, sigma=True)
+
+
+def check(gmm, tags, ctx, subset_df, sigma):
+    periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
+               SA(period=1.0), SA(period=2.0)]
+    stdt = [const.StdDev.TOTAL]
+    # Compute and check results for the NON ergodic model
+    for i in range(len(periods)):
+        imt = periods[i]
+        tag = tags[i]
+        mean, stdr = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
+        if sigma:
+            expected = np.log(10.0**subset_df[tag].to_numpy())
+            # in VerifTable are in log10
+            computed = stdr  # in ln
+        else:
+            expected = subset_df[tag].to_numpy()  # Verif Table in g unit
+            computed = np.exp(mean)  # in OQ are computed in g Units in ln
+        np.testing.assert_allclose(computed, expected, rtol=1e-5)
+
+    
