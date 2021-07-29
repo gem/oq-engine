@@ -1122,6 +1122,14 @@ yenier_atkinson_2015
     :undoc-members:
     :show-inheritance:
 
+youd_etal_2002
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.youd_etal_2002
+    :members:
+    :undoc-members:
+    :show-inheritance:    
+    
 youngs_1997
 -------------------------------------------
 
