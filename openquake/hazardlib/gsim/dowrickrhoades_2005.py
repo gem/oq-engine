@@ -179,26 +179,16 @@ def _get_site_class(vs30, mmi_mean):
     return S
 
 
-def _get_stddevs(C, stddev_types, num_sites):
+def _get_stddevs(C):
     """
     Return total standard deviation as described in paragraph 5.2 pag 200.
     """
     # interevent stddev
-    sigma_inter = C['tau'] + np.zeros(num_sites)
+    sigma_inter = C['tau']
     # intraevent std
-    sigma_intra = C['sigma'] + np.zeros(num_sites)
-    std = []
-
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # equation in section 5.2 page 200
-            std += [np.sqrt(sigma_intra**2 + sigma_inter**2)]
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            std.append(sigma_intra)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            std.append(sigma_inter)
-
-    return std
+    sigma_intra = C['sigma']
+    # equation in section 5.2 page 200
+    return [np.sqrt(sigma_intra**2 + sigma_inter**2), sigma_inter, sigma_intra]
 
 
 class DowrickRhoades2005Asc(GMPE):
@@ -243,28 +233,24 @@ class DowrickRhoades2005Asc(GMPE):
     # defined as nearest distance to the source.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
+            # Deltas for Tectonic Region Type and rake angles
+            delta_R, delta_S, delta_V, delta_I = _get_deltas(trt, ctx.rake)
 
-        # Deltas for Tectonic Region Type and rake angles
-        delta_R, delta_S, delta_V, delta_I = _get_deltas(trt, rup.rake)
+            mean[m] = _compute_mean(C, ctx.mag, ctx.rrup, ctx.hypo_depth,
+                                    delta_R, delta_S, delta_V, delta_I,
+                                    ctx.vs30)
 
-        mean = _compute_mean(C, rup.mag, dists.rrup, rup.hypo_depth,
-                             delta_R, delta_S, delta_V, delta_I,
-                             sites.vs30)
-
-        stddevs = _get_stddevs(C, stddev_types, sites.vs30.size)
-
-        return mean, stddevs
+            sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     #: Coefficient table (table 5, page 198)
     COEFFS = CoeffsTable(table="""\

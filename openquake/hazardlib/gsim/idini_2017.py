@@ -38,16 +38,16 @@ _get_distance_term = CallableDict()
 
 
 @_get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def _get_distance_term_1(trt, C, rup, dists):
+def _get_distance_term_1(trt, C, ctx):
     """
     Returns the magnitude dependent distance scaling term defined in
     Equation (5)
     """
-    mag = rup.mag
+    mag = ctx.mag
     if mag < 7.7:
-        R = dists.rhypo
+        R = ctx.rhypo
     else:
-        R = dists.rrup
+        R = ctx.rrup
 
     g = C['c3'] + CONSTS['c4'] * (mag - CONSTS['Mr'])
     Ro = CONSTS['c6'] * 10 ** (
@@ -56,13 +56,13 @@ def _get_distance_term_1(trt, C, rup, dists):
 
 
 @_get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def _get_distance_term_2(trt, C, rup, dists):
+def _get_distance_term_2(trt, C, ctx):
     """
     Returns the magnitude dependent distance scaling term defined in
     Equation (5)
     """
-    mag = rup.mag
-    R = dists.rhypo
+    mag = ctx.mag
+    R = ctx.rhypo
     g = C['c3'] + CONSTS['c4'] * (mag - CONSTS['Mr']) + C['dc3']
     return g * np.log10(R) + C['c5'] * R
 
@@ -71,31 +71,31 @@ _get_magnitude_term = CallableDict()
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def _get_magnitude_term_1(trt, C, rup):
+def _get_magnitude_term_1(trt, C, ctx):
     """
     Returns the magnitude scaling term defined in Equation (3)
     """
-    mag = rup.mag
+    mag = ctx.mag
     return C['c1'] + C['c2'] * mag + C['c9'] * mag ** 2.0
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def _get_magnitude_term_2(trt, C, rup):
+def _get_magnitude_term_2(trt, C, ctx):
     """
     Returns the magnitude scaling term defined in Equation (3)
     """
-    mag = rup.mag
-    H = rup.hypo_depth
+    mag = ctx.mag
+    H = ctx.hypo_depth
     return C['c1'] + C['c2'] * mag + C['c8'] * (H - CONSTS['h0']) + \
         C['dc1'] + C['dc2'] * mag
 
 
-def _get_site_term(C, sites):
+def _get_site_term(C, ctx):
     """
     Returns the site scaling term defined in Equation (18)
     """
-    soiltype = sites.soiltype
-    vs30 = sites.vs30
+    soiltype = ctx.soiltype
+    vs30 = ctx.vs30
 
     # sT* depends on the soil type.
     # If soiltype > 6, use soiltype = 1 (rock)
@@ -104,23 +104,14 @@ def _get_site_term(C, sites):
     return sT * np.log10(vs30 / CONSTS['Vref'])
 
 
-def _get_stddevs(C, n_sites, stddev_types):
+def _get_stddevs(C):
     """
     Returns the standard deviations
     """
     # sigma_e and sigma_r are in log10 base, so we need to transform them
-    tau = np.log(10 ** C['sigma_e']) + np.zeros(n_sites)
-    phi = np.log(10 ** C['sigma_r']) + np.zeros(n_sites)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma = np.sqrt(tau ** 2.0 + phi ** 2.0)
-            stddevs.append(sigma)
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-    return stddevs
+    tau = np.log(10 ** C['sigma_e'])
+    phi = np.log(10 ** C['sigma_r'])
+    return [np.sqrt(tau ** 2.0 + phi ** 2.0), tau, phi]
 
 
 class IdiniEtAl2017SInter(GMPE):
@@ -159,27 +150,22 @@ class IdiniEtAl2017SInter(GMPE):
     #: M<7.7
     REQUIRES_DISTANCES = {'rrup','rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-
-        mean = (_get_magnitude_term(trt, C, rup) +
-                _get_distance_term(trt, C, rup, dists) +
-                _get_site_term(C, sites))
-        # Convert from log10 to ln
-        mean = np.log(10 ** mean)
-
-        stddevs = _get_stddevs(C, len(sites.vs30), stddev_types)
-
-        return mean, stddevs
+            mean[m] = (_get_magnitude_term(trt, C, ctx) +
+                       _get_distance_term(trt, C, ctx) +
+                       _get_site_term(C, ctx))
+            # Convert from log10 to ln
+            mean[m] = np.log(10 ** mean[m])
+            sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt	          c1	     c2	       c9	      c8	    dc1	      dc2	sigma_e	sigma_t	       c3	       c5	      dc3	sigma_r	     s2	     s3	     s4	     s5	     s6                         

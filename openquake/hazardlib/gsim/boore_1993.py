@@ -28,14 +28,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return total standard deviation.
-    """
-    stddevs = [np.zeros(num_sites) + C['sigma'] for _ in stddev_types]
-    return stddevs
-
-
 class BooreEtAl1993GSCBest(GMPE):
     """
     Implement equation used by the Geological Survey of Canada (GSC) for
@@ -72,33 +64,32 @@ class BooreEtAl1993GSCBest(GMPE):
     #: see paragraph 'Predictor Variables', page 6.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        mag = rup.mag - 6
-        d = np.sqrt(dists.rjb ** 2 + C['c7'] ** 2)
-        mean = np.zeros_like(d)
+            mag = ctx.mag - 6
+            d = np.sqrt(ctx.rjb ** 2 + C['c7'] ** 2)
 
-        mean += C['c1'] + C['c2'] * mag + C['c3'] * mag ** 2 + C['c6']
+            mean[m] += C['c1'] + C['c2'] * mag + C['c3'] * mag ** 2 + C['c6']
 
-        idx = d <= 100.
-        mean[idx] = mean[idx] + C['c5'] * np.log10(d[idx])
+            idx = d <= 100.
+            mean[m, idx] += C['c5'] * np.log10(d[idx])
 
-        idx = d > 100.
-        mean[idx] = (mean[idx] + C['c5'] * np.log10(100.) -
-                     np.log10(d[idx] / 100.) + C['c4'] * (d[idx] - 100.))
+            idx = d > 100.
+            mean[m, idx] += (C['c5'] * np.log10(100.) -
+                             np.log10(d[idx] / 100.) +
+                             C['c4'] * (d[idx] - 100.))
 
-        # convert from log10 to ln and from cm/s**2 to g
-        mean = np.log((10.0 ** (mean - 2.0)) / g)
+            # convert from log10 to ln and from cm/s**2 to g
+            mean[m] = np.log((10.0 ** (mean[m] - 2.0)) / g)
 
-        stddevs = _get_stddevs(C, stddev_types,  dists.rjb.shape[0])
-
-        return mean, stddevs
+            sig[m] = C['sigma']
 
     #: coefficient table provided by GSC
     COEFFS = CoeffsTable(sa_damping=5, table="""\

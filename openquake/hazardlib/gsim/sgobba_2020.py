@@ -48,7 +48,7 @@ CONSTS = {'Mh': 5.0,
           'PseudoDepth': 6.0}
 
 
-def _get_cluster_correction(dat, C, sites, rup, imt):
+def _get_cluster_correction(dat, C, ctx, imt):
     """
     Get cluster correction. The use can specify various options through
     the cluster parameter. The available options are:
@@ -61,7 +61,7 @@ def _get_cluster_correction(dat, C, sites, rup, imt):
         The code uses the correction for the given cluster
     """
     cluster = dat.cluster
-    shape = sites.vs30.shape
+    shape = ctx.vs30.shape
     correction = np.zeros_like(shape)
     # st.dev.
     tau_L2L = np.zeros(shape)
@@ -75,8 +75,8 @@ def _get_cluster_correction(dat, C, sites, rup, imt):
         return correction, tau_L2L, Bp_model, phi_P2P
     # the code finds the most appropriate correction
     if cluster is None:
-        mesh = Mesh(np.array([rup.ev_lon]), np.array([rup.ev_lat]))
-        # midp = rup.surface.get_middle_point()
+        mesh = Mesh(np.array([ctx.ev_lon]), np.array([ctx.ev_lat]))
+        # midp = ctx.surface.get_middle_point()
         # mesh = Mesh(np.array([midp.longitude]),np.array([midp.latitude]))
 
         for key in REGIONS:
@@ -119,12 +119,12 @@ def _get_cluster_correction(dat, C, sites, rup, imt):
         return correction, tau_L2L, Bp_model, phi_P2P
 
 
-def _get_distance_term(C, mag, dists):
+def _get_distance_term(C, mag, ctx):
     """
     Eq.3 - page 3
     """
     term1 = C['c1'] * (mag - C['mref']) + C['c2']
-    tmp = np.sqrt(dists.rjb**2 + CONSTS['PseudoDepth']**2)
+    tmp = np.sqrt(ctx.rjb**2 + CONSTS['PseudoDepth']**2)
     term2 = np.log10(tmp / CONSTS['Rref'])
     term3 = C['c3']*(tmp - CONSTS['Rref'])
     return term1 * term2 + term3
@@ -210,8 +210,8 @@ class SgobbaEtAl2020(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set()
+    #: Required site parameters are lon and lat
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat'}
 
     #: Required rupture parameters is magnitude, ev_lat, ev_lon
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ev_lat', 'ev_lon'}
@@ -253,44 +253,45 @@ class SgobbaEtAl2020(GMPE):
         fname = os.path.join(DATA_FOLDER, "beta_dS2S.csv")
         self.betaS2S = np.loadtxt(fname, delimiter=",", skiprows=1)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Eq.1 - page 2
         """
-        # Ergodic coeffs
-        C = self.COEFFS[imt]
-        # between-event
-        if self.event_id is not None:
-            label = "dBe_{:s}".format(str(imt))
-            self.be = self.df.loc[self.event_id][label]
-            self.be_std = 0.0
-        else:
-            self.be_std = C['tau_ev']
-            self.be = 0.0
-        # Site correction
-        tmp = [[s.location.longitude, s.location.latitude] for s in sites]
-        dsts, idxs = self.kdt.query(np.array(tmp))
-        dat = Data(self.Smodel, self.cluster, self.PERIODS, self.betaS2S, idxs)
-        sc = 0
-        phi_S2Sref = C['phi_S2S_ref']
-        Bs_model = np.zeros(sites.vs30.shape)
-        if self.site and self.bedrock is False:
-            sc, Bs_model, phi_S2Sref = _get_site_correction(
-                dat, sites.vs30.shape, imt)
+        for m, imt in enumerate(imts):
+            # Ergodic coeffs
+            C = self.COEFFS[imt]
+            # between-event
+            if self.event_id is not None:
+                label = "dBe_{:s}".format(str(imt))
+                self.be = self.df.loc[self.event_id][label]
+                self.be_std = 0.0
+            else:
+                self.be_std = C['tau_ev']
+                self.be = 0.0
+            # Site correction
+            points = np.array([ctx.lon, ctx.lat]).T  # shape (N, 2)
+            dsts, idxs = self.kdt.query(points)
+            dat = Data(self.Smodel, self.cluster, self.PERIODS,
+                       self.betaS2S, idxs)
+            sc = 0
+            phi_S2Sref = C['phi_S2S_ref']
+            Bs_model = np.zeros(ctx.vs30.shape)
+            if self.site and self.bedrock is False:
+                sc, Bs_model, phi_S2Sref = _get_site_correction(
+                    dat, ctx.vs30.shape, imt)
 
-        cc, tau_L2L, Bp_model, phi_P2P = _get_cluster_correction(
-            dat, C, sites, rup, imt)
-        # Get mean
-        mean = (C['a'] + _get_magnitude_term(C, rup.mag) +
-                _get_distance_term(C, rup.mag, dists) +
-                sc + cc + self.be)
-        # To natural logarithm and fraction of g
-        mean = np.log(10.0**mean/(gravity_acc*100))
-        # Get stds
-        stds = np.sqrt(C['sigma_0'] ** 2 + self.be_std ** 2 + tau_L2L ** 2 +
-                       Bs_model + phi_S2Sref ** 2 + Bp_model + phi_P2P ** 2)
-        stds = np.log(10.0 ** np.array(stds))
-        return mean, stds
+            cc, tau_L2L, Bp_model, phi_P2P = _get_cluster_correction(
+                dat, C, ctx, imt)
+            # Get mean
+            mean[m] = (C['a'] + _get_magnitude_term(C, ctx.mag) +
+                       _get_distance_term(C, ctx.mag, ctx) +
+                       sc + cc + self.be)
+            # To natural logarithm and fraction of g
+            mean[m] = np.log(10.0**mean[m] / (gravity_acc*100))
+            # Get stds
+            std = np.sqrt(C['sigma_0'] ** 2 + self.be_std ** 2 + tau_L2L ** 2 +
+                          Bs_model + phi_S2Sref ** 2 + Bp_model + phi_P2P ** 2)
+            sig[m] = np.log(10.0 ** std)
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
     IMT                a                   b1                  b2                   c1                   c2                    c3                     mref               tau_ev              tau_L2L               phi_S2S_ref   phi_S2S              phi_P2P             sigma_0            dL2L_cluster1          dL2L_cluster4         dL2L_cluster5

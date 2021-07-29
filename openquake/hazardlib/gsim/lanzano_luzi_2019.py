@@ -28,21 +28,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return standard deviations components.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['phi'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
-
-
 def _compute_distance(rval2, C, kind):
     """
     Compute the distance function
@@ -58,28 +43,28 @@ def _compute_distance(rval2, C, kind):
     raise ValueError(kind)
 
 
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     Compute the magnitude function, equation (9):
     """
-    return C['a'] + C['b'] * rup.mag
+    return C['a'] + C['b'] * ctx.mag
 
 
-def _get_site_amplification(sites, C):
+def _get_site_amplification(ctx, C):
     """
     Compute the site amplification function given by FS = eiSi, for
     i = 1,2,3 where Si are the coefficients determined through regression
     analysis, and ei are dummy variables (0 or 1) used to denote the
     different EC8 site classes.
     """
-    ssb, ssc = _get_site_type_dummy_variables(sites)
+    ssb, ssc = _get_site_type_dummy_variables(ctx)
 
     return (C['sB'] * ssb) + (C['sC'] * ssc)
 
 
-def _get_site_type_dummy_variables(sites):
+def _get_site_type_dummy_variables(ctx):
     """
-    Get site type dummy variables, which classified the sites into
+    Get site type dummy variables, which classified the ctx into
     different site classes based on the shear wave velocity in the
     upper 30 m (Vs30) according to the EC8 (CEN 2003):
     class A: Vs30 > 800 m/s
@@ -87,13 +72,13 @@ def _get_site_type_dummy_variables(sites):
     class C: Vs30 = 180 - 360 m/s
     class D: Vs30 < 180 m/s
     """
-    ssb = np.zeros(len(sites.vs30))
-    ssc = np.zeros(len(sites.vs30))
+    ssb = np.zeros(len(ctx.vs30))
+    ssc = np.zeros(len(ctx.vs30))
     # Class C; Vs30 < 360 m/s.
-    idx = (sites.vs30 < 360.0)
+    idx = (ctx.vs30 < 360.0)
     ssc[idx] = 1.0
     # Class B; 360 m/s <= Vs30 <= 800 m/s.
-    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800.0)
+    idx = (ctx.vs30 >= 360.0) & (ctx.vs30 < 800.0)
     ssb[idx] = 1.0
 
     return ssb, ssc
@@ -143,31 +128,29 @@ class LanzanoLuzi2019shallow(GMPE):
     #: Required distance measure is Rhypo.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_distance(dists.rhypo, C, self.kind) +
-                 _get_site_amplification(sites, C))
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(ctx.rhypo, C, self.kind) +
+                     _get_site_amplification(ctx, C))
 
-        istddevs = _get_stddevs(C, stddev_types, sites.vs30.size)
+            istddevs = [C['sigma'], C['phi'], C['tau']]
 
-        # Convert units to g, but only for PGA and SA (not PGV)
-        if imt.string.startswith(("SA", "PGA")):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:  # PGV:
-            mean = np.log(10.0 ** imean)
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
-        return mean, stddevs
+            # Convert units to g, but only for PGA and SA (not PGV)
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:  # PGV:
+                mean[m] = np.log(10.0 ** imean)
+            # Return stddevs in terms of natural log scaling
+            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+            # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
     # Sigma values in log10
     COEFFS = CoeffsTable(sa_damping=5, table="""
