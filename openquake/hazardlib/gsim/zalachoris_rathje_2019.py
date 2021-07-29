@@ -20,12 +20,12 @@
 Module exports :class:'ZalachorisRathje2019'
 """
 import numpy as np
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.boore_2014 import (
-    BooreEtAl2014, _get_magnitude_scaling_term,
-    _get_path_scaling, _get_site_scaling, _get_pga_on_rock)
+    _get_magnitude_scaling_term, _get_path_scaling, _get_site_scaling,
+    _get_pga_on_rock)
 
 
 def _get_C2_term(Cadj, rjb):
@@ -70,43 +70,35 @@ def _get_ZR19_magnitude_term(C_ZR19, mag):
     return FM
 
 
-def _get_ZR19_site_term(C_ZR19, sites):
+def _get_ZR19_site_term(C_ZR19, ctx):
     """
     Returns the amplification factor, based on vs30
     """
     Vc_ = C_ZR19["Vc"]
-    FS = np.zeros_like(sites.vs30)
-    FS[sites.vs30 < Vc_] = (
-        C_ZR19["c"] * np.log(sites.vs30[sites.vs30 < Vc_]/Vc_))
+    FS = np.zeros_like(ctx.vs30)
+    FS[ctx.vs30 < Vc_] = (
+        C_ZR19["c"] * np.log(ctx.vs30[ctx.vs30 < Vc_]/Vc_))
     return FS
 
 
-def _get_stddevs(C_ZR19, num_sites, stddev_types):
+def _get_stddevs(C_ZR19):
     """
     Return standard deviations, in ln units [g]
     """
     # the units for PGV are not clearly stated in the paper,
     # assumed here cm/s
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C_ZR19["sigma"] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C_ZR19["tau"] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C_ZR19["phi"] + np.zeros(num_sites))
-    return stddevs
+    return [C_ZR19["sigma"], C_ZR19["tau"], C_ZR19["phi"]]
 
 
-def get_FENA(Cadj, rup, dists, imt):
+def get_FENA(Cadj, ctx, imt):
     """
     See :meth:`superclass method
-    <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+    <.base.GroundShakingIntensityModel.compute>`
     for spec of input and result values.
     """
 
-    imean = (Cadj["C1"] + _get_C2_term(Cadj, dists.rjb) +
-             _get_C3_term(Cadj, dists.rjb))
+    imean = (Cadj["C1"] + _get_C2_term(Cadj, ctx.rjb) +
+             _get_C3_term(Cadj, ctx.rjb))
 
     # Convert from log10 to ln
     if imt.string.startswith(("SA", "PGA")):
@@ -116,7 +108,7 @@ def get_FENA(Cadj, rup, dists, imt):
     return FENA
 
 
-class ZalachorisRathje2019(BooreEtAl2014):
+class ZalachorisRathje2019(GMPE):
     """
     Implements the Induced Seismicity GMPE of Zalachoris & Rathje (2019)
     for Texas, Oklahoma and Kansas.
@@ -156,47 +148,47 @@ class ZalachorisRathje2019(BooreEtAl2014):
     #: not verified warning
     non_verified = False
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    region = "nobasin"
+    kind = "base"
+    sof = True
+
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_BSSA14[imt]
         C_PGA = self.COEFFS_BSSA14[PGA()]
-
-        Cadj = self.COEFFS_HA15[imt]
-        C_ZR19 = self.COEFFS_ZR19[imt]
-
-        imt_per = 0 if imt.string == 'PGV' else imt.period
         pga_rock = _get_pga_on_rock(self.kind, self.region, self.sof,
-                                    C_PGA, rup)
-        mean_BSSA14 = (
-            _get_magnitude_scaling_term(self.sof, C, rup) +
-            _get_path_scaling(self.kind, self.region, C, dists, rup.mag) +
-            _get_site_scaling(self.kind, self.region, C, pga_rock, sites,
-                              imt_per, dists.rjb))
+                                    C_PGA, ctx)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS_BSSA14[imt]
+            Cadj = self.COEFFS_HA15[imt]
+            C_ZR19 = self.COEFFS_ZR19[imt]
+            imt_per = 0 if imt.string == 'PGV' else imt.period
 
-        FZR19 = (_get_ZR19_magnitude_term(C_ZR19, rup.mag) +
-                 _get_ZR19_distance_term(C_ZR19, dists.rhypo) +
-                 _get_ZR19_site_term(C_ZR19, sites))
+            mean_BSSA14 = (
+                _get_magnitude_scaling_term(self.sof, C, ctx) +
+                _get_path_scaling(self.kind, self.region, C, ctx, ctx.mag) +
+                _get_site_scaling(self.kind, self.region, C, pga_rock, ctx,
+                                  imt_per, ctx.rjb))
 
-        # add HA15, all in ln units
-        mean = mean_BSSA14 + get_FENA(Cadj, rup, dists, imt)
+            FZR19 = (_get_ZR19_magnitude_term(C_ZR19, ctx.mag) +
+                     _get_ZR19_distance_term(C_ZR19, ctx.rhypo) +
+                     _get_ZR19_site_term(C_ZR19, ctx))
 
-        # add ZR19, all in ln units
-        mean = mean + FZR19
+            # add HA15, all in ln units
+            mean[m] = mean_BSSA14 + get_FENA(Cadj, ctx, imt)
 
-        stddevs = _get_stddevs(C_ZR19, len(dists.rjb), stddev_types)
+            # add ZR19, all in ln units
+            mean[m] += FZR19
 
-        return mean, stddevs
+            sig[m], tau[m], phi[m] = _get_stddevs(C_ZR19)
 
     #: terms for HA15
     #: terms for ZR19
     #: coeffs for BSSA14
-    #: fewer decimals used for BSSA14 by Zalachoris compared to the original 
+    #: fewer decimals used for BSSA14 by Zalachoris compared to the original
     #: values
     COEFFS_BSSA14 = CoeffsTable(sa_damping=5, table="""\
     IMT		e0          e1          e2          e3 			e4          e5          e6          Mh          c1          c2          c3          h           Dc3         c           Vc              f4          f5          f6          f7          R1          R2          DfR         DfV         f1          f2          t1          t2

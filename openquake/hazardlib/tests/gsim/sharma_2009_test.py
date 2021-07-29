@@ -81,6 +81,7 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         ctx.mag = np.array([6.5])
         ctx.rjb = np.array([100.])
         ctx.vs30 = np.array([2000.])
+        ctx.sids = [0]
         im_type = sorted(gmpe.COEFFS.sa_coeffs)[0]
         std_types = list(gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 
