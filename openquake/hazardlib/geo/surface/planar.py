@@ -165,6 +165,9 @@ class PlanarSurface(BaseSurface):
     @classmethod
     def from_hypocenter(cls, hypoc, msr, mag, aratio, strike, dip, rake):
         """
+        Create and return a planar surface given the hypocenter location
+        and other rupture properties.
+
         :param hypoc:
             An instance of :class: `openquake.hazardlib.geo.point.Point`
         :param msr:
@@ -182,29 +185,37 @@ class PlanarSurface(BaseSurface):
             The rupture rake
 
         """
-        area = msr.get_median_area(mag, rake)
-        width = (area / aratio)**0.5
-        length = aratio * width
-
-        mr = point_at(hypoc.longitude, hypoc.latitude, strike, length/2)
-        ml = point_at(hypoc.longitude, hypoc.latitude, (strike+180) % 360,
-                      length/2)
+        lon = hypoc.longitude
+        lat = hypoc.latitude
         depth = hypoc.depth
 
-        dipra = numpy.radians(dip)
-        dx = width * numpy.cos(dipra)
-        dy = width * numpy.sin(dipra)
+        area = msr.get_median_area(mag, rake)
+        width = (area / aratio) ** 0.5
+        length = width * aratio
 
-        tr = point_at(mr[0], mr[1], (strike-90) % 360, dx)
-        br = point_at(mr[0], mr[1], (strike+90) % 360, dx)
-        tl = point_at(ml[0], ml[1], (strike-90) % 360, dx)
-        bl = point_at(ml[0], ml[1], (strike+90) % 360, dx)
+        height = width * numpy.sin(numpy.radians(dip))
+        hdist = width * numpy.cos(numpy.radians(dip))
+        # Move hor. 1/2 hdist in direction -90
+        mid_top = point_at(lon, lat, strike - 90, hdist / 2)
+        # Move hor. 1/2 hdist in direction +90
+        mid_bot = point_at(lon, lat, strike + 90, hdist / 2)
 
-        self = cls(strike, dip, Point(tl[0], tl[1], depth-dy),
-                   Point(tr[0], tr[1], depth-dy),
-                   Point(br[0], br[1], depth+dy),
-                   Point(bl[0], bl[1], depth+dy))
+        # compute corner points at the surface
+        top_right = point_at(mid_top[0], mid_top[1], strike, length / 2)
+        top_left = point_at(mid_top[0], mid_top[1],
+            strike + 180, length / 2)
+        bot_right = point_at(mid_bot[0], mid_bot[1], strike, length/2)
+        bot_left = point_at(mid_bot[0], mid_bot[1],
+            strike + 180, length / 2)
 
+        # compute corner points in 3D
+        pbl = Point(bot_left[0], bot_left[1], depth + height / 2)
+        pbr = Point(bot_right[0], bot_right[1], depth + height / 2)
+        hei = depth - height / 2
+        ptl = Point(top_left[0], top_left[1], hei)
+        ptr = Point(top_right[0], top_right[1], hei)
+
+        self = cls(strike, dip, ptl, ptr, pbr, pbl)
         return self
 
     @classmethod
