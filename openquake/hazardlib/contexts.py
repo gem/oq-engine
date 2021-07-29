@@ -146,7 +146,17 @@ def use_recarray(gsims):
 
 class ContextMaker(object):
     """
-    A class to manage the creation of contexts for distances, sites, rupture.
+    A class to manage the creation of contexts and to compute mean/stddevs
+    and possibly PoEs.
+
+    :param trt: a tectonic region type string
+    :param gsims: a list of GSIMs or a dictionary gsim -> rlz indices
+    :param param:
+       a dictionary of parameters like the maximum_distance, the IMTLs,
+       the investigation time, etc
+
+    NB: the trt can be different from the tectonic region type for which
+    the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
     rup_indep = True
