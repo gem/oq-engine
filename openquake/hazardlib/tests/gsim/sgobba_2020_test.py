@@ -34,7 +34,12 @@ DATA_FOLDER2 = os.path.join(
     os.path.dirname(__file__), '..', '..', 'gsim', 'sgobba_2020')
 
 
-def get_ctx(row, rjb, locs):
+def get_ctx(subset_df):
+    locs = []
+    rjb = []
+    for idx, row in subset_df.iterrows():
+        locs.append(Point(row.lon_sites, row.lat_sites))
+        rjb.append(row.dist_jb)
     sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
     rup = Dummy.get_rupture(
         mag=row.rup_mag, ev_lat=row.lat_epi, ev_lon=row.lon_epi)
@@ -50,18 +55,6 @@ def get_epicenters(df):
         if x not in epicenters:
             epicenters.append(x)
     return epicenters
-
-
-def get_parameters(subset_df):
-    locs = []
-    rjb = []
-    bedrock = False
-    for idx, row in subset_df.iterrows():
-        locs.append(Point(row.lon_sites, row.lat_sites))
-        rjb.append(row.dist_jb)
-        if row.flag_bedrock == 1:
-            bedrock = True
-    return bedrock, row, rjb, locs
 
 
 def check(gmm, tags, ctx, subset_df, sigma):
@@ -97,8 +90,7 @@ class Sgobba2020Test(unittest.TestCase):
             LAT = epicenters[i].y
             idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON))
             subset_df = df.loc[idx]
-            bedrock, row, rjb, locs = get_parameters(subset_df)
-            ctx = get_ctx(row, rjb, locs)
+            ctx = get_ctx(subset_df)
             # Instantiate the GMM
             gmmref = SgobbaEtAl2020(cluster=0)
             # Computes results for the non-ergodic model
@@ -137,8 +129,7 @@ class Sgobba2020Test(unittest.TestCase):
                     ev_id = None
                 print('event_id: '+str(ev_id))
                 print('flag_bedrock: '+str(i))
-                bedrock, row, rjb, locs = get_parameters(subset_df)
-                ctx = get_ctx(row, rjb, locs)
+                ctx = get_ctx(subset_df)
                 # Instantiate the GMM
                 gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
                 # cluster=None because cluster has to be automatically detected
@@ -177,8 +168,7 @@ class Sgobba2020Test(unittest.TestCase):
                     ev_id = None
                 print('event_id: '+str(ev_id))
                 print('flag_bedrock: '+str(i))
-                bedrock, row, rjb, locs = get_parameters(subset_df)
-                ctx = get_ctx(row, rjb, locs)
+                ctx = get_ctx(subset_df)
                 # Instantiate the GMM
                 gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
                 # cluster=None because cluster has to be automatically detected
