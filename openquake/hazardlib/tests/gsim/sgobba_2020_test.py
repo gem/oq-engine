@@ -79,30 +79,19 @@ def check(gmm, tags, ctx, subset_df, sigma):
 class Sgobba2020Test(unittest.TestCase):
 
     def test_ERGODIC(self):
-        # Read dataframe with information
         fname = 'ValidationTable_MEAN_ERG_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         epicenters = get_epicenters(df)
-
-        # For each event check Validation
-        for i in range(len(epicenters)):
-            LON = epicenters[i].x
-            LAT = epicenters[i].y
-            idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON))
+        for epi in epicenters:
+            idx = (df['lat_epi'] == epi.y) & (df['lon_epi'] == epi.x)
             subset_df = df.loc[idx]
             ctx = get_ctx(subset_df)
-            # Instantiate the GMM
-            gmmref = SgobbaEtAl2020(cluster=0)
-            # Computes results for the non-ergodic model
             tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
-            check(gmmref, tags, ctx, subset_df, sigma=False)
+            check(SgobbaEtAl2020(cluster=0), tags, ctx, subset_df, sigma=False)
 
     def test_NON_ERGODIC(self):
-
-        # Read dataframe with information
         fname = 'ValidationTable_MEAN_NERG_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
-        # Read dataframe with information
         fname2 = 'event.csv'
         df2 = pd.read_csv(os.path.join(DATA_FOLDER2, fname2), dtype={'id': str})
         epicenters = get_epicenters(df)
