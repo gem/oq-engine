@@ -55,21 +55,11 @@ def get_site_amplification(C, vs30):
     return C["v1"] * np.log(vs30)
 
 
-def get_stddevs(C, nsites, stddev_types):
+def get_stddevs(C):
     """
     Returns the standard deviations
     """
-    stddevs = []
-    zeros_array = np.zeros(nsites)
-    for stddev in stddev_types:
-        if stddev == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(C["tau"] ** 2. + C["phi"] ** 2.) +
-                           zeros_array)
-        elif stddev == const.StdDev.INTER_EVENT:
-            stddevs.append(C["tau"] + zeros_array)
-        elif stddev == const.StdDev.INTRA_EVENT:
-            stddevs.append(C["phi"] + zeros_array)
-    return stddevs
+    return [np.sqrt(C["tau"] ** 2. + C["phi"] ** 2.), C["tau"], C["phi"]]
 
 
 class BommerEtAl2009RSD(GMPE):
@@ -101,20 +91,20 @@ class BommerEtAl2009RSD(GMPE):
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = (get_magnitude_term(C, rup.mag) +
-                get_distance_term(C, dists.rrup, rup.mag) +
-                get_ztor_term(C, rup.ztor) +
-                get_site_amplification(C, sites.vs30))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (get_magnitude_term(C, ctx.mag) +
+                       get_distance_term(C, ctx.rrup, ctx.mag) +
+                       get_ztor_term(C, ctx.ztor) +
+                       get_site_amplification(C, ctx.vs30))
 
-        stddevs = get_stddevs(C, dists.rrup.shape, stddev_types)
-        return mean, stddevs
+            sig[m], tau[m], phi[m] = get_stddevs(C)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          c0       m1      r1       r2      h1       v1       z1     tau     phi

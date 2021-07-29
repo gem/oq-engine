@@ -34,7 +34,7 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, block_splitter, RecordBuilder)
+    AccumDict, DictArray, groupby, RecordBuilder)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -146,7 +146,17 @@ def use_recarray(gsims):
 
 class ContextMaker(object):
     """
-    A class to manage the creation of contexts for distances, sites, rupture.
+    A class to manage the creation of contexts and to compute mean/stddevs
+    and possibly PoEs.
+
+    :param trt: a tectonic region type string
+    :param gsims: a list of GSIMs or a dictionary gsim -> rlz indices
+    :param param:
+       a dictionary of parameters like the maximum_distance, the IMTLs,
+       the investigation time, etc
+
+    NB: the trt can be different from the tectonic region type for which
+    the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
     rup_indep = True
@@ -516,6 +526,8 @@ class ContextMaker(object):
                     stypes = (StdDev.TOTAL,)
                 else:
                     stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
+            elif stdtype == StdDev.ALL:
+                stypes = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             else:
                 stypes = (stdtype,)
             S = len(stypes)
@@ -877,6 +889,32 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
+def full_context(sites, rup, dctx=None):
+    """
+    :returns: a full RuptureContext with all the relevant attributes
+    """
+    self = RuptureContext()
+    for par, val in vars(rup).items():
+        setattr(self, par, val)
+    for par in sites.array.dtype.names:
+        setattr(self, par, sites[par])
+    if dctx:
+        for par, val in vars(dctx).items():
+            setattr(self, par, val)
+    return self
+
+
+def get_mean_stds(gsims, ctx, imts, stdtype):
+    """
+    :returns:
+        a list of G arrays of shape (O, M, N) obtained by applying the
+        given gsims, ctx amd imts
+    """
+    imtls = {imt.string: [0] for imt in imts}
+    cmaker = ContextMaker('*', gsims, {'imtls': imtls})
+    return cmaker.get_mean_stds([ctx], stdtype)
+
+
 # mock of a rupture used in the tests and in the SMTK
 class RuptureContext(BaseContext):
     """
@@ -893,21 +931,6 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
-
-    @classmethod
-    def full(cls, rup, sites, dctx=None):
-        """
-        :returns: a full context with all the relevant attributes
-        """
-        self = cls()
-        for par, val in vars(rup).items():
-            setattr(self, par, val)
-        for par in sites.array.dtype.names:
-            setattr(self, par, sites[par])
-        if dctx:
-            for par, val in vars(dctx).items():
-                setattr(self, par, val)
-        return self
 
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:

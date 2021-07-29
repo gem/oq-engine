@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -46,9 +46,9 @@
 # liability for use of the software.
 
 '''
-Module: openquake.hmtk.faults.fault_model implements the set of classes to allow for a
-calculation of the magnitude frequency distribution from the geological
-slip rate
+Module: openquake.hmtk.faults.fault_model implements the set of classes
+to allow for a calculation of the magnitude frequency distribution from
+the geological slip rate
 '''
 import numpy as np
 from math import fabs
@@ -186,7 +186,8 @@ class mtkActiveFault(object):
     :param str name:
         Fault Name
     :param geometry:
-        Instance of :class:`openquake.hmtk.faults.fault_model.SimpleFaultGeometry` or
+        Instance of
+        :class:`openquake.hmtk.faults.fault_model.SimpleFaultGeometry` or
         :class:`openquake.hmtk.faults.fault_model.ComplexFaultGeometry`
     :param list slip_rate:
         Slip rate (mm/yr) as list of tuples [(Value, Weight)]
@@ -195,7 +196,8 @@ class mtkActiveFault(object):
     :param float rake:
         Rake of the fault slip (degrees)
     :param neotectonic_fault:
-        Instance of :class:`openquake.hmtk.faults.faulted_earth.NeotectonicFault`
+        Instance of
+        :class:`openquake.hmtk.faults.faulted_earth.NeotectonicFault`
     :param str trt:
         Tectonic region type
     :param scale_rel:
@@ -237,8 +239,9 @@ class mtkActiveFault(object):
         cond = (not isinstance(geometry, SimpleFaultGeometry) and
                 not isinstance(geometry, ComplexFaultGeometry))
         if cond:
-            raise IOError('Geometry must be instance of '
-                          'openquake.hmtk.faults.fault_geometries.BaseFaultGeometry')
+            msg = ('Geometry must be instance of ' +
+                   'openquake.hmtk.faults.fault_geometries.BaseFaultGeometry')
+            raise IOError(msg)
 
         self.geometry = geometry
         self.aseismic = aseismic
@@ -277,7 +280,7 @@ class mtkActiveFault(object):
         '''
         if region_type:
             self.trt = region_type
-        if not self.trt in regionalisation.key_list:
+        if self.trt not in regionalisation.key_list:
             raise ValueError('Tectonic region classification missing or '
                              'not defined in regionalisation')
 

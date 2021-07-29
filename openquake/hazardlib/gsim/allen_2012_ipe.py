@@ -60,19 +60,6 @@ def _compute_magnitude_term(C, mag):
     return C["c0"] + (C["c1"] * mag)
 
 
-def _get_stddevs(C, distance, stddev_types):
-    """
-    Returns the total standard deviation, which is a function of distance
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma = C["s1"] + (C["s2"] / (1.0 +
-                               ((distance / C["s3"]) ** 2.)))
-            stddevs.append(sigma + np.zeros_like(distance))
-    return stddevs
-
-
 class AllenEtAl2012(GMPE):
     """
     Implements the Intensity Prediction Equation of Allen, Wald and Worden
@@ -106,19 +93,20 @@ class AllenEtAl2012(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        [dist_type] = self.REQUIRES_DISTANCES
-        dist = getattr(dists, dist_type)
-        mean = (_compute_magnitude_term(C, rup.mag) +
-                _compute_distance_term(dist_type, C, dist, rup.mag))
-        stddevs = _get_stddevs(C, dist, stddev_types)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            [dist_type] = self.REQUIRES_DISTANCES
+            dist = getattr(ctx, dist_type)
+            mean[m] = (_compute_magnitude_term(C, ctx.mag) +
+                       _compute_distance_term(dist_type, C, dist, ctx.mag))
+            # the total standard deviation, which is a function of distance
+            sig[m] = C["s1"] + C["s2"] / (1.0 + (dist / C["s3"]) ** 2.)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     c0     c1      c2     c3    s1     s2    s3

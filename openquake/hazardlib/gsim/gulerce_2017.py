@@ -43,7 +43,7 @@ CONSTS = {
     'h3': -0.75}
 
 
-def _get_basic_term(C, rup, dists):
+def _get_basic_term(C, ctx):
     """
     Compute and return basic form, see Equation 11 to 13.
     """
@@ -51,37 +51,37 @@ def _get_basic_term(C, rup, dists):
     # the c4m function is shifted to M6.0.
     # The equation for c4m for M4.0-6.0 is different from GKAS16 EQS paper,
     # but used the supplementary material instead after code verification.
-    if rup.mag > 6.:
+    if ctx.mag > 6.:
         c4m = C['c4']
-    elif rup.mag > 4.:
-        c4m = C['c4'] - ((C['c4'] - 1.) * (6. - rup.mag) / (6. - 4.))
+    elif ctx.mag > 4.:
+        c4m = C['c4'] - ((C['c4'] - 1.) * (6. - ctx.mag) / (6. - 4.))
     else:
         c4m = 1.
     # Equation 12
-    R = np.sqrt(dists.rrup**2. + c4m**2.)
+    R = np.sqrt(ctx.rrup**2. + c4m**2.)
     # basic form, Equation 11
-    base_term = C['a1'] * np.ones_like(dists.rrup) + C['a17'] * dists.rrup
+    base_term = C['a1'] * np.ones_like(ctx.rrup) + C['a17'] * ctx.rrup
 
-    if rup.mag >= CONSTS['m1']:
-        base_term += (C['a5'] * (rup.mag - CONSTS['m1']) +
-                      C['a8'] * (8.5 - rup.mag)**2. +
-                      (C['a2'] + C['a3'] * (rup.mag - CONSTS['m1'])) *
+    if ctx.mag >= CONSTS['m1']:
+        base_term += (C['a5'] * (ctx.mag - CONSTS['m1']) +
+                      C['a8'] * (8.5 - ctx.mag)**2. +
+                      (C['a2'] + C['a3'] * (ctx.mag - CONSTS['m1'])) *
                       np.log(R))
-    elif rup.mag >= CONSTS['m2']:
-        base_term += (C['a4'] * (rup.mag - CONSTS['m1']) +
-                      C['a8'] * (8.5 - rup.mag)**2. +
-                      (C['a2'] + C['a3'] * (rup.mag - CONSTS['m1'])) *
+    elif ctx.mag >= CONSTS['m2']:
+        base_term += (C['a4'] * (ctx.mag - CONSTS['m1']) +
+                      C['a8'] * (8.5 - ctx.mag)**2. +
+                      (C['a2'] + C['a3'] * (ctx.mag - CONSTS['m1'])) *
                       np.log(R))
     else:
         base_term += (C['a4'] * (CONSTS['m2'] - CONSTS['m1']) +
                       C['a8'] * (8.5 - CONSTS['m2'])**2. +
-                      C['a6'] * (rup.mag - CONSTS['m2']) +
+                      C['a6'] * (ctx.mag - CONSTS['m2']) +
                       (C['a2'] + C['a3'] * (
                           CONSTS['m2'] - CONSTS['m1'])) * np.log(R))
     return base_term
 
 
-def _get_faulting_style_term(C, rup):
+def _get_faulting_style_term(C, ctx):
     """
     Compute and return faulting style term, that is the sum of the second
     and third terms in Equation 1.
@@ -89,71 +89,71 @@ def _get_faulting_style_term(C, rup):
     # this implements Equations 3 and 4;
     # f7 is the term for reverse fault mechanisms;
     # f8 is the term for normal fault mechanisms.
-    if rup.mag > 5.:
+    if ctx.mag > 5.:
         f7 = C['a11']
         f8 = C['a12']
-    elif rup.mag >= 4.:
-        f7 = C['a11'] * (rup.mag - 4.)
-        f8 = C['a12'] * (rup.mag - 4.)
+    elif ctx.mag >= 4.:
+        f7 = C['a11'] * (ctx.mag - 4.)
+        f8 = C['a12'] * (ctx.mag - 4.)
     else:
         f7 = 0.0
         f8 = 0.0
     # ranges of rake values for each faulting mechanism are same with ASK14
-    return (f7 * float(rup.rake > 30 and rup.rake < 150) +
-            f8 * float(rup.rake > -150 and rup.rake < -30))
+    return (f7 * float(ctx.rake > 30 and ctx.rake < 150) +
+            f8 * float(ctx.rake > -150 and ctx.rake < -30))
 
 
-def _get_hanging_wall_term(C, dists, rup):
+def _get_hanging_wall_term(C, ctx):
     """
     Compute and return hanging wall model term, see section on
     "Hanging Wall Effects".
     """
-    if rup.dip == 90.0:
-        return np.zeros_like(dists.rx)
+    if ctx.dip == 90.0:
+        return np.zeros_like(ctx.rx)
     else:
-        Fhw = np.zeros_like(dists.rx)
-        Fhw[dists.rx > 0] = 1.
+        Fhw = np.zeros_like(ctx.rx)
+        Fhw[ctx.rx > 0] = 1.
         # Compute dip taper t1, Equation 6
-        T1 = np.ones_like(dists.rx)
-        T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
+        T1 = np.ones_like(ctx.rx)
+        T1 *= 60./45. if ctx.dip <= 30. else (90.-ctx.dip)/45.0
         # Compute magnitude taper t2, Equation 7, with a2hw set to 0.2.
-        T2 = np.zeros_like(dists.rx)
+        T2 = np.zeros_like(ctx.rx)
         a2hw = 0.2
-        if rup.mag >= 6.5:
-            T2 += (1. + a2hw * (rup.mag - 6.5))
-        elif rup.mag > 5.5:
-            T2 += (1. + a2hw * (rup.mag - 6.5) - (1. - a2hw) *
-                   (rup.mag - 6.5)**2)
+        if ctx.mag >= 6.5:
+            T2 += (1. + a2hw * (ctx.mag - 6.5))
+        elif ctx.mag > 5.5:
+            T2 += (1. + a2hw * (ctx.mag - 6.5) - (1. - a2hw) *
+                   (ctx.mag - 6.5)**2)
         else:
             T2 *= 0.
         # Compute distance taper t3, Equation 8
-        T3 = np.zeros_like(dists.rx)
-        r1 = rup.width * np.cos(np.radians(rup.dip))
+        T3 = np.zeros_like(ctx.rx)
+        r1 = ctx.width * np.cos(np.radians(ctx.dip))
         # The r2 term is different here from ASK14 where r2 = 3*r1.
         r2 = 4. * r1
         #
-        idx = dists.rx < r1
-        T3[idx] = (np.ones_like(dists.rx)[idx] * CONSTS['h1'] +
-                   CONSTS['h2'] * (dists.rx[idx] / r1) +
-                   CONSTS['h3'] * (dists.rx[idx] / r1)**2)
+        idx = ctx.rx < r1
+        T3[idx] = (np.ones_like(ctx.rx)[idx] * CONSTS['h1'] +
+                   CONSTS['h2'] * (ctx.rx[idx] / r1) +
+                   CONSTS['h3'] * (ctx.rx[idx] / r1)**2)
         #
-        idx = ((dists.rx >= r1) & (dists.rx <= r2))
-        T3[idx] = 1. - (dists.rx[idx] - r1) / (r2 - r1)
+        idx = ((ctx.rx >= r1) & (ctx.rx <= r2))
+        T3[idx] = 1. - (ctx.rx[idx] - r1) / (r2 - r1)
         # Compute depth taper t4, Equation 9
-        T4 = np.zeros_like(dists.rx)
+        T4 = np.zeros_like(ctx.rx)
         #
-        if rup.ztor <= 10.:
-            T4 += (1. - rup.ztor**2. / 100.)
+        if ctx.ztor <= 10.:
+            T4 += (1. - ctx.ztor**2. / 100.)
         # Compute off-edge distance taper T5, Equation 10
         # ry1 computed same as in ASK14
-        T5 = np.zeros_like(dists.rx)
-        ry1 = dists.rx * np.tan(np.radians(20.))
+        T5 = np.zeros_like(ctx.rx)
+        ry1 = ctx.rx * np.tan(np.radians(20.))
         #
-        idx = (dists.ry0 - ry1) <= 0.0
+        idx = (ctx.ry0 - ry1) <= 0.0
         T5[idx] = 1.
         #
-        idx = (((dists.ry0 - ry1) > 0.0) & ((dists.ry0 - ry1) < 5.0))
-        T5[idx] = 1. - (dists.ry0[idx] - ry1[idx]) / 5.0
+        idx = (((ctx.ry0 - ry1) > 0.0) & ((ctx.ry0 - ry1) < 5.0))
+        T5[idx] = 1. - (ctx.ry0[idx] - ry1[idx]) / 5.0
         # Finally, compute the hanging wall term, Equation 5
         return Fhw*C['a13']*T1*T2*T3*T4*T5
 
@@ -285,23 +285,14 @@ def _get_site_response_term(C, imt, vs30):
     return site_resp_term
 
 
-def _get_stddevs(region, C, imt, rup, sites, stddev_types, dists):
+def _get_stddevs(region, C, imt, ctx):
     """
     Return standard deviations as described in section "Equations for
     Standard Deviation".
     """
-    std_intra = _get_intra_event_std(region, C, rup.mag)
-    std_inter = _get_inter_event_std(region, C, rup.mag)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(std_intra ** 2 +
-                                   std_inter ** 2))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(std_intra)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(std_inter)
-    return stddevs
+    std_intra = _get_intra_event_std(region, C, ctx.mag)
+    std_inter = _get_inter_event_std(region, C, ctx.mag)
+    return [np.sqrt(std_intra ** 2 + std_inter ** 2), std_inter, std_intra]
 
 
 _get_tau_regional = CallableDict()
@@ -335,15 +326,15 @@ def _get_tau_regional_JPN(region, C, mag):
     return tau_reg
 
 
-def _get_top_of_rupture_depth_term(C, imt, rup):
+def _get_top_of_rupture_depth_term(C, imt, ctx):
     """
     Compute and return top-of-rupture depth term, see section
     "Deph Scaling Effects".
     """
-    if rup.ztor >= 20.0:
+    if ctx.ztor >= 20.0:
         return C['a15']
     else:
-        return C['a15'] * rup.ztor / 20.0
+        return C['a15'] * ctx.ztor / 20.0
 
 
 def _get_vs30star(vs30, imt):
@@ -416,26 +407,25 @@ class GulerceEtAl2017(GMPE):
     #: see the section for "Functional Form of the Model".
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx', 'ry0'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         for spec of input and result values.
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         """
-        # get the necessary set of coefficients
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        # get the mean value
-        mean = (_get_basic_term(C, rup, dists) +
-                _get_faulting_style_term(C, rup) +
-                _get_site_response_term(C, imt, sites.vs30) +
-                _get_hanging_wall_term(C, dists, rup) +
-                _get_top_of_rupture_depth_term(C, imt, rup))
-        mean += _get_regional_term(self.region, C, imt, sites.vs30, dists.rrup)
-        # get standard deviations
-        stddevs = _get_stddevs(
-            self.region, C, imt, rup, sites, stddev_types, dists)
-        return mean, stddevs
+            # get the mean value
+            mean[m] = (_get_basic_term(C, ctx) +
+                       _get_faulting_style_term(C, ctx) +
+                       _get_site_response_term(C, imt, ctx.vs30) +
+                       _get_hanging_wall_term(C, ctx) +
+                       _get_top_of_rupture_depth_term(C, imt, ctx))
+            mean[m] += _get_regional_term(
+                self.region, C, imt, ctx.vs30, ctx.rrup)
+            # get standard deviations
+            sig[m], tau[m], phi[m] = _get_stddevs(self.region, C, imt, ctx)
 
     #: Coefficients obtained from Tables 1a, 1b, 2, and 3 in
     #: Gulerce et al. (2017). This coefficient table is also provided in a free

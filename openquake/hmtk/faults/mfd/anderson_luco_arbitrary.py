@@ -313,7 +313,7 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
                 mfd_conf['Maximum_Magnitude_Uncertainty']):
             self.mmax_sigma = mfd_conf['Maximum_Magnitude_Uncertainty']
         else:
-            self.mmax_sigma = msr.get_std_dev_mag(rake)
+            self.mmax_sigma = msr.get_std_dev_mag(None, rake)
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
         '''

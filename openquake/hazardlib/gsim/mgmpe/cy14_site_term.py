@@ -94,15 +94,16 @@ class CY14SiteTerm(GMPE):
         for spec of input and result values.
         """
         # Prepare sites
-        sites_rock = copy.copy(sites)
-        sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 1130.
+        rup_rock = copy.copy(rup)
+        rup_rock.sids = sites.sids
+        rup_rock.vs30 = np.full_like(sites.vs30, 1130.)
 
         # Compute mean and standard deviation using the original GMM. These
         # values are used as ground-motion values on reference rock conditions.
         # CHECKED [MP]: The computed reference motion is equal to the one in
         # the CY14 model
-        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
-                                                      imt, stds_types)
+        mean, stddvs = self.gmpe.get_mean_and_stddevs(
+            rup_rock, rup_rock, rup_rock, imt, stds_types)
 
         # Compute the site term correction factor
         vs30 = sites.vs30.copy()

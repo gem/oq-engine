@@ -57,17 +57,6 @@ def _compute_site_scaling(vs30, mean):
     return np.log(np.exp(mean) * site_factor)
 
 
-def _compute_stddevs(C, num_sites, stddev_types):
-    """
-    Return total standard deviation.
-    """
-    std_total = C['sigma']
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + std_total)
-    return stddevs
-
-
 class FukushimaTanaka1990(GMPE):
     """
     Implements the PGA GMPE of Fukushima and Tanaka (1990)
@@ -103,27 +92,25 @@ class FukushimaTanaka1990(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        C = self.COEFFS[imt]
+            imean = (_compute_magnitude_scaling(C, ctx.mag) +
+                     _compute_distance_scaling(C, ctx.rrup, ctx.mag))
+            # Original GMPE returns log10 acceleration in cm/s/s
+            # Converts to natural logarithm of g
+            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            if self.REQUIRES_SITES_PARAMETERS:  # in subclass
+                mean[m] = _compute_site_scaling(ctx.vs30, mean[m])
 
-        imean = (_compute_magnitude_scaling(C, rup.mag) +
-                 _compute_distance_scaling(C, dists.rrup, rup.mag))
-        # Original GMPE returns log10 acceleration in cm/s/s
-        # Converts to natural logarithm of g
-        mean = np.log((10.0 ** (imean - 2.0)) / g)
-        istddevs = _compute_stddevs(
-            C, dists.rrup.shape, stddev_types)
-        # Convert from common logarithm to natural logarithm
-        stddevs = np.log(10 ** np.array(istddevs))
-        return mean, stddevs
+            # Convert from common logarithm to natural logarithm
+            sig[m] = np.log(10 ** C['sigma'])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     c1      c2     c3         c4    c5   sigma
@@ -139,27 +126,6 @@ class FukushimaTanakaSite1990(FukushimaTanaka1990):
     The specific site classification is not known, so it is assumed that
     in this context "average" site conditions refer to NEHRP C, rock conditions
     to NEHRP A and B, and soft soil conditions to NEHRP D and E
-
     """
     #: Input sites as vs30 although only three classes considered
     REQUIRES_SITES_PARAMETERS = {"vs30"}
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        C = self.COEFFS[imt]
-
-        imean = (_compute_magnitude_scaling(C, rup.mag) +
-                 _compute_distance_scaling(C, dists.rrup, rup.mag))
-        # Original GMPE returns log10 acceleration in cm/s/s
-        # Converts to natural logarithm of g
-        mean = np.log((10.0 ** (imean - 2.0)) / g)
-        mean = _compute_site_scaling(sites.vs30, mean)
-        istddevs = _compute_stddevs(
-            C, dists.rrup.shape, stddev_types)
-        # Convert from common logarithm to natural logarithm
-        stddevs = np.log(10 ** np.array(istddevs))
-        return mean, stddevs

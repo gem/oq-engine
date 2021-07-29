@@ -37,38 +37,27 @@ LOG10 = np.log(10)
 CONSTS = {'e': 0.5}
 
 
-def _compute_mag_dist_terms(rup, dists, coeffs):
+def _compute_mag_dist_terms(ctx, coeffs):
     """
     Compute equation (5) and implcitly equation (6):
 
     ``log(pre) = c + a*M + b*X - log(X + d*10^(e*M)) + epsilon``
     """
 
-    log_pre = coeffs['c'] + coeffs['a']*rup.mag + coeffs['b']*dists.rrup \
-        - np.log10(dists.rrup + coeffs['d']*10**(coeffs['e']*rup.mag))
+    log_pre = coeffs['c'] + coeffs['a']*ctx.mag + coeffs['b']*ctx.rrup \
+        - np.log10(ctx.rrup + coeffs['d']*10**(coeffs['e']*ctx.mag))
 
     return log_pre
 
 
-def _compute_site_amplification(sites, coeffs):
+def _compute_site_amplification(ctx, coeffs):
     """
     Compute equation (8):
 
     ``G = p*log(VS30) + q``
     """
 
-    return coeffs['p']*np.log10(sites.vs30) + coeffs['q']
-
-
-def _get_stddevs(coeffs, num_sites, stddev_types):
-    """
-    Only total error is reported so this is a simple lookup.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        stddevs.append(np.zeros(num_sites) + coeffs['epsilon'])
-
-    return stddevs
+    return coeffs['p']*np.log10(ctx.vs30) + coeffs['q']
 
 
 class Kanno2006Shallow(GMPE):
@@ -126,11 +115,11 @@ class Kanno2006Shallow(GMPE):
     #: earthquakes for which the fault model is not available." (p. 880)
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for specification of input and result values.
 
         Implements the following equations:
@@ -162,35 +151,33 @@ class Kanno2006Shallow(GMPE):
 
         Note finally that "log represents log_10 in the present study"
         (p. 880).
-
         """
-        # merge coefficients
-        coeffs = CONSTS.copy()
-        cb = self.COEFFS_BASE[imt]
-        cs = self.COEFFS_SITE[imt]
-        for n in cb.dtype.names:
-            coeffs[n] = cb[n]
-        for n in cs.dtype.names:
-            coeffs[n] = cs[n]
+        for m, imt in enumerate(imts):
+            # merge coefficients
+            coeffs = CONSTS.copy()
+            cb = self.COEFFS_BASE[imt]
+            cs = self.COEFFS_SITE[imt]
+            for n in cb.dtype.names:
+                coeffs[n] = cb[n]
+            for n in cs.dtype.names:
+                coeffs[n] = cs[n]
 
-        # compute bedrock motion, equation (5)
-        log_mean = _compute_mag_dist_terms(rup, dists, coeffs)
+            # compute bedrock motion, equation (5)
+            log_mean = _compute_mag_dist_terms(ctx, coeffs)
 
-        # make site corrections, equation (9)
-        log_mean += _compute_site_amplification(sites, coeffs)
+            # make site corrections, equation (9)
+            log_mean += _compute_site_amplification(ctx, coeffs)
 
-        # retrieve standard deviations
-        log_stddevs = _get_stddevs(coeffs, sites.vs30.size, stddev_types)
+            # retrieve standard deviations
+            log_stddev = coeffs['epsilon']
 
-        # convert from common to natural logarithm
-        ln_mean = log_mean*LOG10
-        ln_stddevs = np.array(log_stddevs)*LOG10
+            # convert from common to natural logarithm
+            mean[m] = log_mean * LOG10
+            sig[m] = log_stddev * LOG10
 
-        # convert accelerations from cm/s^2 to g
-        if not imt.string == "PGV":
-            ln_mean -= np.log(100*g)
-
-        return ln_mean, ln_stddevs
+            # convert accelerations from cm/s^2 to g
+            if not imt.string == "PGV":
+                mean[m] -= np.log(100*g)
 
     #: Coefficients obtained from author via personal communcation with
     #: slightly more precision than Table 3, p. 884.
@@ -383,11 +370,11 @@ class Kanno2006Deep(Kanno2006Shallow):
 #    #: so results cannot be verified without a dataset from the authors.
 #    non_verified = True
 #
-#    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+#    def compute(self, ctx, imts, mean, sig, tau, phi):
 #        # pylint: disable=too-many-arguments
 #        """
 #        See :meth:`superclass method
-#        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+#        <.base.GroundShakingIntensityModel.compute>`
 #        for specification of input and result values.
 #
 #        Implements equation (10) on p. 883 which is a depth correction for
@@ -411,29 +398,29 @@ class Kanno2006Deep(Kanno2006Shallow):
 #        """
 #        # compute mean and standard deviations as per parent class
 #        parent = super()
-#        ln_mean, [ln_stddevs] = parent.get_mean_and_stddevs(
-#            sites, rup, dists, imt, stddev_types)
+#        ln_mean, [ln_stddevs] = parent.compute(
+#            ctx, imts, mean, sig, tau, phi)
 #
 #        # compute site corrections, equation (9)
 #        coeffs = self.COEFFS_NORTHEAST[imt].copy()
-#        log_amp = self._compute_depth_correction(sites, rup, coeffs)
+#        log_amp = self._compute_depth_correction(ctx, coeffs)
 #
 #        # convert correction factor from common to natural logarithm
 #        ln_mean += log_amp*np.log(10.0)
 #
 #        return ln_mean, [ln_stddevs]
 #
-#    def _compute_depth_correction(self, sites, rup, coeffs):
+#    def _compute_depth_correction(self, ctx, coeffs):
 #        """
 #        Compute equation (10):
 #
 #        ``A = log(obs/pre) = (alpha*R_tr + beta)*(D - 30)``
 #        """
 #
-#        r_trench = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
+#        r_trench = _get_min_distance_to_sub_trench(ctx.lon, ctx.lat)
 #
 #        log_amp = (coeffs['alpha']*r_trench + coeffs['beta']) * \
-#            (rup.hypo_depth - self.REF_DEPTH_KM)
+#            (ctx.hypo_depth - self.REF_DEPTH_KM)
 #
 #        return log_amp
 #

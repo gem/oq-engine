@@ -44,15 +44,11 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
     def test_non_supported_imt(self):
-        args = [
-            object(), object(), object(), SA(period=0.45, damping=5),
-            [StdDev.TOTAL]
-        ]
+        ctx = RuptureContext()
         self.assertRaises(
             ValueError,
-            self.GSIM_CLASS().get_mean_and_stddevs,
-            *args
-        )
+            self.GSIM_CLASS().compute,
+            ctx, [SA(period=0.45)], 0, 0, 0, 0)
 
     def test_mag_dist_outside_range(self):
         ctx = RuptureContext()
@@ -61,6 +57,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         # rhypo = 10
         ctx.mag = 2.9434938048208452
         ctx.rhypo = numpy.array([1])
+        ctx.sids = [0]
         mean_mw3_d1, _ = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 
@@ -89,6 +86,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
     def test_dist_not_in_increasing_order(self):
         ctx = RuptureContext()
         ctx.mag = 5.
+        ctx.sids = [0, 1]
         ctx.rhypo = numpy.array([150, 100])
         mean_150_100, _ = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
