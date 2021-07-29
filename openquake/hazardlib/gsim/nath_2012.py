@@ -138,6 +138,11 @@ class NathEtAl2012Lower(GMPE):
         # obtain standard deviation
         ln_stddev = _get_stddevs(coeffs, stddev_types)
 
+        if hasattr(self, 'COEFFS_UPPER'):  # in subclass
+            # compute site corrections, equation (9)
+            corr = self.COEFFS_UPPER[imt]['correction']
+            ln_mean += np.log(corr)
+
         return ln_mean, [ln_stddev]
 
     #: Coefficients taken from Table 5, p. 483.
@@ -163,28 +168,6 @@ class NathEtAl2012Upper(NathEtAl2012Lower):
     This model is based on stochastic simulation with a mean stress drop of 40
     bars.
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # pylint: disable=too-many-arguments
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for specification of input and result values.
-
-        Implements the correction factor for the upper crust, equation (12) on
-        p. 484:
-
-        ``P' = P x Correction_factor``
-        """
-        ln_mean, [ln_stddev] = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        # compute site corrections, equation (9)
-        coeffs = self.COEFFS_UPPER[imt]
-        ln_mean += np.log(coeffs['correction'])
-
-        return ln_mean, [ln_stddev]
-
     #: Coefficients taken from Table 6, p. 485.
     COEFFS_UPPER = CoeffsTable(sa_damping=5., table="""\
      IMT  correction
