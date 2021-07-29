@@ -26,39 +26,10 @@ Module exports :class:`BozorgniaCampbell2016VH`
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim import bozorgnia_campbell_2016
 from openquake.hazardlib.gsim import campbell_bozorgnia_2014
-
-
-def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
-    """
-    Returns the inter-event, intra-event, and total standard deviations
-    """
-    num_sites = len(sites.vs30)
-    tau_v = cls.VGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
-                                           [const.StdDev.INTER_EVENT])[1]
-    tau_h = cls.HGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
-                                           [const.StdDev.INTER_EVENT])[1]
-    phi_v = cls.VGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
-                                           [const.StdDev.INTRA_EVENT])[1]
-    phi_h = cls.HGMPE.get_mean_and_stddevs(sites, rup, dists, imt,
-                                           [const.StdDev.INTRA_EVENT])[1]
-    tau = _get_tau_vh(C, rup.mag, tau_v, tau_h)
-    phi = _get_phi_vh(C, rup.mag, phi_v, phi_h)
-
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
-                           np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(num_sites))
-    # return std dev values for each stddev type in site collection
-    return stddevs
 
 
 def _get_tau_vh(C, mag, stddev_v, stddev_h):
@@ -139,48 +110,44 @@ class BozorgniaCampbell2016VH(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory Variability Model".
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are taken from the V and H models
     REQUIRES_SITES_PARAMETERS = (
         VGMPE.REQUIRES_SITES_PARAMETERS |
-        HGMPE.REQUIRES_SITES_PARAMETERS
-    )
+        HGMPE.REQUIRES_SITES_PARAMETERS)
 
     #: Required rupture parameters are taken from the V and H models
     REQUIRES_RUPTURE_PARAMETERS = (
         VGMPE.REQUIRES_RUPTURE_PARAMETERS |
-        HGMPE.REQUIRES_RUPTURE_PARAMETERS
-    )
+        HGMPE.REQUIRES_RUPTURE_PARAMETERS)
 
     #: Required distance measures are taken from the V and H models
     REQUIRES_DISTANCES = (
         VGMPE.REQUIRES_DISTANCES |
-        HGMPE.REQUIRES_DISTANCES
-    )
+        HGMPE.REQUIRES_DISTANCES)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Extract dictionary of coefficients specific to required IMT and PGA
-        C = self.COEFFS[imt]
-        # VGMPE Functional Form, Equation 1 (in natural log units)
-        mean_v = self.VGMPE.get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)[0]
-        # V/H model, Equation 12 (in natural log units)
-        mean_h = self.HGMPE.get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)[0]
-        # Equation 6
-        mean = mean_v - mean_h
-        # Get standard deviations
-        stddevs = _get_stddevs(self, C, sites, rup, dists, imt, stddev_types)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # V/H model, Equation 1 and 12 (in natural log units)
+            [mean_v, tau_v, phi_v], [mean_h, tau_h, phi_h] = (
+                contexts.get_mean_stds(
+                    [self.VGMPE, self.HGMPE], ctx, [imt], const.StdDev.EVENT))
+            # Equation 6
+            mean[m] = mean_v - mean_h
+
+            # Get standard deviations
+            t = _get_tau_vh(C, ctx.mag, tau_v, tau_h)
+            p = _get_phi_vh(C, ctx.mag, phi_v, phi_h)
+            sig[m] = np.sqrt(t ** 2 + p ** 2)
+            tau[m] = t
+            phi[m] = p
 
     #: Table of regression coefficients obtained from supplementary material
     #: published together with the EQS paper
