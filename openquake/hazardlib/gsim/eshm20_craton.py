@@ -45,13 +45,13 @@ def get_distance_term(C, mag, rrup):
     return f_r
 
 
-def get_hard_rock_mean(C, rctx, dctx):
+def get_hard_rock_mean(C, ctx):
     """
     Returns the mean and standard deviations for the reference very hard
     rock condition (Vs30 = 3000 m/s)
     """
-    return get_magnitude_scaling(C, rctx.mag) + get_distance_term(
-        C, rctx.mag, dctx.rrup)
+    return get_magnitude_scaling(C, ctx.mag) + get_distance_term(
+        C, ctx.mag, ctx.rrup)
 
 
 def get_magnitude_scaling(C, mag):
@@ -65,7 +65,7 @@ def get_magnitude_scaling(C, mag):
         return C["e1"] + C["b3"] * d_m
 
 
-def get_site_amplification(site_epsilon, imt, pga_r, sites):
+def get_site_amplification(site_epsilon, imt, pga_r, ctx):
     """
     Returns the sum of the linear (Stewart et al., 2019) and non-linear
     (Hashash et al., 2019) amplification terms
@@ -81,13 +81,13 @@ def get_site_amplification(site_epsilon, imt, pga_r, sites):
     else:
         period = imt.period
     # Get f760
-    f760 = _get_f760(C_F760, sites.vs30,
+    f760 = _get_f760(C_F760, ctx.vs30,
                      NGAEastGMPE.CONSTANTS)
     # Get the linear amplification factor
-    f_lin = _get_fv(C_LIN, sites, f760,
+    f_lin = _get_fv(C_LIN, ctx, f760,
                     NGAEastGMPE.CONSTANTS)
     # Get the nonlinear amplification from Hashash et al., (2017)
-    f_nl, f_rk = get_fnl(C_NL, pga_r, sites.vs30, period)
+    f_nl, f_rk = get_fnl(C_NL, pga_r, ctx.vs30, period)
     # Mean amplification
     ampl = f_lin + f_nl
 
@@ -97,43 +97,34 @@ def get_site_amplification(site_epsilon, imt, pga_r, sites):
         # In the case of the linear model sigma_f760 and sigma_fv are
         # assumed independent and the resulting sigma_flin is the root
         # sum of squares (SRSS)
-        f760_stddev = _get_f760(C_F760, sites.vs30,
+        f760_stddev = _get_f760(C_F760, ctx.vs30,
                                 NGAEastGMPE.CONSTANTS,
                                 is_stddev=True)
         f_lin_stddev = np.sqrt(
             f760_stddev ** 2. +
             NGAEastGMPE.get_linear_stddev(
-                C_LIN, sites.vs30, NGAEastGMPE.CONSTANTS) ** 2)
+                C_LIN, ctx.vs30, NGAEastGMPE.CONSTANTS) ** 2)
         # Likewise, the epistemic uncertainty on the linear and nonlinear
         # model are assumed independent and the SRSS is taken
         f_nl_stddev = get_nonlinear_stddev(
-            C_NL, sites.vs30) * f_rk
+            C_NL, ctx.vs30) * f_rk
         site_epistemic = np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
         ampl += (site_epsilon * site_epistemic)
     return ampl
 
 
-def get_stddevs(ergodic, tau_model, TAU, PHI_SS,
-                mag, imt, sites, stddev_types, num_sites):
+def get_stddevs(ergodic, tau_model, TAU, PHI_SS, imt, ctx):
     """
     Returns the standard deviations for either the ergodic or
     non-ergodic models
     """
-    phi = get_phi_ss(imt, mag, PHI_SS)
+    phi = get_phi_ss(imt, ctx.mag, PHI_SS)
     if ergodic:
-        phi_s2s = get_stewart_2019_phis2s(imt, sites.vs30)
+        phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
         phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
-    tau = TAU_EXECUTION[tau_model](imt, mag, TAU)
+    tau = TAU_EXECUTION[tau_model](imt, ctx.mag, TAU)
     sigma = np.sqrt(tau ** 2. + phi ** 2.)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(sigma + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(num_sites))
-    return stddevs
+    return [sigma, tau, phi]
 
 
 class ESHM20Craton(GMPE):
@@ -248,35 +239,33 @@ class ESHM20Craton(GMPE):
         self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
                                              self.phi_ss_quantile)
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
-        C = self.COEFFS[imt]
         C_ROCK = self.COEFFS[PGA()]
-        pga_r = get_hard_rock_mean(C_ROCK, rctx, dctx)
+        pga_r = get_hard_rock_mean(C_ROCK, ctx)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # Get the desired spectral acceleration on rock
+            if imt.string != "PGA":
+                # Calculate the ground motion at required spectral period for
+                # the reference rock
+                mean[m] = get_hard_rock_mean(C, ctx)
+            else:
+                # Avoid re-calculating PGA if that was already done!
+                mean[m] = np.copy(pga_r)
 
-        # Get the desired spectral acceleration on rock
-        if not str(imt) == "PGA":
-            # Calculate the ground motion at required spectral period for
-            # the reference rock
-            mean = get_hard_rock_mean(C, rctx, dctx)
-        else:
-            # Avoid re-calculating PGA if that was already done!
-            mean = np.copy(pga_r)
+            mean[m] += get_site_amplification(
+                self.site_epsilon, imt, np.exp(pga_r), ctx)
 
-        mean += get_site_amplification(
-            self.site_epsilon, imt, np.exp(pga_r), sctx)
-
-        # Get standard deviation model
-        nsites = dctx.rrup.shape
-        stddevs = get_stddevs(
-            self.ergodic, self.tau_model, self.TAU, self.PHI_SS,
-            rctx.mag, imt, sctx, stddev_types, nsites)
-        if self.epsilon:
-            # If requested, apply epistemic uncertainty
-            mean += (self.epsilon * C["sigma_mu"])
-        return mean, stddevs
+            # Get standard deviation model
+            sig[m], tau[m], phi[m] = get_stddevs(
+                self.ergodic, self.tau_model, self.TAU, self.PHI_SS,
+                imt, ctx)
+            if self.epsilon:
+                # If requested, apply epistemic uncertainty
+                mean[m] += (self.epsilon * C["sigma_mu"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                    e1                 b1                    b2                  b3                  c1                   c2                    c3            sigma_mu

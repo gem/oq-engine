@@ -42,29 +42,12 @@ def _get_mean(C, mag, rake, dip, rrup, rjb):
     return mean
 
 
-def _get_stddevs(C, mag, stddev_types, num_sites):
-    """
-    Return standard deviation as defined in eq.11 page 319.
-    """
-    std = C['c16'] + np.zeros(num_sites)
-
-    if mag < 7.4:
-        std -= 0.07 * mag
-    else:
-        std -= 0.518
-
-    # only the 'total' standard deviation is supported, therefore the
-    # std is always the same for all types
-    stddevs = [std for _ in stddev_types]
-
-    return stddevs
-
-
 def _compute_magnitude_scaling(C, mag):
     """
     Compute and return magnitude scaling term (eq.2, page 319)
     """
     return C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2
+
 
 def _compute_distance_scaling(C, mag, rrup):
     """
@@ -168,7 +151,7 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
     #: 320)
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    #: No sites parameters are required. Mean value is computed for
+    #: No ctx parameters are required. Mean value is computed for
     #: 'firm rock'.
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
     REQUIRES_SITES_PARAMETERS = set()
@@ -181,18 +164,21 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
     #: page 319).
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = _get_mean(
-            C, rup.mag, rup.rake, rup.dip, dists.rrup, dists.rjb)
-        stddevs = _get_stddevs(C, rup.mag, stddev_types, dists.rrup.size)
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _get_mean(
+                C, ctx.mag, ctx.rake, ctx.dip, ctx.rrup, ctx.rjb)
+            sig[m] = C['c16']
+            if ctx.mag < 7.4:
+                sig[m] -= 0.07 * ctx.mag
+            else:
+                sig[m] -= 0.518
 
     #: Coefficient table (table 4, page 321. Coefficients for horizontal
     #: component and for corrected PGA)
