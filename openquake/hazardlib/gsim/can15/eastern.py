@@ -116,18 +116,15 @@ class EasternCan15Mid(GMPE):
         See documentation for method `GroundShakingIntensityModel` in
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
-        imtls = {imt.string: [0] for imt in imts}
         mean_stds = []  # 5 arrays of shape (2, M, N)
         for gsim in self.gsims:
-            cmaker = contexts.ContextMaker(
-                self.DEFINED_FOR_TECTONIC_REGION_TYPE,
-                [gsim], {'imtls': imtls})
             # add equivalent distances
             if isinstance(gsim, AtkinsonBoore2006Modified2011):
                 c = utils.add_distances_east(ctx, ab06=True)
             else:
                 c = utils.add_distances_east(ctx)
-            mean_stds.extend(cmaker.get_mean_stds([c], StdDev.TOTAL))
+            mean_stds.extend(
+                contexts.get_mean_stds([gsim], c, imts, StdDev.TOTAL))
 
         for m, imt in enumerate(imts):
             cff = self.COEFFS_SITE[imt]

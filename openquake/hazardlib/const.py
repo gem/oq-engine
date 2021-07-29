@@ -102,3 +102,5 @@ class StdDev(object):
     EVENT = 'Event'
     #: Used in event based calculations, correspond to TOTAL if the gsim
     #: is defined for TOTAL, otherwise to the pair (INTER_EVENT, INTRA_EVENT)
+    ALL = 'All'
+    #: Compute all the standard deviations for which the GMPE is defined
