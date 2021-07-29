@@ -80,31 +80,6 @@ class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
     tectonic regionalizations defined for the Switzerland -
     therefore this GMPE is region specific".
     """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        compute mean for Foreland
-        """
-        COEFFS = self.COEFFS[imt]
-        R = _compute_term_d(COEFFS, rup.mag, dists.rrup)
-
-        mean = 10 ** _compute_mean(COEFFS, rup.mag, R)
-
-        # Convert units to g,
-        # but only for PGA and SA (not PGV):
-        if imt.string.startswith(('PGA', 'SA')):
-            mean = np.log(mean / (g*100.))
-        else:
-            # PGV:
-            mean = np.log(mean)
-
-        c1_rrup = _compute_C1_term(COEFFS, dists.rrup)
-        log_phi_ss = 1.00
-        stddevs = _get_stddevs(COEFFS, stddev_types, sites.vs30.shape[0],
-                               rup.mag, c1_rrup, log_phi_ss,
-                               COEFFS['mean_phi_ss'])
-
-        return mean, stddevs
-
     COEFFS = COEFFS_FORELAND_10Bars
 
 

@@ -203,7 +203,7 @@ class EdwardsFah2013Alpine10Bars(GMPE):
         COEFFS = self.COEFFS[imt]
         R = _compute_term_r(COEFFS, rup.mag, dists.rrup)
 
-        mean = 10 ** (_compute_mean(COEFFS, rup.mag, R))
+        mean = 10 ** _compute_mean(COEFFS, rup.mag, R)
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
