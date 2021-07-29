@@ -584,9 +584,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
             if gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value != trt:
-                raise ValueError(
-                    '%r is defined for %s, not %s!' %
-                    (gsim, gsim.DEFINED_FOR_TECTONIC_REGION_TYPE, trt))
+                logging.info('%r is defined for %s, not %s',
+                             gsim, gsim.DEFINED_FOR_TECTONIC_REGION_TYPE, trt)
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             {StdDev.TOTAL}):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
