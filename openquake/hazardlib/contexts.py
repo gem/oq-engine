@@ -526,6 +526,8 @@ class ContextMaker(object):
                     stypes = (StdDev.TOTAL,)
                 else:
                     stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
+            elif stdtype == StdDev.ALL:
+                stypes = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             else:
                 stypes = (stdtype,)
             S = len(stypes)
@@ -900,6 +902,17 @@ def full_context(sites, rup, dctx=None):
         for par, val in vars(dctx).items():
             setattr(self, par, val)
     return self
+
+
+def get_mean_stds(gsims, ctx, imts, stdtype):
+    """
+    :returns:
+        a list of G arrays of shape (O, M, N) obtained by applying the
+        given gsims, ctx amd imts
+    """
+    imtls = {imt.string: [0] for imt in imts}
+    cmaker = ContextMaker('*', gsims, {'imtls': imtls})
+    return cmaker.get_mean_stds([ctx], stdtype)
 
 
 # mock of a rupture used in the tests and in the SMTK

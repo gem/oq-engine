@@ -23,7 +23,7 @@ Module exports :class:`GulerceAbrahamson2011`
 import copy
 import numpy as np
 
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE, registry
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -259,8 +259,8 @@ class GulerceAbrahamson2011(GMPE):
 
         ctx_rock = copy.copy(rup)
         ctx_rock.vs30 = np.full_like(ctx_rock.vs30, 1100.)
-        pga1100 = np.exp(self.gmpe.get_mean_and_stddevs(
-            ctx_rock, ctx_rock, ctx_rock, PGA(), stddev_types)[0])
+        [mean] = contexts.get_mean_stds([self.gmpe], ctx_rock, [PGA()], None)
+        pga1100 = np.exp(mean[0, 0])
         mean = (_compute_base_term(C, rup, dists) +
                 _compute_faulting_style_term(C, rup) +
                 _compute_site_response_term(C, imt, sites, pga1100))
