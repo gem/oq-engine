@@ -210,8 +210,8 @@ class SgobbaEtAl2020(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set()
+    #: Required site parameters are lon and lat
+    REQUIRES_SITES_PARAMETERS = {'lon', 'lat'}
 
     #: Required rupture parameters is magnitude, ev_lat, ev_lon
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ev_lat', 'ev_lon'}
@@ -268,8 +268,8 @@ class SgobbaEtAl2020(GMPE):
             self.be_std = C['tau_ev']
             self.be = 0.0
         # Site correction
-        tmp = [[s.location.longitude, s.location.latitude] for s in sites]
-        dsts, idxs = self.kdt.query(np.array(tmp))
+        points = np.array([sites.lon, sites.lat]).T  # shape (N, 2)
+        dsts, idxs = self.kdt.query(points)
         dat = Data(self.Smodel, self.cluster, self.PERIODS, self.betaS2S, idxs)
         sc = 0
         phi_S2Sref = C['phi_S2S_ref']

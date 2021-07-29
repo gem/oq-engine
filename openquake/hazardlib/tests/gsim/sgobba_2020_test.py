@@ -20,18 +20,26 @@ import os
 import unittest
 import numpy as np
 import pandas as pd
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo import Point
 # from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.sgobba_2020 import SgobbaEtAl2020
-from openquake.hazardlib.contexts import DistancesContext
 
 # folder Verif Tables
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'data', 'SEA20')
 # folder Residuals
-DATA_FOLDER2 = os.path.join(os.path.dirname(__file__), '..', '..', 'gsim', 'sgobba_2020')
+DATA_FOLDER2 = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'gsim', 'sgobba_2020')
+
+
+def get_ctx(row, rjb, locs):
+    sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
+    rup = Dummy.get_rupture(
+        mag=row.rup_mag, ev_lat=row.lat_epi, ev_lon=row.lon_epi)
+    rup.rjb = np.array(rjb)
+    return contexts.full_context(sites, rup)
 
 
 class Sgobba2020Test(unittest.TestCase):
@@ -58,12 +66,7 @@ class Sgobba2020Test(unittest.TestCase):
             for idx, row in subset_df.iterrows():
                 locs.append(Point(row.lon_sites, row.lat_sites))
                 rjb.append(row.dist_jb)
-            # Create the sites
-            sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
-            # Create distance and rupture contexts
-            rup = Dummy.get_rupture(mag=row.rup_mag, ev_lat=row.lat_epi, ev_lon=row.lon_epi)
-            dists = DistancesContext()
-            dists.rjb = np.array(rjb)
+            ctx = get_ctx(row, rjb, locs)
             # Instantiate the GMM
             gmmref = SgobbaEtAl2020(cluster=0)
             # Computes results for the non-ergodic model
@@ -74,7 +77,7 @@ class Sgobba2020Test(unittest.TestCase):
             for i in range(len(periods)):
                 imt = periods[i]
                 tag = tags[i]
-                mr, stdr = gmmref.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+                mr, stdr = gmmref.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
                 expected_ref = subset_df[tag].to_numpy()  # Verif Table in g unit
                 computed_ref = np.exp(mr)  # in OQ are computed in g Units in ln
                 np.testing.assert_allclose(computed_ref, expected_ref, rtol=1e-5)
@@ -124,18 +127,12 @@ class Sgobba2020Test(unittest.TestCase):
                     rjb.append(row.dist_jb)
                     if row.flag_bedrock == 1:
                         bedrock = True
-                # Create the sites
-                sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
-                # bed_flag = Dummy.get_site_collection(len(rjb), flag=bedrock)
-                # Create distance and rupture contexts
-                rup = Dummy.get_rupture(mag=row.rup_mag, ev_lat=row.lat_epi, ev_lon=row.lon_epi)
-                dists = DistancesContext()
-                dists.rjb = np.array(rjb)
+                ctx = get_ctx(row, rjb, locs)
                 # Instantiate the GMM
                 if i == 0:
-                    gmm = SgobbaEtAl2020(event_id=ev_id, site=sites, bedrock=False)  # cluster=None because cluster has to be automatically detected
+                    gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=False)  # cluster=None because cluster has to be automatically detected
                 else:
-                    gmm = SgobbaEtAl2020(event_id=ev_id, site=sites, bedrock=True)
+                    gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=True)
                 # Computes results for the non-ergodic model
                 periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407), SA(period=1.0), SA(period=2.0)]
                 tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
@@ -144,7 +141,7 @@ class Sgobba2020Test(unittest.TestCase):
                 for i in range(len(periods)):
                     imt = periods[i]
                     tag = tags[i]
-                    mean, stdr = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+                    mean, stdr = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
                     expected = subset_df[tag].to_numpy()  # Verif Table in g unit
                     computed = np.exp(mean)  # in OQ are computed in g Units in ln
                     np.testing.assert_allclose(computed, expected, rtol=1e-5)
@@ -193,18 +190,12 @@ class Sgobba2020Test(unittest.TestCase):
                     rjb.append(row.dist_jb)
                     if row.flag_bedrock == 1:
                         bedrock = True
-                # Create the sites
-                sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
-                # bed_flag = Dummy.get_site_collection(len(rjb), flag=bedrock)
-                # Create distance and rupture contexts
-                rup = Dummy.get_rupture(mag=row.rup_mag, ev_lat=row.lat_epi, ev_lon=row.lon_epi)
-                dists = DistancesContext()
-                dists.rjb = np.array(rjb)
+                ctx = get_ctx(row, rjb, locs)
                 # Instantiate the GMM
                 if i == 0:
-                    gmm = SgobbaEtAl2020(event_id=ev_id, site=sites, bedrock=False)  # cluster=None because cluster has to be automatically detected
+                    gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=False)  # cluster=None because cluster has to be automatically detected
                 else:
-                    gmm = SgobbaEtAl2020(event_id=ev_id, site=sites, bedrock=True)
+                    gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=True)
                 # Computes results for the non-ergodic model
                 periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407), SA(period=1.0), SA(period=2.0)]
                 tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
@@ -213,7 +204,7 @@ class Sgobba2020Test(unittest.TestCase):
                 for i in range(len(periods)):
                     imt = periods[i]
                     tag = tags[i]
-                    mean, stdr = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+                    mean, stdr = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
                     expected = np.log(10.0**subset_df[tag].to_numpy())  # in VerifTable are in log10
                     computed = stdr  # in ln
                     np.testing.assert_allclose(computed, expected, rtol=1e-5)
