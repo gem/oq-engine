@@ -76,6 +76,40 @@ def check(gmm, tags, ctx, subset_df, sigma):
         np.testing.assert_allclose(computed, expected, rtol=1e-5)
 
 
+def gen_data(df):
+    df2 = pd.read_csv(os.path.join(DATA_FOLDER2, 'event.csv'),
+                      dtype={'id': str})
+    epicenters = get_epicenters(df)
+
+    # For each event check Validation
+    for i in range(len(epicenters)):
+        LON = epicenters[i].x
+        LAT = epicenters[i].y
+        idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON))
+        subset_df = df.loc[idx]
+        flag_b = subset_df['flag_bedrock']
+        if sum(flag_b) > 0:
+            bedrock = [0, 1]
+        else:
+            bedrock = [0]
+        for i in bedrock:
+            idx = np.where((df['lat_epi'] == LAT) &
+                           (df['lon_epi'] == LON) &
+                           (df['flag_bedrock'] == i))
+            subset_df = df.loc[idx]
+            idx2 = np.where((df2['Ev_lat'] == LAT) & (df2['Ev_lon'] == LON))[0]
+            if len(idx2) > 0:
+                idx2 = idx2[0]
+                ev_id = df2['id'][idx2]
+            else:
+                ev_id = None
+            print('event_id: '+str(ev_id))
+            print('flag_bedrock: '+str(i))
+            ctx = get_ctx(subset_df)
+            gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
+            yield gmm, ctx, subset_df
+
+
 class Sgobba2020Test(unittest.TestCase):
 
     def test_ERGODIC(self):
@@ -92,75 +126,13 @@ class Sgobba2020Test(unittest.TestCase):
     def test_NON_ERGODIC(self):
         fname = 'ValidationTable_MEAN_NERG_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
-        fname2 = 'event.csv'
-        df2 = pd.read_csv(os.path.join(DATA_FOLDER2, fname2), dtype={'id': str})
-        epicenters = get_epicenters(df)
-
-        # For each event check Validation
-        for i in range(len(epicenters)):
-            LON = epicenters[i].x
-            LAT = epicenters[i].y
-            idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON))
-            subset_df = df.loc[idx]
-            flag_b = subset_df['flag_bedrock']
-            if sum(flag_b) > 0:
-                bedrock = [0, 1]
-            else:
-                bedrock = [0]
-            for i in bedrock:
-                idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON) & (df['flag_bedrock'] == i))
-                subset_df = df.loc[idx]
-                idx2 = np.where((df2['Ev_lat'] == LAT) & (df2['Ev_lon'] == LON))[0]
-                if len(idx2) > 0:
-                    idx2 = idx2[0]
-                    ev_id = df2['id'][idx2]
-                else:
-                    ev_id = None
-                print('event_id: '+str(ev_id))
-                print('flag_bedrock: '+str(i))
-                ctx = get_ctx(subset_df)
-                # Instantiate the GMM
-                gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
-                # cluster=None because cluster has to be automatically detected
-                # Computes results for the non-ergodic model
-                tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10',
-                        'gmm_SA20']
-                check(gmm, tags, ctx, subset_df, sigma=False)
+        tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
+        for gmm, ctx, subset_df in gen_data(df):
+            check(gmm, tags, ctx, subset_df, sigma=False)
 
     def test_SIGMA(self):
-
-        # Read dataframe with information
         fname = 'ValidationTable_STD_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
-        # Read dataframe with information
-        fname2 = 'event.csv'
-        df2 = pd.read_csv(os.path.join(DATA_FOLDER2, fname2), dtype={'id': str})
-        epicenters = get_epicenters(df)
-        for i in range(len(epicenters)):
-            LON = epicenters[i].x
-            LAT = epicenters[i].y
-            idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON))
-            subset_df = df.loc[idx]
-            flag_b = subset_df['flag_bedrock']
-            if sum(flag_b) > 0:
-                bedrock = [0, 1]
-            else:
-                bedrock = [0]
-            for i in bedrock:
-                idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON) & (df['flag_bedrock'] == i))
-                subset_df = df.loc[idx]
-                idx2 = np.where((df2['Ev_lat'] == LAT) & (df2['Ev_lon'] == LON))[0]
-                if len(idx2) > 0:
-                    idx2 = idx2[0]
-                    ev_id = df2['id'][idx2]
-                else:
-                    ev_id = None
-                print('event_id: '+str(ev_id))
-                print('flag_bedrock: '+str(i))
-                ctx = get_ctx(subset_df)
-                # Instantiate the GMM
-                gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
-                # cluster=None because cluster has to be automatically detected
-                # Computes results for the non-ergodic model
-                tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
-                check(gmm, tags, ctx, subset_df, sigma=True)
+        tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
+        for gmm, ctx, subset_df in gen_data(df):
+            check(gmm, tags, ctx, subset_df, sigma=True)
