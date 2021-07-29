@@ -94,7 +94,7 @@ class YoungsEtAl1997SInter(GMPE):
     #: Supported standard deviation types is total, table 2, page 67.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    DEFINED_FOR_REFERENCE_VELOCITY = 760
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
 
     #: Required site parameters is Vs30, used to distinguish between rock
     #: and soil ctx, see paragraph 'Strong Motion Data Base', page 59.
@@ -109,7 +109,7 @@ class YoungsEtAl1997SInter(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     #: Vs30 value representing typical rock conditions in California.
-    ROCK_VS30 = 800
+    ROCK_VS30 = 760
 
     delta = 0  # changed in subclasses
 
