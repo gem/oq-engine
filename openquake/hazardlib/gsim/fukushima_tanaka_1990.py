@@ -106,6 +106,8 @@ class FukushimaTanaka1990(GMPE):
             # Original GMPE returns log10 acceleration in cm/s/s
             # Converts to natural logarithm of g
             mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            if self.REQUIRES_SITES_PARAMETERS:  # in subclass
+                mean[m] = _compute_site_scaling(ctx.vs30, mean[m])
 
             # Convert from common logarithm to natural logarithm
             sig[m] = np.log(10 ** C['sigma'])
@@ -124,26 +126,6 @@ class FukushimaTanakaSite1990(FukushimaTanaka1990):
     The specific site classification is not known, so it is assumed that
     in this context "average" site conditions refer to NEHRP C, rock conditions
     to NEHRP A and B, and soft soil conditions to NEHRP D and E
-
     """
     #: Input ctx as vs30 although only three classes considered
     REQUIRES_SITES_PARAMETERS = {"vs30"}
-
-    def compute(self, ctx, imts, mean, sig, tau, phi):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
-        """
-        for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
-
-            imean = (_compute_magnitude_scaling(C, ctx.mag) +
-                     _compute_distance_scaling(C, ctx.rrup, ctx.mag))
-            # Original GMPE returns log10 acceleration in cm/s/s
-            # Converts to natural logarithm of g
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
-            mean[m] = _compute_site_scaling(ctx.vs30, mean[m])
-
-            # Convert from common logarithm to natural logarithm
-            sig[m] = np.log(10 ** C['sigma'])
