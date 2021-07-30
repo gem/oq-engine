@@ -189,16 +189,15 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        working_std_types = list(stddev_types)
-
+        working_std_types = set(stddev_types)
         if ('set_between_epsilon' in self.params or
                 'set_total_std_as_tau_plus_delta' in self.params):
             if (const.StdDev.INTER_EVENT not in
                     self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
                 raise ValueError('The GMPE does not have between event std')
-            working_std_types.append(const.StdDev.INTER_EVENT)
-            working_std_types.append(const.StdDev.INTRA_EVENT)
-            working_std_types.append(const.StdDev.TOTAL)
+            working_std_types.add(const.StdDev.INTER_EVENT)
+            working_std_types.add(const.StdDev.INTRA_EVENT)
+            working_std_types.add(const.StdDev.TOTAL)
 
         if 'apply_swiss_amplification' in self.params:
             self.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
