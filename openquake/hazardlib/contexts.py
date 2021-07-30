@@ -527,7 +527,7 @@ class ContextMaker(object):
                 else:
                     stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
             elif stdtype == StdDev.ALL:
-                stypes = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                stypes = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
             else:
                 stypes = (stdtype,)
             S = len(stypes)
