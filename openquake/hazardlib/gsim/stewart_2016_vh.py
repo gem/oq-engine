@@ -24,16 +24,12 @@ Module exports :class:`StewartEtAl2016VH`,
                :class:`StewartEtAl2016RegCHNNoSOFVH`,
                :class:`StewartEtAl2016RegJPNNoSOFVH`,
 """
-
-import numpy as np
-
 from openquake.hazardlib.gsim import bozorgnia_campbell_2016_vh, boore_2014
-from openquake.hazardlib.gsim.base import GMPE
-from openquake.hazardlib import const, contexts
+from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-class StewartEtAl2016VH(GMPE):
+class StewartEtAl2016VH(bozorgnia_campbell_2016_vh.BozorgniaCampbell2016VH):
     """
     Implements the SBSA15b GMPE by Stewart et al. (2016)
     vertical-to-horizontal ratio (V/H) for ground motions from the PEER
@@ -85,29 +81,6 @@ class StewartEtAl2016VH(GMPE):
     REQUIRES_DISTANCES = (
         VGMPE.REQUIRES_DISTANCES |
         HGMPE.REQUIRES_DISTANCES)
-
-    def compute(self, ctx, imts, mean, sig, tau, phi):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
-        """
-        mag = ctx.mag
-        V, H = contexts.get_mean_stds(
-            [self.VGMPE, self.HGMPE], ctx, imts, const.StdDev.EVENT)
-        for m, imt in enumerate(imts):
-            # Equation 12 (in natural log units)
-            mean_v, tau_v, phi_v = V[:, m]
-            mean_h, tau_h, phi_h = H[:, m]
-            mean[m] = mean_v - mean_h
-
-            # Get standard deviations
-            C = bozorgnia_campbell_2016_vh.BozorgniaCampbell2016VH.COEFFS[imt]
-            t = bozorgnia_campbell_2016_vh._get_tau_vh(C, mag, tau_v, tau_h)
-            p = bozorgnia_campbell_2016_vh._get_phi_vh(C, mag, phi_v, phi_h)
-            sig[m] = np.sqrt(t ** 2 + p ** 2)
-            tau[m] = t
-            phi[m] = p
 
 
 class StewartEtAl2016RegCHNVH(StewartEtAl2016VH):
