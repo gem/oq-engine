@@ -47,6 +47,8 @@ CONSTANTS = {
 
 IMLS = [0., 0.25, 0.5, 0.75, 1., 1.25]
 
+MEAN, INTER, INTRA = 0, 1, 2
+
 get_amplification_factor = CallableDict()
 
 
@@ -574,15 +576,16 @@ class SandikkayaDinsever2018(GMPE):
         [rock] = contexts.get_mean_stds(
             [self.gmpe], ctx_r, imts, const.StdDev.EVENT)
         for m, imt in enumerate(imts):
-            psarock = np.exp(rock[0][m])
+            psarock = np.exp(rock[MEAN][m])
             C = self.COEFFS_SITE[imt]
             if self.region:
                 ck = self.COEFFS_REG[imt][self.region]
             else:
                 ck = 0.0
-            mean[m] = rock[0][m] + get_site_amplification(C, psarock, ctx, ck)
-            t = rock[1][m]
-            p = rock[2][m]
+            mean[m] = rock[MEAN][m] + get_site_amplification(
+                C, psarock, ctx, ck)
+            t = rock[INTER][m]
+            p = rock[INTRA][m]
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.phi_0, C, t, p, psarock, ctx.vs30, imt)
 
