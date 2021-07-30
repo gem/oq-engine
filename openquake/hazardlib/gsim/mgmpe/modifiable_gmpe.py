@@ -29,21 +29,21 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_fixed_total_sigma"]
 
 
-def apply_swiss_amplification(self, sites, rup, dists, imt):
+def apply_swiss_amplification(self, ctx, imt):
     """
     Adds amplfactor to mean
     """
-    self.mean = self.mean + sites.amplfactor
+    self.mean += ctx.amplfactor
 
 
-def set_between_epsilon(self, sites, rup, dists, imt, epsilon_tau):
+def set_between_epsilon(self, ctx, imt, epsilon_tau):
     """
     :param epsilon_tau:
         the epsilon value used to constrain the between event variability
     """
     # Index for the between event standard deviation
     key = const.StdDev.INTER_EVENT
-    self.mean = self.mean + epsilon_tau * getattr(self, key)
+    self.mean += epsilon_tau * getattr(self, key)
 
     # Set between event variability to 0
     keya = const.StdDev.TOTAL
@@ -54,7 +54,7 @@ def set_between_epsilon(self, sites, rup, dists, imt, epsilon_tau):
     setattr(self, keya, getattr(self, keyb))
 
 
-def set_scale_median_scalar(self, sites, rup, dists, imt, scaling_factor):
+def set_scale_median_scalar(self, ctx, imt, scaling_factor):
     """
     :param scaling_factor:
         Simple scaling factor (in linear space) to increase/decrease median
@@ -63,7 +63,7 @@ def set_scale_median_scalar(self, sites, rup, dists, imt, scaling_factor):
     self.mean += np.log(scaling_factor)
 
 
-def set_scale_median_vector(self, sites, rup, dists, imt, scaling_factor):
+def set_scale_median_vector(self, ctx, imt, scaling_factor):
     """
     :param scaling_factor:
         IMT-dependent median scaling factors (in linear space) as
@@ -73,8 +73,7 @@ def set_scale_median_vector(self, sites, rup, dists, imt, scaling_factor):
     self.mean += np.log(C["scaling_factor"])
 
 
-def set_scale_total_sigma_scalar(self, sites, rup, dists, imt,
-                                 scaling_factor):
+def set_scale_total_sigma_scalar(self, ctx, imt, scaling_factor):
     """
     Scale the total standard deviations by a constant scalar factor
     :param scaling_factor:
@@ -85,7 +84,7 @@ def set_scale_total_sigma_scalar(self, sites, rup, dists, imt,
     setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
-def set_scale_total_sigma_vector(self, sites, rup, dists, imt,
+def set_scale_total_sigma_vector(self, ctx, imt,
                                  scaling_factor):
     """
     Scale the total standard deviations by a IMT-dependent scalar factor
@@ -99,7 +98,7 @@ def set_scale_total_sigma_vector(self, sites, rup, dists, imt,
     setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
-def set_fixed_total_sigma(self, sites, rup, dists, imt, total_sigma):
+def set_fixed_total_sigma(self, ctx, imt, total_sigma):
     """
     Sets the total standard deviations to a fixed value per IMT
     :param total_sigma:
@@ -110,7 +109,7 @@ def set_fixed_total_sigma(self, sites, rup, dists, imt, total_sigma):
     setattr(self, const.StdDev.TOTAL, C["total_sigma"] + np.zeros(shp))
 
 
-def add_delta_std_to_total_std(self, sites, rup, dists, imt, delta):
+def add_delta_std_to_total_std(self, ctx, imt, delta):
     """
     :param delta:
         A delta std e.g. a phi S2S to be removed from total
@@ -120,7 +119,7 @@ def add_delta_std_to_total_std(self, sites, rup, dists, imt, delta):
     setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
-def set_total_std_as_tau_plus_delta(self, sites, rup, dists, imt, delta):
+def set_total_std_as_tau_plus_delta(self, ctx, imt, delta):
     """
     :param delta:
         A delta std e.g. a phi SS to be combined with between std, tau.
@@ -216,7 +215,7 @@ class ModifiableGMPE(GMPE):
         # Apply sequentially the modifications
         g = globals()
         for methname, kw in self.params.items():
-            g[methname](self, sites, rup, dists, imt, **kw)
+            g[methname](self, rup, imt, **kw)
 
         # Return the standard deviation types as originally requested
         outs = []
