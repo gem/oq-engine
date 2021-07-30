@@ -22,10 +22,10 @@ Module :mod:`openquake.hazardlib.mgmpe.split_sigma_gmpe` implements
 
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 
 
-def _get_stddvs(between_absolute, within_absolute, total, stds_types):
+def _get_stddvs(between_absolute, within_absolute, total):
     """
     This computes the between and within event std given the total std.
 
@@ -35,7 +35,7 @@ def _get_stddvs(between_absolute, within_absolute, total, stds_types):
     :param stds_types:
         A list with the type of std requested.
     :return:
-        A list of 1D :class:`numpy.ndarray`
+        A list of 3 arrays
     """
     # Compute missing standard deviations
     new_stds = {'total': total}
@@ -55,17 +55,7 @@ def _get_stddvs(between_absolute, within_absolute, total, stds_types):
         new_stds['within'] = within
     else:
         pass
-    stds = []
-    for key in stds_types:
-        if key == const.StdDev.TOTAL:
-            stds.append(new_stds['total'])
-        elif key == const.StdDev.INTER_EVENT:
-            stds.append(new_stds['between'])
-        elif key == const.StdDev.INTRA_EVENT:
-            stds.append(new_stds['within'])
-        else:
-            raise ValueError('Unsupported std type')
-    return stds
+    return [new_stds['total'], new_stds['between'], new_stds['within']]
 
 
 class SplitSigmaGMPE(GMPE):
@@ -107,16 +97,16 @@ class SplitSigmaGMPE(GMPE):
             const.StdDev.INTER_EVENT,
             const.StdDev.INTRA_EVENT}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         # compute mean and standard deviation
-        stds_total_type = [const.StdDev.TOTAL]
-        mean, std_total = self.gmpe.get_mean_and_stddevs(
-            sites, rup, dists, imt, stds_total_type)
-        stddvs = _get_stddvs(self.between_absolute, self.within_absolute,
-                             np.array(std_total[0]), stds_types)
-        return mean, stddvs
+        [out] = contexts.get_mean_stds(
+            [self.gmpe], ctx, imts, const.StdDev.ALL)
+        for m, imt in enumerate(imts):
+            mean[m] = out[0, m]
+            sig[m], tau[m], phi[m] = _get_stddvs(
+                self.between_absolute, self.within_absolute, out[1, m])
