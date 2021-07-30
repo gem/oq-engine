@@ -32,7 +32,7 @@ from openquake.hazardlib.gsim import bozorgnia_campbell_2016
 from openquake.hazardlib.gsim import campbell_bozorgnia_2014
 
 
-def _get_tau_vh(C, mag, stddev_v, stddev_h):
+def _get_tau_vh(C, mag, tau_v, tau_h):
     """
     Returns the inter-event random effects coefficient (tau) defined in
     Equation 10.
@@ -47,12 +47,10 @@ def _get_tau_vh(C, mag, stddev_v, stddev_h):
     else:
         rhob = rhob2
 
-    tau_v = np.array(stddev_v)
-    tau_h = np.array(stddev_h)
     return np.sqrt(tau_v ** 2 + tau_h ** 2 - 2 * rhob * tau_v * tau_h)
 
 
-def _get_phi_vh(C, mag, stddev_v, stddev_h):
+def _get_phi_vh(C, mag, phi_v, phi_h):
     """
     Returns the intra-event random effects coefficient (phi) defined in
     Equation 11.
@@ -63,11 +61,10 @@ def _get_phi_vh(C, mag, stddev_v, stddev_h):
     if mag <= 4.5:
         rhow = rhow1
     elif 4.5 < mag < 5.5:
-        rhow = rhow2 + (rhow1 - rhow2)*(5.5 - mag)
+        rhow = rhow2 + (rhow1 - rhow2) * (5.5 - mag)
     else:
         rhow = rhow2
-    phi_v = np.array(stddev_v)
-    phi_h = np.array(stddev_h)
+
     return np.sqrt(phi_v ** 2 + phi_h ** 2 - 2 * rhow * phi_v * phi_h)
 
 
@@ -133,16 +130,16 @@ class BozorgniaCampbell2016VH(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        V, H = contexts.get_mean_stds(
+            [self.VGMPE, self.HGMPE], ctx, imts, const.StdDev.EVENT)
         for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
             # V/H model, Equation 1 and 12 (in natural log units)
-            [mean_v, tau_v, phi_v], [mean_h, tau_h, phi_h] = (
-                contexts.get_mean_stds(
-                    [self.VGMPE, self.HGMPE], ctx, [imt], const.StdDev.EVENT))
-            # Equation 6
+            mean_v, tau_v, phi_v = V[:, m]
+            mean_h, tau_h, phi_h = H[:, m]
             mean[m] = mean_v - mean_h
 
             # Get standard deviations
+            C = self.COEFFS[imt]
             t = _get_tau_vh(C, ctx.mag, tau_v, tau_h)
             p = _get_phi_vh(C, ctx.mag, phi_v, phi_h)
             sig[m] = np.sqrt(t ** 2 + p ** 2)
