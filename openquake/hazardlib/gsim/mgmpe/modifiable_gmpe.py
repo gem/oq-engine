@@ -21,7 +21,7 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import from_string
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
@@ -29,21 +29,21 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_fixed_total_sigma"]
 
 
-def apply_swiss_amplification(self, sites, rup, dists, imt):
+def apply_swiss_amplification(self, ctx, imt):
     """
     Adds amplfactor to mean
     """
-    self.mean = self.mean + sites.amplfactor
+    self.mean += ctx.amplfactor
 
 
-def set_between_epsilon(self, sites, rup, dists, imt, epsilon_tau):
+def set_between_epsilon(self, ctx, imt, epsilon_tau):
     """
     :param epsilon_tau:
         the epsilon value used to constrain the between event variability
     """
     # Index for the between event standard deviation
     key = const.StdDev.INTER_EVENT
-    self.mean = self.mean + epsilon_tau * getattr(self, key)
+    self.mean += epsilon_tau * getattr(self, key)
 
     # Set between event variability to 0
     keya = const.StdDev.TOTAL
@@ -54,7 +54,7 @@ def set_between_epsilon(self, sites, rup, dists, imt, epsilon_tau):
     setattr(self, keya, getattr(self, keyb))
 
 
-def set_scale_median_scalar(self, sites, rup, dists, imt, scaling_factor):
+def set_scale_median_scalar(self, ctx, imt, scaling_factor):
     """
     :param scaling_factor:
         Simple scaling factor (in linear space) to increase/decrease median
@@ -63,7 +63,7 @@ def set_scale_median_scalar(self, sites, rup, dists, imt, scaling_factor):
     self.mean += np.log(scaling_factor)
 
 
-def set_scale_median_vector(self, sites, rup, dists, imt, scaling_factor):
+def set_scale_median_vector(self, ctx, imt, scaling_factor):
     """
     :param scaling_factor:
         IMT-dependent median scaling factors (in linear space) as
@@ -73,8 +73,7 @@ def set_scale_median_vector(self, sites, rup, dists, imt, scaling_factor):
     self.mean += np.log(C["scaling_factor"])
 
 
-def set_scale_total_sigma_scalar(self, sites, rup, dists, imt,
-                                 scaling_factor):
+def set_scale_total_sigma_scalar(self, ctx, imt, scaling_factor):
     """
     Scale the total standard deviations by a constant scalar factor
     :param scaling_factor:
@@ -85,8 +84,7 @@ def set_scale_total_sigma_scalar(self, sites, rup, dists, imt,
     setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
-def set_scale_total_sigma_vector(self, sites, rup, dists, imt,
-                                 scaling_factor):
+def set_scale_total_sigma_vector(self, ctx, imt, scaling_factor):
     """
     Scale the total standard deviations by a IMT-dependent scalar factor
     :param scaling_factor:
@@ -99,7 +97,7 @@ def set_scale_total_sigma_vector(self, sites, rup, dists, imt,
     setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
-def set_fixed_total_sigma(self, sites, rup, dists, imt, total_sigma):
+def set_fixed_total_sigma(self, ctx, imt, total_sigma):
     """
     Sets the total standard deviations to a fixed value per IMT
     :param total_sigma:
@@ -110,7 +108,7 @@ def set_fixed_total_sigma(self, sites, rup, dists, imt, total_sigma):
     setattr(self, const.StdDev.TOTAL, C["total_sigma"] + np.zeros(shp))
 
 
-def add_delta_std_to_total_std(self, sites, rup, dists, imt, delta):
+def add_delta_std_to_total_std(self, ctx, imt, delta):
     """
     :param delta:
         A delta std e.g. a phi S2S to be removed from total
@@ -120,7 +118,7 @@ def add_delta_std_to_total_std(self, sites, rup, dists, imt, delta):
     setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
-def set_total_std_as_tau_plus_delta(self, sites, rup, dists, imt, delta):
+def set_total_std_as_tau_plus_delta(self, ctx, imt, delta):
     """
     :param delta:
         A delta std e.g. a phi SS to be combined with between std, tau.
@@ -184,43 +182,36 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        working_std_types = list(stddev_types)
-
         if ('set_between_epsilon' in self.params or
-                'set_total_std_as_tau_plus_delta' in self.params):
-            if (const.StdDev.INTER_EVENT not in
-                    self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
-                raise ValueError('The GMPE does not have between event std')
-            working_std_types.append(const.StdDev.INTER_EVENT)
-            working_std_types.append(const.StdDev.INTRA_EVENT)
-            working_std_types.append(const.StdDev.TOTAL)
+            'set_total_std_as_tau_plus_delta' in self.params) and (
+                const.StdDev.INTER_EVENT not in
+                self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
+            raise ValueError('The GMPE does not have between event std')
 
         if 'apply_swiss_amplification' in self.params:
             self.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
         # Compute the original mean and standard deviations
-        omean, ostds = self.gmpe.get_mean_and_stddevs(
-            sites, rup, dists, imt, working_std_types)
-
-        # Save the stds
-        for key, val in zip(working_std_types, ostds):
-            setattr(self, key, val)
-        self.mean = omean
-
-        # Apply sequentially the modifications
+        self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
         g = globals()
-        for methname, kw in self.params.items():
-            g[methname](self, sites, rup, dists, imt, **kw)
+        for m, imt in enumerate(imts):
+            # Save mean and stds
+            kvs = list(zip(contexts.STD_TYPES, [sig[m], tau[m], phi[m]]))
+            self.mean = mean[m]
+            for key, val in kvs:
+                setattr(self, key, val)
 
-        # Return the standard deviation types as originally requested
-        outs = []
-        for key in stddev_types:
-            outs.append(getattr(self, key))
+            # Apply sequentially the modifications
+            for methname, kw in self.params.items():
+                g[methname](self, ctx, imt, **kw)
 
-        return self.mean, outs
+            # Read the stored mean and stds
+            mean[m] = self.mean
+            for key, val in kvs:
+                val[:] = getattr(self, key)
