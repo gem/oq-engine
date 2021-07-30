@@ -22,11 +22,9 @@ import os
 import numpy as np
 from scipy.interpolate import interp1d
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.nga_east import (
-    ITPL, NGAEastGMPE, get_hard_rock_mean, get_site_amplification,
-    get_site_amplification_sigma)
+    ITPL, NGAEastGMPE, get_mean_amp, get_site_amplification_sigma)
 from openquake.hazardlib.gsim.gmpe_table import _get_mean
 
 # Coefficients for EPRI sigma model taken from Table 5.5 of Goulet et al.
@@ -258,41 +256,25 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         """
         Returns the mean and standard deviations
         """
-        # Get the PGA on the reference rock condition
-        if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
-            rock_imt = PGA()
-        else:
-            rock_imt = SA(0.01)
-        pga_r = get_hard_rock_mean(self, rctx, dctx, rock_imt, stddev_types)
-
-        # Get the desired spectral acceleration on rock
-        if not str(imt) == "PGA":
-            # Calculate the ground motion at required spectral period for
-            # the reference rock
-            imean = get_hard_rock_mean(self, rctx, dctx, imt, stddev_types)
-        else:
-            # Avoid re-calculating PGA if that was already done!
-            imean = np.copy(pga_r)
+        imean, site_amp, pga_r = get_mean_amp(self, rctx, imt)
 
         # Get the coefficients for the IMT
         C_LIN = self.COEFFS_LINEAR[imt]
         C_F760 = self.COEFFS_F760[imt]
         C_NL = self.COEFFS_NONLINEAR[imt]
 
-        site_amp = get_site_amplification(self, imt, np.exp(pga_r), sctx)
-
         # Get collapsed amplification model for -sigma, 0, +sigma with weights
         # of 0.185, 0.63, 0.185 respectively
         if self.epistemic_site:
             f_rk = np.log((np.exp(pga_r) + C_NL["f3"]) / C_NL["f3"])
             site_amp_sigma = get_site_amplification_sigma(
-                self, sctx, f_rk, C_LIN, C_F760, C_NL)
+                self, rctx, f_rk, C_LIN, C_F760, C_NL)
             mean = np.log(
-                0.185 * (np.exp(imean + (site_amp - site_amp_sigma))) +
-                0.63 * (np.exp(imean + site_amp)) +
-                0.185 * (np.exp(imean + (site_amp + site_amp_sigma))))
+                0.185 * (np.exp(imean - site_amp_sigma)) +
+                0.63 * np.exp(imean) +
+                0.185 * np.exp(imean + site_amp_sigma))
         else:
-            mean = imean + site_amp
+            mean = imean
 
         # Get standard deviation model
         nsites = getattr(dctx, self.distance_type).shape

@@ -566,7 +566,7 @@ def _get_phi(self, imt, mag):
     return phi
 
 
-def get_mean(self, ctx, imt):
+def get_mean_amp(self, ctx, imt):
     # Get the PGA on the reference rock condition
     if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
         rock_imt = PGA()
@@ -583,9 +583,10 @@ def get_mean(self, ctx, imt):
         # Avoid re-calculating PGA if that was already done!
         mean = np.copy(pga_r)
 
-    mean += get_site_amplification(self, imt, np.exp(pga_r), ctx)
+    amp = get_site_amplification(self, imt, np.exp(pga_r), ctx)
+    mean += amp
 
-    return mean
+    return mean, amp, pga_r
 
 
 class NGAEastGMPE(GMPETable):
@@ -732,7 +733,7 @@ class NGAEastGMPE(GMPETable):
         """
         Returns the mean and standard deviations
         """
-        mean = get_mean(self, rctx, imt)
+        mean, _, _ = get_mean_amp(self, rctx, imt)
         # Get standard deviation model
         nsites = getattr(dctx, self.distance_type).shape
         stddevs = get_stddevs(self, rctx.mag, imt, stddev_types, nsites)
