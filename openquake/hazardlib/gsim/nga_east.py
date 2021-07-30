@@ -456,18 +456,18 @@ def get_nonlinear_stddev(C_NL, vs30):
     return sigma_f2
 
 
-def get_hard_rock_mean(self, rctx, dctx, imt, stddev_types):
+def get_hard_rock_mean(self, ctx, imt):
     """
     Returns the mean and standard deviations for the reference very hard
     rock condition (Vs30 = 3000 m/s)
     """
     # Return Distance Tables
-    imls = _return_tables(self, rctx.mag, imt, "IMLs")
+    imls = _return_tables(self, ctx.mag, imt, "IMLs")
     # Get distance vector for the given magnitude
-    idx = np.searchsorted(self.m_w, rctx.mag)
+    idx = np.searchsorted(self.m_w, ctx.mag)
     dists = self.distances[:, 0, idx - 1]
     # Get mean and standard deviations
-    mean = _get_mean(self.kind, self.distance_type, imls, dctx, dists)
+    mean = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
     return np.log(mean)
 
 
@@ -564,6 +564,28 @@ def _get_phi(self, imt, mag):
         C = self.PHI_S2SS[imt]
         phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
     return phi
+
+
+def get_mean(self, ctx, imt):
+    # Get the PGA on the reference rock condition
+    if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+        rock_imt = PGA()
+    else:
+        rock_imt = SA(0.01)
+    pga_r = get_hard_rock_mean(self, ctx, rock_imt)
+
+    # Get the desired spectral acceleration on rock
+    if imt.string != "PGA":
+        # Calculate the ground motion at required spectral period for
+        # the reference rock
+        mean = get_hard_rock_mean(self, ctx, imt)
+    else:
+        # Avoid re-calculating PGA if that was already done!
+        mean = np.copy(pga_r)
+
+    mean += get_site_amplification(self, imt, np.exp(pga_r), ctx)
+
+    return mean
 
 
 class NGAEastGMPE(GMPETable):
@@ -710,23 +732,7 @@ class NGAEastGMPE(GMPETable):
         """
         Returns the mean and standard deviations
         """
-        # Get the PGA on the reference rock condition
-        if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
-            rock_imt = PGA()
-        else:
-            rock_imt = SA(0.01)
-        pga_r = get_hard_rock_mean(self, rctx, dctx, rock_imt, stddev_types)
-
-        # Get the desired spectral acceleration on rock
-        if imt.string != "PGA":
-            # Calculate the ground motion at required spectral period for
-            # the reference rock
-            mean = get_hard_rock_mean(self, rctx, dctx, imt, stddev_types)
-        else:
-            # Avoid re-calculating PGA if that was already done!
-            mean = np.copy(pga_r)
-
-        mean += get_site_amplification(self, imt, np.exp(pga_r), sctx)
+        mean = get_mean(self, rctx, imt)
         # Get standard deviation model
         nsites = getattr(dctx, self.distance_type).shape
         stddevs = get_stddevs(self, rctx.mag, imt, stddev_types, nsites)
