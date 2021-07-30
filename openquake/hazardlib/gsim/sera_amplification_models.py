@@ -283,8 +283,12 @@ class PitilakisEtAl2018(GMPE):
         s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
         s_1_rp = np.exp(s_1_rp)
         # Get the short and long period amplification factors
+        if self.kind == 'euro8':
+            ec8 = get_ec8_class(sctx.vs30, sctx.h800)
+        else:
+            ec8 = None
         f_s, f_l = get_amplification_factor(
-            self.kind, self.F1, self.FS, s_s_rp, s_1_rp, rctx)
+            self.kind, self.F1, self.FS, s_s_rp, s_1_rp, rctx, ec8)
         s_1 = f_l * s_1_rp
         s_s = f_s * s_s_rp
         # Get the mean ground motion at the IMT using the design code spectrum
@@ -397,33 +401,6 @@ class Eurocode8Amplification(PitilakisEtAl2018):
             setattr(self, name,
                     frozenset(getattr(self, name) | getattr(self.gmpe, name)))
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-        """
-        As with the :class:`PitilakisEtal2018`, the mean ground motion is
-        determined by construction of the Eurocode 8 design spectrum from the
-        short- and long-period acceleration coefficients amplified to the
-        desired site class, with the standard deviations taken from the
-        original GMPE at the desired IMT
-        """
-        ctx_r = copy.copy(rctx)
-        ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
-        # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, PGA(),
-                                               stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, SA(1.0),
-                                                stddev_types)[0]
-        s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
-        s_1_rp = np.exp(s_1_rp)
-        ec8 = get_ec8_class(sctx.vs30, sctx.h800)
-        f_s, f_l = get_amplification_factor(
-            self.kind, self.F1, self.FS, s_s_rp, s_1_rp, sctx, ec8)
-        s_1 = f_l * s_1_rp
-        s_s = f_s * s_s_rp
-        mean = get_amplified_mean(s_s, s_1, s_1_rp, imt)
-        stddevs = self.gmpe.get_mean_and_stddevs(rctx, rctx, rctx, imt,
-                                                 stddev_types)[1]
-        return mean, stddevs
-
 
 # Default short period amplification factors defined by Eurocode 8 Table 3.4
 EC8_FS_default = {
@@ -444,33 +421,9 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
     are applied. This model implements the Eurocode 8 design spectrum
     """
     kind = "euro8default"
-
     #: Required site parameters are the EC8 site class, everything else will
     #: be set be selected GMPES
     REQUIRES_SITES_PARAMETERS = {'ec8'}
-
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-        """
-        Returns the mean and standard deviations following the approach
-        in :class:`Eurocode8Amplification`
-        """
-        ctx_r = copy.copy(sctx)
-        ctx_r.vs30 = self.rock_vs30 * np.ones_like(ctx_r.vs30)
-        # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, PGA(),
-                                               stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(ctx_r, ctx_r, ctx_r, SA(1.0),
-                                                stddev_types)[0]
-        s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
-        s_1_rp = np.exp(s_1_rp)
-        f_s, f_l = get_amplification_factor(
-            self.kind, self.F1, self.FS, s_s_rp, s_1_rp, sctx)
-        s_1 = f_l * s_1_rp
-        s_s = f_s * s_s_rp
-        mean = get_amplified_mean(s_s, s_1, s_1_rp, imt)
-        stddevs = self.gmpe.get_mean_and_stddevs(rctx, rctx, rctx, imt,
-                                                 stddev_types)[1]
-        return mean, stddevs
 
 
 # Sandikkaya & Dinsever
