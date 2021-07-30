@@ -93,11 +93,12 @@ class StewartEtAl2016VH(GMPE):
         for spec of input and result values.
         """
         mag = ctx.mag
+        V, H = contexts.get_mean_stds(
+            [self.VGMPE, self.HGMPE], ctx, imts, const.StdDev.EVENT)
         for m, imt in enumerate(imts):
-            [mean_v, tau_v, phi_v], [mean_h, tau_h, phi_h] = (
-                contexts.get_mean_stds(
-                    [self.VGMPE, self.HGMPE], ctx, [imt], const.StdDev.EVENT))
             # Equation 12 (in natural log units)
+            mean_v, tau_v, phi_v = V[:, m]
+            mean_h, tau_h, phi_h = H[:, m]
             mean[m] = mean_v - mean_h
 
             # Get standard deviations
