@@ -402,8 +402,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                 gsim.imls[iml],
                 self.hdf5["IMLs/" + iml][:])
             np.testing.assert_array_almost_equal(
-                gsim.stddevs[const.StdDev.TOTAL][iml],
-                self.hdf5["Total/" + iml][:])
+                gsim.stddevs[0][iml], self.hdf5["Total/" + iml][:])
 
     def test_retreival_tables_good_no_interp(self):
         """
@@ -426,10 +425,10 @@ class GSIMTableGoodTestCase(unittest.TestCase):
             np.array([2.0, 1., 0.5]))
         # Also for standard deviations
         np.testing.assert_array_almost_equal(
-            _return_tables(gsim, 6.0, imt_module.PGA(), const.StdDev.TOTAL),
+            _return_tables(gsim, 6.0, imt_module.PGA(), 0),
             0.5 * np.ones(3))
         np.testing.assert_array_almost_equal(
-            _return_tables(gsim, 6.0, imt_module.SA(1.0), const.StdDev.TOTAL),
+            _return_tables(gsim, 6.0, imt_module.SA(1.0), 0),
             0.8 * np.ones(3))
 
     def test_retreival_tables_good_interp(self):
@@ -538,10 +537,8 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
 
     def test_get_mean_stddevs_unsupported_stddev(self):
-        """
-        Tests the execution of the GMPE with an unsupported standard deviation
-        type
-        """
+        # Tests the execution of the GMPE with an unsupported standard
+        # deviation type
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         ctx = RuptureContext()
         ctx.mag = 6.0
@@ -552,7 +549,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         with self.assertRaises(KeyError) as ve:
             gsim.get_mean_and_stddevs(ctx, ctx, ctx, imt_module.PGA(),
                                       stddevs)
-        self.assertEqual(str(ve.exception), "'Inter event'")
 
     def tearDown(self):
         """

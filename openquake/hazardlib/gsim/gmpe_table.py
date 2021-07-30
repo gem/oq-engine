@@ -31,7 +31,8 @@ import numpy
 
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import const, site
+from openquake.hazardlib.const import StdDev
+from openquake.hazardlib import site
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.gsim.base import GMPE
@@ -159,8 +160,8 @@ class AmplificationTable(object):
                      "PGA": numpy.ones([n_d, 1, n_m, n_levels]),
                      "PGV": numpy.ones([n_d, 1, n_m, n_levels])}
         self.sigma = {}
-        for stddev_type in [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
-                            const.StdDev.INTRA_EVENT]:
+        for stddev_type in [StdDev.TOTAL, StdDev.INTER_EVENT,
+                            StdDev.INTRA_EVENT]:
             level = next(iter(amplification_group))
             if stddev_type in amplification_group[level]:
                 self.sigma[stddev_type] = deepcopy(self.mean)
@@ -320,14 +321,18 @@ def _return_tables(self, mag, imt, val_type):
     corresponding to the specific magnitude and intensity measure type.
 
     :param val_type:
-        String indicating the type of data {"IMLs", "Total", "Inter" etc}
+       the string "IMLs" or an integer 0, 1, 2 for total, inter, intra
     """
     if imt.string in 'PGA PGV':
         # Get scalar imt
         if val_type == "IMLs":
             iml_table = self.imls[imt.string][:]
         else:
-            iml_table = self.stddevs[val_type][imt.string][:]
+            stds = self.stddevs[val_type]
+            if stds is None:
+                raise KeyError("Unsupported StdDev with #%d", val_type)
+            iml_table = stds[imt.string][:]
+
         n_d, n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
@@ -394,7 +399,7 @@ def _get_stddevs(self, dists, mag, dctx, imt, stddev_types):
     """
     stddevs = []
     for stddev_type in stddev_types:
-        sigma = _return_tables(self, mag, imt, stddev_type)
+        sigma = _return_tables(self, mag, imt, StdDev.idx[stddev_type])
         interpolator_std = interp1d(dists, sigma, bounds_error=False)
         stddev = interpolator_std(getattr(dctx, self.distance_type))
         stddev[getattr(dctx, self.distance_type) < dists[0]] = sigma[0]
@@ -431,7 +436,7 @@ class GMPETable(GMPE):
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ""
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
 
     REQUIRES_SITES_PARAMETERS = set()
 
@@ -480,17 +485,17 @@ class GMPETable(GMPE):
                                  " periods")
 
             # Load in standard deviations
-            self.stddevs = {}
+            self.stddevs = [None] * 3
             if self.kind in "nga_east usgs":
                 # there are no stddevs in the hdf5 file
                 return
-            self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
+            self.stddevs[0] = hdf_arrays_to_dict(fle["Total"])
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            for stddev_type in [const.StdDev.INTER_EVENT,
-                                const.StdDev.INTRA_EVENT]:
+            for stddev_type in [StdDev.INTER_EVENT,
+                                StdDev.INTRA_EVENT]:
                 if stddev_type in fle:
-                    self.stddevs[stddev_type] = hdf_arrays_to_dict(
+                    self.stddevs[StdDev.idx[stddev_type]] = hdf_arrays_to_dict(
                         fle[stddev_type])
                     self.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(stddev_type)
 
