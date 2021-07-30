@@ -24,7 +24,7 @@ import h5py
 import numpy as np
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.gmpe_table import (
     GMPETable, AmplificationTable, hdf_arrays_to_dict, _return_tables)
 from openquake.hazardlib.gsim.base import RuptureContext
@@ -334,7 +334,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
         """
         Test that the set function operates correctly
         """
-        self.assertSetEqual(self.amp_table.get_set(), set(("rake",)))
+        self.assertSetEqual(self.amp_table.get_set(), {"rake"})
 
 
 class AmplificationTableBadTestCase(unittest.TestCase):
@@ -485,29 +485,31 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
         ctx.vs30 = 1000. * np.ones(5)
+        ctx.sids = np.arange(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])
         expected_sigma = 0.25 * np.ones(5)
+        imts = [imt_module.PGA(), imt_module.SA(1.0), imt_module.PGV()]
         # PGA
         mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.PGA(),
-                                                stddevs)
+                                                imts[0], stddevs)
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], expected_sigma, 5)
         # SA
         mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.SA(1.0),
-                                                stddevs)
+                                                imts[1], stddevs)
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
         # PGV
         mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.PGV(),
-                                                stddevs)
+                                                imts[2], stddevs)
         np.testing.assert_array_almost_equal(np.exp(mean),
                                              10. * expected_mean,
                                              5)
         np.testing.assert_array_almost_equal(sigma[0], expected_sigma, 5)
+
+        # event based check
+        contexts.get_mean_stds([gsim], ctx, imts)
 
     def test_get_mean_and_stddevs_good_amplified(self):
         """

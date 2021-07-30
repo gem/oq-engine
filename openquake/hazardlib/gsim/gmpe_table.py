@@ -330,7 +330,7 @@ def _return_tables(self, mag, imt, std_idx):
         else:
             stds = self.stddevs[std_idx]
             if stds is None:
-                raise KeyError("Unsupported StdDev#%d", std_idx)
+                raise KeyError("Unsupported StdDev#%d" % std_idx)
             iml_table = stds[imt.string][:]
 
         n_d, n_s, n_m = iml_table.shape
@@ -340,8 +340,11 @@ def _return_tables(self, mag, imt, std_idx):
             periods = self.imls["T"][:]
             iml_table = self.imls["SA"][:]
         else:
-            periods = self.stddevs[std_idx]["T"][:]
-            iml_table = self.stddevs[std_idx]["SA"][:]
+            stds = self.stddevs[std_idx]
+            if stds is None:
+                raise KeyError("Unsupported StdDev#%d" % std_idx)
+            periods = stds["T"][:]
+            iml_table = stds["SA"][:]
 
         low_period = round(periods[0], 7)
         high_period = round(periods[-1], 7)

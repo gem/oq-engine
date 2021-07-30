@@ -904,15 +904,15 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsims, ctx, imts, stdtype):
+def get_mean_stds(gsims, ctx, imts, stdtype=StdDev.ALL):
     """
     :returns:
-        a list of G arrays of shape (O, M, N) obtained by applying the
+        an array of shape (G, O, M, N) obtained by applying the
         given gsims, ctx amd imts
     """
     imtls = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', gsims, {'imtls': imtls})
-    return cmaker.get_mean_stds([ctx], stdtype)
+    return numpy.array(cmaker.get_mean_stds([ctx], stdtype))
 
 
 # mock of a rupture used in the tests and in the SMTK
