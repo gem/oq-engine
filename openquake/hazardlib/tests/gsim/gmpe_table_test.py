@@ -508,7 +508,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                                              5)
         np.testing.assert_array_almost_equal(sigma[0], expected_sigma, 5)
 
-        # event based check
+        # StdDev.ALL check
         contexts.get_mean_stds([gsim], ctx, imts)
 
     def test_get_mean_and_stddevs_good_amplified(self):
