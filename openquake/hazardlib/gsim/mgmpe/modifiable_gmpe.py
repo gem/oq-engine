@@ -21,7 +21,7 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import from_string
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
@@ -183,42 +183,35 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        working_std_types = set(stddev_types)
         if ('set_between_epsilon' in self.params or
-                'set_total_std_as_tau_plus_delta' in self.params):
-            if (const.StdDev.INTER_EVENT not in
-                    self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
-                raise ValueError('The GMPE does not have between event std')
-            working_std_types.add(const.StdDev.INTER_EVENT)
-            working_std_types.add(const.StdDev.INTRA_EVENT)
-            working_std_types.add(const.StdDev.TOTAL)
+            'set_total_std_as_tau_plus_delta' in self.params) and (
+                const.StdDev.INTER_EVENT not in
+                self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
+            raise ValueError('The GMPE does not have between event std')
 
         if 'apply_swiss_amplification' in self.params:
             self.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
         # Compute the original mean and standard deviations
-        omean, ostds = self.gmpe.get_mean_and_stddevs(
-            sites, rup, dists, imt, working_std_types)
-
-        # Save the stds
-        for key, val in zip(working_std_types, ostds):
-            setattr(self, key, val)
-        self.mean = omean
-
-        # Apply sequentially the modifications
+        self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
         g = globals()
-        for methname, kw in self.params.items():
-            g[methname](self, rup, imt, **kw)
+        for m, imt in enumerate(imts):
+            # Save the stds
+            for key, val in zip(contexts.STD_TYPES, [sig[m], tau[m], phi[m]]):
+                setattr(self, key, val)
+            self.mean = mean[m]
 
-        # Return the standard deviation types as originally requested
-        outs = []
-        for key in stddev_types:
-            outs.append(getattr(self, key))
+            # Apply sequentially the modifications
+            for methname, kw in self.params.items():
+                g[methname](self, ctx, imt, **kw)
 
-        return self.mean, outs
+            # Read the stored mean and stds
+            mean[m] = self.mean
+            for key, val in zip(contexts.STD_TYPES, [sig[m], tau[m], phi[m]]):
+                val[:] = getattr(self, key)
