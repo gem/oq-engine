@@ -22,11 +22,9 @@ import os
 import numpy as np
 from scipy.interpolate import interp1d
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.nga_east import (
-    ITPL, NGAEastGMPE, get_hard_rock_mean, get_site_amplification,
-    get_site_amplification_sigma)
+    ITPL, NGAEastGMPE, get_mean_amp, get_site_amplification_sigma)
 from openquake.hazardlib.gsim.gmpe_table import _get_mean
 
 # Coefficients for EPRI sigma model taken from Table 5.5 of Goulet et al.
@@ -152,7 +150,7 @@ def get_stewart_2019_phis2s(imt, vs30):
 
 
 @_get_mean.add("usgs")
-def _get_mean(kind, distance_type, data, dctx, dists):
+def _get_mean(kind, distance_type, data, dctx, ctx):
     """
     Returns the mean intensity measure level from the tables applying
     log-log interpolation of the IML with distance (contrast with the
@@ -168,24 +166,24 @@ def _get_mean(kind, distance_type, data, dctx, dists):
     # value is identifiable and outside of potential real values
     # For extremely short distance (rrup = 0) use an arbitrarily small
     # distance measure (1.0E-5 used by US NSHMP code)
-    dists[dists < 1.0E-5] = 1.0E-5
-    interpolator_mean = interp1d(np.log10(dists), np.log(data),
+    ctx[ctx < 1.0E-5] = 1.0E-5
+    interpolator_mean = interp1d(np.log10(ctx), np.log(data),
                                  bounds_error=False,
                                  fill_value=-999.)
     mean = np.exp(interpolator_mean(np.log10(getattr(dctx, distance_type))))
     # For those distances less than or equal to the shortest distance
     # extrapolate the shortest distance value
-    mean[getattr(dctx, distance_type) <= dists[0]] = data[0]
+    mean[getattr(dctx, distance_type) <= ctx[0]] = data[0]
     # For those distances significantly greater than the furthest distance
     # set to 1E-20.
-    mean[getattr(dctx, distance_type) > (dists[-1] + 1.0E-3)] = 1E-20
+    mean[getattr(dctx, distance_type) > (ctx[-1] + 1.0E-3)] = 1E-20
     # If any distance is between the final distance and a margin of 0.001
     # km then assign to smallest distance
     mean[mean < -1.] = data[-1]
     return mean
 
 
-def _get_stddevs(sigma_model, mag, vs30, imt, stddev_types, num_sites):
+def _get_stddevs(sigma_model, ctx, imt):
     """
     Returns the standard deviations according to the choice of aleatory
     uncertainty model. Note that for compatibility with the US NSHMP
@@ -194,16 +192,12 @@ def _get_stddevs(sigma_model, mag, vs30, imt, stddev_types, num_sites):
     """
     if sigma_model in ("EPRI", "COLLAPSED"):
         # EPRI recommended aleatory uncertainty model
-        tau_epri, phi_epri = get_epri_tau_phi(imt, mag)
-        tau_epri += np.zeros(num_sites)
-        phi_epri += np.zeros(num_sites)
+        tau_epri, phi_epri = get_epri_tau_phi(imt, ctx.mag)
     if sigma_model in ("PANEL", "COLLAPSED"):
         # Panel recommended model
-        tau_panel, phi0_panel = get_panel_tau_phi(imt, mag)
-        tau_panel += np.zeros(num_sites)
-        phis2s = get_stewart_2019_phis2s(imt, vs30)
+        tau_panel, phi0_panel = get_panel_tau_phi(imt, ctx.mag)
+        phis2s = get_stewart_2019_phis2s(imt, ctx.vs30)
         phi_panel = np.sqrt(phi0_panel ** 2. + phis2s ** 2.)
-
     if sigma_model == "EPRI":
         tau = tau_epri
         phi = phi_epri
@@ -217,15 +211,8 @@ def _get_stddevs(sigma_model, mag, vs30, imt, stddev_types, num_sites):
         sigma_epri = np.sqrt(tau_epri ** 2. + phi_epri ** 2.)
         sigma_panel = np.sqrt(tau_panel ** 2. + phi_panel ** 2.)
         sigma = 0.8 * sigma_epri + 0.2 * sigma_panel
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(sigma)
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-    return stddevs
+        tau, phi = 0., 0.
+    return [sigma, tau, phi]
 
 
 class NGAEastUSGSGMPE(NGAEastGMPE):
@@ -254,52 +241,34 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
                 set((const.StdDev.TOTAL,))
         super().__init__(**kwargs)
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
-        # Get the PGA on the reference rock condition
-        if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
-            rock_imt = PGA()
-        else:
-            rock_imt = SA(0.01)
-        pga_r = get_hard_rock_mean(self, rctx, dctx, rock_imt, stddev_types)
+        for m, imt in enumerate(imts):
+            imean, site_amp, pga_r = get_mean_amp(self, ctx, imt)
 
-        # Get the desired spectral acceleration on rock
-        if not str(imt) == "PGA":
-            # Calculate the ground motion at required spectral period for
-            # the reference rock
-            imean = get_hard_rock_mean(self, rctx, dctx, imt, stddev_types)
-        else:
-            # Avoid re-calculating PGA if that was already done!
-            imean = np.copy(pga_r)
+            # Get the coefficients for the IMT
+            C_LIN = self.COEFFS_LINEAR[imt]
+            C_F760 = self.COEFFS_F760[imt]
+            C_NL = self.COEFFS_NONLINEAR[imt]
 
-        # Get the coefficients for the IMT
-        C_LIN = self.COEFFS_LINEAR[imt]
-        C_F760 = self.COEFFS_F760[imt]
-        C_NL = self.COEFFS_NONLINEAR[imt]
+            # Get collapsed amplification model for -sigma, 0, +sigma
+            # with weights of 0.185, 0.63, 0.185 respectively
+            if self.epistemic_site:
+                f_rk = np.log((np.exp(pga_r) + C_NL["f3"]) / C_NL["f3"])
+                site_amp_sigma = get_site_amplification_sigma(
+                    self, ctx, f_rk, C_LIN, C_F760, C_NL)
+                mean[m] = np.log(
+                    0.185 * (np.exp(imean - site_amp_sigma)) +
+                    0.63 * np.exp(imean) +
+                    0.185 * np.exp(imean + site_amp_sigma))
+            else:
+                mean[m] = imean
 
-        site_amp = get_site_amplification(self, imt, np.exp(pga_r), sctx)
-
-        # Get collapsed amplification model for -sigma, 0, +sigma with weights
-        # of 0.185, 0.63, 0.185 respectively
-        if self.epistemic_site:
-            f_rk = np.log((np.exp(pga_r) + C_NL["f3"]) / C_NL["f3"])
-            site_amp_sigma = get_site_amplification_sigma(
-                self, sctx, f_rk, C_LIN, C_F760, C_NL)
-            mean = np.log(
-                0.185 * (np.exp(imean + (site_amp - site_amp_sigma))) +
-                0.63 * (np.exp(imean + site_amp)) +
-                0.185 * (np.exp(imean + (site_amp + site_amp_sigma))))
-        else:
-            mean = imean + site_amp
-
-        # Get standard deviation model
-        nsites = getattr(dctx, self.distance_type).shape
-        stddevs = _get_stddevs(self.sigma_model, rctx.mag, sctx.vs30, imt,
-                               stddev_types, nsites)
-        return mean, stddevs
-
+            # Get standard deviation model
+            sig[m], tau[m], phi[m] = _get_stddevs(
+                self.sigma_model, ctx, imt)
 
 lines = '''\
 NGAEastUSGSSeedSP15 SP15
