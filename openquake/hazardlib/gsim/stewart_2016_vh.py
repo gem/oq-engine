@@ -37,8 +37,6 @@ def _get_stddevs(C_V, C_H, C, ctx, tau_v, tau_h, phi_v, phi_h):
     """
     Returns the inter-event, intra-event, and total standard deviations
     """
-    tau_v, phi_v = boore_2014._get_stddevs("stewart", C_V, ctx)[1:]
-    tau_h, phi_h = boore_2014._get_stddevs("base", C_H, ctx)[1:]
     tau = bozorgnia_campbell_2016_vh._get_tau_vh(C, ctx.mag, tau_v, tau_h)
     phi = bozorgnia_campbell_2016_vh._get_phi_vh(C, ctx.mag, phi_v, phi_h)
     return [np.sqrt(tau ** 2 + phi ** 2), tau, phi]
@@ -104,7 +102,6 @@ class StewartEtAl2016VH(GMPE):
         for spec of input and result values.
         """
         for m, imt in enumerate(imts):
-            C = bozorgnia_campbell_2016_vh.BozorgniaCampbell2016VH.COEFFS[imt]
             [mean_v, tau_v, phi_v], [mean_h, tau_h, phi_h] = (
                 contexts.get_mean_stds(
                     [self.VGMPE, self.HGMPE], ctx, [imt], const.StdDev.EVENT))
@@ -112,6 +109,7 @@ class StewartEtAl2016VH(GMPE):
             mean[m] = mean_v - mean_h
 
             # Get standard deviations
+            C = bozorgnia_campbell_2016_vh.BozorgniaCampbell2016VH.COEFFS[imt]
             C_V = self.VGMPE.COEFFS[imt]
             C_H = self.HGMPE.COEFFS[imt]
             sig[m], tau[m], phi[m] = _get_stddevs(
