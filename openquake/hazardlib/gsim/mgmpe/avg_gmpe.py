@@ -104,13 +104,14 @@ class AvgGMPE(GMPE):
         Call the underlying GMPEs and return the weighted mean and stddev
         """
         outs = contexts.get_mean_stds(self.gsims, ctx, imts, const.StdDev.ALL)
-        means, sigs, taus, phis = [], [], [], []
+        # shape (G, O, M, N)
+        O1 = outs.shape[1] - 1
+        means, stds = [], [[] for _ in range(O1)]
         for gsim, out in zip(self.gsims, outs):
             means.append(out[0])
-            sigs.append(out[1] ** 2)
-            taus.append(out[2] ** 2)
-            phis.append(out[3] ** 2)
+            for s in range(O1):
+                stds[s].append(out[s+1:] ** 2)
+
         mean[:] = np.average(means, 0, self.weights)
-        sig[:] = np.sqrt(np.average(sigs, 0, self.weights))
-        tau[:] = np.sqrt(np.average(taus, 0, self.weights))
-        phi[:] = np.sqrt(np.average(phis, 0, self.weights))
+        for arr, std in zip([sig, tau, phi], stds):
+            arr[:] = np.sqrt(np.average(std, 0, self.weights))
