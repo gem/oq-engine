@@ -105,13 +105,14 @@ class AvgGMPE(GMPE):
         """
         outs = contexts.get_mean_stds(self.gsims, ctx, imts, const.StdDev.ALL)
         # shape (G, O, M, N)
-        O1 = outs.shape[1] - 1
-        means, stds = [], [[] for _ in range(O1)]
-        for gsim, out in zip(self.gsims, outs):
-            means.append(out[0])
-            for s in range(O1):
-                stds[s].append(out[s+1:] ** 2)
-
-        mean[:] = np.average(means, 0, self.weights)
-        for arr, std in zip([sig, tau, phi], stds):
-            arr[:] = np.sqrt(np.average(std, 0, self.weights))
+        G = len(outs)
+        M, N = outs[0].shape[1:]
+        data = np.zeros((G, 4, M, N))
+        for i, out in enumerate(outs):
+            data[i, 0] = out[0]
+            for s in range(len(out) - 1):
+                data[i, 1 + s] = out[1 + s] ** 2
+        mean[:] = np.average(data[:, 0], 0, self.weights)
+        sig[:] = np.sqrt(np.average(data[:, 1], 0, self.weights))
+        tau[:] = np.sqrt(np.average(data[:, 2], 0, self.weights))
+        phi[:] = np.sqrt(np.average(data[:, 3], 0, self.weights))

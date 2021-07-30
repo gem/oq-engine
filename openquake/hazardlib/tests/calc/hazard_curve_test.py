@@ -188,7 +188,7 @@ class AvgGMPETestCase(unittest.TestCase):
                      b2=dict(SadighEtAl1997={'weight': .4}))
         hcm = calc_hazard_curves(sources, sitecol, imtls, {
             'Active Shallow Crust': ag})['PGA']
-        # the AvgGMPE is not producing real means!!
+        # NB: the AvgGMPE is NOT producing the mean of the PoEs
         numpy.testing.assert_almost_equal(hc, hcm, decimal=3)
 
 

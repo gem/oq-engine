@@ -44,6 +44,7 @@ from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
+STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -527,7 +528,8 @@ class ContextMaker(object):
                 else:
                     stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
             elif stdtype == StdDev.ALL:
-                stypes = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                stypes = tuple(sdt for sdt in STD_TYPES if sdt in
+                               gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
             else:
                 stypes = (stdtype,)
             S = len(stypes)
