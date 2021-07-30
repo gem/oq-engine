@@ -44,6 +44,7 @@ from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
+STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -527,7 +528,8 @@ class ContextMaker(object):
                 else:
                     stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
             elif stdtype == StdDev.ALL:
-                stypes = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
+                stypes = tuple(sdt for sdt in STD_TYPES if sdt in
+                               gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
             else:
                 stypes = (stdtype,)
             S = len(stypes)
@@ -904,15 +906,15 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsims, ctx, imts, stdtype):
+def get_mean_stds(gsims, ctx, imts, stdtype=StdDev.ALL):
     """
     :returns:
-        a list of G arrays of shape (O, M, N) obtained by applying the
+        an array of shape (G, O, M, N) obtained by applying the
         given gsims, ctx amd imts
     """
     imtls = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', gsims, {'imtls': imtls})
-    return cmaker.get_mean_stds([ctx], stdtype)
+    return numpy.array(cmaker.get_mean_stds([ctx], stdtype))
 
 
 # mock of a rupture used in the tests and in the SMTK
