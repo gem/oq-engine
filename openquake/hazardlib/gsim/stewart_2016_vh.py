@@ -33,15 +33,6 @@ from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _get_stddevs(C_V, C_H, C, ctx, tau_v, tau_h, phi_v, phi_h):
-    """
-    Returns the inter-event, intra-event, and total standard deviations
-    """
-    tau = bozorgnia_campbell_2016_vh._get_tau_vh(C, ctx.mag, tau_v, tau_h)
-    phi = bozorgnia_campbell_2016_vh._get_phi_vh(C, ctx.mag, phi_v, phi_h)
-    return [np.sqrt(tau ** 2 + phi ** 2), tau, phi]
-
-
 class StewartEtAl2016VH(GMPE):
     """
     Implements the SBSA15b GMPE by Stewart et al. (2016)
@@ -101,6 +92,7 @@ class StewartEtAl2016VH(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mag = ctx.mag
         for m, imt in enumerate(imts):
             [mean_v, tau_v, phi_v], [mean_h, tau_h, phi_h] = (
                 contexts.get_mean_stds(
@@ -110,10 +102,11 @@ class StewartEtAl2016VH(GMPE):
 
             # Get standard deviations
             C = bozorgnia_campbell_2016_vh.BozorgniaCampbell2016VH.COEFFS[imt]
-            C_V = self.VGMPE.COEFFS[imt]
-            C_H = self.HGMPE.COEFFS[imt]
-            sig[m], tau[m], phi[m] = _get_stddevs(
-                C_V, C_H, C, ctx, tau_v, tau_h, phi_v, phi_h)
+            t = bozorgnia_campbell_2016_vh._get_tau_vh(C, mag, tau_v, tau_h)
+            p = bozorgnia_campbell_2016_vh._get_phi_vh(C, mag, phi_v, phi_h)
+            sig[m] = np.sqrt(t ** 2 + p ** 2)
+            tau[m] = t
+            phi[m] = p
 
 
 class StewartEtAl2016RegCHNVH(StewartEtAl2016VH):
