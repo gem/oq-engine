@@ -84,8 +84,7 @@ def set_scale_total_sigma_scalar(self, ctx, imt, scaling_factor):
     setattr(self, const.StdDev.TOTAL, total_stddev)
 
 
-def set_scale_total_sigma_vector(self, ctx, imt,
-                                 scaling_factor):
+def set_scale_total_sigma_vector(self, ctx, imt, scaling_factor):
     """
     Scale the total standard deviations by a IMT-dependent scalar factor
     :param scaling_factor:
@@ -202,10 +201,11 @@ class ModifiableGMPE(GMPE):
         self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
         g = globals()
         for m, imt in enumerate(imts):
-            # Save the stds
-            for key, val in zip(contexts.STD_TYPES, [sig[m], tau[m], phi[m]]):
-                setattr(self, key, val)
+            # Save mean and stds
+            kvs = list(zip(contexts.STD_TYPES, [sig[m], tau[m], phi[m]]))
             self.mean = mean[m]
+            for key, val in kvs:
+                setattr(self, key, val)
 
             # Apply sequentially the modifications
             for methname, kw in self.params.items():
@@ -213,5 +213,5 @@ class ModifiableGMPE(GMPE):
 
             # Read the stored mean and stds
             mean[m] = self.mean
-            for key, val in zip(contexts.STD_TYPES, [sig[m], tau[m], phi[m]]):
+            for key, val in kvs:
                 val[:] = getattr(self, key)
