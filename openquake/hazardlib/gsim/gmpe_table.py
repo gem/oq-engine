@@ -315,33 +315,33 @@ def _setup_amplification(self, fle):
             {self.amplification.parameter})
 
 
-def _return_tables(self, mag, imt, val_type):
+def _return_tables(self, mag, imt, std_idx):
     """
     Returns the vector of ground motions or standard deviations
     corresponding to the specific magnitude and intensity measure type.
 
-    :param val_type:
+    :param std_idx:
        the string "IMLs" or an integer 0, 1, 2 for total, inter, intra
     """
     if imt.string in 'PGA PGV':
         # Get scalar imt
-        if val_type == "IMLs":
+        if std_idx == "IMLs":
             iml_table = self.imls[imt.string][:]
         else:
-            stds = self.stddevs[val_type]
+            stds = self.stddevs[std_idx]
             if stds is None:
-                raise KeyError("Unsupported StdDev with #%d", val_type)
+                raise KeyError("Unsupported StdDev#%d", std_idx)
             iml_table = stds[imt.string][:]
 
         n_d, n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
-        if val_type == "IMLs":
+        if std_idx == "IMLs":
             periods = self.imls["T"][:]
             iml_table = self.imls["SA"][:]
         else:
-            periods = self.stddevs[val_type]["T"][:]
-            iml_table = self.stddevs[val_type]["SA"][:]
+            periods = self.stddevs[std_idx]["T"][:]
+            iml_table = self.stddevs[std_idx]["SA"][:]
 
         low_period = round(periods[0], 7)
         high_period = round(periods[-1], 7)
