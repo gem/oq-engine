@@ -285,6 +285,8 @@ class AlAtikSigmaModel(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
+    extr = True  # always extrapolate, except when debugging
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.tau_model = kwargs.get('tau_model', 'global')
@@ -313,8 +315,7 @@ class AlAtikSigmaModel(GMPE):
                 data = myfile.read().decode('utf-8')
             self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types,
-                             extr=True):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
 
         nsites = len(sites)
         stddevs = get_stddevs(
@@ -330,22 +331,22 @@ class AlAtikSigmaModel(GMPE):
         hp = sp[-1]
 
         # 1 - if imt.period < cornerp, no changes needed
-        if extr and imt.period <= cornerp and imt.period <= hp:
+        if self.extr and imt.period <= cornerp and imt.period <= hp:
             mean, _ = self.gmpe.get_mean_and_stddevs(
                 sites, rup, dists, imt, stds_types)
         # if the period is larger than the corner period but the corner period
         # is less than the highest period
-        elif extr and imt.period >= cornerp and cornerp <= hp:
+        elif self.extr and imt.period >= cornerp and cornerp <= hp:
             mean, _ = self.gmpe.get_mean_and_stddevs(
                 sites, rup, dists, SA(cornerp), stds_types)
             disp = get_disp_from_acc(mean, cornerp)
             mean = get_acc_from_disp(disp, imt.period)
         # if the corner period is longer than highest and imt is above
         # highets but below corner
-        elif extr and cornerp > hp and hp <= imt.period < cornerp:
+        elif self.extr and cornerp > hp and hp <= imt.period < cornerp:
             mean = extrapolate_in_PSA(
                 self.gmpe, sites, rup, dists, hp, sp, stds_types, imt.period)
-        elif extr and cornerp > hp and imt.period > cornerp:
+        elif self.extr and cornerp > hp and imt.period > cornerp:
             mean = extrapolate_in_PSA(
                 self.gmpe, sites, rup, dists, hp, sp, stds_types, cornerp)
             disp = get_disp_from_acc(mean, cornerp)

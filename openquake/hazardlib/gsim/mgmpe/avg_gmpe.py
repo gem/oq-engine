@@ -33,8 +33,8 @@ logic tree file is as in this example::
               </logicTreeBranch>
 """
 import inspect
-import numpy
-from openquake.hazardlib import const
+import numpy as np
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
@@ -97,21 +97,20 @@ class AvgGMPE(GMPE):
         # gsims are all the same, then the AvgGMPE should use the same
         if all(d == def_for_stddevs[0] for d in def_for_stddevs[1:]):
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = def_for_stddevs[0]
-        self.weights = numpy.array(weights)
+        self.weights = np.array(weights)
 
-    # TODO: fix this to work with the numpy-oriented API
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Call the underlying GMPEs and return the weighted mean and stddev
         """
-        means = []
-        std2 = [[] for _ in stddev_types]
-        for g, gsim in enumerate(self.gsims):
-            mean, stddevs = gsim.get_mean_and_stddevs(
-                sctx, rctx, dctx, imt, stddev_types)
-            means.append(mean)
-            for s, stddev in enumerate(stddevs):
-                std2[s].append(stddev**2)
-        mean = self.weights @ means
-        stddevs = [numpy.sqrt(self.weights @ s) for s in std2]
-        return mean, stddevs
+        outs = contexts.get_mean_stds(self.gsims, ctx, imts, const.StdDev.ALL)
+        means, sigs, taus, phis = [], [], [], []
+        for gsim, out in zip(self.gsims, outs):
+            means.append(out[0])
+            sigs.append(out[1] ** 2)
+            taus.append(out[2] ** 2)
+            phis.append(out[3] ** 2)
+        mean[:] = np.average(means, 0, self.weights)
+        sig[:] = np.sqrt(np.average(sigs, 0, self.weights))
+        tau[:] = np.sqrt(np.average(taus, 0, self.weights))
+        phi[:] = np.sqrt(np.average(phis, 0, self.weights))
