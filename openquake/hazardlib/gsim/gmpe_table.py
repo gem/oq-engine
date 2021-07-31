@@ -32,7 +32,7 @@ import numpy
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib import site, contexts
+from openquake.hazardlib import site
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.gsim.base import GMPE
@@ -496,6 +496,9 @@ class GMPETable(GMPE):
                 _setup_amplification(self, fle)
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
+        stds = [sig, tau, phi]
+        stdis = [StdDev.idx[sdt] for sdt in
+                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES]
         for m, imt in enumerate(imts):
             # Return Distance Tables
             imls = _return_tables(self, ctx.mag, imt, "IMLs")
@@ -504,10 +507,7 @@ class GMPETable(GMPE):
             dists = self.distances[:, 0, idx - 1]
             # Get mean and standard deviations
             mean_ = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
-            stdis = [StdDev.idx[sdt] for sdt in
-                     self.DEFINED_FOR_STANDARD_DEVIATION_TYPES]
             stddevs = _get_stddevs(self, dists, ctx, imt, stdis)
-            stds = [sig, tau, phi]
             if self.amplification:
                 # Apply amplification
                 mean_amp, sigma_amp = (

@@ -40,7 +40,7 @@ def AB06_BA08(C, vs30, imt, PGA760):
     return F
 
 
-def site_term(self, sctx, rctx, dctx, dists, imt, stddev_types):
+def site_term(self, ctx, dists, imt):
     """
     Site term as used to calculate site coefficients for NBCC2015:
 
@@ -54,10 +54,10 @@ def site_term(self, sctx, rctx, dctx, dists, imt, stddev_types):
     Assume PGA_760 = 0.1g for Vs30 > 450 m/s. Also need to correct PGA at
     site class C to 760 m/s. Cap PGA_450 at 0.1 - 0.5g.
     """
-    imls_pga = _return_tables(self, rctx.mag, PGA(), "IMLs")
-    PGA450 = _get_mean(self.kind, self.distance_type, imls_pga, dctx, dists)
-    imls_SA02 = _return_tables(self, rctx.mag, SA(0.2), "IMLs")
-    SA02 = _get_mean(self.kind, self.distance_type, imls_SA02, dctx, dists)
+    imls_pga = _return_tables(self, ctx.mag, PGA(), "IMLs")
+    PGA450 = _get_mean(self.kind, self.distance_type, imls_pga, ctx, dists)
+    imls_SA02 = _return_tables(self, ctx.mag, SA(0.2), "IMLs")
+    SA02 = _get_mean(self.kind, self.distance_type, imls_SA02, ctx, dists)
 
     PGA450[SA02 / PGA450 < 2.0] = PGA450[SA02 / PGA450 < 2.0] * 0.8
 
@@ -65,15 +65,14 @@ def site_term(self, sctx, rctx, dctx, dists, imt, stddev_types):
     pga_cors = np.array([0.083, 0.165, 0.248, 0.331, 0.414])
     PGA760 = np.interp(PGA450, pgas, pga_cors)
     PGA760_ref = np.copy(PGA760)
-    PGA760_ref[sctx.vs30 > 450.] = 0.1
+    PGA760_ref[ctx.vs30 > 450.] = 0.1
 
-    vs30ref = np.zeros_like(sctx.vs30)
+    vs30ref = np.zeros_like(ctx.vs30)
     vs30ref += 450.0
 
     C = self.COEFFS_2000_to_BC[imt]
-    site_term = (AB06_BA08(C, sctx.vs30, imt, PGA760_ref) /
+    site_term = (AB06_BA08(C, ctx.vs30, imt, PGA760_ref) /
                  AB06_BA08(C, vs30ref, imt, PGA760_ref))
-
     return np.log(site_term)
 
 
@@ -124,23 +123,26 @@ class NBCC2015_AA13(GMPETable):
         self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
             'DEFINED_FOR_TECTONIC_REGION_TYPE']
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
-        # Return Distance Tables
-        imls = _return_tables(self, rctx.mag, imt, "IMLs")
-        # Get distance vector for the given magnitude
-        idx = np.searchsorted(self.m_w, rctx.mag)
-        dists = self.distances[:, 0, idx - 1]
-        # Get mean and standard deviations
-        mean = np.log(_get_mean(
-            self.kind, self.distance_type, imls, dctx, dists))
-        stddevs = _get_stddevs(self, dists, rctx.mag, dctx, imt, stddev_types)
-        amplification = site_term(self, sctx, rctx, dctx, dists, imt,
-                                  stddev_types)
-        mean += amplification
-        return mean, stddevs
+        stds = [sig, tau, phi]
+        stdis = [const.StdDev.idx[sdt] for sdt in
+                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES]
+        for m, imt in enumerate(imts):
+            # Return Distance Tables
+            imls = _return_tables(self, ctx.mag, imt, "IMLs")
+            # Get distance vector for the given magnitude
+            idx = np.searchsorted(self.m_w, ctx.mag)
+            dists = self.distances[:, 0, idx - 1]
+            # Get mean and standard deviations
+            mean[m] = np.log(_get_mean(
+                self.kind, self.distance_type, imls, ctx, dists)
+            ) + site_term(self, ctx, dists, imt)
+            stddevs = _get_stddevs(self, dists, ctx, imt, stdis)
+            for s in stdis:
+                stds[s][m] = stddevs[s]
 
     COEFFS_2000_to_BC = CoeffsTable(sa_damping=5, table="""\
     IMT     c
