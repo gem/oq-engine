@@ -393,8 +393,7 @@ def _get_stddevs(self, dists, ctx, imt, stdis):
     dst = getattr(ctx, self.distance_type)
     for stdi in stdis:
         sigma = _return_tables(self, ctx.mag, imt, stdi)
-        interpolator_std = interp1d(dists, sigma, bounds_error=False)
-        stddev = interpolator_std(dst)
+        stddev = numpy.interp(dst, dists, sigma)
         stddev[dst < dists[0]] = sigma[0]
         stddev[dst > dists[-1]] = sigma[-1]
         stddevs.append(stddev)
@@ -515,9 +514,9 @@ class GMPETable(GMPE):
                         imt, ctx, getattr(ctx, self.distance_type),
                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES))
                 mean[m] = numpy.log(mean_) + numpy.log(mean_amp)
-                for s, amp in zip(stdis, sigma_amp):
-                    stds[s][m] = stddevs[s] * amp
+                for i, amp in zip(stdis, sigma_amp):
+                    stds[i][m] = stddevs[i] * amp
             else:
                 mean[m] = numpy.log(mean_)
-                for s in stdis:
-                    stds[s][m] = stddevs[s]
+                for i in stdis:
+                    stds[i][m] = stddevs[i]
