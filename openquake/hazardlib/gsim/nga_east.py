@@ -522,30 +522,18 @@ def get_site_amplification_sigma(self, sites, f_rk, C_LIN, C_F760, C_NL):
     return np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
 
 
-def get_stddevs(self, mag, imt, stddev_types, num_sites):
+def get_stddevs(self, mag, imt):
     """
     Returns the standard deviations for either the ergodic or
     non-ergodic models
     """
-    stddevs = []
     if self.__class__.__name__.endswith('TotalSigma'):
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                sigma = _get_total_sigma(self, imt, mag)
-                stddevs.append(sigma + np.zeros(num_sites))
-        return stddevs
-    # else compute all stddevs
+        return [_get_total_sigma(self, imt, mag), 0., 0.]
+
     tau = _get_tau(self, imt, mag)
     phi = _get_phi(self, imt, mag)
-    sigma = np.sqrt(tau ** 2. + phi ** 2.)
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(sigma + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(num_sites))
-    return stddevs
+    sigma = np.sqrt(tau ** 2 + phi ** 2)
+    return [sigma, tau, phi]
 
 
 def _get_tau(self, imt, mag):
@@ -729,15 +717,14 @@ class NGAEastGMPE(GMPETable):
             assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
         super().__init__(**kwargs)
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
-        mean, _, _ = get_mean_amp(self, rctx, imt)
-        # Get standard deviation model
-        nsites = getattr(dctx, self.distance_type).shape
-        stddevs = get_stddevs(self, rctx.mag, imt, stddev_types, nsites)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            mean[m], _, _ = get_mean_amp(self, ctx, imt)
+            # Get standard deviation model
+            sig[m], tau[m], phi[m] = get_stddevs(self, ctx.mag, imt)
 
     # Seven constants: vref, vL, vU, vw1, vw2, wt1 and wt2
     CONSTANTS = {"vref": 760., "vL": 200., "vU": 2000.0,
