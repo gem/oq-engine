@@ -222,7 +222,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         expected_sigma = np.ones_like(ctx.rjb)
         # Check PGA and PGV
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGA(), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.PGA(), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 1.5) * expected_mean)
@@ -230,7 +230,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
             sigma_amp[0],
             0.9 * expected_mean)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGV(), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.PGV(), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 0.5) * expected_mean)
@@ -239,7 +239,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
             0.9 * expected_mean)
         # Sa (0.5)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.SA(0.5), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.SA(0.5), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 2.0) * expected_mean)
@@ -305,7 +305,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
         expected_mean = np.ones_like(ctx.rjb)
         # Check PGA and PGV
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGA(), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.PGA(), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 1.5) * expected_mean)
@@ -313,7 +313,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
             sigma_amp[0],
             0.9 * expected_mean)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGV(), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.PGV(), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 0.5) * expected_mean)
@@ -322,7 +322,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
             0.9 * expected_mean)
         # Sa (0.5)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.SA(0.5), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.SA(0.5), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 2.0) * expected_mean)
@@ -521,6 +521,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         ctx.mag = 6.0
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
+        ctx.sids = np.arange(5)
         ctx.vs30 = 100. * np.ones(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([20., 20., 10., 5., 1.0E-19])
@@ -537,20 +538,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                                                 stddevs)
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
-
-    def test_get_mean_stddevs_unsupported_stddev(self):
-        # Tests the execution of the GMPE with an unsupported standard
-        # deviation type
-        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        ctx = RuptureContext()
-        ctx.mag = 6.0
-        # Test values at the given distances and those outside range
-        ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
-        ctx.vs30 = 1000. * np.ones(5)
-        stddevs = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT]
-        with self.assertRaises(KeyError) as ve:
-            gsim.get_mean_and_stddevs(ctx, ctx, ctx, imt_module.PGA(),
-                                      stddevs)
 
     def tearDown(self):
         """
@@ -616,6 +603,7 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         ctx.rake = 90.0
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
+        ctx.sids = np.arange(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([20.0, 20.0, 10.0, 5.0, 1.0E-19])
         # PGA
@@ -676,6 +664,7 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         ctx.mag = 6.0
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
+        ctx.sids = np.arange(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])
         # PGA
