@@ -571,21 +571,21 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
-        N = nsites.sum()
-        poes = numpy.zeros((N, self.loglevels.size, len(self.gsims)))
         with self.gmf_mon:
             mean_stdt = self.get_mean_stds(ctxs, StdDev.TOTAL)
-        with self.poe_mon:
-            for g, gsim in enumerate(self.gsims):
-                # builds poes of shape (N, L, G)
-                if self.af:  # kernel amplification method
-                    poes[:, :, g] = get_poes_site(mean_stdt[g], self, ctxs)
-                else:  # regular case
-                    poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
         s = 0
-        for n in nsites:
-            yield poes[s:s+n]
-            s += n
+        with self.poe_mon:
+            for n in nsites:
+                poes = numpy.zeros((n, self.loglevels.size, len(self.gsims)))
+                for g, gsim in enumerate(self.gsims):
+                    ms = mean_stdt[g][:, :, s:s+n]
+                    # builds poes of shape (n, L, G)
+                    if self.af:  # kernel amplification method
+                        poes[:, :, g] = get_poes_site(ms, self, ctxs)
+                    else:  # regular case
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctxs)
+                yield poes
+                s += n
 
 
 # see contexts_tests.py for examples of collapse
