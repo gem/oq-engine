@@ -618,7 +618,11 @@ class GMPE(GroundShakingIntensityModel):
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, :, m] += s * self.adjustment
+                    start = 0
+                    for ctx in ctxs:
+                        n = len(ctx.sids)
+                        ms[0, start:start + n, m] += s * ctx.adjustment
+                        start += n
                 outs.append(_get_poes(ms, loglevels, trunclevel))
             arr = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):

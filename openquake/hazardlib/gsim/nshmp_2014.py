@@ -118,8 +118,8 @@ class NSHMP2014(base.GMPE):
         mean, stddevs = self.gsim.get_mean_and_stddevs(
             sctx, rctx, dctx, imt, stddev_types)
         # return mean increased by the adjustment factor and standard deviation
-        self.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
-        return mean + self.sgn * self.adjustment, stddevs
+        rctx.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
+        return mean + self.sgn * rctx.adjustment, stddevs
 
 
 # populate gsim_aliases
