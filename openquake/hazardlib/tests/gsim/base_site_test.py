@@ -87,7 +87,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         # This function is rather slow at the moment
         ctx = unittest.mock.Mock(mag=self.mag, rrup=self.rrup, sids=[0],
                                  sites=dict(ampcode=[sitecode]))
-        res = get_poes_site(self.meastd, self.cmaker, [ctx])
+        res = get_poes_site(self.meastd, self.cmaker, ctx)
 
         if False:
             import matplotlib.pyplot as plt
