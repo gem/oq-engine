@@ -547,8 +547,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 # the sum is zero for {'default': [(1, 0), (10, 0)]}
                 if sum(dic.values()):
                     it = list(dic.items())
-                    md = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                    logging.info('ps_dist %s: %s', trt, md)
+                    dists = {i[1] for i in it}
+                    if len(set(dists)) > 1:
+                        md = '%s->%d ... %s->%d' % (it[0] + it[-1])
+                        logging.info('ps_dist %s: %s', trt, md)
         imts_with_period = [imt for imt in oq.imtls
                             if imt == 'PGA' or imt.startswith('SA')]
         imts_ok = len(imts_with_period) == len(oq.imtls)
