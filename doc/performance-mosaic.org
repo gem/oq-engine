@@ -46,9 +46,6 @@ ClassicalCalculator.run 4_769    6_193     1
 
 ** USA
 
-#+BEGIN_EXAMPLE    
-#+END_EXAMPLE
-
 ** CAN
 
 The calculation is totally dominated by "computing mean_std", thus suggesting

@@ -608,8 +608,10 @@ def get_gsim_lt(oqparam, trts=('*',)):
     if trts != ('*',):  # not in get_input_files
         old_style = count_old_style(gsim_lt)
         no_vect = count_no_vect(gsim_lt)
-        logging.info('There are %d old style GMPEs', old_style)
-        logging.info('There are %d not vectorized GMPEs', no_vect)
+        if old_style:
+            logging.info('There are %d old style GMPEs', old_style)
+        if no_vect:
+            logging.info('There are %d not vectorized GMPEs', no_vect)
     return gsim_lt
 
 
