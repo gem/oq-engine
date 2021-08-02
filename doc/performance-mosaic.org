@@ -45,17 +45,9 @@ ClassicalCalculator.run 4_769    6_193     1
 #+END_EXAMPLE
 
 ** USA
-poes[:, :, g] = gsim.get_poes(
-  File "/mnt/sdd/users/michele/oq-engine/openquake/hazardlib/gsim/base.py", line 621, in get_poes
-    ms[0, :, m] += s * self.adjustment
-ValueError: operands could not be broadcast together with shapes (818,) (273,) (818,)
 
-
-I fails:
-
-  File "/mnt/sdd/users/michele/oq-engine/openquake/hazardlib/gsim/base.py", line 621, in get_poes
-    ms[0, :, m] += s * self.adjustment
-ValueError: operands could not be broadcast together with shapes (818,) (273,) (818,)
+#+BEGIN_EXAMPLE    
+#+END_EXAMPLE
 
 ** CAN
 
