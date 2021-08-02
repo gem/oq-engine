@@ -38,7 +38,7 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
-    case_71)
+    case_71, case_72)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -913,3 +913,9 @@ hazard_uhs-std.csv
         slc0, slc1 = cmakers[0].slc, cmakers[1].slc
         self.assertEqual(slc0.stop - slc0.start, 3)
         self.assertEqual(slc1.stop - slc1.start, 2)
+
+    def test_case_72(self):
+        # reduced USA model
+        self.run_calc(case_72.__file__, 'job.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f)

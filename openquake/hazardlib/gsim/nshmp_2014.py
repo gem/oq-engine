@@ -86,8 +86,8 @@ class NSHMP2014(base.GMPE):
         for spec of input and result values.
         """
         self.gsim.compute(ctx, imts, mean, sig, tau, phi)
-        self.adjustment = nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
-        mean[:] += self.sgn * self.adjustment
+        ctx.adjustment = nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
+        mean[:] += self.sgn * ctx.adjustment
 
 
 # populate gsim_aliases
