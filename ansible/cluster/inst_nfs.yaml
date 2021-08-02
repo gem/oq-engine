@@ -14,26 +14,6 @@
     nfs_serv_opts: "(ro,fsid=0,crossmnt,insecure,no_subtree_check,async)"
     server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
 
-  pre_tasks:
-  - name: ping hosts
-    ping:
-
-  - name: check OS
-    debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_python_version}}
-
-  - name: check server host IP
-    debug: msg={{ server_host }}
-
-  - name: Ensure user openquake exist and generate ssh key
-    user:
-      name: openquake
-      home: /home/openquake
-      shell: /bin/bash
-      state: present
-      generate_ssh_key: yes
-      ssh_key_bits: 2048
-      ssh_key_file: .ssh/id_rsa
-
   tasks:
   ##### Check OS for update system
   - name: ping hosts
