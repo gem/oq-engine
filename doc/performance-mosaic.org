@@ -1,0 +1,78 @@
+Performance of various models in the global hazard mosaic, with
+parameters pointsource_distance=75, ps_grid_spacing=50, using an azure
+machine with 120 cores, 480 GB of RAM (kind HB120rs_v2).
+
+* Engine 3.11
+
+** EUR
+
+calc_26, maxmem=53.0 GB time_sec memory_mb counts   
+======================= ======== ========= =========
+total classical         115_897  464       628      
+get_poes                45_780   0.0       8_774_945
+computing mean_std      34_300   0.0       8_774_945
+total build_hazard      25_592   23        240      
+combine pmaps           23_719   0.0       99_146   
+composing pnes          19_093   0.0       9_557_638
+make_contexts           9_852    0.0       9_582_215
+ClassicalCalculator.run 1_789    4_988     1        
+
+The calculation is dominated by "get_poes", followed by "computing mean_std".
+Also the computation of the statistics is significantly slow.
+
+** SAM
+
+openquake.commonlib.logictree.InvalidLogicTree:
+/mnt/sdd/users/michele/mosaic/SAM/in/gmmLT.xml is missing the TRT 'Shield'
+
+
+As Europe, but with terrible slow tasks:
+
+$ oq show task_info 36
+================== ====== ======= ====== ======= =======
+operation-duration counts mean    stddev min     max    
+build_hazard       240    33      2%     32      35     
+classical          712    277     95%    16      2_854  
+
+calc_36, maxmem=48.4 GB time_sec memory_mb counts    
+======================= ======== ========= ==========
+total classical         197_460  537       712       
+get_poes                68_605   0.0       9_982_857 
+computing mean_std      56_969   0.0       9_982_857 
+composing pnes          34_811   0.0       24_518_375
+make_contexts           19_669   0.0       24_544_086
+total build_hazard      8_108    14        240       
+combine pmaps           7_412    0.0       198_474   
+ClassicalCalculator.run 4_769    6_193     1         
+
+** USA
+poes[:, :, g] = gsim.get_poes(
+  File "/mnt/sdd/users/michele/oq-engine/openquake/hazardlib/gsim/base.py", line 621, in get_poes
+    ms[0, :, m] += s * self.adjustment
+ValueError: operands could not be broadcast together with shapes (818,) (273,) (818,)
+
+
+I fails:
+
+  File "/mnt/sdd/users/michele/oq-engine/openquake/hazardlib/gsim/base.py", line 621, in get_poes
+    ms[0, :, m] += s * self.adjustment
+ValueError: operands could not be broadcast together with shapes (818,) (273,) (818,)
+
+** CAN
+
+The calculation is totally dominated by "computing mean_std", thus suggesting
+that the table-based GMPEs are poorly implemented. Computing the statistics
+is nearly as slow as "get_poes".
+
+calc_32, maxmem=62.6 GB time_sec  memory_mb counts    
+======================= ========= ========= ==========
+total classical         1_779_810 615       619       
+computing mean_std      1_456_858 0.0       17_030_190
+get_poes                181_862   0.0       17_030_190
+total build_hazard      127_988   50        240       
+combine pmaps           119_030   0.0       138_284   
+composing pnes          99_463    0.0       36_736_209
+ClassicalCalculator.run 18_098    2_850     1         
+make_contexts           15_677    0.0       36_739_040
+
+** AUS
