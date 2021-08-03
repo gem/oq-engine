@@ -57,6 +57,22 @@ A *lot* more memory is needed, 162G > 48G.
 
 #+END_EXAMPLE* Engine 3.11
 
+** USA
+
+The calculation is totally dominated by get_poes and uses a lot of memory.
+
+| calc_42, maxmem=254.5 GB | time_sec | memory_mb | counts     |
+|--------------------------+----------+-----------+------------|
+| total classical          | 594_802  | 2_281     | 733        |
+| get_poes                 | 346_214  | 0.0       | 10_159     |
+| computing mean_std       | 184_702  | 0.0       | 10_159     |
+| composing pnes           | 82_092   | 0.0       | 17_423_053 |
+| make_contexts            | 51_041   | 0.0       | 17_424_669 |
+| ClassicalCalculator.run  | 6_026    | 3_164     | 1          |
+| total build_hazard       | 2_865    | 85.9      | 240        |
+
+The slowest task takes 2_891s. "build_hazard" is 30x faster.
+
 * Engine 3.11
 
 ** EUR
@@ -105,6 +121,21 @@ ClassicalCalculator.run 4_769    6_193     1
 #+END_EXAMPLE
 
 ** USA
+
+There is a terribly slow task taking 10_309 seconds and the calculation
+is totally dominated by "get_poes".
+
+======================== ======== ========= =========
+calc_43, maxmem=134.6 GB time_sec memory_mb counts   
+======================== ======== ========= =========
+total classical          302_285  1_140     661      
+get_poes                 192_912  0.0       1_429_999
+total build_hazard       85_877   146       240      
+combine pmaps            83_671   0.0       94_480   
+composing pnes           62_824   0.0       227_943  
+computing mean_std       23_797   0.0       1_429_999
+make_contexts            17_422   0.0       229_559  
+ClassicalCalculator.run  11_270   4_031     1        
 
 ** CAN
 
