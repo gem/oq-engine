@@ -573,8 +573,8 @@ class ContextMaker(object):
         with self.gmf_mon:
             mean_stdt = self.get_mean_stds(ctxs, StdDev.TOTAL)
         s = 0
-        with self.poe_mon:
-            for ctx in ctxs:
+        for ctx in ctxs:
+            with self.poe_mon:
                 n = len(ctx)
                 poes = numpy.zeros((n, self.loglevels.size, len(self.gsims)))
                 for g, gsim in enumerate(self.gsims):
@@ -584,8 +584,8 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx)
-                yield poes
-                s += n
+            yield poes
+            s += n
 
 
 # see contexts_tests.py for examples of collapse
