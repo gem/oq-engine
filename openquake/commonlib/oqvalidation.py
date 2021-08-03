@@ -1268,6 +1268,8 @@ class OqParam(valid.ParamSet):
         """
         Loss types plus insured types, if any
         """
+        if not hasattr(self, "all_cost_types"):  # for hazard
+            return []
         names = []
         for lt in self.all_cost_types:
             names.append(lt)

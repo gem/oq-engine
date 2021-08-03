@@ -56,7 +56,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
         super().setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
-        self.cmaker = ContextMaker('faketrt', [self.gsim])
+        self.cmaker = ContextMaker('faketrt', [self.gsim], dict(imtls={}))
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
             self.DEFAULT_COMPONENT
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES = frozenset(
@@ -159,7 +159,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.fake_surface = FakeSurface
 
     def make_contexts(self, site_collection, rupture):
-        return ContextMaker('faketrt', [self.gsim_class]).make_contexts(
+        param = dict(imtls={})
+        return ContextMaker('faketrt', [self.gsim_class], param).make_contexts(
             site_collection, rupture)
 
     def test_unknown_distance_error(self):

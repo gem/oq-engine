@@ -163,8 +163,8 @@ class ContextMaker(object):
     rup_indep = True
     tom = None
 
-    def __init__(self, trt, gsims, param=None, monitor=Monitor()):
-        param = param or {}  # empty in the gmpe-smtk
+    def __init__(self, trt, gsims, param, monitor=Monitor()):
+        param = param
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
@@ -197,7 +197,7 @@ class ContextMaker(object):
         elif 'hazard_imtls' in param:
             self.imtls = DictArray(param['hazard_imtls'])
         else:
-            self.imtls = {}
+            raise KeyError('Missing imtls in ContextMaker!')
         self.imts = tuple(imt_module.from_string(imt) for imt in self.imtls)
         self.reqv = param.get('reqv')
         if self.reqv is not None:
@@ -573,8 +573,8 @@ class ContextMaker(object):
         with self.gmf_mon:
             mean_stdt = self.get_mean_stds(ctxs, StdDev.TOTAL)
         s = 0
-        with self.poe_mon:
-            for ctx in ctxs:
+        for ctx in ctxs:
+            with self.poe_mon:
                 n = len(ctx)
                 poes = numpy.zeros((n, self.loglevels.size, len(self.gsims)))
                 for g, gsim in enumerate(self.gsims):
@@ -584,8 +584,8 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx)
-                yield poes
-                s += n
+            yield poes
+            s += n
 
 
 # see contexts_tests.py for examples of collapse

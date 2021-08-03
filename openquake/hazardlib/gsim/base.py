@@ -365,6 +365,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         tau = numpy.zeros((1, N))
         phi = numpy.zeros((1, N))
         if isinstance(rup, (RuptureContext, numpy.ndarray)):
+            assert sites is rup, (sites, rup)
+            assert dists is rup, (dists, rup)
             ctx = rup  # rup is already a good object
         else:
             ctx = full_context(sites, rup, dists)
