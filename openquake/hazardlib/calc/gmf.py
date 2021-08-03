@@ -284,6 +284,9 @@ class GmfComputer(object):
             gmf = to_imt_unit_values(
                 mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
+        else:
+            # this cannot happen, unless you pass a wrong mean_stds array
+            raise ValueError('There are %d>3 outputs!' % num_outs)
         return gmf, stdi, epsilons
 
 
