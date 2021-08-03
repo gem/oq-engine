@@ -206,6 +206,10 @@ def preclassical(srcs, srcfilter, params, monitor):
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
     if params['ps_grid_spacing']:
+        # reduce the weight of CollapsedPointSources
+        for src in dic[grp_id]:
+            if hasattr(src, 'pointsources'):  # CollapsedPointSource
+                src.num_ruptures /= len(src.pointsources)
         dic['ps_grid/%02d' % monitor.task_no] = [
             src for src in dic[grp_id] if src.nsites > EPS]
     return dic

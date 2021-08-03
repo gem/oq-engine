@@ -80,14 +80,17 @@ task is 264.9s.
 
 ** SAM
 
-As Europe, but with terrible slow tasks due to complex fault sources
-not being split:
+As Europe, but with terrible slow tasks due to heavy griddedSources:
 
 #+BEGIN_EXAMPLE
 $ oq show task_info 36
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
 classical          712    277     95%    16      2_854  
+
+$ oq show task:classical:-1 36
+taskno=706, eff_ruptures=69554, eff_sites=19361, duration=2832 s
+sources="src_09_5pt85 src_09_5pt95 src_09_6pt05 src_09_6pt15 src_09_6pt25 src_09_6pt35 src_09_6pt45"
 
 calc_36, maxmem=48.4 GB time_sec memory_mb counts    
 ======================= ======== ========= ==========
