@@ -17,19 +17,18 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Implements SERA site amplification models class: `PitilakisEtAl2018`,
-                                                 `PitilakisEtAl2020`,
-                                                 `Eurocode8Amplification`,
-                                                 `Eurocode8AmplificationDefault`,
-                                                 `SandikkayaDinsever2018`
+Implements SERA site amplification models
+class:`PitilakisEtAl2018`, `PitilakisEtAl2020`, `Eurocode8Amplification`,
+      `Eurocode8AmplificationDefault`,`SandikkayaDinsever2018`
 """
 import numpy as np
 import copy
 from scipy.constants import g
-# from scipy.interpolate import interp1d
-from openquake.hazardlib.gsim.base import (GMPE, CoeffsTable, registry)
+
+from openquake.baselib.general import CallableDict
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, registry
 from openquake.hazardlib.imt import PGA, SA, from_string
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 
 
 # Pitilakis GMPE Wrapper
@@ -40,6 +39,159 @@ REQUIRES_SITES_PARAMETERS
 REQUIRES_RUPTURE_PARAMETERS
 REQUIRES_DISTANCES
 '''.split()
+
+CONSTANTS = {
+    "F0": 2.5,
+    "kappa": 5.0,
+    "TA": 0.03}
+
+IMLS = [0., 0.25, 0.5, 0.75, 1., 1.25]
+
+MEAN, INTER, INTRA = 0, 1, 2
+
+get_amplification_factor = CallableDict()
+
+
+@get_amplification_factor.add("base")
+def get_amplification_factor_1(kind, F1, FS, s_s, s_1, sctx, ec8=None):
+    """
+    Returns the short and long-period amplification factors given the
+    input Pitilakis et al. (2018) site class and the short and long-period
+    input accelerations
+    """
+    f_s = np.ones(sctx.ec8_p18.shape, dtype=float)
+    f_l = np.ones(sctx.ec8_p18.shape, dtype=float)
+    for ec8b in np.unique(sctx.ec8_p18):
+        ec8 = ec8b.decode('ascii')
+        if ec8 == "A":
+            # Amplification factors are 1
+            continue
+        idx = sctx.ec8_p18 == ec8b
+        if np.any(idx):
+            s_ss = s_s[idx]
+            f_ss = np.ones(np.sum(idx))
+            f_ls = np.ones(np.sum(idx))
+            lb = s_ss < 0.25
+            ub = s_ss > 1.25
+            f_ss[lb] = FS[ec8][0]
+            f_ls[lb] = F1[ec8][0]
+            f_ss[ub] = FS[ec8][-1]
+            f_ls[ub] = F1[ec8][-1]
+            for j in range(1, len(IMLS) - 1):
+                jdx = np.logical_and(s_ss >= IMLS[j], s_ss < IMLS[j + 1])
+                if not np.any(jdx):
+                    continue
+                dfs = FS[ec8][j + 1] - FS[ec8][j]
+                dfl = F1[ec8][j + 1] - F1[ec8][j]
+                diml = IMLS[j + 1] - IMLS[j]
+                f_ss[jdx] = FS[ec8][j] + (s_ss[jdx] - IMLS[j]) * (dfs / diml)
+                f_ls[jdx] = F1[ec8][j] + (s_ss[jdx] - IMLS[j]) * (dfl / diml)
+            f_s[idx] = f_ss
+            f_l[idx] = f_ls
+    return f_s, f_l
+
+
+@get_amplification_factor.add("euro8")
+def get_amplification_factor_2(kind, F1, FS, s_s_rp, s_1_rp, sctx, ec8):
+    """
+    Returns the amplification factors based on the proposed EC8 formulation
+    in Table 3.4
+    """
+    r_alpha = 1.0 - 2.0E3 * ((s_s_rp * g) / (sctx.vs30 ** 2))
+    r_beta = 1.0 - 2.0E3 * ((s_1_rp * g) / (sctx.vs30 ** 2))
+    f_s = np.ones(sctx.vs30.shape)
+    f_l = np.ones(sctx.vs30.shape)
+    vsh_norm = sctx.vs30 / 800.
+    for s_c in np.unique(ec8):
+        if s_c == b"A":
+            continue
+        idx = ec8 == s_c
+        if not np.any(idx):
+            continue
+        if s_c in (b"B", b"C", b"D"):
+            f_s[idx] = vsh_norm[idx] ** (-0.25 * r_alpha[idx])
+            f_l[idx] = vsh_norm[idx] ** (-0.7 * r_beta[idx])
+        elif s_c == b"E":
+            f_s[idx] = vsh_norm[idx] ** (-0.25 * r_alpha[idx] *
+                                         (sctx.h800[idx] / 30.) *
+                                         (4.0 - (sctx.h800[idx] / 10.)))
+            f_l[idx] = vsh_norm[idx] ** (-0.7 * r_beta[idx] *
+                                         (sctx.h800[idx] / 30.))
+        elif s_c == b"F":
+            f_s[idx] = 0.9 * (vsh_norm[idx] ** (-0.25 * r_alpha[idx]))
+            f_l[idx] = 1.25 * (vsh_norm[idx] ** (-0.7 * r_beta[idx]))
+        else:
+            pass
+    return f_s, f_l
+
+
+@get_amplification_factor.add("euro8default")
+def get_amplification_factor_3(kind, F1, FS, s_s_rp, s_1_rp, sctx, ec8=None):
+    """
+    Returns the default amplification factor dependent upon the site class
+    """
+    f_s = np.ones(sctx.ec8.shape)
+    f_l = np.ones(sctx.ec8.shape)
+    for key in EC8_FS_default:
+        idx = sctx.ec8 == key
+        f_s[idx] = EC8_FS_default[key]
+        f_l[idx] = EC8_FL_default[key]
+    return f_s, f_l
+
+
+def get_amplified_mean(s_s, s_1, s_1_rp, imt):
+    """
+    Given the amplified short- and long-period input accelerations,
+    returns the mean ground motion for the IMT according to the design
+    spectrum construction in equations 1 - 5 of Pitilakis et al., (2018)
+    """
+    if "PGA" in str(imt) or imt.period <= CONSTANTS["TA"]:
+        # PGA or v. short period acceleration
+        return np.log(s_s / CONSTANTS["F0"])
+    mean = np.copy(s_s)
+    t_c = s_1 / s_s
+    t_b = t_c / CONSTANTS["kappa"]
+    t_b[t_b < 0.05] = 0.05
+    t_b[t_b > 0.1] = 0.1
+    t_d = 2.0 + np.zeros_like(s_1_rp)
+    idx = s_1_rp > 0.1
+    t_d[idx] = 1.0 + (10. * s_1_rp[idx])
+    idx = np.logical_and(CONSTANTS["TA"] < imt.period,
+                         t_b >= imt.period)
+    mean[idx] = (s_s[idx] / (t_b[idx] - CONSTANTS["TA"])) *\
+        ((imt.period - CONSTANTS["TA"]) +
+         (t_b[idx] - imt.period) / CONSTANTS["F0"])
+    idx = np.logical_and(t_c < imt.period, t_d >= imt.period)
+    mean[idx] = s_1[idx] / imt.period
+    idx = t_d < imt.period
+    mean[idx] = t_d[idx] * s_1[idx] / (imt.period ** 2.)
+    return np.log(mean)
+
+
+def get_ec8_class(vsh, h800):
+    """
+    Method to return the vector of Eurocode 8 site classes based on
+    Vs30 and h800
+    """
+    ec8 = np.array([b"A" for i in range(len(vsh))], dtype="|S1")
+
+    idx = np.logical_and(vsh >= 400., h800 > 5.)
+    ec8[idx] = b"B"
+    idx1 = np.logical_and(vsh < 400., vsh >= 250.)
+    idx = np.logical_and(idx1, np.logical_and(h800 > 5., h800 <= 30.))
+    ec8[idx] = b"E"
+    idx = np.logical_and(idx1, np.logical_and(h800 > 30., h800 <= 100.))
+    ec8[idx] = b"C"
+    idx = np.logical_and(idx1, h800 > 100.)
+    ec8[idx] = b"F"
+    idx1 = vsh < 250.
+    idx = np.logical_and(idx1, h800 <= 30.)
+    ec8[idx] = b"E"
+    idx = np.logical_and(idx1, np.logical_and(h800 > 30., h800 <= 100.))
+    ec8[idx] = b"D"
+    idx = np.logical_and(idx1, h800 > 100.)
+    ec8[idx] = b"F"
+    return ec8
 
 
 class PitilakisEtAl2018(GMPE):
@@ -70,7 +222,7 @@ class PitilakisEtAl2018(GMPE):
     :param float rock_vs30:
         Reference shearwave velocity used for the rock calculation
     """
-    experimental = True
+    kind = "base"
 
     #: Supported tectonic region type is undefined (applies to any)
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
@@ -114,7 +266,7 @@ class PitilakisEtAl2018(GMPE):
             setattr(self, name,
                     frozenset(getattr(self, name) | getattr(self.gmpe, name)))
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations calling the input GMPE
         for the mean acceleration for PGA and Sa (1.0) on the reference rock,
@@ -123,105 +275,34 @@ class PitilakisEtAl2018(GMPE):
         input GMPE once more in order to return the standard deviations for the
         required IMT.
         """
-        sctx_r = copy.copy(sctx)
-        sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
-                                               stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, SA(1.0),
-                                                stddev_types)[0]
-        s_s_rp = self.CONSTANTS["F0"] * np.exp(pga_r)
+        ctx_r = copy.copy(ctx)
+        ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
+        [rock] = contexts.get_mean_stds(
+            [self.gmpe], ctx_r, [PGA(),  SA(1.0)], const.StdDev.ALL)
+        pga_r = rock[0, 0]
+        s_1_rp = rock[0, 1]
+        s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
         s_1_rp = np.exp(s_1_rp)
         # Get the short and long period amplification factors
-        f_s, f_l = self.get_amplification_factor(s_s_rp, s_1_rp, sctx)
+        if self.kind == 'euro8':
+            ec8 = get_ec8_class(ctx.vs30, ctx.h800)
+        else:
+            ec8 = None
+        f_s, f_l = get_amplification_factor(
+            self.kind, self.F1, self.FS, s_s_rp, s_1_rp, ctx, ec8)
         s_1 = f_l * s_1_rp
         s_s = f_s * s_s_rp
-        # Get the mean ground motion at the IMT using the design code spectrum
-        mean = self.get_amplified_mean(s_s, s_1, s_1_rp, imt)
-        # Call the original GMPE to return the standard deviation for the
-        # IMT in question
-        stddevs = self.gmpe.get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                 stddev_types)[1]
-        return mean, stddevs
 
-    def get_amplification_factor(self, s_s, s_1, sctx):
-        """
-        Returns the short and long-period amplification factors given the
-        input Pitilakis et al. (2018) site class and the short and long-period
-        input accelerations
-        """
-        f_s = np.ones(sctx.ec8_p18.shape, dtype=float)
-        f_l = np.ones(sctx.ec8_p18.shape, dtype=float)
-        for ec8b in np.unique(sctx.ec8_p18):
-            ec8 = ec8b.decode('ascii')
-            if ec8 == "A":
-                # Amplification factors are 1
-                continue
-            idx = sctx.ec8_p18 == ec8b
-            if np.any(idx):
-                s_ss = s_s[idx]
-                f_ss = np.ones(np.sum(idx))
-                f_ls = np.ones(np.sum(idx))
-                lb = s_ss < 0.25
-                ub = s_ss > 1.25
-                f_ss[lb] = self.FS[ec8][0]
-                f_ls[lb] = self.F1[ec8][0]
-                f_ss[ub] = self.FS[ec8][-1]
-                f_ls[ub] = self.F1[ec8][-1]
-                for j in range(1, len(self.IMLS) - 1):
-                    jdx = np.logical_and(s_ss >= self.IMLS[j],
-                                         s_ss < self.IMLS[j + 1])
-                    if not np.any(jdx):
-                        continue
-                    dfs = self.FS[ec8][j + 1] - self.FS[ec8][j]
-                    dfl = self.F1[ec8][j + 1] - self.F1[ec8][j]
-                    diml = self.IMLS[j + 1] - self.IMLS[j]
-                    f_ss[jdx] = self.FS[ec8][j] + (s_ss[jdx] - self.IMLS[j]) *\
-                        (dfs / diml)
-                    f_ls[jdx] = self.F1[ec8][j] + (s_ss[jdx] - self.IMLS[j]) *\
-                        (dfl / diml)
-                f_s[idx] = f_ss
-                f_l[idx] = f_ls
-        return f_s, f_l
-
-    def get_amplified_mean(self, s_s, s_1, s_1_rp, imt):
-        """
-        Given the amplified short- and long-period input accelerations,
-        returns the mean ground motion for the IMT according to the design
-        spectrum construction in equations 1 - 5 of Pitilakis et al., (2018)
-        """
-        if "PGA" in str(imt) or imt.period <= self.CONSTANTS["TA"]:
-            # PGA or v. short period acceleration
-            return np.log(s_s / self.CONSTANTS["F0"])
-        mean = np.copy(s_s)
-        t_c = s_1 / s_s
-        t_b = t_c / self.CONSTANTS["kappa"]
-        t_b[t_b < 0.05] = 0.05
-        t_b[t_b > 0.1] = 0.1
-        t_d = 2.0 + np.zeros_like(s_1_rp)
-        idx = s_1_rp > 0.1
-        if np.any(idx):
-            t_d[idx] = 1.0 + (10. * s_1_rp[idx])
-        idx = np.logical_and(self.CONSTANTS["TA"] < imt.period,
-                             t_b >= imt.period)
-        if np.any(idx):
-            mean[idx] = (s_s[idx] / (t_b[idx] - self.CONSTANTS["TA"])) *\
-                ((imt.period - self.CONSTANTS["TA"]) +
-                 (t_b[idx] - imt.period) / self.CONSTANTS["F0"])
-        idx = np.logical_and(t_c < imt.period, t_d >= imt.period)
-        if np.any(idx):
-            mean[idx] = s_1[idx] / imt.period
-        idx = t_d < imt.period
-        if np.any(idx):
-            mean[idx] = t_d[idx] * s_1[idx] / (imt.period ** 2.)
-        return np.log(mean)
-
-    CONSTANTS = {
-        "F0": 2.5,
-        "kappa": 5.0,
-        "TA": 0.03}
-
-    IMLS = [0., 0.25, 0.5, 0.75, 1., 1.25]
+        # NB: this is wasteful since means are computed and then discarded
+        [out] = contexts.get_mean_stds(
+            [self.gmpe], ctx_r, imts, const.StdDev.ALL)
+        for m, imt in enumerate(imts):
+            # Get the mean ground motion using the design code spectrum
+            mean[m] = get_amplified_mean(s_s, s_1, s_1_rp, imt)
+            sig[m] = out[1, m]
+            tau[m] = out[2, m]
+            phi[m] = out[3, m]
 
     # Short period amplification factors defined by Pitilakis et al., (2018)
     FS = {
@@ -257,8 +338,6 @@ class PitilakisEtAl2020(PitilakisEtAl2018):
     of the 17th World Conference on Earthquake Engineering, 17WCEE, Sendai,
     Japan, September 13th to 18th 2020. Paper No. C002895.
     """
-    experimental = True
-
     # Short period amplification factors defined by Pitilakis et al., (2020)
     FS = {
         "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
@@ -292,7 +371,7 @@ class Eurocode8Amplification(PitilakisEtAl2018):
     The potential notes highlighted in :class:`PitilakisEtAl2018` apply
     in this case too.
     """
-    experimental = True
+    kind = "euro8"
 
     #: Supported tectonic region type is undefined (applies to any)
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
@@ -327,90 +406,6 @@ class Eurocode8Amplification(PitilakisEtAl2018):
             setattr(self, name,
                     frozenset(getattr(self, name) | getattr(self.gmpe, name)))
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-        """
-        As with the :class:`PitilakisEtal2018`, the mean ground motion is
-        determined by construction of the Eurocode 8 design spectrum from the
-        short- and long-period acceleration coefficients amplified to the
-        desired site class, with the standard deviations taken from the
-        original GMPE at the desired IMT
-        """
-        sctx_r = copy.copy(sctx)
-        sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
-        # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
-                                               stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, SA(1.0),
-                                                stddev_types)[0]
-        s_s_rp = self.CONSTANTS["F0"] * np.exp(pga_r)
-        s_1_rp = np.exp(s_1_rp)
-        ec8 = self.get_ec8_class(sctx.vs30, sctx.h800)
-        f_s, f_l = self.get_amplification_factor(s_s_rp, s_1_rp, ec8, sctx)
-        s_1 = f_l * s_1_rp
-        s_s = f_s * s_s_rp
-        mean = self.get_amplified_mean(s_s, s_1, s_1_rp, imt)
-        stddevs = self.gmpe.get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                 stddev_types)[1]
-        return mean, stddevs
-
-    def get_amplification_factor(self, s_s_rp, s_1_rp, ec8, sctx):
-        """
-        Returns the amplification factors based on the proposed EC8 formulation
-        in Table 3.4
-        """
-        r_alpha = 1.0 - 2.0E3 * ((s_s_rp * g) / (sctx.vs30 ** 2))
-        r_beta = 1.0 - 2.0E3 * ((s_1_rp * g) / (sctx.vs30 ** 2))
-        f_s = np.ones(sctx.vs30.shape)
-        f_l = np.ones(sctx.vs30.shape)
-        vsh_norm = sctx.vs30 / 800.
-        for s_c in np.unique(ec8):
-            if s_c == b"A":
-                continue
-            idx = ec8 == s_c
-            if not np.any(idx):
-                continue
-            if s_c in (b"B", b"C", b"D"):
-                f_s[idx] = vsh_norm[idx] ** (-0.25 * r_alpha[idx])
-                f_l[idx] = vsh_norm[idx] ** (-0.7 * r_beta[idx])
-            elif s_c == b"E":
-                f_s[idx] = vsh_norm[idx] ** (-0.25 * r_alpha[idx] *
-                                             (sctx.h800[idx] / 30.) *
-                                             (4.0 - (sctx.h800[idx] / 10.)))
-                f_l[idx] = vsh_norm[idx] ** (-0.7 * r_beta[idx] *
-                                             (sctx.h800[idx] / 30.))
-            elif s_c == b"F":
-                f_s[idx] = 0.9 * (vsh_norm[idx] ** (-0.25 * r_alpha[idx]))
-                f_l[idx] = 1.25 * (vsh_norm[idx] ** (-0.7 * r_beta[idx]))
-            else:
-                pass
-        return f_s, f_l
-
-    @staticmethod
-    def get_ec8_class(vsh, h800):
-        """
-        Method to return the vector of Eurocode 8 site classes based on
-        Vs30 and h800
-        """
-        ec8 = np.array([b"A" for i in range(len(vsh))], dtype="|S1")
-
-        idx = np.logical_and(vsh >= 400., h800 > 5.)
-        ec8[idx] = b"B"
-        idx1 = np.logical_and(vsh < 400., vsh >= 250.)
-        idx = np.logical_and(idx1, np.logical_and(h800 > 5., h800 <= 30.))
-        ec8[idx] = b"E"
-        idx = np.logical_and(idx1, np.logical_and(h800 > 30., h800 <= 100.))
-        ec8[idx] = b"C"
-        idx = np.logical_and(idx1, h800 > 100.)
-        ec8[idx] = b"F"
-        idx1 = vsh < 250.
-        idx = np.logical_and(idx1, h800 <= 30.)
-        ec8[idx] = b"E"
-        idx = np.logical_and(idx1, np.logical_and(h800 > 30., h800 <= 100.))
-        ec8[idx] = b"D"
-        idx = np.logical_and(idx1, h800 > 100.)
-        ec8[idx] = b"F"
-        return ec8
-
 
 # Default short period amplification factors defined by Eurocode 8 Table 3.4
 EC8_FS_default = {
@@ -430,51 +425,50 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
     is otherwise determined then a set of default amplification factors
     are applied. This model implements the Eurocode 8 design spectrum
     """
-    experimental = True
-
+    kind = "euro8default"
     #: Required site parameters are the EC8 site class, everything else will
     #: be set be selected GMPES
-    REQUIRES_SITES_PARAMETERS = set(('ec8',))
-
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-        """
-        Returns the mean and standard deviations following the approach
-        in :class:`Eurocode8Amplification`
-        """
-        sctx_r = copy.copy(sctx)
-        sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
-        # Get PGA and Sa (1.0) from GMPE
-        pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
-                                               stddev_types)[0]
-        s_1_rp = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, SA(1.0),
-                                                stddev_types)[0]
-        s_s_rp = self.CONSTANTS["F0"] * np.exp(pga_r)
-        s_1_rp = np.exp(s_1_rp)
-        f_s, f_l = self.get_amplification_factor(s_s_rp, s_1_rp, sctx)
-        s_1 = f_l * s_1_rp
-        s_s = f_s * s_s_rp
-        mean = self.get_amplified_mean(s_s, s_1, s_1_rp, imt)
-        stddevs = self.gmpe.get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                 stddev_types)[1]
-        return mean, stddevs
-
-    def get_amplification_factor(self, s_s_rp, s_1_rp, sctx):
-        """
-        Returns the default amplification factor dependent upon the site class
-        """
-        f_s = np.ones(sctx.ec8.shape)
-        f_l = np.ones(sctx.ec8.shape)
-        for key in EC8_FS_default:
-            idx = sctx.ec8 == key
-            if np.any(idx):
-                f_s[idx] = EC8_FS_default[key]
-                f_l[idx] = EC8_FL_default[key]
-        return f_s, f_l
+    REQUIRES_SITES_PARAMETERS = {'ec8'}
 
 
 # Sandikkaya & Dinsever
 
 REGION_SET = ["USNZ", "JP", "TW", "CH", "WA", "TRGR", "WMT", "NWE"]
+
+
+def get_site_amplification(C, psarock, ctx, ck):
+    """
+    Returns the site amplification model define in equation (9)
+    """
+    vs30_s = np.copy(ctx.vs30)
+    vs30_s[vs30_s > 1000.] = 1000.
+    fn_lin = (C["b1"] + ck) * np.log(vs30_s / 760.)
+    fn_z = C["b2"] * np.log(ctx.z1pt0)
+    fn_nl = C["b3"] * np.log((psarock + 0.1 * g) / (0.1 * g)) *\
+        np.exp(-np.exp(2.0 * np.log(ctx.vs30) - 11.))
+    return fn_lin + fn_z + fn_nl
+
+
+def get_stddevs(phi_0, C, tau, phi, psa_rock, vs30, imt):
+    """
+    Returns the standard deviation adjusted for the site-response model
+    """
+    ysig = np.copy(psa_rock)
+    ysig[ysig > 0.35] = 0.35
+    ysig[ysig < 0.005] = 0.005
+    vsig = np.copy(vs30)
+    vsig[vsig > 600.0] = 600.0
+    vsig[vsig < 150.] = 150.
+    sigma_s = C["sigma_s"] * C["c0"] * (
+        C["c1"] * np.log(ysig) + C["c2"] * np.log(vsig))
+    if phi_0:
+        phi0 = phi_0[imt]['value'] + np.zeros(vs30.shape)
+    else:
+        # In the case that no input phi0 is defined take 'approximate'
+        # phi0 as 85 % of phi
+        phi0 = 0.85 * phi
+    phi = np.sqrt(phi0 ** 2. + sigma_s ** 2.)
+    return [np.sqrt(tau ** 2 + phi ** 2), tau, phi]
 
 
 class SandikkayaDinsever2018(GMPE):
@@ -511,14 +505,14 @@ class SandikkayaDinsever2018(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Shallow Crust"
 
     #: Supported intensity measure types are not set
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set((PGA, SA))
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation type
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters will be set be selected GMPES
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
@@ -556,10 +550,8 @@ class SandikkayaDinsever2018(GMPE):
 
         if isinstance(phi_0, dict):
             # Input phi_0 model
-            iphi_0 = {}
-            for key in phi_0:
-                iphi_0[from_string(key)] = phi_0[key]
-            self.phi_0 = CoeffsTable(sa_damping=5, table=iphi_0)
+            iphi_0 = {from_string(key): {'value': phi_0[key]} for key in phi_0}
+            self.phi_0 = CoeffsTable.fromdict(iphi_0)
         else:
             # No input phi_0 model
             self.phi_0 = None
@@ -575,70 +567,27 @@ class SandikkayaDinsever2018(GMPE):
         else:
             self.region = region
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
-        sctx_r = copy.copy(sctx)
-        sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
-        mean, stddevs = self.gmpe.get_mean_and_stddevs(
-            sctx_r, rctx, dctx, imt, [const.StdDev.INTER_EVENT,
-                                      const.StdDev.INTRA_EVENT])
-        psarock = np.exp(mean)
-        C = self.COEFFS_SITE[imt]
-        if self.region:
-            ck = self.COEFFS_REG[imt][self.region]
-        else:
-            ck = 0.0
-        ampl = self.get_site_amplification(C, psarock, sctx, ck)
-        mean += ampl
-        stddevs = self.get_stddevs(C, stddevs, psarock, sctx.vs30, imt,
-                                   stddev_types)
-        return mean, stddevs
-
-    def get_site_amplification(self, C, psarock, sites, ck):
-        """
-        Returns the site amplification model define in equation (9)
-        """
-        vs30_s = np.copy(sites.vs30)
-        vs30_s[vs30_s > 1000.] = 1000.
-        fn_lin = (C["b1"] + ck) * np.log(vs30_s / 760.)
-        fn_z = C["b2"] * np.log(sites.z1pt0)
-        fn_nl = C["b3"] * np.log((psarock + 0.1 * g) / (0.1 * g)) *\
-            np.exp(-np.exp(2.0 * np.log(sites.vs30) - 11.))
-        return fn_lin + fn_z + fn_nl
-
-    def get_stddevs(self, C, istddevs, psa_rock, vs30, imt, stddev_types):
-        """
-        Returns the standard deviation adjusted for the site-response model
-        """
-        tau, phi = istddevs
-        ysig = np.copy(psa_rock)
-        ysig[ysig > 0.35] = 0.35
-        ysig[ysig < 0.005] = 0.005
-        vsig = np.copy(vs30)
-        vsig[vsig > 600.0] = 600.0
-        vsig[vsig < 150.] = 150.
-        sigma_s = C["sigma_s"] * C["c0"] * (C["c1"] * np.log(ysig) +
-                                            C["c2"] * np.log(vsig))
-        if self.phi_0:
-            phi0 = self.phi_0[imt] + np.zeros(vs30.shape)
-        else:
-            # In the case that no input phi0 is defined take 'approximate'
-            # phi0 as 85 % of phi
-            phi0 = 0.85 * phi
-        phi = np.sqrt(phi0 ** 2. + sigma_s ** 2.)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(vs30.shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(vs30.shape))
-        return stddevs
+        ctx_r = copy.copy(ctx)
+        ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
+        [rock] = contexts.get_mean_stds(
+            [self.gmpe], ctx_r, imts, const.StdDev.EVENT)
+        for m, imt in enumerate(imts):
+            psarock = np.exp(rock[MEAN][m])
+            C = self.COEFFS_SITE[imt]
+            if self.region:
+                ck = self.COEFFS_REG[imt][self.region]
+            else:
+                ck = 0.0
+            mean[m] = rock[MEAN][m] + get_site_amplification(
+                C, psarock, ctx, ck)
+            t = rock[INTER][m]
+            p = rock[INTRA][m]
+            sig[m], tau[m], phi[m] = get_stddevs(
+                self.phi_0, C, t, p, psarock, ctx.vs30, imt)
 
     COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt          b1        b3       b2  sigma_s       c0       c2        c1

@@ -88,6 +88,8 @@ class _GeographicObjects(object):
                 depths = objects['depth']
             except ValueError:  # no field of name depth
                 depths = numpy.zeros_like(lons)
+        else:
+            raise TypeError('%r not supported' % objects)
         self.kdtree = cKDTree(spherical_to_cartesian(lons, lats, depths))
 
     def get_closest(self, lon, lat, depth=0):

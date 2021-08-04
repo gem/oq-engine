@@ -1,9 +1,6 @@
----
-name: Installation Script for Windows
+name: Windows Install engine for 3.6, 3.7 and 3.8 
 
 on:
-  push:
-    branches: [ cleanup ]
   schedule:
     - cron: "00 23 * * *"
 
@@ -24,8 +21,6 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
-        with:
-          ref: cleanup
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -33,16 +28,19 @@ jobs:
     # You can test your matrix by printing the current Python version
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
-      - name: Check version of executable
+      - name: Install engine on developer mode
         run: |
-          where.exe python
-          where.exe py
-    # Use script to install engine and not the pip install .
-      - name: Install engine with install script
-        run: |
-          git status
-          python -m pip install -e .
+          #git status
+          #$PY_VER="py${{ matrix.python-version }}"
+          #$py = $PY_VER.replace(".","")
+          set PIP_DEFAULT_TIMEOUT=100
+          python -m pip install pip wheel setuptools --upgrade
+          #python -m pip install install -r requirements-$py-win64.txt
+          #python -m pip install -e .
+          python install.py devel
+        shell: cmd
       - name: Run demos to test installation
         run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
           oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"

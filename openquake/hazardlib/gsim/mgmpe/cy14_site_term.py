@@ -26,6 +26,20 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
+def _get_site_term(C, vs30, ln_y_ref):
+    """
+    Applies the linear and nonlinear site amplification term of Chiou &
+    Youngs (2014) (excluding the basin amplification term)
+    """
+    y_ref = np.exp(ln_y_ref)
+    exp1 = np.exp(C['phi3'] * (vs30.clip(-np.inf, 1130) - 360))
+    exp2 = np.exp(C['phi3'] * (1130 - 360))
+    af = (C['phi1'] * np.log(vs30 / 1130).clip(-np.inf, 0) +
+          C['phi2'] * (exp1 - exp2) *
+          np.log((y_ref + C['phi4']) / C['phi4']))
+    return af
+
+
 class CY14SiteTerm(GMPE):
     """
     Implements a modified GMPE class that can be used to account for local
@@ -38,7 +52,6 @@ class CY14SiteTerm(GMPE):
     :param gmpe_name:
         The name of a GMPE class
     """
-
     # Parameters
     REQUIRES_SITES_PARAMETERS = {'vs30'}
     REQUIRES_DISTANCES = set()
@@ -73,40 +86,23 @@ class CY14SiteTerm(GMPE):
             msg = 'DEFINED_FOR_REFERENCE_VELOCITY outside of range'
             raise ValueError(msg)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
         # Prepare sites
-        sites_rock = copy.copy(sites)
-        sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 1130.
+        rup_rock = copy.copy(ctx)
+        rup_rock.vs30 = np.full_like(ctx.vs30, 1130.)
 
         # Compute mean and standard deviation using the original GMM. These
         # values are used as ground-motion values on reference rock conditions.
-        # CHECKED [MP]: The computed reference motion is equal to the one in the
-        #               CY14 model
-        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
-                                                      imt, stds_types)
-
-        # Compute the site term correction factor
-        vs30 = sites.vs30.copy()
-        fa = self._get_site_term(ChiouYoungs2014.COEFFS[imt], vs30, mean)
-        mean += fa
-
-        return mean, stddvs
-
-    def _get_site_term(self, C, vs30, ln_y_ref):
-        """
-        Applies the linear and nonlinear site amplification term of Chiou &
-        Youngs (2014) (excluding the basin amplification term)
-        """
-        y_ref = np.exp(ln_y_ref)
-        exp1 = np.exp(C['phi3'] * (vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-        af = (C['phi1'] * np.log(vs30 / 1130).clip(-np.inf, 0) +
-              C['phi2'] * (exp1 - exp2) *
-              np.log((y_ref + C['phi4']) / C['phi4']))
-        return af
+        # CHECKED [MP]: The computed reference motion is equal to the one in
+        # the CY14 model
+        self.gmpe.compute(rup_rock, imts, mean, sig, tau, phi)
+        # Compute the site term correction factor for each IMT
+        vs30 = ctx.vs30.copy()
+        for m, imt in enumerate(imts):
+            C = ChiouYoungs2014.COEFFS[imt]
+            mean[m] += _get_site_term(C, vs30, mean[m])

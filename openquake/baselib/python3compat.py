@@ -103,3 +103,14 @@ def with_metaclass(meta, *bases):
                 return type.__new__(mcl, name, (), d)
             return meta(name, bases, d)
     return metaclass('temporary_class', None, {})
+
+
+def dataclass(cls):
+    """
+    A poor man dataclass decorator for use in Python 3.6
+    """
+    def __init__(self, *args):
+        for arg, name in zip(args, cls.__annotations__):
+            setattr(self, name, arg)
+    cls.__init__ = __init__
+    return cls

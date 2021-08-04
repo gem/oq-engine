@@ -101,18 +101,20 @@ Here is the usage message::
 
 The list of available exports (i.e. the datastore keys and the available export
 formats) can be extracted with the `oq info exports`
-command; at the moment there are 52 exporters defined, but
-this number changes at each version::
+command; the number of exporters defined changes at each version::
 
   $ oq info exports
   agg_curves-rlzs ['csv']
   agg_curves-stats ['csv']
+  agg_loss_table ['csv']
   agg_losses-rlzs ['csv']
   agg_losses-stats ['csv']
   agg_risk ['csv']
+  aggcurves ['csv']
   agglosses ['csv']
   aggregate_by ['csv']
   asset_risk ['csv']
+  avg_gmf ['csv']
   avg_losses-rlzs ['csv']
   avg_losses-stats ['csv']
   bcr-rlzs ['csv']
@@ -120,10 +122,10 @@ this number changes at each version::
   damages-rlzs ['npz', 'csv']
   damages-stats ['csv']
   disagg ['csv', 'xml']
-  dmg_by_event ['csv']
+  disagg_traditional ['csv']
   events ['csv']
   fullreport ['rst']
-  gmf_data ['csv']
+  gmf_data ['csv', 'hdf5']
   hcurves ['csv', 'xml', 'npz']
   hmaps ['csv', 'xml', 'npz']
   input ['zip']
@@ -133,12 +135,11 @@ this number changes at each version::
   loss_maps-rlzs ['csv', 'npz']
   loss_maps-stats ['csv', 'npz']
   losses_by_asset ['npz']
-  losses_by_event ['csv']
   realizations ['csv']
   ruptures ['xml', 'csv']
   src_loss_table ['csv']
   uhs ['csv', 'xml', 'npz']
-  There are 44 exporters defined.
+  There are 47 exporters defined.
 
 At the present the supported export types are `xml`, `csv`, `rst`, `npz` and 
 `hdf5`. `xml` has been deprecated for some outputs and is not the recommended 

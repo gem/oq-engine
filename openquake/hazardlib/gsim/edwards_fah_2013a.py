@@ -40,12 +40,120 @@ from openquake.hazardlib.gsim.edwards_fah_2013a_coeffs import (
     COEFFS_ALPINE_50Bars,
     COEFFS_ALPINE_75Bars,
     COEFFS_ALPINE_90Bars,
-    COEFFS_ALPINE_120Bars
-)
+    COEFFS_ALPINE_120Bars)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import (
-    _compute_phi_ss,
-    _compute_C1_term
-)
+    _compute_phi_ss, _compute_C1_term)
+
+#: Fixed magnitude terms
+M1 = 5.00
+M2 = 4.70
+
+
+def _compute_term_d(C, mag, rrup):
+    """
+    Compute distance term: original implementation from Carlo Cauzzi
+    if M > 5.5     rmin = 0.55;
+    elseif M > 4.7 rmin = -2.067.*M +11.92;
+    else           rmin = -0.291.*M + 3.48;
+    end
+    d = log10(max(R,rmin));
+    """
+    if mag > M1:
+        rrup_min = 0.55
+    elif mag > M2:
+        rrup_min = -2.067 * mag + 11.92
+    else:
+        rrup_min = -0.291 * mag + 3.48
+
+    R = np.maximum(rrup_min, rrup)
+
+    return np.log10(R)
+
+
+def _compute_mean(C, mag, term_dist_r):
+    """
+    compute mean
+    """
+    return (_compute_term_1(C, mag) +
+            _compute_term_2(C, mag, term_dist_r) +
+            _compute_term_3(C, mag, term_dist_r) +
+            _compute_term_4(C, mag, term_dist_r) +
+            _compute_term_5(C, mag, term_dist_r))
+
+
+def _compute_term_1(C, mag):
+    """
+    Compute term 1
+    a1 + a2.*M + a3.*M.^2 + a4.*M.^3 + a5.*M.^4 + a6.*M.^5 + a7.*M.^6
+    """
+    return (
+        C['a1'] + C['a2'] * mag + C['a3'] *
+        np.power(mag, 2) + C['a4'] * np.power(mag, 3)
+        + C['a5'] * np.power(mag, 4) + C['a6'] *
+        np.power(mag, 5) + C['a7'] * np.power(mag, 6))
+
+
+def _compute_term_2(C, mag, R):
+    """
+    (a8 + a9.*M + a10.*M.*M + a11.*M.*M.*M).*d(r)
+    """
+    return (
+        (C['a8'] + C['a9'] * mag + C['a10'] * np.power(mag, 2) +
+         C['a11'] * np.power(mag, 3)) * R)
+
+
+def _compute_term_3(C, mag, R):
+    """
+    (a12 + a13.*M + a14.*M.*M + a15.*M.*M.*M).*(d(r).^2)
+    """
+    return (
+        (C['a12'] + C['a13'] * mag + C['a14'] * np.power(mag, 2) +
+         C['a15'] * np.power(mag, 3)) * np.power(R, 2))
+
+
+def _compute_term_4(C, mag, R):
+    """
+    (a16 + a17.*M + a18.*M.*M + a19.*M.*M.*M).*(d(r).^3)
+    """
+    return (
+        (C['a16'] + C['a17'] * mag + C['a18'] * np.power(mag, 2) +
+         C['a19'] * np.power(mag, 3)) * np.power(R, 3))
+
+
+def _compute_term_5(C, mag, R):
+    """
+    (a20 + a21.*M + a22.*M.*M + a23.*M.*M.*M).*(d(r).^4)
+    """
+    return (
+        (C['a20'] + C['a21'] * mag + C['a22'] * np.power(mag, 2) +
+         C['a23'] * np.power(mag, 3)) * np.power(R, 4))
+
+
+def _compute_term_r(C, mag, rrup):
+    """
+    Compute distance term
+    d = log10(max(R,rmin));
+    """
+    if mag > M1:
+        rrup_min = 0.55
+
+    elif mag > M2:
+        rrup_min = -2.80 * mag + 14.55
+
+    else:
+        rrup_min = -0.295 * mag + 2.65
+
+    R = np.maximum(rrup, rrup_min)
+
+    return np.log10(R)
+
+
+def _get_stddevs(C, mag, c1_rrup, log_phi_ss, mean_phi_ss):
+    """
+    Return standard deviations
+    """
+    phi_ss = _compute_phi_ss(C, mag, c1_rrup, log_phi_ss, mean_phi_ss)
+    return [np.sqrt(C['tau'] ** 2 + phi_ss ** 2), C['tau'], phi_ss]
 
 
 class EdwardsFah2013Alpine10Bars(GMPE):
@@ -66,11 +174,7 @@ class EdwardsFah2013Alpine10Bars(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see tables 3 and 4, pages 227 and 228.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGV,
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV, PGA, SA}
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
     #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`
@@ -78,9 +182,7 @@ class EdwardsFah2013Alpine10Bars(GMPE):
 
     #: Supported standard deviation type is total,
     #: Carlo Cauzzi - Personal Communication
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
@@ -96,139 +198,35 @@ class EdwardsFah2013Alpine10Bars(GMPE):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        for m, imt in enumerate(imts):
+            COEFFS = self.COEFFS[imt]
+            if 'Foreland' in self.__class__.__name__:
+                R = _compute_term_d(COEFFS, ctx.mag, ctx.rrup)
+            else:
+                R = _compute_term_r(COEFFS, ctx.mag, ctx.rrup)
 
-        COEFFS = self.COEFFS[imt]
-        R = self._compute_term_r(COEFFS, rup.mag, dists.rrup)
+            mean[m] = 10 ** _compute_mean(COEFFS, ctx.mag, R)
 
-        mean = 10 ** (self._compute_mean(COEFFS, rup.mag, R))
+            # Convert units to g,
+            # but only for PGA and SA (not PGV):
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log(mean[m] / (g*100.))
+            else:
+                # PGV:
+                mean[m] = np.log(mean[m])
 
-        # Convert units to g,
-        # but only for PGA and SA (not PGV):
-        if imt.name in "SA PGA":
-            mean = np.log(mean / (g*100.))
-        else:
-            # PGV:
-            mean = np.log(mean)
+            c1_rrup = _compute_C1_term(COEFFS, ctx.rrup)
+            log_phi_ss = 1.00
 
-        c1_rrup = _compute_C1_term(COEFFS, dists.rrup)
-        log_phi_ss = 1.00
-
-        stddevs = self._get_stddevs(
-            COEFFS, stddev_types, sites.vs30.shape[0], rup.mag, c1_rrup,
-            log_phi_ss, COEFFS['mean_phi_ss']
-        )
-
-        return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites, mag, c1_rrup,
-                     log_phi_ss, mean_phi_ss):
-        """
-        Return standard deviations
-        """
-        phi_ss = _compute_phi_ss(C, mag, c1_rrup, log_phi_ss, mean_phi_ss)
-
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(
-                               C['tau'] * C['tau'] +
-                               phi_ss * phi_ss) +
-                               np.zeros(num_sites))
-
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi_ss + np.zeros(num_sites))
-
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_term_r(self, C, mag, rrup):
-        """
-        Compute distance term
-        d = log10(max(R,rmin));
-        """
-        if mag > self.M1:
-            rrup_min = 0.55
-
-        elif mag > self.M2:
-            rrup_min = -2.80 * mag + 14.55
-
-        else:
-            rrup_min = -0.295 * mag + 2.65
-
-        R = np.maximum(rrup, rrup_min)
-
-        return np.log10(R)
-
-    def _compute_term_1(self, C, mag):
-        """
-        Compute term 1
-        a1 + a2.*M + a3.*M.^2 + a4.*M.^3 + a5.*M.^4 + a6.*M.^5 + a7.*M.^6
-        """
-        return (
-            C['a1'] + C['a2'] * mag + C['a3'] *
-            np.power(mag, 2) + C['a4'] * np.power(mag, 3)
-            + C['a5'] * np.power(mag, 4) + C['a6'] *
-            np.power(mag, 5) + C['a7'] * np.power(mag, 6)
-        )
-
-    def _compute_term_2(self, C, mag, R):
-        """
-        (a8 + a9.*M + a10.*M.*M + a11.*M.*M.*M).*d(r)
-        """
-        return (
-            (C['a8'] + C['a9'] * mag + C['a10'] * np.power(mag, 2) +
-             C['a11'] * np.power(mag, 3)) * R
-        )
-
-    def _compute_term_3(self, C, mag, R):
-        """
-        (a12 + a13.*M + a14.*M.*M + a15.*M.*M.*M).*(d(r).^2)
-        """
-        return (
-            (C['a12'] + C['a13'] * mag + C['a14'] * np.power(mag, 2) +
-             C['a15'] * np.power(mag, 3)) * np.power(R, 2)
-        )
-
-    def _compute_term_4(self, C, mag, R):
-        """
-        (a16 + a17.*M + a18.*M.*M + a19.*M.*M.*M).*(d(r).^3)
-        """
-        return (
-            (C['a16'] + C['a17'] * mag + C['a18'] * np.power(mag, 2) +
-             C['a19'] * np.power(mag, 3)) * np.power(R, 3)
-        )
-
-    def _compute_term_5(self, C, mag, R):
-        """
-        (a20 + a21.*M + a22.*M.*M + a23.*M.*M.*M).*(d(r).^4)
-        """
-        return (
-            (C['a20'] + C['a21'] * mag + C['a22'] * np.power(mag, 2) +
-             C['a23'] * np.power(mag, 3)) * np.power(R, 4)
-        )
-
-    def _compute_mean(self, C, mag, term_dist_r):
-        """
-        compute mean
-        """
-        return (self._compute_term_1(C, mag) +
-                self._compute_term_2(C, mag, term_dist_r) +
-                self._compute_term_3(C, mag, term_dist_r) +
-                self._compute_term_4(C, mag, term_dist_r) +
-                self._compute_term_5(C, mag, term_dist_r))
-
-    #: Fixed magnitude terms
-    M1 = 5.00
-    M2 = 4.70
+            sig[m], tau[m], phi[m] = _get_stddevs(
+                COEFFS, ctx.mag, c1_rrup,
+                log_phi_ss, COEFFS['mean_phi_ss'])
 
     COEFFS = COEFFS_ALPINE_10Bars
 

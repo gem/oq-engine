@@ -19,10 +19,12 @@
 
 import os
 import re
+import ast
 import json
 import inspect
 import logging
 import functools
+import collections
 import multiprocessing
 import numpy
 
@@ -31,9 +33,9 @@ from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
 from openquake.hazardlib import correlation, stats, calc
-from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree, datastore
+from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
@@ -206,6 +208,11 @@ distance_bin_width:
 ebrisk_maxsize:
   INTERNAL
 
+ignore_encoding_errors:
+  If set, skip characters with non-UTF8 encoding
+  Example: *ignore_encoding_errors = true*.
+  Default: False
+
 ignore_master_seed:
   If set, estimate analytically the uncertainty on the losses due to the
   uncertainty on the vulnerability functions.
@@ -305,6 +312,11 @@ investigation_time:
   Example: *investigation_time = 50*.
   Default: no default
 
+limit_states:
+   Limit states used in damage calculations.
+   Example: *limit_states = moderate, complete*
+   Default: no default
+
 lrem_steps_per_interval:
   Used in the vulnerability functions.
   Example: *lrem_steps_per_interval  = 1*.
@@ -377,6 +389,11 @@ minimum_asset_loss:
   *minimum_asset_loss* are consider zeros.
   Example: *minimum_asset_loss = {"structural": 1000}*.
   Default: empty dictionary
+
+minimum_distance:
+   If set, distances below the minimum are rounded up.
+   Example: *minimum_distance = 5*
+   Default: 0
 
 minimum_intensity:
   If set, ground motion values below the *minimum_intensity* are
@@ -693,12 +710,6 @@ class OqParam(valid.ParamSet):
                     'structural_vulnerability_retrofitted',
                     'occupants_vulnerability'}
     hazard_imtls = {}
-    siteparam = dict(
-        vs30measured='reference_vs30_type',
-        vs30='reference_vs30_value',
-        z1pt0='reference_depth_to_1pt0km_per_sec',
-        z2pt5='reference_depth_to_2pt5km_per_sec',
-        backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), None)
@@ -732,6 +743,7 @@ class OqParam(valid.ParamSet):
     distance_bin_width = valid.Param(valid.positivefloat)
     float_dmg_dist = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
+    ignore_encoding_errors = valid.Param(valid.boolean, False)
     ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
@@ -746,7 +758,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    individual_curves = valid.Param(valid.boolean, False)
+    individual_curves = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -754,6 +766,7 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
+    limit_states = valid.Param(valid.namelist, [])
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
@@ -768,6 +781,7 @@ class OqParam(valid.ParamSet):
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
+    minimum_distance = valid.Param(valid.positivefloat, 0)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
@@ -858,8 +872,8 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
-        if '_job_id' in names_vals:  # called from engine
-            del names_vals['_job_id']
+        if '_log' in names_vals:  # called from engine
+            del names_vals['_log']
 
         # support legacy names
         for name in list(names_vals):
@@ -917,6 +931,20 @@ class OqParam(valid.ParamSet):
                               'pointsource_distance!' % self.inputs['job_ini'])
 
         self._risk_files = get_risk_files(self.inputs)
+        if self.risk_files:
+            # checks for risk_files
+            hc = self.hazard_calculation_id
+            if 'damage' in self.calculation_mode and not hc:
+                ok = any('fragility' in key for key in self._risk_files)
+                if not ok:
+                    raise InvalidFile('Missing fragility files in %s' %
+                                      self.inputs['job_ini'])
+            elif ('risk' in self.calculation_mode and
+                  self.calculation_mode != 'multi_risk' and not hc):
+                ok = any('vulnerability' in key for key in self._risk_files)
+                if not ok:
+                    raise InvalidFile('Missing vulnerability files in %s' %
+                                      self.inputs['job_ini'])
 
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'debug')
@@ -950,6 +978,11 @@ class OqParam(valid.ParamSet):
         if unknown:
             raise ValueError('Unknown key %s_file in %s' %
                              (unknown.pop(), self.inputs['job_ini']))
+
+        # check return_periods vs poes
+        if self.return_periods and not self.poes and self.investigation_time:
+            self.poes = 1 - numpy.exp(
+                - self.investigation_time / numpy.array(self.return_periods))
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -1030,14 +1063,18 @@ class OqParam(valid.ParamSet):
         """
         Set self.loss_names
         """
+        from openquake.commonlib import datastore  # avoid circular import
         # set all_cost_types
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
         costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
-            with datastore.read(self.hazard_calculation_id) as ds:
-                parent = ds['oqparam']
-            self._risk_files = get_risk_files(parent.inputs)
-            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+            try:
+                with datastore.read(self.hazard_calculation_id) as ds:
+                    parent = ds['oqparam']
+                    self._risk_files = rfs = get_risk_files(parent.inputs)
+                    costtypes = set(rt.rsplit('/')[1] for rt in rfs)
+            except OSError:  # FileNotFound for wrong hazard_calculation_id
+                pass
         self.all_cost_types = sorted(costtypes)
 
         # fix minimum_asset_loss
@@ -1052,7 +1089,10 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
-        imts = set(from_string(imt).name for imt in self.imtls)
+        imts = set()
+        for imt in self.imtls:
+            im = from_string(imt)
+            imts.add("SA" if imt.startswith("SA") else im.string)
         for gsim in gsims:
             if hasattr(gsim, 'weight'):  # disable the check
                 continue
@@ -1073,8 +1113,8 @@ class OqParam(valid.ParamSet):
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     if param in ('lon', 'lat'):  # no check
                         continue
-                    elif param in self.siteparam:  # mandatory params
-                        param_name = self.siteparam[param]
+                    elif param in site.param:  # mandatory params
+                        param_name = site.param[param]
                         param_value = getattr(self, param_name)
                         if (isinstance(param_value, float) and
                                 numpy.isnan(param_value)):
@@ -1228,6 +1268,8 @@ class OqParam(valid.ParamSet):
         """
         Loss types plus insured types, if any
         """
+        if not hasattr(self, "all_cost_types"):  # for hazard
+            return []
         names = []
         for lt in self.all_cost_types:
             names.append(lt)
@@ -1576,6 +1618,9 @@ class OqParam(valid.ParamSet):
         and number_of_logic_tree_samples must be greater than 1.
         """
         if self.calculation_mode == 'event_based_damage':
+            if not self.investigation_time:
+                ini = self.inputs['job_ini']
+                raise InvalidFile('Missing investigation_time in %s' % ini)
             self.collect_rlzs = True
             return True
         if self.collect_rlzs is False or self.hazard_calculation_id:
@@ -1647,8 +1692,15 @@ class OqParam(valid.ParamSet):
 
     def __fromh5__(self, array, attrs):
         if isinstance(array, numpy.ndarray):  # old format <= 3.11
-            pars = dict(array)
-            if 'hazard_calculation_id' in pars:  # read hc_id only
-                self.hazard_calculation_id = int(pars['hazard_calculation_id'])
+            dd = collections.defaultdict(dict)
+            for (name_, literal_) in array:
+                name = python3compat.decode(name_)
+                literal = python3compat.decode(literal_)
+                if '.' in name:
+                    k1, k2 = name.split('.', 1)
+                    dd[k1][k2] = ast.literal_eval(literal)
+                else:
+                    dd[name] = ast.literal_eval(literal)
+            vars(self).update(dd)
         else:  # new format >= 3.12
             vars(self).update(json.loads(python3compat.decode(array)))

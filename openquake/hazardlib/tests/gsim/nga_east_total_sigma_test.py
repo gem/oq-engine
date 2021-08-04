@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
 import itertools
 from openquake.hazardlib.gsim import nga_east as ne
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase

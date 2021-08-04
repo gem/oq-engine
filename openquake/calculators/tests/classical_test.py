@@ -24,7 +24,7 @@ from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import lt, contexts
 from openquake.commonlib import readinput
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import (
@@ -37,7 +37,8 @@ from openquake.qa_tests_data.classical import (
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
-    case_58, case_59, case_60, case_61, case_62, case_63, case_64)
+    case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
+    case_71, case_72)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -86,7 +87,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_1.__file__)
 
         if parallel.oq_distribute() != 'no':
-            info = view('job_info', self.calc.datastore)
+            info = text_table(view('job_info', self.calc.datastore))
             self.assertIn('task', info)
             self.assertIn('sent', info)
             self.assertIn('received', info)
@@ -129,8 +130,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_2.__file__, 'job.ini')
 
         # check view inputs
-        lines = view('inputs', self.calc.datastore).splitlines()
-        self.assertEqual(len(lines), 9)
+        lines = text_table(view('inputs', self.calc.datastore)).splitlines()
+        self.assertEqual(len(lines), 13)  # rst table with 13 rows
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
@@ -228,8 +229,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
-        csv = general.gettemp(view('extreme_sites', self.calc.datastore))
-        self.assertEqualFiles('expected/extreme_sites.csv', csv)
+        csv = general.gettemp(
+            text_table(view('extreme_sites', self.calc.datastore)))
+        self.assertEqualFiles('expected/extreme_sites.rst', csv)
 
         # test extract/hcurves/rlz-0, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
@@ -446,7 +448,7 @@ hazard_uhs-std.csv
         self.assertEqual(total, 780)  # 260 x 3
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['rup/mag']), 260)
+        self.assertEqual(len(self.calc.datastore['rup/mag']), 174)
 
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -611,7 +613,7 @@ hazard_uhs-std.csv
     def test_case_46(self):
         # SMLT with applyToBranches
         self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__,
-                               delta=1E-6)
+                              delta=1E-6)
 
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
@@ -652,7 +654,14 @@ hazard_uhs-std.csv
         aac(dst[0], exact[:, 0], atol=.5)  # site 0
         aac(dst[1], exact[:, 1], atol=.5)  # site 1
 
-        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
+        # This test shows in detail what happens to the distances in presence
+        # of a magnitude-dependent pointsource_distance.
+        self.run_calc(
+            case_48.__file__, 'job.ini', pointsource_distance=
+            '{"default": [(5.1, 42), (5.3, 47), (5.5, 52), (5.7, 58), '
+            '(5.9, 65), (6.1, 72), (6.3, 80), (6.5, 89), (6.7, 99), '
+            '(6.9, 110)]}')
+
         psdist = self.calc.oqparam.pointsource_distance
         psd = psdist.ddic['active shallow crust']
         dist_by_mag = {mag: int(psd[mag]) for mag in psd}
@@ -683,8 +692,6 @@ hazard_uhs-std.csv
         aac(dst[0], approx[:, 0], atol=.5)  # site 0
         aac(dst[1], approx[:, 1], atol=.5)  # site 1
 
-        # This test shows in detail what happens to the distances in presence
-        # of a magnitude-dependent pointsource_distance.
     def test_case_49(self):
         # serious test of amplification + uhs
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.21).csv',
@@ -794,22 +801,10 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
 
     def test_case_56(self):
-        # test with oversampling
-        # there are 6 potential paths 1A 1B 1C 2A 2B 2C
-        # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
-        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
+        # test with a discardable source model (#2)
         self.run_calc(case_56.__file__, 'job.ini', concurrent_tasks='0')
-        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurves.csv', fname)
-
-        self.calc.datastore['_poes'].shape
-        cmakers = contexts.read_cmakers(self.calc.datastore)
-        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
-        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
-        slc0, slc1 = cmakers[0].slc, cmakers[1].slc
-        self.assertEqual(slc0.stop - slc0.start, 3)
-        self.assertEqual(slc1.stop - slc1.start, 2)
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs.csv', fname)
 
     def test_case_57(self):
         # AvgPoeGMPE
@@ -878,5 +873,49 @@ hazard_uhs-std.csv
     def test_case_64(self):
         # LanzanoEtAl2016 with bas term
         self.run_calc(case_64.__file__, 'job.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+
+    def test_case_65(self):
+        # Multi fault source
+        self.run_calc(case_65.__file__, 'job.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-4)
+
+        # make sure we are not breaking event_based
+        self.run_calc(case_65.__file__, 'job.ini',
+                      calculation_mode='event_based',
+                      ses_per_logic_tree_path=100)
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-4)
+
+        rups = extract(self.calc.datastore, 'ruptures')
+        csv = general.gettemp(rups.array)
+        self.assertEqualFiles('expected/full_ruptures.csv', csv, delta=1E-4)
+
+        files = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
+
+    def test_case_71(self):
+        # test with oversampling
+        # there are 6 potential paths 1A 1B 1C 2A 2B 2C
+        # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
+        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
+        self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurves.csv', fname)
+
+        self.calc.datastore['_poes'].shape
+        cmakers = contexts.read_cmakers(self.calc.datastore)
+        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
+        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
+        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
+        slc0, slc1 = cmakers[0].slc, cmakers[1].slc
+        self.assertEqual(slc0.stop - slc0.start, 3)
+        self.assertEqual(slc1.stop - slc1.start, 2)
+
+    def test_case_72(self):
+        # reduced USA model
+        self.run_calc(case_72.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f)

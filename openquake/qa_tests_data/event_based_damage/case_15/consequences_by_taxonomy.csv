@@ -1,0 +1,11 @@
+taxonomy,consequence,loss_type,moderate,complete
+Concrete,losses,structural,0.31,1
+Adobe,losses,structural,0.31,1
+Stone-Masonry,losses,structural,0.31,1
+Unreinforced-Brick-Masonry,losses,structural,0.31,1
+Wood,losses,structural,0.31,1
+Concrete,fatalities,structural,0,1
+Adobe,fatalities,structural,0,1
+Stone-Masonry,fatalities,structural,0,1
+Unreinforced-Brick-Masonry,fatalities,structural,0,1
+Wood,fatalities,structural,0,1

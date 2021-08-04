@@ -24,9 +24,7 @@ from openquake.hazardlib.gsim.mcverry_2006 import (
     McVerry2006AscSC,
     McVerry2006SInterSC,
     McVerry2006SSlabSC,
-    McVerry2006VolcSC
-)
-
+    McVerry2006VolcSC)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from MS Excel implementation from G. McVerry

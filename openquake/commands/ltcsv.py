@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from openquake.commonlib.writers import write_csv
+from openquake.baselib.writers import write_csv
 from openquake.commonlib.logictree import SourceModelLogicTree
 
 

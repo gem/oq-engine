@@ -23,7 +23,8 @@ from openquake.hazardlib.const import TRT
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, RuptureContext, _collapse, get_pmap, ContextMaker, get_distances)
+    Effect, RuptureContext, _collapse, ContextMaker, get_distances,
+    get_probability_no_exceedance)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -167,7 +168,7 @@ class EffectTestCase(unittest.TestCase):
 
 
 def compose(ctxs, poe):
-    pnes = [ctx.get_probability_no_exceedance(poe, tom) for ctx in ctxs]
+    pnes = [get_probability_no_exceedance(ctx, poe, tom) for ctx in ctxs]
     return 1. - numpy.prod(pnes), pnes
 
 
@@ -222,5 +223,5 @@ class CollapseTestCase(unittest.TestCase):
         cmaker = ContextMaker(
             'TRT', gsims, dict(imtls=imtls, truncation_level=trunclevel))
         cmaker.tom = PoissonTOM(time_span=50)
-        pmap = get_pmap(ctxs, cmaker)
+        pmap = cmaker.get_pmap(ctxs)
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)

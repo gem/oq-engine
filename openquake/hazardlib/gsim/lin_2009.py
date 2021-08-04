@@ -26,6 +26,56 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _get_distance_term(C, mag, rrup):
+    """
+    Returns the distance scaling term
+    """
+    return (C['C4'] + C['C5'] * (mag - 6.3)) *\
+        np.log(np.sqrt(rrup ** 2. + np.exp(C['H']) ** 2.))
+
+
+def _get_fault_type_dummy_variables(rake):
+    """
+    Defines the fault type dummy variables for normal faulting (f_n) and
+    reverse faulting (f_r) from rake. Classification based on that
+    found in the original fortran code of Lin (2009)
+    """
+    f_n, f_r = 0, 0
+    if rake >= -120 and rake <= -60:
+        # normal
+        f_n = 1
+    elif rake >= 30 and rake <= 150:
+        # reverse
+        f_r = 1
+    return f_n, f_r
+
+
+def _get_magnitude_term(C, mag):
+    """
+    Returns the magnitude scaling term.
+    """
+    lny = C['C1'] + (C['C3'] * ((8.5 - mag) ** 2.))
+    if mag > 6.3:
+        return lny + (-C['H'] * C['C5']) * (mag - 6.3)
+    else:
+        return lny + C['C2'] * (mag - 6.3)
+
+
+def _get_site_response_term(C, vs30):
+    """
+    Returns the site amplification term
+    """
+    return C['C8'] * np.log(vs30 / 1130.0)
+
+
+def _get_style_of_faulting_term(C, rake):
+    """
+    Returns the style of faulting factor
+    """
+    f_n, f_r = _get_fault_type_dummy_variables(rake)
+    return C['C6'] * f_n + C['C7'] * f_r
+
+
 class Lin2009(GMPE):
     """
     Implements GMPE developed by Po-Shen Lin and published as "Ground-motion
@@ -39,19 +89,14 @@ class Lin2009(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see Table 4.1 in pages 48-49.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components, see equation 4.1 page 46.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total, see equation 4.1 page 46.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameter is only Vs30 (used to distinguish rock).
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -64,77 +109,20 @@ class Lin2009(GMPE):
     #: page 46.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = (
-            self._get_magnitude_term(C, rup.mag) +
-            self._get_distance_term(C, rup.mag, dists.rrup) +
-            self._get_style_of_faulting_term(C, rup.rake) +
-            self._get_site_response_term(C, sites.vs30))
-
-        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
-        return mean, stddevs
-
-    def _get_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term.
-        """
-        lny = C['C1'] + (C['C3'] * ((8.5 - mag) ** 2.))
-        if mag > 6.3:
-            return lny + (-C['H'] * C['C5']) * (mag - 6.3)
-        else:
-            return lny + C['C2'] * (mag - 6.3)
-
-    def _get_distance_term(self, C, mag, rrup):
-        """
-        Returns the distance scaling term
-        """
-        return (C['C4'] + C['C5'] * (mag - 6.3)) *\
-            np.log(np.sqrt(rrup ** 2. + np.exp(C['H']) ** 2.))
-
-    def _get_style_of_faulting_term(self, C, rake):
-        """
-        Returns the style of faulting factor
-        """
-        f_n, f_r = self._get_fault_type_dummy_variables(rake)
-        return C['C6'] * f_n + C['C7'] * f_r
-
-    def _get_fault_type_dummy_variables(self, rake):
-        """
-        Defines the fault type dummy variables for normal faulting (f_n) and
-        reverse faulting (f_r) from rake. Classification based on that
-        found in the original fortran code of Lin (2009)
-        """
-        f_n, f_r = 0, 0
-        if rake >= -120 and rake <= -60:
-            # normal
-            f_n = 1
-        elif rake >= 30 and rake <= 150:
-            # reverse
-            f_r = 1
-        return f_n, f_r
-
-    def _get_site_response_term(self, C, vs30):
-        """
-        Returns the site amplification term
-        """
-        return C['C8'] * np.log(vs30 / 1130.0)
-
-    def _get_stddevs(self, C, stddev_types, nsites):
-        """
-        Compute total standard deviation, see table 4.2, page 50.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma'] + np.zeros(nsites, dtype=float))
-        return stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (
+                _get_magnitude_term(C, ctx.mag) +
+                _get_distance_term(C, ctx.mag, ctx.rrup) +
+                _get_style_of_faulting_term(C, ctx.rake) +
+                _get_site_response_term(C, ctx.vs30))
+            sig[m] = C['sigma']
 
     #: Coefficient table for rock sites, see table 3 page 227.
     COEFFS = CoeffsTable(sa_damping=5.0, table="""\

@@ -27,6 +27,30 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _get_azimuth_correction(coe, azimuth):
+    """
+    This is the azimuth correction defined in the functional form (see
+    equation 3 at page 2256)
+    """
+    term1 = abs(np.cos(np.radians(2.*azimuth)))
+    term2 = abs(np.sin(np.radians(2.*azimuth)))*coe['a5']
+    return np.log(np.max(np.hstack((term1, term2))))
+
+
+def _get_distance_scaling(coe, rhypo):
+    """
+    Returns the distance scaling term
+    """
+    return coe["a3"] * np.log(rhypo) + coe["a4"] * rhypo
+
+
+def _get_magnitude_scaling(coe, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    return coe["a0"] + coe["a1"] * mag + coe["a2"] * mag**2.
+
+
 class MegawatiEtAl2003(GMPE):
     """
     Implements GMPE developed by Megawati, Pan and Koketsu and published in
@@ -41,20 +65,14 @@ class MegawatiEtAl2003(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground veloacity and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No site parameter required. This GMPE is for very hard rock conditions
     REQUIRES_SITES_PARAMETERS = set()
@@ -65,55 +83,24 @@ class MegawatiEtAl2003(GMPE):
     #: Required distance measure is hypocentral distance, and azimuth
     REQUIRES_DISTANCES = {'rhypo', 'azimuth'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Check that the GSIM supports the standard deviations requested
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        coe = self.COEFFS[imt]
-        mean = (self._get_magnitude_scaling(coe, rup.mag) +
-                self._get_distance_scaling(coe, dists.rhypo) +
-                self._get_azimuth_correction(coe, dists.azimuth))
-        # Convert to g
-        if imt.name in "SA PGA":
-            mean = np.log(np.exp(mean) / (100.0 * g))
-        # Compute std
-        stddevs = self._compute_std(coe, stddev_types, dists.azimuth.shape)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            coe = self.COEFFS[imt]
+            mean[m] = (_get_magnitude_scaling(coe, ctx.mag) +
+                       _get_distance_scaling(coe, ctx.rhypo) +
+                       _get_azimuth_correction(coe, ctx.azimuth))
+            # Convert to g
+            if imt.string.startswith(("PGA", "SA")):
+                mean[m] = np.log(np.exp(mean[m]) / (100.0 * g))
+            # Compute std
+            sig[m] = coe['sigma']
 
-    def _get_magnitude_scaling(self, coe, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        return coe["a0"] + coe["a1"] * mag + coe["a2"] * mag**2.
-
-    def _get_distance_scaling(self, coe, rhypo):
-        """
-        Returns the distance scaling term
-        """
-        return coe["a3"] * np.log(rhypo) + coe["a4"] * rhypo
-
-    def _get_azimuth_correction(self, coe, azimuth):
-        """
-        This is the azimuth correction defined in the functional form (see
-        equation 3 at page 2256)
-        """
-        term1 = abs(np.cos(np.radians(2.*azimuth)))
-        term2 = abs(np.sin(np.radians(2.*azimuth)))*coe['a5']
-        return np.log(np.max(np.hstack((term1, term2))))
-
-    def _compute_std(self, coe, stddev_types, shape):
-        """
-        Returns the total standard deviation according to table III at page
-        2257. Table obtained via http://www.onlineocr.net/
-        """
-        return [np.zeros(shape)*coe['sigma']]
-
-    #: Coefficient table for rock sites, see table 3 page 2257
+    #: Coefficient table for rock ctx, see table 3 page 2257
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT             a0       a1          a2        a3          a4      a5    sigma
 PGV        -13.512   3.8980   -0.129363   -1.0000   -0.000887  0.1286   0.3740

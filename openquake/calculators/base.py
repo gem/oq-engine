@@ -49,6 +49,7 @@ get_weight = operator.attrgetter('weight')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -57,17 +58,6 @@ TWO32 = 2 ** 32
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
-
-
-def get_calc(job_ini, calc_id):
-    """
-    Factory function returning a Calculator instance
-
-    :param job_ini: path to job.ini file
-    :param calc_id: calculation ID
-    """
-    return calculators(readinput.get_oqparam(job_ini), calc_id)
-
 
 # this is used for the minimum_intensity dictionaries
 def consistent(dic1, dic2):
@@ -156,8 +146,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
-        oqparam.validate()
-        self.datastore = datastore.new(calc_id)
+        self.datastore = datastore.new(calc_id, oqparam)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
             h5=self.datastore)
@@ -458,7 +447,7 @@ class HazardCalculator(BaseCalculator):
         if ('amplification' in oq.inputs and
                 oq.amplification_method == 'kernel'):
             logging.info('Reading %s', oq.inputs['amplification'])
-            df = readinput.get_amplification(oq)
+            df = AmplFunction.read_df(oq.inputs['amplification'])
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
@@ -477,6 +466,11 @@ class HazardCalculator(BaseCalculator):
                 for trt in mags_by_trt:
                     self.datastore['source_mags/' + trt] = numpy.array(
                         mags_by_trt[trt])
+                    it = list(oq.maximum_distance.ddic[trt].items())
+                    if len(it) > 2:
+                        md = '%s->%d, ... %s->%d, %s->%d' % (
+                            it[0] + it[-2] + it[-1])
+                        logging.info('max_dist %s: %s', trt, md)
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
@@ -582,6 +576,7 @@ class HazardCalculator(BaseCalculator):
             calc.from_engine = self.from_engine
             calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
+            calc.datastore.close()
             for name in ('csm param sitecol assetcol crmodel realizations '
                          'policy_name policy_dict full_lt exported').split():
                 if hasattr(calc, name):
@@ -810,7 +805,6 @@ class HazardCalculator(BaseCalculator):
                              len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
-            self.crmodel.reduce_cons_model(self.assetcol.tagcol)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:
@@ -824,15 +818,16 @@ class HazardCalculator(BaseCalculator):
         self.af = None
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
-            df = readinput.get_amplification(oq)
+            df = AmplFunction.read_df(oq.inputs['amplification'])
             check_amplification(df, self.sitecol)
-            self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
             if oq.amplification_method == 'kernel':
                 # TODO: need to add additional checks on the main calculation
                 # methodology since the kernel method is currently tested only
                 # for classical PSHA
                 self.af = AmplFunction.from_dframe(df)
                 self.amplifier = None
+            else:
+                self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
         else:
             self.amplifier = None
 
@@ -847,13 +842,13 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_asset_loss=%s', mal)
         self.param = dict(individual_curves=oq.individual_curves,
                           ps_grid_spacing=oq.ps_grid_spacing,
+                          minimum_distance=oq.minimum_distance,
                           collapse_level=int(oq.collapse_level),
                           split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
                           sec_perils=sec_perils,
                           ses_seed=oq.ses_seed)
-
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
@@ -877,9 +872,8 @@ class HazardCalculator(BaseCalculator):
         R = self.R
         logging.info('There are %d realization(s)', R)
 
-        if oq.imtls:
-            self.datastore['weights'] = arr = build_weights(self.realizations)
-            self.datastore.set_attrs('weights', nbytes=arr.nbytes)
+        self.datastore['weights'] = arr = build_weights(self.realizations)
+        self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
         if ('event_based' in oq.calculation_mode and R >= TWO16
                 or R >= TWO32):
@@ -890,19 +884,29 @@ class HazardCalculator(BaseCalculator):
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
+        if rel_ruptures:
+            self.check_discardable(rel_ruptures)
 
-        # check for gsim logic tree reduction
-        discard_trts = []
-        for trt in self.full_lt.gsim_lt.values:
-            if rel_ruptures.get(trt, 0) == 0:
-                discard_trts.append(trt)
-        if (discard_trts and 'scenario' not in oq.calculation_mode
-                and 'event_based' not in oq.calculation_mode
-                and 'ebrisk' not in oq.calculation_mode
-                and not oq.is_ucerf()):
+    def check_discardable(self, rel_ruptures):
+        """
+        Check if logic tree reduction is possible
+        """
+        n = len(self.full_lt.sm_rlzs)
+        keep_trts = set()
+        nrups = []
+        for grp_id, trt_smrs in enumerate(self.datastore['trt_smrs']):
+            trti, smrs = numpy.divmod(trt_smrs, n)
+            trt = self.full_lt.trts[trti[0]]
+            nr = rel_ruptures.get(grp_id, 0)
+            nrups.append(nr)
+            if nr:
+                keep_trts.add(trt)
+        self.datastore['est_rups_by_grp'] = U32(nrups)
+        discard_trts = set(self.full_lt.trts) - keep_trts
+        if discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
-                   'discard_trts = %s\nin %s') % (', '.join(discard_trts),
-                                                  oq.inputs['job_ini'])
+                   'discard_trts = %s\nin %s') % (
+                       ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
     def store_source_info(self, calc_times, nsites=False):
@@ -1295,9 +1299,31 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         calc.datastore['events'] = events
         # convert into an array of dtype gmv_data_dt
         lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
-               for s in numpy.arange(N, dtype=U32)
-               for ei, event in enumerate(events)]
+               for ei, event in enumerate(events)
+               for s in numpy.arange(N, dtype=U32)]
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(calc.datastore, imts, data=data)
     return sitecol, assetcol
+
+
+def create_risk_by_event(calc):
+    """
+    Created an empty risk_by_event with keys event_id, agg_id, loss_id
+    and fields for damages, losses and consequences
+    """
+    oq = calc.oqparam
+    dstore = calc.datastore
+    aggkey = getattr(calc, 'aggkey', {})  # empty if not aggregate_by
+    crmodel = calc.crmodel
+    if 'risk' in oq.calculation_mode:
+        descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
+                 ('loss', F32), ('variance', F32)]
+        dstore.create_df('risk_by_event', descr, K=len(aggkey),
+                         L=len(oq.loss_names))
+    else:  # damage + consequences
+        dmgs = ' '.join(crmodel.damage_states[1:])
+        descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
+                 [(dc, F32) for dc in crmodel.get_dmg_csq()])
+        dstore.create_df('risk_by_event', descr, K=len(aggkey),
+                         L=len(oq.loss_names), limit_states=dmgs)

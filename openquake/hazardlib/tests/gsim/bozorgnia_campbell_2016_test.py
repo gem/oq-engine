@@ -25,79 +25,59 @@ with the Earthquake Spectra paper
 #   * Formula error in Column L, i.e. the formula for f_sed
 #     (Basin Response Term) should refer to the Sj flag instead of the Sji flag
 """
-
+import itertools
 from openquake.hazardlib.gsim.bozorgnia_campbell_2016 import (
-    BozorgniaCampbell2016,
-    BozorgniaCampbell2016HighQ,
-    BozorgniaCampbell2016LowQ,
-    BozorgniaCampbell2016AveQJapanSite,
-    BozorgniaCampbell2016HighQJapanSite,
-    BozorgniaCampbell2016LowQJapanSite)
+    BozorgniaCampbell2016)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+
+# expected files depending on sgn, SJ
+MEAN_FILE = {(0, 0): 'BC15/BC15_GLOBAL_MEAN.csv',
+             (0, 1): 'BC15/BC15_AVEQ_JPN_MEAN.csv',
+             (1, 0): 'BC15/BC15_HIGHQ_MEAN.csv',
+             (1, 1): 'BC15/BC15_HIGHQ_JPN_MEAN.csv',
+             (-1, 0): 'BC15/BC15_LOWQ_MEAN.csv',
+             (-1, 1): 'BC15/BC15_LOWQ_JPN_MEAN.csv'}
+STD_INTRA_FILE = {(0, 0): 'BC15/BC15_GLOBAL_STD_INTRA.csv',
+                  (0, 1): 'BC15/BC15_AVEQ_JPN_STD_INTRA.csv',
+                  (1, 0): 'BC15/BC15_HIGHQ_STD_INTRA.csv',
+                  (1, 1): 'BC15/BC15_HIGHQ_JPN_STD_INTRA.csv',
+                  (-1, 0): 'BC15/BC15_LOWQ_STD_INTRA.csv',
+                  (-1, 1): 'BC15/BC15_LOWQ_JPN_STD_INTRA.csv'}
+
+STD_INTER_FILE = {(0, 0): 'BC15/BC15_GLOBAL_STD_INTER.csv',
+                  (0, 1): 'BC15/BC15_AVEQ_JPN_STD_INTER.csv',
+                  (1, 0): 'BC15/BC15_HIGHQ_STD_INTER.csv',
+                  (1, 1): 'BC15/BC15_HIGHQ_JPN_STD_INTER.csv',
+                  (-1, 0): 'BC15/BC15_LOWQ_STD_INTER.csv',
+                  (-1, 1): 'BC15/BC15_LOWQ_JPN_STD_INTER.csv'}
+
+STD_TOTAL_FILE = {(0, 0): 'BC15/BC15_GLOBAL_STD_TOTAL.csv',
+                  (0, 1): 'BC15/BC15_AVEQ_JPN_STD_TOTAL.csv',
+                  (1, 0): 'BC15/BC15_HIGHQ_STD_TOTAL.csv',
+                  (1, 1): 'BC15/BC15_HIGHQ_JPN_STD_TOTAL.csv',
+                  (-1, 0): 'BC15/BC15_LOWQ_STD_TOTAL.csv',
+                  (-1, 1): 'BC15/BC15_LOWQ_JPN_STD_TOTAL.csv'}
 
 
 class BozorgniaCampbell2016TestCase(BaseGSIMTestCase):
     GSIM_CLASS = BozorgniaCampbell2016
-    MEAN_FILE = 'BC15/BC15_GLOBAL_MEAN.csv'
-    STD_INTRA_FILE = 'BC15/BC15_GLOBAL_STD_INTRA.csv'
-    STD_INTER_FILE = 'BC15/BC15_GLOBAL_STD_INTER.csv'
-    STD_TOTAL_FILE = 'BC15/BC15_GLOBAL_STD_TOTAL.csv'
 
     def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=0.1)
+        for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
+            self.check(MEAN_FILE[sgn, SJ],
+                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
 
     def test_std_intra(self):
-        self.check(self.STD_INTRA_FILE,
-                   max_discrep_percentage=0.1)
+        for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
+            self.check(STD_INTRA_FILE[sgn, SJ],
+                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
 
     def test_std_inter(self):
-        self.check(self.STD_INTER_FILE,
-                   max_discrep_percentage=0.1)
+        for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
+            self.check(STD_INTER_FILE[sgn, SJ],
+                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
 
     def test_std_total(self):
-        self.check(self.STD_TOTAL_FILE,
-                   max_discrep_percentage=0.1)
-
-
-class BozorgniaCampbell2016HighQTestCase(BozorgniaCampbell2016TestCase):
-    GSIM_CLASS = BozorgniaCampbell2016HighQ
-    MEAN_FILE = 'BC15/BC15_HIGHQ_MEAN.csv'
-    STD_INTRA_FILE = 'BC15/BC15_HIGHQ_STD_INTRA.csv'
-    STD_INTER_FILE = 'BC15/BC15_HIGHQ_STD_INTER.csv'
-    STD_TOTAL_FILE = 'BC15/BC15_HIGHQ_STD_TOTAL.csv'
-
-
-class BozorgniaCampbell2016LowQTestCase(BozorgniaCampbell2016TestCase):
-    GSIM_CLASS = BozorgniaCampbell2016LowQ
-    MEAN_FILE = 'BC15/BC15_LOWQ_MEAN.csv'
-    STD_INTRA_FILE = 'BC15/BC15_LOWQ_STD_INTRA.csv'
-    STD_INTER_FILE = 'BC15/BC15_LOWQ_STD_INTER.csv'
-    STD_TOTAL_FILE = 'BC15/BC15_LOWQ_STD_TOTAL.csv'
-
-
-class BozorgniaCampbell2016AveQJapanSiteTestCase(
-        BozorgniaCampbell2016TestCase):
-    GSIM_CLASS = BozorgniaCampbell2016AveQJapanSite
-    MEAN_FILE = 'BC15/BC15_AVEQ_JPN_MEAN.csv'
-    STD_INTRA_FILE = 'BC15/BC15_AVEQ_JPN_STD_INTRA.csv'
-    STD_INTER_FILE = 'BC15/BC15_AVEQ_JPN_STD_INTER.csv'
-    STD_TOTAL_FILE = 'BC15/BC15_AVEQ_JPN_STD_TOTAL.csv'
-
-
-class BozorgniaCampbell2016HighQJapanSiteTestCase(
-        BozorgniaCampbell2016TestCase):
-    GSIM_CLASS = BozorgniaCampbell2016HighQJapanSite
-    MEAN_FILE = 'BC15/BC15_HIGHQ_JPN_MEAN.csv'
-    STD_INTRA_FILE = 'BC15/BC15_HIGHQ_JPN_STD_INTRA.csv'
-    STD_INTER_FILE = 'BC15/BC15_HIGHQ_JPN_STD_INTER.csv'
-    STD_TOTAL_FILE = 'BC15/BC15_HIGHQ_JPN_STD_TOTAL.csv'
-
-
-class BozorgniaCampbell2016LowQJapanSiteTestCase(
-        BozorgniaCampbell2016TestCase):
-    GSIM_CLASS = BozorgniaCampbell2016LowQJapanSite
-    MEAN_FILE = 'BC15/BC15_LOWQ_JPN_MEAN.csv'
-    STD_INTRA_FILE = 'BC15/BC15_LOWQ_JPN_STD_INTRA.csv'
-    STD_INTER_FILE = 'BC15/BC15_LOWQ_JPN_STD_INTER.csv'
-    STD_TOTAL_FILE = 'BC15/BC15_LOWQ_JPN_STD_TOTAL.csv'
+        for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
+            self.check(STD_TOTAL_FILE[sgn, SJ],
+                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)

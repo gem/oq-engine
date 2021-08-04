@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import inspect
 import tempfile
 import warnings
@@ -45,15 +46,17 @@ INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
 
 
-def maybe_encode(value):
+def sanitize(value):
     """
-    If value is a sequence of strings, encode it
+    Sanitize the value so that it can be stored as an HDF5 attribute
     """
     if isinstance(value, bytes):
         return numpy.void(value)
-    if isinstance(value, (list, tuple)):
+    elif isinstance(value, (list, tuple)):
         if value and isinstance(value[0], str):
             return encode(value)
+    elif isinstance(value, int) and value > sys.maxsize:
+        return float(value)
     return value
 
 
@@ -77,7 +80,7 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
                                    compression=compression)
     if attrs:
         for k, v in attrs.items():
-            dset.attrs[k] = maybe_encode(v)
+            dset.attrs[k] = sanitize(v)
     return dset
 
 
@@ -281,6 +284,9 @@ class File(h5py.File):
     3
     >>> f.close()
     """
+    class EmptyDataset(ValueError):
+        """Raised when reading an empty dataset"""
+
     def __init__(self, name, mode='r', driver=None, libver='latest',
                  userblock_size=None, swmr=True, rdcc_nslots=None,
                  rdcc_nbytes=None, rdcc_w0=None, track_order=None,
@@ -401,7 +407,7 @@ class File(h5py.File):
             a = super().__getitem__(path).attrs
             for k, v in sorted(items):
                 try:
-                    a[k] = maybe_encode(v)
+                    a[k] = sanitize(v)
                 except Exception as exc:
                     raise TypeError(
                         'Could not store attribute %s=%s: %s' % (k, v, exc))
@@ -813,17 +819,18 @@ def _read_csv(fileobj, compositedt):
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None):
+             index=None, errors=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
     :param renamedict: aliases for the fields to rename
     :param sep: separator (default comma)
     :param index: if not None, returns a pandas DataFrame
+    :param errors: passed to the underlying open function (default None)
     :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
-    with open(fname, encoding='utf-8-sig') as f:
+    with open(fname, encoding='utf-8-sig', errors=errors) as f:
         while True:
             first = next(f)
             if first.startswith('#'):

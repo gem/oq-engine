@@ -25,6 +25,151 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.baselib.general import CallableDict
+
+_compute_distance = CallableDict()
+
+
+@_compute_distance.add('rjb')
+def _compute_distance_rjb(dist_type, ctx, C):
+    """
+    Compute the third term of the equation 1:
+    FD(Mw,R) = [c1j + c2j(M-Mr)] * log10(R/Rh) con j=1,...4 (eq 4)
+    c coeffs are in matrix C
+    """
+    Mr = 5.0
+    Rh = 70
+
+    LATref = -0.33 * ctx.lon + 48.3
+    diff = ctx.lat - LATref
+    R = np.sqrt(ctx.rjb**2 + C['h']**2)
+
+    dist_term = (diff >= 0) * (C['c11'] + C['c21'] * (ctx.mag - Mr)) *\
+                (R <= Rh) * np.log10(R/Rh) +\
+                (diff >= 0) * (C['c12'] + C['c22'] * (ctx.mag - Mr)) *\
+                (R > Rh) * np.log10(R/Rh) +\
+                (diff < 0) * (C['c13'] + C['c23'] * (ctx.mag - Mr)) *\
+                (R <= Rh) * np.log10(R/Rh) +\
+                (diff < 0) * (C['c14'] + C['c24'] * (ctx.mag - Mr)) *\
+                (R > Rh) * np.log10(R/Rh)
+    return dist_term
+
+
+@_compute_distance.add('rhypo')
+def _compute_distance_rhypo(dist_type, ctx, C):
+    """
+    Compute the third term of the equation 1:
+    FD(Mw,R) = [c1j + c2j(M-Mr)] * log10(R/Rh) con j=1,...4 (eq 4)
+    c coeffs are in matrix C
+    """
+    Mr = 5.0
+    Rh = 70
+
+    LATref = -0.33 * ctx.lon + 48.3
+    diff = ctx.lat - LATref
+    R = ctx.rhypo
+
+    dist_term = (diff >= 0) * (C['c11'] + C['c21'] * (ctx.mag - Mr)) *\
+                (R <= Rh) * np.log10(R/Rh) +\
+                (diff >= 0) * (C['c12'] + C['c22'] * (ctx.mag - Mr)) *\
+                (R > Rh) * np.log10(R/Rh) +\
+                (diff < 0) * (C['c13'] + C['c23'] * (ctx.mag - Mr)) *\
+                (R <= Rh) * np.log10(R/Rh) +\
+                (diff < 0) * (C['c14'] + C['c24'] * (ctx.mag - Mr)) *\
+                (R > Rh) * np.log10(R/Rh)
+    return dist_term
+
+
+def _compute_magnitude(ctx, C):
+    """
+    Compute the second term of the equation 1:
+    Fm(M) = b1(M-Mr) + b2(M-Mr)^2   Eq (5)
+    """
+    Mr = 5
+    return C['a'] + C['b1'] * (ctx.mag - Mr) + C['b2'] * (ctx.mag - Mr)**2
+
+
+def _get_basin_effect_term(ctx, C):
+    """
+    Get basin correction for ctx in the Po Plain.
+    if ctx.bas == 0 the correction is not necessary,
+    otherwise if ctx.bas == 1 the site is in the Po Plain
+    and the correction is applied.
+    """
+    delta = np.zeros(len(ctx.vs30))
+    delta[ctx.bas == 1] = 1.0
+
+    return C['dbas'] * delta
+
+
+def _get_fault_type_dummy_variables(ctx):
+    """
+    Fault type (Strike-slip, Normal, Thrust/reverse) is
+    derived from rake angle.
+    Rakes angles within 30 of horizontal are strike-slip,
+    angles from 30 to 150 are reverse, and angles from
+    -30 to -150 are normal.
+    """
+    UN, TF, NF = 0, 0, 0
+    if ctx.rake < -30 and ctx.rake > -150:
+        # normal
+        NF = 1
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
+        # reverse
+        TF = 1
+    else:
+        UN = 1
+
+    return UN, TF, NF
+
+
+def _get_mechanism(ctx, C):
+    """
+    Compute the part of the second term of the equation 1 (FM(SoF)):
+    Get fault type dummy variables
+    """
+    UN, TF, NF = _get_fault_type_dummy_variables(ctx)
+    return C['fNF'] * NF + C['fTF'] * TF + C['fUN'] * UN
+
+
+def _get_site_amplification(ctx, C):
+    """
+    Compute the fourth term of the equation 1 described on paragraph :
+    The functional form Fs in Eq. (1) represents the site amplification and
+    it is given by FS = sj Cj , for j = 1,...,3, where sj are the
+    coefficients to be determined through the regression analysis,
+    while Cj are dummy variables used to denote the five different EC8
+    site classes
+    """
+    ssa, ssb, ssc = _get_site_type_dummy_variables(ctx)
+
+    return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc)
+
+
+def _get_site_type_dummy_variables(ctx):
+    """
+    Get site type dummy variables, five different EC8 site classes
+    The recording ctx are classified into 3 classes,
+    based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
+    according to the EC8 (CEN 2003):
+    class A: Vs30 > 800 m/s
+    class B: Vs30 = 360 - 800 m/s
+    class C: Vs30 < 360 m/s
+    """
+    ssa = np.zeros(len(ctx.vs30))
+    ssb = np.zeros(len(ctx.vs30))
+    ssc = np.zeros(len(ctx.vs30))
+
+    # Class C; 180 m/s <= Vs30 <= 360 m/s.
+    idx = ctx.vs30 < 360.0
+    ssc[idx] = 1.0
+    # Class B; 360 m/s <= Vs30 <= 800 m/s.
+    idx = (ctx.vs30 >= 360.0) & (ctx.vs30 < 800)
+    ssb[idx] = 1.0
+    # Class A; Vs30 > 800 m/s.
+    idx = (ctx.vs30 >= 800.0)
+    ssa[idx] = 1.0
+    return ssa, ssb, ssc
 
 
 class LanzanoEtAl2016_RJB(GMPE):
@@ -46,11 +191,7 @@ class LanzanoEtAl2016_RJB(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -58,11 +199,8 @@ class LanzanoEtAl2016_RJB(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter
     REQUIRES_SITES_PARAMETERS = {'vs30', 'lon', 'lat', 'bas'}
@@ -73,162 +211,33 @@ class LanzanoEtAl2016_RJB(GMPE):
     #: Required distance measure is R Joyner-Boore distance (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            [dist_type] = self.REQUIRES_DISTANCES
 
-        C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(dist_type, ctx, C) +
+                     _get_site_amplification(ctx, C) +
+                     _get_basin_effect_term(ctx, C) +
+                     _get_mechanism(ctx, C))
 
-        imean = (self._compute_magnitude(rup, C) +
-                 self._compute_distance(rup, dists, C, sites) +
-                 self._get_site_amplification(sites, C) +
-                 self._get_basin_effect_term(sites, C) +
-                 self._get_mechanism(rup, C))
+            # Convert units to g, but only for PGA and SA (not PGV):
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV
+                mean[m] = np.log(10.0 ** imean)
 
-        istddevs = self._get_stddevs(C,
-                                     stddev_types,
-                                     num_sites=len(sites.vs30))
-
-        # Convert units to g, but only for PGA and SA (not PGV):
-        if imt.name in "SA PGA":
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
-
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-
-        return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 1.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['SigmaTot'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['phi'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_distance(self, rup, dists, C, sites):
-        """
-        Compute the third term of the equation 1:
-        FD(Mw,R) = [c1j + c2j(M-Mr)] * log10(R/Rh) con j=1,...4 (eq 4)
-        c coeffs are in matrix C
-        """
-        Mr = 5.0
-        Rh = 70
-
-        LATref = -0.33 * sites.lon + 48.3
-        diff = sites.lat - LATref
-        R = np.sqrt(dists.rjb**2 + C['h']**2)
-
-        dist_term = (diff >= 0) * (C['c11'] + C['c21'] * (rup.mag - Mr)) *\
-                    (R <= Rh) * np.log10(R/Rh) +\
-                    (diff >= 0) * (C['c12'] + C['c22'] * (rup.mag - Mr)) *\
-                    (R > Rh) * np.log10(R/Rh) +\
-                    (diff < 0) * (C['c13'] + C['c23'] * (rup.mag - Mr)) *\
-                    (R <= Rh) * np.log10(R/Rh) +\
-                    (diff < 0) * (C['c14'] + C['c24'] * (rup.mag - Mr)) *\
-                    (R > Rh) * np.log10(R/Rh)
-        return dist_term
-
-    def _compute_magnitude(self, rup, C):
-        """
-        Compute the second term of the equation 1:
-        Fm(M) = b1(M-Mr) + b2(M-Mr)^2   Eq (5)
-        """
-        Mr = 5
-        return C['a'] + C['b1'] * (rup.mag - Mr) + C['b2'] * (rup.mag - Mr)**2
-
-    def _get_site_amplification(self, sites, C):
-        """
-        Compute the fourth term of the equation 1 described on paragraph :
-        The functional form Fs in Eq. (1) represents the site amplification and
-        it is given by FS = sj Cj , for j = 1,...,3, where sj are the
-        coefficients to be determined through the regression analysis,
-        while Cj are dummy variables used to denote the five different EC8
-        site classes
-        """
-        ssa, ssb, ssc = self._get_site_type_dummy_variables(sites)
-
-        return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc)
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables, five different EC8 site classes
-        The recording sites are classified into 3 classes,
-        based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
-        according to the EC8 (CEN 2003):
-        class A: Vs30 > 800 m/s
-        class B: Vs30 = 360 - 800 m/s
-        class C: Vs30 < 360 m/s
-        """
-        ssa = np.zeros(len(sites.vs30))
-        ssb = np.zeros(len(sites.vs30))
-        ssc = np.zeros(len(sites.vs30))
-
-        # Class C; 180 m/s <= Vs30 <= 360 m/s.
-        idx = sites.vs30 < 360.0
-        ssc[idx] = 1.0
-        # Class B; 360 m/s <= Vs30 <= 800 m/s.
-        idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800)
-        ssb[idx] = 1.0
-        # Class A; Vs30 > 800 m/s.
-        idx = (sites.vs30 >= 800.0)
-        ssa[idx] = 1.0
-        return ssa, ssb, ssc
-
-    def _get_basin_effect_term(self, sites, C):
-        """
-        Get basin correction for sites in the Po Plain.
-        if sites.bas == 0 the correction is not necessary,
-        otherwise if sites.bas == 1 the site is in the Po Plain
-        and the correction is applied.
-        """
-        delta = np.zeros(len(sites.vs30))
-        delta[sites.bas == 1] = 1.0
-
-        return C['dbas'] * delta
-
-    def _get_mechanism(self, rup, C):
-        """
-        Compute the part of the second term of the equation 1 (FM(SoF)):
-        Get fault type dummy variables
-        """
-        UN, TF, NF = self._get_fault_type_dummy_variables(rup)
-        return C['fNF'] * NF + C['fTF'] * TF + C['fUN'] * UN
-
-    def _get_fault_type_dummy_variables(self, rup):
-        """
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal.
-        """
-        UN, TF, NF = 0, 0, 0
-        if rup.rake < -30 and rup.rake > -150:
-            # normal
-            NF = 1
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            TF = 1
-        else:
-            UN = 1
-
-        return UN, TF, NF
+            # Return stddevs in terms of natural log scaling
+            sig[m] = np.log(10.0 ** C['SigmaTot'])
+            tau[m] = np.log(10.0 ** C['tau'])
+            phi[m] = np.log(10.0 ** C['phi'])
 
     #: Coefficients from SA PGA and PGV from Table S2
 
@@ -276,29 +285,6 @@ class LanzanoEtAl2016_Rhypo(LanzanoEtAl2016_RJB):
 
     #: Required distance measure is R Hypocentral Distance.
     REQUIRES_DISTANCES = {'rhypo'}
-
-    def _compute_distance(self, rup, dists, C, sites):
-        """
-        Compute the third term of the equation 1:
-        FD(Mw,R) = [c1j + c2j(M-Mr)] * log10(R/Rh) con j=1,...4 (eq 4)
-        c coeffs are in matrix C
-        """
-        Mr = 5.0
-        Rh = 70
-
-        LATref = -0.33 * sites.lon + 48.3
-        diff = sites.lat - LATref
-        R = dists.rhypo
-
-        dist_term = (diff >= 0) * (C['c11'] + C['c21'] * (rup.mag - Mr)) *\
-                    (R <= Rh) * np.log10(R/Rh) +\
-                    (diff >= 0) * (C['c12'] + C['c22'] * (rup.mag - Mr)) *\
-                    (R > Rh) * np.log10(R/Rh) +\
-                    (diff < 0) * (C['c13'] + C['c23'] * (rup.mag - Mr)) *\
-                    (R <= Rh) * np.log10(R/Rh) +\
-                    (diff < 0) * (C['c14'] + C['c24'] * (rup.mag - Mr)) *\
-                    (R > Rh) * np.log10(R/Rh)
-        return dist_term
 
     #: Coefficients from SA PGA and PGV from esupp Table S3
     COEFFS = CoeffsTable(sa_damping=5, table="""

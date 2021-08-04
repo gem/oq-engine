@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
+#
 # Copyright (C) 2019, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 import unittest
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.contexts import DistancesContext
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.gsim.mgmpe.split_sigma_gmpe import SplitSigmaGMPE
 
 
@@ -35,26 +34,22 @@ class SplitSigmaGMPETest(unittest.TestCase):
         else:
             raise ValueError('Unknown option')
         # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=760.)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rrup = np.array([1., 10., 30., 70.])
+        ctx = RuptureContext()
+        ctx.mag = 6.0
+        ctx.sids = [0, 1, 2, 3]
+        ctx.vs30 = [760.] * 4
+        ctx.rrup = np.array([1., 10., 30., 70.])
         imt = PGA()
         stds_types = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
                       const.StdDev.INTRA_EVENT]
         # Compute results
-        mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt,
-                                              stds_types)
+        mean, stds = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stds_types)
         return stds, stds_types
 
     def test_instantiation(self):
         within_absolute = 0.3
-        gmm = SplitSigmaGMPE(gmpe_name='Campbell2003',
-                             within_absolute=within_absolute)
-        # Check the standard deviations
-        expected = set(['Intra event', 'Total', 'Inter event'])
-        self.assertTrue(gmm.DEFINED_FOR_STANDARD_DEVIATION_TYPES == expected,
-                        msg='The standard deviations assigned are wrong')
+        SplitSigmaGMPE(gmpe_name='Campbell2003',
+                       within_absolute=within_absolute)
 
     def test_within_absolute(self):
         within_absolute = 0.3

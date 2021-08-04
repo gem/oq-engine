@@ -141,7 +141,7 @@ ratio conditioned on the shaking intensity and ignoring the uncertainty.
 This tradeoff of not propagating the vulnerabilty uncertainty to the loss
 estimates can lead to a significant boost in performance and tractability.
 
-The asset loss table and the agg_loss_table
+The asset loss table
 -------------------------------------------
 
 When performing an event based risk calculation the engine
@@ -176,7 +176,7 @@ calculation. Clearly it is a matter of compromise: by sacrificing precision
 it is possible to reduce enourmously the size of the stored asset loss table
 and to make an impossible calculation possible.
 
-NB: starting from engine 3.11 the asset loss table is stored if the user
+Starting from engine 3.11 the asset loss table is stored if the user
 specifies
 
 ``aggregate_by = id``
@@ -194,19 +194,19 @@ multi-tag). For instance, the tag ``occupancy`` has the three values
 
 ``aggregate_by = occupancy``
 
-the engine will store a pandas DataFrame with field ``agg_id`` with 4
-possible value: 0 for "Residential", 1 for "Industrial", 2 for "Commercial"
-and 3 for the full aggregation.
+the engine will store a pandas DataFrame called ``risk_by_event` with a
+field ``agg_id`` with 4 possible value: 0 for "Residential", 1 for
+"Industrial", 2 for "Commercial" and 3 for the full aggregation.
 
 NB: if the parameter ``aggregate_by`` is not specified, the engine will
-still compute the ``agg_loss_table`` but then the ``agg_id`` field will
+still compute the aggregate loss table but then the ``agg_id`` field will
 have a single value 0 corresponding to the total portfolio losses.
 
 The Probable Maximum Loss (PML) and the loss curves
 ---------------------------------------------------
 
-Given an effective investigation time, a return period and an
-``agg_loss_table``, the engine is able to compute a PML for each
+Given an effective investigation time and a return period,
+the engine is able to compute a PML for each
 aggregation tag. It does so by using the function
 ``openquake.risklib.scientific.losses_by_period`` which takes in input
 an array of cumulative losses associated to the aggregation tag, a
@@ -307,3 +307,84 @@ you the mean and quantile loss curves in a format like the following one::
 If you do not set the ``aggregate_by`` parameter
 you will still able to compute the total loss curve 
 (for the entire portfolio of assets), and the total average losses.
+
+Aggregating by multiple tags
+----------------------------
+
+The engine also supports aggregation my multiple tags. For instance
+the second event based risk demo (the file ``job_eb.ini``) has a line
+
+   ``aggregate_by = NAME_1, taxonomy``
+
+and it is able to aggregate both on geographic region (``NAME_1``) and
+on taxonomy. There are 25 possible combinations, that you can see with
+the command::
+
+   $ oq show agg_keys
+   | NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
+   +---------+-----------+-------------+----------------------------+
+   | 1       | 1         | Mid-Western | Wood                       |
+   | 1       | 2         | Mid-Western | Adobe                      |
+   | 1       | 3         | Mid-Western | Stone-Masonry              |
+   | 1       | 4         | Mid-Western | Unreinforced-Brick-Masonry |
+   | 1       | 5         | Mid-Western | Concrete                   |
+   | 2       | 1         | Far-Western | Wood                       |
+   | 2       | 2         | Far-Western | Adobe                      |
+   | 2       | 3         | Far-Western | Stone-Masonry              |
+   | 2       | 4         | Far-Western | Unreinforced-Brick-Masonry |
+   | 2       | 5         | Far-Western | Concrete                   |
+   | 3       | 1         | West        | Wood                       |
+   | 3       | 2         | West        | Adobe                      |
+   | 3       | 3         | West        | Stone-Masonry              |
+   | 3       | 4         | West        | Unreinforced-Brick-Masonry |
+   | 3       | 5         | West        | Concrete                   |
+   | 4       | 1         | East        | Wood                       |
+   | 4       | 2         | East        | Adobe                      |
+   | 4       | 3         | East        | Stone-Masonry              |
+   | 4       | 4         | East        | Unreinforced-Brick-Masonry |
+   | 4       | 5         | East        | Concrete                   |
+   | 5       | 1         | Central     | Wood                       |
+   | 5       | 2         | Central     | Adobe                      |
+   | 5       | 3         | Central     | Stone-Masonry              |
+   | 5       | 4         | Central     | Unreinforced-Brick-Masonry |
+   | 5       | 5         | Central     | Concrete                   |
+
+The lines in this table are associated to the *generalized aggregation ID*,
+``agg_id`` which is an index going from ``0`` (meaning aggregate assets with
+NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets
+with NAME_1=*Mid-Western* and taxonomy=*Wood*); moreover ``agg_id=25`` means
+full aggregation.
+
+The ``agg_id`` field enters in ``risk_by_event`` and in outputs like
+the aggregate losses; for instance::
+
+   $ oq show agg_losses-rlzs
+   | agg_id | rlz | loss_type     | value       |
+   +--------+-----+---------------+-------------+
+   | 0      | 0   | nonstructural | 2_327_008   |
+   | 0      | 0   | structural    | 937_852     |
+   +--------+-----+---------------+-------------+
+   | ...    + ... + ...           + ...         +
+   +--------+-----+---------------+-------------+
+   | 25     | 1   | nonstructural | 100_199_448 |
+   | 25     | 1   | structural    | 157_885_648 |
+
+The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id``
+to the proper combination of tags; ``agg_id=25``, i.e. full aggregation,
+is replaced with the string ``*total*``.
+
+By knowing the number of events, the number of aggregation keys and the
+number of loss types, it is possible to give an upper limit to the size
+of ``risk_by_event``. In the demo there are 1703 events, 26 aggregation
+keys and 2 loss types, so ``risk_by_event`` contains at most
+
+  1703 * 26 * 2 = 88,556 rows
+
+This is an upper limit, since some combination can produce zero losses
+and are not stored, especially if the ``minimum_asset_loss`` feature is
+used. In the case of the demo actually only 20,877 rows are nonzero::
+
+   $ oq show risk_by_event
+          event_id  agg_id  loss_id           loss      variance
+   ...
+   [20877 rows x 5 columns]

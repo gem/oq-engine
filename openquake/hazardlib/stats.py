@@ -19,8 +19,66 @@
 Utilities to compute mean and quantile curves
 """
 import numpy
+import pandas
 from scipy.stats import norm
+from scipy.special import ndtr
 from openquake.baselib.general import agg_probs
+
+
+def _truncnorm_sf(truncation_level, values):
+    """
+    Survival function for truncated normal distribution.
+
+    Assumes zero mean, standard deviation equal to one and symmetric
+    truncation.
+
+    :param truncation_level:
+        Positive float number representing the truncation on both sides
+        around the mean, in units of sigma, or None, for non-truncation
+    :param values:
+        Numpy array of values as input to a survival function for the given
+        distribution.
+    :returns:
+        Numpy array of survival function results in a range between 0 and 1.
+
+    >>> from scipy.stats import truncnorm
+    >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
+    True
+    >>> from scipy.stats import norm
+    >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345)
+    True
+    """
+    if truncation_level == 0:
+        return values
+
+    if truncation_level is None:
+        return ndtr(- values)
+
+    # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
+    # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
+
+    # "CDF" in comments refers to cumulative distribution function
+    # of non-truncated distribution with that mu and sigma values.
+
+    # assume symmetric truncation, that is ``a = - truncation_level``
+    # and ``b = + truncation_level``.
+
+    # calculate CDF of b
+    phi_b = ndtr(truncation_level)
+
+    # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
+    # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
+    z = phi_b * 2 - 1
+
+    # calculate the result of survival function of ``values``,
+    # and restrict it to the interval where probability is defined --
+    # 0..1. here we use some transformations of the original formula
+    # that is ``SF(x) = 1 - (CDF(x) - CDF(a)) / Z`` in order to minimize
+    # number of arithmetic operations and function calls:
+    # ``SF(x) = (Z - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
+    return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
 
 
 def norm_cdf(x, a, s):
@@ -119,20 +177,24 @@ def std_curve(values, weights=None):
     return res
 
 
-# NB: for equal weights and sorted values the quantile is computed a
+# NB: for equal weights and sorted values the quantile is computed as
 # numpy.interp(q, [1/N, 2/N, ..., N/N], values)
 def quantile_curve(quantile, curves, weights=None):
     """
-    Compute the weighted quantile aggregate of a set of curves.
+    Compute the weighted quantile aggregate of an array or list of arrays
 
     :param quantile:
         Quantile value to calculate. Should be in the range [0.0, 1.0].
     :param curves:
-        Array of R PoEs (possibly arrays)
+        R arrays
     :param weights:
-        Array-like of weights, 1 for each input curve, or None
+        R weights with sum 1, or None
     :returns:
-        A numpy array representing the quantile aggregate
+        A numpy array representing the quantile of the underlying arrays
+
+    >>> arr = numpy.array([.15, .25, .3, .4, .5, .6, .75, .8, .9])
+    >>> quantile_curve(.8, arr)
+    array(0.76)
     """
     if not isinstance(curves, numpy.ndarray):
         curves = numpy.array(curves)
@@ -311,3 +373,30 @@ def combine_probs(values_by_grp, cmakers, rlz):
             if rlz in rlzs:
                 probs.append(values[..., g])
     return agg_probs(*probs)
+
+
+def average_df(dframes, weights=None):
+    """
+    Compute weighted average of DataFrames with the same index and columns.
+
+    >>> df1 = pandas.DataFrame(dict(value=[1, 1, 1]), [1, 2, 3])
+    >>> df2 = pandas.DataFrame(dict(value=[2, 2, 2]), [1, 2, 3])
+    >>> average_df([df1, df2], [.4, .6])
+       value
+    1    1.6
+    2    1.6
+    3    1.6
+    """
+    d0 = dframes[0]
+    n = len(dframes)
+    if n == 1:
+        return d0
+    elif weights is None:
+        weights = numpy.ones(n)
+    elif len(weights) != n:
+        raise ValueError('There are %d weights for %d dataframes!' %
+                         (len(weights), n))
+    data = numpy.average([df.to_numpy() for df in dframes],
+                         weights=weights, axis=0)  # shape (E, C)
+    return pandas.DataFrame({
+        col: data[:, c] for c, col in enumerate(d0.columns)}, d0.index)

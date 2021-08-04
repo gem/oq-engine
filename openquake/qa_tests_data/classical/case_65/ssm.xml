@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+    xmlns="http://openquake.org/xmlns/nrml/0.5"
+    xmlns:gml="http://www.opengis.net/gml" >
+  <sourceModel name="test hazardmodel" investigation_time="1.0">
+    <sourceGroup name="group1" tectonicRegion="Active Shallow Crust">
+      <multiFaultSource id="1" name="Test1">
+	<multiPlanesRupture probs_occur="0.8 0.2">
+	  <magnitude>5.0</magnitude>
+	  <sectionIndexes indexes="s1"/>
+	  <rake>90</rake>
+	</multiPlanesRupture>
+	<multiPlanesRupture probs_occur="0.7 0.3">
+	  <magnitude>6.0</magnitude>
+	  <sectionIndexes indexes="s1,s2"/>
+	  <rake>90</rake>
+	</multiPlanesRupture>
+	<multiPlanesRupture probs_occur="0.9 0.1">
+	  <magnitude>5.2</magnitude>
+	  <sectionIndexes indexes="s2"/>
+	  <rake>90</rake>
+	</multiPlanesRupture>
+      </multiFaultSource>
+    </sourceGroup>
+  </sourceModel>
+</nrml>

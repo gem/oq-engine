@@ -24,16 +24,14 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib.general import (
-    group_array, deprecated, AccumDict, DictArray)
-from openquake.baselib import hdf5
+from openquake.baselib.general import deprecated, DictArray
+from openquake.baselib import hdf5, writers
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
-from openquake.calculators.getters import gen_rupture_getters
-from openquake.commonlib import writers, hazard_writers, calc, util
+from openquake.commonlib import hazard_writers, calc, util
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -50,30 +48,6 @@ def add_quotes(values):
     return ['"%s"' % val for val in values]
 
 
-@export.add(('ruptures', 'xml'))
-@deprecated(msg='This exporter will disappear in the future')
-def export_ruptures_xml(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    fmt = ekey[-1]
-    oq = dstore['oqparam']
-    events = group_array(dstore['events'][()], 'rup_id')
-    ruptures_by_grp = AccumDict(accum=[])
-    for rgetter in gen_rupture_getters(dstore):
-        ebrs = []
-        for proxy in rgetter.get_proxies():
-            events_by_ses = group_array(events[proxy['id']], 'ses_id')
-            ebr = proxy.to_ebr(rgetter.trt)
-            ebrs.append(ebr.export(events_by_ses))
-        ruptures_by_grp[rgetter.trt_smr].extend(ebrs)
-    dest = dstore.export_path('ses.' + fmt)
-    writer = hazard_writers.SESXMLWriter(dest)
-    writer.serialize(ruptures_by_grp, oq.investigation_time)
-    return [dest]
-
-
 @export.add(('ruptures', 'csv'))
 def export_ruptures_csv(ekey, dstore):
     """
@@ -87,8 +61,8 @@ def export_ruptures_csv(ekey, dstore):
     arr = extract(dstore, 'rupture_info')
     if export.sanity_check:
         bad = view('bad_ruptures', dstore)
-        if bad.count('\n') > 3:  # nonempty rst_table
-            print(bad, file=sys.stderr)
+        if len(bad):  # nonempty
+            print(text_table(bad), file=sys.stderr)
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
@@ -337,9 +311,10 @@ def export_hcurves_xml(ekey, dstore):
             fname = name[:-len_ext] + '-' + im + '.' + fmt
             data = [HazardCurve(Location(site), poes[0])
                     for site, poes in zip(sitemesh, hcurves)]
+            imt_name = 'SA' if im.startswith('SA') else im
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
-                               imls=oq.imtls[im], imt=imt.name,
+                               imls=oq.imtls[im], imt=imt_name,
                                sa_period=getattr(imt, 'period', None) or None,
                                sa_damping=getattr(imt, 'damping', None),
                                smlt_path=smlt_path, gsimlt_path=gsimlt_path)
@@ -525,8 +500,9 @@ def export_disagg_csv_xml(ekey, dstore):
             'rlz-%d-%s-sid-%d-poe-%d.xml' % (r, imt, s, p))
         lon, lat = sitecol.lons[s], sitecol.lats[s]
         metadata = dstore.metadata
+        imt_name = 'SA' if imt.string.startswith('SA') else imt.string
         metadata.update(investigation_time=oq.investigation_time,
-                        imt=imt.name,
+                        imt=imt_name,
                         smlt_path='_'.join(rlz.sm_lt_path),
                         gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
                         mag_bin_edges=bins['Mag'].tolist(),

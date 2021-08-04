@@ -30,12 +30,12 @@ class AkkarCagnan2010TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('AC10/AC10_STD_TOTAL.csv',
-                  max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
     def test_std_intra(self):
         self.check('AC10/AC10_STD_INTRA.csv',
-                  max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
     def test_std_inter(self):
         self.check('AC10/AC10_STD_INTER.csv',
-                  max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)

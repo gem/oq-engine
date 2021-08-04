@@ -63,7 +63,7 @@ install_requires = [
     'pyzmq <20.0',
     'psutil >=2.0, <5.7',
     'shapely >=1.7, <1.8',
-    'docutils >=0.11, <0.15',
+    'docutils >=0.11',
     'decorator >=4.3',
     'django >=1.11, <2.3',
     'matplotlib',

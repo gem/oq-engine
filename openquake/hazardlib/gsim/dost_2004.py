@@ -23,9 +23,36 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV
+
+
+def _compute_distance_term(C, rhypo):
+    """
+    Returns the distance scaling term
+    """
+    return (C["c2"] * rhypo) + (C["c3"] * np.log10(rhypo))
+
+
+_compute_magnitude_term = CallableDict()
+
+
+@_compute_magnitude_term.add("base")
+def _compute_magnitude_term_1(kind, C, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    return C["c0"] + (C["c1"] * mag)
+
+
+@_compute_magnitude_term.add("bommer")
+def _compute_magnitude_term_2(kind, C, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    return C["c0"] + C["c1"] * mag + C["c1e"] * (mag - 4.5) ** 2
 
 
 class DostEtAl2004(GMPE):
@@ -36,15 +63,14 @@ class DostEtAl2004(GMPE):
     acceleration and peak ground velocity recorded in the Netherlands.
     Bollettino di Geofisica Teorica ed Applicata. 45(3), 153 - 168
     """
+    kind = "base"
+
     #: The GMPE is derived from induced earthquakes
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.INDUCED
 
     #: Supported intensity measure types are peak ground acceleration
     #: and peak ground velocity
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV}
 
     #: Supported intensity measure component is the average horizontal
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotD100
@@ -65,47 +91,26 @@ class DostEtAl2004(GMPE):
     #: not verified warning
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude_term(self.kind, C, ctx.mag) +
+                     _compute_distance_term(C, ctx.rhypo))
+            # Convert mean from cm/s and cm/s/s
+            if imt.string == "PGA":
+                mean[m] = np.log(10.0 ** imean / g)
+            else:
+                mean[m] = np.log(10.0 ** imean)
 
-        imean = (self._compute_magnitude_term(C, rup.mag) +
-                 self._compute_distance_term(C, dists.rhypo))
-        # Convert mean from cm/s and cm/s/s
-        if imt.name == "PGA":
-            mean = np.log((10.0 ** (imean)) / g)
-        else:
-            mean = np.log(10.0 ** imean)
-        stddevs = self._get_stddevs(C, len(dists.rhypo), stddev_types)
-        return mean, stddevs
-
-    def _compute_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        return C["c0"] + (C["c1"] * mag)
-
-    def _compute_distance_term(self, C, rhypo):
-        """
-        Returns the distance scaling term
-        """
-        return (C["c2"] * rhypo) + (C["c3"] * np.log10(rhypo))
-
-    def _get_stddevs(self, C, num_sites, stddev_types):
-        """
-        Returns the total standard deviation
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(
-                    np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-        return stddevs
+            sig[m] = np.log(10.0 ** C["sigma"])
+            if self.kind == "bommer":
+                tau[m] = np.log(10.0 ** C["tau"])
+                phi[m] = np.log(10.0 ** C["phi"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     c0     c1        c2      c3   sigma
@@ -119,36 +124,11 @@ class DostEtAl2004BommerAdaptation(DostEtAl2004):
     Adaptation of the GMPE for application to higher magnitudes proposed
     by Bommer et al. (2013)
     """
-    #: Supported standard deviation types is total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    kind = "bommer"
 
-    def _compute_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        return C["c0"] + (C["c1"] * mag) + (C["c1e"] * ((mag - 4.5) ** 2.0))
-    
-    def _get_stddevs(self, C, num_sites, stddev_types):
-        """
-        Returns the the total, inter-event and intra-event standard deviation
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(
-                    np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-            if stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(
-                    np.log(10.0 ** C["tau"]) + np.zeros(num_sites))
-            if stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(
-                    np.log(10.0 ** C["phi"]) + np.zeros(num_sites))
-        return stddevs
+    #: Supported standard deviation types is total.
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     c0         c1       c1e         c2      c3     tau     phi  sigma

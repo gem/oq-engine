@@ -24,7 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, general
-from openquake.hazardlib.contexts import read_cmakers, get_pmap
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -48,7 +48,7 @@ def conditional_spectrum(dstore, slc, cmaker, monitor):
         dstore.open('r')
         ctxs = cmaker.read_ctxs(dstore, slc)
         N = len(dstore['sitecol/sids'])
-    return {cmaker.grp_id: get_pmap(ctxs, cmaker).array(N)}
+    return {cmaker.grp_id: cmaker.get_pmap(ctxs).array(N)}
 
 
 @base.calculators.add('conditional_spectrum')

@@ -14,7 +14,7 @@ ENV {{ var }} {{ value }}
 {% endfor %}
 {% endif %}
 
-RUN if [ $(command -v apt-get) ]; then  apt-get update && apt-get install -y openssh-server git && apt-get clean; \
+RUN if [ $(command -v apt-get) ]; then  apt-get update && apt-get install -y openssh-server git && apt-get clean ; \
     elif [ $(command -v dnf) ] && cat /etc/os-release | grep -q '^NAME="CentOS Linux"' && \
       cat /etc/os-release | grep -q '^VERSION_ID="8"' ; then dnf makecache && dnf install -y git openssh-server && dnf clean all ; \
     elif [ $(command -v yum) ] && cat /etc/os-release | grep -q '^NAME="CentOS Linux"' && \

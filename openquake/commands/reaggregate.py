@@ -35,27 +35,20 @@ def main(calc_id: int, aggregate_by):
     for tagname in aggby:
         if tagname not in oqp.aggregate_by:
             raise ValueError('%r not in %s' % (tagname, oqp.aggregate_by))
-    job_id = logs.init('job', level=logging.INFO)
     dic = dict(
         calculation_mode='reaggregate',
         description=oqp.description + '[aggregate_by=%s]' % aggregate_by,
         user_name=getpass.getuser(), is_running=1, status='executing',
-        pid=os.getpid(), hazard_calculation_id=job_id)
-    logs.dbcmd('update_job', job_id, dic)
+        pid=os.getpid(), hazard_calculation_id=calc_id)
+    log = logs.init('job', dic, logging.INFO)
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    with logs.handle(job_id, logging.INFO):
+    with log:
         oqp.hazard_calculation_id = parent.calc_id
         parallel.Starmap.init()
-        prc = PostRiskCalculator(oqp, job_id)
-        try:
-            prc.run(aggregate_by=aggby)
-            engine.expose_outputs(prc.datastore)
-            logs.dbcmd('finish', job_id, 'complete')
-        except Exception:
-            logs.dbcmd('finish', job_id, 'failed')
-        finally:
-            parallel.Starmap.shutdown()
+        prc = PostRiskCalculator(oqp, log.calc_id)
+        prc.run(aggregate_by=aggby)
+        engine.expose_outputs(prc.datastore)
 
 
 main.calc_id = 'ID of the risk calculation'

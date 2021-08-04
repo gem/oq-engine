@@ -32,7 +32,7 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
-from openquake.engine.engine import run_jobs
+from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
@@ -137,13 +137,7 @@ class InfoTestCase(unittest.TestCase):
                             'source_model_logic_tree.xml')
         with Print.patch() as p:
             sap.runline('openquake.commands info ' + path)
-        self.assertEqual(str(p), """\
-==================== ===========
-TRT                  pointSource
-==================== ===========
-active shallow crust 1          
-Total                1          
-==================== ===========""")
+        self.assertIn('pointSource', str(p))
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
@@ -244,11 +238,12 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline('openquake.commands show sitecol %d' % self.calc_id)
-        self.assertIn('sids\tlon\tlat\tdepth\tvs30\tvs30measured', str(p))
+        self.assertIn('sids | lon | lat | depth | vs30  | vs30measured',
+                      str(p))
 
         with Print.patch() as p:
             sap.runline(f'openquake.commands show slow_sources {self.calc_id}')
-        self.assertIn('source_id code calc_time num_sites', str(p))
+        self.assertIn('source_id | code | calc_time | num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -508,19 +503,19 @@ class DbTestCase(unittest.TestCase):
 class EngineRunJobTestCase(unittest.TestCase):
     def test_multi_run(self):
         job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-        jobparams = run_jobs([job_ini, job_ini], log_level='error', multi=True)
-        jobs, params = zip(*jobparams)
+        jobs = create_jobs([job_ini, job_ini], 'error', multi=True)
+        run_jobs(jobs)
         with Print.patch():
             [r1, r2] = commonlib.logs.dbcmd(
                 'select id, hazard_calculation_id from job '
-                'where id in (?S) order by id', jobs)
-        self.assertEqual(r1.hazard_calculation_id, r1.id)
-        self.assertEqual(r2.hazard_calculation_id, r1.id)
+                'where id in (?S) order by id', [job.calc_id for job in jobs])
+        self.assertEqual(r1.hazard_calculation_id, None)
+        self.assertEqual(r2.hazard_calculation_id, None)
 
     def test_OQ_REDUCE(self):
         with mock.patch.dict(os.environ, OQ_REDUCE='.1'):
             job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-            run_jobs([job_ini])
+            run_jobs(create_jobs([job_ini]))
 
     def test_sensitivity(self):
         job_ini = gettemp('''[general]
@@ -530,7 +525,7 @@ sites = 0 0
 intensity_measure_types = PGA
 sensitivity_analysis = {
   'maximum_distance': [100, 200]}''')
-        run_jobs([job_ini])
+        run_jobs(create_jobs([job_ini]))
 
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
@@ -538,7 +533,7 @@ sensitivity_analysis = {
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
-            [(job_id, oqparam)] = run_jobs([job_ini], log_level='error')
+            [log] = run_jobs(create_jobs([job_ini], 'error'))
         self.assertIn('id | name', str(p))
 
         # check the exported outputs
@@ -561,15 +556,15 @@ Input Files
 Realizations
 Source Loss Table'''.splitlines())
         with Print.patch() as p:
-            sap.runline(f'openquake.commands engine --lo {job_id}')
+            sap.runline(f'openquake.commands engine --lo {log.calc_id}')
         got = set(re.findall(r'\| ([\w ]+)', str(p))) - {'name'}
         if got != expected:
             print('Missing output', expected - got, file=sys.stderr)
         # sanity check on the performance views: make sure that the most
         # relevant information is stored (it can be lost due to a wrong
         # refactoring of the monitoring and it happened several times)
-        with read(job_id) as dstore:
-            perf = view('performance', dstore)
+        with read(log.calc_id) as dstore:
+            perf = str(view('performance', dstore))
             self.assertIn('total event_based_risk', perf)
 
     def test_oqdata(self):
@@ -578,13 +573,13 @@ Source Loss Table'''.splitlines())
         tempdir = tempfile.mkdtemp()
         dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
-            [(job_id, oq)] = run_jobs([job_ini], log_level='error')
-            job = commonlib.logs.dbcmd('get_job', job_id)
+            [job] = run_jobs(create_jobs([job_ini], 'error'))
+            job = commonlib.logs.dbcmd('get_job', job.calc_id)
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
         with Print.patch() as p:
-            sap.runline(f'openquake.commands export ruptures {job_id} -e csv'
-                        f' --export-dir={tempdir}')
+            sap.runline(f'openquake.commands export ruptures {job.id} '
+                        f'-e csv --export-dir={tempdir}')
         self.assertIn('Exported', str(p))
         shutil.rmtree(tempdir)
 

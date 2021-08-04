@@ -25,6 +25,39 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
+from openquake.baselib.general import CallableDict
+
+
+_compute_distance_term = CallableDict()
+
+
+@_compute_distance_term.add('rrup')
+def _compute_distance_term_rrup(kind, C, rrup, mag):
+    """
+    Returns the distance scaling term
+    """
+    exponent_term = (1.0 + C["c3"] * np.exp(mag - 5.)) ** 2.
+    return C["c2"] * np.log(np.sqrt(rrup ** 2. + exponent_term))
+
+
+@_compute_distance_term.add('rhypo')
+def _compute_distance_term_rhypo(kind, C, rhypo, mag):
+    """
+    Returns the distance scaling term
+    """
+    r_m = C["m1"] + C["m2"] * np.exp(mag - 5.)
+    f_r = C["c2"] * np.log(np.sqrt(rhypo ** 2. + r_m ** 2.))
+    # For distances greater than 50 km an anelastic term is added
+    idx = rhypo > 50.0
+    f_r[idx] += C["c4"] * np.log(rhypo[idx] / 50.)
+    return f_r
+
+
+def _compute_magnitude_term(C, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    return C["c0"] + (C["c1"] * mag)
 
 
 class AllenEtAl2012(GMPE):
@@ -42,18 +75,14 @@ class AllenEtAl2012(GMPE):
 
     #: Supported intensity measure types are peak ground acceleration
     #: and peak ground velocity
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        MMI,
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {MMI}
 
     #: Supported intensity measure component is not considered for IPEs, so
     #: we assume equivalent to 'average horizontal'
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No required site parameters (in the present version)
     REQUIRES_SITES_PARAMETERS = set()
@@ -64,43 +93,20 @@ class AllenEtAl2012(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = (self._compute_magnitude_term(C, rup.mag) +
-                self._compute_distance_term(C, dists.rrup, rup.mag))
-        stddevs = self._get_stddevs(C, dists.rrup, stddev_types)
-        return mean, stddevs
-
-    def _compute_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        return C["c0"] + (C["c1"] * mag)
-
-    def _compute_distance_term(self, C, rrup, mag):
-        """
-        Returns the distance scaling term
-        """
-        exponent_term = (1.0 + C["c3"] * np.exp(mag - 5.)) ** 2.
-        return C["c2"] * np.log(np.sqrt(rrup ** 2. + exponent_term))
-
-    def _get_stddevs(self, C, distance, stddev_types):
-        """
-        Returns the total standard deviation, which is a function of distance
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma = C["s1"] + (C["s2"] / (1.0 +
-                                   ((distance / C["s3"]) ** 2.)))
-                stddevs.append(sigma + np.zeros_like(distance))
-        return stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            [dist_type] = self.REQUIRES_DISTANCES
+            dist = getattr(ctx, dist_type)
+            mean[m] = (_compute_magnitude_term(C, ctx.mag) +
+                       _compute_distance_term(dist_type, C, dist, ctx.mag))
+            # the total standard deviation, which is a function of distance
+            sig[m] = C["s1"] + C["s2"] / (1.0 + (dist / C["s3"]) ** 2.)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     c0     c1      c2     c3    s1     s2    s3
@@ -113,31 +119,7 @@ class AllenEtAl2012Rhypo(AllenEtAl2012):
     Version of the Allen, Wald and Worden (2012) GSIM for hypocentral distance
     """
     #: Required distance measure is hypocentral distance
-    REQUIRES_DISTANCES = set(('rhypo',))
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        C = self.COEFFS[imt]
-
-        mean = (self._compute_magnitude_term(C, rup.mag) +
-                self._compute_distance_term(C, dists.rhypo, rup.mag))
-        stddevs = self._get_stddevs(C, dists.rhypo, stddev_types)
-        return mean, stddevs
-
-    def _compute_distance_term(self, C, rhypo, mag):
-        """
-        Returns the distance scaling term
-        """
-        r_m = C["m1"] + C["m2"] * np.exp(mag - 5.)
-        f_r = C["c2"] * np.log(np.sqrt(rhypo ** 2. + r_m ** 2.))
-        # For distances greater than 50 km an anelastic term is added
-        idx = rhypo > 50.0
-        f_r[idx] += C["c4"] * np.log(rhypo[idx] / 50.)
-        return f_r
+    REQUIRES_DISTANCES = {'rhypo'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     c0     c1      c2   c3     c4      m1      m2     s1     s2    s3

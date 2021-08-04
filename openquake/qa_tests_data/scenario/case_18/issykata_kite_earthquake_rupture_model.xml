@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+    <multiPlanesRupture>
+    
+      <magnitude>7.5</magnitude>
+      <rake>90</rake>
+      <hypocenter lon="74.6" lat="42.95" depth="10"/>
+
+      <kiteSurface>
+        <profile>
+          <gml:LineString>
+            <gml:posList>
+                74.63 42.8039 0
+                74.6216 42.7776 3
+                74.5952 42.7203 3.5
+                74.5706 42.5524 20
+            </gml:posList>
+          </gml:LineString>
+        </profile>
+        <profile>
+          <gml:LineString>
+            <gml:posList>
+                75.0665 42.6991 0.0 
+                75.05792 42.67283 3
+                75.0688 42.5946 3.5
+                75.053 42.4273 20
+            </gml:posList>
+          </gml:LineString>
+        </profile>
+        <profile>
+          <gml:LineString>
+            <gml:posList>
+                75.4167 42.675 0.0 
+                75.41401 42.6481 3
+                75.407 42.5718 3.5
+                75.3993 42.406 20
+            </gml:posList>
+          </gml:LineString>
+        </profile>
+      </kiteSurface>      
+    </multiPlanesRupture>
+</nrml>

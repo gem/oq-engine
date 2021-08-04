@@ -1,0 +1,11 @@
+#,,"generated_by='OpenQuake engine 3.12.0-git67bc686664', start_date='2021-05-14T08:43:59', checksum=3590982611"
+event_id,loss,loss_type
+0,8.51288E+02,structural
+1,3.28829E+02,structural
+2,4.09643E+02,structural
+3,3.74689E+02,structural
+4,3.42458E+02,structural
+5,2.52500E+02,structural
+6,4.81053E+02,structural
+8,5.79551E+02,structural
+9,5.03661E+02,structural

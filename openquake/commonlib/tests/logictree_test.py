@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import pprint
 import codecs
 import unittest
 import collections
@@ -27,7 +28,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt
+from openquake.hazardlib import geo, lt, gsim_lt
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
@@ -1850,7 +1851,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTreeBranchingLevel>
         </logicTree>""")
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             'only uncertainties of type "gmpeModel" are allowed '
             'in gmpe logic tree')
 
@@ -1882,7 +1883,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             'Branching level bl1 has multiple branchsets')
 
     def test_branchset_id_not_unique(self):
@@ -1919,7 +1920,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             "Duplicated branchSetID bs1")
 
     def test_branch_id_not_unique(self):
@@ -1950,7 +1951,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
 </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             "There where duplicated branchIDs in")
 
     def test_invalid_gsim(self):
@@ -2003,7 +2004,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             "Found duplicated applyToTectonicRegionType="
             "['Subduction Interface', 'Subduction Interface']")
 
@@ -2288,6 +2289,30 @@ class SerializeSmltTestCase(unittest.TestCase):
             ba = smlta.branches[brid]
             bb = smltb.branches[brid]
             self.assertEqual(repr(ba), repr(bb))
+
+
+class ReduceLtTestCase(unittest.TestCase):
+    def test(self):
+        ssmLT = os.path.join(DATADIR, 'ssmLT.xml')
+        gmmLT = os.path.join(DATADIR, 'gmmLT.xml')
+        smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
+        gslt = logictree.GsimLogicTree(gmmLT)
+        paths = '''\
+[012345]~[01][345][678][9AB][C][FGH][IJ]
+[012345]~[2][345][678][9AB][E][FGH][K]
+[012345]~[1][345][678][9AB][E][FGH][IJ]
+[012345]~[01][345][678][9AB][D][FGH][IJ]
+[012345]~[2][345][678][9AB][C][FGH][K]
+[012345]~[2][345][678][9AB][C][FGH][IJ]
+[012345]~[01][345][678][9AB][E][FGH][K]
+[012345]~[012][345][678][9AB][D][FGH][K]
+[012345]~[01][345][678][9AB][C][FGH][K]
+[012345]~[0][345][678][9AB][E][FGH][IJ]
+[012345]~[2][345][678][9AB][E][FGH][IJ]
+[012345]~[2][345][678][9AB][D][FGH][IJ]'''.split()
+        full_lt = unittest.mock.Mock(source_model_lt=smlt, gsim_lt=gslt)
+        dic = logictree.reduce_full(full_lt, paths)
+        pprint.pprint(dic)
 
 
 class TaxonomyMappingTestCase(unittest.TestCase):

@@ -29,6 +29,31 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA, PGV
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
+CONSTS = {'ref_mag': 10.}
+
+
+def _compute_mean(ctx, coeffs):
+    """
+    Evaluate equation (11) on p. 484.
+    """
+    ln_p = coeffs['c1'] + coeffs['c2']*ctx.mag + \
+        coeffs['c3']*(CONSTS['ref_mag'] - ctx.mag)**3 + \
+        coeffs['c4']*np.log(
+            ctx.rrup + coeffs['c5']*np.exp(coeffs['c6']*ctx.mag))
+    return ln_p
+
+
+def _get_stddev(coeffs):
+    """
+    Look up values from Table 5 on p. 483 and convert to natural logarithm.
+    Interpretation of "sigma_log(Y)" as the common logarithm is based on
+    the order of magnitude of the values and consistent use of "log" and
+    "ln" to denote common and natural logarithm elsewhere in the paper.
+    """
+    log_stddev = coeffs['sigma']
+    ln_stddev = log_stddev*np.log(10)
+    return ln_stddev
+
 
 class NathEtAl2012Lower(GMPE):
     # pylint: disable=too-few-public-methods, no-init
@@ -83,64 +108,40 @@ class NathEtAl2012Lower(GMPE):
     #: following equation (11) on p. 484.
     REQUIRES_DISTANCES = {'rrup'}
 
-    #: no site parameters are defined, the GMPE is calibrated for rock sites
+    #: no site parameters are defined, the GMPE is calibrated for rock ctx
     #: m/s (provisionally set to 800 for compatibility with SiteTerm class)
     REQUIRES_SITES_PARAMETERS = set()
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for specification of input and result values.
 
         Implements equation (11) on p. 484:
 
         ``ln(P) = c1 + c2*M + c3*(10 - M)^3 + c4*ln(R + c5*exp(c6*M)``
         """
+        for m, imt in enumerate(imts):
+            c = self.COEFFS_BEDROCK[imt]
+            coeffs = CONSTS.copy()
+            for n in c.dtype.names:
+                coeffs[n] = c[n]
 
-        # obtain coefficients for required intensity measure type (IMT)
-        coeffs = self.COEFFS_BEDROCK[imt].copy()
+            # compute bedrock motion, equation (11)
+            ln_mean = _compute_mean(ctx, coeffs)
 
-        # obtain IMT-independent coefficients
-        coeffs.update(self.CONSTS)
+            # obtain standard deviation
+            ln_stddev = _get_stddev(coeffs)
 
-        # compute bedrock motion, equation (11)
-        ln_mean = self._compute_mean(rup, dists, coeffs)
+            if hasattr(self, 'COEFFS_UPPER'):  # in subclass
+                # compute site corrections, equation (9)
+                corr = self.COEFFS_UPPER[imt]['correction']
+                ln_mean += np.log(corr)
 
-        # obtain standard deviation
-        ln_stddev = self._get_stddevs(coeffs, stddev_types)
-
-        return ln_mean, [ln_stddev]
-
-    def _compute_mean(self, rup, dists, coeffs):
-        """
-        Evaluate equation (11) on p. 484.
-        """
-
-        ln_p = coeffs['c1'] + coeffs['c2']*rup.mag + \
-            coeffs['c3']*(self.CONSTS['ref_mag'] - rup.mag)**3 +\
-            coeffs['c4']*np.log(dists.rrup +
-                                coeffs['c5']*np.exp(coeffs['c6']*rup.mag))
-
-        return ln_p
-
-    def _get_stddevs(self, coeffs, stddev_types):
-        """
-        Look up values from Table 5 on p. 483 and convert to natural logarithm.
-        Interpretation of "sigma_log(Y)" as the common logarithm is based on
-        the order of magnitude of the values and consistent use of "log" and
-        "ln" to denote common and natural logarithm elsewhere in the paper.
-        """
-
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-
-        log_stddev = coeffs['sigma']
-        ln_stddev = log_stddev*np.log(10)
-
-        return ln_stddev
+            mean[m], sig[m] = ln_mean, ln_stddev
 
     #: Coefficients taken from Table 5, p. 483.
     COEFFS_BEDROCK = CoeffsTable(sa_damping=5., table="""\
@@ -155,10 +156,6 @@ class NathEtAl2012Lower(GMPE):
        4 -6.9619  0.9977 -0.0270 -0.8393   0.0000  1.9613  0.4614
     """)
 
-    CONSTS = {
-        'ref_mag': 10.,
-    }
-
 
 class NathEtAl2012Upper(NathEtAl2012Lower):
     # pylint: disable=too-few-public-methods, no-init
@@ -169,28 +166,6 @@ class NathEtAl2012Upper(NathEtAl2012Lower):
     This model is based on stochastic simulation with a mean stress drop of 40
     bars.
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # pylint: disable=too-many-arguments
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for specification of input and result values.
-
-        Implements the correction factor for the upper crust, equation (12) on
-        p. 484:
-
-        ``P' = P x Correction_factor``
-        """
-        ln_mean, [ln_stddev] = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        # compute site corrections, equation (9)
-        coeffs = self.COEFFS_UPPER[imt]
-        ln_mean += np.log(coeffs['correction'])
-
-        return ln_mean, [ln_stddev]
-
     #: Coefficients taken from Table 6, p. 485.
     COEFFS_UPPER = CoeffsTable(sa_damping=5., table="""\
      IMT  correction

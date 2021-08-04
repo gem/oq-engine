@@ -5,14 +5,14 @@
                           applyToTectonicRegionType="Subduction Deep">
         
          <logicTreeBranch branchID="b1">
-           <uncertaintyModel minimum_distance="10">
+           <uncertaintyModel>
              LinLee2008SSlab
            </uncertaintyModel>
            <uncertaintyWeight>0.60</uncertaintyWeight>
          </logicTreeBranch>
            
          <logicTreeBranch branchID="b2">
-           <uncertaintyModel minimum_distance="5">
+           <uncertaintyModel>
              YoungsEtAl1997SSlab
            </uncertaintyModel>
            <uncertaintyWeight>0.40</uncertaintyWeight>

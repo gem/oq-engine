@@ -27,6 +27,127 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _compute_distance(ctx, C):
+    """
+    Compute the second term of the equation 1 described on paragraph 3:
+
+    ``c1 + c2 * (M-Mref) * log(sqrt(Rjb ** 2 + h ** 2)/Rref) -
+         c3*(sqrt(Rjb ** 2 + h ** 2)-Rref)``
+    """
+    mref = 5.0
+    rref = 1.0
+    rval = np.sqrt(ctx.rjb ** 2 + C['h'] ** 2)
+    return (C['c1'] + C['c2'] * (ctx.mag - mref)) *\
+        np.log10(rval / rref) - C['c3'] * (rval - rref)
+
+
+def _compute_magnitude(ctx, C):
+    """
+    Compute the third term of the equation 1:
+
+    e1 + b1 * (M-Mh) + b2 * (M-Mh)**2 for M<=Mh
+    e1 + b3 * (M-Mh) otherwise
+    """
+    m_h = 6.75
+    b_3 = 0.0
+    if ctx.mag <= m_h:
+        return C["e1"] + (C['b1'] * (ctx.mag - m_h)) +\
+            (C['b2'] * (ctx.mag - m_h) ** 2)
+    else:
+        return C["e1"] + (b_3 * (ctx.mag - m_h))
+
+
+def _get_delta(coeffs, imt, mag):
+    # Get the coefficients needed to compute the delta used for scaling
+    tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
+    return tmp
+
+
+def _get_fault_type_dummy_variables(ctx):
+    """
+    Fault type (Strike-slip, Normal, Thrust/reverse) is
+    derived from rake angle.
+    Rakes angles within 30 of horizontal are strike-slip,
+    angles from 30 to 150 are reverse, and angles from
+    -30 to -150 are normal.
+    Note that the 'Unspecified' case is not considered,
+    because rake is always given.
+    """
+    U, SS, NS, RS = 0, 0, 0, 0
+    if np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
+        # strike-slip
+        SS = 1
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
+        # reverse
+        RS = 1
+    else:
+        # normal
+        NS = 1
+    return U, SS, NS, RS
+
+
+def _get_mechanism(ctx, C):
+    """
+    Compute the fifth term of the equation 1 described on paragraph :
+    Get fault type dummy variables, see Table 1
+    """
+    U, SS, NS, RS = _get_fault_type_dummy_variables(ctx)
+
+    return C['f1'] * NS + C['f2'] * RS + C['f3'] * SS
+
+
+def _get_site_amplification(ctx, C):
+    """
+    Compute the fourth term of the equation 1 described on paragraph :
+    The functional form Fs in Eq. (1) represents the site amplification and
+    it is given by FS = sj Cj , for j = 1,...,5, where sj are the
+    coefficients to be determined through the regression analysis,
+    while Cj are dummy variables used to denote the five different EC8
+    site classes
+    """
+    ssa, ssb, ssc, ssd, sse = _get_site_type_dummy_variables(ctx)
+
+    return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc) + \
+        (C['sD'] * ssd) + (C['sE'] * sse)
+
+
+def _get_site_type_dummy_variables(ctx):
+    """
+    Get site type dummy variables, five different EC8 site classes
+    he recording ctx are classified into 5 classes,
+    based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
+    according to the EC8 (CEN 2003):
+    class A: Vs30 > 800 m/s
+    class B: Vs30 = 360 − 800 m/s
+    class C: Vs30 = 180 - 360 m/s
+    class D: Vs30 < 180 m/s
+    class E: 5 to 20 m of C- or D-type alluvium underlain by
+    stiffer material with Vs30 > 800 m/s.
+    """
+    ssa = np.zeros(len(ctx.vs30))
+    ssb = np.zeros(len(ctx.vs30))
+    ssc = np.zeros(len(ctx.vs30))
+    ssd = np.zeros(len(ctx.vs30))
+    sse = np.zeros(len(ctx.vs30))
+
+    # Class E Vs30 = 0 m/s. We fixed this value to define class E
+    idx = (np.fabs(ctx.vs30) < 1E-10)
+    sse[idx] = 1.0
+    # Class D;  Vs30 < 180 m/s.
+    idx = (ctx.vs30 >= 1E-10) & (ctx.vs30 < 180.0)
+    ssd[idx] = 1.0
+    # SClass C; 180 m/s <= Vs30 <= 360 m/s.
+    idx = (ctx.vs30 >= 180.0) & (ctx.vs30 < 360.0)
+    ssc[idx] = 1.0
+    # Class B; 360 m/s <= Vs30 <= 800 m/s.
+    idx = (ctx.vs30 >= 360.0) & (ctx.vs30 < 800)
+    ssb[idx] = 1.0
+    # Class A; Vs30 > 800 m/s.
+    idx = (ctx.vs30 >= 800.0)
+    ssa[idx] = 1.0
+    return ssa, ssb, ssc, ssd, sse
+
+
 class BindiEtAl2011(GMPE):
     """
     Implements GMPE developed by D.Bindi, F.Pacor, L.Luzi, R.Puglia,
@@ -45,11 +166,7 @@ class BindiEtAl2011(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -57,11 +174,8 @@ class BindiEtAl2011(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -72,161 +186,37 @@ class BindiEtAl2011(GMPE):
     #: Required distance measure is RRup (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    sgn = 0
+
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(ctx, C) +
+                     _get_site_amplification(ctx, C) +
+                     _get_mechanism(ctx, C))
 
-        C = self.COEFFS[imt]
+            # Convert units to g,
+            # but only for PGA and SA (not PGV):
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV
+                mean[m] = np.log(10.0 ** imean)
 
-        imean = (self._compute_magnitude(rup, C) +
-                 self._compute_distance(rup, dists, C) +
-                 self._get_site_amplification(sites, C) +
-                 self._get_mechanism(rup, C))
+            # Return stddevs in terms of natural log scaling
+            sig[m] = np.log(10.0 ** C['SigmaTot'])
+            tau[m] = np.log(10.0 ** C['SigmaB'])
+            phi[m] = np.log(10.0 ** C['SigmaW'])
 
-        istddevs = self._get_stddevs(C,
-                                     stddev_types,
-                                     num_sites=len(sites.vs30))
-
-        # Convert units to g,
-        # but only for PGA and SA (not PGV):
-        if imt.name in "SA PGA":
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
-        return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 1.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['SigmaTot'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['SigmaW'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['SigmaB'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_distance(self, rup, dists, C):
-        """
-        Compute the second term of the equation 1 described on paragraph 3:
-
-        ``c1 + c2 * (M-Mref) * log(sqrt(Rjb ** 2 + h ** 2)/Rref) -
-             c3*(sqrt(Rjb ** 2 + h ** 2)-Rref)``
-        """
-        mref = 5.0
-        rref = 1.0
-        rval = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
-        return (C['c1'] + C['c2'] * (rup.mag - mref)) *\
-            np.log10(rval / rref) - C['c3'] * (rval - rref)
-
-    def _compute_magnitude(self, rup, C):
-        """
-        Compute the third term of the equation 1:
-
-        e1 + b1 * (M-Mh) + b2 * (M-Mh)**2 for M<=Mh
-        e1 + b3 * (M-Mh) otherwise
-        """
-        m_h = 6.75
-        b_3 = 0.0
-        if rup.mag <= m_h:
-            return C["e1"] + (C['b1'] * (rup.mag - m_h)) +\
-                (C['b2'] * (rup.mag - m_h) ** 2)
-        else:
-            return C["e1"] + (b_3 * (rup.mag - m_h))
-
-    def _get_site_amplification(self, sites, C):
-        """
-        Compute the fourth term of the equation 1 described on paragraph :
-        The functional form Fs in Eq. (1) represents the site amplification and
-        it is given by FS = sj Cj , for j = 1,...,5, where sj are the
-        coefficients to be determined through the regression analysis,
-        while Cj are dummy variables used to denote the five different EC8
-        site classes
-        """
-        ssa, ssb, ssc, ssd, sse = self._get_site_type_dummy_variables(sites)
-
-        return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc) + \
-            (C['sD'] * ssd) + (C['sE'] * sse)
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables, five different EC8 site classes
-        he recording sites are classified into 5 classes,
-        based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
-        according to the EC8 (CEN 2003):
-        class A: Vs30 > 800 m/s
-        class B: Vs30 = 360 − 800 m/s
-        class C: Vs30 = 180 - 360 m/s
-        class D: Vs30 < 180 m/s
-        class E: 5 to 20 m of C- or D-type alluvium underlain by
-        stiffer material with Vs30 > 800 m/s.
-        """
-        ssa = np.zeros(len(sites.vs30))
-        ssb = np.zeros(len(sites.vs30))
-        ssc = np.zeros(len(sites.vs30))
-        ssd = np.zeros(len(sites.vs30))
-        sse = np.zeros(len(sites.vs30))
-
-        # Class E Vs30 = 0 m/s. We fixed this value to define class E
-        idx = (np.fabs(sites.vs30) < 1E-10)
-        sse[idx] = 1.0
-        # Class D;  Vs30 < 180 m/s.
-        idx = (sites.vs30 >= 1E-10) & (sites.vs30 < 180.0)
-        ssd[idx] = 1.0
-        # SClass C; 180 m/s <= Vs30 <= 360 m/s.
-        idx = (sites.vs30 >= 180.0) & (sites.vs30 < 360.0)
-        ssc[idx] = 1.0
-        # Class B; 360 m/s <= Vs30 <= 800 m/s.
-        idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800)
-        ssb[idx] = 1.0
-        # Class A; Vs30 > 800 m/s.
-        idx = (sites.vs30 >= 800.0)
-        ssa[idx] = 1.0
-        return ssa, ssb, ssc, ssd, sse
-
-    def _get_mechanism(self, rup, C):
-        """
-        Compute the fifth term of the equation 1 described on paragraph :
-        Get fault type dummy variables, see Table 1
-        """
-        U, SS, NS, RS = self._get_fault_type_dummy_variables(rup)
-
-        return C['f1'] * NS + C['f2'] * RS + C['f3'] * SS
-
-    def _get_fault_type_dummy_variables(self, rup):
-        """
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal.
-        Note that the 'Unspecified' case is not considered,
-        because rake is always given.
-        """
-        U, SS, NS, RS = 0, 0, 0, 0
-        if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-            # strike-slip
-            SS = 1
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            RS = 1
-        else:
-            # normal
-            NS = 1
-        return U, SS, NS, RS
+            if self.sgn:
+                mean[m] += self.sgn * _get_delta(
+                    self.COEFFS_DELTA[imt], imt, ctx.mag)
 
     #: Coefficients from SA from Table 1
     #: Coefficients from PGA e PGV from Table 5
@@ -260,30 +250,7 @@ class BindiEtAl2011(GMPE):
     4.00    2.058    -1.0840    0.2000     4.876   -0.000843     0.6740    -0.00621    0.0    0.1950    0.300    0.350    0.230    0.02950    0.0255    -0.0550    0.0    0.197    0.300     0.359
     """)
 
-
-class BindiEtAl2011Ita19Low(BindiEtAl2011):
-    """
-    Implements the lower term of the ITA19 backbone model.
-    """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        delta = self._get_delta(imt, rup.mag)
-        return mean-delta, stddevs
-
-    def _get_delta(self, imt, mag):
-        # Get the coefficients needed to compute the delta used for scaling
-        coeffs = self.DELTACOEFF[imt]
-        tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
-        return tmp
-
-    DELTACOEFF = CoeffsTable(sa_damping=5, table="""
+    COEFFS_DELTA = CoeffsTable(sa_damping=5, table="""
     imt   a      b     c
     pga   0.101 -1.136 3.555
     pgv   0.066 -0.741 2.400
@@ -299,22 +266,18 @@ class BindiEtAl2011Ita19Low(BindiEtAl2011):
     2.00  0.041 -0.512 1.888
     3.00  0.050 -0.616 2.193
     4.00  0.076 -0.906 3.046
-        """)
+    """)
+
+
+class BindiEtAl2011Ita19Low(BindiEtAl2011):
+    """
+    Implements the lower term of the ITA19 backbone model.
+    """
+    sgn = -1
 
 
 class BindiEtAl2011Ita19Upp(BindiEtAl2011):
     """
     Implements the upper term of the ITA19 backbone model.
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        gmm = BindiEtAl2011Ita19Low()
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        delta = gmm._get_delta(imt, rup.mag)
-        return mean+delta, stddevs
+    sgn = +1

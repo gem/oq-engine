@@ -26,6 +26,103 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _compute_anelestic_attenuation_term(C, ctx):
+    """
+    Compute and return anelastic attenuation term in equation 5,
+    page 970.
+    """
+    f_aat = np.zeros_like(ctx.rjb)
+    idx = ctx.rjb > 80.0
+    f_aat[idx] = C["b10"] * (ctx.rjb[idx] - 80.0)
+    return f_aat
+
+
+def _compute_faulting_style_term(C, rake):
+    """
+    Compute and return style-of-faulting term in equation 4,
+    page 970.
+    """
+    Fn = float(rake > -135.0 and rake < -45.0)
+    Fr = float(rake > 45.0 and rake < 135.0)
+
+    return C['b8'] * Fn + C['b9'] * Fr
+
+
+def _compute_geometric_decay_term(c1, C, mag, ctx):
+    """
+    Compute and return geometric decay term in equation 3,
+    page 970.
+    """
+    return (
+        (C['b4'] + C['b5'] * (mag - c1)) *
+        np.log(np.sqrt(ctx.rjb ** 2.0 + C['b6'] ** 2.0)))
+
+
+def _compute_magnitude_scaling_term(c1, C, mag):
+    """
+    Compute and return magnitude scaling term in equation 2,
+    page 970.
+    """
+    if mag <= c1:
+        return C['b1'] + C['b2'] * (mag - c1) + C['b3'] * (8.5 - mag) ** 2
+    else:
+        return C['b1'] + C['b7'] * (mag - c1) + C['b3'] * (8.5 - mag) ** 2
+
+
+def _compute_mean(CONSTS, C, mag, ctx, rake):
+    """
+    Compute and return mean value without site conditions,
+    that is equations 2-5, page 970.
+    """
+    c1 = CONSTS['c1']
+    mean = (
+        _compute_magnitude_scaling_term(c1, C, mag) +
+        _compute_geometric_decay_term(c1, C, mag, ctx) +
+        _compute_faulting_style_term(C, rake) +
+        _compute_anelestic_attenuation_term(C, ctx))
+
+    return mean
+
+
+def _compute_non_linear_term(CONSTS, C, pga_only, ctx):
+    """
+    Compute non-linear term, equation 6, page 970.
+    """
+    Vref = CONSTS['Vref']
+    Vcon = CONSTS['Vcon']
+    c = CONSTS['c']
+    n = CONSTS['n']
+    lnS = np.zeros_like(ctx.vs30)
+
+    # equation (6a)
+    idx = ctx.vs30 < Vref
+    lnS[idx] = (
+        C['sb1'] * np.log(ctx.vs30[idx] / Vref) +
+        C['sb2'] * np.log(
+            (pga_only[idx] + c * (ctx.vs30[idx] / Vref) ** n) /
+            ((pga_only[idx] + c) * (ctx.vs30[idx] / Vref) ** n)))
+
+    # equation (6b)
+    idx = ctx.vs30 >= Vref
+    new_sites = ctx.vs30[idx]
+    new_sites[new_sites > Vcon] = Vcon
+    lnS[idx] = C['sb1'] * np.log(new_sites / Vref)
+
+    return lnS
+
+
+def _compute_weight_std(C, mag):
+    """
+    Common part of equations 8 and 9, page 971.
+    """
+    if mag < 6.0:
+        return C['a1']
+    elif mag >= 6.0 and mag < 6.5:
+        return C['a1'] + (C['a2'] - C['a1']) * ((mag - 6.0) / 0.5)
+    else:
+        return C['a2']
+
+
 class KaleEtAl2015Turkey(GMPE):
     """
     Implements GMPE developed by O. Kale, S. Akkar, A. Ansari and H. Hamzehloo
@@ -43,11 +140,7 @@ class KaleEtAl2015Turkey(GMPE):
 
     #: The supported intensity measure types are PGA, PGV, and SA, see table
     #: 5, page 973
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: The supported intensity measure component is 'geometric mean', see
     #: section 'Functional Form of the GMPEs and Regression Analyses', page 970
@@ -55,11 +148,8 @@ class KaleEtAl2015Turkey(GMPE):
 
     #: The supported standard deviations are total, inter and intra event, see
     #: table 3 and equations 8 & 9, pages 972 and 971
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: The required site parameter is vs30, see equation 6, page 970.
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -72,10 +162,10 @@ class KaleEtAl2015Turkey(GMPE):
     #: equation 3, page 970.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
 
         Implement equation 1, page 970.
@@ -84,131 +174,21 @@ class KaleEtAl2015Turkey(GMPE):
         # amplification
         C_pga = self.COEFFS[PGA()]
         median_pga = np.exp(
-            self._compute_mean(C_pga, rup.mag, dists, rup.rake)
-        )
+            _compute_mean(self.CONSTS, C_pga, ctx.mag, ctx, ctx.rake))
+        for m, imt in enumerate(imts):
+            # compute mean value by adding nonlinear site amplification terms
+            C = self.COEFFS[imt]
+            mean[m] = (
+                _compute_mean(self.CONSTS, C, ctx.mag, ctx, ctx.rake) +
+                _compute_non_linear_term(self.CONSTS, C, median_pga, ctx))
 
-        # compute full mean value by adding nonlinear site amplification terms
-        C = self.COEFFS[imt]
-        mean = (self._compute_mean(C, rup.mag, dists, rup.rake) +
-                self._compute_non_linear_term(C, median_pga, sites))
-
-        stddevs = self._get_stddevs(C, rup, sites.vs30.shape, stddev_types)
-
-        return mean, stddevs
-
-    def _get_stddevs(self, C, rup, shape, stddev_types):
-        """
-        Return standard deviations as defined in p. 971.
-        """
-        weight = self._compute_weight_std(C, rup.mag)
-        std_intra = weight * C["sd1"] * np.ones(shape)
-        std_inter = weight * C["sd2"] * np.ones(shape)
-        
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(std_intra ** 2. + std_inter ** 2.))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(std_intra)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(std_inter)
-        return stddevs
-
-    def _compute_weight_std(self, C, mag):
-        """
-        Common part of equations 8 and 9, page 971.
-        """
-        if mag < 6.0:
-            return C['a1']
-        elif mag >= 6.0 and mag < 6.5:
-            return C['a1'] + (C['a2'] - C['a1']) * ((mag - 6.0) / 0.5)
-        else:
-            return C['a2']
-
-    def _compute_magnitude_scaling_term(self, C, mag):
-        """
-        Compute and return magnitude scaling term in equation 2,
-        page 970.
-        """
-        c1 = self.CONSTS['c1']
-        if mag <= c1:
-            return C['b1'] + C['b2'] * (mag - c1) + C['b3'] * (8.5 - mag) ** 2
-        else:
-            return C['b1'] + C['b7'] * (mag - c1) + C['b3'] * (8.5 - mag) ** 2
-
-    def _compute_geometric_decay_term(self, C, mag, dists):
-        """
-        Compute and return geometric decay term in equation 3,
-        page 970.
-        """
-        c1 = self.CONSTS['c1']
-        return (
-            (C['b4'] + C['b5'] * (mag - c1)) *
-            np.log(np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0))
-        )
-
-    def _compute_faulting_style_term(self, C, rake):
-        """
-        Compute and return style-of-faulting term in equation 4,
-        page 970.
-        """
-        Fn = float(rake > -135.0 and rake < -45.0)
-        Fr = float(rake > 45.0 and rake < 135.0)
-
-        return C['b8'] * Fn + C['b9'] * Fr
-
-    def _compute_anelestic_attenuation_term(self, C, dists):
-        """
-        Compute and return anelastic attenuation term in equation 5,
-        page 970.
-        """
-        f_aat = np.zeros_like(dists.rjb)
-        idx = dists.rjb > 80.0
-        f_aat[idx] = C["b10"] * (dists.rjb[idx] - 80.0)
-        return f_aat
-
-    def _compute_non_linear_term(self, C, pga_only, sites):
-        """
-        Compute non-linear term, equation 6, page 970.
-        """
-        Vref = self.CONSTS['Vref']
-        Vcon = self.CONSTS['Vcon']
-        c = self.CONSTS['c']
-        n = self.CONSTS['n']
-        lnS = np.zeros_like(sites.vs30)
-
-        # equation (6a)
-        idx = sites.vs30 < Vref
-        lnS[idx] = (
-            C['sb1'] * np.log(sites.vs30[idx] / Vref) +
-            C['sb2'] * np.log(
-                (pga_only[idx] + c * (sites.vs30[idx] / Vref) ** n) /
-                ((pga_only[idx] + c) * (sites.vs30[idx] / Vref) ** n)
-            )
-        )
-
-        # equation (6b)
-        idx = sites.vs30 >= Vref
-        new_sites = sites.vs30[idx]
-        new_sites[new_sites > Vcon] = Vcon
-        lnS[idx] = C['sb1'] * np.log(new_sites / Vref)
-
-        return lnS
-
-    def _compute_mean(self, C, mag, dists, rake):
-        """
-        Compute and return mean value without site conditions,
-        that is equations 2-5, page 970.
-        """
-        mean = (
-            self._compute_magnitude_scaling_term(C, mag) +
-            self._compute_geometric_decay_term(C, mag, dists) +
-            self._compute_faulting_style_term(C, rake) +
-            self._compute_anelestic_attenuation_term(C, dists)
-        )
-
-        return mean
+            # Return standard deviations as defined in p. 971.
+            weight = _compute_weight_std(C, ctx.mag)
+            std_intra = weight * C["sd1"]
+            std_inter = weight * C["sd2"]
+            sig[m] = np.sqrt(std_intra ** 2. + std_inter ** 2.)
+            tau[m] = std_inter
+            phi[m] = std_intra
 
     #: Coefficient tables obtained by joining tables 2, 3, 4, 5
     #: and electronic supplementary

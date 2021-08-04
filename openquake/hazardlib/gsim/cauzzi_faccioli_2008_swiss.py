@@ -57,45 +57,37 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 
     Model implemented by laurentiu.danciu@gmail.com
     """
-
     #: Supported standard deviation type is only total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground acceleration and peak ground velocity.
     #: The original paper provides coefficients for PGA and PGV, while SA
     #: is obtained from displacement response spectrum values.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
-        sites.vs30 = 700 * np.ones(len(sites.vs30))
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
+        ctx.vs30 = 700 * np.ones(len(ctx.vs30))
+        super().compute(ctx, imts, mean, sig, tau, phi)
 
         C = CauzziFaccioli2008SWISS01.COEFFS
-
         tau_ss = 'tau'
         log_phi_ss = np.log(10)
-        mean, stddevs = _apply_adjustments(
-            C, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rhypo, imt, stddev_types,
-            log_phi_ss)
-
-        return mean, np.log(10 ** np.array(stddevs))
+        for m, imt in enumerate(imts):
+            _apply_adjustments(
+                C, self.COEFFS_FS_ROCK[imt], tau_ss,
+                mean[m], sig[m], tau[m], phi[m], ctx, ctx.rhypo, imt,
+                log_phi_ss)
+            sig[m] = np.log(10 ** sig[m])
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
@@ -509,10 +501,10 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 class CauzziFaccioli2008SWISS04(CauzziFaccioli2008SWISS01):
 
     """
-    This class extends 
-    :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`, 
+    This class extends
+    :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`,
     following same strategy
-    as for 
+    as for
     :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss.CauzziFaccioli2008SWISS01`
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04

@@ -1,0 +1,54 @@
+---
+name: Build Image Latest for Docker 
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: Comma-separated list of tags
+        default: latest
+        required: true
+      git-ref:
+        description: Git Ref 
+        default: master
+        required: true
+
+jobs:
+  docker:
+    name: Build image and push after successfull calculation
+    runs-on: ubuntu-latest
+
+    steps:
+  # This Checkout is necessary when using a context in docker/build-push-action
+      - name: Clone Repository (Latest)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Extract tag names
+        shell: bash
+        run: echo "##[set-output name=tags;]" | tr -d '\n'; for tag in $(echo ${{ github.event.inputs.tags }} | tr , '\n'); do echo "-t openquake/engine:$tag " | tr -d '\n'; done
+        id: extract_tags
+      - name: Build image engine with tag ${{ github.event.inputs.version }}
+        env:
+          DOCKER_USERNAME: ${{ secrets.docker_username }}
+          DOCKER_PASSWORD: ${{ secrets.docker_password }}
+          REPO_REF: ${{ github.event.inputs.git-ref }}
+        id: docker_engine
+        run: docker build --build-arg oq_branch=$REPO_REF  ${{ steps.extract_tags.outputs.tags }} -f docker/Dockerfile.engine docker
+      - name: List Image
+        run: |
+          docker image ls
+      - name: Run calcs on single docker
+        run: |
+          time docker run openquake/engine:latest "oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true""
+      - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
+        env:
+          DOCKER_USERNAME: ${{ secrets.docker_username }}
+          DOCKER_PASSWORD: ${{ secrets.docker_password }}
+          DOCKER_TAG: ${{ github.event.inputs.version }}
+        run: |
+          docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+          docker push openquake/engine --all-tags

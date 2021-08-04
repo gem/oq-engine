@@ -22,36 +22,6 @@ Module exports :class:`AtkinsonMacias2009NSHMP2014` and :class:`NSHMP2014`
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim import base
-from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
-from openquake.hazardlib.gsim.can15.sinter import SInterCan15Mid
-
-
-class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
-    """
-    Implements an adjusted version of the Atkinson and Macias (2009) GMPE.
-    The motion is scaled B/C conditions following the approach described in
-    Atkinson and Adams (2013) and implemented in
-    :mod:`openquake.hazardlib.gsim.can15.sinter`.
-    """
-
-    #: Shear-wave velocity for reference soil conditions in [m s-1]
-    DEFINED_FOR_REFERENCE_VELOCITY = 760.
-
-    #: GMPE not tested against independent implementation so raise
-    #: not verified warning
-    non_verified = True
-
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # Get original mean and standard deviations
-        mean, stddevs = super().get_mean_and_stddevs(
-            sctx, rctx, dctx, imt, stddev_types)
-        mean += np.log(SInterCan15Mid.SITE_COEFFS[imt]['mf'])
-        return mean, stddevs
 
 
 def nga_west2_epistemic_adjustment(magnitude, distance):
@@ -109,17 +79,15 @@ class NSHMP2014(base.GMPE):
         self.gsim = cls()  # underlying gsim
         super().__init__(**kwargs)
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        mean, stddevs = self.gsim.get_mean_and_stddevs(
-            sctx, rctx, dctx, imt, stddev_types)
-        # return mean increased by the adjustment factor and standard deviation
-        self.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
-        return mean + self.sgn * self.adjustment, stddevs
+        self.gsim.compute(ctx, imts, mean, sig, tau, phi)
+        ctx.adjustment = nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
+        mean[:] += self.sgn * ctx.adjustment
 
 
 # populate gsim_aliases
@@ -132,4 +100,4 @@ for name in ('Idriss2014', 'ChiouYoungs2014', 'CampbellBozorgnia2014',
              'BooreEtAl2014', 'AbrahamsonEtAl2014'):
     for sgn in (1, -1, 0):
         a = name + 'NSHMP' + SUFFIX[sgn]
-        base.gsim_aliases[a] = f'[NSHMP2014]\ngmpe_name="{name}"\nsgn={sgn}'
+        base.add_alias(a, NSHMP2014, gmpe_name=name, sgn=sgn)

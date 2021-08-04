@@ -21,6 +21,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tests.geo.surface import _planar_test_data as tdata
+from openquake.hazardlib.scalerel import WC1994
 
 aac = numpy.testing.assert_allclose
 
@@ -156,6 +157,17 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         self.assertEqual(surf.top_right, Point(0.5, 0.5, -1))
         self.assertEqual(surf.bottom_left, Point(0.063592, -0.063592, 9))
         self.assertEqual(surf.bottom_right, Point(0.563593, 0.436408, 9.))
+
+    def test_inclined_surf_from_hypocenter(self):
+        # inclined surface (dip = 45) with 45 degrees strike
+        surf = PlanarSurface.from_hypocenter(
+            Point(0, 0, 20), WC1994(), 7, 1, 45, 45, 0)
+        self.assertAlmostEqual(surf.strike, 45., delta=0.1)
+        self.assertAlmostEqual(surf.dip, 45., delta=0.1)
+        self.assertEqual(surf.top_left, Point(-0.149496, -0.025650, 10.2623))
+        self.assertEqual(surf.top_right, Point(0.025650, 0.149496, 10.2623))
+        self.assertEqual(surf.bottom_left, Point(-0.025650, -0.149496, 29.7377))
+        self.assertEqual(surf.bottom_right, Point(0.149496, 0.025650, 29.7377))
 
 
 class PlanarSurfaceProjectTestCase(unittest.TestCase):

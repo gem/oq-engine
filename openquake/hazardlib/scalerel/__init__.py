@@ -35,8 +35,10 @@ from openquake.hazardlib.scalerel.leonard2014 import (Leonard2014_SCR,
 from openquake.hazardlib.scalerel.strasser2010 import (StrasserInterface,
                                                        StrasserIntraslab)
 from openquake.hazardlib.scalerel.wc1994_qcss import WC1994_QCSS
-
-
+from openquake.hazardlib.scalerel.thingbaijam2017 import ThingbaijamInterface
+from openquake.hazardlib.scalerel.allenhayes2017 import (
+    AllenHayesInterfaceLinear, AllenHayesInterfaceBilinear,
+    AllenHayesIntraslab)
 
 
 def _get_available_class(base_class):

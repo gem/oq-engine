@@ -25,8 +25,11 @@ import copy
 import numpy as np
 
 from pyproj import Geod
+from shapely.geometry import Polygon
+
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point, Line
+from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
@@ -88,6 +91,48 @@ class KiteSurface(BaseSurface):
         # TODO if the object is created without profiles we must extract them
         # from the mesh
         return kite_surface_node(self.profiles)
+
+    def get_joyner_boore_distance(self, mesh):
+
+        # Get indexes of the finite points composing the edges
+        iupp = np.nonzero(np.isfinite(self.mesh.lons[0, :]))[0]
+        ilow = np.flipud(np.nonzero(np.isfinite(self.mesh.lons[-1, :]))[0])
+        irig = np.nonzero(np.isfinite(self.mesh.lons[:, -1]))[0]
+        ilef = np.flipud(np.nonzero(np.isfinite(self.mesh.lons[:, 0]))[0])
+
+        # Building the polygon
+        pnts = []
+        for corner in [(0, iupp), (irig, -1), (-1, ilow), (ilef, 0)]:
+            pnts.extend(zip(self.mesh.lons[corner], self.mesh.lats[corner],
+                            self.mesh.depths[corner]))
+        perimeter = np.array(pnts)
+
+        distances = geodetic.min_geodetic_distance(
+            (perimeter[:, 0], perimeter[:, 1]), (mesh.lons, mesh.lats))
+
+        idxs = (distances < 40).nonzero()[0]  # indices on the first dimension
+        if not len(idxs):
+            # no point is close enough, return distances as they are
+            return distances
+
+        # Get the projection
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(perimeter[:, 0],
+                                                  perimeter[:, 1]))
+
+        # Mesh projected coordinates
+        mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
+
+        # Create the shapely Polygon using projected coordinates
+        xp, yp = proj(perimeter[:, 0], perimeter[:, 1])
+        polygon = Polygon([[x, y] for x, y in zip(xp, yp)])
+
+        # Calculate the distances
+        distances[idxs] = geo_utils.point_to_polygon_distance(
+            polygon, mesh_xx, mesh_yy)
+
+        return distances
+
 
     def _fix_right_hand(self):
         # This method fixes the mesh used to represent the grid surface so
@@ -154,6 +199,7 @@ class KiteSurface(BaseSurface):
             dips = []
             lens = []
             for col_idx in range(self.mesh.lons.shape[1]):
+
                 hdists = distance(self.mesh.lons[:-1, col_idx],
                                   self.mesh.lats[:-1, col_idx],
                                   np.zeros_like(self.mesh.depths[1:, col_idx]),
@@ -166,11 +212,12 @@ class KiteSurface(BaseSurface):
                 ok = np.logical_and(np.isfinite(hdists), np.isfinite(vdists))
                 hdists = hdists[ok]
                 vdists = vdists[ok]
-
-                dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
-                lens.append(np.sum((hdists**2 + vdists**2)**0.5))
+                if len(vdists) > 0:
+                    dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
+                    lens.append(np.sum((hdists**2 + vdists**2)**0.5))
             lens = np.array(lens)
             self.dip = np.sum(np.array(dips) * lens/np.sum(lens))
+
         return self.dip
 
     def get_strike(self) -> float:
@@ -182,10 +229,12 @@ class KiteSurface(BaseSurface):
             The average strike, in decimal degrees.
         """
         if self.strike is None:
-            idx = np.isfinite(self.mesh.lons)
-            azi = azimuth(self.mesh.lons[:-1, :], self.mesh.lats[:-1, :],
-                          self.mesh.lons[1:, :], self.mesh.lats[1:, :])
-            self.strike = np.mean(((azi[idx[:-1, :]]+0.001) % 360))
+            idx = np.nonzero(np.isfinite(self.mesh.lons[0, :]))[0]
+            azi = azimuth(self.mesh.lons[0, idx[:-1]],
+                          self.mesh.lats[0, idx[:-1]],
+                          self.mesh.lons[0, idx[1:]],
+                          self.mesh.lats[0, idx[1:]])
+            self.strike = np.mean((azi+0.001) % 360)
         return self.strike
 
     def get_top_edge_depth(self):

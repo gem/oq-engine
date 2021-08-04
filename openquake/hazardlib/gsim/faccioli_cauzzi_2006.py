@@ -53,54 +53,25 @@ class FaccioliCauzzi2006(GMPE):
 
     REQUIRES_DISTANCES = {'repi'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            d = np.sqrt(ctx.repi**2 + C['h']**2)
+            term01 = C['c3'] * (np.log(d))
+            mean[m] = C['c1'] + C['c2'] * ctx.mag + term01
+            sig[m] = C['sigma']
 
-        mean = self._compute_mean(C, rup, dists)
+        #: Coefficient table constructed from the electronic suplements of the
+        #: original paper - coeff in the same order as in Table 4/page 703
+        #: for Maw only (read last paragraph on page 701 -
+        #: explains what Maw should be used)
 
-        stddevs = self._get_stddevs(
-            C, stddev_types, num_sites=dists.repi.shape)
-
-        return mean, stddevs
-
-    def _compute_mean(self, C, rup, dists):
-        """
-        Compute mean value defined by equation 1/page 414
-        no amplification factor is applied to the equation
-        hence the S-factor = 0
-        """
-
-        d = np.sqrt(dists.repi**2+C['h']**2)
-
-        term01 = C['c3'] * (np.log(d))
-        mean = C['c1'] + C['c2'] * rup.mag + term01
-
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            stddevs.append((C['sigma']) + np.zeros(num_sites))
-        return stddevs
-
-    #: Coefficient table constructed from the electronic suplements of the
-    #: original paper - coeff in the same order as in Table 4/page 703
-    #: for Maw only (read last paragraph on page 701 -
-    #: expains what Maw should be used)
-
-    COEFFS = CoeffsTable(table="""\
+    COEFFS = CoeffsTable(sa_damping=5., table="""\
     IMT           c1        c2         c3       h    sigma
     MMI       1.0157    1.2566    -0.6547       2   0.5344
-        """)
+    """)

@@ -1,0 +1,10 @@
+#,,,"generated_by='OpenQuake engine 3.12.0-gita523c63801', start_date='2021-05-14T10:21:51', checksum=3590982611"
+event_id,moderate,complete,loss_type
+0,5.76236E+00,4.74956E+00,structural
+1,4.68805E+00,4.41489E-01,structural
+2,2.60818E+00,9.31064E-01,structural
+3,5.10363E+00,5.37440E+00,structural
+4,1.89634E+00,3.03533E+00,structural
+5,3.00487E+00,7.66755E+00,structural
+6,4.20566E+00,1.74977E+00,structural
+7,4.35956E-03,1.59563E+00,structural

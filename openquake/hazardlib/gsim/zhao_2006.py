@@ -31,6 +31,100 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _compute_distance_term(C, mag, rrup):
+    """
+    Compute second and third terms in equation 1, p. 901.
+    """
+    term1 = C['b'] * rrup
+    term2 = - np.log(rrup + C['c'] * np.exp(C['d'] * mag))
+
+    return term1 + term2
+
+
+def _compute_faulting_style_term(C, rake):
+    """
+    Compute fifth term in equation 1, p. 901.
+    """
+    # p. 900. "The differentiation in focal mechanism was
+    # based on a rake angle criterion, with a rake of +/- 45
+    # as demarcation between dip-slip and strike-slip."
+    return ((rake > 45.0) & (rake < 135.0)) * C['FR']
+
+
+def _compute_focal_depth_term(C, hypo_depth):
+    """
+    Compute fourth term in equation 1, p. 901.
+    """
+    # p. 901. "(i.e, depth is capped at 125 km)".
+    focal_depth = np.clip(hypo_depth, 0, 125.)
+
+    # p. 902. "We used the value of 15 km for the
+    # depth coefficient hc ...".
+    hc = 15.0
+
+    # p. 901. "When h is larger than hc, the depth terms takes
+    # effect ...". The next sentence specifies h>=hc.
+    return (focal_depth >= hc) * C['e'] * (focal_depth - hc)
+
+
+def _compute_magnitude_squared_term(P, M, Q, W, mag):
+    """
+    Compute magnitude squared term, equation 5, p. 909.
+    """
+    return P * (mag - M) + Q * (mag - M) ** 2 + W
+
+
+def _compute_magnitude_term(C, mag):
+    """
+    Compute first term in equation 1, p. 901.
+    """
+    return C['a'] * mag
+
+
+def _compute_site_class_term(C, vs30):
+    """
+    Compute nine-th term in equation 1, p. 901.
+    """
+    # map vs30 value to site class, see table 2, p. 901.
+    site_term = np.zeros(len(vs30))
+
+    # hard rock
+    site_term[vs30 > 1100.0] = C['CH']
+
+    # rock
+    site_term[(vs30 > 600) & (vs30 <= 1100)] = C['C1']
+
+    # hard soil
+    site_term[(vs30 > 300) & (vs30 <= 600)] = C['C2']
+
+    # medium soil
+    site_term[(vs30 > 200) & (vs30 <= 300)] = C['C3']
+
+    # soft soil
+    site_term[vs30 <= 200] = C['C4']
+
+    return site_term
+
+
+def _compute_slab_correction_term(C, rrup):
+    """
+    Compute path modification term for slab events, that is
+    the 8-th term in equation 1, p. 901.
+    """
+    slab_term = C['SSL'] * np.log(rrup)
+
+    return slab_term
+
+
+def _set_stddevs(sig, tau, phi, Cs, Ct):
+    """
+    Set standard deviations as defined in equation 3 p. 902.
+    """
+    sig[:] = np.sqrt(Cs ** 2 + Ct ** 2)
+    tau[:] = Ct
+    phi[:] = Cs
+
+
 class ZhaoEtAl2006Asc(GMPE):
     """
     Implements GMPE developed by John X. Zhao et al. and published as
@@ -58,9 +152,7 @@ class ZhaoEtAl2006Asc(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 3, p. 902.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT}
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30.
     #: See table 2, p. 901.
@@ -75,127 +167,37 @@ class ZhaoEtAl2006Asc(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     #: Reference conditions. See Table 2 at page 901. The hard rock conditions
-    #: is 1100 m/s. Here we force it to 800 to make it compatible with a 
+    #: is 1100 m/s. Here we force it to 800 to make it compatible with a
     #: generic site term
     #  DEFINED_FOR_REFERENCE_VELOCITY = 1100
     DEFINED_FOR_REFERENCE_VELOCITY = 800
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_ASC[imt]
+        for m, imt in enumerate(imts):
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS_ASC[imt]
 
-        # mean value as given by equation 1, p. 901, without considering the
-        # interface and intraslab terms (that is SI, SS, SSL = 0) and the
-        # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 p. 909).
-        mean = self._compute_magnitude_term(C, rup.mag) +\
-            self._compute_distance_term(C, rup.mag, dists.rrup) +\
-            self._compute_focal_depth_term(C, rup.hypo_depth) +\
-            self._compute_faulting_style_term(C, rup.rake) +\
-            self._compute_site_class_term(C, sites.vs30) +\
-            self._compute_magnitude_squared_term(P=0.0, M=6.3, Q=C['QC'],
-                                                 W=C['WC'], mag=rup.mag)
+            # mean value as given by equation 1, p. 901, without considering
+            # interface and intraslab terms (that is SI, SS, SSL = 0) and
+            # inter and intra event terms, plus the magnitude-squared term
+            # correction factor (equation 5 p. 909).
+            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+                _compute_distance_term(C, ctx.mag, ctx.rrup) +\
+                _compute_focal_depth_term(C, ctx.hypo_depth) +\
+                _compute_faulting_style_term(C, ctx.rake) +\
+                _compute_site_class_term(C, ctx.vs30) +\
+                _compute_magnitude_squared_term(P=0.0, M=6.3, Q=C['QC'],
+                                                W=C['WC'], mag=ctx.mag)
 
-        # convert from cm/s**2 to g
-        mean = np.log(np.exp(mean) * 1e-2 / g)
-
-        stddevs = self._get_stddevs(C['sigma'], C['tauC'], stddev_types,
-                                    num_sites=len(sites.vs30))
-
-        return mean, stddevs
-
-    def _get_stddevs(self, sigma, tau, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in equation 3 p. 902.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma_t = np.sqrt(sigma ** 2 + tau ** 2)
-                stddevs.append(sigma_t + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(sigma + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_magnitude_term(self, C, mag):
-        """
-        Compute first term in equation 1, p. 901.
-        """
-        return C['a'] * mag
-
-    def _compute_distance_term(self, C, mag, rrup):
-        """
-        Compute second and third terms in equation 1, p. 901.
-        """
-        term1 = C['b'] * rrup
-        term2 = - np.log(rrup + C['c'] * np.exp(C['d'] * mag))
-
-        return term1 + term2
-
-    def _compute_focal_depth_term(self, C, hypo_depth):
-        """
-        Compute fourth term in equation 1, p. 901.
-        """
-        # p. 901. "(i.e, depth is capped at 125 km)".
-        focal_depth = hypo_depth
-        if focal_depth > 125.0:
-            focal_depth = 125.0
-
-        # p. 902. "We used the value of 15 km for the
-        # depth coefficient hc ...".
-        hc = 15.0
-
-        # p. 901. "When h is larger than hc, the depth terms takes
-        # effect ...". The next sentence specifies h>=hc.
-        return float(focal_depth >= hc) * C['e'] * (focal_depth - hc)
-
-    def _compute_faulting_style_term(self, C, rake):
-        """
-        Compute fifth term in equation 1, p. 901.
-        """
-        # p. 900. "The differentiation in focal mechanism was
-        # based on a rake angle criterion, with a rake of +/- 45
-        # as demarcation between dip-slip and strike-slip."
-        return float(rake > 45.0 and rake < 135.0) * C['FR']
-
-    def _compute_site_class_term(self, C, vs30):
-        """
-        Compute nine-th term in equation 1, p. 901.
-        """
-        # map vs30 value to site class, see table 2, p. 901.
-        site_term = np.zeros(len(vs30))
-
-        # hard rock
-        site_term[vs30 > 1100.0] = C['CH']
-
-        # rock
-        site_term[(vs30 > 600) & (vs30 <= 1100)] = C['C1']
-
-        # hard soil
-        site_term[(vs30 > 300) & (vs30 <= 600)] = C['C2']
-
-        # medium soil
-        site_term[(vs30 > 200) & (vs30 <= 300)] = C['C3']
-
-        # soft soil
-        site_term[vs30 <= 200] = C['C4']
-
-        return site_term
-
-    def _compute_magnitude_squared_term(self, P, M, Q, W, mag):
-        """
-        Compute magnitude squared term, equation 5, p. 909.
-        """
-        return P * (mag - M) + Q * (mag - M) ** 2 + W
+            # convert from cm/s**2 to g
+            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C['tauC'])
 
     #: Coefficient table obtained by joining table 4 (except columns for
     #: SI, SS, SSL), table 5 (both at p. 903) and table 6 (only columns for
@@ -247,38 +249,35 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     #: Required rupture parameters are magnitude and focal depth.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_ASC[imt]
-        C_SINTER = self.COEFFS_SINTER[imt]
+        for m, imt in enumerate(imts):
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS_ASC[imt]
+            C_SINTER = self.COEFFS_SINTER[imt]
 
-        # mean value as given by equation 1, p. 901, without considering the
-        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
-        # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 p. 909)
-        mean = self._compute_magnitude_term(C, rup.mag) +\
-            self._compute_distance_term(C, rup.mag, dists.rrup) +\
-            self._compute_focal_depth_term(C, rup.hypo_depth) +\
-            self._compute_site_class_term(C, sites.vs30) + \
-            self._compute_magnitude_squared_term(P=0.0, M=6.3,
-                                                 Q=C_SINTER['QI'],
-                                                 W=C_SINTER['WI'],
-                                                 mag=rup.mag) +\
-            C_SINTER['SI']
+            # mean value as given by equation 1, p. 901, without considering
+            # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
+            # inter and intra event terms, plus the magnitude-squared term
+            # correction factor (equation 5 p. 909)
+            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+                _compute_distance_term(C, ctx.mag, ctx.rrup) +\
+                _compute_focal_depth_term(C, ctx.hypo_depth) +\
+                _compute_site_class_term(C, ctx.vs30) + \
+                _compute_magnitude_squared_term(P=0.0, M=6.3,
+                                                Q=C_SINTER['QI'],
+                                                W=C_SINTER['WI'],
+                                                mag=ctx.mag) +\
+                C_SINTER['SI']
 
-        # convert from cm/s**2 to g
-        mean = np.log(np.exp(mean) * 1e-2 / g)
-
-        stddevs = self._get_stddevs(C['sigma'], C_SINTER['tauI'], stddev_types,
-                                    num_sites=len(sites.vs30))
-
-        return mean, stddevs
+            # convert from cm/s**2 to g
+            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
 
     #: Coefficient table containing subduction interface coefficients,
     #: taken from table 4, p. 903 (only column SI), and table 6, p. 907
@@ -330,52 +329,40 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     #: Required rupture parameters are magnitude and focal depth.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_ASC[imt]
-        C_SSLAB = self.COEFFS_SSLAB[imt]
+        for m, imt in enumerate(imts):
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS_ASC[imt]
+            C_SSLAB = self.COEFFS_SSLAB[imt]
 
-        # to avoid singularity at 0.0 (in the calculation of the
-        # slab correction term), replace 0 values with 0.1
-        d = np.array(dists.rrup)  # make a copy
-        d[d == 0.0] = 0.1
+            # to avoid singularity at 0.0 (in the calculation of the
+            # slab correction term), replace 0 values with 0.1
+            d = np.array(ctx.rrup)  # make a copy
+            d[d == 0.0] = 0.1
 
-        # mean value as given by equation 1, p. 901, without considering the
-        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
-        # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 p. 909)
-        mean = self._compute_magnitude_term(C, rup.mag) +\
-            self._compute_distance_term(C, rup.mag, d) +\
-            self._compute_focal_depth_term(C, rup.hypo_depth) +\
-            self._compute_site_class_term(C, sites.vs30) +\
-            self._compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
-                                                 Q=C_SSLAB['QS'],
-                                                 W=C_SSLAB['WS'],
-                                                 mag=rup.mag) +\
-            C_SSLAB['SS'] + self._compute_slab_correction_term(C_SSLAB, d)
+            # mean value as given by equation 1, p. 901, without considering
+            # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
+            # inter and intra event terms, plus the magnitude-squared term
+            # correction factor (equation 5 p. 909)
+            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+                _compute_distance_term(C, ctx.mag, d) +\
+                _compute_focal_depth_term(C, ctx.hypo_depth) +\
+                _compute_site_class_term(C, ctx.vs30) +\
+                _compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
+                                                Q=C_SSLAB['QS'],
+                                                W=C_SSLAB['WS'],
+                                                mag=ctx.mag) +\
+                C_SSLAB['SS'] + _compute_slab_correction_term(C_SSLAB, d)
 
-        # convert from cm/s**2 to g
-        mean = np.log(np.exp(mean) * 1e-2 / g)
-
-        stddevs = self._get_stddevs(C['sigma'], C_SSLAB['tauS'], stddev_types,
-                                    num_sites=len(sites.vs30))
-
-        return mean, stddevs
-
-    def _compute_slab_correction_term(self, C, rrup):
-        """
-        Compute path modification term for slab events, that is
-        the 8-th term in equation 1, p. 901.
-        """
-        slab_term = C['SSL'] * np.log(rrup)
-
-        return slab_term
+            # convert from cm/s**2 to g
+            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
 
     #: Coefficient table containing subduction slab coefficients taken from
     #: table 4, p. 903 (only columns for SS and SSL), and table 6, p. 907
@@ -420,22 +407,18 @@ class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
     ``hazSUBXnga.f`` Fotran code available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
     """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
 
         Call super class method with hypocentral depth fixed at 20 km
         """
         # create new rupture context to avoid changing the original one
-        new_rup = copy.copy(rup)
-        new_rup.hypo_depth = 20.
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, new_rup, dists, imt, stddev_types)
-
-        return mean, stddevs
+        ctx = copy.copy(ctx)
+        ctx.hypo_depth = 20.
+        super().compute(ctx, imts, mean, sig, tau, phi)
 
     COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
         IMT    SI     QI      WI      tauI
@@ -468,47 +451,41 @@ class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
     For the 2014 US National Seismic Hazard Maps the magnitude of Zhao et al.
     (2006) for the subduction inslab events is capped at magnitude Mw 7.8
     """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_ASC[imt]
-        C_SSLAB = self.COEFFS_SSLAB[imt]
+        for m, imt in enumerate(imts):
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS_ASC[imt]
+            C_SSLAB = self.COEFFS_SSLAB[imt]
 
-        # to avoid singularity at 0.0 (in the calculation of the
-        # slab correction term), replace 0 values with 0.1
-        d = np.array(dists.rrup)  # make a copy
-        d[d == 0.0] = 0.1
+            # to avoid singularity at 0.0 (in the calculation of the
+            # slab correction term), replace 0 values with 0.1
+            d = np.array(ctx.rrup)  # make a copy
+            d[d == 0.0] = 0.1
 
-        if rup.mag > 7.8:
-            rup_mag = 7.8
-        else:
-            rup_mag = rup.mag
-        # mean value as given by equation 1, p. 901, without considering the
-        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
-        # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 p. 909)
-        mean = self._compute_magnitude_term(C, rup_mag) +\
-            self._compute_distance_term(C, rup_mag, d) +\
-            self._compute_focal_depth_term(C, rup.hypo_depth) +\
-            self._compute_site_class_term(C, sites.vs30) +\
-            self._compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
-                                                 Q=C_SSLAB['QS'],
-                                                 W=C_SSLAB['WS'],
-                                                 mag=rup_mag) +\
-            C_SSLAB['SS'] + self._compute_slab_correction_term(C_SSLAB, d)
+            rup_mag = np.clip(ctx.mag, 0., 7.8)
+            # mean value as given by equation 1, p. 901, without considering
+            # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
+            # inter and intra event terms, plus the magnitude-squared term
+            # correction factor (equation 5 p. 909)
+            mean[m] = _compute_magnitude_term(C, rup_mag) +\
+                _compute_distance_term(C, rup_mag, d) +\
+                _compute_focal_depth_term(C, ctx.hypo_depth) +\
+                _compute_site_class_term(C, ctx.vs30) +\
+                _compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
+                                                Q=C_SSLAB['QS'],
+                                                W=C_SSLAB['WS'],
+                                                mag=rup_mag) +\
+                C_SSLAB['SS'] + _compute_slab_correction_term(C_SSLAB, d)
 
-        # convert from cm/s**2 to g
-        mean = np.log(np.exp(mean) * 1e-2 / g)
-
-        stddevs = self._get_stddevs(C['sigma'], C_SSLAB['tauS'], stddev_types,
-                                    num_sites=len(sites.vs30))
-
-        return mean, stddevs
+            # convert from cm/s**2 to g
+            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
 
 
 # Coefficient table taken from Gail Atkinson's "White paper on
@@ -555,40 +532,37 @@ class ZhaoEtAl2006SInterCascadia(ZhaoEtAl2006SInter):
     equation for active shallow crust, by removing the faulting style
     term and adding a subduction interface term.
     """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_ASC[imt]
-        C_SINTER = self.COEFFS_SINTER[imt]
-        C_SF = COEFFS_SITE_FACTORS[imt]
+        for m, imt in enumerate(imts):
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS_ASC[imt]
+            C_SINTER = self.COEFFS_SINTER[imt]
+            C_SF = COEFFS_SITE_FACTORS[imt]
 
-        # mean value as given by equation 1, p. 901, without considering the
-        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
-        # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 p. 909)
-        mean = self._compute_magnitude_term(C, rup.mag) +\
-            self._compute_distance_term(C, rup.mag, dists.rrup) +\
-            self._compute_focal_depth_term(C, rup.hypo_depth) +\
-            self._compute_site_class_term(C, sites.vs30) + \
-            self._compute_magnitude_squared_term(P=0.0, M=6.3,
-                                                 Q=C_SINTER['QI'],
-                                                 W=C_SINTER['WI'],
-                                                 mag=rup.mag) +\
-            C_SINTER['SI']
+            # mean value as given by equation 1, p. 901, without considering
+            # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
+            # inter and intra event terms, plus the magnitude-squared term
+            # correction factor (equation 5 p. 909)
+            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+                _compute_distance_term(C, ctx.mag, ctx.rrup) +\
+                _compute_focal_depth_term(C, ctx.hypo_depth) +\
+                _compute_site_class_term(C, ctx.vs30) + \
+                _compute_magnitude_squared_term(P=0.0, M=6.3,
+                                                Q=C_SINTER['QI'],
+                                                W=C_SINTER['WI'],
+                                                mag=ctx.mag) +\
+                C_SINTER['SI']
 
-        # multiply by site factor to "convert" Japan values to Cascadia values
-        # then convert from cm/s**2 to g
-        mean = np.log((np.exp(mean) * C_SF["MF"]) * 1e-2 / g)
-
-        stddevs = self._get_stddevs(C['sigma'], C_SINTER['tauI'], stddev_types,
-                                    num_sites=len(sites.vs30))
-
-        return mean, stddevs
+            # multiply by site factor to "convert" Japan values to Cascadia
+            # values then convert from cm/s**2 to g
+            mean[m] = np.log((np.exp(mean[m]) * C_SF["MF"]) * 1e-2 / g)
+            _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
 
 
 class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
@@ -604,45 +578,42 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
     term and adding subduction slab terms.
     """
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS_ASC[imt]
-        C_SSLAB = self.COEFFS_SSLAB[imt]
-        C_SF = COEFFS_SITE_FACTORS[imt]
+        for m, imt in enumerate(imts):
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS_ASC[imt]
+            C_SSLAB = self.COEFFS_SSLAB[imt]
+            C_SF = COEFFS_SITE_FACTORS[imt]
 
-        # to avoid singularity at 0.0 (in the calculation of the
-        # slab correction term), replace 0 values with 0.1
-        d = np.array(dists.rrup)  # make a copy
-        d[d == 0.0] = 0.1
+            # to avoid singularity at 0.0 (in the calculation of the
+            # slab correction term), replace 0 values with 0.1
+            d = np.array(ctx.rrup)  # make a copy
+            d[d == 0.0] = 0.1
 
-        # mean value as given by equation 1, p. 901, without considering the
-        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
-        # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 p. 909)
-        mean = self._compute_magnitude_term(C, rup.mag) +\
-            self._compute_distance_term(C, rup.mag, d) +\
-            self._compute_focal_depth_term(C, rup.hypo_depth) +\
-            self._compute_site_class_term(C, sites.vs30) +\
-            self._compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
-                                                 Q=C_SSLAB['QS'],
-                                                 W=C_SSLAB['WS'],
-                                                 mag=rup.mag) +\
-            C_SSLAB['SS'] + self._compute_slab_correction_term(C_SSLAB, d)
+            # mean value as given by equation 1, p. 901, without considering
+            # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
+            # inter and intra event terms, plus the magnitude-squared term
+            # correction factor (equation 5 p. 909)
+            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+                _compute_distance_term(C, ctx.mag, d) +\
+                _compute_focal_depth_term(C, ctx.hypo_depth) +\
+                _compute_site_class_term(C, ctx.vs30) +\
+                _compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
+                                                Q=C_SSLAB['QS'],
+                                                W=C_SSLAB['WS'],
+                                                mag=ctx.mag) +\
+                C_SSLAB['SS'] + _compute_slab_correction_term(C_SSLAB, d)
 
-        # multiply by site factor to "convert" Japan values to Cascadia values
-        # then convert from cm/s**2 to g
-        mean = np.log((np.exp(mean) * C_SF["MF"]) * 1e-2 / g)
-
-        stddevs = self._get_stddevs(C['sigma'], C_SSLAB['tauS'], stddev_types,
-                                    num_sites=len(sites.vs30))
-
-        return mean, stddevs
+            # multiply by site factor to "convert" Japan values to Cascadia
+            # values then convert from cm/s**2 to g
+            mean[m] = np.log((np.exp(mean[m]) * C_SF["MF"]) * 1e-2 / g)
+            _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
 
 
 class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
@@ -653,12 +624,10 @@ class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
     by SGS for the national PSHA model for Saudi Arabia.
     """
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Using a minimum distance of 5km for the calculation.
         """
-        dists_mod = copy.deepcopy(dists)
-        dists_mod.rrup[dists.rrup <= 5.] = 5.
-
-        return super().get_mean_and_stddevs(
-            sites, rup, dists_mod, imt, stddev_types)
+        ctx = copy.deepcopy(ctx)
+        ctx.rrup[ctx.rrup <= 5.] = 5.
+        super().compute(ctx, imts, mean, sig, tau, phi)

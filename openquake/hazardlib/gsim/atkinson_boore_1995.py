@@ -47,10 +47,7 @@ class AtkinsonBoore1995GSCBest(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is random horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.RANDOM_HORIZONTAL`,
@@ -58,9 +55,7 @@ class AtkinsonBoore1995GSCBest(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RANDOM_HORIZONTAL
 
     #: Supported standard deviation type is total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: site params are not required
     REQUIRES_SITES_PARAMETERS = set()
@@ -72,46 +67,34 @@ class AtkinsonBoore1995GSCBest(GMPE):
     #: see page 18 in Atkinson and Boore's manuscript
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        # clip rhypo at 10 (this is the minimum distance used in
-        # deriving the equation), see page 22, this avoids singularity
-        # in mean value equation
-        rhypo = dists.rhypo.copy()
-        rhypo[rhypo < 10] = 10
+            # clip rhypo at 10 (this is the minimum distance used in
+            # deriving the equation), see page 22, this avoids singularity
+            # in mean value equation
+            rhypo = ctx.rhypo.copy()
+            rhypo[rhypo < 10] = 10
 
-        # convert magnitude from Mblg to Mw
-        mag = rup.mag * 0.98 - 0.39 if rup.mag <= 5.5 else \
-              2.715 - 0.277 * rup.mag + 0.127 * rup.mag * rup.mag
+            # convert magnitude from Mblg to Mw
+            mag = ctx.mag * 0.98 - 0.39 if ctx.mag <= 5.5 else \
+                2.715 - 0.277 * ctx.mag + 0.127 * ctx.mag * ctx.mag
 
-        # functional form as explained in 'Youngs_fit_to_AB95lookup.doc'
-        f1 = np.minimum(np.log(rhypo), np.log(70.))
-        f2 = np.maximum(np.log(rhypo / 130.), 0)
-        mean = (
-            C['c1'] + C['c2'] * mag + C['c3'] * mag ** 2 +
-            (C['c4'] + C['c5'] * mag) * f1 +
-            (C['c6'] + C['c7'] * mag) * f2 +
-            C['c8'] * rhypo
-        )
-
-        stddevs = self._get_stddevs(stddev_types,  dists.rhypo.shape[0])
-
-        return mean, stddevs
-
-    def _get_stddevs(self, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        stddevs = [np.zeros(num_sites) + 0.69 for _ in stddev_types]
-        return stddevs
+            # functional form as explained in 'Youngs_fit_to_AB95lookup.doc'
+            f1 = np.minimum(np.log(rhypo), np.log(70.))
+            f2 = np.maximum(np.log(rhypo / 130.), 0)
+            mean[m] = (
+                C['c1'] + C['c2'] * mag + C['c3'] * mag ** 2 +
+                (C['c4'] + C['c5'] * mag) * f1 +
+                (C['c6'] + C['c7'] * mag) * f2 +
+                C['c8'] * rhypo)
+            sig[m] = .69
 
     #: coefficient table provided by GSC
     COEFFS = CoeffsTable(sa_damping=5, table="""\

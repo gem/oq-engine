@@ -2,7 +2,7 @@
 :module:`openquake.hazardlib.gsim.can15.utils` contains utility
 functions required for the implementation of CAN15 gmpes
 """
-
+import copy
 import scipy
 import numpy as np
 
@@ -62,7 +62,6 @@ def _get_equivalent_distances_east(wid, lng, mag, repi, focal_depth=10.,
 
 
 def get_equivalent_distances_east(mag, repi, focal_depth=10., ab06=False):
-    """ """
     wid = get_rup_wid_east(mag)
     lng = get_rup_len_east(mag)
     rjb, rrup = _get_equivalent_distances_east(wid, lng, mag, repi,
@@ -70,8 +69,19 @@ def get_equivalent_distances_east(mag, repi, focal_depth=10., ab06=False):
     return rjb, rrup
 
 
+def add_distances_east(ctx, focal_depth=10., ab06=False):
+    """
+    :returns: a new context with distances .rjb and .rrup computed from .repi
+    """
+    ctx = copy.copy(ctx)
+    wid = get_rup_wid_east(ctx.mag)
+    lng = get_rup_len_east(ctx.mag)
+    ctx.rjb, ctx.rrup = _get_equivalent_distances_east(
+        wid, lng, ctx.mag, ctx.repi, focal_depth, ab06)
+    return ctx
+
+
 def get_equivalent_distances_west(mag, repi, focal_depth=10.):
-    """ """
     wid = get_rup_wid_west(mag)
     lng = get_rup_len_west(mag)
     rjb, rrup = _get_equivalent_distances_east(wid, lng, mag, repi,
