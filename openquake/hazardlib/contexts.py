@@ -198,7 +198,6 @@ class ContextMaker(object):
             self.imtls = DictArray(param['hazard_imtls'])
         else:
             raise KeyError('Missing imtls in ContextMaker!')
-        self.imts = tuple(imt_module.from_string(imt) for imt in self.imtls)
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
@@ -513,9 +512,11 @@ class ContextMaker(object):
         :param stdtype: a standard deviation type
         :returns: a list of G arrays of shape (O, M, N) with mean and stddevs
         """
+        if not hasattr(self, 'imts'):
+            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
-        M = len(self.imts)
+        M = len(self.imtls)
         out = []
         if self.use_recarray:
             ctxs = [self.recarray(ctxs)]
