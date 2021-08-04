@@ -507,7 +507,7 @@ class ContextMaker(object):
             return ~pmap if rup_indep else pmap
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs, stdtype):
+    def get_mean_stds(self, ctxs, stdtype=StdDev.ALL):
         """
         :param ctxs: a list of contexts
         :param stdtype: a standard deviation type
