@@ -25,6 +25,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
@@ -213,7 +214,7 @@ class GmfComputer(object):
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
-                    (gsim, imt, self.source_id,
+                    (gsim, imt, decode(self.source_id),
                      exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
