@@ -4,20 +4,20 @@ metadata:
   name: master
   namespace: default
   labels:
-    app: engine
+    app: master-engine
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: engine
+      app: master-engine
   template:
     metadata:
       labels:
-        app: engine
+        app: master-engine
         version: "latest"
     spec:
       containers:
-      - name: engine-master
+      - name: master
         image: openquake/engine:nightly
         env:
         - name: OQ_CONFIG_FILE
