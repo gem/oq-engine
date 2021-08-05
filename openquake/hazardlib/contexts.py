@@ -842,6 +842,10 @@ class SitesContext(BaseContext):
             for slot in slots:
                 setattr(self, slot, getattr(sitecol, slot))
 
+    # used in the SMTK
+    def __len__(self):
+        return len(self.sids)
+
 
 class DistancesContext(BaseContext):
     """
@@ -899,8 +903,12 @@ def full_context(sites, rup, dctx=None):
     self = RuptureContext()
     for par, val in vars(rup).items():
         setattr(self, par, val)
-    for par in sites.array.dtype.names:
-        setattr(self, par, sites[par])
+    if hasattr(sites, 'array'):  # is a SiteCollection
+        for par in sites.array.dtype.names:
+            setattr(self, par, sites[par])
+    else:  # sites is a SitesContext
+        for par, val in vars(sites).items():
+            setattr(self, par, val)
     if dctx:
         for par, val in vars(dctx).items():
             setattr(self, par, val)

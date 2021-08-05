@@ -364,12 +364,11 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         sig = numpy.zeros((1, N))
         tau = numpy.zeros((1, N))
         phi = numpy.zeros((1, N))
-        if isinstance(rup, (RuptureContext, numpy.ndarray)):
-            assert sites is rup, (sites, rup)
-            assert dists is rup, (dists, rup)
-            ctx = rup  # rup is already a good object
-        else:
+        if sites is not rup or dists is not rup:
+            # convert three old-style contexts to a single new-style context
             ctx = full_context(sites, rup, dists)
+        else:
+            ctx = rup  # rup is already a good object
         self.compute(ctx, [imt], mean, sig, tau, phi)
         stddevs = []
         for stddev_type in stddev_types:
