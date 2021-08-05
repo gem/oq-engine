@@ -163,6 +163,13 @@ class ContextMaker(object):
     rup_indep = True
     tom = None
 
+    @property
+    def dtype(self):
+        """
+        :returns: dtype of the underlying ctx_builder
+        """
+        return self.ctx_builder.dtype
+
     def __init__(self, trt, gsims, param, monitor=Monitor()):
         param = param
         self.af = param.get('af', None)
