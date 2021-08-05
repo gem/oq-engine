@@ -917,9 +917,13 @@ def full_context(sites, rup, dctx=None):
 
 def get_mean_stds(gsims, ctx, imts, stdtype=StdDev.ALL):
     """
+    :param gsims: a list of G GSIMs
+    :param ctx: a RuptureContext or a recarray of size N
+    :param imts: a list of M IMTs
+    :param stdtype: a standard deviation type (TOTAL, EVENT, etc)
     :returns:
         an array of shape (G, O, M, N) obtained by applying the
-        given gsims, ctx amd imts
+        given GSIMs, ctx amd imts
     """
     imtls = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', gsims, {'imtls': imtls})
