@@ -27,7 +27,7 @@ from scipy.constants import g
 from math import log10
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
-from openquake.hazardlib import const, contexts
+from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean)

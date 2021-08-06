@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: svc-webui
+  name: webui-service
   labels:
-    run: svc-webui
+    run: webui-service
 spec:
   ports:
-  - name: engine-webui
+  - name: webui-service
     port: 8800
     protocol: TCP
   selector:
-    app: master-engine
+    app: pvc-engine

@@ -163,6 +163,13 @@ class ContextMaker(object):
     rup_indep = True
     tom = None
 
+    @property
+    def dtype(self):
+        """
+        :returns: dtype of the underlying ctx_builder
+        """
+        return self.ctx_builder.dtype
+
     def __init__(self, trt, gsims, param, monitor=Monitor()):
         param = param
         self.af = param.get('af', None)
@@ -198,7 +205,6 @@ class ContextMaker(object):
             self.imtls = DictArray(param['hazard_imtls'])
         else:
             raise KeyError('Missing imtls in ContextMaker!')
-        self.imts = tuple(imt_module.from_string(imt) for imt in self.imtls)
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
@@ -507,15 +513,17 @@ class ContextMaker(object):
             return ~pmap if rup_indep else pmap
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs, stdtype):
+    def get_mean_stds(self, ctxs, stdtype=StdDev.ALL):
         """
         :param ctxs: a list of contexts
         :param stdtype: a standard deviation type
         :returns: a list of G arrays of shape (O, M, N) with mean and stddevs
         """
+        if not hasattr(self, 'imts'):
+            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
-        M = len(self.imts)
+        M = len(self.imtls)
         out = []
         if self.use_recarray:
             ctxs = [self.recarray(ctxs)]
@@ -841,6 +849,10 @@ class SitesContext(BaseContext):
             for slot in slots:
                 setattr(self, slot, getattr(sitecol, slot))
 
+    # used in the SMTK
+    def __len__(self):
+        return len(self.sids)
+
 
 class DistancesContext(BaseContext):
     """
@@ -898,8 +910,12 @@ def full_context(sites, rup, dctx=None):
     self = RuptureContext()
     for par, val in vars(rup).items():
         setattr(self, par, val)
-    for par in sites.array.dtype.names:
-        setattr(self, par, sites[par])
+    if hasattr(sites, 'array'):  # is a SiteCollection
+        for par in sites.array.dtype.names:
+            setattr(self, par, sites[par])
+    else:  # sites is a SitesContext
+        for par, val in vars(sites).items():
+            setattr(self, par, val)
     if dctx:
         for par, val in vars(dctx).items():
             setattr(self, par, val)
@@ -908,9 +924,13 @@ def full_context(sites, rup, dctx=None):
 
 def get_mean_stds(gsims, ctx, imts, stdtype=StdDev.ALL):
     """
+    :param gsims: a list of G GSIMs
+    :param ctx: a RuptureContext or a recarray of size N
+    :param imts: a list of M IMTs
+    :param stdtype: a standard deviation type (TOTAL, EVENT, etc)
     :returns:
         an array of shape (G, O, M, N) obtained by applying the
-        given gsims, ctx amd imts
+        given GSIMs, ctx amd imts
     """
     imtls = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', gsims, {'imtls': imtls})
