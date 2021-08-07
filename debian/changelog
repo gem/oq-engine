@@ -1,9 +1,10 @@
   [Michele Simionato]
+  * `oq info gsim_logic_tree.xml` now displays the logic tree
   * Fixed a bug in the adjustment term in NSHMP2014 breaking the USA model
 
   [Graeme Weatherill]
   * Implements Abrahamson & Gulerce (2020) NGA Subduction GMPE
-  
+
   [Nico Kuehn/Graeme Weatherill]
   * Implements Kuehn et al. (2020) NGA Subduction GMPE
 
