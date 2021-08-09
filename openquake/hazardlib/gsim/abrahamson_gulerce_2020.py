@@ -643,7 +643,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
                                                      self.region, ctx,
                                                      self.apply_usa_adjustment)
         pga1000 = np.exp(pga1000)
-        
+
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = get_mean_acceleration(C, trt, self.region, ctx, pga1000,
