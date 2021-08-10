@@ -329,9 +329,7 @@ class ContextMaker(object):
             ctx.sids = numpy.arange(len(uniq))
             for rtype, gr in grp.groupby('result_type'):
                 del gr['result_type']
-                cmap = {col: str(imt_module.from_string(col))
-                        for col in gr.columns}
-                setattr(ctx, rtype, gr.rename(columns=cmap))
+                setattr(ctx, rtype, gr)
             allctxs.append(ctx)
         return allctxs
 
@@ -1248,6 +1246,7 @@ def read_cmaker_df(gsim, csvfnames):
         cols = slice(None)
     df = pandas.concat(df[cols] for df in dfs)
     imtls = {}
+    cmap = {}
     for col in df.columns:
         try:
             imt = imt_module.from_string(col)
@@ -1255,10 +1254,20 @@ def read_cmaker_df(gsim, csvfnames):
             pass
         else:
             imtls[str(imt)] = [0]
+            cmap[col] = str(imt)
     cmaker = ContextMaker(
         gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
     cmaker.out_types = out_types
-    return cmaker, df
+    for dist in cmaker.REQUIRES_DISTANCES:
+        name = 'dist_' + dist
+        df[name] = numpy.array(df[name].to_numpy(), cmaker.dtype[dist])
+    for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
+        name = 'rup_' + par
+        if name not in df.columns:  # i.e. missing rake
+            df[name] = numpy.zeros(len(df), cmaker.dtype[par])
+        else:
+            df[name] = numpy.array(df[name].to_numpy(), cmaker.dtype[par])
+    return cmaker, df.rename(columns=cmap)
 
 
 def read_cmakers(dstore, full_lt=None):

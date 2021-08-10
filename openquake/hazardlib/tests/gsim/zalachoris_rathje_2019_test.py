@@ -31,4 +31,4 @@ class ZalachorisRathje2019TestCase(BaseGSIMTestCase):
                        'Zalachoris/Zalachoris_inter.csv',
                        'Zalachoris/Zalachoris_totalsigma.csv',
                        mean_discrep_percentage=1.0,
-                       stddev_discrep_percentage=0.2)
+                       std_discrep_percentage=0.2)

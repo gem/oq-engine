@@ -37,9 +37,7 @@ class BaseGSIMTestCase(unittest.TestCase):
         print(stats)
 
     def check_all(self, *filenames, mean_discrep_percentage,
-                  stdv_discrep_percentage=None, **kwargs):
-        if stdv_discrep_percentage is None:
-            stdv_discrep_percentage = mean_discrep_percentage
+                  std_discrep_percentage, **kwargs):
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
         gsim = self.GSIM_CLASS(**kwargs)
@@ -48,7 +46,7 @@ class BaseGSIMTestCase(unittest.TestCase):
             [out] = cmaker.get_mean_stds([ctx])
             for o, out_type in enumerate(cmaker.out_types):
                 discrep = (mean_discrep_percentage if out_type == 'MEAN'
-                           else stdv_discrep_percentage)
+                           else std_discrep_percentage)
                 for m, imt in enumerate(cmaker.imtls):
                     if out_type == 'MEAN' and imt != 'MMI':
                         out[o, m] = np.exp(out[o, m])
@@ -61,4 +59,4 @@ class BaseGSIMTestCase(unittest.TestCase):
                         msg['expected'] = expected
                         msg['got'] = out[o, m]
                         msg['discrep_percent'] = discrep_percent.max()
-                        print(msg)
+                        raise ValueError(msg)
