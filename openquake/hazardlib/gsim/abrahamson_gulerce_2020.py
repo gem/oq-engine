@@ -230,10 +230,8 @@ def get_rupture_depth_scaling_term(C, trt, ctx):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         # Not defined for interface events
         return 0.0
-    f_dep = C["a11"] * (ctx.ztor - 50.0)
+    f_dep = np.where(ctx.ztor <= 50.0, C["a8"] * (ctx.ztor - 50.0), C["a11"] * (ctx.ztor - 50.0))
     f_dep[ctx.ztor > 200.0] = C["a11"] * 150.0
-    idx = ctx.ztor <= 50.0
-    f_dep[idx] = C["a8"] * (ctx.ztor[idx] - 50.0)
     return f_dep
 
 
