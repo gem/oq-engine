@@ -1,3 +1,6 @@
+  [Jason Motha/Tom Son]
+  * Implemented backwards compatibility to Abrahamson & Gulerce (2020)
+
   [Michele Simionato]
   * `oq info gsim_logic_tree.xml` now displays the logic tree
   * Fixed a bug in the adjustment term in NSHMP2014 breaking the USA model
