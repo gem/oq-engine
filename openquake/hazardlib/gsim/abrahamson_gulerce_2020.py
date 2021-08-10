@@ -237,7 +237,7 @@ def get_rupture_depth_scaling_term(C, trt, ctx):
 
 def get_site_amplification_term(C, region, vs30, pga1000):
     """
-    Returns the shallow site amplification term as descrbied in Equation 3.7,
+    Returns the shallow site amplification term as described in Equation 3.7,
     and corrected in the Erratum
 
     :param numpy.ndarray vs30:
