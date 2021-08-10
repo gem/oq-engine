@@ -18,6 +18,8 @@
 import unittest
 import os
 
+import numpy as np
+from openquake.hazardlib import contexts
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 
 
@@ -33,3 +35,30 @@ class BaseGSIMTestCase(unittest.TestCase):
             raise AssertionError(stats)
         print()
         print(stats)
+
+    def check_all(self, *filenames, mean_discrep_percentage,
+                  stdv_discrep_percentage=None, **kwargs):
+        if stdv_discrep_percentage is None:
+            stdv_discrep_percentage = mean_discrep_percentage
+        fnames = [os.path.join(self.BASE_DATA_PATH, filename)
+                  for filename in filenames]
+        gsim = self.GSIM_CLASS(**kwargs)
+        cmaker, df = contexts.read_cmaker_df(gsim, fnames)
+        for ctx in cmaker.from_df(df):
+            [out] = cmaker.get_mean_stds([ctx])
+            for o, out_type in enumerate(cmaker.out_types):
+                discrep = (mean_discrep_percentage if out_type == 'MEAN'
+                           else stdv_discrep_percentage)
+                for m, imt in enumerate(cmaker.imtls):
+                    if out_type == 'MEAN' and imt != 'MMI':
+                        out[o, m] = np.exp(out[o, m])
+                    expected = getattr(ctx, out_type)[imt].to_numpy()
+                    msg = dict(out_type=out_type, imt=imt)
+                    for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
+                        msg[par] = getattr(ctx, par)
+                    discrep_percent = np.abs(out[o, m] / expected * 100 - 100)
+                    if (discrep_percent > discrep).any():
+                        msg['expected'] = expected
+                        msg['got'] = out[o, m]
+                        msg['discrep_percent'] = discrep_percent.max()
+                        print(msg)

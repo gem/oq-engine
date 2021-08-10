@@ -42,7 +42,7 @@ def imt2tup(string):
     >>> imt2tup('SA(1)')
     ('SA(1.0)', 1.0)
     """
-    s = string.strip()
+    s = string.strip().upper()
     name, *rest = s.split('(')
     if name not in globals():
         raise KeyError(name)
