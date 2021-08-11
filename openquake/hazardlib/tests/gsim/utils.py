@@ -116,7 +116,9 @@ class BaseGSIMTestCase(unittest.TestCase):
         print(stats)
 
     def check_all(self, *filenames, mean_discrep_percentage,
-                  std_discrep_percentage, **kwargs):
+                  std_discrep_percentage=None, **kwargs):
+        if std_discrep_percentage is None:
+            std_discrep_percentage =  mean_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
         gsim = self.GSIM_CLASS(**kwargs)
