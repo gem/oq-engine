@@ -36,10 +36,6 @@ def read_cmaker_df(gsim, csvfnames):
     :returns: a list RuptureContexts, grouped by rupture parameters
     """
     # build a suitable ContextMaker
-    out_types = ["MEAN"]
-    for sdt in contexts.STD_TYPES:
-        if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
-            out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
     dfs = [pandas.read_csv(fname) for fname in csvfnames]
     if not all_equals([df.columns for df in dfs]):
         p = len(os.path.commonprefix(csvfnames))
@@ -61,7 +57,6 @@ def read_cmaker_df(gsim, csvfnames):
             cmap[col] = im
     cmaker = contexts.ContextMaker(
         gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
-    cmaker.out_types = out_types
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
@@ -81,24 +76,23 @@ def gen_ctxs(df):
     """
     rrp = [col for col in df.columns if col.startswith('rup_')]
     pars = [col for col in df.columns if col.startswith(('dist_', 'site_'))]
-    num_outs = len(df.result_type.unique())
+    outs = df.result_type.unique()
+    num_outs = len(outs)
     for rup_params, grp in df.groupby(rrp):
         ctx = contexts.RuptureContext()
         for par, rp in zip(rrp, rup_params):
             setattr(ctx, par[4:], rp)
             del grp[par]
-        uniq = np.unique(grp[pars].to_numpy(), axis=0)  # shape (N, P)
-        assert len(uniq) == len(grp) / num_outs, (
-            len(uniq), len(grp) / num_outs)
-        for i, par in enumerate(pars):
-            setattr(ctx, par[5:], uniq[:, i])  # strip site_, dist_
-            del grp[par]
         if 'damping' in grp.columns:
             del grp['damping']
-        ctx.sids = np.arange(len(uniq))
         for rtype, gr in grp.groupby('result_type'):
             del gr['result_type']
             setattr(ctx, rtype, gr)
+        for par in pars:
+            out = grp[grp.result_type == outs[0]][par].to_numpy()
+            setattr(ctx, par[5:], out)
+        ctx.sids = np.arange(len(gr))
+        assert len(gr) == len(grp) / num_outs, (len(gr), len(gr) / num_outs)
         yield ctx
 
 
@@ -120,10 +114,18 @@ class BaseGSIMTestCase(unittest.TestCase):
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
         gsim = self.GSIM_CLASS(**kwargs)
+        out_types = ["MEAN"]
+        for sdt in contexts.STD_TYPES:
+            if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
+                out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
+
         cmaker, df = read_cmaker_df(gsim, fnames)
         for ctx in gen_ctxs(df):
             [out] = cmaker.get_mean_stds([ctx])
-            for o, out_type in enumerate(cmaker.out_types):
+            for o, out_type in enumerate(out_types):
+                if not hasattr(ctx, out_type):
+                    # for instance MEAN is missing in zhao_2016_test
+                    continue
                 discrep = (mean_discrep_percentage if out_type == 'MEAN'
                            else std_discrep_percentage)
                 for m, im in enumerate(cmaker.imtls):

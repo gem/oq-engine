@@ -118,7 +118,7 @@ class ZhaoEtAl2016SSlabTestCase(BaseGSIMTestCase):
                        'zhao16/zhao_subduction_inslab_intra_event.csv',
                        'zhao16/zhao_subduction_inslab_inter_event.csv',
                        'zhao16/zhao_subduction_inslab_total_sigma.csv',
-                       mean_discrep_percentage=MAX_DISC,
+                       mean_discrep_percentage=0.3,
                        std_discrep_percentage=MAX_DISC)
 
 
