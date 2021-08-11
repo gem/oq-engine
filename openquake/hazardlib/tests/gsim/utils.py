@@ -47,7 +47,7 @@ def read_cmaker_df(gsim, csvfnames):
     else:
         cols = slice(None)
     df = pandas.concat(df[cols] for df in dfs)
-    imtls = {}
+    imts = []
     cmap = {}
     for col in df.columns:
         try:
@@ -55,8 +55,9 @@ def read_cmaker_df(gsim, csvfnames):
         except KeyError:
             pass
         else:
-            imtls[im] = [0]
+            imts.append(im)
             cmap[col] = im
+    imtls = {im: [0] for im in sorted(imts)}
     cmaker = contexts.ContextMaker(
         gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
     for dist in cmaker.REQUIRES_DISTANCES:
@@ -135,11 +136,16 @@ class BaseGSIMTestCase(unittest.TestCase):
                         out[o, m] = np.exp(out[o, m])
                     expected = getattr(ctx, out_type)[im].to_numpy()
                     msg = dict(out_type=out_type, imt=im)
-                    for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
-                        msg[par] = getattr(ctx, par)
                     discrep_percent = np.abs(out[o, m] / expected * 100 - 100)
-                    if (discrep_percent > discrep).any():
-                        msg['expected'] = expected
-                        msg['got'] = out[o, m]
-                        msg['discrep_percent'] = discrep_percent.max()
+                    idxs, = np.where(discrep_percent > discrep)
+                    if len(idxs):
+                        idx = idxs[0]
+                        msg['expected'] = expected[idx]
+                        msg['got'] = out[o, m, idx]
+                        msg['discrep_percent'] = discrep_percent[idx]
+                        for par in (cmaker.REQUIRES_DISTANCES |
+                                    cmaker.REQUIRES_SITES_PARAMETERS):
+                            msg[par] = getattr(ctx, par)[idx]
+                        for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
+                            msg[par] = getattr(ctx, par)
                         raise ValueError(msg)
