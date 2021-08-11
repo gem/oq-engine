@@ -38,10 +38,12 @@ def read_cmaker_df(gsim, csvfnames):
     # build a suitable ContextMaker
     dfs = [pandas.read_csv(fname) for fname in csvfnames]
     if not all_equals([df.columns for df in dfs]):
-        p = len(os.path.commonprefix(csvfnames))
-        shortnames = [f[p:] for f in csvfnames]
-        print('There are different columns across %s' % ', '.join(shortnames))
-        cols = set.intersection(*[set(df.columns) for df in dfs])
+        colset = set.intersection(*[set(df.columns) for df in dfs])
+        cols = [col for col in dfs[0].columns if col in colset]
+        extra = set()
+        for df in dfs:
+            extra.update(set(df.columns) - colset)
+        print('\nThere are extra columns %s' % extra)
     else:
         cols = slice(None)
     df = pandas.concat(df[cols] for df in dfs)
@@ -89,8 +91,8 @@ def gen_ctxs(df):
             del gr['result_type']
             setattr(ctx, rtype, gr)
         for par in pars:
-            out = grp[grp.result_type == outs[0]][par].to_numpy()
-            setattr(ctx, par[5:], out)
+            value = grp[grp.result_type == outs[0]][par].to_numpy()
+            setattr(ctx, par[5:], value)  # dist_, site_ parameters
         ctx.sids = np.arange(len(gr))
         assert len(gr) == len(grp) / num_outs, (len(gr), len(gr) / num_outs)
         yield ctx
