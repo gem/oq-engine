@@ -36,10 +36,8 @@ class BaumontEtAl2018High2210IAVGDC30n7TestCase(BaseGSIMTestCase):
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "baumont_2018/BaumontEtAl2018High2210IAVGDC30n7_stDev.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+    def test_all(self):
+        self.check_all(self.MEAN_FILE,
+                       self.STD_FILE,
+                       mean_discrep_percentage=MEAN_DISCREP,
+                       std_discrep_percentage=STDDEV_DISCREP)

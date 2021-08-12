@@ -24,7 +24,7 @@ import numpy
 
 from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.base import (
-    GMPE, CoeffsTable, gsim_aliases, SitesContext, RuptureContext,
+    GMPE, gsim_aliases, SitesContext, RuptureContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA
