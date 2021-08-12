@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: engine
+  labels:
+    app: engine # MUST Match with the definition on pv and pvc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: engine
+  template:
+    metadata:
+      labels:
+        app: engine
+    spec:
+      containers:
+      - name: engine
+        image: openquake/engine:nightly
+        ports:
+        - name: webui
+          containerPort: 8800
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webui
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8800
+  selector:
+    app: engine
