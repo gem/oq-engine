@@ -45,17 +45,6 @@ def _compute_mean(C, mag, ztor, rrup):
     return mean
 
 
-def _compute_stddevs(C, mag, num_sites, stddev_types):
-    """
-    Return total standard deviation.
-    """
-    std_total = C['gc4'] + C['gc5'] * np.minimum(8., mag)
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + std_total)
-    return stddevs
-
-
 class Geomatrix1993SSlabNSHMP2008(GMPE):
     """
     Implements GMPE for subduction intraslab events developed by Geomatrix
@@ -96,19 +85,16 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-
-        mean = _compute_mean(C, rup.mag, rup.ztor, dists.rrup)
-        stddevs = _compute_stddevs(
-            C, rup.mag, dists.rrup.shape, stddev_types)
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, ctx.mag, ctx.ztor, ctx.rrup)
+            sig[m] =  C['gc4'] + C['gc5'] * np.minimum(8., ctx.mag)
 
     #: Coefficient table obtained from coefficient arrays and variables
     #: defined in subroutine getGeom in hazgridXnga2.f

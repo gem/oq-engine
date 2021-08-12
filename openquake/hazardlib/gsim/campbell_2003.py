@@ -109,6 +109,7 @@ def _compute_term3(C, rrup):
 
 _convert_magnitude = CallableDict()
 
+
 @_convert_magnitude.add("Mblg87")
 def _convert_magnitude_1(kind, mag):
     """
@@ -132,21 +133,6 @@ def _convert_magnitude_3(kind, mag):
     Return magnitude value unchanged
     """
     return mag
-
-
-def _get_stddevs(C, stddev_types, mag, num_sites):
-    """
-    Return total standard deviation as for equation 35, page 1021.
-    """
-    stddevs = []
-    for _ in stddev_types:
-        if mag < 7.16:
-            sigma = C['c11'] + C['c12'] * mag
-        elif mag >= 7.16:
-            sigma = C['c13']
-        stddevs.append(np.zeros(num_sites) + sigma)
-
-    return stddevs
 
 
 class Campbell2003(GMPE):
@@ -189,21 +175,18 @@ class Campbell2003(GMPE):
     #: 30 page 1021.
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types), stddev_types
-
-        C = self.COEFFS[imt]
-        mean = _compute_mean(self.kind, C, rup.mag, dists.rrup)
-        stddevs = _get_stddevs(C, stddev_types, rup.mag,
-                               dists.rrup.shape[0])
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(self.kind, C, ctx.mag, ctx.rrup)
+            sig[m] = np.where(ctx.mag < 7.16,
+                              C['c11'] + C['c12'] * ctx.mag,
+                              C['c13'])
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.
@@ -242,29 +225,24 @@ class Campbell2003SHARE(Campbell2003):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract faulting style  and rock adjustment coefficients for the
-        # given imt
-        C_ADJ = self.COEFFS_FS_ROCK[imt]
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        # apply faulting style and rock adjustment factor for mean and std
-        mean = np.log(np.exp(mean) *
-                      _compute_faulting_style_term(C_ADJ['Frss'],
-                                                   self.CONSTS_FS['pR'],
-                                                   self.CONSTS_FS['Fnss'],
-                                                   self.CONSTS_FS['pN'],
-                                                   rup.rake) * C_ADJ['AFrock'])
-        stddevs = np.array(stddevs)
-
-        return mean, stddevs
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            # extract faulting style  and rock adjustment coefficients for the
+            # given imt
+            C_ADJ = self.COEFFS_FS_ROCK[imt]
+            # apply faulting style and rock adjustment factor for mean and std
+            mean[m] = np.log(np.exp(mean[m]) * _compute_faulting_style_term(
+                C_ADJ['Frss'],
+                self.CONSTS_FS['pR'],
+                self.CONSTS_FS['Fnss'],
+                self.CONSTS_FS['pN'],
+                ctx.rake) * C_ADJ['AFrock'])
 
     #: Coefficients for faulting style and rock adjustment
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
@@ -295,12 +273,12 @@ def _compute_faulting_style_term(Frss, pR, Fnss, pN, rake):
     """
     Compute SHARE faulting style adjustment term.
     """
-    if rake > 30.0 and rake <= 150.0:
-        return np.power(Frss, 1 - pR) * np.power(Fnss, -pN)
-    elif rake > -120.0 and rake <= -60.0:
-        return np.power(Frss, - pR) * np.power(Fnss, 1 - pN)
-    else:
-        return np.power(Frss, - pR) * np.power(Fnss, - pN)
+    term = np.full_like(rake, np.power(Frss, - pR) * np.power(Fnss, - pN))
+    term[(rake > 30.0) & (rake <= 150.0)] = (
+        np.power(Frss, 1 - pR) * np.power(Fnss, -pN))
+    term[(rake > -120.0) & (rake <= -60.0)] = (
+        np.power(Frss, - pR) * np.power(Fnss, 1 - pN))
+    return term
 
 
 class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
@@ -330,21 +308,19 @@ class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mag = _convert_magnitude(self.kind, rup.mag)
+        mag = _convert_magnitude(self.kind, ctx.mag)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        mean = _compute_mean(self.kind, C, mag, dists.rrup)
-        mean = clip_mean(imt, mean)
-
-        stddevs = _get_stddevs(C, stddev_types, mag, dists.rrup.size)
-
-        return mean, stddevs
+            mean[m] = _compute_mean(self.kind, C, mag, ctx.rrup)
+            mean[m] = clip_mean(imt, mean[m])
+            sig[m] = np.where(mag < 7.16, C['c11'] + C['c12'] * mag, C['c13'])
 
     #: Coefficient tables extracted from ``subroutine getCampCEUS`` in
     #: ``hazgridXnga2.f``

@@ -34,16 +34,17 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, block_splitter, RecordBuilder)
+    AccumDict, DictArray, groupby, RecordBuilder)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
-from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
+from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
+STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -135,43 +136,42 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def fake_gsim(gsim, imts):
+def use_recarray(gsims):
     """
-    :returns: a numba object emulating the gsim, or the gsim as is
+    :returns:
+        True if the `ctx` argument of gsim.compute is a recarray for all gsims
     """
-    if not numba:
-        return gsim
-    dic = {attr: getattr(gsim, attr) for attr in gsim.REQUIRES_ATTRIBUTES}
-    for attr in dir(gsim):
-        value = getattr(gsim, attr)
-        if isinstance(value, CoeffsTable):
-            imt0 = imts[0]
-            ctable = getattr(gsim, attr)
-            td = numba.typed.Dict.empty(
-                key_type=numba.typeof(imt0),
-                value_type=numba.typeof(ctable[imt0]))
-            for imt in imts:  # populate td
-                td[imt] = ctable[imt]
-            dic[attr] = td
-    typedic = {a: numba.typeof(dic[a]) for a in dic}
-    cls = type(gsim.__class__.__name__, (), dict(__init__=lambda self: None))
-    jcls = numba.experimental.jitclass(typedic)(cls)
-    obj = jcls()
-    for a in dic:
-        setattr(obj, a, dic[a])
-    return obj
+    return all(gsim.compute.__annotations__.get("ctx") is numpy.recarray
+               for gsim in gsims)
 
 
 class ContextMaker(object):
     """
-    A class to manage the creation of contexts for distances, sites, rupture.
+    A class to manage the creation of contexts and to compute mean/stddevs
+    and possibly PoEs.
+
+    :param trt: a tectonic region type string
+    :param gsims: a list of GSIMs or a dictionary gsim -> rlz indices
+    :param param:
+       a dictionary of parameters like the maximum_distance, the IMTLs,
+       the investigation time, etc
+
+    NB: the trt can be different from the tectonic region type for which
+    the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
     rup_indep = True
     tom = None
 
-    def __init__(self, trt, gsims, param=None, monitor=Monitor()):
-        param = param or {}  # empty in the gmpe-smtk
+    @property
+    def dtype(self):
+        """
+        :returns: dtype of the underlying ctx_builder
+        """
+        return self.ctx_builder.dtype
+
+    def __init__(self, trt, gsims, param, monitor=Monitor()):
+        param = param
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
@@ -181,10 +181,13 @@ class ContextMaker(object):
             param.get('maximum_distance') or MagDepDistance({}))
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
+        if self.investigation_time:
+            self.tom = registry['PoissonTOM'](self.investigation_time)
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
+        self.use_recarray = use_recarray(gsims)
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -201,16 +204,25 @@ class ContextMaker(object):
         elif 'hazard_imtls' in param:
             self.imtls = DictArray(param['hazard_imtls'])
         else:
-            self.imtls = {}
-        self.imts = tuple(imt_module.from_string(imt) for imt in self.imtls)
+            raise KeyError('Missing imtls in ContextMaker!')
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        for gsim in gsims:
-            reqs = (sorted(gsim.REQUIRES_RUPTURE_PARAMETERS) +
-                    sorted(gsim.REQUIRES_SITES_PARAMETERS) +
-                    sorted(gsim.REQUIRES_DISTANCES))
-            gsim.ctx_builder = RecordBuilder(**{req: 0. for req in reqs})
+        reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
+                sorted(self.REQUIRES_SITES_PARAMETERS) +
+                sorted(self.REQUIRES_DISTANCES))
+        dic = {}
+        for req in reqs:
+            if req in site_param_dt:
+                dt = site_param_dt[req]
+                if isinstance(dt, tuple):  # (string_, size)
+                    dic[req] = b''
+                else:
+                    dic[req] = dt(0)
+            else:
+                dic[req] = 0.
+        dic['sids'] = numpy.uint32(0)
+        self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -219,53 +231,15 @@ class ContextMaker(object):
             for imt, imls in self.imtls.items():
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
-
         self.init_monitoring(monitor)
-        self.newapi = any(hasattr(gs, 'compute') for gs in self.gsims)
-        self.compile()
 
     def init_monitoring(self, monitor):
-        # instantiate child monitors
+        # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
-
-    def compile(self):
-        """
-        Compile the required jittable functions
-        """
-        G = len(self.gsims)
-        M = len(self.imts)
-        out = numpy.zeros((G, 4, M, 1))
-        self.fake = {}
-        for g, gsim in enumerate(self.gsims):
-            if hasattr(gsim, 'compute'):
-                self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
-                if numba:
-                    ctx = numpy.ones(1, gsim.ctx_builder.dtype)
-                else:
-                    ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
-                gsim.__class__.compute(fake, ctx, self.imts, *out[g])
-
-    def gen_triples(self, gsim, ctxs):
-        """
-        Yield triples ctx, fake, slice for each context
-        """
-        fake = self.fake[gsim]
-        start = 0
-        for ctx in ctxs:
-            n = ctx.size()
-            if numba:
-                new = gsim.ctx_builder.zeros(n)
-                for name in gsim.ctx_builder.names:
-                    new[name] = getattr(ctx, name)
-            else:
-                new = ctx
-            stop = start + n
-            yield new, fake, slice(start, stop)
-            start = stop
 
     def read_ctxs(self, dstore, slc=None):
         """
@@ -289,22 +263,21 @@ class ContextMaker(object):
             ctxs.append(ctx)
         return ctxs
 
-    def multi(self, ctxs):
+    def recarray(self, ctxs):
         """
-        :params ctxs: a list of contexts, all referring to a single point
-        :returns: a multiple RuptureContext
+        :params ctxs: a list of contexts
+        :returns: a recarray
         """
-        ctx = RuptureContext()
-        for par in self.REQUIRES_SITES_PARAMETERS:
-            setattr(ctx, par, getattr(ctxs[0], par))
-        for par in self.REQUIRES_RUPTURE_PARAMETERS:
-            vals = [getattr(ctx, par) for ctx in ctxs]
-            setattr(ctx, par, numpy.array(vals))
-        for par in self.REQUIRES_DISTANCES:
-            dists = [getattr(ctx, par)[0] for ctx in ctxs]
-            setattr(ctx, par, numpy.array(dists))
-        ctx.ctxs = ctxs
-        return ctx
+        C = sum(len(ctx) for ctx in ctxs)
+        ra = self.ctx_builder.zeros(C).view(numpy.recarray)
+        start = 0
+        for ctx in ctxs:
+            slc = slice(start, start + len(ctx))
+            for par in self.ctx_builder.names:
+                getattr(ra, par)[slc] = getattr(ctx, par)
+            ra.sids[slc] = ctx.sids
+            start = slc.stop
+        return ra
 
     def get_ctx_params(self):
         """
@@ -327,7 +300,7 @@ class ContextMaker(object):
             rctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 rctxs.append(self.make_rctx(rup))
-            allctxs.extend(self.gen_ctxs(rctxs, sitecol, src.id))
+            allctxs.extend(self.get_ctxs(rctxs, sitecol, src.id))
         return allctxs
 
     def filter(self, sites, rup):
@@ -414,7 +387,7 @@ class ContextMaker(object):
                 dctx.rrup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
         return self.make_rctx(rupture), sites, dctx
 
-    def gen_ctxs(self, ruptures, sites, src_id, mon=Monitor()):
+    def get_ctxs(self, ruptures, sites, src_id, mon=Monitor()):
         """
         :param ruptures:
             a list of ruptures generated by the same source
@@ -424,9 +397,10 @@ class ContextMaker(object):
             the ID of the source (for debugging purposes)
         :param mon:
             a Monitor object
-        :yields:
+        :returns:
             fat RuptureContexts
         """
+        ctxs = []
         fewsites = len(sites.complete) <= self.max_sites_disagg
         for rup in ruptures:
             with mon:
@@ -446,7 +420,8 @@ class ContextMaker(object):
                     closest = rup.surface.get_closest_points(sites.complete)
                     ctx.clon = closest.lons[ctx.sids]
                     ctx.clat = closest.lats[ctx.sids]
-            yield ctx
+            ctxs.append(ctx)
+        return ctxs
 
     # this is used with pointsource_distance approximation for close distances,
     # when there are many ruptures affecting few sites
@@ -527,7 +502,7 @@ class ContextMaker(object):
         for ctx, poes in zip(ctxs, self.gen_poes(ctxs)):
             # pnes and poes of shape (N, L, G)
             with self.pne_mon:
-                pnes = ctx.get_probability_no_exceedance(poes, tom)
+                pnes = get_probability_no_exceedance(ctx, poes, tom)
                 for sid, pne in zip(ctx.sids, pnes):
                     probs = pmap.setdefault(sid, self.rup_indep).array
                     if rup_indep:
@@ -537,16 +512,21 @@ class ContextMaker(object):
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
-    def get_mean_stds(self, ctxs, stdtype):
+    # called by gen_poes and by the GmfComputer
+    def get_mean_stds(self, ctxs, stdtype=StdDev.ALL):
         """
         :param ctxs: a list of contexts
         :param stdtype: a standard deviation type
-        :returns: a list of G arrays of shape (O, N, M) with mean and stddevs
+        :returns: a list of G arrays of shape (O, M, N) with mean and stddevs
         """
+        if not hasattr(self, 'imts'):
+            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
-        M = len(self.imts)
+        M = len(self.imtls)
         out = []
+        if self.use_recarray:
+            ctxs = [self.recarray(ctxs)]
         for g, gsim in enumerate(self.gsims):
             if stdtype is None or self.trunclevel == 0:
                 stypes = ()
@@ -555,37 +535,39 @@ class ContextMaker(object):
                     stypes = (StdDev.TOTAL,)
                 else:
                     stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
+            elif stdtype == StdDev.ALL:
+                stypes = tuple(sdt for sdt in STD_TYPES if sdt in
+                               gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
             else:
                 stypes = (stdtype,)
             S = len(stypes)
-            arr = numpy.zeros((1 + S, N, M))
-            gcls = gsim.__class__
-            calc_ms = getattr(gcls, 'compute', None)
-            if calc_ms:  # fast lane
-                if all(len(ctx) == 1 for ctx in ctxs):
-                    # single-site-optimization
-                    ctxs = [self.multi(ctxs)]
+            arr = numpy.zeros((1 + S, M, N))
+            compute = gsim.__class__.__dict__.get('compute')
+            if compute:  # new api
                 outs = numpy.zeros((4, M, N))
-                for ctx, fake, slc in self.gen_triples(gsim, ctxs):
-                    calc_ms(fake, ctx, self.imts, *outs[:, :, slc])
-                arr[0] = outs[0].T
+                start = 0
+                for ctx in ctxs:
+                    slc = slice(start, start + len(ctx))
+                    compute(gsim, ctx, self.imts, *outs[:, :, slc])
+                    start = slc.stop
+                arr[0] = outs[0]
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
-                        arr[s] = outs[1].T
+                        arr[s] = outs[1]
                     elif stype == StdDev.INTER_EVENT:
-                        arr[s] = outs[2].T
+                        arr[s] = outs[2]
                     elif stype == StdDev.INTRA_EVENT:
-                        arr[s] = outs[3].T
-            else:  # slow lane
+                        arr[s] = outs[3]
+            else:  # legacy api
                 start = 0
                 for ctx in ctxs:
                     stop = start + len(ctx.sids)
                     for m, imt in enumerate(self.imts):
                         mean, stds = gsim.get_mean_and_stddevs(
                             ctx, ctx, ctx, imt, stypes)
-                        arr[0, start:stop, m] = mean
+                        arr[0, m, start:stop] = mean
                         for s in range(S):
-                            arr[1 + s, start:stop, m] = stds[s]
+                            arr[1 + s, m, start:stop] = stds[s]
                     start = stop
             out.append(arr)
         return out
@@ -595,18 +577,22 @@ class ContextMaker(object):
         :param ctxs: a list of C context objects
         :yields: poes of shape (N, L, G)
         """
-        nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
-        N = nsites.sum()
-        poes = numpy.zeros((N, self.loglevels.size, len(self.gsims)))
+        from openquake.hazardlib.site_amplification import get_poes_site
         with self.gmf_mon:
             mean_stdt = self.get_mean_stds(ctxs, StdDev.TOTAL)
-        with self.poe_mon:
-            for g, gsim in enumerate(self.gsims):
-                # builds poes of shape (N, L, G)
-                poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
         s = 0
-        for ctx, n in zip(ctxs, nsites):
-            yield poes[s:s+n]
+        for ctx in ctxs:
+            with self.poe_mon:
+                n = len(ctx)
+                poes = numpy.zeros((n, self.loglevels.size, len(self.gsims)))
+                for g, gsim in enumerate(self.gsims):
+                    ms = mean_stdt[g][:, :, s:s+n]
+                    # builds poes of shape (n, L, G)
+                    if self.af:  # kernel amplification method
+                        poes[:, :, g] = get_poes_site(ms, self, ctx)
+                    else:  # regular case
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctx)
+            yield poes
             s += n
 
 
@@ -618,7 +604,7 @@ def combine_pmf(o1, o2):
 
     :param o1: probability distribution of length n1
     :param o2: probability distribution of length n2
-    :returns: probability distribution of length n1 + n2
+    :returns: probability distribution of length n1 + n2 - 1
 
     >>> combine_pmf([.99, .01], [.98, .02])
     array([9.702e-01, 2.960e-02, 2.000e-04])
@@ -640,7 +626,7 @@ def _collapse(ctxs):
     for ctx in ctxs:
         if numpy.isnan(ctx.occurrence_rate):  # nonparametric
             nrups.append(ctx)
-        else:  # parametrix
+        else:  # parametric
             prups.append(ctx)
     if len(prups) > 1:
         ctx = copy.copy(prups[0])
@@ -683,9 +669,6 @@ class PmapMaker(object):
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
-        # NB: if maxsites is too big or too small the performance of
-        # get_poes can easily become 2-3 times worse!
-        self.maxsites = 512000 / len(self.gsims) / self.imtls.size
 
     def count_bytes(self, ctxs):
         # # usuful for debugging memory issues
@@ -700,35 +683,28 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _update_pmap(self, ctxs, pmap):
-        # compute PoEs and update pmap
-        # splitting in blocks makes sure that the maximum poes array
-        # generated has size N x L x G x 8 = 4 MB
-        for block in block_splitter(
-                ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
-            self.cmaker.get_pmap(block, pmap)
-
     def _ruptures(self, src, filtermag=None):
         return src.iter_ruptures(
             shift_hypo=self.shift_hypo, mag=filtermag)
 
-    def _gen_ctxs(self, rups, sites, srcid):
-        # yield context objects to save memory
-        ctxs = self.cmaker.gen_ctxs(rups, sites, srcid, self.ctx_mon)
+    def _get_ctxs(self, rups, sites, srcid):
+        ctxs = self.cmaker.get_ctxs(rups, sites, srcid, self.ctx_mon)
         if self.collapse_level > 1:
-            ctxs = self.cmaker.collapse_the_ctxs(list(ctxs))
+            ctxs = self.cmaker.collapse_the_ctxs(ctxs)
+        out = []
         for ctx in ctxs:
             self.numsites += len(ctx.sids)
             self.numctxs += 1
             if self.fewsites:  # keep the contexts in memory
                 self.rupdata.append(ctx)
-            yield ctx
+            out.append(ctx)
+        return out
 
     def _make_src_indep(self):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.filter if self.N == 1 and self.newapi
+        filt = (self.srcfilter.split_less if self.N == 1
                 else self.srcfilter.split)
         for src, sites in filt(self.group):
             t0 = time.time()
@@ -737,7 +713,7 @@ class PmapMaker(object):
             self.numctxs = 0
             self.numsites = 0
             rups = self._gen_rups(src, sites)
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id), pmap)
+            self.cmaker.get_pmap(self._get_ctxs(rups, sites, src.id), pmap)
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
                 [self.numctxs, self.numsites, dt])
@@ -753,7 +729,7 @@ class PmapMaker(object):
             self.numsites = 0
             rups = self._ruptures(src)
             pm = ProbabilityMap(self.cmaker.imtls.size, len(self.cmaker.gsims))
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id), pm)
+            self.cmaker.get_pmap(self._get_ctxs(rups, sites, src.id), pm)
             p = pm
             if self.cmaker.rup_indep:
                 p = ~p
@@ -873,6 +849,10 @@ class SitesContext(BaseContext):
             for slot in slots:
                 setattr(self, slot, getattr(sitecol, slot))
 
+    # used in the SMTK
+    def __len__(self):
+        return len(self.sids)
+
 
 class DistancesContext(BaseContext):
     """
@@ -923,6 +903,40 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
+def full_context(sites, rup, dctx=None):
+    """
+    :returns: a full RuptureContext with all the relevant attributes
+    """
+    self = RuptureContext()
+    for par, val in vars(rup).items():
+        setattr(self, par, val)
+    if hasattr(sites, 'array'):  # is a SiteCollection
+        for par in sites.array.dtype.names:
+            setattr(self, par, sites[par])
+    else:  # sites is a SitesContext
+        for par, val in vars(sites).items():
+            setattr(self, par, val)
+    if dctx:
+        for par, val in vars(dctx).items():
+            setattr(self, par, val)
+    return self
+
+
+def get_mean_stds(gsims, ctx, imts, stdtype=StdDev.ALL):
+    """
+    :param gsims: a list of G GSIMs
+    :param ctx: a RuptureContext or a recarray of size N
+    :param imts: a list of M IMTs
+    :param stdtype: a standard deviation type (TOTAL, EVENT, etc)
+    :returns:
+        an array of shape (G, O, M, N) obtained by applying the
+        given GSIMs, ctx amd imts
+    """
+    imtls = {imt.string: [0] for imt in imts}
+    cmaker = ContextMaker('*', gsims, {'imtls': imtls})
+    return numpy.array(cmaker.get_mean_stds([ctx], stdtype))
+
+
 # mock of a rupture used in the tests and in the SMTK
 class RuptureContext(BaseContext):
     """
@@ -940,21 +954,6 @@ class RuptureContext(BaseContext):
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
 
-    @classmethod
-    def full(cls, rup, sites, dctx=None):
-        """
-        :returns: a full context with all the relevant attributes
-        """
-        self = cls()
-        for par, val in vars(rup).items():
-            setattr(self, par, val)
-        for par in sites.array.dtype.names:
-            setattr(self, par, sites[par])
-        if dctx:
-            for par, val in vars(dctx).items():
-                setattr(self, par, val)
-        return self
-
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
             setattr(self, param, value)
@@ -965,14 +964,14 @@ class RuptureContext(BaseContext):
         of magnitudes and it refers to a single site, returns the size of
         the array, otherwise returns 1.
         """
-        nsites = len(self.rjb)
+        nsites = len(self.sids)
         if nsites == 1 and isinstance(self.mag, numpy.ndarray):
             return len(self.mag)
         return nsites
 
     # used in acme_2019
     def __len__(self):
-        return len(self.sites)
+        return len(self.sids)
 
     def roundup(self, minimum_distance):
         """
@@ -994,50 +993,53 @@ class RuptureContext(BaseContext):
                 setattr(ctx, dist, array)
         return ctx
 
-    def get_probability_no_exceedance(self, poes, tom):
-        """
-        Compute and return the probability that in the time span for which the
-        rupture is defined, the rupture itself never generates a ground motion
-        value higher than a given level at a given site.
 
-        Such calculation is performed starting from the conditional probability
-        that an occurrence of the current rupture is producing a ground motion
-        value higher than the level of interest at the site of interest.
-        The actual formula used for such calculation depends on the temporal
-        occurrence model the rupture is associated with.
-        The calculation can be performed for multiple intensity measure levels
-        and multiple sites in a vectorized fashion.
+def get_probability_no_exceedance(rup, poes, tom):
+    """
+    Compute and return the probability that in the time span for which the
+    rupture is defined, the rupture itself never generates a ground motion
+    value higher than a given level at a given site.
 
-        :param poes:
-            2D numpy array containing conditional probabilities the the a
-            rupture occurrence causes a ground shaking value exceeding a
-            ground motion level at a site. First dimension represent sites,
-            second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
+    Such calculation is performed starting from the conditional probability
+    that an occurrence of the current rupture is producing a ground motion
+    value higher than the level of interest at the site of interest.
+    The actual formula used for such calculation depends on the temporal
+    occurrence model the rupture is associated with.
+    The calculation can be performed for multiple intensity measure levels
+    and multiple sites in a vectorized fashion.
 
-        :param tom:
-            temporal occurrence model instance, used only if the rupture
-            is parametric
-        """
-        if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
-            # Uses the formula
-            #
-            #    ∑ p(k|T) * p(X<x|rup)^k
-            #
-            # where `p(k|T)` is the probability that the rupture occurs k times
-            # in the time span `T`, `p(X<x|rup)` is the probability that a
-            # rupture occurrence does not cause a ground motion exceedance, and
-            # thesummation `∑` is done over the number of occurrences `k`.
-            #
-            # `p(k|T)` is given by the attribute probs_occur and
-            # `p(X<x|rup)` is computed as ``1 - poes``.
-            prob_no_exceed = numpy.float64(
-                [v * (1 - poes) ** i for i, v in enumerate(self.probs_occur)]
-            ).sum(axis=0)
-            return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
+    :param rup:
+        an object with attributes .occurrence_rate and possibly .probs_occur
+    :param poes:
+        2D numpy array containing conditional probabilities the the a
+        rupture occurrence causes a ground shaking value exceeding a
+        ground motion level at a site. First dimension represent sites,
+        second dimension intensity measure levels. ``poes`` can be obtained
+        calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
 
-        # parametric rupture
-        return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
+    :param tom:
+        temporal occurrence model instance, used only if the rupture
+        is parametric
+    """
+    if numpy.isnan(rup.occurrence_rate):  # nonparametric rupture
+        # Uses the formula
+        #
+        #    ∑ p(k|T) * p(X<x|rup)^k
+        #
+        # where `p(k|T)` is the probability that the rupture occurs k times
+        # in the time span `T`, `p(X<x|rup)` is the probability that a
+        # rupture occurrence does not cause a ground motion exceedance, and
+        # thesummation `∑` is done over the number of occurrences `k`.
+        #
+        # `p(k|T)` is given by the attribute probs_occur and
+        # `p(X<x|rup)` is computed as ``1 - poes``.
+        prob_no_exceed = numpy.float64(
+            [v * (1 - poes) ** i for i, v in enumerate(rup.probs_occur)]
+        ).sum(axis=0)
+        return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
+
+    # parametric rupture
+    return tom.get_probability_no_exceedance(rup.occurrence_rate, poes)
 
 
 class Effect(object):

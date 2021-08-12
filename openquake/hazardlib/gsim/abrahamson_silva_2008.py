@@ -39,137 +39,137 @@ CONSTS = {
     'sigma_amp': 0.3}
 
 
-def _compute_base_term(C, rup, dists):
+def _compute_base_term(C, ctx):
     """
     Compute and return base model term, that is the first term in equation
     1, page 74. The calculation of this term is explained in paragraph
     'Base Model', page 75.
     """
     c1 = CONSTS['c1']
-    R = np.sqrt(dists.rrup ** 2 + CONSTS['c4'] ** 2)
+    R = np.sqrt(ctx.rrup ** 2 + CONSTS['c4'] ** 2)
 
     base_term = (C['a1'] +
-                 C['a8'] * ((8.5 - rup.mag) ** 2) +
-                 (C['a2'] + CONSTS['a3'] * (rup.mag - c1)) *
+                 C['a8'] * ((8.5 - ctx.mag) ** 2) +
+                 (C['a2'] + CONSTS['a3'] * (ctx.mag - c1)) *
                  np.log(R))
 
-    if rup.mag <= c1:
-        return base_term + CONSTS['a4'] * (rup.mag - c1)
+    if ctx.mag <= c1:
+        return base_term + CONSTS['a4'] * (ctx.mag - c1)
     else:
-        return base_term + CONSTS['a5'] * (rup.mag - c1)
+        return base_term + CONSTS['a5'] * (ctx.mag - c1)
 
 
-def _compute_faulting_style_term(C, rup):
+def _compute_faulting_style_term(C, ctx):
     """
     Compute and return faulting style term, that is the sum of the second
     and third terms in equation 1, page 74.
     """
     # ranges of rake values for each faulting mechanism are specified in
     # table 2, page 75
-    return (C['a12'] * float(rup.rake > 30 and rup.rake < 150) +
-            C['a13'] * float(rup.rake > -120 and rup.rake < -60))
+    return (C['a12'] * float(ctx.rake > 30 and ctx.rake < 150) +
+            C['a13'] * float(ctx.rake > -120 and ctx.rake < -60))
 
 
-def _compute_site_response_term(C, imt, sites, pga1100):
+def _compute_site_response_term(C, imt, ctx, pga1100):
     """
     Compute and return site response model term, that is the fifth term
     in equation 1, page 74.
     """
-    site_resp_term = np.zeros_like(sites.vs30)
+    site_resp_term = np.zeros_like(ctx.vs30)
 
-    vs30_star, _ = _compute_vs30_star_factor(imt, sites.vs30)
+    vs30_star, _ = _compute_vs30_star_factor(imt, ctx.vs30)
     vlin, c, n = C['VLIN'], CONSTS['c'], CONSTS['n']
     a10, b = C['a10'], C['b']
 
-    idx = sites.vs30 < vlin
+    idx = ctx.vs30 < vlin
     arg = vs30_star[idx] / vlin
     site_resp_term[idx] = (a10 * np.log(arg) -
                            b * np.log(pga1100[idx] + c) +
                            b * np.log(pga1100[idx] + c * (arg ** n)))
 
-    idx = sites.vs30 >= vlin
+    idx = ctx.vs30 >= vlin
     site_resp_term[idx] = (a10 + b * n) * np.log(vs30_star[idx] / vlin)
 
     return site_resp_term
 
 
-def _compute_hanging_wall_term(C, dists, rup):
+def _compute_hanging_wall_term(C, ctx):
     """
     Compute and return hanging wall model term, that is the sixth term in
     equation 1, page 74. The calculation of this term is explained in
     paragraph 'Hanging-Wall Model', page 77.
     """
-    if rup.dip == 90.0:
-        return np.zeros_like(dists.rx)
+    if ctx.dip == 90.0:
+        return np.zeros_like(ctx.rx)
     else:
-        idx = dists.rx > 0
-        Fhw = np.zeros_like(dists.rx)
+        idx = ctx.rx > 0
+        Fhw = np.zeros_like(ctx.rx)
         Fhw[idx] = 1
 
         # equation 8, page 77
-        T1 = np.zeros_like(dists.rx)
-        idx1 = (dists.rjb < 30.0) & (idx)
-        T1[idx1] = 1.0 - dists.rjb[idx1] / 30.0
+        T1 = np.zeros_like(ctx.rx)
+        idx1 = (ctx.rjb < 30.0) & (idx)
+        T1[idx1] = 1.0 - ctx.rjb[idx1] / 30.0
 
         # equation 9, page 77
-        T2 = np.ones_like(dists.rx)
-        idx2 = ((dists.rx <= rup.width * np.cos(np.radians(rup.dip))) &
+        T2 = np.ones_like(ctx.rx)
+        idx2 = ((ctx.rx <= ctx.width * np.cos(np.radians(ctx.dip))) &
                 (idx))
-        T2[idx2] = (0.5 + dists.rx[idx2] /
-                    (2 * rup.width * np.cos(np.radians(rup.dip))))
+        T2[idx2] = (0.5 + ctx.rx[idx2] /
+                    (2 * ctx.width * np.cos(np.radians(ctx.dip))))
 
         # equation 10, page 78
-        T3 = np.ones_like(dists.rx)
-        idx3 = (dists.rx < rup.ztor) & (idx)
-        T3[idx3] = dists.rx[idx3] / rup.ztor
+        T3 = np.ones_like(ctx.rx)
+        idx3 = (ctx.rx < ctx.ztor) & (idx)
+        T3[idx3] = ctx.rx[idx3] / ctx.ztor
 
         # equation 11, page 78
-        if rup.mag <= 6.0:
+        if ctx.mag <= 6.0:
             T4 = 0.0
-        elif rup.mag > 6 and rup.mag < 7:
-            T4 = rup.mag - 6
+        elif ctx.mag > 6 and ctx.mag < 7:
+            T4 = ctx.mag - 6
         else:
             T4 = 1.0
 
         # equation 5, in AS08_NGA_errata.pdf
-        if rup.dip >= 30:
-            T5 = 1.0 - (rup.dip - 30.0) / 60.0
+        if ctx.dip >= 30:
+            T5 = 1.0 - (ctx.dip - 30.0) / 60.0
         else:
             T5 = 1.0
 
         return Fhw * C['a14'] * T1 * T2 * T3 * T4 * T5
 
 
-def _compute_top_of_rupture_depth_term(C, rup):
+def _compute_top_of_rupture_depth_term(C, ctx):
     """
     Compute and return top of rupture depth term, that is the seventh term
     in equation 1, page 74. The calculation of this term is explained in
     paragraph 'Depth-to-Top of Rupture Model', page 78.
     """
-    if rup.ztor >= 10.0:
+    if ctx.ztor >= 10.0:
         return C['a16']
     else:
-        return C['a16'] * rup.ztor / 10.0
+        return C['a16'] * ctx.ztor / 10.0
 
 
-def _compute_large_distance_term(C, dists, rup):
+def _compute_large_distance_term(C, ctx):
     """
     Compute and return large distance model term, that is the 8-th term
     in equation 1, page 74. The calculation of this term is explained in
     paragraph 'Large Distance Model', page 78.
     """
     # equation 15, page 79
-    if rup.mag < 5.5:
+    if ctx.mag < 5.5:
         T6 = 1.0
-    elif rup.mag >= 5.5 and rup.mag <= 6.5:
-        T6 = 0.5 * (6.5 - rup.mag) + 0.5
+    elif ctx.mag >= 5.5 and ctx.mag <= 6.5:
+        T6 = 0.5 * (6.5 - ctx.mag) + 0.5
     else:
         T6 = 0.5
 
     # equation 14, page 79
-    large_distance_term = np.zeros_like(dists.rrup)
-    idx = dists.rrup >= 100.0
-    large_distance_term[idx] = C['a18'] * (dists.rrup[idx] - 100.0) * T6
+    large_distance_term = np.zeros_like(ctx.rrup)
+    idx = ctx.rrup >= 100.0
+    large_distance_term[idx] = C['a18'] * (ctx.rrup[idx] - 100.0) * T6
 
     return large_distance_term
 
@@ -193,20 +193,20 @@ def _compute_soil_depth_term(C, imt, z1pt0, vs30):
     return soil_depth_term
 
 
-def _compute_imt1100(C_PGA, sites, rup, dists):
+def _compute_imt1100(C_PGA, ctx):
     """
     Compute and return mean imt value for rock conditions
     (vs30 = 1100 m/s)
     """
     imt = PGA()
-    vs30_1100 = np.zeros_like(sites.vs30) + 1100
+    vs30_1100 = np.zeros_like(ctx.vs30) + 1100
     vs30_star, _ = _compute_vs30_star_factor(imt, vs30_1100)
-    mean = (_compute_base_term(C_PGA, rup, dists) +
-            _compute_faulting_style_term(C_PGA, rup) +
-            _compute_hanging_wall_term(C_PGA, dists, rup) +
-            _compute_top_of_rupture_depth_term(C_PGA, rup) +
-            _compute_large_distance_term(C_PGA, dists, rup) +
-            _compute_soil_depth_term(C_PGA, imt, sites.z1pt0, vs30_1100) +
+    mean = (_compute_base_term(C_PGA, ctx) +
+            _compute_faulting_style_term(C_PGA, ctx) +
+            _compute_hanging_wall_term(C_PGA, ctx) +
+            _compute_top_of_rupture_depth_term(C_PGA, ctx) +
+            _compute_large_distance_term(C_PGA, ctx) +
+            _compute_soil_depth_term(C_PGA, imt, ctx.z1pt0, vs30_1100) +
             # this is the site response term in case of vs30=1100
             ((C_PGA['a10'] + C_PGA['b'] * CONSTS['n']) *
              np.log(vs30_star / C_PGA['VLIN'])))
@@ -214,24 +214,16 @@ def _compute_imt1100(C_PGA, sites, rup, dists):
     return mean
 
 
-def _get_stddevs(C, C_PGA, pga1100, rup, sites, stddev_types):
+def _get_stddevs(C, C_PGA, pga1100, ctx):
     """
     Return standard deviations as described in paragraph 'Equations for
     standard deviation', page 81.
     """
-    std_intra = _compute_intra_event_std(C, C_PGA, pga1100, rup.mag,
-                                         sites.vs30, sites.vs30measured)
-    std_inter = _compute_inter_event_std(C, C_PGA, pga1100, rup.mag,
-                                         sites.vs30)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(std_intra ** 2 + std_inter ** 2))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(std_intra)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(std_inter)
-    return stddevs
+    std_intra = _compute_intra_event_std(C, C_PGA, pga1100, ctx.mag,
+                                         ctx.vs30, ctx.vs30measured)
+    std_inter = _compute_inter_event_std(C, C_PGA, pga1100, ctx.mag,
+                                         ctx.vs30)
+    return [np.sqrt(std_intra ** 2 + std_inter ** 2), std_inter, std_intra]
 
 
 def _compute_intra_event_std(C, C_PGA, pga1100, mag, vs30, vs30measured):
@@ -489,32 +481,28 @@ class AbrahamsonSilva2008(GMPE):
     #: Required distance measures are Rrup, Rjb and Rx (see Table 2, page 75).
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
 
         # compute median pga on rock (vs30=1100), needed for site response
         # term calculation
-        pga1100 = np.exp(_compute_imt1100(C_PGA, sites, rup, dists))
+        pga1100 = np.exp(_compute_imt1100(C_PGA, ctx))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (_compute_base_term(C, ctx) +
+                       _compute_faulting_style_term(C, ctx) +
+                       _compute_site_response_term(C, imt, ctx, pga1100) +
+                       _compute_hanging_wall_term(C, ctx) +
+                       _compute_top_of_rupture_depth_term(C, ctx) +
+                       _compute_large_distance_term(C, ctx) +
+                       _compute_soil_depth_term(C, imt, ctx.z1pt0, ctx.vs30))
 
-        mean = (_compute_base_term(C, rup, dists) +
-                _compute_faulting_style_term(C, rup) +
-                _compute_site_response_term(C, imt, sites, pga1100) +
-                _compute_hanging_wall_term(C, dists, rup) +
-                _compute_top_of_rupture_depth_term(C, rup) +
-                _compute_large_distance_term(C, dists, rup) +
-                _compute_soil_depth_term(C, imt, sites.z1pt0, sites.vs30))
-
-        stddevs = _get_stddevs(C, C_PGA, pga1100, rup, sites, stddev_types)
-
-        return mean, stddevs
+            sig[m], tau[m], phi[m] = _get_stddevs(C, C_PGA, pga1100, ctx)
 
     #: Coefficient tables obtained by joining table 5a page 84, and table 5b
     #: page 85.

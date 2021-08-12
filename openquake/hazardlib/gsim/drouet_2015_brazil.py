@@ -33,54 +33,38 @@ _compute_distance_term = CallableDict()
 
 
 @_compute_distance_term.add(False)
-def _compute_distance_term_1(depth, C, rup, rjb):
+def _compute_distance_term_1(depth, C, ctx, rjb):
     """
     This computes the term f2 equation 8 Drouet & Cotton (2015)
     """
-    return (C['c4'] + C['c5'] * rup.mag) * np.log(
+    return (C['c4'] + C['c5'] * ctx.mag) * np.log(
         np.sqrt(rjb ** 2. + C['c6'] ** 2.)) + C['c7'] * rjb
 
 
 @_compute_distance_term.add(True)
-def _compute_distance_term_2(depth, C, rup, rjb):
+def _compute_distance_term_2(depth, C, ctx, rjb):
     """
     This computes the term f2 equation 8 Drouet & Cotton (2015)
     """
-    return (C['c4'] + C['c5'] * rup.mag) * np.log(
-        np.sqrt(rjb ** 2. + rup.hypo_depth ** 2.)) + C['c6'] * rjb
+    return (C['c4'] + C['c5'] * ctx.mag) * np.log(
+        np.sqrt(rjb ** 2. + ctx.hypo_depth ** 2.)) + C['c6'] * rjb
 
 
-def _compute_magnitude_term(C, rup):
+def _compute_magnitude_term(C, ctx):
     """
     This computes the term f1 equation 8 Drouet & Cotton (2015)
     """
-    return C['c2'] * (rup.mag - 8.0) + C['c3'] * (rup.mag - 8.0) ** 2
+    return C['c2'] * (ctx.mag - 8.0) + C['c3'] * (ctx.mag - 8.0) ** 2
 
 
-def _compute_mean(depth, C, rup, rjb):
+def _compute_mean(depth, C, ctx, rjb):
     """
     Compute mean value according to equation 30, page 1021.
     """
     mean = (C['c1'] +
-            _compute_magnitude_term(C, rup) +
-            _compute_distance_term(depth, C, rup, rjb))
+            _compute_magnitude_term(C, ctx) +
+            _compute_distance_term(depth, C, ctx, rjb))
     return mean
-
-
-def _get_stddevs(C, stddev_types, mag, num_sites):
-    """
-    Return total standard deviation as for equation 35, page 1021.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma_t = np.sqrt(C['sigma'] ** 2. + C['tau'] ** 2.)
-            stddevs.append(sigma_t + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
 
 
 class DrouetBrazil2015(GMPE):
@@ -119,22 +103,23 @@ class DrouetBrazil2015(GMPE):
     #: 30 page 1021.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        depth = "hypo_depth" in self.REQUIRES_RUPTURE_PARAMETERS
-        mean = _compute_mean(depth, C, rup, dists.rjb)
-        if imt.string.startswith(('PGA', 'SA')):  # Convert from m/s**2 to g
-            mean -= np.log(g)
-        elif imt.string == "PGV":  # Convert from m/s to cm/s
-            mean += np.log(100.0)
-        stddevs = _get_stddevs(C, stddev_types, rup.mag, dists.rjb.shape)
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            depth = "hypo_depth" in self.REQUIRES_RUPTURE_PARAMETERS
+            mean[m] = _compute_mean(depth, C, ctx, ctx.rjb)
+            if imt.string.startswith(('PGA', 'SA')):  # from m/s**2 to g
+                mean[m] -= np.log(g)
+            elif imt.string == "PGV":  # Convert from m/s to cm/s
+                mean[m] += np.log(100.0)
+            sig[m] = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
+            phi[m] = C['sigma']
+            tau[m] = C['tau']
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.

@@ -5,7 +5,7 @@ driver:
   name: docker
 platforms:
   - name: master
-    image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu1804}-ansible:latest"
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu2004}-ansible:latest"
     command: /sbin/init 
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro

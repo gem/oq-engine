@@ -20,7 +20,7 @@ Module exports :class:`MultiGMPE`, which can create a composite of
 multiple GMPEs for different IMTs when passed a dictionary of ground motion
 models organised by IMT type or by a string describing the association
 """
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import imt as imt_module
 
@@ -94,9 +94,14 @@ class MultiGMPE(GMPE):
                       sorted(self.kwargs.items()))
         return hash(items)
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Call the get mean and stddevs of the GMPE for the respective IMT
         """
-        return self.kwargs[str(imt)].get_mean_and_stddevs(
-            sctx, rctx, dctx, imt, stddev_types)
+        gsims = [self.kwargs[imt.string] for imt in imts]
+        outs = contexts.get_mean_stds(gsims, ctx, imts, const.StdDev.ALL)
+        for m, out in enumerate(outs):
+            mean[m] = out[0]
+            sig[m] = out[1]
+            tau[m] = out[2]
+            phi[m] = out[3]

@@ -27,70 +27,62 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _get_stddevs(C, stddev_types, num_sites):
+def _get_stddevs(C):
     """
     Return standard deviations as defined in table 1.
     """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 +
-                                   C['phi_0'] ** 2) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2) +
-                           np.zeros(num_sites))
-    return stddevs
+    return [np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 + C['phi_0'] ** 2),
+            C['tau'], np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2)]
 
 
-def _compute_distance(rup, dists, C):
+def _compute_distance(ctx, dist_type, C):
     """
     Compute the third term of the equation 1:
     FD(Mw,R) = [c1(Mw-Mref) + c2] * log10(R) + c3(R) (eq 4)
     Mref, h, Mh are in matrix C
     """
-    R = np.sqrt(dists**2 + C['h']**2)
-    return ((C['c1'] * (rup.mag - C['Mref']) + C['c2']) * np.log10(R) +
+    dist = getattr(ctx, dist_type)
+    R = np.sqrt(dist ** 2 + C['h'] ** 2)
+    return ((C['c1'] * (ctx.mag - C['Mref']) + C['c2']) * np.log10(R) +
             C['c3']*R)
 
 
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     Compute the second term of the equation 1:
     b1 * (Mw-Mh) for M<=Mh
     b2 * (Mw-Mh) otherwise
     """
-    dmag = rup.mag - C["Mh"]
-    if rup.mag <= C["Mh"]:
+    dmag = ctx.mag - C["Mh"]
+    if ctx.mag <= C["Mh"]:
         mag_term = C['a'] + C['b1'] * dmag
     else:
         mag_term = C['a'] + C['b2'] * dmag
     return mag_term
 
 
-def _site_amplification(sites, C):
+def _site_amplification(ctx, C):
     """
     Compute the fourth term of the equation 1 :
     The functional form Fs in Eq. (1) represents the site amplification and
     it is given by FS = klog10(V0/800) , where V0 = Vs30 when Vs30 <= 1500
     and V0=1500 otherwise
     """
-    v0 = np.ones_like(sites.vs30) * 1500.
-    v0[sites.vs30 < 1500] = sites.vs30
+    v0 = np.ones_like(ctx.vs30) * 1500.
+    v0[ctx.vs30 < 1500] = ctx.vs30
     return C['k'] * np.log10(v0/800)
 
 
-def _get_mechanism(rup, C):
+def _get_mechanism(ctx, C):
     """
     Compute the part of the second term of the equation 1 (FM(SoF)):
     Get fault type dummy variables
     """
-    SS, TF, NF = _get_fault_type_dummy_variables(rup)
+    SS, TF, NF = _get_fault_type_dummy_variables(ctx)
     return C['f1'] * SS + C['f2'] * TF
 
 
-def _get_fault_type_dummy_variables(rup):
+def _get_fault_type_dummy_variables(ctx):
     """
     Fault type (Strike-slip, Normal, Thrust/reverse) is
     derived from rake angle.
@@ -99,10 +91,10 @@ def _get_fault_type_dummy_variables(rup):
     -30 to -150 are normal.
     """
     SS, TF, NF = 0, 0, 0
-    if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+    if np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
         # strike-slip
         SS = 1
-    elif rup.rake > 30.0 and rup.rake < 150.0:
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
         # reverse
         TF = 1
     else:
@@ -151,39 +143,32 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
     #: Required distance measure is R Joyner-Boore distance (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
+        [dist_type] = self.REQUIRES_DISTANCES
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(ctx, dist_type, C) +
+                     _site_amplification(ctx, C) +
+                     _get_mechanism(ctx, C))
 
-        C = self.COEFFS[imt]
-        if self.REQUIRES_DISTANCES == {'rjb'}:
-            d = dists.rjb
-        else:
-            d = dists.rrup
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_distance(rup, d, C) +
-                 _site_amplification(sites, C) +
-                 _get_mechanism(rup, C))
+            istddevs = _get_stddevs(C)
 
-        istddevs = _get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+            # Convert units to g, but only for PGA and SA (not PGV):
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV:
+                mean[m] = np.log(10.0 ** imean)
 
-        # Convert units to g, but only for PGA and SA (not PGV):
-        if imt.string.startswith(("SA", "PGA")):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
-
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
-
-        return mean, stddevs
+            # Return stddevs in terms of natural log scaling
+            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+            # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
     #: Coefficients from SA PGA and PGV from esupp Table S2
 

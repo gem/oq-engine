@@ -103,18 +103,11 @@ class AvgPoeGMPE(GMPE):
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """Do nothing: the work is done in get_poes"""
 
-    def get_poes(self, mean_std, cmaker, ctxs):
+    def get_poes(self, mean_std, cmaker, ctx):
         """
         :returns: an array of shape (N, L)
         """
         cm = copy.copy(cmaker)
         cm.gsims = self.gsims
-        N = sum(len(ctx) for ctx in ctxs)
-        L = cmaker.loglevels.size
-        out = numpy.zeros((N, L))
-        start = 0
-        for poes in cm.gen_poes(ctxs):  # shape N, L, G
-            stop = start + len(poes)
-            out[start:stop, :] = poes @ self.weights
-            start = stop
-        return out
+        [poes] = cm.gen_poes([ctx])  # shape N, L, G
+        return poes @ self.weights

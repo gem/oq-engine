@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="US14_all_excl_cali"
+    >
+        <logicTreeBranchingLevel
+        branchingLevelID="US14_ALL"
+        >
+            <logicTreeBranchSet
+            branchSetID="US14ALLSources"
+            uncertaintyType="sourceModel"
+            >
+                <logicTreeBranch
+                branchID="2014USAll"
+                >
+                    <uncertaintyModel>
+                        ssm/WUSActiveShallowSources.xml
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        1.0
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

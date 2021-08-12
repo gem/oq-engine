@@ -27,22 +27,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return standard deviations as defined in table 1.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['epsilon'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
-
-
-def _compute_distance(rup, dists, C):
+def _compute_distance(ctx, C):
     """
     equation 3 pag 1960:
 
@@ -50,20 +35,20 @@ def _compute_distance(rup, dists, C):
     """
     rref = 1.0
     c31 = -1.7
-    return (c31 * np.log10(dists.rhypo) + C['c32'] * (dists.rhypo - rref))
+    return (c31 * np.log10(ctx.rhypo) + C['c32'] * (ctx.rhypo - rref))
 
 
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     equation 3 pag 1960:
 
     c1 + c2(M-5.5)
     """
     m_h = 5.5
-    return C['c1'] + (C['c2'] * (rup.mag - m_h))
+    return C['c1'] + (C['c2'] * (ctx.mag - m_h))
 
 
-def _get_site_amplification(sites, C):
+def _get_site_amplification(ctx, C):
     """
     Compute the fourth term of the equation 3:
     The functional form Fs in Eq. (1) represents the site amplification and
@@ -73,12 +58,12 @@ def _get_site_amplification(sites, C):
     C and D respectively
     Coefficents for categories A and B are set to zero
     """
-    S, SS = _get_site_type_dummy_variables(sites)
+    S, SS = _get_site_type_dummy_variables(ctx)
 
     return (C['c61'] * S) + (C['c62'] * SS)
 
 
-def _get_site_type_dummy_variables(sites):
+def _get_site_type_dummy_variables(ctx):
     """
     Get site type dummy variables, three different site classes,
     based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
@@ -88,58 +73,58 @@ def _get_site_type_dummy_variables(sites):
     class D: Vs30 < 360 m/s
 
     """
-    S = np.zeros(len(sites.vs30))
-    SS = np.zeros(len(sites.vs30))
+    S = np.zeros(len(ctx.vs30))
+    SS = np.zeros(len(ctx.vs30))
 
     # Class C; 180 m/s <= Vs30 <= 360 m/s.
-    idx = (sites.vs30 < 360.0)
+    idx = (ctx.vs30 < 360.0)
     SS[idx] = 1.0
     # Class B; 360 m/s <= Vs30 <= 760 m/s. (NEHRP)
-    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 760)
+    idx = (ctx.vs30 >= 360.0) & (ctx.vs30 < 760)
     S[idx] = 1.0
 
     return S, SS
 
 
-def _compute_forearc_backarc_term(C, sites, dists, rup):
+def _compute_forearc_backarc_term(C, ctx):
     """
     Compute back-arc term of Equation 3
 
     """
     # flag 1 (R < 335 & R >= 205)
-    flag1 = np.zeros(len(dists.rhypo))
-    ind1 = np.logical_and((dists.rhypo < 335), (dists.rhypo >= 205))
+    flag1 = np.zeros(len(ctx.rhypo))
+    ind1 = np.logical_and((ctx.rhypo < 335), (ctx.rhypo >= 205))
     flag1[ind1] = 1.0
     # flag 2 (R >= 335)
-    flag2 = np.zeros(len(dists.rhypo))
-    ind2 = (dists.rhypo >= 335)
+    flag2 = np.zeros(len(ctx.rhypo))
+    ind2 = (ctx.rhypo >= 335)
     flag2[ind2] = 1.0
     # flag 3 (R < 240 & R >= 140)
-    flag3 = np.zeros(len(dists.rhypo))
-    ind3 = np.logical_and((dists.rhypo < 240), (dists.rhypo >= 140))
+    flag3 = np.zeros(len(ctx.rhypo))
+    ind3 = np.logical_and((ctx.rhypo < 240), (ctx.rhypo >= 140))
     flag3[ind3] = 1.0
     # flag 4 (R >= 240)
-    flag4 = np.zeros(len(dists.rhypo))
-    ind4 = (dists.rhypo >= 240)
+    flag4 = np.zeros(len(ctx.rhypo))
+    ind4 = (ctx.rhypo >= 240)
     flag4[ind4] = 1.0
 
-    A = flag1 * ((205 - dists.rhypo)/150) + flag2
-    B = flag3 * ((140 - dists.rhypo)/100) + flag4
-    if (rup.hypo_depth < 80):
+    A = flag1 * ((205 - ctx.rhypo)/150) + flag2
+    B = flag3 * ((140 - ctx.rhypo)/100) + flag4
+    if (ctx.hypo_depth < 80):
         FHR = A
     else:
         FHR = B
 
     H0 = 100
     # Heaviside function
-    if (rup.hypo_depth >= H0):
+    if (ctx.hypo_depth >= H0):
         H = 1
     else:
         H = 0
 
     # ARC = 0 for back-arc - ARC = 1 for forearc
-    ARC = np.zeros(len(sites.backarc))
-    idxarc = (sites.backarc == 1)
+    ARC = np.zeros(len(ctx.backarc))
+    idxarc = (ctx.backarc == 1)
     ARC[idxarc] = 1.0
 
     return ((C['c41'] * (1 - ARC) * H) + (C['c42'] * (1 - ARC) * H * FHR) +
@@ -185,34 +170,31 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
     #: Required distance measure is Rhypo.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(ctx, C) +
+                     _get_site_amplification(ctx, C) +
+                     _compute_forearc_backarc_term(C, ctx))
+            stp = np.array([C['epsilon'], C['tau'], C['sigma']])
 
-        C = self.COEFFS[imt]
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_distance(rup, dists, C) +
-                 _get_site_amplification(sites, C) +
-                 _compute_forearc_backarc_term(C, sites, dists, rup))
+            # Convert units to g,
+            # but only for PGA and SA (not PGV)
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV
+                mean[m] = np.log(10.0 ** imean)
+            # Return stddevs in terms of natural log scaling
+            sig[m], tau[m], phi[m] = np.log(10.0 ** stp)
+            # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
-        istddevs = _get_stddevs(C, stddev_types, len(sites.vs30))
-
-        # Convert units to g,
-        # but only for PGA and SA (not PGV):
-        if imt.string.startswith(("SA", "PGA")):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
-        return mean, stddevs
     #: Coefficients from SA from Table 1
     #: Coefficients from PGA e PGV from Table 5
 

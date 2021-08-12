@@ -53,41 +53,33 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
     TOL_PERCENT = 11.
 
     def test_mean(self):
-        """
-        Ensure that means match reference dataset.
-        """
+        # Ensure that means match reference dataset
         self.check(self.MEAN_FILE, max_discrep_percentage=self.TOL_PERCENT)
 
     def test_std_total(self):
-        """
-        Ensure that standard deviations match reference dataset.
-        """
+        # Ensure that standard deviations match reference dataset
         self.check(self.SIGMA_FILE, max_discrep_percentage=self.TOL_PERCENT)
 
     def test_warning(self):
-        """
-        Warning should be thrown for any vs30 below limit for NEHRP class D.
-        """
-
-        rctx = gsim.base.RuptureContext()
-        sctx = gsim.base.SitesContext()
-        dctx = gsim.base.DistancesContext()
+        # Warning should be thrown for any vs30 below limit for NEHRP class D
+        ctx = gsim.base.RuptureContext()
+        ctx.sids = np.uint32([0])
 
         # set reasonable default values
         gmpe = self.GSIM_CLASS()
-        rctx.mag = np.array([6.5])
-        dctx.rhypo = np.array([100.])
+        ctx.mag = np.array([6.5])
+        ctx.rhypo = np.array([100.])
         im_type = sorted(gmpe.COEFFS_BEDROCK.sa_coeffs)[0]
         std_types = list(gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 
         # set critical value to trigger warning
-        sctx.vs30 = np.array([170.])
+        ctx.vs30 = np.array([170.])
 
         with warnings.catch_warnings(record=True) as warning_stream:
             warnings.simplefilter('always')
 
             mean = gmpe.get_mean_and_stddevs(
-                sctx, rctx, dctx, im_type, std_types)[0]
+                ctx, ctx, ctx, im_type, std_types)[0]
 
             # confirm type and content of warning
             assert len(warning_stream) == 1

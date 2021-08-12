@@ -1,7 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
-name: Install engine for 3.6, 3.7 and 3.8 on linux
+name: Linux Install engine for 3.6, 3.7 and 3.8 
 
 on:
   schedule:
@@ -37,7 +34,10 @@ jobs:
         #grep setuptools requirements*
         #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
         #echo $PY_VER
-        pip3 install -U pip wheel setuptools
+        #https://pip.pypa.io/en/stable/user_guide/
+        export PIP_DEFAULT_TIMEOUT=100
+        #
+        pip3 install --default-timeout=100 -U pip wheel setuptools
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
         python install.py devel 

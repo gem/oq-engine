@@ -26,18 +26,20 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _get_ln_y_ref(rup, dists, C):
+def _get_ln_y_ref(ctx, C):
     """
     Get an intensity on a reference soil.
 
     Implements eq. 13a.
     """
     # reverse faulting flag
-    Frv = 1 if 30 <= rup.rake <= 150 else 0
+    Frv = np.zeros_like(ctx.mag)
+    Frv[(30 <= ctx.rake) & (ctx.rake <= 150)] = 1
     # normal faulting flag
-    Fnm = 1 if -120 <= rup.rake <= -60 else 0
+    Fnm = np.zeros_like(ctx.mag)
+    Fnm[(-120 <= ctx.rake) & (ctx.rake <= -60)] = 1
     # hanging wall flag
-    Fhw = (dists.rx >= 0)
+    Fhw = np.where(ctx.rx >= 0, 1, 0)
     # aftershock flag. always zero since we only consider main shock
     AS = 0
 
@@ -46,36 +48,36 @@ def _get_ln_y_ref(rup, dists, C):
         C['c1']
         + (C['c1a'] * Frv
            + C['c1b'] * Fnm
-           + C['c7'] * (rup.ztor - 4))
+           + C['c7'] * (ctx.ztor - 4))
         * (1 - AS)
-        + (C['c10'] + C['c7a'] * (rup.ztor - 4)) * AS
+        + (C['c10'] + C['c7a'] * (ctx.ztor - 4)) * AS
         # second line
-        + C['c2'] * (rup.mag - 6)
+        + C['c2'] * (ctx.mag - 6)
         + ((C['c2'] - C['c3']) / C['cn'])
-        * np.log(1 + np.exp(C['cn'] * (C['cm'] - rup.mag)))
+        * np.log(1 + np.exp(C['cn'] * (C['cm'] - ctx.mag)))
         # third line
         + C['c4']
-        * np.log(dists.rrup
+        * np.log(ctx.rrup
                  + C['c5']
-                 * np.cosh(C['c6'] * max(rup.mag - C['chm'], 0)))
+                 * np.cosh(C['c6'] * np.fmax(ctx.mag - C['chm'], 0)))
         # fourth line
         + (C['c4a'] - C['c4'])
-        * np.log(np.sqrt(dists.rrup ** 2 + C['crb'] ** 2))
+        * np.log(np.sqrt(ctx.rrup ** 2 + C['crb'] ** 2))
         # fifth line
-        + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
-        * dists.rrup
+        + (C['cg1'] + C['cg2'] / (np.cosh(np.fmax(ctx.mag - C['cg3'], 0))))
+        * ctx.rrup
         # sixth line
         + C['c9'] * Fhw
-        * np.tanh(dists.rx
-                  * (np.cos(np.radians(rup.dip)) ** 2)
+        * np.tanh(ctx.rx
+                  * (np.cos(np.radians(ctx.dip)) ** 2)
                   / C['c9a'])
-        * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
-           / (dists.rrup + 0.001))
+        * (1 - np.sqrt(ctx.rjb ** 2 + ctx.ztor ** 2)
+           / (ctx.rrup + 0.001))
     )
     return ln_y_ref
 
 
-def _get_mean(sites, C, ln_y_ref, exp1, exp2):
+def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
     """
     Add site effects to an intensity.
 
@@ -83,7 +85,7 @@ def _get_mean(sites, C, ln_y_ref, exp1, exp2):
     """
     # we do not support estimating of basin depth and instead
     # rely on it being available (since we require it).
-    z1pt0 = sites.z1pt0
+    z1pt0 = ctx.z1pt0
 
     # we consider random variables being zero since we want
     # to find the exact mean value.
@@ -91,7 +93,7 @@ def _get_mean(sites, C, ln_y_ref, exp1, exp2):
 
     ln_y = (
         # first line of eq. 13b
-        ln_y_ref + C['phi1'] * np.log(sites.vs30 / 1130).clip(-np.inf, 0)
+        ln_y_ref + C['phi1'] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0)
         # second line
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
@@ -106,7 +108,7 @@ def _get_mean(sites, C, ln_y_ref, exp1, exp2):
     return ln_y
 
 
-def _get_stddevs(sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
+def _set_stddevs(sig, tau, phi, ctx, C, ln_y_ref, exp1, exp2):
     """
     Get standard deviation for a given intensity on reference soil.
 
@@ -115,18 +117,19 @@ def _get_stddevs(sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
     """
     # aftershock flag is zero, we consider only main shock.
     AS = 0
-    Fmeasured = sites.vs30measured
-    Finferred = 1 - sites.vs30measured
+    Fmeasured = np.where(ctx.vs30measured, True, False)
+    Finferred = ~Fmeasured
 
     # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
-    tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
+    mag_test = np.clip(ctx.mag, 5.0, 7.0) - 5.0
+    t = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
     # b and c coeffs from eq. 10
     b = C['phi2'] * (exp1 - exp2)
     c = C['phi4']
 
     y_ref = np.exp(ln_y_ref)
+
     # eq. 20
     NL = b * y_ref / (y_ref + c)
     sigma = (
@@ -136,17 +139,10 @@ def _get_stddevs(sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
         * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
                   + (1 + NL) ** 2))
 
-    ret = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # eq. 21
-            ret += [np.sqrt(((1 + NL) ** 2) * (tau ** 2) + (sigma ** 2))]
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            ret.append(sigma)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            # this is implied in eq. 21
-            ret.append(np.abs((1 + NL) * tau))
-    return ret
+    # eq. 21
+    sig[:] = np.sqrt(((1 + NL) ** 2) * (t ** 2) + sigma ** 2)
+    tau[:] = np.abs((1 + NL) * t)
+    phi[:] = sigma
 
 
 class ChiouYoungs2008(GMPE):
@@ -186,27 +182,26 @@ class ChiouYoungs2008(GMPE):
     #: Required distance measures are RRup, Rjb and Rx (all are in eq. 13a).
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        # intensity on a reference soil is used for both mean
-        # and stddev calculations.
-        ln_y_ref = _get_ln_y_ref(rup, dists, C)
-        # exp1 and exp2 are parts of eq. 10 and eq. 13b,
-        # calculate it once for both.
-        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
+        for m, imt in enumerate(imts):
+            # extracting dictionary of coefficients specific to required
+            # intensity measure type.
+            C = self.COEFFS[imt]
+            # intensity on a reference soil is used for both mean
+            # and stddev calculations.
+            ln_y_ref = _get_ln_y_ref(ctx, C)
+            # exp1 and exp2 are parts of eq. 10 and eq. 13b,
+            # calculate it once for both.
+            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
+            exp2 = np.exp(C['phi3'] * (1130 - 360))
 
-        mean = _get_mean(sites, C, ln_y_ref, exp1, exp2)
-        stddevs = _get_stddevs(sites, rup, C, stddev_types,
-                               ln_y_ref, exp1, exp2)
-        return mean, stddevs
+            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2)
+            _set_stddevs(sig[m], tau[m], phi[m], ctx, C, ln_y_ref, exp1, exp2)
 
     #: Coefficient tables are constructed from values in tables 1, 2 and 3
     #: (pages 197, 198 and 199). Spectral acceleration is defined for damping

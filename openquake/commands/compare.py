@@ -137,7 +137,7 @@ class Comparator(object):
         if len(diff_idxs) == 0:
             print('There are no differences within the tolerances '
                   'atol=%s, rtol=%d%%, sids=%s' % (atol, rtol * 100, sids))
-            return
+            return []
         arr = arrays.transpose(1, 0, 2)  # shape (N, C, L)
         for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
             for ex, cols in zip(self.extractors, array):
@@ -187,7 +187,7 @@ def compare_hmaps(imt, calc_ids: int, files=False, *,
     """
     c = Comparator(calc_ids)
     arrays = c.compare('hmaps', imt, files, samplesites, atol, rtol)
-    if len(calc_ids) == 2:
+    if len(arrays) and len(calc_ids) == 2:
         ms = numpy.mean((arrays[0] - arrays[1])**2, axis=0)  # P
         maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
         rows = [(str(poe), rms, md) for poe, rms, md in zip(

@@ -50,8 +50,7 @@ def get_portable_gsims():
     by class name.
     '''
     portable = {}
-    for name, cls in sorted(registry.items()):
-        if (cls.__base__.__name__ == 'GMPE' and not cls.__subclasses__()
-                and count_methods(cls) > 1):
-            portable[name] = cls
+    for cls in registry.values():
+        if 'get_mean_and_stddevs' in cls.__dict__:
+            portable[cls.__name__] = cls
     return portable

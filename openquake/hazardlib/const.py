@@ -82,7 +82,8 @@ class IMC(Enum):
     VERTICAL_TO_HORIZONTAL_RATIO = 'Vertical-to-Horizontal Ratio'
 
 
-class StdDev(Enum):
+# NB: cannot be an enum because it would break the Strong Motion Toolkit :-(
+class StdDev(object):
     """
     GSIM standard deviation represents ground shaking variability at a site.
     """
@@ -101,3 +102,8 @@ class StdDev(Enum):
     EVENT = 'Event'
     #: Used in event based calculations, correspond to TOTAL if the gsim
     #: is defined for TOTAL, otherwise to the pair (INTER_EVENT, INTRA_EVENT)
+    ALL = 'All'
+    #: Compute all the standard deviations for which the GMPE is defined
+
+
+StdDev.idx = {StdDev.TOTAL: 0, StdDev.INTER_EVENT: 1, StdDev.INTRA_EVENT: 2}

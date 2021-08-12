@@ -78,17 +78,6 @@ def _compute_mean(kind, C, mag, rjb):
     return mean
 
 
-def _compute_stddevs(C, num_sites, stddev_types):
-    """
-    Return total standard deviation.
-    """
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + C['sigma'])
-
-    return stddevs
-
-
 class ToroEtAl1997MblgNSHMP2008(GMPE):
     """
     Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Schneider
@@ -146,20 +135,17 @@ class ToroEtAl1997MblgNSHMP2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-
-        mean = _compute_mean(self.kind, C, rup.mag, dists.rjb)
-        stddevs = _compute_stddevs(C, dists.rjb.size, stddev_types)
-
-        mean = clip_mean(imt, mean)
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = clip_mean(
+                imt, _compute_mean(self.kind, C, ctx.mag, ctx.rjb))
+            sig[m] = C['sigma']
 
     #: Coefficient table obtained from coefficient arrays (tb1, tb2, tb3, tb4,
     #: tb5, tb6, tbh) defined from line 1596 - 1614 in hazgridXnga2.f

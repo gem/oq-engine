@@ -138,6 +138,9 @@ class MultiFaultSource(BaseSeismicSource):
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 self.pmfs[i])
 
+    def __iter__(self):  # not splittable
+        yield self
+
     def count_ruptures(self):
         """
         :returns: the number of the ruptures in the source

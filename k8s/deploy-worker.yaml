@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: worker
+  name: workers-engine
   namespace: default
   labels:
-    app: workers
+    app: workers-engine
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: workers
+      app: workers-engine
   template:
     metadata:
       labels:
-        app: workers
+        app: workers-engine
         version: "nightly"
     spec:
       containers:
-      - name: engine-worker
+      - name: worker-engine
         image: openquake/engine:nightly
         env:
         - name: OQ_CONFIG_FILE

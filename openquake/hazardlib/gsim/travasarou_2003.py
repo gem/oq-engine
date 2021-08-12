@@ -26,21 +26,20 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import IA
 
 
-def _get_stddevs(rup, arias, stddev_types, sites):
+def _get_stddevs(ctx, arias):
     """
     Return standard deviations as defined in table 1, p. 200.
     """
-    stddevs = []
     # Magnitude dependent inter-event term (Eq. 13)
-    if rup.mag < 4.7:
+    if ctx.mag < 4.7:
         tau = 0.611
-    elif rup.mag > 7.6:
+    elif ctx.mag > 7.6:
         tau = 0.475
     else:
-        tau = 0.611 - 0.047 * (rup.mag - 4.7)
+        tau = 0.611 - 0.047 * (ctx.mag - 4.7)
 
     # Retrieve site-class dependent sigma
-    sigma1, sigma2 = _get_intra_event_sigmas(sites)
+    sigma1, sigma2 = _get_intra_event_sigmas(ctx)
     sigma = np.copy(sigma1)
     # Implements the nonlinear intra-event sigma (Eq. 14)
     idx = arias >= 0.125
@@ -50,28 +49,20 @@ def _get_stddevs(rup, arias, stddev_types, sites):
                                         np.log(0.0132))
 
     sigma_total = np.sqrt(tau ** 2. + sigma ** 2.)
-
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(sigma_total)
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(sigma)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau * np.ones_like(sites.vs30))
-    return stddevs
+    return [sigma_total, tau, sigma]
 
 
-def _get_intra_event_sigmas(sites):
+def _get_intra_event_sigmas(ctx):
     """
     The intra-event term nonlinear and dependent on both the site class
     and the expected ground motion. In this case the sigma coefficients
     are determined from the site class as described below Eq. 14
     """
-    sigma1 = 1.18 * np.ones_like(sites.vs30)
-    sigma2 = 0.94 * np.ones_like(sites.vs30)
+    sigma1 = 1.18 * np.ones_like(ctx.vs30)
+    sigma2 = 0.94 * np.ones_like(ctx.vs30)
 
-    idx1 = np.logical_and(sites.vs30 >= 360.0, sites.vs30 < 760.0)
-    idx2 = sites.vs30 < 360.0
+    idx1 = np.logical_and(ctx.vs30 >= 360.0, ctx.vs30 < 760.0)
+    idx2 = ctx.vs30 < 360.0
     sigma1[idx1] = 1.17
     sigma2[idx1] = 0.93
     sigma1[idx2] = 0.96
@@ -79,72 +70,72 @@ def _get_intra_event_sigmas(sites):
     return sigma1, sigma2
 
 
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     Compute the first term of the equation described on p. 1144:
 
     ``c1 + c2 * (M - 6) + c3 * log(M / 6)``
     """
-    return C['c1'] + C['c2'] * (rup.mag - 6.0) +\
-        (C['c3'] * np.log(rup.mag / 6.0))
+    return C['c1'] + C['c2'] * (ctx.mag - 6.0) +\
+        (C['c3'] * np.log(ctx.mag / 6.0))
 
 
-def _compute_distance(dists, C):
+def _compute_distance(ctx, C):
     """
     Compute the second term of the equation described on p. 1144:
 
     `` c4 * np.log(sqrt(R ** 2. + h ** 2.)
     """
-    return C["c4"] * np.log(np.sqrt(dists.rrup ** 2. + C["h"] ** 2.))
+    return C["c4"] * np.log(np.sqrt(ctx.rrup ** 2. + C["h"] ** 2.))
 
 
-def _get_site_amplification(sites, rup, C):
+def _get_site_amplification(ctx, C):
     """
     Compute the third term of the equation described on p. 1144:
 
     ``(s11 + s12 * (M - 6)) * Sc + (s21 + s22 * (M - 6)) * Sd`
     """
-    Sc, Sd = _get_site_type_dummy_variables(sites)
-    return (C["s11"] + C["s12"] * (rup.mag - 6.0)) * Sc +\
-        (C["s21"] + C["s22"] * (rup.mag - 6.0)) * Sd
+    Sc, Sd = _get_site_type_dummy_variables(ctx)
+    return (C["s11"] + C["s12"] * (ctx.mag - 6.0)) * Sc +\
+        (C["s21"] + C["s22"] * (ctx.mag - 6.0)) * Sd
 
 
-def _get_site_type_dummy_variables(sites):
+def _get_site_type_dummy_variables(ctx):
     """
-    Get site type dummy variables, ``Sc`` (for soft and stiff soil sites)
-    and ``Sd`` (for rock sites).
+    Get site type dummy variables, ``Sc`` (for soft and stiff soil ctx)
+    and ``Sd`` (for rock ctx).
     """
-    Sc = np.zeros_like(sites.vs30)
-    Sd = np.zeros_like(sites.vs30)
+    Sc = np.zeros_like(ctx.vs30)
+    Sd = np.zeros_like(ctx.vs30)
     # Soft soil; Vs30 < 360 m/s. Page 199.
-    Sd[sites.vs30 < 360.0] = 1
+    Sd[ctx.vs30 < 360.0] = 1
     # Stiff soil 360 <= Vs30 < 760
-    Sc[np.logical_and(sites.vs30 >= 360.0, sites.vs30 < 760.0)] = 1
+    Sc[np.logical_and(ctx.vs30 >= 360.0, ctx.vs30 < 760.0)] = 1
 
     return Sc, Sd
 
 
-def _get_mechanism(rup, C):
+def _get_mechanism(ctx, C):
     """
     Compute the fourth term of the equation described on p. 199:
 
     ``f1 * Fn + f2 * Fr``
     """
-    Fn, Fr = _get_fault_type_dummy_variables(rup)
+    Fn, Fr = _get_fault_type_dummy_variables(ctx)
     return (C['f1'] * Fn) + (C['f2'] * Fr)
 
 
-def _get_fault_type_dummy_variables(rup):
+def _get_fault_type_dummy_variables(ctx):
     """
     The original classification considers four style of faulting categories
     (normal, strike-slip, reverse-oblique and reverse).
     """
 
     Fn, Fr = 0, 0
-    if rup.rake >= -112.5 and rup.rake <= -67.5:
+    if ctx.rake >= -112.5 and ctx.rake <= -67.5:
         # normal
         Fn = 1
-    elif rup.rake >= 22.5 and rup.rake <= 157.5:
+    elif ctx.rake >= 22.5 and ctx.rake <= 157.5:
         # Joins both the reverse and reverse-oblique categories
         Fr = 1
     return Fn, Fr
@@ -192,26 +183,23 @@ class TravasarouEtAl2003(GMPE):
     #: No independent tests - verification against paper
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        # Implements mean model (equation 12)
-        mean = (_compute_magnitude(rup, C) +
-                _compute_distance(dists, C) +
-                _get_site_amplification(sites, rup, C) +
-                _get_mechanism(rup, C))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # Implements mean model (equation 12)
+            mean[m] = (_compute_magnitude(ctx, C) +
+                       _compute_distance(ctx, C) +
+                       _get_site_amplification(ctx, C) +
+                       _get_mechanism(ctx, C))
 
-        stddevs = _get_stddevs(rup, np.exp(mean), stddev_types, sites)
+            sig[m], tau[m], phi[m] = _get_stddevs(ctx, np.exp(mean[m]))
 
-        return mean, stddevs
-
-    #: For Ia, coefficients are taken from table 3,
+    #: For Ia, coefficients are taken from table 3
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2      c3       c4      h      s11      s12      s21      s22        f1      f2
     ia    2.800   -1.981   20.72   -1.703   8.78    0.454    0.101    0.479    0.334    -0.166   0.512
