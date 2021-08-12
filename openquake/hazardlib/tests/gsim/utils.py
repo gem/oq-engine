@@ -88,6 +88,13 @@ def gen_ctxs(df):
     outs = df.result_type.unique()
     num_outs = len(outs)
     for rup_params, grp in df.groupby(rrp):
+        inputs = [gr[rrp + pars].to_numpy()
+                  for _, gr in grp.groupby('result_type')]
+        if len(inputs) < num_outs:
+            dic = dict(zip(rrp + pars, inputs[0][0]))
+            print('\nMissing some data for %s' % dic)
+            continue
+        assert all_equals(inputs)
         if len(rrp) == 1:
             rup_params = [rup_params]
         ctx = contexts.RuptureContext()
@@ -123,7 +130,7 @@ class BaseGSIMTestCase(unittest.TestCase):
     def check_all(self, *filenames, mean_discrep_percentage,
                   std_discrep_percentage=None, **kwargs):
         if std_discrep_percentage is None:
-            std_discrep_percentage =  mean_discrep_percentage
+            std_discrep_percentage = mean_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
         gsim = self.GSIM_CLASS(**kwargs)
