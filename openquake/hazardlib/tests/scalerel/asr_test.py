@@ -24,12 +24,12 @@ class WC1994ASRTestCase(unittest.TestCase):
         self.asr = WC1994()
 
     def test_get_std_dev_mag(self):
-        self.assertEqual(self.asr.get_std_dev_mag(None), 0.24)
-        self.assertEqual(self.asr.get_std_dev_mag(20), 0.23)
-        self.assertEqual(self.asr.get_std_dev_mag(138), 0.23)
-        self.assertEqual(self.asr.get_std_dev_mag(-136), 0.23)
-        self.assertEqual(self.asr.get_std_dev_mag(50), 0.25)
-        self.assertEqual(self.asr.get_std_dev_mag(-130), 0.25)
+        self.assertEqual(self.asr.get_std_dev_mag(None, None), 0.24)
+        self.assertEqual(self.asr.get_std_dev_mag(None, 20), 0.23)
+        self.assertEqual(self.asr.get_std_dev_mag(None, 138), 0.23)
+        self.assertEqual(self.asr.get_std_dev_mag(None, -136), 0.23)
+        self.assertEqual(self.asr.get_std_dev_mag(None, 50), 0.25)
+        self.assertEqual(self.asr.get_std_dev_mag(None, -130), 0.25)
 
     def test_get_median_mag(self):
         self.assertAlmostEqual(self.asr.get_median_mag(50, None), 5.7349906)

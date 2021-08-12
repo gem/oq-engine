@@ -22,6 +22,7 @@ Module exports
 :class:`ZhaoEtAl2006AscSWISS03`,
 :class:`ZhaoEtAl2006AscSWISS08`.
 """
+import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -68,26 +69,23 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        sites.vs30 = 700 * np.ones(len(sites.vs30))
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
+        ctx = copy.copy(ctx)
+        ctx.vs30 = 700 * np.ones(len(ctx.vs30))
+        super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tauC'
         log_phi_ss = 1.00
         C = ZhaoEtAl2006AscSWISS05.COEFFS_ASC
-        mean, stddevs = _apply_adjustments(
-            C, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rrup, imt, stddev_types,
-            log_phi_ss)
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            _apply_adjustments(
+                C, self.COEFFS_FS_ROCK[imt], tau_ss,
+                mean[m], sig[m], tau[m], phi[m],
+                ctx, ctx.rrup, imt, log_phi_ss)
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS05
     #: Original Coefficient table

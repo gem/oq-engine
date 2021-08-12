@@ -16,9 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (BooreAtkinson2008,
-                                                          Atkinson2010Hawaii)
-
+from openquake.hazardlib.gsim.boore_atkinson_2008 import (
+    BooreAtkinson2008, Atkinson2010Hawaii)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 

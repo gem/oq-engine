@@ -34,14 +34,6 @@ CONSTS = {
     "Mw1": 16.0}
 
 
-def _compute_stddevs(C, num_sites, stddev_types):
-    """ Return total standard deviation (converted to base e) """
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + C['sigma'] * np.log(10))
-    return stddevs
-
-
 def _get_basin_term(C, z1pt4):
     d0 = CONSTS["D0"]
     tmp = np.ones_like(z1pt4) * C['Dlmin']
@@ -66,22 +58,22 @@ _get_magnitude_term = CallableDict()
 
 @_get_magnitude_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
 def _get_magnitude_term_1(trt, region, C, rrup, mw1prime, mw1, rhypo):
-    return (C['a']*(mw1prime - mw1)**2 + C['b1'] * rrup + C['c1'] -
-            np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
+    return (C['a'] * (mw1prime - mw1)**2 + C['b1'] * rrup + C['c1'] -
+            np.log10(rrup + C['d'] * 10.**(CONSTS['e'] * mw1prime)))
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTERFACE)
 def _get_magnitude_term_2(trt, region, C, rrup, mw1prime, mw1, rhypo):
-    return (C['a']*(mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
+    return (C['a'] * (mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
             np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTRASLAB)
 def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, rhypo):
-    tmp = (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
+    tmp = (C['a'] * (mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
            np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
-    if region == "SW" and rhypo < 80:
-        tmp += C['PH']
+    if region == "SW":
+        tmp[rhypo < 80] += C['PH']
     return tmp
 
 
@@ -127,29 +119,29 @@ class MorikawaFujiwara2013Crustal(GMPE):
     region = None
     model = 'model1'
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        C = self.COEFFS[imt]
-
         mw01 = CONSTS["Mw01"]
         mw1 = CONSTS["Mw1"]
-        mw1prime = np.min([rup.mag, mw01])
+        mw1prime = np.array(ctx.mag)
+        mw1prime[ctx.mag >= mw01] = mw01
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            if self.model == 'model1':
+                mag_term = _get_magnitude_term(
+                    trt, self.region, C, ctx.rrup, mw1prime, mw1,
+                    ctx.hypo_depth)
+            else:
+                msg = "Model not supported"
+                raise ValueError(msg)
 
-        if self.model == 'model1':
-            mag_term = _get_magnitude_term(
-                trt, self.region, C, dists.rrup, mw1prime, mw1, rup.hypo_depth)
-        else:
-            msg = "Model not supported"
-            raise ValueError(msg)
+            mean[m] = (mag_term + _get_basin_term(C, ctx.z1pt4) +
+                       _get_shallow_amplification_term(C, ctx.vs30) +
+                       _get_intensity_correction_term(
+                           C, self.region, ctx.xvf, ctx.hypo_depth))
 
-        mean = (mag_term + _get_basin_term(C, sites.z1pt4) +
-                _get_shallow_amplification_term(C, sites.vs30) +
-                _get_intensity_correction_term(C, self.region, sites.xvf,
-                rup.hypo_depth))
-
-        stddevs = _compute_stddevs(C, len(sites.vs30), stddev_types)
-        mean = np.log(10**mean/980.665)
-        return mean, stddevs
+            mean[m] = np.log(10**mean[m] / 980.665)
+            sig[m] = C['sigma'] * np.log(10)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
   IMT       a        b1        b2        b3      c1      c2      c3         d        pd  Dlmin        ps   Vsmax   V0       gNE       gEW      PH   sigma

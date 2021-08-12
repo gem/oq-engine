@@ -55,23 +55,6 @@ def get_Shr_term(vs30):
     return vs30 >= 1500
 
 
-def get_stddevs(mean, stddev_types):
-    """
-    Returns the standard deviations from mean (pg 164; more robust than
-    estimate using magnitude)
-    """
-    mean = np.exp(mean)
-    sigma = 0.39 + np.zeros(mean.shape)
-    sigma[mean < 0.068] = 0.55
-    idx = np.logical_and(mean >= 0.068, mean <= 0.21)
-    sigma[idx] = 0.173 - 0.140 * np.log(mean[idx])
-    stddevs = []
-    for stddev in stddev_types:
-        if stddev == const.StdDev.TOTAL:
-            stddevs.append(sigma)
-    return stddevs
-
-
 class Campbell1997(GMPE):
     """
     Implements GMPE (PGA) by Campbell, Kenneth W. "Empirical near-source
@@ -110,25 +93,30 @@ class Campbell1997(GMPE):
     #: (web.stanford.edu/~bakerjw/GMPEs/C_1997_horiz.m), which also has no
     #: verification tables.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        R = dists.rrup
-        M = rup.mag
+        R = ctx.rrup
+        M = ctx.mag
         # get constants
-        Ssr = get_Ssr_term(sites.vs30)
-        Shr = get_Shr_term(sites.vs30)
-        rake = rup.rake
+        Ssr = get_Ssr_term(ctx.vs30)
+        Shr = get_Shr_term(ctx.vs30)
+        rake = ctx.rake
         F = get_fault_term(rake)
 
         # compute mean
-        mean = -3.512 + (0.904 * M) - (
+        mean[:] = -3.512 + (0.904 * M) - (
             1.328 * np.log(np.sqrt(R**2 + (0.149 * np.exp(0.647 * M))**2))) \
             + (1.125 - 0.112 * np.log(R) - 0.0957 * M) * F \
             + (0.440 - 0.171 * np.log(R)) * Ssr \
             + (0.405 - 0.222 * np.log(R)) * Shr
-        stddevs = get_stddevs(mean, stddev_types)
-        return mean, stddevs
+        # standard deviations from mean (pg 164; more robust than
+        # estimate using magnitude
+        mean = np.exp(mean)
+        sig[:] = 0.39
+        sig[mean < 0.068] = 0.55
+        idx = np.logical_and(mean >= 0.068, mean <= 0.21)
+        sig[idx] = 0.173 - 0.140 * np.log(mean[idx])

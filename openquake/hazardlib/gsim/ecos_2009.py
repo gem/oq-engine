@@ -28,7 +28,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
 
 
-def _compute_mean(C, rup, dists, num_sites):
+def _compute_mean(C, ctx, num_sites):
     """
     Compute mean value.
     """
@@ -38,21 +38,10 @@ def _compute_mean(C, rup, dists, num_sites):
     c2 = -(C['a']) * C['alpha']
     c3 = -(C['b']) * C['alpha']
 
-    log_term = np.log(dists.rhypo / C['hypo_depth'])
-    dist_term = c3 * (dists.rhypo-C['hypo_depth'])
+    log_term = np.log(ctx.rhypo / C['hypo_depth'])
+    dist_term = c3 * (ctx.rhypo-C['hypo_depth'])
 
-    return (rup.mag - c2 * log_term - dist_term - c0) / c1
-
-
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return total standard deviation.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        stddevs.append((C['sigma']) + np.zeros(num_sites))
-
-    return stddevs
+    return (ctx.mag - c2 * log_term - dist_term - c0) / c1
 
 
 class ECOS2009(GMPE):
@@ -86,19 +75,16 @@ class ECOS2009(GMPE):
 
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
-        mean = _compute_mean(C, rup, dists, imt)
-        stddevs = _get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, ctx, imt)
+            sig[m] = C['sigma']
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.
@@ -121,11 +107,11 @@ class ECOS2009Highest(ECOS2009):
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        C = self.COEFFS[imt]
-        mean = _compute_mean(C, rup, dists, imt)
-        stddevs = _get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
-        return mean, stddevs
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, ctx, imt)
+            sig[m] = C['sigma']
 
     COEFFS = CoeffsTable(sa_damping=5.0, table="""\
     IMT             a          b    alpha      beta   hypo_depth   sigma

@@ -3,7 +3,7 @@
 :class:`SSlabCan15Mid`, :class:`SSlabCan15Upp`,
 :class:`SSlabCan15Low`
 """
-
+import copy
 import numpy as np
 
 from openquake.hazardlib import const
@@ -20,9 +20,8 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
     generation of Canada hazard maps, released in 2015. See Atkinson and Adams
     (2013).
     """
-
     #: Required distance is only repi since rrup and rjb are obtained from repi
-    REQUIRES_DISTANCES = set(('repi',))
+    REQUIRES_DISTANCES = {'repi'}
 
     # Distances to be excluded while checking this GMPE. This parameter is
     # needed to avoid conflicts with the parameters included in the
@@ -30,7 +29,7 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
     # epicentral and rrup and rjb are computed following the methodology
     # described in Atkinson (2012).
     # See also :module:`openquake.hazardlib.tests.gsim.utils.py`
-    DO_NOT_CHECK_DISTANCES = set(('rrup', 'rjb'))
+    DO_NOT_CHECK_DISTANCES = {'rrup', 'rjb'}
 
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
@@ -40,27 +39,28 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     #: Supported standard deviations
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    delta = 0.
+
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
         # get original values
         hslab = 50  # See info in GMPEt_Inslab_med.dat
-        rjb, rrup = utils.get_equivalent_distance_inslab(rup.mag, dists.repi,
-                                                         hslab)
-        dists.rjb = rjb
-        dists.rrup = rrup
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        cff = self.COEFFS_SITE[imt]
-        mean_adj = np.log(np.exp(mean) * 10**cff['mf'])
-        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        return mean_adj, stddevs
+        rjb, rrup = utils.get_equivalent_distance_inslab(
+            ctx.mag, ctx.repi, hslab)
+        ctx = copy.copy(ctx)
+        ctx.rjb = rjb
+        ctx.rrup = rrup
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            cff = self.COEFFS_SITE[imt]
+            mean[m] = np.log(np.exp(mean[m]) * 10**cff['mf']) + self.delta
+            sig[m] = get_sigma(imt)
 
     # These are the coefficients included in Table 1 of Atkinson and Adams
     # (2013)
@@ -85,41 +85,15 @@ class SSlabCan15Low(SSlabCan15Mid):
     """
     Slab backbone model for the Canada 2015 model. Low ground motion version
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # get original values
-        hslab = 50  # See info in GMPEt_Inslab_med.dat
-        rjb, rrup = utils.get_equivalent_distance_inslab(rup.mag, dists.repi,
-                                                         hslab)
-        dists.rjb = rjb
-        dists.rrup = rrup
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        # adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013; page 992)
-        delta = np.log(10.**(0.15))
-        mean_adj = mean - delta
-        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        return mean_adj, stddevs
+    # adjust mean values using the recommended delta (see Atkinson and
+    # Adams, 2013; page 992)
+    delta = -np.log(10.**0.15)
 
 
 class SSlabCan15Upp(SSlabCan15Mid):
     """
     Slab backbone model for the Canada 2015 model. High ground motion version
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # get original values
-        hslab = 50  # See info in GMPEt_Inslab_med.dat
-        rjb, rrup = utils.get_equivalent_distance_inslab(rup.mag, dists.repi,
-                                                         hslab)
-        dists.rjb = rjb
-        dists.rrup = rrup
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        # adjust mean values using the reccomended delta (see Atkinson and
-        # Adams, 2013; page 992)
-        delta = np.log(10.**(0.15))
-        mean_adj = mean + delta
-        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        return mean_adj, stddevs
+    # adjust mean values using the recommended delta (see Atkinson and
+    # Adams, 2013; page 992)
+    delta = np.log(10.**0.15)

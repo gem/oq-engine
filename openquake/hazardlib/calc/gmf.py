@@ -25,6 +25,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
@@ -196,7 +197,7 @@ class GmfComputer(object):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
-        :param mean_stds: array of shape O, N, M
+        :param mean_stds: array of shape O, M, N
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for stddev_inter
@@ -209,11 +210,11 @@ class GmfComputer(object):
         for imti, imt in enumerate(self.imts):
             try:
                 result[imti], sig[imti], eps[imti] = self._compute(
-                     mean_stds[:, :, imti], num_events, imt, gsim)
+                     mean_stds[:, imti], num_events, imt, gsim)
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
-                    (gsim, imt, self.source_id.decode('utf8'),
+                    (gsim, imt, decode(self.source_id),
                      exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
@@ -284,6 +285,9 @@ class GmfComputer(object):
             gmf = to_imt_unit_values(
                 mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
+        else:
+            # this cannot happen, unless you pass a wrong mean_stds array
+            raise ValueError('There are %d>3 outputs!' % num_outs)
         return gmf, stdi, epsilons
 
 

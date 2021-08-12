@@ -73,26 +73,6 @@ def _get_magnitude_scaling_term(C, mag):
     return C["c1"] + (C["c2"] * mag) + (C["c3"] * (mag ** 2.0))
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Returns the standard deviation. Original standard deviations are in
-    logarithms of base 10. Converts to natural logarithm.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
-            stddevs.append(np.log(10.0 **
-                                  (sigma + np.zeros(num_sites))))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.log(10.0 **
-                                  (C["phi"] + np.zeros(num_sites))))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(np.log(10.0 **
-                                  (C["tau"] + np.zeros(num_sites))))
-    return stddevs
-
-
 class RietbrockEtAl2013SelfSimilar(GMPE):
     """
     Implements the ground motion prediction equation of Rietbrock et al
@@ -114,11 +94,7 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground acceleration and peak ground velocity.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -126,11 +102,8 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event and
     #: total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT, const.StdDev.TOTAL}
 
     #: No site parameter is required
     REQUIRES_SITES_PARAMETERS = set()
@@ -141,27 +114,29 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
-        imean = (_get_magnitude_scaling_term(C, rup.mag) +
-                 _get_distance_scaling_term(C, dists.rjb, rup.mag))
-        # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
-        # is already in cm/s) and also convert from base 10 to base e.
-        if imt.string.startswith(('PGA', 'SA')):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            mean = np.log(10 ** imean)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_get_magnitude_scaling_term(C, ctx.mag) +
+                     _get_distance_scaling_term(C, ctx.rjb, ctx.mag))
+            # convert from cm/s**2 to g for SA and
+            # from cm/s**2 to g for PGA (PGV is already in cm/s) and
+            # also convert from base 10 to base e
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                mean[m] = np.log(10 ** imean)
 
-        stddevs = _get_stddevs(C, stddev_types, dists.rjb.shape[0])
-
-        return mean, stddevs
+            # Original standard deviations are in
+            # logarithms of base 10. Converts to natural logarithm.
+            sig[m] = np.log(10.0 ** np.sqrt(C["tau"]**2 + C["phi"]**2))
+            tau[m] = np.log(10.0 ** C["tau"])
+            phi[m] = np.log(10.0 ** C["phi"])
 
     # Coefficients from Table 5, Page 64
     COEFFS = CoeffsTable(sa_damping=5, table="""\

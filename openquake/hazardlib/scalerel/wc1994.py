@@ -67,7 +67,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             # normal
             return 0.22
 
-    def get_std_dev_mag(self, rake):
+    def get_std_dev_mag(self, area, rake):
         """
         Standard deviation on the magnitude for the WC1994 area relation.
         """

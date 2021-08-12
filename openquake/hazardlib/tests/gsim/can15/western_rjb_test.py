@@ -18,10 +18,8 @@ import unittest
 import numpy as np
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.can15.western import get_sigma
-from openquake.hazardlib.gsim.can15.western_rjb import (WesternCan15RjbMid,
-                                                        WesternCan15RjbLow,
-                                                        WesternCan15RjbUpp)
+from openquake.hazardlib.gsim.can15.western import (
+    get_sigma, WesternCan15RjbMid, WesternCan15RjbLow, WesternCan15RjbUpp)
 
 
 class GetSigmaTestCase(unittest.TestCase):

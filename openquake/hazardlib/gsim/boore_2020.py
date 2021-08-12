@@ -33,29 +33,18 @@ CONSTS = {
     "Vref": 760.0}
 
 
-def _get_inter_event_tau(C, mag, num_sites):
+def _get_inter_event_tau(C, mag):
     """
     Returns the inter-event standard deviation (tau), which is dependent
     on magnitude
     """
-    base_vals = np.zeros(num_sites)
     if mag <= C["Mtau1"]:
-        return base_vals + C["tau1"]
+        return C["tau1"]
     elif mag > C["Mtau1"] and mag < C["Mtau2"]:
-        magncof = (mag-C["Mtau1"])/(C["Mtau2"]-C["Mtau1"])
-        return base_vals + C["tau1"]+(C["tau2"]-C["tau1"])*magncof
+        magncof = (mag - C["Mtau1"]) / (C["Mtau2"] - C["Mtau1"])
+        return C["tau1"] + (C["tau2"] - C["tau1"]) * magncof
     else:
-        return base_vals + C["tau2"]
-
-
-def _get_intra_event_phi(C, num_sites):
-    """
-    Returns the intra-event standard deviation (phi)
-    """
-    base_vals = np.zeros(num_sites)
-    base_vals = C["phi"]
-
-    return base_vals
+        return C["tau2"]
 
 
 def _get_linear_site_term(C, vs30):
@@ -63,13 +52,10 @@ def _get_linear_site_term(C, vs30):
     Returns the linear site scaling term (equation 6)
     """
     flin = np.ones_like(vs30)
-    flin = flin*C["clin"]*np.log(C["Vc"]/CONSTS["Vref"])
-    tmp = vs30 <= C["V1"]
-    if any(tmp):
-        flin[tmp] = C["clin"]*np.log(C["V1"]/CONSTS["Vref"])
-    tmp = (vs30 > C["V1"]) & (vs30 <= C["Vc"])
-    if any(tmp):
-        flin[tmp] = C["clin"]*np.log(vs30[tmp]/C["Vref"])
+    flin = flin*C["clin"] * np.log(C["Vc"]/CONSTS["Vref"])
+    flin[vs30 <= C["V1"]] = C["clin"] * np.log(C["V1"] / CONSTS["Vref"])
+    ok = (vs30 > C["V1"]) & (vs30 <= C["Vc"])
+    flin[ok] = C["clin"] * np.log(vs30[ok] / C["Vref"])
     return flin
 
 
@@ -80,7 +66,7 @@ def _get_magnitude_scaling_term(C, rup):
     """
     dmag = rup.mag - C["Mh"]
     if rup.mag <= C["Mh"]:
-        mag_term = (C["e4"] * dmag) + (C["e5"] * (dmag ** 2.0))
+        mag_term = (C["e4"] * dmag) + (C["e5"] * dmag**2)
     else:
         mag_term = C["e6"] * dmag
     return _get_style_of_faulting_term(C, rup) + mag_term
@@ -90,9 +76,9 @@ def _get_nonlinear_site_term(C, vs30, pga_rock):
     """
     Returns the nonlinear site scaling term (equation 7)
     """
-    atmp = C["f5"]*(np.minimum(vs30, CONSTS["Vref"])-360.0)
-    f2 = C["f4"] * (np.exp(atmp) - np.exp(C["f5"] * (CONSTS["Vref"]-360)))
-    fnl = C["f1"] + f2*np.log(1.0 + pga_rock/C["f3"])
+    atmp = C["f5"] * (np.minimum(vs30, CONSTS["Vref"]) - 360.)
+    f2 = C["f4"] * (np.exp(atmp) - np.exp(C["f5"] * (CONSTS["Vref"] - 360.)))
+    fnl = C["f1"] + f2 * np.log(1.0 + pga_rock/C["f3"])
     return fnl
 
 
@@ -100,10 +86,9 @@ def _get_path_scaling(C, dists, mag):
     """
     Returns the path scaling term given by equation (3)
     """
-    rval = np.sqrt((dists.rjb ** 2.0) + (C["h"] ** 2.0))
-    scaling = (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *\
-        np.log(rval / CONSTS["Rref"])
-
+    rval = np.sqrt(dists.rjb**2 + C["h"]**2)
+    scaling = (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) * np.log(
+        rval / CONSTS["Rref"])
     return scaling + (C["c3"] * (rval - CONSTS["Rref"]))
 
 
@@ -124,25 +109,6 @@ def _get_site_scaling(C, pga_rock, sites):
     flin = _get_linear_site_term(C, sites.vs30)
     fnl = _get_nonlinear_site_term(C, sites.vs30, pga_rock)
     return flin + fnl
-
-
-def _get_stddevs(C, rup, dists, sites, stddev_types):
-    """
-    Returns the aleatory uncertainty terms described in equations (13) to
-    (17)
-    """
-    stddevs = []
-    num_sites = len(sites.vs30)
-    tau = _get_inter_event_tau(C, rup.mag, num_sites)
-    phi = _get_intra_event_phi(C, num_sites)
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt((tau ** 2.0) + (phi ** 2.0)))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-    return stddevs
 
 
 def _get_style_of_faulting_term(C, rup):
@@ -202,29 +168,19 @@ class BooreEtAl2020(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         C_PGA = self.COEFFS[PGA()]
-        pga_rock = _get_pga_on_rock(C_PGA, rup, dists)
-
-        mean = (_get_magnitude_scaling_term(C, rup) +
-                _get_path_scaling(C, dists, rup.mag) +
-                _get_site_scaling(C, pga_rock, sites))
-        stddevs = _get_stddevs(C, rup, dists, sites, stddev_types)
-
-        if imt.string == "PGV":
-            mean = mean
-        else:
-            mean = np.log((np.exp(mean)/981.00))
-
-        return mean, stddevs
+        pga_rock = _get_pga_on_rock(C_PGA, ctx, ctx)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (_get_magnitude_scaling_term(C, ctx) +
+                       _get_path_scaling(C, ctx, ctx.mag) +
+                       _get_site_scaling(C, pga_rock, ctx))
+            if imt.string != "PGV":
+                mean[m] = np.log((np.exp(mean[m]) / 981.))
+            tau[m] = _get_inter_event_tau(C, ctx.mag)
+            phi[m] = C['phi']
+        sig[:] = np.sqrt(tau**2 + phi**2)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT	           B           e0	      e1	      e2	     e3	         e4	        e5	           e6	         Mh	          c1	         c2	         c3	            Mref	    Rref	     h	        clin	         V1	          Vc	     Vref	     f1	       f3	         f4	              f5	         phi	   tau1	        Mtau1	     Mtau2	  tau2	sigma_M_ge_6_0

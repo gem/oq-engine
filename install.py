@@ -45,12 +45,15 @@ try:
 except ImportError:
     # check platform
     if sys.platform != 'win32':
-        sys.exit('venv is missing! Please see the documentation of your Operating System to install it')
+        sys.exit('venv is missing! Please see the documentation of your '
+                 'Operating System to install it')
     else:
         if os.path.exists('python\\python._pth.old'):
-            print(f'This is method of the installation from the installer windows')
+            print('This is method of the installation from the installer '
+                  'windows')
         else:
-            sys.exit('venv is missing! Please see the documentation of your Operating System to install it')
+            sys.exit('venv is missing! Please see the documentation of your '
+                     'Operating System to install it')
 
 
 class server:
@@ -95,9 +98,9 @@ class user:
     """
     Parameters for a user installation
     """
-    if sys.platform == 'win32': 
+    if sys.platform == 'win32':
         if os.path.exists('python\\python._pth.old'):
-            VENV = 'C:\Program Files\\OpenQuake\\python'
+            VENV = r'C:\Program Files\\OpenQuake\\python'
             OQ = os.path.join(VENV, '\\Scripts\\oq')
             OQDATA = os.path.expanduser('~\\oqdata')
         else:
@@ -180,7 +183,8 @@ def before_checks(inst, remove, usage):
                  '.'.join(map(str, sys.version_info)))
 
     # check platform
-    if ((inst is server and sys.platform != 'linux') or (inst is devel_server and sys.platform != 'linux')):
+    if ((inst is server and sys.platform != 'linux') or (
+            inst is devel_server and sys.platform != 'linux')):
         sys.exit('Error: this installation method is meant for linux!')
 
     # check venv
@@ -189,18 +193,21 @@ def before_checks(inst, remove, usage):
 
     # check user
     user = getpass.getuser()
-    if ((inst is server and user != 'root') or (inst is devel_server and user != 'root')):
-        sys.exit('Error: you cannot perform a server or devel_server installation unless '
+    if ((inst is server and user != 'root') or (
+            inst is devel_server and user != 'root')):
+        sys.exit('Error: you cannot perform a server or devel_server '
+                 'installation unless '
                  'you are root. If you do not have root permissions, you '
                  'can install the engine in user mode.\n\n' + usage)
-    elif ((inst is user and user == 'root') or (inst is devel and user == 'root')):
+    elif ((inst is user and user == 'root') or (
+            inst is devel and user == 'root')):
         sys.exit('Error: you cannot perform a user or devel installation'
                  ' as root.')
 
     # check if there is a DbServer running
     if not remove:
-        cmd = ('sudo systemctl stop openquake-dbserver' if (inst is server or inst is devel_server)
-               else 'oq dbserver stop')
+        cmd = ('sudo systemctl stop openquake-dbserver' if (
+            inst is server or inst is devel_server) else 'oq dbserver stop')
         cmd = ('oq dbserver stop')
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -214,8 +221,9 @@ def before_checks(inst, remove, usage):
                      (inst.DBPORT, cmd, inst.DBPORT))
 
     # check if there is an installation from packages
-    if ((inst is server and os.path.exists('/etc/openquake/openquake.cfg')) or 
-            (inst is devel_server and os.path.exists('/etc/openquake/openquake.cfg'))):
+    if ((inst is server and os.path.exists('/etc/openquake/openquake.cfg'))
+        or (inst is devel_server and
+            os.path.exists('/etc/openquake/openquake.cfg'))):
         sys.exit(PACKAGES)
     if ((inst is server and os.path.exists(inst.OQ) and
             os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV) or
@@ -304,14 +312,17 @@ def install(inst, version):
         os.symlink(oqreal, inst.OQ)
     if inst is user:
         if sys.platform == 'win32':
-            print(f'Please activate the virtualenv with {inst.VENV}\\Scripts\\activate.bat')
+            print(f'Please activate the virtualenv with {inst.VENV}'
+                  '\\Scripts\\activate.bat')
         else:
             print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
     elif inst is devel:
         if sys.platform == 'win32':
-            print(f'Please activate the virtualenv with {inst.VENV}\\Scripts\\activate.bat')
+            print(f'Please activate the virtualenv with {inst.VENV}'
+                  '\\Scripts\\activate.bat')
         else:
-            print(f'Please activate the venv with source {inst.VENV}/bin/activate')
+            print(f'Please activate the venv with source {inst.VENV}'
+                  '/bin/activate')
 
     # create systemd services
     if ((inst is server and os.path.exists('/usr/lib/systemd/system')) or
@@ -323,7 +334,8 @@ def install(inst, version):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
                     f.write(srv)
-            subprocess.check_call(['systemctl', 'enable', '--now', service_name])
+            subprocess.check_call(
+                ['systemctl', 'enable', '--now', service_name])
             subprocess.check_call(['systemctl', 'start', service_name])
 
     # download and unzip the demos
@@ -361,7 +373,8 @@ def remove(inst):
         subprocess.check_call(['systemctl', 'daemon-reload'])
     shutil.rmtree(inst.VENV)
     print('%s has been removed' % inst.VENV)
-    if inst is server and os.path.exists(server.OQ) or inst is devel_server and os.path.exists(server.OQ):
+    if inst is server and os.path.exists(server.OQ) or (
+            inst is devel_server and os.path.exists(server.OQ)):
         os.remove(server.OQ)
         print('%s has been removed' % server.OQ)
 
@@ -370,7 +383,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("inst", choices=['server', 'user', 'devel', 'devel_server'],
+    parser.add_argument("inst", choices=['server', 'user', 'devel',
+                                         'devel_server'],
                         default='server', nargs='?',
                         help='the kind of installation you want '
                         '(default server)')

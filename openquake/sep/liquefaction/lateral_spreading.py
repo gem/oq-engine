@@ -14,7 +14,7 @@ def hazus_lateral_spreading_displacement(
         mag: Union[float, np.ndarray],
         pga: Union[float, np.ndarray],
         liq_susc_cat: Union[str, List[str]],
-        thresh_table: dict = LIQUEFACTION_PGA_THRESHOLD_TABLE,
+        pga_threshold_table: dict = LIQUEFACTION_PGA_THRESHOLD_TABLE,
         return_unit: str = 'm') -> Union[float, np.ndarray]:
     """
     Distance of lateral spreading from Hazus
@@ -41,10 +41,10 @@ def hazus_lateral_spreading_displacement(
         Displacements from lateral spreading in meters or inches.
     """
     if isinstance(liq_susc_cat, str):
-        pga_threshold = thresh_table[liq_susc_cat]
+        pga_threshold = pga_threshold_table[liq_susc_cat]
     else:
         pga_threshold = np.array(
-            [thresh_table[susc_cat] for susc_cat in liq_susc_cat])
+            [pga_threshold_table[susc_cat] for susc_cat in liq_susc_cat])
     disp_inch = hazus_lateral_spreading_displacement_fn(
         mag, pga, pga_threshold)
     if return_unit == 'm':

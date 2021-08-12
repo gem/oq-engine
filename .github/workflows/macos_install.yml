@@ -1,4 +1,4 @@
-name: Install engine for 3.6, 3.7 and 3.8 on MacOS
+name: MacOS Install engine for 3.6, 3.7 and 3.8
 'on':
   schedule:
     - cron: "0 1 * * *"
@@ -27,6 +27,7 @@ jobs:
         run: |
             #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
             #echo $PY_VER
+            export PIP_DEFAULT_TIMEOUT=100
             pip3 install -U pip wheel setuptools
             #pip3 install -r requirements-$PY_VER-macos.txt
             #pip3 install -e .\[osgeo\]

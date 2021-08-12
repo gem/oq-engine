@@ -37,31 +37,6 @@ def _compute_mean(C, mag, rjb):
     return mean
 
 
-def _compute_stddevs(C, mag, rjb, imt, stddev_types):
-    """
-    Compute total standard deviation, equations 5 and 6, page 48.
-    """
-    # aleatory uncertainty
-    sigma_ale_m = np.interp(mag, [5.0, 5.5, 8.0],
-                            [C['m50'], C['m55'], C['m80']])
-    sigma_ale_rjb = np.interp(rjb, [5.0, 20.0], [C['r5'], C['r20']])
-    sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
-
-    # epistemic uncertainty
-    if imt.period < 1:
-        sigma_epi = 0.36 + 0.07 * (mag - 6)
-    else:
-        sigma_epi = 0.34 + 0.06 * (mag - 6)
-
-    sigma_total = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
-
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(sigma_total)
-
-    return stddevs
-
-
 def _compute_term1(C, mag):
     """
     Compute magnitude dependent terms (2nd and 3rd) in equation 3
@@ -130,34 +105,48 @@ class ToroEtAl2002(GMPE):
     #: no fault style adjustement in the base class
     CONSTS_FS = {}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mean = _compute_mean(C, rup.mag, dists.rjb)
-        stddevs = _compute_stddevs(C, rup.mag, dists.rjb, imt,
-                                   stddev_types)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, ctx.mag, ctx.rjb)
 
-        # apply decay factor for 3 and 4 seconds (not originally supported
-        # by the equations)
-        if imt.period == 3.0:
-            mean /= 0.612
-        if imt.period == 4.0:
-            mean /= 0.559
+            # Compute total standard deviation, equations 5 and 6, page 48
 
-        if self.CONSTS_FS:  # fault style and rock adjustement in SHARE
-            C_ADJ = self.COEFFS_FS_ROCK[imt]
-            mean = np.log(np.exp(mean) * _compute_faulting_style_term(
-                C_ADJ['Frss'],
-                self.CONSTS_FS['pR'],
-                self.CONSTS_FS['Fnss'],
-                self.CONSTS_FS['pN'],
-                rup.rake) * C_ADJ['AFrock'])
+            # aleatory uncertainty
+            sigma_ale_m = np.interp(ctx.mag, [5.0, 5.5, 8.0],
+                                    [C['m50'], C['m55'], C['m80']])
+            sigma_ale_rjb = np.interp(
+                ctx.rjb, [5.0, 20.0], [C['r5'], C['r20']])
+            sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
 
-        return mean, stddevs
+            # epistemic uncertainty
+            if imt.period < 1:
+                sigma_epi = 0.36 + 0.07 * (ctx.mag - 6)
+            else:
+                sigma_epi = 0.34 + 0.06 * (ctx.mag - 6)
+            sig[m] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
+
+            # apply decay factor for 3 and 4 seconds (not originally supported
+            # by the equations)
+            if imt.period == 3.0:
+                mean[m] /= 0.612
+            if imt.period == 4.0:
+                mean[m] /= 0.559
+
+            if self.CONSTS_FS:  # fault style and rock adjustement in SHARE
+                C_ADJ = self.COEFFS_FS_ROCK[imt]
+                mean[m] = np.log(np.exp(mean[m]) * (
+                    _compute_faulting_style_term(
+                        C_ADJ['Frss'],
+                        self.CONSTS_FS['pR'],
+                        self.CONSTS_FS['Fnss'],
+                        self.CONSTS_FS['pN'],
+                        ctx.rake) * C_ADJ['AFrock']))
 
     #: Coefficient tables obtained by joining tables 2, 3, and 4, pages 47,
     #: 50, 51.

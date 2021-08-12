@@ -46,6 +46,48 @@ CONSTS = {
 
 C1 = 7.2  # for Montalva2017
 
+# Total epistemic uncertainty factors from Abrahamson et al. (2018)
+BCHYDRO_SIGMA_MU = CoeffsTable(sa_damping=5, table="""
+    imt     SIGMA_MU_SINTER    SIGMA_MU_SSLAB
+    pga                 0.3              0.50
+    0.010               0.3              0.50
+    0.020               0.3              0.50
+    0.030               0.3              0.50
+    0.050               0.3              0.50
+    0.075               0.3              0.50
+    0.100               0.3              0.50
+    0.150               0.3              0.50
+    0.200               0.3              0.50
+    0.250               0.3              0.46
+    0.300               0.3              0.42
+    0.400               0.3              0.38
+    0.500               0.3              0.34
+    0.600               0.3              0.30
+    0.750               0.3              0.30
+    1.000               0.3              0.30
+    1.500               0.3              0.30
+    2.000               0.3              0.30
+    2.500               0.3              0.30
+    3.000               0.3              0.30
+    4.000               0.3              0.30
+    5.000               0.3              0.30
+    6.000               0.3              0.30
+    7.500               0.3              0.30
+    10.00               0.3              0.30
+    """)
+
+
+def get_stress_factor(imt, slab):
+    """
+    Returns the stress adjustment factor for the BC Hydro GMPE according to
+    Abrahamson et al. (2018)
+    """
+    if slab:
+        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SSLAB"]
+    else:
+        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SINTER"]
+    return sigma_mu / 1.65
+
 
 def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     """
@@ -54,76 +96,54 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     """
     base = theta1 + theta4 * dc1
     dmag = C1 + dc1
-    if mag > dmag:
-        f_mag = theta5 * (mag - dmag) + theta13 * (10. - mag) ** 2.
-    else:
-        f_mag = theta4 * (mag - dmag) + theta13 * (10. - mag) ** 2.
+    f_mag = np.where(mag > dmag,
+                     theta5 * (mag - dmag) + theta13 * (10. - mag) ** 2.,
+                     theta4 * (mag - dmag) + theta13 * (10. - mag) ** 2.)
     return base + f_mag
 
 
 # theta6_adj used in BCHydro
-def _compute_disterm(trt, C1, theta2, theta14, theta3, mag, dists, c4, theta9,
+def _compute_disterm(trt, C1, theta2, theta14, theta3, ctx, c4, theta9,
                      theta6_adj, theta6, theta10):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
-        dists = dists.rrup
+        dists = ctx.rrup
         assert theta10 == 0., theta10
     elif trt == const.TRT.SUBDUCTION_INTRASLAB:
-        dists = dists.rhypo
+        dists = ctx.rhypo
     else:
         raise NotImplementedError(trt)
-    return ((theta2 + theta14 + theta3 * (mag - C1)) * np.log(
-        dists + c4 * np.exp((mag - 6.) * theta9)) +
-            ((theta6_adj + theta6) * dists)) + theta10
+    return ((theta2 + theta14 + theta3 * (ctx.mag - C1)) * np.log(
+        dists + c4 * np.exp((ctx.mag - 6.) * theta9)) +
+            (theta6_adj + theta6) * dists) + theta10
 
 
-def _compute_forearc_backarc_term(trt, faba_model, C, sites, dists):
+def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
-        dists = dists.rrup
+        dists = ctx.rrup
         a, b = C['theta15'], C['theta16']
         min_dist = 100.
     elif trt == const.TRT.SUBDUCTION_INTRASLAB:
-        dists = dists.rhypo
+        dists = ctx.rhypo
         a, b = C['theta7'], C['theta8']
         min_dist = 85.
     else:
         raise NotImplementedError(trt)
     if faba_model is None:
         f_faba = np.zeros_like(dists)
-        # Term only applies to backarc sites (F_FABA = 0. for forearc)
-        fixed_dists = dists[sites.backarc]
+        # Term only applies to backarc ctx (F_FABA = 0. for forearc)
+        fixed_dists = dists[ctx.backarc]
         fixed_dists[fixed_dists < min_dist] = min_dist
-        f_faba[sites.backarc] = a + b * np.log(fixed_dists / 40.)
+        f_faba[ctx.backarc] = a + b * np.log(fixed_dists / 40.)
         return f_faba
 
     # in BCHydro subclasses
     fixed_dists = np.copy(dists)
     fixed_dists[fixed_dists < min_dist] = min_dist
     f_faba = a + b * np.log(fixed_dists / 40.)
-    return f_faba * faba_model(-sites.xvf)
+    return f_faba * faba_model(-ctx.xvf)
 
 
-def _get_stddevs(ergodic, C, stddev_types, num_sites):
-    """
-    Return standard deviations as defined in Table 3
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma = C["sigma"] if ergodic else C["sigma_ss"]
-            stddevs.append(sigma + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            if ergodic:
-                phi = C["phi"]
-            else:
-                # Get single station phi
-                phi = np.sqrt(C["sigma_ss"] ** 2. - C["tau"] ** 2.)
-            stddevs.append(phi + np.zeros(num_sites))
-    return stddevs
-
-
-def _compute_distance_term(kind, trt, theta6_adj, C, mag, dists):
+def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
     """
     Computes the distance scaling term, as contained within equation (1)
     """
@@ -137,16 +157,16 @@ def _compute_distance_term(kind, trt, theta6_adj, C, mag, dists):
         C1 = 7.8
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         return _compute_disterm(
-            trt, C1, C['theta2'], 0., theta3, mag, dists, CONSTS['c4'],
+            trt, C1, C['theta2'], 0., theta3, ctx, CONSTS['c4'],
             CONSTS['theta9'], theta6_adj, C['theta6'], theta10=0.)
     else:  # sslab
         return _compute_disterm(
-            trt, C1, C['theta2'], C['theta14'], theta3, mag, dists,
+            trt, C1, C['theta2'], C['theta14'], theta3, ctx,
             CONSTS['c4'], CONSTS['theta9'], theta6_adj, C['theta6'],
             C["theta10"])
 
 
-def _compute_focal_depth_term(trt, C, rup):
+def _compute_focal_depth_term(trt, C, ctx):
     """
     Computes the hypocentral depth scaling term - as indicated by
     equation (3)
@@ -156,10 +176,10 @@ def _compute_focal_depth_term(trt, C, rup):
     """
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         return 0.
-    if rup.hypo_depth > 120.0:
+    if ctx.hypo_depth > 120.0:
         z_h = 120.0
     else:
-        z_h = rup.hypo_depth
+        z_h = ctx.hypo_depth
     return C['theta11'] * (z_h - 60.)
 
 
@@ -180,35 +200,34 @@ def _compute_magnitude_term(kind, C, dc1, mag):
                                 C['theta5'], 0., dc1, mag)
 
 
-def _compute_pga_rock(kind, trt, theta6_adj, faba_model,
-                      C, dc1, sites, rup, dists):
+def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
     """
     Compute and return mean imt value for rock conditions
     (vs30 = 1000 m/s)
     """
-    mean = (_compute_magnitude_term(kind, C, dc1, rup.mag) +
-            _compute_distance_term(kind, trt, theta6_adj, C, rup.mag, dists) +
-            _compute_focal_depth_term(trt, C, rup) +
-            _compute_forearc_backarc_term(trt, faba_model, C, sites, dists))
+    mean = (_compute_magnitude_term(kind, C, dc1, ctx.mag) +
+            _compute_distance_term(kind, trt, theta6_adj, C, ctx) +
+            _compute_focal_depth_term(trt, C, ctx) +
+            _compute_forearc_backarc_term(trt, faba_model, C, ctx))
     # Apply linear site term
     site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
                      np.log(1000. / C['vlin']))
     return mean + site_response
 
 
-def _compute_site_response_term(C, sites, pga1000):
+def _compute_site_response_term(C, ctx, pga1000):
     """
     Compute and return site response model term
     This GMPE adopts the same site response scaling model of
     Walling et al (2008) as implemented in the Abrahamson & Silva (2008)
     GMPE. The functional form is retained here.
     """
-    vs_star = sites.vs30.copy()
+    vs_star = ctx.vs30.copy()
     vs_star[vs_star > 1000.0] = 1000.
     arg = vs_star / C["vlin"]
     site_resp_term = C["theta12"] * np.log(arg)
     # Get linear scaling term
-    idx = sites.vs30 >= C["vlin"]
+    idx = ctx.vs30 >= C["vlin"]
     site_resp_term[idx] += (C["b"] * CONSTS["n"] * np.log(arg[idx]))
     # Get nonlinear scaling term
     idx = np.logical_not(idx)
@@ -270,42 +289,56 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     delta_c1 = None
     kind = "base"
-    theta6_adj = 0.
-    faba_model = None  # overridden in BCHydro
+    FABA_ALL_MODELS = {}  # overridden in BCHydro
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ergodic = kwargs.get('ergodic', True)
+        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
+        faba_type = kwargs.get("faba_taper_model", "Step")
+        if 'xvf' in self.REQUIRES_SITES_PARAMETERS:  # BCHydro subclasses
+            self.faba_model = self.FABA_ALL_MODELS[faba_type](**kwargs)
+        else:
+            self.faba_model = None
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
-        if self.delta_c1 is None:
-            dc1 = self.COEFFS_MAG_SCALE[imt]["dc1"]
-            dc1_pga = self.COEFFS_MAG_SCALE[PGA()]["dc1"]
-        else:
-            dc1 = dc1_pga = self.delta_c1
+        dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
         # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
         pga1000 = np.exp(_compute_pga_rock(
             self.kind, self.trt, self.theta6_adj, self.faba_model,
-            C_PGA, dc1_pga, sites, rup, dists))
-        mean = (_compute_magnitude_term(self.kind, C, dc1, rup.mag) +
-                _compute_distance_term(self.kind, self.trt, self.theta6_adj,
-                                       C, rup.mag, dists) +
-                _compute_focal_depth_term(self.trt, C, rup) +
-                _compute_forearc_backarc_term(self.trt, self.faba_model,
-                                              C, sites, dists) +
-                _compute_site_response_term(C, sites, pga1000))
-        stddevs = _get_stddevs(self.ergodic, C, stddev_types, len(sites.vs30))
-        return mean, stddevs
+            C_PGA, dc1_pga, ctx))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            dc1 = self.delta_c1 or self.COEFFS_MAG_SCALE[imt]["dc1"]
+            mean[m] = (
+                _compute_magnitude_term(
+                    self.kind, C, dc1, ctx.mag) +
+                _compute_distance_term(
+                    self.kind, self.trt, self.theta6_adj, C, ctx) +
+                _compute_focal_depth_term(
+                    self.trt, C, ctx) +
+                _compute_forearc_backarc_term(
+                    self.trt, self.faba_model, C, ctx) +
+                _compute_site_response_term(
+                    C, ctx, pga1000))
+            if self.sigma_mu_epsilon:
+                sigma_mu = get_stress_factor(
+                    imt, self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                    const.TRT.SUBDUCTION_INTRASLAB)
+                mean[m] += sigma_mu * self.sigma_mu_epsilon
+
+            sig[m] = C["sigma"] if self.ergodic else C["sigma_ss"]
+            tau[m] = C['tau']
+            phi[m] = C["phi"] if self.ergodic else np.sqrt(
+                C["sigma_ss"] ** 2. - C["tau"] ** 2.)
 
     # Period-dependent coefficients (Table 3)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

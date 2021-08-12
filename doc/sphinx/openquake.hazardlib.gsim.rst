@@ -28,6 +28,14 @@ abrahamson_2018
     :undoc-members:
     :show-inheritance:
 
+abrahamson_gulerce_2020
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.abrahamson_gulerce_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 abrahamson_silva_1997
 -----------------------------------------------------
 
@@ -309,6 +317,14 @@ bozorgnia_campbell_2016
 -----------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bozorgnia_campbell_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bozorgnia_campbell_2016_vh
+-----------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bozorgnia_campbell_2016_vh
     :members:
     :undoc-members:
     :show-inheritance:
@@ -705,6 +721,14 @@ kanno_2006
     :undoc-members:
     :show-inheritance:
 
+kuehn_2020
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.kuehn_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 kotha_2016
 ------------------------------------------
 
@@ -986,6 +1010,14 @@ si_midorikawa_1999
     :undoc-members:
     :show-inheritance:
 
+si_2020
+--------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.si_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 silva_2002
 ------------------------------------------
 
@@ -1022,6 +1054,14 @@ stewart_2016
 -----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.stewart_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stewart_2016_vh
+-----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.stewart_2016_vh
     :members:
     :undoc-members:
     :show-inheritance:

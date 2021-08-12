@@ -17,14 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import copy
 import warnings
 import numpy as np
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.gsim.projects.acme_base import (
     get_phi_ss_at_quantile_ACME)
 from openquake.hazardlib.imt import SA
-from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
         YenierAtkinson2015BSSA
 from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
@@ -72,23 +72,20 @@ def _get_tau(tau_model, TAU, imt, mag):
     return TAU_EXECUTION[tau_model](imt, mag, TAU)
 
 
-def extrapolate_in_PSA(gmpe, sites, rup, dists, imt_high,
-                       set_imt, stds_types, imt):
+def extrapolate_in_PSA(gmpe, ctx, imt_high, set_imt, imt):
     extrap_mean = []
     t_log10 = np.log10([im for im in set_imt])
-    for d in np.arange(0, len(dists.rjb)):
-        dist = DistancesContext()
-        if hasattr(dists, 'rjb'):
-            dist.rjb = np.array([dists.rjb[d]])
-        if hasattr(dists, 'rrup'):
-            dist.rrup = np.array([dists.rrup[d]])
+    for d in np.arange(0, len(ctx.rjb)):
+        c = copy.copy(ctx)
+        if hasattr(ctx, 'rjb'):
+            c.rjb = np.array([ctx.rjb[d]])
+        if hasattr(ctx, 'rrup'):
+            c.rrup = np.array([ctx.rrup[d]])
         means_log10 = []
         for im in set_imt:
-            mean_ln, _ = gmpe.get_mean_and_stddevs(
-                sites, rup, dist, SA(im), stds_types)
+            [mean_ln] = contexts.get_mean_stds([gmpe], c, [SA(im)], None)
             mean = np.exp(mean_ln[0])
             means_log10.append(np.log10(mean))
-
         mb = np.polyfit(t_log10, means_log10, 1)
         mean_imt_log10 = mb[0] * np.log10(imt) + mb[1]
         extrap_mean.append(np.log(10**mean_imt_log10))
@@ -172,24 +169,16 @@ def get_disp_from_acc(acc, imt):
 
 
 def get_stddevs(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model,
-                tau_model, TAU, mag, imt, stddev_types, num_sites):
+                tau_model, TAU, mag, imt):
     """
     Returns the standard deviations for either the ergodic or
     non-ergodic models
     """
     tau = _get_tau(tau_model, TAU, imt, mag)
-    phi = _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model,
-                   imt, mag)
-    sigma = np.sqrt(tau ** 2. + phi ** 2.)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(sigma + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(num_sites))
-    return stddevs
+    phi = _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile,
+                   phi_model, imt, mag)
+    sigma = np.sqrt(tau ** 2 + phi ** 2)
+    return [sigma, tau, phi]
 
 
 class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
@@ -285,6 +274,8 @@ class AlAtikSigmaModel(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
+    extr = True  # always extrapolate, except when debugging
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.tau_model = kwargs.get('tau_model', 'global')
@@ -313,59 +304,52 @@ class AlAtikSigmaModel(GMPE):
                 data = myfile.read().decode('utf-8')
             self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types,
-                             extr=True):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        for m, imt in enumerate(imts):
 
-        nsites = len(sites)
-        stddevs = get_stddevs(
-            self.ergodic, self.PHI_SS, self.PHI_S2SS, self.phi_ss_quantile,
-            self.phi_model, self.tau_model, self.TAU, rup.mag, imt,
-            stds_types, nsites)
-        cornerp = get_corner_period(rup.mag)
-        # capping period only compares
-        # - highest period with a coefficient
-        # - corner period
-        # - 2.0 if it's bindi
-        sp = get_capping_period(cornerp, self.gmpe, imt)
-        hp = sp[-1]
+            cornerp = get_corner_period(ctx.mag)
+            # capping period only compares
+            # - highest period with a coefficient
+            # - corner period
+            # - 2.0 if it's bindi
+            sp = get_capping_period(cornerp, self.gmpe, imt)
+            hp = sp[-1]
 
-        # 1 - if imt.period < cornerp, no changes needed
-        if extr and imt.period <= cornerp and imt.period <= hp:
-            mean, _ = self.gmpe.get_mean_and_stddevs(
-                sites, rup, dists, imt, stds_types)
-        # if the period is larger than the corner period but the corner period
-        # is less than the highest period
-        elif extr and imt.period >= cornerp and cornerp <= hp:
-            mean, _ = self.gmpe.get_mean_and_stddevs(
-                sites, rup, dists, SA(cornerp), stds_types)
-            disp = get_disp_from_acc(mean, cornerp)
-            mean = get_acc_from_disp(disp, imt.period)
-        # if the corner period is longer than highest and imt is above
-        # highets but below corner
-        elif extr and cornerp > hp and hp <= imt.period < cornerp:
-            mean = extrapolate_in_PSA(
-                self.gmpe, sites, rup, dists, hp, sp, stds_types, imt.period)
-        elif extr and cornerp > hp and imt.period > cornerp:
-            mean = extrapolate_in_PSA(
-                self.gmpe, sites, rup, dists, hp, sp, stds_types, cornerp)
-            disp = get_disp_from_acc(mean, cornerp)
-            mean = get_acc_from_disp(disp, imt.period)
-
-        else:
-            mean, _ = self.gmpe.get_mean_and_stddevs(
-                sites, rup, dists, imt, stds_types)
-
-        kappa = 1
-        if self.kappa_file:
-
-            if imt.period == 0:
-                kappa = self.KAPPATAB[SA(0.01)][self.kappa_val]
-            elif imt.period > 2.0:
-                kappa = self.KAPPATAB[SA(2.0)][self.kappa_val]
+            # 1 - if imt.period < cornerp, no changes needed
+            if self.extr and imt.period <= cornerp and imt.period <= hp:
+                [mean_] = contexts.get_mean_stds([self.gmpe], ctx, [imt], None)
+            # if the period is larger than the corner period but the corner
+            # period is less than the highest period
+            elif self.extr and imt.period >= cornerp and cornerp <= hp:
+                [mean_] = contexts.get_mean_stds(
+                    [self.gmpe], ctx, [SA(cornerp)], None)
+                disp = get_disp_from_acc(mean_, cornerp)
+                mean_ = get_acc_from_disp(disp, imt.period)
+            # if the corner period is longer than highest and imt is above
+            # highets but below corner
+            elif self.extr and cornerp > hp and hp <= imt.period < cornerp:
+                mean_ = extrapolate_in_PSA(self.gmpe, ctx, hp, sp, imt.period)
+            elif self.extr and cornerp > hp and imt.period > cornerp:
+                mean_ = extrapolate_in_PSA(self.gmpe, ctx, hp, sp, cornerp)
+                disp = get_disp_from_acc(mean, cornerp)
+                mean_ = get_acc_from_disp(disp, imt.period)
             else:
-                kappa = self.KAPPATAB[imt][self.kappa_val]
+                [mean_] = contexts.get_mean_stds([self.gmpe], ctx, [imt], None)
 
-        return mean + np.log(kappa), stddevs
+            kappa = 1
+            if self.kappa_file:
+
+                if imt.period == 0:
+                    kappa = self.KAPPATAB[SA(0.01)][self.kappa_val]
+                elif imt.period > 2.0:
+                    kappa = self.KAPPATAB[SA(2.0)][self.kappa_val]
+                else:
+                    kappa = self.KAPPATAB[imt][self.kappa_val]
+
+            mean[m] = mean_ + np.log(kappa)
+            sig[m], tau[m], sig[m] = get_stddevs(
+                self.ergodic, self.PHI_SS, self.PHI_S2SS, self.phi_ss_quantile,
+                self.phi_model, self.tau_model, self.TAU, ctx.mag, imt)
 
     # PHI_SS2S coefficients, table 2.2 HID
     COEFFS_PHI_S2SS_BRB = CoeffsTable(logratio=False, sa_damping=5., table="""\

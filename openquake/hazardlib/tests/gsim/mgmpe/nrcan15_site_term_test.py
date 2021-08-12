@@ -19,9 +19,9 @@ import unittest
 
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
-    AtkinsonBoore2006, BooreAtkinson2008)
-from openquake.hazardlib.contexts import DistancesContext
+from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.const import TRT, IMC
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
@@ -30,11 +30,20 @@ from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
 
 class NRCan15SiteTermTestCase(unittest.TestCase):
 
+    def ctx(self, nsites, vs30):
+        sites = Dummy.get_site_collection(nsites, vs30=vs30)
+        rup = Dummy.get_rupture(mag=6.0)
+        ctx = RuptureContext()
+        vars(ctx).update(vars(rup))
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
+        return ctx
+
     def test_instantiation(self):
         mgmpe = NRCan15SiteTerm(gmpe_name='BooreEtAl2014')
 
         # Check the assigned IMTs
-        expected = set([PGA, SA, PGV])
+        expected = {PGA, SA, PGV}
         self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES == expected,
                         msg='The assigned IMTs are incorrect')
         # Check the TR
@@ -46,27 +55,23 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
                         expected, msg='The IM component is wrong')
         # Check the required distances
-        expected = set(['rjb'])
+        expected = {'rjb'}
         self.assertTrue(mgmpe.REQUIRES_DISTANCES == expected,
                         msg='The assigned distance types are wrong')
 
     def test_gm_calculation_soilBC(self):
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
-        # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=760.)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rrup = np.array([1., 10., 30., 70.])
+        ctx = self.ctx(4, 760.)
+        ctx.rrup = np.array([1., 10., 30., 70.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = AtkinsonBoore2006()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
-                                                                 stdt)
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
+            ctx, ctx, ctx, imt, stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
         np.testing.assert_almost_equal(mean, mean_expected)
@@ -75,20 +80,16 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
     def test_gm_calculationAB06_hard_bedrock(self):
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
-        # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=1999.0)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rrup = np.array([10., 20., 30., 40.])
+        ctx = self.ctx(4, 1999.)
+        ctx.rrup = np.array([10., 20., 30., 40.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = AtkinsonBoore2006()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
-                                                                 stdt)
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
+            ctx, ctx, ctx, imt, stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
         np.testing.assert_almost_equal(mean, mean_expected)
@@ -97,20 +98,16 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
     def test_gm_calculationAB06(self):
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
-        # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=[1000., 1500., 1000., 1500.])
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rrup = np.array([10., 10., 40., 40.])
+        ctx = self.ctx(4, [1000., 1500., 1000., 1500.])
+        ctx.rrup = np.array([10., 10., 40., 40.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = AtkinsonBoore2006()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
-                                                                 stdt)
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
+            ctx, ctx, ctx, imt, stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
         np.testing.assert_almost_equal(mean, mean_expected)
@@ -120,18 +117,16 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
         # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=400.)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rjb = np.array([1., 10., 30., 70.])
+        ctx = self.ctx(4, vs30=400.)
+        ctx.rjb = np.array([1., 10., 30., 70.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = BooreAtkinson2008()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(ctx, ctx,
+                                                                 ctx, imt,
                                                                  stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
@@ -142,41 +137,36 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
         # Set parameters
-        sites = Dummy.get_site_collection(1, vs30=400.)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rjb = np.array([10])
+        ctx = self.ctx(1, vs30=400.)
+        ctx.rjb = np.array([10])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = BooreAtkinson2008()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(ctx, ctx,
+                                                                 ctx, imt,
                                                                  stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
         np.testing.assert_almost_equal(mean, mean_expected)
         np.testing.assert_almost_equal(stds, stds_expected)
 
-
     def test_gm_calculationBA08_vs30variable(self):
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
         # Set parameters
-        sites = Dummy.get_site_collection(3, vs30=[400., 600, 1000])
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rjb = np.array([10., 10., 10.])
+        ctx = self.ctx(3, vs30=[400., 600, 1000])
+        ctx.rjb = np.array([10., 10., 10.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = BooreAtkinson2008()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(ctx, ctx,
+                                                                 ctx, imt,
                                                                  stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
@@ -216,18 +206,16 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='AtkinsonBoore2006')
         # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=760.)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rrup = np.array([1., 10., 30., 70.])
+        ctx = self.ctx(4, vs30=760.)
+        ctx.rrup = np.array([1., 10., 30., 70.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = AtkinsonBoore2006()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(ctx, ctx,
+                                                                 ctx, imt,
                                                                  stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
@@ -238,20 +226,19 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='AtkinsonBoore2006')
         # Set parameters
-        sites = Dummy.get_site_collection(2, vs30=[760, 2010])
-        rup = Dummy.get_rupture(mag=7.0)
-        dists = DistancesContext()
-        dists.rrup = np.array([15., 15.])
+        ctx = self.ctx(2, vs30=[760, 2010])
+        ctx.rrup = np.array([15., 15.])
+        ctx.mag = 7.0
         stdt = [const.StdDev.TOTAL]
         gmpe = AtkinsonBoore2006()
 
         for imt in [PGA(), SA(1.0), SA(5.0)]:
             # Computes results
-            mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt,
+            mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt,
                                                     stdt)
             # Compute the expected results
             mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
-                sites,  rup, dists, imt, stdt)
+                ctx,  ctx, ctx, imt, stdt)
             # Test that for reference soil conditions the modified GMPE gives
             # the same results of the original gmpe
             np.testing.assert_allclose(np.exp(mean), np.exp(mean_expected),
@@ -262,18 +249,16 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
         # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=400.)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rjb = np.array([1., 10., 30., 70.])
+        ctx = self.ctx(4, vs30=400.)
+        ctx.rjb = np.array([1., 10., 30., 70.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = BooreAtkinson2008()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(ctx, ctx,
+                                                                 ctx, imt,
                                                                  stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
@@ -283,19 +268,16 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
     def test_gm_calculationBA08_1site(self):
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
-        # Set parameters
-        sites = Dummy.get_site_collection(1, vs30=400.)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rjb = np.array([10])
+        ctx = self.ctx(1, vs30=400.)
+        ctx.rjb = np.array([10])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = BooreAtkinson2008()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(ctx, ctx,
+                                                                 ctx, imt,
                                                                  stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
@@ -305,19 +287,16 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
     def test_gm_calculationBA08_vs30variable(self):
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
-        # Set parameters
-        sites = Dummy.get_site_collection(3, vs30=[400., 600, 1000])
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rjb = np.array([10., 10., 10.])
+        ctx = self.ctx(3, vs30=[400., 600, 1000])
+        ctx.rjb = np.array([10., 10., 10.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
         # Compute the expected results
         gmpe = BooreAtkinson2008()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(ctx, ctx,
+                                                                 ctx, imt,
                                                                  stdt)
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe

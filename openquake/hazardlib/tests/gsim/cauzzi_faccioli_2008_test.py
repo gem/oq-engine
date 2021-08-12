@@ -19,8 +19,7 @@
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import (
     CauzziFaccioli2008, FaccioliEtAl2010)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
-                                           DistancesContext)
+from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 
@@ -45,19 +44,17 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         # (for rhypo=0 the distance term has a singularity). In this case the
         # method should return values equal to the ones obtained by clipping
         # distances at 15 km.
-        sctx = SitesContext()
-        sctx.vs30 = numpy.array([800.0, 800.0, 800.0])
-        rctx = RuptureContext()
-        rctx.mag = 5.0
-        rctx.rake = 0
-        dctx = DistancesContext()
-        dctx.rhypo = numpy.array([0.0, 10.0, 16.0])
-        dctx.rhypo.flags.writeable = False
+        ctx = RuptureContext()
+        ctx.sids = [0, 1, 2]
+        ctx.vs30 = numpy.array([800.0, 800.0, 800.0])
+        ctx.mag = 5.0
+        ctx.rake = 0
+        ctx.rhypo = numpy.array([0.0, 10.0, 16.0])
+        ctx.rhypo.flags.writeable = False
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
-        setattr(dctx, 'rhypo', numpy.array([15.0, 15.0, 16.0]))
+            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         mean_15, stds_15 = self.GSIM_CLASS().get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
+            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_array_equal(mean_0, mean_15)
         numpy.testing.assert_array_equal(stds_0, stds_15)
 

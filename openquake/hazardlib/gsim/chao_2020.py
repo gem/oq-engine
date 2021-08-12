@@ -94,7 +94,7 @@ _ftype = CallableDict()
 
 
 @_ftype.add(const.TRT.SUBDUCTION_INTERFACE, const.TRT.SUBDUCTION_INTRASLAB)
-def _ftype_1(trt, suffix, C, rup):
+def _ftype_1(trt, suffix, C, ctx):
     """
     Factor based on the type of fault.
     """
@@ -102,71 +102,60 @@ def _ftype_1(trt, suffix, C, rup):
 
 
 @_ftype.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def _ftype_2(trt, suffix, C, rup):
+def _ftype_2(trt, suffix, C, ctx):
     """
     Factor based on the type of fault.
     """
     # use fault.rake to determine fault type
-    if 30 <= rup.rake <= 150:
+    if 30 <= ctx.rake <= 150:
         # reverse
         return C['c1']
-    if -150 <= rup.rake <= -30:
+    if -150 <= ctx.rake <= -30:
         # normal
         return C['c3']
     # strike-slip
     return C['c2']
 
 
-def _fvs30(geology, C, sites):
+def _fvs30(geology, C, ctx):
     """
     Source of Vs30 factor.
     vs30measured available for Kuo17 (measured)
     self.geology True for KS17 (inferred)
     self.geology False for Receiver Function (inferred)
     """
-    return np.where(sites.vs30measured, C['c26'],
+    return np.where(ctx.vs30measured, C['c26'],
                     C['c27'] if geology else C['c28'])
 
 
-def _fz1pt0(C, sites):
+def _fz1pt0(C, ctx):
     """
     z1pt0 factor.
     """
-    result = np.zeros_like(sites.z1pt0)
-    idx = sites.z1pt0 >= 0
+    result = np.zeros_like(ctx.z1pt0)
+    idx = ctx.z1pt0 >= 0
     if sum(idx) == 0:
         return result
 
-    z1pt0_ref = np.exp(-4.08 / 2 * np.log((sites.vs30 ** 2 + 355.4 ** 2)
+    z1pt0_ref = np.exp(-4.08 / 2 * np.log((ctx.vs30 ** 2 + 355.4 ** 2)
                                           / (1750 ** 2 + 355.4 ** 2)))
-    result[idx] = np.log(sites.z1pt0[idx] / z1pt0_ref) * C['c25']
+    result[idx] = np.log(ctx.z1pt0[idx] / z1pt0_ref) * C['c25']
     return result
 
 
-def get_stddevs(f, C, mag, stddev_types):
+def get_stddevs(f, C, mag):
     """
     Standard deviation.
     tau: between event stddev ln(g)
     phis2s: between site stddev in ln(g)
     phiss: single station stddev in ln(g)
     """
-    stddevs = []
     f_mag = 0.5 * (min(6.5, max(4.5, mag)) - 4.5)
-
     tau = C[f'tau1{f}'] + (C[f'tau2{f}'] - C[f'tau1{f}']) * f_mag
     phiss = C[f'phiss1{f}'] + (C[f'phiss2{f}'] - C[f'phiss1{f}']) * f_mag
     phis2s = C['phis2s']
     phi = math.sqrt(phis2s ** 2 + phiss ** 2)
-
-    for stddev in stddev_types:
-        if stddev == const.StdDev.TOTAL:
-            stddevs.append(math.sqrt(tau ** 2 + phi ** 2))
-        elif stddev == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-        elif stddev == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-
-    return stddevs
+    return [math.sqrt(tau ** 2 + phi ** 2), tau, phi]
 
 
 class ChaoEtAl2020SInter(GMPE):
@@ -208,41 +197,39 @@ class ChaoEtAl2020SInter(GMPE):
         # only used for inferred vs30, otherwise use vs30measured
         self.geology = geology
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        # extract dictionary of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        s = CONSTANTS
-        med = np.zeros(len(sites.vs30))
+            s = CONSTANTS
+            med = mean[m]
 
-        med += _ftype(trt, self.SUFFIX, C, rup)
-        med += (rup.ztor - self.CONST_FAULT['href']) * C['c14' + self.SUFFIX]
-        med += (rup.mag - s['mag_ref']) * C['c8' + self.SBCR]
-        med += (5 - rup.mag) * np.heaviside(5 - rup.mag, 0.5) \
-            * C['c11' + self.SBCR]
-        med += _fh(trt, self.SBCR, self.MC, self.CONST_FAULT['C4'],
-                   C, rup.mag, dists.rrup)
+            med += _ftype(trt, self.SUFFIX, C, ctx)
+            med += (ctx.ztor - self.CONST_FAULT['href']) * C[
+                'c14' + self.SUFFIX]
+            med += (ctx.mag - s['mag_ref']) * C['c8' + self.SBCR]
+            med += (5 - ctx.mag) * np.heaviside(5 - ctx.mag, 0.5) \
+                * C['c11' + self.SBCR]
+            med += _fh(trt, self.SBCR, self.MC, self.CONST_FAULT['C4'],
+                       C, ctx.mag, ctx.rrup)
 
-        med += (dists.rrup - s['rrup_ref']) * C['c21' + self.SBCR]
-        med += _ffault(trt, self.MC, self.SUFFIX, C, rup.mag)
-        med += C['c6'] * self.aftershocks + C['c7'] * self.manila
-        med += _fvs30(self.geology, C, sites)
+            med += (ctx.rrup - s['rrup_ref']) * C['c21' + self.SBCR]
+            med += _ffault(trt, self.MC, self.SUFFIX, C, ctx.mag)
+            med += C['c6'] * self.aftershocks + C['c7'] * self.manila
+            med += _fvs30(self.geology, C, ctx)
 
-        sa1180 = np.exp(med + math.log(1180/s['vs30_ref']) * C['c24'])
-        med += _fc(C, imt, sites.vs30, sa1180)
-        med += np.log(sites.vs30 / s['vs30_ref']) * C['c24']
-        med += _fz1pt0(C, sites)
+            sa1180 = np.exp(med + math.log(1180/s['vs30_ref']) * C['c24'])
+            med += _fc(C, imt, ctx.vs30, sa1180)
+            med += np.log(ctx.vs30 / s['vs30_ref']) * C['c24']
+            med += _fz1pt0(C, ctx)
 
-        stddevs = get_stddevs(self.SBCR, C, rup.mag, stddev_types)
-
-        return med, stddevs
+            sig[m], tau[m], phi[m] = get_stddevs(self.SBCR, C, ctx.mag)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt    c1                  c2                  c3                  c4_if               c4_is               c6                  c7                 c8_cr              c8_sb               c10                 c11_cr              c11_sb              c13                 c14_cr              c14_if              c14_is              c17_cr              c17_sb             c19_cr             c19_sb              c21_cr              c21_sb              c23                 c24                c25                 c26                 c27                 c28                 c29_if              c29_is             tau1_cr            tau2_cr            tau1_sb            tau2_sb            phiss1_cr          phiss2_cr          phiss1_sb          phiss2_sb          phis2s

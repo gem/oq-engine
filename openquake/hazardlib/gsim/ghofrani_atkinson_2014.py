@@ -125,25 +125,6 @@ def _get_site_term(C, vs30):
     return C["c3"] * np.log10(vs30 / 760.0)
 
 
-def _get_stddevs(C, num_sites, stddev_types):
-    """
-    Returns the total, inter-event or intra-event standard deviation
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sig_tot = np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.)
-            stddevs.append(np.log(10.0 ** sig_tot) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(
-                np.log(10.0 ** C["tau"]) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(
-                np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-    return stddevs
-
-
-# TODO: convert to one-parameter GMPE ("kind")
 class GhofraniAtkinson2014(GMPE):
     """
     Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
@@ -178,26 +159,28 @@ class GhofraniAtkinson2014(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        imean = (_get_magnitude_term(C, rup.mag) +
-                 _get_distance_term(C, dists.rrup, sites.backarc) +
-                 _get_site_term(C, sites.vs30) +
-                 _get_scaling_term(self.kind, C, dists.rrup))
-        # Convert mean from cm/s and cm/s/s and from common logarithm to
-        # natural logarithm
-        if imt.string.startswith(('PGA', 'SA')):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            mean = np.log((10.0 ** (imean)))
-        stddevs = _get_stddevs(C, len(dists.rrup), stddev_types)
-        return mean, stddevs
+            imean = (_get_magnitude_term(C, ctx.mag) +
+                     _get_distance_term(C, ctx.rrup, ctx.backarc) +
+                     _get_site_term(C, ctx.vs30) +
+                     _get_scaling_term(self.kind, C, ctx.rrup))
+            # Convert mean from cm/s and cm/s/s and from common logarithm to
+            # natural logarithm
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                mean[m] = np.log((10.0 ** (imean)))
+            sig[m] = np.log(10.0 ** np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.))
+            tau[m] = np.log(10.0 ** C["tau"])
+            phi[m] = np.log(10.0 ** C["sigma"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT        c0         a        b         c1         c2       c3   sig_init       af   sigma     tau   sig_tot

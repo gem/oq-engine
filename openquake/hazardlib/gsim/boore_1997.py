@@ -53,7 +53,7 @@ def _compute_site_term(vs30, C):
     return C['Bv'] * np.log(vs30 / C['Va'])
 
 
-def _compute_style_of_faulting_term(sof, rup, C):
+def _compute_style_of_faulting_term(sof, ctx, C):
     """
     Computes the coefficient to scale for reverse or strike-slip events
     Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -67,10 +67,10 @@ def _compute_style_of_faulting_term(sof, rup, C):
     """
     if sof is None:  # unspecified
         return C['B1all']
-    elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+    elif np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
         # strike-slip
         return C['B1ss']
-    elif rup.rake > 30.0 and rup.rake < 150.0:
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
         # reverse
         return C['B1rv']
     else:
@@ -78,33 +78,15 @@ def _compute_style_of_faulting_term(sof, rup, C):
         return C['B1all']
 
 
-def _get_stddevs(horizontal, C, stddev_types, num_sites):
+def _get_stddevs(horizontal, C):
     """
     Return standard deviations using Page 142 (Eq 4 - 5)
     """
     if horizontal:
         # Return standard deviations as defined in table 8, pag 121.
-        stddevs = []
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma_tot'] * np.ones(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma_r'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['sigma_e'] + np.zeros(num_sites))
-        return stddevs
-
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigtot = np.sqrt(((C['sigma_e'] * np.ones(num_sites)) ** 2.) +
-                             (C['sigma1'] * np.ones(num_sites)) ** 2.)
-            stddevs.append(sigtot)
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['sigma1'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['sigma_e'] + np.zeros(num_sites))
-    return stddevs
+        return [C['sigma_tot'], C['sigma_e'], C['sigma_r']]
+    return [np.sqrt(C['sigma_e'] ** 2 + C['sigma1'] ** 2),
+            C['sigma_e'], C['sigma1']]
 
 
 class BooreEtAl1997GeometricMean(GMPE):
@@ -143,23 +125,19 @@ class BooreEtAl1997GeometricMean(GMPE):
     sof = True
     horizontal = False
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        mean = (_compute_style_of_faulting_term(self.sof, rup, C) +
-                _compute_magnitude_scaling(rup.mag, C) +
-                _compute_distance_scaling(dists.rjb, C) +
-                _compute_site_term(sites.vs30, C))
-        stddevs = _get_stddevs(self.horizontal, C, stddev_types,
-                               num_sites=len(sites.vs30))
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (_compute_style_of_faulting_term(self.sof, ctx, C) +
+                       _compute_magnitude_scaling(ctx.mag, C) +
+                       _compute_distance_scaling(ctx.rjb, C) +
+                       _compute_site_term(ctx.vs30, C))
+            sig[m], tau[m], phi[m] = _get_stddevs(self.horizontal, C)
 
     #: Coefficient table is constructed from values in Table 8
     #: Note that for periods between 0.1 s and 0.18s the inter-event term

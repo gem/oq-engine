@@ -52,6 +52,9 @@ MULTIFAULT = os.path.join(os.path.dirname(__file__),
 GRIDDED = os.path.join(os.path.dirname(__file__),
                        'source_model/gridded.xml')
 
+KITEFAULT = os.path.join(os.path.dirname(__file__),
+                       'source_model/kite-fault-source.xml')
+
 TOML = os.path.join(os.path.dirname(__file__), 'expected_sources.toml')
 
 conv = SourceConverter(50., 1., 20, 0.1, 10.)
@@ -83,6 +86,9 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_multi_fault(self):
         self.check_round_trip(MULTIFAULT)
+
+    def test_kite_fault(self):
+        self.check_round_trip(KITEFAULT)
 
     def test_nonparam(self):
         [[src]] = self.check_round_trip(NONPARAM)

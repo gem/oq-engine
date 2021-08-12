@@ -43,9 +43,9 @@ def get_nl(C, ln_y_ref, exp1, exp2):
     return NL
 
 
-def get_tau(C, rup):
+def get_tau(C, ctx):
     # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
+    mag_test = min(max(ctx.mag, 5.0), 7.0) - 5.0
     tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
     return tau
 
@@ -80,31 +80,27 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-
-        sites.vs30 = 620 * np.ones(len(sites.vs30))
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        ctx.vs30 = 620 * np.ones(len(ctx.vs30))
         log_phi_ss = 1
-        tau = get_tau(ChiouYoungs2008.COEFFS[imt], rup)
+        super().compute(ctx, imts, mean, sig, tau, phi)
 
-        ln_y_ref = _get_ln_y_ref(rup, dists, ChiouYoungs2008.COEFFS[imt])
+        for m, imt in enumerate(imts):
+            t = get_tau(ChiouYoungs2008.COEFFS[imt], ctx)
 
-        exp1 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] *
-                      (sites.vs30.clip(-np.inf, 1130) - 360))
+            ln_y_ref = _get_ln_y_ref(ctx, ChiouYoungs2008.COEFFS[imt])
 
-        exp2 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] * (1130 - 360))
+            exp1 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] *
+                          (ctx.vs30.clip(-np.inf, 1130) - 360))
 
-        nl = get_nl(ChiouYoungs2008.COEFFS[imt], ln_y_ref, exp1, exp2)
+            exp2 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] * (1130 - 360))
 
-        mean, stddevs = _apply_adjustments(
-            ChiouYoungs2008.COEFFS, self.COEFFS_FS_ROCK[imt], 1,
-            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
-            log_phi_ss, NL=nl, tau_value=tau)
+            nl = get_nl(ChiouYoungs2008.COEFFS[imt], ln_y_ref, exp1, exp2)
 
-        return mean, stddevs
+            _apply_adjustments(
+                ChiouYoungs2008.COEFFS, self.COEFFS_FS_ROCK[imt], 1,
+                mean[m], sig[m], tau[m], phi[m], ctx, ctx.rjb, imt,
+                log_phi_ss, NL=nl, tau_value=t)
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 

@@ -15,13 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Module exports :class:`YuEtAl2013Ms`, :class:`YuEtAl2013MsTibet`,
 :class:`YuEtAl2013MsEastern`, :class:`YuEtAl2013MsStable`
 :class:`YuEtAl2013Mw`, :class:`YuEtAl2013MwTibet`,
 :class:`YuEtAl2013MwEastern`, :class:`YuEtAl2013MwStable`
-
 """
 import numpy as np
 from scipy.constants import g
@@ -29,10 +27,6 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-
-
-def _compute_std(C, stddev_types, num_sites):
-    return [np.ones(num_sites)*C['sigma']]
 
 
 def gc(coeff, mag):
@@ -183,61 +177,54 @@ class YuEtAl2013Ms(GMPE):
     #: Required distance measures are epicentral distance and azimuth
     REQUIRES_DISTANCES = {'repi', 'azimuth'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Check that the requested standard deviation type is available
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        #
         # Set parameters
-        mag = rup.mag
-        epi = dists.repi
-        theta = dists.azimuth
-        #
-        # Set coefficients
-        coeff = self.COEFFS[imt]
-        a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = \
-            gc(coeff, mag)
-        #
-        # Get correction coefficients. Here for each site we find the
-        # the geometry of the ellipses
-        ras = []
-        for epi, theta in zip(dists.repi, dists.azimuth):
-            res = get_ras(epi, theta, mag, coeff)
-            ras.append(res)
-        ras = np.array(ras)
-        rbs = rbf(ras, coeff, mag)
-        #
-        # Compute values of ground motion for the two cases. The value of
-        # 225 is hardcoded under the assumption that the hypocentral depth
-        # corresponds to 15 km (i.e. 15**2)
-        mean1 = (a1ca + a1cb * mag +
-                 a1cc * np.log((ras**2+225)**0.5 +
-                               a1cd * np.exp(a1ce * mag)))
-        mean2 = (a2ca + a2cb * mag +
-                 a2cc * np.log((rbs**2+225)**0.5 +
-                               a2cd * np.exp(a2ce * mag)))
-        #
-        # Get distances
-        x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
-        y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
-        mean = mean1 * mean2 / np.sqrt(x+y)
-        if imt.string == "PGA":
-            mean = np.exp(mean)/g/100
-        elif imt.string == "PGV":
-            mean = np.exp(mean)
-        else:
-            raise ValueError('Unsupported IMT')
-        #
-        # Get the standard deviation
-        stddevs = _compute_std(coeff, stddev_types, len(dists.repi))
-        #
-        # Return results
-        return np.log(mean), stddevs
+        mag = ctx.mag
+        epi = ctx.repi
+        theta = ctx.azimuth
+
+        for m, imt in enumerate(imts):
+            coeff = self.COEFFS[imt]
+            a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = gc(
+                coeff, mag)
+
+            # Get correction coefficients. Here for each site we find the
+            # the geometry of the ellipses
+            ras = []
+            for epi, theta in zip(ctx.repi, ctx.azimuth):
+                res = get_ras(epi, theta, mag, coeff)
+                ras.append(res)
+            ras = np.array(ras)
+            rbs = rbf(ras, coeff, mag)
+            #
+            # Compute values of ground motion for the two cases. The value of
+            # 225 is hardcoded under the assumption that the hypocentral depth
+            # corresponds to 15 km (i.e. 15**2)
+            mean1 = (a1ca + a1cb * mag +
+                     a1cc * np.log((ras**2+225)**0.5 +
+                                   a1cd * np.exp(a1ce * mag)))
+            mean2 = (a2ca + a2cb * mag +
+                     a2cc * np.log((rbs**2+225)**0.5 +
+                                   a2cd * np.exp(a2ce * mag)))
+            #
+            # Get distances
+            x = (mean1 * np.sin(np.radians(ctx.azimuth)))**2
+            y = (mean2 * np.cos(np.radians(ctx.azimuth)))**2
+            mean_ = mean1 * mean2 / np.sqrt(x+y)
+            if imt.string == "PGA":
+                mean_ = np.exp(mean_)/g/100
+            elif imt.string == "PGV":
+                mean_ = np.exp(mean_)
+            else:
+                raise ValueError('Unsupported IMT')
+
+            mean[m] = np.log(mean_)
+            sig[m] = coeff['sigma']
 
     #: Coefficient table
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -288,16 +275,16 @@ class YuEtAl2013Mw(YuEtAl2013Ms):
     propagate the uncertainty related to the magnitude conversion process.
     """
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         # Set parameters
-        magn = rup.mag
-        epi = dists.repi
-        theta = dists.azimuth
+        magn = ctx.mag
+        epi = ctx.repi
+        theta = ctx.azimuth
 
         # Convert Mw into Ms
         if magn < 6.58:
@@ -305,46 +292,42 @@ class YuEtAl2013Mw(YuEtAl2013Ms):
         else:
             mag = (magn + 2.42) / 1.28
 
-        # Set coefficients
-        coeff = self.COEFFS[imt]
-        a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = \
-            gc(coeff, mag)
+        for m, imt in enumerate(imts):
+            coeff = self.COEFFS[imt]
+            a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = gc(
+                coeff, mag)
 
-        # Get correction coefficients. Here for each site we find the
-        # the geometry of the ellipses
-        ras = []
-        for epi, theta in zip(dists.repi, dists.azimuth):
-            res = get_ras(epi, theta, mag, coeff)
-            ras.append(res)
-        ras = np.array(ras)
-        rbs = rbf(ras, coeff, mag)
+            # Get correction coefficients. Here for each site we find the
+            # the geometry of the ellipses
+            ras = []
+            for epi, theta in zip(ctx.repi, ctx.azimuth):
+                res = get_ras(epi, theta, mag, coeff)
+                ras.append(res)
+            ras = np.array(ras)
+            rbs = rbf(ras, coeff, mag)
 
-        # Compute values of ground motion for the two cases. The value of
-        # 225 is hardcoded under the assumption that the hypocentral depth
-        # corresponds to 15 km (i.e. 15**2)
-        mean1 = (a1ca + a1cb * mag +
-                 a1cc * np.log((ras**2+225)**0.5 +
-                               a1cd * np.exp(a1ce * mag)))
-        mean2 = (a2ca + a2cb * mag +
-                 a2cc * np.log((rbs**2+225)**0.5 +
-                               a2cd * np.exp(a2ce * mag)))
-        #
-        # Get distances
-        x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
-        y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
-        mean = mean1 * mean2 / np.sqrt(x+y)
-        if imt.string == "PGA":
-            mean = np.exp(mean)/g/100
-        elif imt.string == "PGV":
-            mean = np.exp(mean)
-        else:
-            raise ValueError('Unsupported IMT')
-        #
-        # Get the standard deviation
-        stddevs = _compute_std(coeff, stddev_types, len(dists.repi))
-        #
-        # Return results
-        return np.log(mean), stddevs
+            # Compute values of ground motion for the two cases. The value of
+            # 225 is hardcoded under the assumption that the hypocentral depth
+            # corresponds to 15 km (i.e. 15**2)
+            mean1 = (a1ca + a1cb * mag +
+                     a1cc * np.log((ras**2+225)**0.5 +
+                                   a1cd * np.exp(a1ce * mag)))
+            mean2 = (a2ca + a2cb * mag +
+                     a2cc * np.log((rbs**2+225)**0.5 +
+                                   a2cd * np.exp(a2ce * mag)))
+            #
+            # Get distances
+            x = (mean1 * np.sin(np.radians(ctx.azimuth)))**2
+            y = (mean2 * np.cos(np.radians(ctx.azimuth)))**2
+            mean_ = mean1 * mean2 / np.sqrt(x+y)
+            if imt.string == "PGA":
+                mean_ = np.exp(mean_)/g/100
+            elif imt.string == "PGV":
+                mean_ = np.exp(mean_)
+            else:
+                raise ValueError('Unsupported IMT')
+            mean[m] = np.log(mean_)
+            sig[m] = coeff['sigma']
 
 
 class YuEtAl2013MwTibet(YuEtAl2013Mw):

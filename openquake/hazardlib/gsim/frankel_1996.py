@@ -350,29 +350,26 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
 
         :raises ValueError:
             if imt is instance of :class:`openquake.hazardlib.imt.SA` with
             unsupported period.
         """
-        if imt not in IMTS_TABLES:
-            raise ValueError(
-                'IMT %s not supported in FrankelEtAl1996NSHMP. ' % repr(imt) +
-                'FrankelEtAl1996NSHMP does not allow interpolation for ' +
-                'unsupported periods.')
+        for m, imt in enumerate(imts):
+            if imt not in IMTS_TABLES:
+                raise ValueError(
+                    'IMT %s not supported in FrankelEtAl1996NSHMP. ' %
+                    imt.string + 'FrankelEtAl1996NSHMP does not allow '
+                    'interpolation for unsupported periods.')
 
-        mean = _compute_mean(self.kind, imt, rup.mag, dists.rhypo.copy())
-        mean = clip_mean(imt, mean)
-
-        stddevs = _compute_stddevs(
-            self.COEFFS[imt], imt, dists.rhypo.shape, stddev_types)
-
-        return mean, stddevs
+            mean[m] = _compute_mean(self.kind, imt, ctx.mag, ctx.rhypo.copy())
+            mean[m] = clip_mean(imt, mean[m])
+            sig[m] = self.COEFFS[imt]['sigma'] * np.log(10)
 
     # period dependent standard deviations (in base 10)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
