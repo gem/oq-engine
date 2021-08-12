@@ -71,69 +71,73 @@ class BCHydroESHM20SInterCentralTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInter
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SINTER_CENTRAL_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+        self.check_all("eshm20_bchydro/BCHydroESHM20_SINTER_CENTRAL_MEAN.csv",
+                       mean_discrep_percentage=MAX_DISCREP)
 
 
 class BCHydroESHM20SInterLowTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInterLow
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SINTER_LOWER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+        self.check_all("eshm20_bchydro/BCHydroESHM20_SINTER_LOWER_MEAN.csv",
+                       mean_discrep_percentage=MAX_DISCREP)
 
 
 class BCHydroESHM20SInterHighTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInterHigh
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SINTER_UPPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+        self.check_all("eshm20_bchydro/BCHydroESHM20_SINTER_UPPER_MEAN.csv",
+                       mean_discrep_percentage=MAX_DISCREP)
 
 
 class BCHydroESHM20SInterFastTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInter
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SINTER_FAST_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   theta6_adjustment=-0.0015)
+        self.check_all("eshm20_bchydro/BCHydroESHM20_SINTER_FAST_MEAN.csv",
+                       mean_discrep_percentage=MAX_DISCREP,
+                       theta6_adjustment=-0.0015)
 
 
 class BCHydroESHM20SInterHighSigmaMuTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInter
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SINTER_HIGH_SIGMA_MU_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   sigma_mu_epsilon=1.0)
+        self.check_all(
+            "eshm20_bchydro/BCHydroESHM20_SINTER_HIGH_SIGMA_MU_MEAN.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            sigma_mu_epsilon=1.0)
 
 
 class BCHydroESHM20SInterLinearFABATaperTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInter
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SINTER_LINEAR_FABA_TAPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   faba_taper_model="Linear", width=100.)
+        self.check_all(
+            "eshm20_bchydro/BCHydroESHM20_SINTER_LINEAR_FABA_TAPER_MEAN.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            faba_taper_model="Linear", width=100.)
 
 
 class BCHydroESHM20SInterSFuncFABATaperTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInter
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SINTER_SFUNC_FABA_TAPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   faba_taper_model="SFunc", a=-100.0, b=100.0)
+        self.check_all(
+            "eshm20_bchydro/BCHydroESHM20_SINTER_SFUNC_FABA_TAPER_MEAN.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            faba_taper_model="SFunc", a=-100.0, b=100.0)
 
 
 class BCHydroESHM20SInterGaussianFABATaperTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInter
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SINTER_GAUSSIAN_FABA_TAPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   faba_taper_model="Gaussian", sigma=30.0, a=-100.0, b=100.0)
+        self.check_all(
+            "eshm20_bchydro/BCHydroESHM20_SINTER_GAUSSIAN_FABA_TAPER_MEAN.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            faba_taper_model="Gaussian", sigma=30.0, a=-100.0, b=100.0)
 
 # Subduction Slab
 
@@ -142,66 +146,70 @@ class BCHydroESHM20SSlabCentralTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SSlab
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_CENTRAL_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+        self.check_all("eshm20_bchydro/BCHydroESHM20_SSLAB_CENTRAL_MEAN.csv",
+                       mean_discrep_percentage=MAX_DISCREP)
 
 
 class BCHydroESHM20SSlabLowTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SSlabLow
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_LOWER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+        self.check_all("eshm20_bchydro/BCHydroESHM20_SSLAB_LOWER_MEAN.csv",
+                       mean_discrep_percentage=MAX_DISCREP)
 
 
 class BCHydroESHM20SSlabHighTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SSlabHigh
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_UPPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+        self.check_all("eshm20_bchydro/BCHydroESHM20_SSLAB_UPPER_MEAN.csv",
+                       mean_discrep_percentage=MAX_DISCREP)
 
 
 class BCHydroESHM20SSlabFastTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SSlab
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_FAST_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   theta6_adjustment=-0.0015)
+        self.check_all("eshm20_bchydro/BCHydroESHM20_SSLAB_FAST_MEAN.csv",
+                       mean_discrep_percentage=MAX_DISCREP,
+                       theta6_adjustment=-0.0015)
 
 
 class BCHydroESHM20SSlabHighSigmaMuTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SSlab
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_HIGH_SIGMA_MU_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   sigma_mu_epsilon=1.0)
+        self.check_all(
+            "eshm20_bchydro/BCHydroESHM20_SSLAB_HIGH_SIGMA_MU_MEAN.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            sigma_mu_epsilon=1.0)
 
 
 class BCHydroESHM20SSlabLinearFABATaperTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SSlab
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_LINEAR_FABA_TAPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   faba_taper_model="Linear", width=100.)
+        self.check_all(
+            "eshm20_bchydro/BCHydroESHM20_SSLAB_LINEAR_FABA_TAPER_MEAN.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            faba_taper_model="Linear", width=100.)
 
 
 class BCHydroESHM20SSlabSFuncFABATaperTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SSlab
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_SFUNC_FABA_TAPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   faba_taper_model="SFunc", a=-100.0, b=100.0)
+        self.check_all(
+            "eshm20_bchydro/BCHydroESHM20_SSLAB_SFUNC_FABA_TAPER_MEAN.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            faba_taper_model="SFunc", a=-100.0, b=100.0)
 
 
 class BCHydroESHM20SSlabGaussianFABATaperTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SSlab
 
     def test_mean(self):
-        self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_GAUSSIAN_FABA_TAPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   faba_taper_model="Gaussian", sigma=30.0, a=-100.0, b=100.0)
+        self.check_all(
+            "eshm20_bchydro/BCHydroESHM20_SSLAB_GAUSSIAN_FABA_TAPER_MEAN.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            faba_taper_model="Gaussian", sigma=30.0, a=-100.0, b=100.0)
