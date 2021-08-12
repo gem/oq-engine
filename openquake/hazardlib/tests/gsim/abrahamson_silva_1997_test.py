@@ -24,17 +24,18 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 # (subroutine getAS in HazFXv.f code) available from
 # http://earthquake.usgs.gov/hazards/products/ak/2007/software/
 
+
 class AbrahamsonSilva1997TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonSilva1997
 
     def test_mean_ss(self):
-        self.check('AS97/AS97_MEAN_SS.csv',
-                   max_discrep_percentage=0.2)
+        self.check_all('AS97/AS97_MEAN_SS.csv',
+                       mean_discrep_percentage=0.2)
 
     def test_mean_reverse(self):
-        self.check('AS97/AS97_MEAN_REVERSE.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('AS97/AS97_MEAN_REVERSE.csv',
+                       mean_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('AS97/AS97_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('AS97/AS97_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
