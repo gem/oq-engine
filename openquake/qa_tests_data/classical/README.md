@@ -71,4 +71,5 @@
 | case_69 | |
 | case_70 | |
 | case_71 | |
-| [case_72](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_72) | Tests some epistemic uncertainties in a source-specific LT | 
+| [case_72](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_72) | Test calculation with a subset of the 2014 US model | 
+| [case_73](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_73) | Tests some epistemic uncertainties in a source-specific LT | 
