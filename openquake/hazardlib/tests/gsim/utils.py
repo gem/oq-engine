@@ -15,14 +15,56 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import unittest
 import os
+import csv
+import unittest
 
 import numpy as np
 import pandas
 from openquake.baselib.general import all_equals
 from openquake.hazardlib import contexts, imt
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
+
+NORMALIZE = False
+
+
+def get_ifield(fields):
+    """
+    :returns: dictionary field name -> field index
+    """
+    return {f: i for i, f in enumerate(fields)
+            if f.startswith(('site_', 'rup_', 'dist_'))}
+
+
+def normalize(csvfnames):
+    """
+    Fix headers and input rows of the given files
+    """
+    allcols = []
+    ifield = {}
+    data = {}
+    for fname in csvfnames:
+        with open(fname) as f:
+            reader = csv.reader(f)
+            fields = []
+            for f in next(reader):
+                try:
+                    im = imt.from_string(f)
+                except KeyError:
+                    fields.append(f)
+                else:
+                    fields.append(str(im.period) if im.period else f)
+            allcols.append(fields)
+            ifield[fname] = {f: i for i, f in enumerate(fields)}
+            data[fname] = list(reader)
+    colset = set.intersection(*[set(cols) for cols in allcols])
+    for fname, cols in zip(csvfnames, allcols):
+        idx = ifield[fname]
+        cols = [c for c in cols if c in colset]
+        writer = csv.writer(open(fname, 'w'))
+        writer.writerow(cols)
+        for row in data[fname]:
+            writer.writerow([row[idx[c]] for c in cols])
 
 
 def read_cmaker_df(gsim, csvfnames):
@@ -133,6 +175,9 @@ class BaseGSIMTestCase(unittest.TestCase):
             std_discrep_percentage = mean_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
+        if NORMALIZE:
+            normalize(fnames)
+            return
         gsim = self.GSIM_CLASS(**kwargs)
         out_types = ["MEAN"]
         for sdt in contexts.STD_TYPES:
