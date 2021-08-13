@@ -25,6 +25,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
@@ -213,7 +214,7 @@ class GmfComputer(object):
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
-                    (gsim, imt, self.source_id.decode('utf8'),
+                    (gsim, imt, decode(self.source_id),
                      exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
@@ -284,6 +285,9 @@ class GmfComputer(object):
             gmf = to_imt_unit_values(
                 mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
+        else:
+            # this cannot happen, unless you pass a wrong mean_stds array
+            raise ValueError('There are %d>3 outputs!' % num_outs)
         return gmf, stdi, epsilons
 
 

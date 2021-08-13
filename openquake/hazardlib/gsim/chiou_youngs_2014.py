@@ -35,64 +35,64 @@ CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
 
-def _get_centered_cdpp(clsname, dists):
+def _get_centered_cdpp(clsname, ctx):
     """
     Returns the centred dpp term (zero by default)
     """
     if clsname.endswith("NearFaultEffect"):
-        return dists.rcdpp
-    return np.zeros(dists.rrup.shape)
+        return ctx.rcdpp
+    return np.zeros(ctx.rrup.shape)
 
 
-def _get_centered_z1pt0(clsname, sites):
+def _get_centered_z1pt0(clsname, ctx):
     """
     Get z1pt0 centered on the Vs30- dependent average z1pt0(m)
     California and non-Japan regions
     """
     if clsname.endswith("Japan"):
-        mean_z1pt0 = (-5.23 / 2.) * np.log(((sites.vs30 ** 2.) + 412.39 ** 2.)
+        mean_z1pt0 = (-5.23 / 2.) * np.log(((ctx.vs30 ** 2.) + 412.39 ** 2.)
                                            / (1360 ** 2. + 412.39 ** 2.))
-        return sites.z1pt0 - np.exp(mean_z1pt0)
+        return ctx.z1pt0 - np.exp(mean_z1pt0)
 
     #: California and non-Japan regions
-    mean_z1pt0 = (-7.15 / 4.) * np.log(((sites.vs30) ** 4. + 570.94 ** 4.)
+    mean_z1pt0 = (-7.15 / 4.) * np.log(((ctx.vs30) ** 4. + 570.94 ** 4.)
                                        / (1360 ** 4. + 570.94 ** 4.))
-    return sites.z1pt0 - np.exp(mean_z1pt0)
+    return ctx.z1pt0 - np.exp(mean_z1pt0)
 
 
-def _get_centered_ztor(rup):
+def _get_centered_ztor(ctx):
     """
     Get ztor centered on the M- dependent avarage ztor(km)
     by different fault types.
     """
-    if 30 <= rup.rake <= 150:
+    if 30 <= ctx.rake <= 150:
         # Reverse and reverse-oblique faulting
-        mean_ztor = max(2.704 - 1.226 * max(rup.mag - 5.849, 0.0), 0.) ** 2
+        mean_ztor = max(2.704 - 1.226 * max(ctx.mag - 5.849, 0.0), 0.) ** 2
     else:
         # Strike-slip and normal faulting
-        mean_ztor = max(2.673 - 1.136 * max(rup.mag - 4.970, 0.0), 0.) ** 2
-    return rup.ztor - mean_ztor
+        mean_ztor = max(2.673 - 1.136 * max(ctx.mag - 4.970, 0.0), 0.) ** 2
+    return ctx.ztor - mean_ztor
 
 
-def _get_ln_y_ref(rup, dists, C):
+def _get_ln_y_ref(ctx, C):
     """
     Get an intensity on a reference soil.
     Implements eq. 13a.
     """
     # Reverse faulting flag
-    Frv = 1. if 30 <= rup.rake <= 150 else 0.
+    Frv = 1. if 30 <= ctx.rake <= 150 else 0.
     # Normal faulting flag
-    Fnm = 1. if -120 <= rup.rake <= -60 else 0.
+    Fnm = 1. if -120 <= ctx.rake <= -60 else 0.
     # A part in eq. 11
-    mag_test1 = np.cosh(2. * max(rup.mag - 4.5, 0))
+    mag_test1 = np.cosh(2. * max(ctx.mag - 4.5, 0))
     # Centered DPP
     centered_dpp = 0
     # Centered Ztor
     centered_ztor = 0
 
-    dist_taper = np.fmax(1 - (np.fmax(dists.rrup - 40,
-                              np.zeros_like(dists)) / 30.),
-                         np.zeros_like(dists))
+    dist_taper = np.fmax(1 - (np.fmax(ctx.rrup - 40,
+                              np.zeros_like(ctx)) / 30.),
+                         np.zeros_like(ctx))
     dist_taper = dist_taper.astype(np.float64)
     ln_y_ref = (
         # first part of eq. 11
@@ -101,34 +101,34 @@ def _get_ln_y_ref(rup, dists, C):
         + (C['c1b'] + C['c1d'] / mag_test1) * Fnm
         + (C['c7'] + C['c7b'] / mag_test1) * centered_ztor
         + (C['c11'] + C['c11b'] / mag_test1) *
-        np.cos(np.radians(rup.dip)) ** 2
+        np.cos(np.radians(ctx.dip)) ** 2
         # second part
-        + C['c2'] * (rup.mag - 6)
+        + C['c2'] * (ctx.mag - 6)
         + ((C['c2'] - C['c3']) / C['cn'])
-        * np.log(1 + np.exp(C['cn'] * (C['cm'] - rup.mag)))
+        * np.log(1 + np.exp(C['cn'] * (C['cm'] - ctx.mag)))
         # third part
         + C['c4']
-        * np.log(dists.rrup + C['c5']
-                 * np.cosh(C['c6'] * max(rup.mag - C['chm'], 0)))
+        * np.log(ctx.rrup + C['c5']
+                 * np.cosh(C['c6'] * max(ctx.mag - C['chm'], 0)))
         + (C['c4a'] - C['c4'])
-        * np.log(np.sqrt(dists.rrup ** 2 + C['crb'] ** 2))
+        * np.log(np.sqrt(ctx.rrup ** 2 + C['crb'] ** 2))
         # forth part
-        + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
-        * dists.rrup
+        + (C['cg1'] + C['cg2'] / (np.cosh(max(ctx.mag - C['cg3'], 0))))
+        * ctx.rrup
         # fifth part
         + C['c8'] * dist_taper
-        * min(max(rup.mag - 5.5, 0) / 0.8, 1.0)
-        * np.exp(-1 * C['c8a'] * (rup.mag - C['c8b']) ** 2) * centered_dpp
+        * min(max(ctx.mag - 5.5, 0) / 0.8, 1.0)
+        * np.exp(-1 * C['c8a'] * (ctx.mag - C['c8b']) ** 2) * centered_dpp
         # sixth part
-        # + C['c9'] * Fhw * np.cos(math.radians(rup.dip)) *
-        # (C['c9a'] + (1 - C['c9a']) * np.tanh(dists.rx / C['c9b']))
-        # * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
-        #   / (dists.rrup + 1.0))
+        # + C['c9'] * Fhw * np.cos(math.radians(ctx.dip)) *
+        # (C['c9a'] + (1 - C['c9a']) * np.tanh(ctx.rx / C['c9b']))
+        # * (1 - np.sqrt(ctx.rjb ** 2 + ctx.ztor ** 2)
+        #   / (ctx.rrup + 1.0))
     )
     return ln_y_ref
 
 
-def _get_mean(sites, C, ln_y_ref, exp1, exp2):
+def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
     """
     Add site effects to an intensity. Implements eq. 13b.
     """
@@ -137,7 +137,7 @@ def _get_mean(sites, C, ln_y_ref, exp1, exp2):
         # first line of eq. 12
         ln_y_ref + eta
         # second line
-        + C['phi1'] * np.log(sites.vs30 / 1130).clip(-np.inf, 0)
+        + C['phi1'] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0)
         # third line
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
@@ -158,7 +158,7 @@ def get_basin_depth_term(clsname, C, centered_z1pt0):
                                      CONSTANTS["phi6"]))
 
 
-def get_directivity(clsname, C, rup, dists):
+def get_directivity(clsname, C, ctx):
     """
     Returns the directivity term.
 
@@ -167,13 +167,13 @@ def get_directivity(clsname, C, rup, dists):
     equal to zero, since the near fault directivity effect prediction is
     off by default in our calculation.
     """
-    cdpp = _get_centered_cdpp(clsname, dists)
+    cdpp = _get_centered_cdpp(clsname, ctx)
     if not np.any(cdpp > 0.0):
         # No directivity term
         return 0.0
-    f_dir = np.exp(-C["c8a"] * ((rup.mag - C["c8b"]) ** 2.)) * cdpp
-    f_dir *= min((max(rup.mag - 5.5, 0.0) / 0.8), 1.)
-    rrup_max = dists.rrup - 40.
+    f_dir = np.exp(-C["c8a"] * ((ctx.mag - C["c8b"]) ** 2.)) * cdpp
+    f_dir *= min((max(ctx.mag - 5.5, 0.0) / 0.8), 1.)
+    rrup_max = ctx.rrup - 40.
     rrup_max[rrup_max < 0.0] = 0.0
     rrup_max = 1.0 - (rrup_max / 30.)
     rrup_max[rrup_max < 0.0] = 0.0
@@ -261,28 +261,28 @@ def get_geometric_spreading(C, mag, rrup):
         rrup + C["c5"] * np.cosh(C["c6"] * max(mag - C["chm"], 0.0)))
 
 
-def get_hanging_wall_term(C, rup, dists):
+def get_hanging_wall_term(C, ctx):
     """
     Returns the hanging wall term
     """
-    fhw = np.zeros(dists.rrup.shape)
-    idx = dists.rx >= 0.0
+    fhw = np.zeros(ctx.rrup.shape)
+    idx = ctx.rx >= 0.0
     if np.any(idx):
-        fdist = 1.0 - (np.sqrt(dists.rjb[idx] ** 2. + rup.ztor ** 2.) /
-                       (dists.rrup[idx] + 1.0))
-        fdist *= (C["c9a"] + (1.0 - C["c9a"]) * np.tanh(dists.rx[idx] /
+        fdist = 1.0 - (np.sqrt(ctx.rjb[idx] ** 2. + ctx.ztor ** 2.) /
+                       (ctx.rrup[idx] + 1.0))
+        fdist *= (C["c9a"] + (1.0 - C["c9a"]) * np.tanh(ctx.rx[idx] /
                                                         C["c9b"]))
-        fhw[idx] += (C["c9"] * np.cos(np.radians(rup.dip)) * fdist)
+        fhw[idx] += (C["c9"] * np.cos(np.radians(ctx.dip)) * fdist)
     return fhw
 
 
-def get_linear_site_term(clsname, C, sites):
+def get_linear_site_term(clsname, C, ctx):
     """
     Returns the linear site scaling term
     """
     if clsname.endswith("Japan"):
-        return C["phi1jp"] * np.log(sites.vs30 / 1130).clip(-np.inf, 0.0)
-    return C["phi1"] * np.log(sites.vs30 / 1130).clip(-np.inf, 0.0)
+        return C["phi1jp"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
+    return C["phi1"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
 
 
 def get_region(clsname):
@@ -296,20 +296,20 @@ def get_region(clsname):
         return "CAL"
 
 
-def get_ln_y_ref(clsname, C, rup, dists):
+def get_ln_y_ref(clsname, C, ctx):
     """
     Returns the ground motion on the reference rock, described fully by
     Equation 11
     """
     region = get_region(clsname)
-    delta_ztor = _get_centered_ztor(rup)
+    delta_ztor = _get_centered_ztor(ctx)
     return (get_stress_scaling(C) +
-            get_magnitude_scaling(C, rup.mag) +
-            get_source_scaling_terms(C, rup, delta_ztor) +
-            get_hanging_wall_term(C, rup, dists) +
-            get_geometric_spreading(C, rup.mag, dists.rrup) +
-            get_far_field_distance_scaling(region, C, rup.mag, dists.rrup) +
-            get_directivity(clsname, C, rup, dists))
+            get_magnitude_scaling(C, ctx.mag) +
+            get_source_scaling_terms(C, ctx, delta_ztor) +
+            get_hanging_wall_term(C, ctx) +
+            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
+            get_far_field_distance_scaling(region, C, ctx.mag, ctx.rrup) +
+            get_directivity(clsname, C, ctx))
 
 
 def get_magnitude_scaling(C, mag):
@@ -322,84 +322,69 @@ def get_magnitude_scaling(C, mag):
     return f_m
 
 
-def get_nonlinear_site_term(C, sites, y_ref):
+def get_nonlinear_site_term(C, ctx, y_ref):
     """
     Returns the nonlinear site term and the Vs-scaling factor (to be
     used in the standard deviation model
     """
-    vs = sites.vs30.clip(-np.inf, 1130.0)
+    vs = ctx.vs30.clip(-np.inf, 1130.0)
     f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
                                 np.exp(C["phi3"] * (1130. - 360.)))
     f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
     return f_nl, f_nl_scaling
 
 
-def get_phi(C, mag, sites, nl0):
+def get_phi(C, mag, ctx, nl0):
     """
     Returns the within-event variability described in equation 13, line 3
     """
-    phi = C["sig3"] * np.ones(sites.vs30.shape)
-    phi[sites.vs30measured] = 0.7
+    phi = C["sig3"] * np.ones(ctx.vs30.shape)
+    phi[ctx.vs30measured] = 0.7
     phi = np.sqrt(phi + ((1.0 + nl0) ** 2.))
     mdep = C["sig1"] + (((C["sig2"] - C["sig1"]) / 1.5) *
                         (min(max(mag, 5.0), 6.5) - 5.0))
     return mdep * phi
 
 
-def get_source_scaling_terms(C, rup, delta_ztor):
+def get_source_scaling_terms(C, ctx, delta_ztor):
     """
     Returns additional source scaling parameters related to style of
     faulting, dip and top of rupture depth
     """
     f_src = 0.0
-    coshm = np.cosh(2.0 * max(rup.mag - 4.5, 0.0))
+    coshm = np.cosh(2.0 * max(ctx.mag - 4.5, 0.0))
     # Style of faulting term
-    if 30 <= rup.rake <= 150:
+    if 30 <= ctx.rake <= 150:
         # reverse faulting flag
         f_src += (C["c1a"] + (C["c1c"] / coshm))
-    elif -120 <= rup.rake <= -60:
+    elif -120 <= ctx.rake <= -60:
         # normal faulting flag
         f_src += (C["c1b"] + (C["c1d"] / coshm))
     # Top of rupture term
     f_src += ((C["c7"] + (C["c7b"] / coshm)) * delta_ztor)
     # Dip term
     f_src += ((CONSTANTS["c11"] + (C["c11b"] / coshm)) *
-              np.cos(np.radians(rup.dip)) ** 2.0)
+              np.cos(np.radians(ctx.dip)) ** 2.0)
     return f_src
 
 
-def get_stddevs(clsname, C, sites, mag, y_ref, f_nl_scaling, stddev_types):
+def get_stddevs(clsname, C, ctx, mag, y_ref, f_nl_scaling):
     """
     Returns the standard deviation model described in equation 13
     """
     if clsname == 'ChiouYoungs2014PEER':
         # the standard deviation, which is fixed at 0.65 for every site
-        ret = []
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                # Fix total sigma to 0.65
-                ret.append(0.65 * np.ones_like(sites.vs30))
-        return ret
+        return [0.65 * np.ones_like(ctx.vs30), 0, 0]
 
     # Determines the nonlinear term described in equation 13, line 4
     nl0 = f_nl_scaling * (y_ref / (y_ref + C["phi4"]))
     # Get between and within-event variability
     tau = get_tau(C, mag)
-    phi_nl0 = get_phi(C, mag, sites, nl0)
+    phi_nl0 = get_phi(C, mag, ctx, nl0)
     # Get total standard deviation propagating the uncertainty in the
     # nonlinear amplification term
     sigma = np.sqrt(((1.0 + nl0) ** 2.) * (tau ** 2.) + phi_nl0 ** 2.)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # Equation 13, line 1
-            stddevs.append(sigma)
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi_nl0)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            # This is implied by equation 13, line 1
-            stddevs.append(np.abs((1 + nl0) * tau))
-    return stddevs
+    return [sigma, np.abs((1 + nl0) * tau), phi_nl0]
 
 
 def get_stress_scaling(C):
@@ -459,36 +444,35 @@ class ChiouYoungs2014(GMPE):
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         name = self.__class__.__name__
-        C = self.COEFFS[imt]
-        # Get ground motion on reference rock
-        ln_y_ref = get_ln_y_ref(name, C, rup, dists)
-        y_ref = np.exp(ln_y_ref)
-        # Get the site amplification
-        # Get basin depth
-        dz1pt0 = _get_centered_z1pt0(name, sites)
-        # In the case that Z1.0 = 0.0 then no deep soil correction is applied
-        dz1pt0[sites.z1pt0 <= 0.0] = 0.0
-        f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
-        # Get linear amplification term
-        f_lin = get_linear_site_term(name, C, sites)
-        # Get nonlinear amplification term
-        f_nl, f_nl_scaling = get_nonlinear_site_term(C, sites, y_ref)
-        # Add on the site amplification
-        mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
-        # Get standard deviations
-        stddevs = get_stddevs(name, C, sites, rup.mag, y_ref, f_nl_scaling,
-                              stddev_types)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # Get ground motion on reference rock
+            ln_y_ref = get_ln_y_ref(name, C, ctx)
+            y_ref = np.exp(ln_y_ref)
+            # Get the site amplification
+            # Get basin depth
+            dz1pt0 = _get_centered_z1pt0(name, ctx)
+            # for Z1.0 = 0.0 no deep soil correction is applied
+            dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
+            f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
+            # Get linear amplification term
+            f_lin = get_linear_site_term(name, C, ctx)
+            # Get nonlinear amplification term
+            f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+            # Add on the site amplification
+            mean[m] = ln_y_ref + (f_lin + f_nl + f_z1pt0)
+            # Get standard deviations
+            sig[m], tau[m], phi[m] = get_stddevs(
+                name, C, ctx, ctx.mag, y_ref, f_nl_scaling)
 
     #: Coefficient tables are constructed from values in tables 1 - 5
-
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     c1      c1a     c1b     c1c     c1d     cn      cm    c2      c3    c4     c4a  crb   c5      chm     c6      c7      c7b     c8     c8a    c8b       c9     c9a    c9b     c11      c11b        cg1        cg2       cg3     phi1       phi2      phi3     phi4     phi5   phi6  gjpit  gwn      phi1jp  phi5jp   phi6jp     tau1    tau2    sig1    sig2    sig3    sig2jp
 pga   -1.5065  0.165  -0.255  -0.165  0.255  16.0875  4.9993  1.06  1.9636  -2.1  -0.5  50  6.4551  3.0956  0.4908  0.0352   0.0462  0.     0.2695  0.4833  0.9228  0.1202  6.8607  0.      -0.4536    -0.007146  -0.006758  4.2542  -0.521   -0.1417   -0.00701   0.102151  0.     300  1.5817  0.7594  -0.6846  0.459    800.        0.4     0.26    0.4912  0.3762  0.8     0.4528
@@ -574,22 +558,19 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
     """
     adapted = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        # intensity on a reference soil is used for both mean
-        # and stddev calculations.
-        ln_y_ref = _get_ln_y_ref(self.__class__.__name__, rup, dists, C)
-        # exp1 and exp2 are parts of eq. 12 and eq. 13,
-        # calculate it once for both.
-        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-        mean = _get_mean(sites, C, ln_y_ref, exp1, exp2)
-        stddevs = np.zeros_like(mean)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # intensity on a reference soil is used for both mean
+            # and stddev calculations.
+            ln_y_ref = _get_ln_y_ref(self.__class__.__name__, ctx, C)
+            # exp1 and exp2 are parts of eq. 12 and eq. 13,
+            # calculate it once for both.
+            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
+            exp2 = np.exp(C['phi3'] * (1130 - 360))
+            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2)

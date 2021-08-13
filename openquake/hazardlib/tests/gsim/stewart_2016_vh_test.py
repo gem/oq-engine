@@ -107,7 +107,7 @@ class StewartEtAl2016VHTestCaseA(BaseGSIMTestCase):
 
 class StewartEtAl2016VHTestCaseB(StewartEtAl2016VHTestCaseA):
     """
-    Tests the Stewart et al. (2016) V/H GMPE for the "global {default}" 
+    Tests the Stewart et al. (2016) V/H GMPE for the "global {default}"
     conditions: Style of faulting included - "Global" Q model
     """
     GSIM_CLASS = SBSAb.StewartEtAl2016VH

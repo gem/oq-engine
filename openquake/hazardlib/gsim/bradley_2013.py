@@ -28,6 +28,7 @@ Module exports :class:`Bradley2013`, :class:`Bradley2013Volc`,
 :class:`Bradley2013ChchMaps`.
 :class:`Bradley2013ChchMapsAdditionalSigma`.
 """
+import copy
 import numpy as np
 import shapely
 
@@ -38,17 +39,13 @@ from openquake.hazardlib.imt import PGA, SA
 
 
 def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
-
     dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
     # If the site is in the CBD polygon, get dL2L and dS2S terms
     if in_cshm is True:
         # Only apply the dL2L term only to sites located in the CBD.
         dL2L[in_cbd == 1] = _get_dL2L(imt_per)
         dS2S[in_cbd == 1] = _get_dS2S(region, imt_per)
-
-    mean = b13_mean + dL2L + dS2S
-
-    return mean
+    return b13_mean + dL2L + dS2S
 
 
 def _check_in_cbd_polygon(lons, lats):
@@ -145,18 +142,18 @@ def _get_SRF_tau(imt_per):
     return srf
 
 
-def _get_adjusted_stddevs(
-        clsname, additional_sigma, sites, rup, C, stddev_types, ln_y_ref,
-        exp1, exp2, in_cshm, in_cbd, imt_per):
+def set_adjusted_stddevs(
+        clsname, additional_sigma, ctx, C, ln_y_ref,
+        exp1, exp2, in_cshm, in_cbd, imt_per, sig, tau, phi):
 
     # aftershock flag is zero, we consider only main shock.
     AS = 0
-    Fmeasured = sites.vs30measured
-    Finferred = 1 - sites.vs30measured
+    Fmeasured = ctx.vs30measured
+    Finferred = ~ctx.vs30measured
 
     # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
-    tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
+    mag_test = min(max(ctx.mag, 5.0), 7.0) - 5.0
+    t = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
     # b and c coeffs from eq. 10
     b = C['phi2'] * (exp1 - exp2)
@@ -167,45 +164,30 @@ def _get_adjusted_stddevs(
     NL = b * y_ref / (y_ref + c)
     sigma = (
         # first line of eq. 20
-        (C['sig1']
-         + 0.5 * (C['sig2'] - C['sig1']) * mag_test
-         + C['sig4'] * AS)
+        (C['sig1'] + 0.5 * (C['sig2'] - C['sig1']) * mag_test + C['sig4'] * AS)
         # second line
-        * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
-                  + (1 + NL) ** 2))
+        * np.sqrt(C['sig3'] * Finferred + 0.7 * Fmeasured + (1 + NL) ** 2))
     if "Maps" in clsname:
 
         # Get sigma reduction factors if site is in CBD polygon.
         srf_sigma = np.array(np.ones(np.shape(in_cbd)))
         srf_phi = np.array(np.ones(np.shape(in_cbd)))
         srf_tau = np.array(np.ones(np.shape(in_cbd)))
-        if in_cshm is True:
+        if in_cshm == 1:
             srf_sigma[in_cbd == 1] = _get_SRF_sigma(imt_per)
             srf_phi[in_cbd == 1] = _get_SRF_phi(imt_per)
             # The tau reduction term is not used in this implementation
             # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
 
         # Add 'additional sigma' specified in the Canterbury Seismic
-        # Hazard Model to total sigma
-
-        ret = []
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                # eq. 21
-                scaled_sigma = np.sqrt(((1 + NL) ** 2) *
-                                       (tau ** 2) + (sigma ** 2)) * srf_sigma
-                ret += [np.sqrt(scaled_sigma ** 2 + additional_sigma ** 2)]
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                scaled_phi = sigma * srf_phi
-                ret.append(np.sqrt(
-                    scaled_phi ** 2 + additional_sigma ** 2 / 2))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                # this is implied in eq. 21
-                scaled_tau = (np.abs((1 + NL) * tau)) * srf_tau
-                ret.append(np.sqrt(
-                    scaled_tau ** 2 + additional_sigma ** 2 / 2))
-
-        return ret
+        # Hazard Model to total sigma, eq. 21
+        scaled_sigma = np.sqrt((1 + NL) ** 2 * t ** 2 + sigma ** 2) * srf_sigma
+        sig[:] = np.sqrt(scaled_sigma ** 2 + additional_sigma ** 2)
+        scaled_phi = sigma * srf_phi
+        phi[:] = np.sqrt(scaled_phi ** 2 + additional_sigma ** 2 / 2)
+        scaled_tau = np.abs((1 + NL) * t) * srf_tau
+        tau[:] = np.sqrt(scaled_tau ** 2 + additional_sigma ** 2 / 2)
+        return
 
     # Get sigma reduction factors
     srf_sigma = _get_SRF_sigma(imt_per)
@@ -214,24 +196,13 @@ def _get_adjusted_stddevs(
 
     # Add 'additional sigma' specified in the Canterbury Seismic
     # Hazard Model to total sigma. This equals zero for the base model.
-    ret = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # eq. 21
-            scaled_sigma = np.sqrt(((1 + NL) ** 2) * (tau ** 2) +
-                                   (sigma ** 2)) * srf_sigma
-            ret += [np.sqrt(scaled_sigma ** 2 + additional_sigma ** 2)]
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            scaled_phi = sigma * srf_phi
-            ret.append(np.sqrt(scaled_phi ** 2 +
-                               additional_sigma ** 2 / 2))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            # this is implied in eq. 21
-            scaled_tau = (np.abs((1 + NL) * tau)) * srf_tau
-            ret.append(np.sqrt(scaled_tau ** 2 +
-                               additional_sigma ** 2 / 2))
-
-    return ret
+    # eq. 21
+    scaled_sigma = np.sqrt((1 + NL) ** 2 * t**2 + sigma**2) * srf_sigma
+    sig[:] += np.sqrt(scaled_sigma ** 2 + additional_sigma ** 2)
+    scaled_phi = sigma * srf_phi
+    phi[:] += np.sqrt(scaled_phi ** 2 + additional_sigma ** 2 / 2)
+    scaled_tau = np.abs((1 + NL) * t) * srf_tau
+    tau[:] += np.sqrt(scaled_tau ** 2 + additional_sigma ** 2 / 2)
 
 
 def _get_dL2L(imt_per):
@@ -344,7 +315,7 @@ def _get_dS2S_4(region, imt_per):
     return dS2S
 
 
-def _get_ln_y_ref(trt, rup, dists, C):
+def _get_ln_y_ref(trt, ctx, C):
     """
     Get an intensity on a reference soil.
 
@@ -354,14 +325,14 @@ def _get_ln_y_ref(trt, rup, dists, C):
     (i.e. no TVZ attenuation)
     """
     # Taupo Volcanic Zone Path Distance. Set to zero.
-    rtvz = dists.rrup if trt == const.TRT.VOLCANIC else 0.
+    rtvz = ctx.rrup if trt == const.TRT.VOLCANIC else 0.
 
     # reverse faulting flag
-    Frv = 1 if 30 <= rup.rake <= 150 else 0
+    Frv = 1 if 30 <= ctx.rake <= 150 else 0
     # normal faulting flag
-    Fnm = 1 if -120 <= rup.rake <= -60 else 0
+    Fnm = 1 if -120 <= ctx.rake <= -60 else 0
     # hanging wall flag
-    Fhw = (dists.rx >= 0)
+    Fhw = (ctx.rx >= 0)
     # aftershock flag. always zero since we only consider main shock
     AS = 0
 
@@ -370,37 +341,37 @@ def _get_ln_y_ref(trt, rup, dists, C):
         C['c1']
         + (C['c1a'] * Frv
            + C['c1b'] * Fnm
-           + C['c7'] * (np.clip(rup.ztor, -np.inf, C['c8']) - 4))
+           + C['c7'] * (np.clip(ctx.ztor, -np.inf, C['c8']) - 4))
         * (1 - AS)
-        + (C['c10'] + C['c7a'] * (rup.ztor - 4)) * AS
+        + (C['c10'] + C['c7a'] * (ctx.ztor - 4)) * AS
         # second line
-        + C['c2'] * (rup.mag - 6)
+        + C['c2'] * (ctx.mag - 6)
         + ((C['c2'] - C['c3']) / C['cn'])
-        * np.log(1 + np.exp(C['cn'] * (C['cm'] - rup.mag)))
+        * np.log(1 + np.exp(C['cn'] * (C['cm'] - ctx.mag)))
         # third line
         + C['c4']
-        * np.log(dists.rrup
+        * np.log(ctx.rrup
                  + C['c5']
-                 * np.cosh(C['c6'] * max(rup.mag - C['chm'], 0)))
+                 * np.cosh(C['c6'] * max(ctx.mag - C['chm'], 0)))
         # fourth line
         + (C['c4a'] - C['c4'])
-        * np.log(np.sqrt(dists.rrup ** 2 + C['crb'] ** 2))
+        * np.log(np.sqrt(ctx.rrup ** 2 + C['crb'] ** 2))
         # fifth line
-        + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
+        + (C['cg1'] + C['cg2'] / (np.cosh(max(ctx.mag - C['cg3'], 0))))
         # sixth line
-        * ((1 + C['ctvz'] * (rtvz / dists.rrup)) * dists.rrup)
+        * ((1 + C['ctvz'] * (rtvz / ctx.rrup)) * ctx.rrup)
         # seventh line
         + C['c9'] * Fhw
-        * np.tanh(dists.rx
-                  * (np.cos(np.radians(rup.dip)) ** 2)
+        * np.tanh(ctx.rx
+                  * (np.cos(np.radians(ctx.dip)) ** 2)
                   / C['c9a'])
-        * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
-           / (dists.rrup + 0.001)))
+        * (1 - np.sqrt(ctx.rjb ** 2 + ctx.ztor ** 2)
+           / (ctx.rrup + 0.001)))
 
     return ln_y_ref
 
 
-def _get_mean(sites, C, ln_y_ref, exp1, exp2, v1):
+def _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1):
     """
     Add site effects to an intensity.
 
@@ -408,7 +379,7 @@ def _get_mean(sites, C, ln_y_ref, exp1, exp2, v1):
     """
     # we do not support estimating of basin depth and instead
     # rely on it being available (since we require it).
-    z1pt0 = sites.z1pt0
+    z1pt0 = ctx.z1pt0
 
     # we consider random variables being zero since we want
     # to find the exact mean value.
@@ -417,7 +388,7 @@ def _get_mean(sites, C, ln_y_ref, exp1, exp2, v1):
     ln_y = (
         # first line of eq. 13b
         ln_y_ref + C['phi1'] *
-        np.log(np.clip(sites.vs30, -np.inf, v1) / 1130)
+        np.log(np.clip(ctx.vs30, -np.inf, v1) / 1130)
         # second line
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
@@ -432,16 +403,16 @@ def _get_mean(sites, C, ln_y_ref, exp1, exp2, v1):
     return ln_y
 
 
-def _get_stddevs(additional_sigma, sites, rup, C,
-                 stddev_types, ln_y_ref, exp1, exp2):
+def set_stddevs(additional_sigma, ctx, C,
+                ln_y_ref, exp1, exp2, sig, tau, phi):
     # aftershock flag is zero, we consider only main shock.
     AS = 0
-    Fmeasured = sites.vs30measured
-    Finferred = 1 - sites.vs30measured
+    Fmeasured = ctx.vs30measured
+    Finferred = 1 - ctx.vs30measured
 
     # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
-    tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
+    mag_test = min(max(ctx.mag, 5.0), 7.0) - 5.0
+    t = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
     # b and c coeffs from eq. 10
     b = C['phi2'] * (exp1 - exp2)
@@ -461,21 +432,13 @@ def _get_stddevs(additional_sigma, sites, rup, C,
 
     # Add 'additional sigma' specified in the Canterbury Seismic
     # Hazard Model to total sigma
-    ret = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # eq. 21
-            unscaled_sigma_tot = np.sqrt(
-                ((1 + NL) ** 2) * (tau ** 2) + sigma ** 2)
-            ret += [np.sqrt(unscaled_sigma_tot ** 2 + additional_sigma ** 2)]
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            ret.append(np.sqrt(sigma ** 2 + additional_sigma ** 2 / 2))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            # this is implied in eq. 21
-            unscaled_tau = (np.abs((1 + NL) * tau))
-            ret.append(np.sqrt(unscaled_tau ** 2 + additional_sigma ** 2 / 2))
-
-    return ret
+    # eq. 21
+    unscaled_sigma_tot = np.sqrt((1 + NL) ** 2 * t ** 2 + sigma ** 2)
+    sig[:] = np.sqrt(unscaled_sigma_tot ** 2 + additional_sigma ** 2)
+    phi[:] = np.sqrt(sigma ** 2 + additional_sigma ** 2 / 2)
+    # this is implied in eq. 21
+    unscaled_tau = np.abs((1 + NL) * t)
+    tau[:] = np.sqrt(unscaled_tau ** 2 + additional_sigma ** 2 / 2)
 
 
 def _get_v1(imt):
@@ -485,12 +448,10 @@ def _get_v1(imt):
     """
     if imt == PGA():
         v1 = 1800.
-
     else:
         T = imt.period
         v1a = np.clip((1130 * (T / 0.75)**-0.11), 1130, np.inf)
         v1 = np.clip(v1a, -np.inf, 1800.)
-
     return v1
 
 
@@ -551,30 +512,27 @@ class Bradley2013(GMPE):
 
     additional_sigma = 0.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        # intensity on a reference soil is used for both mean
-        # and stddev calculations.
-        ln_y_ref = _get_ln_y_ref(trt, rup, dists, C)
-        # exp1 and exp2 are parts of eq. 7
-        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-        # v1 is the period dependent site term. The Vs30 above which, the
-        # amplification is constant
-        v1 = _get_v1(imt)
-
-        mean = _get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
-        stddevs = _get_stddevs(self.additional_sigma, sites, rup, C,
-                               stddev_types, ln_y_ref, exp1, exp2)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # intensity on a reference soil is used for both mean
+            # and stddev calculations.
+            ln_y_ref = _get_ln_y_ref(trt, ctx, C)
+            # exp1 and exp2 are parts of eq. 7
+            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
+            exp2 = np.exp(C['phi3'] * (1130 - 360))
+            # v1 is the period dependent site term. The Vs30 above which, the
+            # amplification is constant
+            v1 = _get_v1(imt)
+            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
+            set_stddevs(self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
+                        sig[m], tau[m], phi[m])
 
     #: Coefficient tables are constructed from values in tables 1, 2 and 3
     #: (pages 197, 198 and 199) in Chiou & Youngs,2008. Only Coefficients c1,
@@ -645,33 +603,15 @@ class Bradley2013LHC(Bradley2013):
     #: model has not been published, nor is independent code available.
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        # intensity on a reference soil is used for both mean
-        # and stddev calculations.
-        ln_y_ref = _get_ln_y_ref(trt, rup, dists, C)
-        # exp1 and exp2 are parts of eq. 7
-        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-        # v1 is the period dependent site term. The Vs30 above which, the
-        # amplification is constant
-        v1 = _get_v1(imt)
-
-        mean = _get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
-        mean += convert_to_LHC(imt)
-
-        stddevs = _get_stddevs(self.__class__.__name__, self.additional_sigma,
-                               sites, rup, C, stddev_types,
-                               ln_y_ref, exp1, exp2)
-        return mean, stddevs
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            mean[m] += convert_to_LHC(imt)
 
 
 class Bradley2013VolcLHC(Bradley2013LHC):
@@ -741,39 +681,38 @@ class Bradley2013bChchCBD(Bradley2013LHC):
     region = "CBD"
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        imt_per = imt.period
+        ctx = copy.copy(ctx)
         # Fix site parameters for consistent dS2S application.
-        sites.vs30 = np.array([250])
-        sites.z1pt0 = np.array([330])
-        # intensity on a reference soil is used for both mean
-        # and stddev calculations.
-        ln_y_ref = _get_ln_y_ref(trt, rup, dists, C)
-        # exp1 and exp2 are parts of eq. 7
-        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-        # v1 is the period dependent site term. The Vs30 above which, the
-        # amplification is constant
-        v1 = _get_v1(imt)
-        # Get log-mean from regular unadjusted model
-        b13a_mean = _get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
-        # Adjust mean and standard deviation
-        mean = b13a_mean + _get_dL2L(imt_per) + _get_dS2S(self.region, imt_per)
-        mean += convert_to_LHC(imt)
-        stddevs = _get_adjusted_stddevs(
-            self.__class__.__name__, self.additional_sigma, sites, rup,
-            C, stddev_types, ln_y_ref, exp1, exp2, 0, 0, imt_per)
-
-        return mean, stddevs
+        ctx.vs30 = np.array([250])
+        ctx.z1pt0 = np.array([330])
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imt_per = imt.period
+            # intensity on a reference soil is used for both mean
+            # and stddev calculations.
+            ln_y_ref = _get_ln_y_ref(trt, ctx, C)
+            # exp1 and exp2 are parts of eq. 7
+            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
+            exp2 = np.exp(C['phi3'] * (1130 - 360))
+            # v1 is the period dependent site term. The Vs30 above which, the
+            # amplification is constant
+            v1 = _get_v1(imt)
+            # Get log-mean from regular unadjusted model
+            b13a_mean = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
+            # Adjust mean and standard deviation
+            mean[m] = b13a_mean + _get_dL2L(imt_per) + _get_dS2S(
+                self.region, imt_per)
+            mean[m] += convert_to_LHC(imt)
+            set_adjusted_stddevs(
+                self.__class__.__name__, self.additional_sigma, ctx,
+                C, ln_y_ref, exp1, exp2, 0, 0, imt_per, sig[m], tau[m], phi[m])
 
 
 class Bradley2013bChchWest(Bradley2013bChchCBD):
@@ -855,7 +794,6 @@ class Bradley2013AdditionalSigma(Bradley2013LHC):
     "Seismic hazard modelling for the recovery of Christchurch",
     Earthquake Spectra, 30(1), 17-29.
     """
-
     additional_sigma = .35
 
 
@@ -890,45 +828,43 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
     #: not have code that can be made available.
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        ctx = copy.copy(ctx)
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         name = self.__class__.__name__
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        imt_per = imt.period
         # Check if any part of source is located within CSHM region
-        in_cshm = _check_in_cshm_polygon(rup)
+        in_cshm = _check_in_cshm_polygon(ctx)
         # Check if site is located in the CBD polygon
-        in_cbd = _check_in_cbd_polygon(sites.lon, sites.lat)
+        in_cbd = _check_in_cbd_polygon(ctx.lon, ctx.lat)
         # Fix CBD site terms before dS2S modification.
-        sites.vs30[in_cbd == 1] = 250
-        sites.z1pt0[in_cbd == 1] = 330
-        # intensity on a reference soil is used for both mean
-        # and stddev calculations.
-        ln_y_ref = _get_ln_y_ref(trt, rup, dists, C)
-        # exp1 and exp2 are parts of eq. 7
-        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-        # v1 is the period dependent site term. The Vs30 above which, the
-        # amplification is constant
-        v1 = _get_v1(imt)
-        # Get log-mean from regular unadjusted model
-        b13_mean = _get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
-        # Adjust mean and standard deviation
-        mean = _adjust_mean_model(
-            self.region, in_cshm, in_cbd, imt_per, b13_mean)
-        mean += convert_to_LHC(imt)
-        stddevs = _get_adjusted_stddevs(
-            name, self.additional_sigma, sites, rup,
-            C, stddev_types, ln_y_ref, exp1, exp2, in_cshm, in_cbd, imt_per)
-
-        return mean, stddevs
+        ctx.vs30[in_cbd == 1] = 250
+        ctx.z1pt0[in_cbd == 1] = 330
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imt_per = imt.period
+            # intensity on a reference soil is used for both mean
+            # and stddev calculations.
+            ln_y_ref = _get_ln_y_ref(trt, ctx, C)
+            # exp1 and exp2 are parts of eq. 7
+            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
+            exp2 = np.exp(C['phi3'] * (1130 - 360))
+            # v1 is the period dependent site term. The Vs30 above which, the
+            # amplification is constant
+            v1 = _get_v1(imt)
+            # Get log-mean from regular unadjusted model
+            b13_mean = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
+            # Adjust mean and standard deviation
+            mean[m] = _adjust_mean_model(
+                self.region, in_cshm, in_cbd, imt_per, b13_mean)
+            mean[m] += convert_to_LHC(imt)
+            set_adjusted_stddevs(
+                name, self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
+                in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
 
 
 class Bradley2013bChchMapsAdditionalSigma(Bradley2013bChchMaps):

@@ -22,7 +22,6 @@ Module exports :class:'GarciaEtAl2005SSlab',
 
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -30,18 +29,20 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA, PGV
 
 
-def _compute_mean(C, g, mag, hypo_depth, dists, imt):
+def _compute_mean(C, g, ctx, imt):
     """
     Compute mean according to equation on Table 2, page 2275.
     """
+    mag = ctx.mag
+    hypo_depth = ctx.hypo_depth
 
     delta = 0.00750 * 10 ** (0.507 * mag)
 
     # computing R for different values of mag
     if mag < 6.5:
-        R = np.sqrt(dists.rhypo ** 2 + delta ** 2)
+        R = np.sqrt(ctx.rhypo ** 2 + delta ** 2)
     else:
-        R = np.sqrt(dists.rrup ** 2 + delta ** 2)
+        R = np.sqrt(ctx.rrup ** 2 + delta ** 2)
 
     mean = (
         # 1st term
@@ -62,20 +63,13 @@ def _compute_mean(C, g, mag, hypo_depth, dists, imt):
     return mean
 
 
-def _get_stddevs(C, stddev_types, num_sites):
+def _get_stddevs(C):
     """
     Return standard deviations as defined in table 2, pag 2275.
     """
     # the standard deviation values are converted from base 10 to base e
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.log(10 ** C['s_t']) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.log(10 ** C['s_r']) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(np.log(10 ** C['s_e']) + np.zeros(num_sites))
-    return stddevs
+    stds = np.array([C['s_t'], C['s_e'], C['s_r']])
+    return np.log(10 ** stds)
 
 
 class GarciaEtAl2005SSlab(GMPE):
@@ -119,7 +113,7 @@ class GarciaEtAl2005SSlab(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: No site parameters required
-    #: All data from 51 hard (NEHRP B) sites.
+    #: All data from 51 hard (NEHRP B) sites
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and focal depth
@@ -131,23 +125,16 @@ class GarciaEtAl2005SSlab(GMPE):
     #: rest (both in kilometers) as explained in page 2274
     REQUIRES_DISTANCES = {'rrup', 'rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Extracting dictionary of coefficients specific to required
-        # intensity measure type.
-
-        C = self.COEFFS[imt]
-        mag = rup.mag
-        hypo_depth = rup.hypo_depth
-
-        mean = _compute_mean(C, g, mag, hypo_depth, dists, imt)
-        stddevs = _get_stddevs(C, stddev_types, sites.vs30.shape[0])
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, g, ctx, imt)
+            sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     #: Equation coefficients for geometric average of the maximum of the two
     #: horizontal components, as described in Table 2 on pp. 2275, but

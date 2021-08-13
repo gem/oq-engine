@@ -31,7 +31,8 @@ from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
-
+from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
+    AbrahamsonGulerce2020SInter)
 aac = numpy.testing.assert_allclose
 
 
@@ -56,7 +57,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
         super().setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
-        self.cmaker = ContextMaker('faketrt', [self.gsim])
+        self.cmaker = ContextMaker('faketrt', [self.gsim], dict(imtls={}))
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
             self.DEFAULT_COMPONENT
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES = frozenset(
@@ -159,7 +160,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.fake_surface = FakeSurface
 
     def make_contexts(self, site_collection, rupture):
-        return ContextMaker('faketrt', [self.gsim_class]).make_contexts(
+        param = dict(imtls={})
+        return ContextMaker('faketrt', [self.gsim_class], param).make_contexts(
             site_collection, rupture)
 
     def test_unknown_distance_error(self):
@@ -272,6 +274,18 @@ class ContextTestCase(unittest.TestCase):
         rctx = RuptureContext()
         rctx.mag = 5.
         self.assertTrue(sctx1 != rctx)
+
+    def test_recarray_conversion(self):
+        # automatic recarray conversion for backward compatibility
+        imt = PGA()
+        gsim = AbrahamsonGulerce2020SInter()
+        ctx = RuptureContext()
+        ctx.mag = 5.
+        ctx.sids = [0, 1]
+        ctx.vs30 = [760., 760.]
+        ctx.rrup = [100., 110.]
+        mean, _stddevs = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imt, [])
+        numpy.testing.assert_allclose(mean, [-5.81116004, -6.00192455])
 
 
 class GsimInstantiationTestCase(unittest.TestCase):

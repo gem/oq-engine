@@ -33,27 +33,27 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _compute_mean(clsname, sof, adjustment_factor, C, rup, dists, sites, imt):
+def _compute_mean(clsname, sof, adjustment_factor, C, ctx, imt):
     """
     Returns the mean ground motion acceleration and velocity
     """
     if sof:
-        sof_term = _get_style_of_faulting_term(C, rup.rake)
+        sof_term = _get_style_of_faulting_term(C, ctx.rake)
     else:
         sof_term = 0.
     if clsname.endswith("Germany"):
-        if rup.width > 1.0E-3:
+        if ctx.width > 1.0E-3:
             # Finite rupture source used
-            rrup = np.copy(dists.rrup)
+            rrup = np.copy(ctx.rrup)
         else:
             # Point source MSR used - convert rhypo to rrup
-            rrup = rhypo_to_rrup(dists.rhypo, rup.mag)
+            rrup = rhypo_to_rrup(ctx.rhypo, ctx.mag)
     else:
-        rrup = dists.rrup
-    mean = (_get_magnitude_scaling_term(C, rup.mag) +
-            _get_distance_scaling_term(C, rup.mag, rrup) +
+        rrup = ctx.rrup
+    mean = (_get_magnitude_scaling_term(C, ctx.mag) +
+            _get_distance_scaling_term(C, ctx.mag, rrup) +
             sof_term + _get_site_amplification_term(
-                clsname, sof, C, sites.vs30))
+                clsname, sof, C, ctx.vs30))
     # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
     # is already in cm/s) and also convert from base 10 to base e.
     if imt.string == "PGA":
@@ -176,36 +176,24 @@ _get_stddevs = CallableDict()
 
 
 @_get_stddevs.add(True)
-def _get_stddevs_1(sof, C, stddev_types, num_sites):
+def _get_stddevs_1(sof, C):
     """
-    Return total standard deviation.
+    Return standard deviations assuming style-of-faulting is known
     """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.log(10.0 ** C['sM']) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.log(10.0 ** C['f']) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(np.log(10.0 ** C["tM"]) + np.zeros(num_sites))
-    return stddevs
+    return [np.log(10.0 ** C['sM']),
+            np.log(10.0 ** C["tM"]),
+            np.log(10.0 ** C['f'])]
 
 
 @_get_stddevs.add(False)
-def _get_stddevs_2(sof, C, stddev_types, num_sites):
+def _get_stddevs_2(sof, C):
     """
     Returns the standard deviation terms assuming no style-of-faulting
     is known
     """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.log(10.0 ** C['s']) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.log(10.0 ** C['f']) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(np.log(10.0 ** C["t"]) + np.zeros(num_sites))
-    return stddevs
+    return [np.log(10.0 ** C['s']),
+            np.log(10.0 ** C["t"]),
+            np.log(10.0 ** C['f'])]
 
 
 def _get_style_of_faulting_term(C, rake):
@@ -278,26 +266,20 @@ class CauzziEtAl2014(GMPE):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
-
-        mean = _compute_mean(
-            self.__class__.__name__, self.sof, self.adjustment_factor,
-            C, rup, dists, sites, imt)
-
-        stddevs = _get_stddevs(self.sof, C, stddev_types, sites.vs30.shape[0])
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(
+                self.__class__.__name__, self.sof, self.adjustment_factor,
+                C, ctx, imt)
+            sig[m], tau[m], phi[m] = _get_stddevs(self.sof, C)
 
     #: Coefficient table constructed from the electronic suplements of the
-
     #: original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                       c1                   m1                    m2                    r1                   r2                    r3                   sB                   sC                   sD                    bV                 bV800                       VA                    fN                    fR                   fSS                    f                    t                    s                   tM                   sM

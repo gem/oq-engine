@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: engine-workers
+  name: svc-workers-engine
   labels:
-    run: engine-workers
+    run: svc-workers-engine
 spec:
   ports:
   - port: 1909
     protocol: TCP
   selector:
-    app: workers
+    app: workers-engine

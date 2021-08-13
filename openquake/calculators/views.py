@@ -34,7 +34,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util, logictree
+from openquake.commonlib import util
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
@@ -568,7 +568,7 @@ def view_required_params_per_trt(token, dstore):
     tbl = []
     for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.get_gsims(trt)
-        maker = ContextMaker(trt, gsims)
+        maker = ContextMaker(trt, gsims, {'imtls': {}})
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)

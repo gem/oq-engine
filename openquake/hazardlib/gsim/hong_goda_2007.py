@@ -107,19 +107,11 @@ def _get_bnl(C_AMP, vs30):
     return bnl
 
 
-def _get_stddevs(C, stddev_types, stddev_shape):
+def _get_stddevs(C):
     """
     Returns the standard deviations given in Table 2
     """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C["sigtot"] + np.zeros(stddev_shape))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['sig2'] + np.zeros(stddev_shape))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['sig1'] + np.zeros(stddev_shape))
-    return stddevs
+    return [C["sigtot"], C['sig1'], C['sig2']]
 
 
 class HongGoda2007(GMPE):
@@ -161,28 +153,27 @@ class HongGoda2007(GMPE):
     #: GMPE not tested against independent implementation
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
 
         Implements equation 14 of Hong & Goda (2007)
         """
-        C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
-        C_AMP = self.COEFFS_AMP[imt]
-
         # Gets the PGA on rock - need to convert from g to cm/s/s
-        pga_rock = _compute_pga_rock(C_PGA, rup.mag, dists.rjb) * 980.665
-        # Get the mean ground motion value
-        mean = (_compute_nonlinear_magnitude_term(C, rup.mag) +
-                _compute_magnitude_distance_term(C, dists.rjb, rup.mag) +
-                _get_site_amplification(C_AMP, sites.vs30, pga_rock))
+        pga_rock = _compute_pga_rock(C_PGA, ctx.mag, ctx.rjb) * 980.665
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            C_AMP = self.COEFFS_AMP[imt]
 
-        # Get standard deviations
-        stddevs = _get_stddevs(C, stddev_types, dists.rjb.shape)
-        return mean, stddevs
+            # Get the mean ground motion value
+            mean[m] = (_compute_nonlinear_magnitude_term(C, ctx.mag) +
+                       _compute_magnitude_distance_term(C, ctx.rjb, ctx.mag) +
+                       _get_site_amplification(C_AMP, ctx.vs30, pga_rock))
+            # Get standard deviations
+            sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt        b1       b2       b3       b4       b5     h    sig1    sig2  sigtot

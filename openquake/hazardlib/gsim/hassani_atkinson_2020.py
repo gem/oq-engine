@@ -210,22 +210,14 @@ def _fz_ha18(rt, C, mag, rrup):
                     + (C['b3'] + C['b4'] * mag) * np.log10(ref / rref))
 
 
-def get_stddevs(suffix, C, stddev_types):
+def get_stddevs(suffix, C):
     """
     Between event standard deviations as tau.
     Intra event from site to site stddev and within site stddev.
     Total given in COEFFS to 3dp.
     """
-    stddevs = []
-    for stddev in stddev_types:
-        if stddev == const.StdDev.TOTAL:
-            stddevs.append(C['s' + suffix])
-        elif stddev == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'])
-        elif stddev == const.StdDev.INTRA_EVENT:
-            stddevs.append(math.sqrt(C['ps2s'] ** 2 + C['pss' + suffix] ** 2))
-
-    return stddevs
+    return [C['s' + suffix], C['tau'],
+            math.sqrt(C['ps2s'] ** 2 + C['pss' + suffix] ** 2)]
 
 
 class HassaniAtkinson2020SInter(GMPE):
@@ -267,52 +259,50 @@ class HassaniAtkinson2020SInter(GMPE):
         self.forearc_ne = forearc_ne
         self.forearc_sw = forearc_sw
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
+
         C_PGA = self.COEFFS[PGA()]
-
-        dsigma = _dsigma(self.CONST_REGION, rup.hypo_depth)
-        fm = _fm_ha18(C, rup.mag)
-        fm_pga = _fm_ha18(C_PGA, rup.mag)
-        fz = _fz_ha18(self.CONST_REGION['rt'], C, rup.mag, dists.rrup)
-        fz_pga = _fz_ha18(self.CONST_REGION['rt'], C_PGA, rup.mag, dists.rrup)
-        fdsigma = _fds_ha18(C, rup.mag, dsigma)
-        fdsigma_pga = _fds_ha18(C_PGA, rup.mag, dsigma)
-        fkappa = _fkp_ha18(self.kappa, C, rup.mag, dsigma)
-        fkappa_pga = _fkp_ha18(self.kappa, C_PGA, rup.mag, dsigma)
-        fgamma = _fgamma(self.SUFFIX, self.backarc, self.forearc_ne,
-                         self.forearc_sw, C, dists.rrup)
+        dsigma = _dsigma(self.CONST_REGION, ctx.hypo_depth)
+        fm_pga = _fm_ha18(C_PGA, ctx.mag)
+        fz_pga = _fz_ha18(self.CONST_REGION['rt'], C_PGA, ctx.mag, ctx.rrup)
+        fdsigma_pga = _fds_ha18(C_PGA, ctx.mag, dsigma)
         fgamma_pga = _fgamma(self.SUFFIX, self.backarc, self.forearc_ne,
-                             self.forearc_sw, C_PGA, dists.rrup)
-        clf = _clf(self.SUFFIX, C, rup.mag)
-        clf_pga = _clf(self.SUFFIX, C_PGA, rup.mag)
-        pga_rock = 10 ** (fm_pga + fz_pga + fdsigma_pga +
-                          fkappa_pga + fgamma_pga + self.CONST_REGION['cc'] +
+                             self.forearc_sw, C_PGA, ctx.rrup)
+        fkappa_pga = _fkp_ha18(self.kappa, C_PGA, ctx.mag, dsigma)
+        clf_pga = _clf(self.SUFFIX, C_PGA, ctx.mag)
+        pga_rock = 10 ** (fm_pga + fz_pga + fdsigma_pga + fkappa_pga +
+                          fgamma_pga + self.CONST_REGION['cc'] +
                           clf_pga + C_PGA['chf'] + C_PGA['amp_cr'])
-        fsnonlin = _fsnonlin_ss14(C, sites.vs30, pga_rock)
-        fvs30 = _fvs30(C, sites.vs30)
-        fz2pt5 = _fz2pt5(C, sites.z2pt5)
-        ffpeak = _ffpeak(C, imt, sites.fpeak)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            fm = _fm_ha18(C, ctx.mag)
+            fz = _fz_ha18(self.CONST_REGION['rt'], C, ctx.mag, ctx.rrup)
+            fdsigma = _fds_ha18(C, ctx.mag, dsigma)
+            fkappa = _fkp_ha18(self.kappa, C, ctx.mag, dsigma)
+            fgamma = _fgamma(self.SUFFIX, self.backarc, self.forearc_ne,
+                             self.forearc_sw, C, ctx.rrup)
+            clf = _clf(self.SUFFIX, C, ctx.mag)
+            fsnonlin = _fsnonlin_ss14(C, ctx.vs30, pga_rock)
+            fvs30 = _fvs30(C, ctx.vs30)
+            fz2pt5 = _fz2pt5(C, ctx.z2pt5)
+            ffpeak = _ffpeak(C, imt, ctx.fpeak)
 
-        mean = 10 ** (fm + fdsigma + fz + fkappa + fgamma
-                      + self.CONST_REGION['cc'] + clf + C['chf']
-                      + C['amp_cr'] + fvs30 + fz2pt5 + ffpeak + fsnonlin)
-        if imt.string != "PGV":
-            # pgv in cm/s
-            # sa and psa in cm/s^2
-            mean = mean / 981
-        mean = np.log(mean)
+            mean[m] = 10 ** (fm + fdsigma + fz + fkappa + fgamma
+                             + self.CONST_REGION['cc'] + clf + C['chf']
+                             + C['amp_cr'] + fvs30 + fz2pt5 + ffpeak +
+                             fsnonlin)
+            if imt.string != "PGV":
+                # pgv in cm/s
+                # sa and psa in cm/s^2
+                mean[m] /= 981.
+            mean[m] = np.log(mean[m])
 
-        stddevs = get_stddevs(self.SUFFIX, C, stddev_types)
-
-        return mean, stddevs
+            sig[m], tau[m], phi[m] = get_stddevs(self.SUFFIX, C)
 
     # periods given by 1 / 10 ** COEFFS['f']
     COEFFS = CoeffsTable(sa_damping=5, table="""\

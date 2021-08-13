@@ -39,10 +39,10 @@ data:
     password =
 
     [zworkers]
-    host_cores = engine-workers -1
+    host_cores = svc-workers-engine -1
     ctrl_port = 1909
     remote_python =
 
     [directory]
-    shared_dir = /oqshared/oqdata
+    shared_dir = /oqshared/oqdata/
     custom_tmp =

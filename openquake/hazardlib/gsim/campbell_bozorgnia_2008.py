@@ -43,15 +43,15 @@ def _compute_basin_response_term(C, z2pt5):
     return fsed
 
 
-def _compute_distance_term(C, rup, dists):
+def _compute_distance_term(C, ctx):
     """
     Returns the distance scaling factor (equation (3), page 145)
     """
-    return (C['c4'] + C['c5'] * rup.mag) * \
-        np.log(np.sqrt(dists.rrup ** 2. + C['c6'] ** 2.))
+    return (C['c4'] + C['c5'] * ctx.mag) * \
+        np.log(np.sqrt(ctx.rrup ** 2. + C['c6'] ** 2.))
 
 
-def _compute_hanging_wall_term(C, rup, dists):
+def _compute_hanging_wall_term(C, ctx):
     """
     Returns the hanging wall scaling term, the product of the scaling
     coefficient and four separate scaling terms for distance, magnitude,
@@ -59,30 +59,30 @@ def _compute_hanging_wall_term(C, rup, dists):
     scaling terms defined in separate functions
     """
     return (C['c9'] *
-            _get_hanging_wall_distance_term(dists, rup.ztor) *
-            _get_hanging_wall_magnitude_term(rup.mag) *
-            _get_hanging_wall_depth_term(rup.ztor) *
-            _get_hanging_wall_dip_term(rup.dip))
+            _get_hanging_wall_distance_term(ctx) *
+            _get_hanging_wall_magnitude_term(ctx.mag) *
+            _get_hanging_wall_depth_term(ctx.ztor) *
+            _get_hanging_wall_dip_term(ctx.dip))
 
 
-def _compute_imt1100(C, sites, rup, dists, get_pga_site=False):
+def _compute_imt1100(C, ctx, get_pga_site=False):
     """
     Computes the PGA on reference (Vs30 = 1100 m/s) rock.
     """
     # Calculates simple site response term assuming all sites 1100 m/s
     fsite = (C['c10'] + (C['k2'] * C['n'])) * log(1100. / C['k1'])
     # Calculates the PGA on rock
-    pga1100 = np.exp(_compute_magnitude_term(C, rup.mag) +
-                     _compute_distance_term(C, rup, dists) +
-                     _compute_style_of_faulting_term(C, rup) +
-                     _compute_hanging_wall_term(C, rup, dists) +
-                     _compute_basin_response_term(C, sites.z2pt5) +
+    pga1100 = np.exp(_compute_magnitude_term(C, ctx.mag) +
+                     _compute_distance_term(C, ctx) +
+                     _compute_style_of_faulting_term(C, ctx) +
+                     _compute_hanging_wall_term(C, ctx) +
+                     _compute_basin_response_term(C, ctx.z2pt5) +
                      fsite)
     # If PGA at the site is needed then remove factor for rock and
     # re-calculate on correct site condition
     if get_pga_site:
         pga_site = np.exp(np.log(pga1100) - fsite)
-        fsite = _compute_shallow_site_response(C, sites, pga1100)
+        fsite = _compute_shallow_site_response(C, ctx, pga1100)
         pga_site = np.exp(np.log(pga_site) + fsite)
     else:
         pga_site = None
@@ -137,41 +137,41 @@ def _compute_magnitude_term(C, mag):
         return fmag + (C['c2'] * (mag - 5.5))
 
 
-def _compute_shallow_site_response(C, sites, pga1100):
+def _compute_shallow_site_response(C, ctx, pga1100):
     """
     Returns the shallow site response term (equation 11, page 146)
     """
     stiff_factor = C['c10'] + (C['k2'] * C['n'])
     # Initially default all sites to intermediate rock value
-    fsite = stiff_factor * np.log(sites.vs30 / C['k1'])
-    # Check for soft soil sites
-    idx = sites.vs30 < C['k1']
+    fsite = stiff_factor * np.log(ctx.vs30 / C['k1'])
+    # Check for soft soil ctx
+    idx = ctx.vs30 < C['k1']
     if np.any(idx):
         pga_scale = np.log(pga1100[idx] +
-                           (C['c'] * ((sites.vs30[idx] / C['k1']) **
+                           (C['c'] * ((ctx.vs30[idx] / C['k1']) **
                             C['n']))) - np.log(pga1100[idx] + C['c'])
-        fsite[idx] = C['c10'] * np.log(sites.vs30[idx] / C['k1']) + \
+        fsite[idx] = C['c10'] * np.log(ctx.vs30[idx] / C['k1']) + \
             (C['k2'] * pga_scale)
-    # Any very hard rock sites are rendered to the constant amplification
+    # Any very hard rock ctx are rendered to the constant amplification
     # factor
-    idx = sites.vs30 >= 1100.
+    idx = ctx.vs30 >= 1100.
     if np.any(idx):
         fsite[idx] = stiff_factor * log(1100. / C['k1'])
 
     return fsite
 
 
-def _compute_style_of_faulting_term(C, rup):
+def _compute_style_of_faulting_term(C, ctx):
     """
     Returns the style of faulting factor, depending on the mechanism (rake)
     and top of rupture depth (equations (4) and (5), pages 145 - 146)
     """
-    frv, fnm = _get_fault_type_dummy_variables(rup.rake)
+    frv, fnm = _get_fault_type_dummy_variables(ctx.rake)
 
     if frv > 0.:
         # Top of rupture depth term only applies to reverse faults
-        if rup.ztor < 1.:
-            ffltz = rup.ztor
+        if ctx.ztor < 1.:
+            ffltz = ctx.ztor
         else:
             ffltz = 1.
     else:
@@ -217,19 +217,19 @@ def _get_hanging_wall_dip_term(dip):
         return 1.0
 
 
-def _get_hanging_wall_distance_term(dists, ztor):
+def _get_hanging_wall_distance_term(ctx):
     """
     Returns the hanging wall distance scaling term (equation 7, page 146)
     """
-    fhngr = np.ones_like(dists.rjb, dtype=float)
-    idx = dists.rjb > 0.
-    if ztor < 1.:
-        temp_rjb = np.sqrt(dists.rjb[idx] ** 2. + 1.)
-        r_max = np.max(np.column_stack([dists.rrup[idx], temp_rjb]),
+    fhngr = np.ones_like(ctx.rjb, dtype=float)
+    idx = ctx.rjb > 0.
+    if ctx.ztor < 1.:
+        temp_rjb = np.sqrt(ctx.rjb[idx] ** 2. + 1.)
+        r_max = np.max(np.column_stack([ctx.rrup[idx], temp_rjb]),
                        axis=1)
-        fhngr[idx] = (r_max - dists.rjb[idx]) / r_max
+        fhngr[idx] = (r_max - ctx.rjb[idx]) / r_max
     else:
-        fhngr[idx] = (dists.rrup[idx] - dists.rjb[idx]) / dists.rrup[idx]
+        fhngr[idx] = (ctx.rrup[idx] - ctx.rjb[idx]) / ctx.rrup[idx]
     return fhngr
 
 
@@ -245,23 +245,16 @@ def _get_hanging_wall_magnitude_term(mag):
         return 2. * (mag - 6.0)
 
 
-def _get_stddevs(kind, C, sites, pga1100, sigma_pga, stddev_types):
+def _get_stddevs(kind, C, ctx, pga1100, sigma_pga):
     """
     Returns the standard deviations as described in the "ALEATORY
     UNCERTAINTY MODEL" section of the paper. Equations 13 to 19, pages 147
     to 151
     """
-    std_intra = _compute_intra_event_std(C, sites.vs30, pga1100, sigma_pga)
-    std_inter = C['t_lny'] * np.ones_like(sites.vs30)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(_get_total_sigma(kind, C, std_intra, std_inter))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(std_intra)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(std_inter)
-    return stddevs
+    std_intra = _compute_intra_event_std(C, ctx.vs30, pga1100, sigma_pga)
+    std_inter = C['t_lny'] * np.ones_like(ctx.vs30)
+    return [_get_total_sigma(kind, C, std_intra, std_inter),
+            std_inter, std_intra]
 
 
 def _get_total_sigma(kind, C, std_intra, std_inter):
@@ -324,45 +317,41 @@ class CampbellBozorgnia2008(GMPE):
     #: Required distance measures are Rrup and Rjb.
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type and for PGA
-        C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
 
-        # compute median pga on rock (vs30=1100), needed for site response
-        # term calculation
-        # For spectral accelerations at periods between 0.0 and 0.25 s, Sa (T)
-        # cannot be less than PGA on soil, therefore if the IMT is in this
-        # period range it is necessary to calculate PGA on soil
-        if imt.string[:2] == 'SA' and imt.period > 0.0 and imt.period < 0.25:
-            get_pga_site = True
-        else:
-            get_pga_site = False
-        pga1100, pga_site = _compute_imt1100(
-            C_PGA, sites, rup, dists, get_pga_site)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        # Get the median ground motion
-        mean = (_compute_magnitude_term(C, rup.mag) +
-                _compute_distance_term(C, rup, dists) +
-                _compute_style_of_faulting_term(C, rup) +
-                _compute_hanging_wall_term(C, rup, dists) +
-                _compute_shallow_site_response(C, sites, pga1100) +
-                _compute_basin_response_term(C, sites.z2pt5))
+            # compute median pga on rock (vs30=1100), needed for site response
+            # term calculation
+            # For spectral accelerations at periods between 0.0 and 0.25 s,
+            # Sa (T) cannot be less than PGA on soil, therefore if the IMT is
+            # in this period range it is necessary to calculate PGA on soil
+            get_pga_site = imt.period > 0.0 and imt.period < 0.25
+            pga1100, pga_site = _compute_imt1100(C_PGA, ctx, get_pga_site)
 
-        # If it is necessary to ensure that Sa(T) >= PGA (see previous comment)
-        if get_pga_site:
-            idx = mean < np.log(pga_site)
-            mean[idx] = np.log(pga_site[idx])
+            # Get the median ground motion
+            mean[m] = (_compute_magnitude_term(C, ctx.mag) +
+                       _compute_distance_term(C, ctx) +
+                       _compute_style_of_faulting_term(C, ctx) +
+                       _compute_hanging_wall_term(C, ctx) +
+                       _compute_shallow_site_response(C, ctx, pga1100) +
+                       _compute_basin_response_term(C, ctx.z2pt5))
 
-        stddevs = _get_stddevs(self.kind, C, sites, pga1100, C_PGA['s_lny'],
-                               stddev_types)
-        return mean, stddevs
+            # If it is necessary to ensure that Sa(T) >= PGA
+            # (see previous comment)
+            if get_pga_site:
+                idx = mean[m] < np.log(pga_site)
+                mean[m, idx] = np.log(pga_site[idx])
+
+            sig[m], tau[m], phi[m] = _get_stddevs(
+                self.kind, C, ctx, pga1100, C_PGA['s_lny'])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
       imt      c0     c1      c2      c3      c4    c5    c6     c7      c8     c9     c10    c11   c12    k1      k2     k3     c     n  s_lny  t_lny s_lnAF  c_lny    rho

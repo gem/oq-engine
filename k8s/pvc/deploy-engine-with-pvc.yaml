@@ -4,27 +4,27 @@ metadata:
   name: pvc-engine
   namespace: default
   labels:
-    app: engine
+    app: engine # MUST Match with the definition on pv and pvc
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: engine
+      app: pvc-engine
   template:
     metadata:
       labels:
-        app: engine
+        app: pvc-engine
     spec:
       containers:
-      - name: oqengine
-        image: openquake/engine:latest
+      - name: oq-engine
+        image: openquake/engine:nightly
         ports:
         - name: webui
           containerPort: 8800
         volumeMounts:
-        - mountPath: /home/openquake/data
+        - mountPath: /home/openquake/oqdata
           name: data
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: datacalc
+            claimName: datacalc  #must match the PVC definitions of PVC

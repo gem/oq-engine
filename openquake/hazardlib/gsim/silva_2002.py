@@ -27,22 +27,10 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import (
-    mblg_to_mw_atkinson_boore_87,
-    mblg_to_mw_johnston_96,
-    clip_mean)
+    mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
-
-
-def _compute_stddevs(C, num_sites, stddev_types):
-    """
-    Return total standard deviation.
-    """
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + C['sigma'])
-    return stddevs
 
 
 _convert_magnitude = CallableDict()
@@ -120,21 +108,20 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        mag = _convert_magnitude(self.kind, rup.mag)
-
-        mean = (
-            C['c1'] + C['c2'] * mag + C['c10'] * (mag - 6) ** 2 +
-            (C['c6'] + C['c7'] * mag) * np.log(dists.rjb + np.exp(C['c4'])))
-        mean = clip_mean(imt, mean)
-        stddevs = _compute_stddevs(C, dists.rjb.size, stddev_types)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mag = _convert_magnitude(self.kind, ctx.mag)
+            mean[m] = (
+                C['c1'] + C['c2'] * mag + C['c10'] * (mag - 6) ** 2 +
+                (C['c6'] + C['c7'] * mag) * np.log(ctx.rjb + np.exp(C['c4'])))
+            mean[m] = clip_mean(imt, mean[m])
+            sig[m] = C['sigma']
 
     #: Coefficient table obtained from coefficient arrays (c1, c2, c4, c6,
     #: c7, c10, sigma) defined in suroutine getSilva in hazgridXnga2.f
@@ -181,18 +168,14 @@ class SilvaEtAl2002DoubleCornerSaturation(SilvaEtAl2002MwNSHMP2008):
     """
     kind = "Mw"
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        C = self.COEFFS[imt]
-        mag = _convert_magnitude(self.kind, rup.mag)
-        mean = (
-            C['c1'] + C['c2'] * mag + C['c10'] * (mag - 6) ** 2 +
-            (C['c6'] + C['c7'] * mag) * np.log(dists.rjb + np.exp(C['c4']))
-        )
-        stddevs = _compute_stddevs(C, dists.rjb.size, stddev_types)
-        return mean, stddevs
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mag = _convert_magnitude(self.kind, ctx.mag)
+            mean[m] = (
+                C['c1'] + C['c2'] * mag + C['c10'] * (mag - 6) ** 2 +
+                (C['c6'] + C['c7'] * mag) * np.log(ctx.rjb + np.exp(C['c4'])))
+            sig[m] = C['sigma']
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
         IMT      c1           c2           c4           c5         c6        c7           c8         c10      sigma_par    sigma

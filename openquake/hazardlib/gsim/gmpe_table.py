@@ -31,7 +31,8 @@ import numpy
 
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import const, site
+from openquake.hazardlib.const import StdDev
+from openquake.hazardlib import site
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.gsim.base import GMPE
@@ -159,8 +160,8 @@ class AmplificationTable(object):
                      "PGA": numpy.ones([n_d, 1, n_m, n_levels]),
                      "PGV": numpy.ones([n_d, 1, n_m, n_levels])}
         self.sigma = {}
-        for stddev_type in [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
-                            const.StdDev.INTRA_EVENT]:
+        for stddev_type in [StdDev.TOTAL, StdDev.INTER_EVENT,
+                            StdDev.INTRA_EVENT]:
             level = next(iter(amplification_group))
             if stddev_type in amplification_group[level]:
                 self.sigma[stddev_type] = deepcopy(self.mean)
@@ -187,7 +188,7 @@ class AmplificationTable(object):
         """
         return {self.parameter}
 
-    def get_amplification_factors(self, imt, sctx, rctx, dists, stddev_types):
+    def get_amplification_factors(self, imt, ctx, dists, stddev_types):
         """
         Returns the amplification factors for the given rupture and site
         conditions.
@@ -195,10 +196,8 @@ class AmplificationTable(object):
         :param imt:
             Intensity measure type as an instance of the :class:
             `openquake.hazardlib.imt`
-        :param sctx:
-            SiteCollection instance
-        :param rctx:
-            Rupture instance
+        :param ctx:
+            RuptureContext
         :param dists:
             Source to site distances (km)
         :param stddev_types:
@@ -209,8 +208,8 @@ class AmplificationTable(object):
             * sigma_amps - List of modification factors applied to the
                          standard deviations of ground motion
         """
-        dist_level_table = self.get_mean_table(imt, rctx)
-        sigma_tables = self.get_sigma_tables(imt, rctx, stddev_types)
+        dist_level_table = self.get_mean_table(imt, ctx)
+        sigma_tables = self.get_sigma_tables(imt, ctx, stddev_types)
         mean_interpolator = interp1d(self.values,
                                      numpy.log10(dist_level_table),
                                      axis=1)
@@ -218,18 +217,18 @@ class AmplificationTable(object):
                                for sigma_table in sigma_tables]
         if self.element == "Rupture":
             mean_amp = 10.0 ** mean_interpolator(
-                getattr(rctx, self.parameter))[0] * numpy.ones_like(dists)
+                getattr(ctx, self.parameter))[0] * numpy.ones_like(dists)
             sigma_amps = []
             for sig_interpolator in sigma_interpolators:
                 sigma_amps.append(sig_interpolator(
-                    getattr(rctx, self.parameter))[0] * numpy.ones_like(dists))
+                    getattr(ctx, self.parameter))[0] * numpy.ones_like(dists))
         else:
             mean_amp = 10.0 ** mean_interpolator(
-                getattr(sctx, self.parameter))[0, :]
+                getattr(ctx, self.parameter))[0, :]
             sigma_amps = []
             for sig_interpolator in sigma_interpolators:
                 sigma_amps.append(sig_interpolator(
-                    getattr(sctx, self.parameter))[0, :] *
+                    getattr(ctx, self.parameter))[0, :] *
                     numpy.ones_like(dists))
         return mean_amp, sigma_amps
 
@@ -314,29 +313,36 @@ def _setup_amplification(self, fle):
             {self.amplification.parameter})
 
 
-def _return_tables(self, mag, imt, val_type):
+def _return_tables(self, mag, imt, std_idx):
     """
     Returns the vector of ground motions or standard deviations
     corresponding to the specific magnitude and intensity measure type.
 
-    :param val_type:
-        String indicating the type of data {"IMLs", "Total", "Inter" etc}
+    :param std_idx:
+       the string "IMLs" or an integer 0, 1, 2 for total, inter, intra
     """
     if imt.string in 'PGA PGV':
         # Get scalar imt
-        if val_type == "IMLs":
+        if std_idx == "IMLs":
             iml_table = self.imls[imt.string][:]
         else:
-            iml_table = self.stddevs[val_type][imt.string][:]
+            stds = self.stddevs[std_idx]
+            if stds is None:
+                raise KeyError("Unsupported StdDev#%d" % std_idx)
+            iml_table = stds[imt.string][:]
+
         n_d, n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
-        if val_type == "IMLs":
+        if std_idx == "IMLs":
             periods = self.imls["T"][:]
             iml_table = self.imls["SA"][:]
         else:
-            periods = self.stddevs[val_type]["T"][:]
-            iml_table = self.stddevs[val_type]["SA"][:]
+            stds = self.stddevs[std_idx]
+            if stds is None:
+                raise KeyError("Unsupported StdDev#%d" % std_idx)
+            periods = stds["T"][:]
+            iml_table = stds["SA"][:]
 
         low_period = round(periods[0], 7)
         high_period = round(periods[-1], 7)
@@ -378,27 +384,18 @@ def apply_magnitude_interpolation(self, mag, iml_table):
     return 10.0 ** m_interpolator(mag)
 
 
-def _get_stddevs(self, dists, mag, dctx, imt, stddev_types):
+def _get_stddevs(self, dists, ctx, imt, stdis):
     """
     Returns the total standard deviation of the intensity measure level
     from the tables.
-
-    :param fle:
-        HDF5 data stream as instance of :class:`h5py.File`
-    :param distances:
-        The distance vector for the given magnitude and IMT
-    :param key:
-        The distance type
-    :param mag:
-        The rupture magnitude
     """
     stddevs = []
-    for stddev_type in stddev_types:
-        sigma = _return_tables(self, mag, imt, stddev_type)
-        interpolator_std = interp1d(dists, sigma, bounds_error=False)
-        stddev = interpolator_std(getattr(dctx, self.distance_type))
-        stddev[getattr(dctx, self.distance_type) < dists[0]] = sigma[0]
-        stddev[getattr(dctx, self.distance_type) > dists[-1]] = sigma[-1]
+    dst = getattr(ctx, self.distance_type)
+    for stdi in stdis:
+        sigma = _return_tables(self, ctx.mag, imt, stdi)
+        stddev = numpy.interp(dst, dists, sigma)
+        stddev[dst < dists[0]] = sigma[0]
+        stddev[dst > dists[-1]] = sigma[-1]
         stddevs.append(stddev)
     return stddevs
 
@@ -431,7 +428,7 @@ class GMPETable(GMPE):
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ""
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
 
     REQUIRES_SITES_PARAMETERS = set()
 
@@ -480,43 +477,46 @@ class GMPETable(GMPE):
                                  " periods")
 
             # Load in standard deviations
-            self.stddevs = {}
+            self.stddevs = [None] * 3
             if self.kind in "nga_east usgs":
                 # there are no stddevs in the hdf5 file
                 return
-            self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
+            self.stddevs[0] = hdf_arrays_to_dict(fle["Total"])
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            for stddev_type in [const.StdDev.INTER_EVENT,
-                                const.StdDev.INTRA_EVENT]:
+            for stddev_type in [StdDev.INTER_EVENT,
+                                StdDev.INTRA_EVENT]:
                 if stddev_type in fle:
-                    self.stddevs[stddev_type] = hdf_arrays_to_dict(
+                    self.stddevs[StdDev.idx[stddev_type]] = hdf_arrays_to_dict(
                         fle[stddev_type])
                     self.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(stddev_type)
 
             if "Amplification" in fle:
                 _setup_amplification(self, fle)
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-        """
-        Returns the mean and standard deviations
-        """
-        # Return Distance Tables
-        imls = _return_tables(self, rctx.mag, imt, "IMLs")
-        # Get distance vector for the given magnitude
-        idx = numpy.searchsorted(self.m_w, rctx.mag)
-        dists = self.distances[:, 0, idx - 1]
-        # Get mean and standard deviations
-        mean = _get_mean(self.kind, self.distance_type, imls, dctx, dists)
-        stddevs = _get_stddevs(self, dists, rctx.mag, dctx, imt, stddev_types)
-        if self.amplification:
-            # Apply amplification
-            mean_amp, sigma_amp = self.amplification.get_amplification_factors(
-                imt, sctx, rctx, getattr(dctx, self.distance_type),
-                stddev_types)
-            mean = numpy.log(mean) + numpy.log(mean_amp)
-            for iloc in range(len(stddev_types)):
-                stddevs[iloc] *= sigma_amp[iloc]
-            return mean, stddevs
-        else:
-            return numpy.log(mean), stddevs
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        stds = [sig, tau, phi]
+        stdis = [StdDev.idx[sdt] for sdt in
+                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES]
+        for m, imt in enumerate(imts):
+            # Return Distance Tables
+            imls = _return_tables(self, ctx.mag, imt, "IMLs")
+            # Get distance vector for the given magnitude
+            idx = numpy.searchsorted(self.m_w, ctx.mag)
+            dists = self.distances[:, 0, idx - 1]
+            # Get mean and standard deviations
+            mean_ = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
+            stddevs = _get_stddevs(self, dists, ctx, imt, stdis)
+            if self.amplification:
+                # Apply amplification
+                mean_amp, sigma_amp = (
+                    self.amplification.get_amplification_factors(
+                        imt, ctx, getattr(ctx, self.distance_type),
+                        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES))
+                mean[m] = numpy.log(mean_) + numpy.log(mean_amp)
+                for i, amp in zip(stdis, sigma_amp):
+                    stds[i][m] = stddevs[i] * amp
+            else:
+                mean[m] = numpy.log(mean_)
+                for i in stdis:
+                    stds[i][m] = stddevs[i]

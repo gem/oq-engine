@@ -122,12 +122,8 @@ class SInterCan15Mid(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        imtls = {imt.string: [0] for imt in imts}
-        cmaker = contexts.ContextMaker(
-            self.DEFINED_FOR_TECTONIC_REGION_TYPE,
-            self.gsims, {'imtls': imtls})
-        mean_zh06, mean_am09, mean_ab15, mean_ga14 = cmaker.get_mean_stds(
-            [ctx], None)  # 4 arrays of shape (1, M, N)
+        mean_zh06, mean_am09, mean_ab15, mean_ga14 = contexts.get_mean_stds(
+            self.gsims, ctx, imts, None)
 
         # Computing adjusted means
         for m, imt in enumerate(imts):

@@ -80,36 +80,36 @@ def _get_phi_al_regional_JPN(C, mag, vs30measured, rrup):
     return phi_al
 
 
-def _get_basic_term(C, rup, dists):
+def _get_basic_term(C, ctx):
     """
     Compute and return basic form, see page 1030.
     """
     # Fictitious depth calculation
-    if rup.mag > 5.:
+    if ctx.mag > 5.:
         c4m = C['c4']
-    elif rup.mag > 4.:
-        c4m = C['c4'] - (C['c4']-1.) * (5. - rup.mag)
+    elif ctx.mag > 4.:
+        c4m = C['c4'] - (C['c4']-1.) * (5. - ctx.mag)
     else:
         c4m = 1.
-    R = np.sqrt(dists.rrup**2. + c4m**2.)
+    R = np.sqrt(ctx.rrup**2. + c4m**2.)
     # basic form
-    base_term = C['a1'] * np.ones_like(dists.rrup) + C['a17'] * dists.rrup
+    base_term = C['a1'] * np.ones_like(ctx.rrup) + C['a17'] * ctx.rrup
     # equation 2 at page 1030
-    if rup.mag >= C['m1']:
-        base_term += (C['a5'] * (rup.mag - C['m1']) +
-                      C['a8'] * (8.5 - rup.mag)**2. +
-                      (C['a2'] + C['a3'] * (rup.mag - C['m1'])) *
+    if ctx.mag >= C['m1']:
+        base_term += (C['a5'] * (ctx.mag - C['m1']) +
+                      C['a8'] * (8.5 - ctx.mag)**2. +
+                      (C['a2'] + C['a3'] * (ctx.mag - C['m1'])) *
                       np.log(R))
-    elif rup.mag >= CONSTS['m2']:
-        base_term += (C['a4'] * (rup.mag - C['m1']) +
-                      C['a8'] * (8.5 - rup.mag)**2. +
-                      (C['a2'] + C['a3'] * (rup.mag - C['m1'])) *
+    elif ctx.mag >= CONSTS['m2']:
+        base_term += (C['a4'] * (ctx.mag - C['m1']) +
+                      C['a8'] * (8.5 - ctx.mag)**2. +
+                      (C['a2'] + C['a3'] * (ctx.mag - C['m1'])) *
                       np.log(R))
     else:
         base_term += (C['a4'] * (CONSTS['m2'] - C['m1']) +
                       C['a8'] * (8.5 - CONSTS['m2'])**2. +
-                      C['a6'] * (rup.mag - CONSTS['m2']) +
-                      C['a7'] * (rup.mag - CONSTS['m2'])**2. +
+                      C['a6'] * (ctx.mag - CONSTS['m2']) +
+                      C['a7'] * (ctx.mag - CONSTS['m2'])**2. +
                       (C['a2'] + C['a3'] * (CONSTS['m2'] - C['m1'])) *
                       np.log(R))
     return base_term
@@ -129,7 +129,7 @@ def _get_derivative(C, sa1180, vs30):
     return derAmp
 
 
-def _get_faulting_style_term(C, rup):
+def _get_faulting_style_term(C, ctx):
     """
     Compute and return faulting style term, that is the sum of the second
     and third terms in equation 1, page 74.
@@ -137,40 +137,40 @@ def _get_faulting_style_term(C, rup):
     # this implements equations 5 and 6 at page 1032. f7 is the
     # coefficient for reverse mechanisms while f8 is the correction
     # factor for normal ruptures
-    if rup.mag > 5.0:
+    if ctx.mag > 5.0:
         f7 = C['a11']
         f8 = C['a12']
-    elif rup.mag >= 4:
-        f7 = C['a11'] * (rup.mag - 4.)
-        f8 = C['a12'] * (rup.mag - 4.)
+    elif ctx.mag >= 4:
+        f7 = C['a11'] * (ctx.mag - 4.)
+        f8 = C['a12'] * (ctx.mag - 4.)
     else:
         f7 = 0.0
         f8 = 0.0
     # ranges of rake values for each faulting mechanism are specified in
     # table 2, page 1031
-    return (f7 * float(rup.rake > 30 and rup.rake < 150) +
-            f8 * float(rup.rake > -150 and rup.rake < -30))
+    return (f7 * float(ctx.rake > 30 and ctx.rake < 150) +
+            f8 * float(ctx.rake > -150 and ctx.rake < -30))
 
 
-def _get_hanging_wall_term(C, dists, rup):
+def _get_hanging_wall_term(C, ctx):
     """
     Compute and return hanging wall model term, see page 1038.
     """
-    if rup.dip == 90.0:
-        return np.zeros_like(dists.rx)
+    if ctx.dip == 90.0:
+        return np.zeros_like(ctx.rx)
     else:
-        Fhw = np.zeros_like(dists.rx)
-        Fhw[dists.rx > 0] = 1.
+        Fhw = np.zeros_like(ctx.rx)
+        Fhw[ctx.rx > 0] = 1.
         # Taper 1
-        T1 = _hw_taper1(dists, rup)
+        T1 = _hw_taper1(ctx)
         # Taper 2
-        T2 = _hw_taper2(dists, rup)
+        T2 = _hw_taper2(ctx)
         # Taper 3
-        T3 = _hw_taper3(dists, rup)
+        T3 = _hw_taper3(ctx)
         # Taper 4
-        T4 = _hw_taper4(dists, rup)
+        T4 = _hw_taper4(ctx)
         # Taper 5
-        T5 = _hw_taper5(dists, rup)
+        T5 = _hw_taper5(ctx)
         # Finally, compute the hanging wall term
         return Fhw*C['a13']*T1*T2*T3*T4*T5
 
@@ -236,25 +236,25 @@ def _get_regional_term(region, C, imt, vs30, rrup):
         return 0.
 
 
-def _get_sa_at_1180(region, C, imt, sites, rup, dists):
+def _get_sa_at_1180(region, C, imt, ctx):
     """
     Compute and return mean imt value for rock conditions
     (vs30 = 1100 m/s)
     """
     # reference vs30 = 1180 m/s
-    vs30_1180 = np.ones_like(sites.vs30) * 1180.
+    vs30_1180 = np.ones_like(ctx.vs30) * 1180.
     # reference shaking intensity = 0
-    ref_iml = np.zeros_like(sites.vs30)
+    ref_iml = np.zeros_like(ctx.vs30)
     # fake Z1.0 - Since negative it will be replaced by the default Z1.0
     # for the corresponding region
-    fake_z1pt0 = np.ones_like(sites.vs30) * -1
-    return (_get_basic_term(C, rup, dists) +
-            _get_faulting_style_term(C, rup) +
+    fake_z1pt0 = np.ones_like(ctx.vs30) * -1
+    return (_get_basic_term(C, ctx) +
+            _get_faulting_style_term(C, ctx) +
             _get_site_response_term(C, imt, vs30_1180, ref_iml) +
-            _get_hanging_wall_term(C, dists, rup) +
-            _get_top_of_rupture_depth_term(C, imt, rup) +
+            _get_hanging_wall_term(C, ctx) +
+            _get_top_of_rupture_depth_term(C, imt, ctx) +
             _get_soil_depth_term(region, C, fake_z1pt0, vs30_1180) +
-            _get_regional_term(region, C, imt, vs30_1180, dists.rrup)
+            _get_regional_term(region, C, imt, vs30_1180, ctx.rrup)
             )
 
 
@@ -268,11 +268,11 @@ def _get_site_response_term(C, imt, vs30, sa1180):
     site_resp_term = np.zeros_like(vs30)
     gt_vlin = vs30 >= C['vlin']
     lw_vlin = vs30 < C['vlin']
-    # compute site response term for sites with vs30 greater than vlin
+    # compute site response term for ctx with vs30 greater than vlin
     vs30_rat = vs30_star / C['vlin']
     site_resp_term[gt_vlin] = ((C['a10'] + C['b'] * CONSTS['n']) *
                                np.log(vs30_rat[gt_vlin]))
-    # compute site response term for sites with vs30 lower than vlin
+    # compute site response term for ctx with vs30 lower than vlin
     site_resp_term[lw_vlin] = (C['a10'] * np.log(vs30_rat[lw_vlin]) -
                                C['b'] * np.log(sa1180[lw_vlin] + C['c']) +
                                C['b'] * np.log(sa1180[lw_vlin] + C['c'] *
@@ -306,35 +306,28 @@ def _get_soil_depth_term(region, C, z1pt0, vs30):
     return f2(vs30) * factor
 
 
-def _get_stddevs(region, C, imt, rup, sites, stddev_types, sa1180, dists):
+def _get_stddevs(region, C, imt, ctx, sa1180):
     """
     Return standard deviations as described in paragraph 'Equations for
     standard deviation', page 1046.
     """
-    std_intra = _get_intra_event_std(region, C, rup.mag, sa1180, sites.vs30,
-                                     sites.vs30measured, dists.rrup)
-    std_inter = _get_inter_event_std(C, rup.mag, sa1180, sites.vs30)
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(std_intra ** 2 +
-                                   std_inter ** 2))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(std_intra)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(std_inter)
-    return stddevs
+    std_intra = _get_intra_event_std(region, C, ctx.mag, sa1180, ctx.vs30,
+                                     ctx.vs30measured, ctx.rrup)
+    std_inter = _get_inter_event_std(C, ctx.mag, sa1180, ctx.vs30)
+    return [np.sqrt(std_intra ** 2 + std_inter ** 2),
+            std_inter,
+            std_intra]
 
 
-def _get_top_of_rupture_depth_term(C, imt, rup):
+def _get_top_of_rupture_depth_term(C, imt, ctx):
     """
     Compute and return top of rupture depth term. See paragraph
     'Depth-to-Top of Rupture Model', page 1042.
     """
-    if rup.ztor >= 20.0:
+    if ctx.ztor >= 20.0:
         return C['a15']
     else:
-        return C['a15'] * rup.ztor / 20.0
+        return C['a15'] * ctx.ztor / 20.0
 
 
 def _get_vs30star(vs30, imt):
@@ -373,65 +366,65 @@ def _get_z1pt0ref(region, vs30):
                                                      (1360.**4 + 610.**4)))
 
 
-def _hw_taper1(dists, rup):
+def _hw_taper1(ctx):
     # Compute taper t1
-    T1 = np.ones_like(dists.rx)
-    T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
+    T1 = np.ones_like(ctx.rx)
+    T1 *= 60./45. if ctx.dip <= 30. else (90.-ctx.dip)/45.0
     return T1
 
 
-def _hw_taper2(dists, rup):
+def _hw_taper2(ctx):
     # Compute taper t2 (eq 12 at page 1039) - a2hw set to 0.2 as
     # indicated at page 1041
-    T2 = np.zeros_like(dists.rx)
+    T2 = np.zeros_like(ctx.rx)
     a2hw = 0.2
-    if rup.mag > 6.5:
-        T2 += (1. + a2hw * (rup.mag - 6.5))
-    elif rup.mag > 5.5:
-        T2 += (1. + a2hw * (rup.mag - 6.5) - (1. - a2hw) *
-               (rup.mag - 6.5)**2)
+    if ctx.mag > 6.5:
+        T2 += (1. + a2hw * (ctx.mag - 6.5))
+    elif ctx.mag > 5.5:
+        T2 += (1. + a2hw * (ctx.mag - 6.5) - (1. - a2hw) *
+               (ctx.mag - 6.5)**2)
     else:
         T2 *= 0.
     return T2
 
 
-def _hw_taper3(dists, rup):
+def _hw_taper3(ctx):
     # Compute taper t3 (eq. 13 at page 1039) - r1 and r2 specified at
     # page 1040
-    T3 = np.zeros_like(dists.rx)
-    r1 = rup.width * np.cos(np.radians(rup.dip))
+    T3 = np.zeros_like(ctx.rx)
+    r1 = ctx.width * np.cos(np.radians(ctx.dip))
     r2 = 3. * r1
     #
-    idx = dists.rx < r1
-    T3[idx] = (np.ones_like(dists.rx)[idx] * CONSTS['h1'] +
-               CONSTS['h2'] * (dists.rx[idx] / r1) +
-               CONSTS['h3'] * (dists.rx[idx] / r1)**2)
+    idx = ctx.rx < r1
+    T3[idx] = (np.ones_like(ctx.rx)[idx] * CONSTS['h1'] +
+               CONSTS['h2'] * (ctx.rx[idx] / r1) +
+               CONSTS['h3'] * (ctx.rx[idx] / r1)**2)
     #
-    idx = ((dists.rx >= r1) & (dists.rx <= r2))
-    T3[idx] = 1. - (dists.rx[idx] - r1) / (r2 - r1)
+    idx = ((ctx.rx >= r1) & (ctx.rx <= r2))
+    T3[idx] = 1. - (ctx.rx[idx] - r1) / (r2 - r1)
     return T3
 
 
-def _hw_taper4(dists, rup):
+def _hw_taper4(ctx):
     # Compute taper t4 (eq. 14 at page 1040)
-    T4 = np.zeros_like(dists.rx)
+    T4 = np.zeros_like(ctx.rx)
     #
-    if rup.ztor <= 10.:
-        T4 += (1. - rup.ztor**2. / 100.)
+    if ctx.ztor <= 10.:
+        T4 += (1. - ctx.ztor**2. / 100.)
     return T4
 
 
-def _hw_taper5(dists, rup):
+def _hw_taper5(ctx):
     # Compute T5 (eq 15a at page 1040) - ry1 computed according to
     # suggestions provided at page 1040
-    T5 = np.zeros_like(dists.rx)
-    ry1 = dists.rx * np.tan(np.radians(20.))
+    T5 = np.zeros_like(ctx.rx)
+    ry1 = ctx.rx * np.tan(np.radians(20.))
     #
-    idx = (dists.ry0 - ry1) <= 0.0
+    idx = (ctx.ry0 - ry1) <= 0.0
     T5[idx] = 1.
     #
-    idx = (((dists.ry0 - ry1) > 0.0) & ((dists.ry0 - ry1) < 5.0))
-    T5[idx] = 1. - (dists.ry0[idx] - ry1[idx]) / 5.0
+    idx = (((ctx.ry0 - ry1) > 0.0) & ((ctx.ry0 - ry1) < 5.0))
+    T5[idx] = 1. - (ctx.ry0[idx] - ry1[idx]) / 5.0
     return T5
 
 
@@ -482,32 +475,31 @@ class AbrahamsonEtAl2014(GMPE):
         self.region = kwargs.get('region')
         assert self.region in (None, 'CHN', 'JPN', 'TWN'), region
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # get the necessary set of coefficients
-        C = self.COEFFS[imt]
-        # compute median sa on rock (vs30=1180m/s). Used for site response
-        # term calculation
-        sa1180 = np.exp(_get_sa_at_1180(
-            self.region, C, imt, sites, rup, dists))
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # compute median sa on rock (vs30=1180m/s). Used for site response
+            # term calculation
+            sa1180 = np.exp(_get_sa_at_1180(self.region, C, imt, ctx))
 
-        # get the mean value
-        mean = (_get_basic_term(C, rup, dists) +
-                _get_faulting_style_term(C, rup) +
-                _get_site_response_term(C, imt, sites.vs30, sa1180) +
-                _get_hanging_wall_term(C, dists, rup) +
-                _get_top_of_rupture_depth_term(C, imt, rup) +
-                _get_soil_depth_term(self.region, C, sites.z1pt0 /
-                                     METRES_PER_KM, sites.vs30))
-        mean += _get_regional_term(self.region, C, imt, sites.vs30, dists.rrup)
-        # get standard deviations
-        stddevs = _get_stddevs(
-            self.region, C, imt, rup, sites, stddev_types, sa1180, dists)
-        return mean, stddevs
+            # get the mean value
+            mean[m] = (_get_basic_term(C, ctx) +
+                       _get_faulting_style_term(C, ctx) +
+                       _get_site_response_term(C, imt, ctx.vs30, sa1180) +
+                       _get_hanging_wall_term(C, ctx) +
+                       _get_top_of_rupture_depth_term(C, imt, ctx) +
+                       _get_soil_depth_term(self.region, C, ctx.z1pt0 /
+                                            METRES_PER_KM, ctx.vs30))
+            mean[m] += _get_regional_term(
+                self.region, C, imt, ctx.vs30, ctx.rrup)
+            # get standard deviations
+            sig[m], tau[m], phi[m] = _get_stddevs(
+                self.region, C, imt, ctx, sa1180)
 
     #: Coefficient tables as per annex B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

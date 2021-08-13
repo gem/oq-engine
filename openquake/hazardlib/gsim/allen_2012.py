@@ -57,19 +57,6 @@ def _compute_mean(C, mag, rrup):
     return mean
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return total standard deviation.
-    """
-    # standard deviation is converted from log10 to ln
-    std_total = np.log(10 ** C['sigma'])
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + std_total)
-
-    return stddevs
-
-
 class Allen2012(GMPE):
     """
     Implements GMPE developed by T. Allen and published as "Stochastic ground-
@@ -109,21 +96,21 @@ class Allen2012(GMPE):
     #: 'Regression of Model Coefficients', page 32
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        if rup.hypo_depth < 10:
-            C = self.COEFFS_SHALLOW[imt]
-        else:
-            C = self.COEFFS_DEEP[imt]
+        for m, imt in enumerate(imts):
+            if ctx.hypo_depth < 10:
+                C = self.COEFFS_SHALLOW[imt]
+            else:
+                C = self.COEFFS_DEEP[imt]
 
-        mean = _compute_mean(C, rup.mag, dists.rrup)
-        stddevs = _get_stddevs(C, stddev_types, dists.rrup.shape[0])
-
-        return mean, stddevs
+            mean[m] = _compute_mean(C, ctx.mag, ctx.rrup)
+            sig[m] = np.log(10 ** C['sigma'])
+            # standard deviation is converted from log10 to ln
 
     #: Coefficients for shallow events taken from Excel file produced by Trevor
     #: Allen and provided by Geoscience Australia (20120821.GMPE_coeffs.xls)

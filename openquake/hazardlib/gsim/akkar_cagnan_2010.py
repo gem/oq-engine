@@ -20,7 +20,6 @@
 Module exports :class:`AkkarCagnan2010`.
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
@@ -90,20 +89,11 @@ def _compute_quadratic_magnitude_term(C, mag):
     return C['a4'] * (8.5 - mag) ** 2
 
 
-def _get_stddevs(C, stddev_types, num_sites):
+def _get_stddevs(C):
     """
     Return standard deviations as defined in table 3, p. 2985.
     """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            sigma_t = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
-            stddevs.append(sigma_t + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
+    return [np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2), C['tau'], C['sigma']]
 
 
 class AkkarCagnan2010(GMPE):
@@ -148,43 +138,39 @@ class AkkarCagnan2010(GMPE):
     #: See paragraph 'Functional Form', p. 2981.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients (for soil amplification)
-        # specific to required intensity measure type
-        C_SR = self.COEFFS_SOIL_RESPONSE[imt]
-
-        # compute median PGA on rock (in g), needed to compute non-linear site
+        # compute median PGA on rock, needed to compute non-linear site
         # amplification
         C = self.COEFFS_AC10[PGA()]
         pga4nl = np.exp(
-            _compute_mean(C, rup.mag, dists.rjb, rup.rake)) * 1e-2 / g
-
-        # compute full mean value by adding site amplification terms
-        # (but avoiding recomputing mean on rock for PGA)
-        if imt.string == "PGA":
-            mean = (np.log(pga4nl) +
-                    _get_site_amplification_linear(sites.vs30, C_SR) +
-                    _get_site_amplification_non_linear(sites.vs30, pga4nl,
-                                                       C_SR))
-        else:
+            _compute_mean(C, ctx.mag, ctx.rjb, ctx.rake)) * 1e-2 / g
+        for m, imt in enumerate(imts):
             C = self.COEFFS_AC10[imt]
-            mean = (_compute_mean(C, rup.mag, dists.rjb, rup.rake) +
-                    _get_site_amplification_linear(sites.vs30, C_SR) +
-                    _get_site_amplification_non_linear(sites.vs30, pga4nl,
-                                                       C_SR))
+            C_SR = self.COEFFS_SOIL_RESPONSE[imt]
 
-        # convert from cm/s**2 to g for SA (PGA is already computed in g)
-        if imt.string[:2] == "SA":
-            mean = np.log(np.exp(mean) * 1e-2 / g)
+            # compute full mean value by adding site amplification terms
+            # (but avoiding recomputing mean on rock for PGA)
+            if imt.string == "PGA":
+                mean[m] = (np.log(pga4nl) +
+                           _get_site_amplification_linear(ctx.vs30, C_SR) +
+                           _get_site_amplification_non_linear(
+                               ctx.vs30, pga4nl, C_SR))
+            else:
+                mean[m] = (_compute_mean(C, ctx.mag, ctx.rjb, ctx.rake) +
+                           _get_site_amplification_linear(ctx.vs30, C_SR) +
+                           _get_site_amplification_non_linear(
+                               ctx.vs30, pga4nl, C_SR))
 
-        stddevs = _get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+            # convert from cm/s**2 to g for SA (PGA is already computed in g)
+            if imt.string[:2] == "SA":
+                mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
 
-        return mean, stddevs
+            sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     #: Coefficient table (from Table 3, p. 2985)
     #: sigma is the 'intra-event' standard deviation,

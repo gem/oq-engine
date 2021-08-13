@@ -45,67 +45,57 @@ NEHRP_BC_BOUNDARY = 760.
 RAKE_THRESH = 30.
 
 
-def _get_stddevs(coeffs, stddev_types, num_sites):
-    """
-    Return total sigma as reported in Table 2, p. 1202.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        stddevs.append(coeffs['sigma'] + np.zeros(num_sites))
-    return np.array(stddevs)
-
-
-def _compute_magnitude(rup, coeffs):
+def _compute_magnitude(ctx, coeffs):
     """
     Compute first two terms of equation (1) on p. 1200:
 
     ``b1 + b2 * M``
     """
-    return coeffs['b1'] + coeffs['b2']*rup.mag
+    return coeffs['b1'] + coeffs['b2']*ctx.mag
 
 
-def _compute_distance(dists, coeffs):
+def _compute_distance(ctx, coeffs):
     """
     Compute third term of equation (1) on p. 1200:
 
     ``b3 * log(sqrt(Rjb ** 2 + b4 ** 2))``
     """
-    return coeffs['b3']*np.log10(np.sqrt(dists.rjb**2. + coeffs['b4']**2.))
+    return coeffs['b3']*np.log10(np.sqrt(ctx.rjb**2. + coeffs['b4']**2.))
 
 
-def _get_site_amplification(sites, coeffs):
+def _get_site_amplification(ctx, coeffs):
     """
     Compute fourth term of equation (1) on p. 1200:
 
     ``b5 * S``
     """
-    is_rock = get_site_type_dummy_variables(sites)
+    is_rock = get_site_type_dummy_variables(ctx)
     return coeffs['b5']*is_rock
 
 
-def _get_mechanism(rup, coeffs):
+def _get_mechanism(ctx, coeffs):
     """
     Compute fifth term of equation (1) on p. 1200:
 
     ``b6 * H``
     """
-    is_strike_slip = get_fault_type_dummy_variables(rup)
+    is_strike_slip = get_fault_type_dummy_variables(ctx)
     return coeffs['b6']*is_strike_slip
 
 
-def get_site_type_dummy_variables(sites):
+def get_site_type_dummy_variables(ctx):
     """
-    Binary rock/soil classification dummy variable based on sites.vs30.
+    Binary rock/soil classification dummy variable based on ctx.vs30.
 
     "``S`` is 1 for a rock site and 0 otherwise" (p. 1201).
     """
-    is_rock = np.array(sites.vs30 > NEHRP_BC_BOUNDARY)
+    is_rock = np.array(ctx.vs30 > NEHRP_BC_BOUNDARY)
     return is_rock
 
 
-def get_fault_type_dummy_variables(rup, warned=[False]):
+def get_fault_type_dummy_variables(ctx, warned=[False]):
     """
-    Fault-type classification dummy variable based on rup.rake.
+    Fault-type classification dummy variable based on ctx.rake.
 
     "``H`` is 1 for a strike-slip mechanism and 0 for a reverse mechanism"
     (p. 1201).
@@ -117,11 +107,11 @@ def get_fault_type_dummy_variables(rup, warned=[False]):
     """
     # normal faulting
     is_normal = np.array(
-        RAKE_THRESH < -rup.rake < (180. - RAKE_THRESH))
+        RAKE_THRESH < -ctx.rake < (180. - RAKE_THRESH))
 
     # reverse raulting
     is_reverse = np.array(
-        RAKE_THRESH < rup.rake < (180. - RAKE_THRESH))
+        RAKE_THRESH < ctx.rake < (180. - RAKE_THRESH))
 
     if not warned[0] and is_normal.any():
         # make sure that the warning is printed only once to avoid
@@ -197,31 +187,25 @@ class SharmaEtAl2009(GMPE):
 
     ALREADY_WARNED = False  # warn the first time only
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        # pylint: disable=too-many-arguments
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for specification of input and result values.
         """
+        for m, imt in enumerate(imts):
+            coeffs = self.COEFFS[imt]
 
-        # extract dictionary of coefficients specific to required
-        # intensity measure type
-        coeffs = self.COEFFS[imt]
+            # equation (1) is in terms of common logarithm
+            log_mean = (_compute_magnitude(ctx, coeffs) +
+                        _compute_distance(ctx, coeffs) +
+                        _get_site_amplification(ctx, coeffs) +
+                        _get_mechanism(ctx, coeffs))
+            # so convert to g and thence to the natural logarithm
+            mean[m] = log_mean * np.log(10.0) - np.log(g)
 
-        # equation (1) is in terms of common logarithm
-        log_mean = (_compute_magnitude(rup, coeffs) +
-                    _compute_distance(dists, coeffs) +
-                    _get_site_amplification(sites, coeffs) +
-                    _get_mechanism(rup, coeffs))
-        # so convert to g and thence to the natural logarithm
-        mean = log_mean*np.log(10.0) - np.log(g)
-
-        # convert standard deviations from common to natural logarithm
-        log_stddevs = _get_stddevs(coeffs, stddev_types, len(sites.vs30))
-        stddevs = log_stddevs*np.log(10.0)
-
-        return mean, stddevs
+            # convert standard deviations from common to natural logarithm
+            sig[m] = coeffs['sigma'] * np.log(10.0)
 
     #: Coefficients taken from Table 2, p. 1202. Note that "In
     #: this article, only the coefficients for a subset of these

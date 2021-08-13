@@ -583,6 +583,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
+            # NB: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE can be != trt,
+            # but it is not an error, it is actually the most common case!
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             {StdDev.TOTAL}):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
@@ -603,11 +605,13 @@ def get_gsim_lt(oqparam, trts=('*',)):
         logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     gsim_lt_cache[key] = gsim_lt
-
-    old_style = count_old_style(gsim_lt)
-    no_vect = count_no_vect(gsim_lt)
-    logging.info('There are %d old style GMPEs', old_style)
-    logging.info('There are %d not vectorized GMPEs', no_vect)
+    if trts != ('*',):  # not in get_input_files
+        old_style = count_old_style(gsim_lt)
+        no_vect = count_no_vect(gsim_lt)
+        if old_style:
+            logging.info('There are %d old style GMPEs', old_style)
+        if no_vect:
+            logging.info('There are %d not vectorized GMPEs', no_vect)
     return gsim_lt
 
 

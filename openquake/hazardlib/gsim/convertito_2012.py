@@ -20,7 +20,6 @@
 Module exports :class:'ConvertitoEtAl2012Geysers'
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
 
@@ -53,16 +52,6 @@ def _compute_site_scaling(C, vs30):
     # For soil sites add on the site coefficient
     site_term[vs30 < 760.0] = C["e"]
     return site_term
-
-
-def _compute_stddevs(C, num_sites, stddev_types):
-    """
-    Return total standard deviation.
-    """
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + np.log(10.0 ** C["sigma"]))
-    return stddevs
 
 
 class ConvertitoEtAl2012Geysers(GMPE):
@@ -104,22 +93,21 @@ class ConvertitoEtAl2012Geysers(GMPE):
     #: not verified warning
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-
-        mean = (_compute_magnitude_scaling(C, rup.mag) +
-                _compute_distance_scaling(C, dists.rhypo) +
-                _compute_site_scaling(C, sites.vs30))
-        # Original GMPE returns log acceleration in m/s/s
-        # Converts to natural logarithm of g
-        mean = np.log((10.0 ** mean) / g)
-        stddevs = _compute_stddevs(C, dists.rhypo.shape, stddev_types)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = (_compute_magnitude_scaling(C, ctx.mag) +
+                       _compute_distance_scaling(C, ctx.rhypo) +
+                       _compute_site_scaling(C, ctx.vs30))
+            # Original GMPE returns log acceleration in m/s/s
+            # Converts to natural logarithm of g
+            mean[m] = np.log((10.0 ** mean[m]) / g)
+            sig[m] = np.log(10.0 ** C["sigma"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT        a      b       c      d    h      e  sigma

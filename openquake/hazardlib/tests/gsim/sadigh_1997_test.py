@@ -46,26 +46,3 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
     def test_total_stddev_soil(self):
         self.check('SADIGH97/SADIGH1997_SOIL_STD_TOTAL.csv',
                    max_discrep_percentage=1e-10)
-
-    def test_mag_greater_8pt5(self):
-        gmpe = SadighEtAl1997()
-        ctx = RuptureContext()
-        ctx.rake = 0.0
-        ctx.rrup = numpy.array([0., 1.])
-        ctx.vs30 = numpy.array([800., 800.])
-        ctx.mag = 9.0
-        mean_rock_9, _ = gmpe.get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
-        ctx.mag = 8.5
-        mean_rock_8pt5, _ = gmpe.get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
-        numpy.testing.assert_allclose(mean_rock_9, mean_rock_8pt5)
-
-        ctx.vs30 = numpy.array([300., 300.])
-        ctx.mag = 9.0
-        mean_soil_9, _ = gmpe.get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
-        ctx.mag = 8.5
-        mean_soil_8pt5, _ = gmpe.get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
-        numpy.testing.assert_allclose(mean_soil_9, mean_soil_8pt5)

@@ -54,17 +54,6 @@ def _compute_mean(C, mag, rjb):
     return mean
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return total standard deviation.
-    """
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + C['sigma'])
-
-    return stddevs
-
-
 class SomervilleEtAl2009NonCratonic(GMPE):
     """
     Implements GMPE developed by P. Somerville, R. Graves, N. Collins, S. G.
@@ -98,22 +87,18 @@ class SomervilleEtAl2009NonCratonic(GMPE):
     #: The required distance parameter is 'Joyner-Boore' distance, see table 2
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
 
         Implement equations as defined in table 2.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        C = self.COEFFS[imt]
-        mean = _compute_mean(C, rup.mag, dists.rjb)
-        stddevs = _get_stddevs(C, stddev_types, dists.rjb.shape[0])
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, ctx.mag, ctx.rjb)
+            sig[m] = C['sigma']
 
     #: Coefficients taken from table 3
     COEFFS = CoeffsTable(sa_damping=5, table="""\

@@ -392,7 +392,7 @@ class Amplifier(object):
                 gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt))
 
 
-def get_poes_site(mean_std, cmaker, ctxs):
+def get_poes_site(mean_std, cmaker, ctx):
     """
     NOTE: this works for a single site
 
@@ -406,8 +406,8 @@ def get_poes_site(mean_std, cmaker, ctxs):
     :param ampl:
         Site amplification function instance of
         :class:openquake.hazardlib.site_amplification.AmpFunction
-    :param ctxs:
-        Context objects with attributes .mag, .sites, .rrup
+    :param ctx:
+        Context object with attributes .mag, .sites, .rrup
     """
     # Mean and std of ground motion for the IMTs considered in this analysis
     # C - Number of contexts
@@ -416,8 +416,7 @@ def get_poes_site(mean_std, cmaker, ctxs):
     trunclevel = cmaker.trunclevel
     mean, stddev = mean_std  # shape (C, M)
     C, L = mean.shape[1], loglevels.size
-    for ctx in ctxs:
-        assert len(ctx.sids) == 1  # 1 site
+    assert len(ctx.sids) == 1  # 1 site
     M = len(loglevels)
     L1 = L // M
 
@@ -431,9 +430,9 @@ def get_poes_site(mean_std, cmaker, ctxs):
     # Compute the probability of exceedance for each in intensity
     # measure type IMT
     sigma = cmaker.af.get_max_sigma()
-    mags = [ctx.mag for ctx in ctxs]
-    rrups = [ctx.rrup for ctx in ctxs]
-    ampcode = ctxs[0].sites['ampcode'][0]
+    mags = [ctx.mag]
+    rrups = ctx.rrup
+    ampcode = ctx.sites['ampcode'][0]
     for m, imt in enumerate(loglevels):
 
         # Get the values of ground-motion used to compute the probability

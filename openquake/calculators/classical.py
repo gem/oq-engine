@@ -206,6 +206,10 @@ def preclassical(srcs, srcfilter, params, monitor):
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
     if params['ps_grid_spacing']:
+        # reduce the weight of CollapsedPointSources
+        for src in dic[grp_id]:
+            if hasattr(src, 'pointsources'):  # CollapsedPointSource
+                src.num_ruptures /= len(src.pointsources)
         dic['ps_grid/%02d' % monitor.task_no] = [
             src for src in dic[grp_id] if src.nsites > EPS]
     return dic
@@ -518,8 +522,9 @@ class ClassicalCalculator(base.HazardCalculator):
             numsites = sum(arr[1] for arr in self.calc_times.values())
             logging.info('Total number of contexts: {:_d}'.
                          format(int(self.numctxs)))
-            logging.info('Average number of sites per context: %d',
-                         numsites / self.numctxs)
+            if self.numctxs:
+                logging.info('Average number of sites per context: %d',
+                             numsites / self.numctxs)
         if psd:
             psdist = max(max(psd.ddic[trt].values()) for trt in psd.ddic)
             if psdist and self.maxradius >= psdist / 2:
@@ -547,8 +552,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 # the sum is zero for {'default': [(1, 0), (10, 0)]}
                 if sum(dic.values()):
                     it = list(dic.items())
-                    md = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                    logging.info('ps_dist %s: %s', trt, md)
+                    dists = {i[1] for i in it}
+                    if len(set(dists)) > 1:
+                        md = '%s->%d ... %s->%d' % (it[0] + it[-1])
+                        logging.info('ps_dist %s: %s', trt, md)
         imts_with_period = [imt for imt in oq.imtls
                             if imt == 'PGA' or imt.startswith('SA')]
         imts_ok = len(imts_with_period) == len(oq.imtls)

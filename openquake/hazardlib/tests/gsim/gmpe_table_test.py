@@ -24,7 +24,7 @@ import h5py
 import numpy as np
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.gmpe_table import (
     GMPETable, AmplificationTable, hdf_arrays_to_dict, _return_tables)
 from openquake.hazardlib.gsim.base import RuptureContext
@@ -222,7 +222,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         expected_sigma = np.ones_like(ctx.rjb)
         # Check PGA and PGV
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGA(), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.PGA(), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 1.5) * expected_mean)
@@ -230,7 +230,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
             sigma_amp[0],
             0.9 * expected_mean)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGV(), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.PGV(), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 0.5) * expected_mean)
@@ -239,7 +239,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
             0.9 * expected_mean)
         # Sa (0.5)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.SA(0.5), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.SA(0.5), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 2.0) * expected_mean)
@@ -305,7 +305,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
         expected_mean = np.ones_like(ctx.rjb)
         # Check PGA and PGV
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGA(), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.PGA(), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 1.5) * expected_mean)
@@ -313,7 +313,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
             sigma_amp[0],
             0.9 * expected_mean)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGV(), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.PGV(), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 0.5) * expected_mean)
@@ -322,7 +322,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
             0.9 * expected_mean)
         # Sa (0.5)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.SA(0.5), ctx, ctx, ctx.rjb, stddevs)
+            imt_module.SA(0.5), ctx, ctx.rjb, stddevs)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 2.0) * expected_mean)
@@ -334,7 +334,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
         """
         Test that the set function operates correctly
         """
-        self.assertSetEqual(self.amp_table.get_set(), set(("rake",)))
+        self.assertSetEqual(self.amp_table.get_set(), {"rake"})
 
 
 class AmplificationTableBadTestCase(unittest.TestCase):
@@ -402,8 +402,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                 gsim.imls[iml],
                 self.hdf5["IMLs/" + iml][:])
             np.testing.assert_array_almost_equal(
-                gsim.stddevs[const.StdDev.TOTAL][iml],
-                self.hdf5["Total/" + iml][:])
+                gsim.stddevs[0][iml], self.hdf5["Total/" + iml][:])
 
     def test_retreival_tables_good_no_interp(self):
         """
@@ -426,10 +425,10 @@ class GSIMTableGoodTestCase(unittest.TestCase):
             np.array([2.0, 1., 0.5]))
         # Also for standard deviations
         np.testing.assert_array_almost_equal(
-            _return_tables(gsim, 6.0, imt_module.PGA(), const.StdDev.TOTAL),
+            _return_tables(gsim, 6.0, imt_module.PGA(), 0),
             0.5 * np.ones(3))
         np.testing.assert_array_almost_equal(
-            _return_tables(gsim, 6.0, imt_module.SA(1.0), const.StdDev.TOTAL),
+            _return_tables(gsim, 6.0, imt_module.SA(1.0), 0),
             0.8 * np.ones(3))
 
     def test_retreival_tables_good_interp(self):
@@ -486,29 +485,31 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
         ctx.vs30 = 1000. * np.ones(5)
+        ctx.sids = np.arange(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])
         expected_sigma = 0.25 * np.ones(5)
+        imts = [imt_module.PGA(), imt_module.SA(1.0), imt_module.PGV()]
         # PGA
         mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.PGA(),
-                                                stddevs)
+                                                imts[0], stddevs)
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], expected_sigma, 5)
         # SA
         mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.SA(1.0),
-                                                stddevs)
+                                                imts[1], stddevs)
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
         # PGV
         mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.PGV(),
-                                                stddevs)
+                                                imts[2], stddevs)
         np.testing.assert_array_almost_equal(np.exp(mean),
                                              10. * expected_mean,
                                              5)
         np.testing.assert_array_almost_equal(sigma[0], expected_sigma, 5)
+
+        # StdDev.ALL check
+        contexts.get_mean_stds([gsim], ctx, imts)
 
     def test_get_mean_and_stddevs_good_amplified(self):
         """
@@ -520,6 +521,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         ctx.mag = 6.0
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
+        ctx.sids = np.arange(5)
         ctx.vs30 = 100. * np.ones(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([20., 20., 10., 5., 1.0E-19])
@@ -536,23 +538,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                                                 stddevs)
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
-
-    def test_get_mean_stddevs_unsupported_stddev(self):
-        """
-        Tests the execution of the GMPE with an unsupported standard deviation
-        type
-        """
-        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        ctx = RuptureContext()
-        ctx.mag = 6.0
-        # Test values at the given distances and those outside range
-        ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
-        ctx.vs30 = 1000. * np.ones(5)
-        stddevs = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT]
-        with self.assertRaises(KeyError) as ve:
-            gsim.get_mean_and_stddevs(ctx, ctx, ctx, imt_module.PGA(),
-                                      stddevs)
-        self.assertEqual(str(ve.exception), "'Inter event'")
 
     def tearDown(self):
         """
@@ -618,6 +603,7 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         ctx.rake = 90.0
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
+        ctx.sids = np.arange(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([20.0, 20.0, 10.0, 5.0, 1.0E-19])
         # PGA
@@ -678,6 +664,7 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         ctx.mag = 6.0
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
+        ctx.sids = np.arange(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])
         # PGA
