@@ -25,15 +25,7 @@ from openquake.baselib.general import all_equals
 from openquake.hazardlib import contexts, imt
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 
-NORMALIZE = False
-
-
-def get_ifield(fields):
-    """
-    :returns: dictionary field name -> field index
-    """
-    return {f: i for i, f in enumerate(fields)
-            if f.startswith(('site_', 'rup_', 'dist_'))}
+NORMALIZE = True
 
 
 def normalize(csvfnames):
@@ -43,6 +35,7 @@ def normalize(csvfnames):
     allcols = []
     ifield = {}
     data = {}
+    idata = {}
     for fname in csvfnames:
         with open(fname) as f:
             reader = csv.reader(f)
@@ -57,14 +50,23 @@ def normalize(csvfnames):
             allcols.append(fields)
             ifield[fname] = {f: i for i, f in enumerate(fields)}
             data[fname] = list(reader)
+            idata[fname] = set()
+            for row in data[fname]:
+                tup = tuple(v for v, f in zip(row, fields)
+                            if f.startswith(('site_', 'rup_', 'dist_')))
+                idata[fname].add(tup)
     colset = set.intersection(*[set(cols) for cols in allcols])
+    commonset = set.intersection(*[idata[fname] for fname in csvfnames])
     for fname, cols in zip(csvfnames, allcols):
         idx = ifield[fname]
         cols = [c for c in cols if c in colset]
-        writer = csv.writer(open(fname, 'w'))
+        writer = csv.writer(open(fname, 'w', newline='', encoding='utf-8'))
         writer.writerow(cols)
         for row in data[fname]:
-            writer.writerow([row[idx[c]] for c in cols])
+            tup = tuple(v for v, f in zip(row, cols)
+                        if f.startswith(('site_', 'rup_', 'dist_')))
+            if tup in commonset:
+                writer.writerow([row[idx[c]] for c in cols])
 
 
 def read_cmaker_df(gsim, csvfnames):
