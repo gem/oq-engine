@@ -95,6 +95,9 @@ def read_cmaker_df(gsim, csvfnames):
     else:
         cols = slice(None)
     df = pandas.concat(df[cols] for df in dfs)
+    sizes = {r: len(d) for r, d in df.groupby('result_type')}
+    if not all_equals(list(sizes.values())):
+        raise ValueError('Inconsistent number of rows: %s' % sizes)
     imts = []
     cmap = {}
     for col in df.columns:
@@ -140,7 +143,7 @@ def gen_ctxs(df):
             dic = dict(zip(rrp + pars, inputs[0][0]))
             print('\nMissing some data for %s' % dic)
             continue
-        assert all_equals(inputs)
+        assert all_equals(inputs), 'Use NORMALIZE=True'
         if len(rrp) == 1:
             rup_params = [rup_params]
         ctx = contexts.RuptureContext()
