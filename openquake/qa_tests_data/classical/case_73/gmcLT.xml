@@ -7,7 +7,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4">
                       applyToTectonicRegionType="Active Shallow Crust">
     
     <logicTreeBranch branchID="b1">
-      <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+      <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
     </logicTreeBranch>
     
