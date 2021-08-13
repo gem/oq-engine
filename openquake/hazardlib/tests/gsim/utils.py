@@ -57,6 +57,7 @@ def normalize(csvfnames):
                 idata[fname].add(tup)
     colset = set.intersection(*[set(cols) for cols in allcols])
     commonset = set.intersection(*[idata[fname] for fname in csvfnames])
+    assert commonset
     for fname, cols in zip(csvfnames, allcols):
         idx = ifield[fname]
         cols = [c for c in cols if c in colset]
@@ -104,6 +105,7 @@ def read_cmaker_df(gsim, csvfnames):
         else:
             imts.append(im)
             cmap[col] = im
+    assert imts
     imtls = {im: [0] for im in sorted(imts)}
     cmaker = contexts.ContextMaker(
         gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
