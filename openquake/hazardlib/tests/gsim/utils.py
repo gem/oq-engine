@@ -82,7 +82,7 @@ def read_cmaker_df(gsim, csvfnames):
     """
     # build a suitable ContextMaker
     dfs = [pandas.read_csv(fname) for fname in csvfnames]
-    if not all_equals([df.columns for df in dfs]):
+    if not all_equals([sorted(df.columns) for df in dfs]):
         colset = set.intersection(*[set(df.columns) for df in dfs])
         cols = [col for col in dfs[0].columns if col in colset]
         extra = set()

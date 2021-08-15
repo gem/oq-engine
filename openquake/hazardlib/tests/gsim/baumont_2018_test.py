@@ -21,7 +21,8 @@ Implements the tests for Bindi et al. (2011) GMPE for macroseismic intensity
 
 Test data generated from source code provided by Philippe Roth
 """
-from openquake.hazardlib.gsim.baumont_2018 import BaumontEtAl2018High2210IAVGDC30n7
+from openquake.hazardlib.gsim.baumont_2018 import (
+    BaumontEtAl2018High2210IAVGDC30n7)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
