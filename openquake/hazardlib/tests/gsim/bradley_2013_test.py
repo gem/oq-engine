@@ -63,7 +63,7 @@ class Bradley2013VolcTestCase(BaseGSIMTestCase):
     # canterbury-earthquakes-data
     # Downloaded 26 March 2014.
 
-    def test_mean(self):
+    def test_all(self):
         self.check_all('BRADLEY13/Bradley2013Volc_MEAN.csv',
                        'BRADLEY13/Bradley2013Volc_TOTAL_STDDEV.csv',
                        'BRADLEY13/Bradley2013Volc_INTRA_EVENT_STDDEV.csv',
