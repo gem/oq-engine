@@ -33,13 +33,13 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
     # Test data generated from Fortran implementation
     # of Dave Boore (http://www.daveboore.com/pubs_online.html)
 
-    def test_mean1(self):
-        self.check('AB06/AB06_MEAN.csv',
-                   max_discrep_percentage=0.9)
+    def test_all1(self):
+        self.check_all('AB06/AB06_MEAN.csv',
+                       mean_discrep_percentage=0.9)
 
     def test_std_total1(self):
-        self.check('AB06/AB06_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('AB06/AB06_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
 
     def test_zero_distance(self):
         # test the calculation in case of zero rrup distance (for rrup=0
@@ -61,42 +61,42 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
 
     # Test data generated from subroutine getAB06 in hazgridXnga2.f
 
-    def test_mean2(self):
-        self.check('AB06/AB06MblgAB1987NSHMP140bar_MEAN.csv',
-                   max_discrep_percentage=2.1, mag_eq="Mblg87")
+    def test_all2(self):
+        self.check_all('AB06/AB06MblgAB1987NSHMP140bar_MEAN.csv',
+                       mean_discrep_percentage=2.1, mag_eq="Mblg87")
 
     def test_std_total2(self):
-        self.check('AB06/AB06MblgAB1987NSHMP140bar_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1, mag_eq="Mblg87")
+        self.check_all('AB06/AB06MblgAB1987NSHMP140bar_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1, mag_eq="Mblg87")
 
-    def test_mean3(self):
-        self.check('AB06/AB06MblgJ1996NSHMP140bar_MEAN.csv',
-                   max_discrep_percentage=2.2, mag_eq="Mblg96")
+    def test_all3(self):
+        self.check_all('AB06/AB06MblgJ1996NSHMP140bar_MEAN.csv',
+                       mean_discrep_percentage=2.2, mag_eq="Mblg96")
 
-    def test_mean4(self):
-        self.check('AB06/AB06MwNSHMP140bar_MEAN.csv',
-                   max_discrep_percentage=1.9, mag_eq="Mw")
+    def test_all4(self):
+        self.check_all('AB06/AB06MwNSHMP140bar_MEAN.csv',
+                       mean_discrep_percentage=1.9, mag_eq="Mw")
 
-    def test_mean5(self):
-        self.check('AB06/AB06MblgAB1987NSHMP200bar_MEAN.csv',
-                   max_discrep_percentage=2.1, mag_eq="Mblg87",
-                   scale_fac=0.5146)
+    def test_all5(self):
+        self.check_all('AB06/AB06MblgAB1987NSHMP200bar_MEAN.csv',
+                       mean_discrep_percentage=2.1, mag_eq="Mblg87",
+                       scale_fac=0.5146)
 
     # change in stress drop does not affect standard deviation
     def test_std_total5(self):
-        self.check('AB06/AB06MblgAB1987NSHMP140bar_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1, mag_eq="Mblg87",
-                   scale_fac=0.5146)
+        self.check_all('AB06/AB06MblgAB1987NSHMP140bar_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1, mag_eq="Mblg87",
+                       scale_fac=0.5146)
 
-    def test_mean6(self):
-        self.check('AB06/AB06MblgJ1996NSHMP200bar_MEAN.csv',
-                   max_discrep_percentage=2.2, mag_eq="Mblg96",
-                   scale_fac=0.5146)
+    def test_all6(self):
+        self.check_all('AB06/AB06MblgJ1996NSHMP200bar_MEAN.csv',
+                       mean_discrep_percentage=2.2, mag_eq="Mblg96",
+                       scale_fac=0.5146)
 
-    def test_mean7(self):
-        self.check('AB06/AB06MwNSHMP200bar_MEAN.csv',
-                   max_discrep_percentage=1.9, mag_eq="Mw",
-                   scale_fac=0.5146)
+    def test_all7(self):
+        self.check_all('AB06/AB06MwNSHMP200bar_MEAN.csv',
+                       mean_discrep_percentage=1.9, mag_eq="Mw",
+                       scale_fac=0.5146)
 
 
 class AtkinsonBoore2006Modified2011TestCase(BaseGSIMTestCase):
@@ -104,6 +104,6 @@ class AtkinsonBoore2006Modified2011TestCase(BaseGSIMTestCase):
 
     # Test data provided by David M. Boore
 
-    def test_mean(self):
-        self.check('AB06/AB06_UPDATE2011_MEAN.csv',
-                   max_discrep_percentage=1.0)
+    def test_all(self):
+        self.check_all('AB06/AB06_UPDATE2011_MEAN.csv',
+                       mean_discrep_percentage=1.0)
