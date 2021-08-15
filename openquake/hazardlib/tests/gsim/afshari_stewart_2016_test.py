@@ -31,7 +31,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 # Discrepency percentages to be applied to tests
 # Small differences in coefficients from the SCEC BBP implementation in the
 # style-of-faulting term lead to a tolerable discrepency at small magnitudes
-MEAN_DISCREP = 3.0 
+MEAN_DISCREP = 3.0
 STDDEV_DISCREP = 0.1
 
 
