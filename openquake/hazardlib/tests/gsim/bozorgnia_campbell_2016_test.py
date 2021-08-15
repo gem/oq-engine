@@ -64,20 +64,20 @@ class BozorgniaCampbell2016TestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
-            self.check(MEAN_FILE[sgn, SJ],
-                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
+            self.check_all(MEAN_FILE[sgn, SJ],
+                           mean_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
 
     def test_std_intra(self):
         for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
-            self.check(STD_INTRA_FILE[sgn, SJ],
-                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
+            self.check_all(STD_INTRA_FILE[sgn, SJ],
+                           mean_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
 
     def test_std_inter(self):
         for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
-            self.check(STD_INTER_FILE[sgn, SJ],
-                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
+            self.check_all(STD_INTER_FILE[sgn, SJ],
+                           mean_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
 
     def test_std_total(self):
         for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
-            self.check(STD_TOTAL_FILE[sgn, SJ],
-                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
+            self.check_all(STD_TOTAL_FILE[sgn, SJ],
+                           mean_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
