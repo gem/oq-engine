@@ -15,14 +15,59 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import unittest
 import os
+import csv
+import unittest
 
 import numpy as np
 import pandas
 from openquake.baselib.general import all_equals
 from openquake.hazardlib import contexts, imt
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
+
+NORMALIZE = False
+
+
+def normalize(csvfnames):
+    """
+    Fix headers and input rows of the given files
+    """
+    allcols = []
+    ifield = {}
+    data = {}
+    idata = {}
+    for fname in csvfnames:
+        with open(fname) as f:
+            reader = csv.reader(f)
+            fields = []
+            for f in next(reader):
+                try:
+                    im = imt.from_string(f)
+                except KeyError:
+                    fields.append(f)
+                else:
+                    fields.append(str(im.period) if im.period else f)
+            allcols.append(fields)
+            ifield[fname] = {f: i for i, f in enumerate(fields)}
+            data[fname] = list(reader)
+            idata[fname] = set()
+            for row in data[fname]:
+                tup = tuple(v for v, f in zip(row, fields)
+                            if f.startswith(('site_', 'rup_', 'dist_')))
+                idata[fname].add(tup)
+    colset = set.intersection(*[set(cols) for cols in allcols])
+    commonset = set.intersection(*[idata[fname] for fname in csvfnames])
+    assert commonset
+    for fname, cols in zip(csvfnames, allcols):
+        idx = ifield[fname]
+        cols = [c for c in cols if c in colset]
+        writer = csv.writer(open(fname, 'w', newline='', encoding='utf-8'))
+        writer.writerow(cols)
+        for row in data[fname]:
+            tup = tuple(v for v, f in zip(row, cols)
+                        if f.startswith(('site_', 'rup_', 'dist_')))
+            if tup in commonset:
+                writer.writerow([row[idx[c]] for c in cols])
 
 
 def read_cmaker_df(gsim, csvfnames):
@@ -50,31 +95,39 @@ def read_cmaker_df(gsim, csvfnames):
     else:
         cols = slice(None)
     df = pandas.concat(df[cols] for df in dfs)
+    sizes = {r: len(d) for r, d in df.groupby('result_type')}
+    if not all_equals(list(sizes.values())):
+        raise ValueError('Inconsistent number of rows: %s' % sizes)
     imts = []
     cmap = {}
     for col in df.columns:
         try:
-            im = str(imt.from_string(col))
+            im = str(imt.from_string(col.upper()))
         except KeyError:
             pass
         else:
             imts.append(im)
             cmap[col] = im
+    assert imts
     imtls = {im: [0] for im in sorted(imts)}
     cmaker = contexts.ContextMaker(
         gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
+    print(gsim)
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
+        print(name, df[name].unique())
     for dist in cmaker.REQUIRES_SITES_PARAMETERS:
         name = 'site_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
+        print(name, df[name].unique())
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
         if name not in df.columns:  # i.e. missing rake
             df[name] = np.zeros(len(df), cmaker.dtype[par])
         else:
             df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
+        print(name, df[name].unique())
     return cmaker, df.rename(columns=cmap)
 
 
@@ -88,6 +141,13 @@ def gen_ctxs(df):
     outs = df.result_type.unique()
     num_outs = len(outs)
     for rup_params, grp in df.groupby(rrp):
+        inputs = [gr[rrp + pars].to_numpy()
+                  for _, gr in grp.groupby('result_type')]
+        if len(inputs) < num_outs:
+            dic = dict(zip(rrp + pars, inputs[0][0]))
+            print('\nMissing some data for %s' % dic)
+            continue
+        assert all_equals(inputs), 'Use NORMALIZE=True'
         if len(rrp) == 1:
             rup_params = [rup_params]
         ctx = contexts.RuptureContext()
@@ -123,9 +183,12 @@ class BaseGSIMTestCase(unittest.TestCase):
     def check_all(self, *filenames, mean_discrep_percentage,
                   std_discrep_percentage=None, **kwargs):
         if std_discrep_percentage is None:
-            std_discrep_percentage =  mean_discrep_percentage
+            std_discrep_percentage = mean_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
+        if NORMALIZE:
+            normalize(fnames)
+            return
         gsim = self.GSIM_CLASS(**kwargs)
         out_types = ["MEAN"]
         for sdt in contexts.STD_TYPES:
