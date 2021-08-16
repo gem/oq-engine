@@ -34,7 +34,7 @@ class AbrahamsonSilva2008TestCase(BaseGSIMTestCase):
         self.check_all('AS08/AS08_MEAN.csv',
                        mean_discrep_percentage=0.1)
 
-    def test_std_inter(self):
+    def test_std(self):
         self.check_all('AS08/AS08_STD_INTER.csv',
                        'AS08/AS08_STD_INTRA.csv',
                        'AS08/AS08_STD_TOTAL.csv',

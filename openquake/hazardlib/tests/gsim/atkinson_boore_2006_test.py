@@ -33,7 +33,7 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
     # Test data generated from Fortran implementation
     # of Dave Boore (http://www.daveboore.com/pubs_online.html)
 
-    def test_all1(self):
+    def test_mean1(self):
         self.check_all('AB06/AB06_MEAN.csv',
                        mean_discrep_percentage=0.9)
 
@@ -61,7 +61,7 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
 
     # Test data generated from subroutine getAB06 in hazgridXnga2.f
 
-    def test_all2(self):
+    def test_mean2(self):
         self.check_all('AB06/AB06MblgAB1987NSHMP140bar_MEAN.csv',
                        mean_discrep_percentage=2.1, mag_eq="Mblg87")
 
@@ -69,15 +69,15 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         self.check_all('AB06/AB06MblgAB1987NSHMP140bar_STD_TOTAL.csv',
                        mean_discrep_percentage=0.1, mag_eq="Mblg87")
 
-    def test_all3(self):
+    def test_mean3(self):
         self.check_all('AB06/AB06MblgJ1996NSHMP140bar_MEAN.csv',
                        mean_discrep_percentage=2.2, mag_eq="Mblg96")
 
-    def test_all4(self):
+    def test_mean4(self):
         self.check_all('AB06/AB06MwNSHMP140bar_MEAN.csv',
                        mean_discrep_percentage=1.9, mag_eq="Mw")
 
-    def test_all5(self):
+    def test_mean5(self):
         self.check_all('AB06/AB06MblgAB1987NSHMP200bar_MEAN.csv',
                        mean_discrep_percentage=2.1, mag_eq="Mblg87",
                        scale_fac=0.5146)
@@ -88,12 +88,12 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
                        mean_discrep_percentage=0.1, mag_eq="Mblg87",
                        scale_fac=0.5146)
 
-    def test_all6(self):
+    def test_mean6(self):
         self.check_all('AB06/AB06MblgJ1996NSHMP200bar_MEAN.csv',
                        mean_discrep_percentage=2.2, mag_eq="Mblg96",
                        scale_fac=0.5146)
 
-    def test_all7(self):
+    def test_mean7(self):
         self.check_all('AB06/AB06MwNSHMP200bar_MEAN.csv',
                        mean_discrep_percentage=1.9, mag_eq="Mw",
                        scale_fac=0.5146)
@@ -104,6 +104,6 @@ class AtkinsonBoore2006Modified2011TestCase(BaseGSIMTestCase):
 
     # Test data provided by David M. Boore
 
-    def test_all(self):
+    def test_mean(self):
         self.check_all('AB06/AB06_UPDATE2011_MEAN.csv',
                        mean_discrep_percentage=1.0)
