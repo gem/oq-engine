@@ -28,29 +28,29 @@ class BooreAtkinson2008TestCase(BaseGSIMTestCase):
     # Extra tables for inter and intra event standard deviations
     # were generated from the OpenSHA implementation.
 
-    def test_mean_normal(self):
-        self.check('NGA/BA08/BA08_MEDIAN_NM.csv',
-                   max_discrep_percentage=0.6)
+    def test_all_normal(self):
+        self.check_all('NGA/BA08/BA08_MEDIAN_NM.csv',
+                       mean_discrep_percentage=0.6)
 
-    def test_mean_reverse(self):
-        self.check('NGA/BA08/BA08_MEDIAN_RV.csv',
-                   max_discrep_percentage=0.6)
+    def test_all_reverse(self):
+        self.check_all('NGA/BA08/BA08_MEDIAN_RV.csv',
+                       mean_discrep_percentage=0.6)
 
-    def test_mean_strike_slip(self):
-        self.check('NGA/BA08/BA08_MEDIAN_SS.csv',
-                   max_discrep_percentage=0.6)
+    def test_all_strike_slip(self):
+        self.check_all('NGA/BA08/BA08_MEDIAN_SS.csv',
+                       mean_discrep_percentage=0.6)
 
     def test_std_intra(self):
-        self.check('NGA/BA08/BA08_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('NGA/BA08/BA08_STD_INTRA.csv',
+                       mean_discrep_percentage=0.1)
 
     def test_std_inter(self):
-        self.check('NGA/BA08/BA08_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('NGA/BA08/BA08_STD_INTER.csv',
+                       mean_discrep_percentage=0.1)
 
     def test_std_total_strike_slip(self):
-        self.check('NGA/BA08/BA08_SIGTM_SS.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('NGA/BA08/BA08_SIGTM_SS.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class Atkinson2010HawaiiTestCase(BaseGSIMTestCase):
@@ -60,10 +60,8 @@ class Atkinson2010HawaiiTestCase(BaseGSIMTestCase):
     # (Note that it is here used a modified version of the table
     # to get rid of distances less than 1km)
 
-    def test_mean(self):
-        self.check('NGA/BA08/A10H_MEDIAN_1KM.csv',
-                   max_discrep_percentage=0.6)
-
-    def test_std_total(self):
-        self.check('NGA/BA08/A10H_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('NGA/BA08/A10H_MEDIAN_1KM.csv',
+                       'NGA/BA08/A10H_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.6,
+                       std_discrep_percentage=0.1)
