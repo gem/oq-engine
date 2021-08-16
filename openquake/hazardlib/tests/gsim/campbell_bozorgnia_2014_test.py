@@ -48,21 +48,12 @@ class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
     STD_INTER_FILE = 'CB14/CB2014_STD_INTER.csv'
     STD_TOTAL_FILE = 'CB14/CB2014_STD_TOTAL.csv'
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check(self.STD_INTRA_FILE,
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check(self.STD_INTER_FILE,
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.STD_TOTAL_FILE,
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all(self.MEAN_FILE,
+                       self.STD_INTRA_FILE,
+                       self.STD_INTER_FILE,
+                       self.STD_TOTAL_FILE,
+                       mean_discrep_percentage=0.1)
 
 
 class CampbellBozorgnia2014HighQTestCase(CampbellBozorgnia2014TestCase):

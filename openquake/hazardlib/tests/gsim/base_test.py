@@ -24,14 +24,15 @@ import numpy
 
 from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.base import (
-    GMPE, CoeffsTable, gsim_aliases, SitesContext, RuptureContext,
+    GMPE, gsim_aliases, SitesContext, RuptureContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
-
+from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
+    AbrahamsonGulerce2020SInter)
 aac = numpy.testing.assert_allclose
 
 
@@ -273,6 +274,18 @@ class ContextTestCase(unittest.TestCase):
         rctx = RuptureContext()
         rctx.mag = 5.
         self.assertTrue(sctx1 != rctx)
+
+    def test_recarray_conversion(self):
+        # automatic recarray conversion for backward compatibility
+        imt = PGA()
+        gsim = AbrahamsonGulerce2020SInter()
+        ctx = RuptureContext()
+        ctx.mag = 5.
+        ctx.sids = [0, 1]
+        ctx.vs30 = [760., 760.]
+        ctx.rrup = [100., 110.]
+        mean, _stddevs = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imt, [])
+        numpy.testing.assert_allclose(mean, [-5.81116004, -6.00192455])
 
 
 class GsimInstantiationTestCase(unittest.TestCase):

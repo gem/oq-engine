@@ -24,21 +24,21 @@ class EasternCan15LowTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EasternCan15Low
 
     def test_mean(self):
-        self.check('CAN15/GMPEt_ENA_low.csv',
-                   max_discrep_percentage=170.)
+        self.check_all('CAN15/GMPEt_ENA_low.csv',
+                       mean_discrep_percentage=170.)
 
 
 class EasternCan15HighTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EasternCan15Upp
 
     def test_mean(self):
-        self.check('CAN15/GMPEt_ENA_high.csv',
-                   max_discrep_percentage=170.)
+        self.check_all('CAN15/GMPEt_ENA_high.csv',
+                       mean_discrep_percentage=170.)
 
 
 class EasternCan15MidTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EasternCan15Mid
 
     def test_mean(self):
-        self.check('CAN15/GMPEt_ENA_med.csv',
-                   max_discrep_percentage=100.)
+        self.check_all('CAN15/GMPEt_ENA_med.csv',
+                       mean_discrep_percentage=100.)

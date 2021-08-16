@@ -15,30 +15,29 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.can15.sslab import (SSlabCan15Mid,
-                                                  SSlabCan15Low,
-                                                  SSlabCan15Upp)
+from openquake.hazardlib.gsim.can15.sslab import (
+    SSlabCan15Mid, SSlabCan15Low, SSlabCan15Upp)
 
 
 class EasternCan15HighTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SSlabCan15Upp
 
     def test_mean(self):
-        self.check('CAN15/GMPEt_Inslab_high.csv',
-                   max_discrep_percentage=80)
+        self.check_all('CAN15/GMPEt_Inslab_high.csv',
+                       mean_discrep_percentage=80)
 
 
 class EasternCan15LowTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SSlabCan15Low
 
     def test_mean(self):
-        self.check('CAN15/GMPEt_Inslab_low.csv',
-                   max_discrep_percentage=80)
+        self.check_all('CAN15/GMPEt_Inslab_low.csv',
+                       mean_discrep_percentage=80)
 
 
 class EasternCan15MidTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SSlabCan15Mid
 
     def test_mean(self):
-        self.check('CAN15/GMPEt_Inslab_med.csv',
-                   max_discrep_percentage=80)
+        self.check_all('CAN15/GMPEt_Inslab_med.csv',
+                       mean_discrep_percentage=80)
