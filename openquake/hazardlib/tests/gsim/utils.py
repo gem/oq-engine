@@ -28,6 +28,10 @@ from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 NORMALIZE = False
 
 
+def _normalize(float_string):
+    return str(float(float_string))
+
+
 def normalize(csvfnames):
     """
     Fix headers and input rows of the given files
@@ -52,12 +56,12 @@ def normalize(csvfnames):
             data[fname] = list(reader)
             idata[fname] = set()
             for row in data[fname]:
-                tup = tuple(v for v, f in zip(row, fields)
+                tup = tuple(_normalize(v) for v, f in zip(row, fields)
                             if f.startswith(('site_', 'rup_', 'dist_')))
                 idata[fname].add(tup)
     colset = set.intersection(*[set(cols) for cols in allcols])
     commonset = set.intersection(*[idata[fname] for fname in csvfnames])
-    assert commonset
+    assert commonset, 'No common inputs in ' + ' '.join(csvfnames)
     for fname, cols in zip(csvfnames, allcols):
         idx = ifield[fname]
         cols = [c for c in cols if c in colset]
@@ -82,6 +86,8 @@ def read_cmaker_df(gsim, csvfnames):
     """
     # build a suitable ContextMaker
     dfs = [pandas.read_csv(fname) for fname in csvfnames]
+    if sum(len(df) for df in dfs) == 0:
+        raise ValueError('The files %s are empty!' % ' '.join(csvfnames))
     if not all_equals([sorted(df.columns) for df in dfs]):
         colset = set.intersection(*[set(df.columns) for df in dfs])
         cols = [col for col in dfs[0].columns if col in colset]
@@ -94,7 +100,7 @@ def read_cmaker_df(gsim, csvfnames):
               (csvfnames[0], len(extra), extra, ncols))
     else:
         cols = slice(None)
-    df = pandas.concat(df[cols] for df in dfs)
+    df = pandas.concat(d[cols] for d in dfs)
     sizes = {r: len(d) for r, d in df.groupby('result_type')}
     if not all_equals(list(sizes.values())):
         raise ValueError('Inconsistent number of rows: %s' % sizes)
