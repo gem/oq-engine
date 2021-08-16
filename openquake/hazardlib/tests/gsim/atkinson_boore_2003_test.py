@@ -55,12 +55,12 @@ class AtkinsonBoore2003SInterNSHMP2008TestCase(BaseGSIMTestCase):
     # test data generated from subrutine 'getABsub' in 'hazSUBXnga.f'
 
     def test_mean(self):
-        self.check('AB03/AB03SInterGlobalNSHMP_MEAN.csv',
-                   max_discrep_percentage=0.5)
+        self.check_all('AB03/AB03SInterGlobalNSHMP_MEAN.csv',
+                       mean_discrep_percentage=0.5)
 
     def test_std_total(self):
-        self.check('AB03/AB03SInterGlobalNSHMP_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('AB03/AB03SInterGlobalNSHMP_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class AtkinsonBoore2003SSlabNSHMP2008TestCase(BaseGSIMTestCase):
@@ -95,6 +95,7 @@ class AtkinsonBoore2003SSlabJapanNSHMP2008TestCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check_all('AB03/AB03SSlabJapanNSHMP_MEAN.csv',
-                       'AB03/AB03SSlabJapanNSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.2,
-                       std_discrep_percentage=0.1)
+                       mean_discrep_percentage=0.2)
+
+        self.check_all('AB03/AB03SSlabJapanNSHMP_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
