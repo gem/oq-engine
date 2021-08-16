@@ -29,9 +29,9 @@ class YuEtAl2013MwActiveTestCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check_all('YU2013Mw/yu_2013_mean_active.csv',
-                       'YU2013Mw/yu_2013_stddev_active.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+                       mean_discrep_percentage=0.4)
+        self.check_all('YU2013Mw/yu_2013_stddev_active.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class YuEtAl2013MwTibetTestCase(BaseGSIMTestCase):
@@ -39,9 +39,9 @@ class YuEtAl2013MwTibetTestCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check_all('YU2013Mw/yu_2013_mean_tibetan.csv',
-                       'YU2013Mw/yu_2013_stddev_tibetan.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+                       mean_discrep_percentage=0.4)
+        self.check_all('YU2013Mw/yu_2013_stddev_tibetan.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class YuEtAl2013MwEasternTestCase(BaseGSIMTestCase):
@@ -49,9 +49,9 @@ class YuEtAl2013MwEasternTestCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check_all('YU2013Mw/yu_2013_mean_eastern.csv',
-                       'YU2013Mw/yu_2013_stddev_eastern.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+                       mean_discrep_percentage=0.4)
+        self.check_all('YU2013Mw/yu_2013_stddev_eastern.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class YuEtAl2013MwStableTestCase(BaseGSIMTestCase):
@@ -59,6 +59,6 @@ class YuEtAl2013MwStableTestCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check_all('YU2013Mw/yu_2013_mean_stable.csv',
-                       'YU2013Mw/yu_2013_stddev_stable.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+                       mean_discrep_percentage=0.4)
+        self.check_all('YU2013Mw/yu_2013_stddev_stable.csv',
+                       mean_discrep_percentage=0.1)
