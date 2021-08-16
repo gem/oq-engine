@@ -32,25 +32,19 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class Campbell2003TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Campbell2003
 
-    def test_mean(self):
-        self.check('C03/C03_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('C03/C03_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('C03/C03_MEAN.csv',
+                       'C03/C03_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class Campbell2003SHARETestCase(BaseGSIMTestCase):
     GSIM_CLASS = Campbell2003SHARE
 
-    def test_mean(self):
-        self.check('C03/C03SHARE_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('C03/C03SHARE_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('C03/C03SHARE_MEAN.csv',
+                       'C03/C03SHARE_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class Campbell2003MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
@@ -58,13 +52,12 @@ class Campbell2003MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
 
     # test data generated from ``subroutine getCampCEUS`` in ``hazgridXnga2.f``
 
-    def test_mean(self):
-        self.check('C03/C03MblgAB1987NSHMP2008_MEAN.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('C03/C03MblgAB1987NSHMP2008_MEAN.csv',
+                       mean_discrep_percentage=0.1)
 
-    def test_std_total(self):
-        self.check('C03/C03MblgAB1987NSHMP2008_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('C03/C03MblgAB1987NSHMP2008_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class Campbell2003MblgJ1996NSHMP2008TestCase(BaseGSIMTestCase):
@@ -72,13 +65,12 @@ class Campbell2003MblgJ1996NSHMP2008TestCase(BaseGSIMTestCase):
 
     # test data generated from ``subroutine getCampCEUS`` in ``hazgridXnga2.f``
 
-    def test_mean(self):
-        self.check('C03/C03MblgJ1996NSHMP2008_MEAN.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('C03/C03MblgJ1996NSHMP2008_MEAN.csv',
+                       mean_discrep_percentage=0.1)
 
-    def test_std_total(self):
-        self.check('C03/C03MblgJ1996NSHMP2008_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('C03/C03MblgJ1996NSHMP2008_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class Campbell2003MwNSHMP2008TestCase(BaseGSIMTestCase):
@@ -86,10 +78,9 @@ class Campbell2003MwNSHMP2008TestCase(BaseGSIMTestCase):
 
     # test data generated from ``subroutine getCampCEUS`` in ``hazgridXnga2.f``
 
-    def test_mean(self):
-        self.check('C03/C03MwNSHMP2008_MEAN.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('C03/C03MwNSHMP2008_MEAN.csv',
+                       mean_discrep_percentage=0.1)
 
-    def test_std_total(self):
-        self.check('C03/C03MwNSHMP2008_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('C03/C03MwNSHMP2008_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)

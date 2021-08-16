@@ -34,7 +34,7 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, RecordBuilder)
+    AccumDict, DictArray, groupby, RecordBuilder, all_equals)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -292,6 +292,8 @@ class ContextMaker(object):
 
     def from_srcs(self, srcs, sitecol):  # used in disagg.disaggregation
         """
+        :param srcs: a list of Source objects
+        :param sitecol: a SiteCollection instance
         :returns: a list RuptureContexts
         """
         allctxs = []

@@ -25,8 +25,6 @@ Each of the test tables is generated from the original GMPE tables, which are
 subsequently modified using the adjustment factors presented in the module
 openquake.hazardlib.gsim.armenia_2016
 """
-import unittest
-import numpy as np
 from openquake.hazardlib.gsim.armenia_2016 import (AkkarEtAlRjb2014Armenia,
                                                    BindiEtAl2014RjbArmenia,
                                                    BooreEtAl2014LowQArmenia,
@@ -50,8 +48,8 @@ class AkkarEtAlRjb2014ArmeniaTestCase(BaseGSIMTestCase):
     MEAN_FILE = "armenia_2016/AKKAR14_ARMENIA_MEAN.csv"
 
     def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
+        self.check_all(self.MEAN_FILE,
+                       mean_discrep_percentage=MEAN_DISCREP)
 
 
 class BindiEtAl2014RjbArmeniaTestCase(AkkarEtAlRjb2014ArmeniaTestCase):

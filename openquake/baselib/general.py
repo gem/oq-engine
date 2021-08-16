@@ -1090,6 +1090,25 @@ def not_equal(array_or_none1, array_or_none2):
     return (array_or_none1 != array_or_none2).any()
 
 
+def all_equals(inputs):
+    """
+    :param inputs: a list of arrays or strings
+    :returns: True if all values are equal, False otherwise
+    """
+    inp0 = inputs[0]
+    for inp in inputs[1:]:
+        try:
+            diff = inp != inp0
+        except ValueError:  # Lengths must match to compare
+            return False
+        if isinstance(diff, numpy.ndarray):
+            if diff.any():
+                return False
+        elif diff:
+            return False
+    return True
+
+
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
     """
     Return file size in a human-friendly format

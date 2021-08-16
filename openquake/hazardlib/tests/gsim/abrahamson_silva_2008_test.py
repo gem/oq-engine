@@ -30,18 +30,12 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class AbrahamsonSilva2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonSilva2008
 
-    def test_mean(self):
-        self.check('AS08/AS08_MEAN.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('AS08/AS08_MEAN.csv',
+                       mean_discrep_percentage=0.1)
 
-    def test_std_inter(self):
-        self.check('AS08/AS08_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('AS08/AS08_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('AS08/AS08_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+    def test_std(self):
+        self.check_all('AS08/AS08_STD_INTER.csv',
+                       'AS08/AS08_STD_INTRA.csv',
+                       'AS08/AS08_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
