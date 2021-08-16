@@ -39,42 +39,41 @@ class ChiouYoungs2014TestCase(BaseGSIMTestCase):
     # in tests/gsim/data/NGA/CY14
 
     def test_mean_hanging_wall_normal_slip(self):
-        self.check('NGA/CY14/CY14_MEDIAN_MS_HW_NM.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_MEDIAN_MS_HW_NM.csv',
+                       mean_discrep_percentage=0.05)
 
     def test_mean_hanging_wall_reversed_slip(self):
-        self.check('NGA/CY14/CY14_MEDIAN_MS_HW_RV.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_MEDIAN_MS_HW_RV.csv',
+                       mean_discrep_percentage=0.05)
 
     def test_mean_hanging_wall_strike_slip(self):
-        self.check('NGA/CY14/CY14_MEDIAN_MS_HW_SS.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_MEDIAN_MS_HW_SS.csv',
+                       mean_discrep_percentage=0.05)
 
     def test_inter_event_stddev(self):
         # data generated from opensha
-        self.check('NGA/CY14/CY14_INTER_EVENT_SIGMA.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_INTER_EVENT_SIGMA.csv',
+                       mean_discrep_percentage=0.05)
 
     def test_intra_event_stddev(self):
         # data generated from opensha
-        self.check('NGA/CY14/CY14_INTRA_EVENT_SIGMA.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_INTRA_EVENT_SIGMA.csv',
+                       mean_discrep_percentage=0.05)
 
     def test_total_event_stddev(self):
         # data generated from opensha
-        self.check('NGA/CY14/CY14_TOTAL_EVENT_SIGMA.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_TOTAL_EVENT_SIGMA.csv',
+                       mean_discrep_percentage=0.05)
 
     def test_mean_refactor(self):
         # Test for backward compatibility - and extended test table
-        self.check('NGA/CY14/cy14_extended_table_mean.csv',
-                   max_discrep_percentage=0.001)
+        self.check_all('NGA/CY14/cy14_extended_table_mean.csv',
+                       mean_discrep_percentage=0.001)
 
     def test_total_stddev_refactor(self):
         # Test for backward compatibility - and extended test table
-        self.check('NGA/CY14/cy14_extended_table_total_stddev.csv',
-                   max_discrep_percentage=0.001)
-        
+        self.check_all('NGA/CY14/cy14_extended_table_total_stddev.csv',
+                       mean_discrep_percentage=0.001)
 
 
 # Note that in the regionalisation cases the discrepancy percentage is raised
@@ -82,29 +81,32 @@ class ChiouYoungs2014TestCase(BaseGSIMTestCase):
 # when compared to the verification code
 class ChiouYoungs2014JapanTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014Japan
+
     def test_mean_japan(self):
         # Data generated from implementation from Yue Hua
         # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
-        self.check('NGA/CY14/CY14_Japan_MEAN.csv',
-                   max_discrep_percentage=1.0)
+        self.check_all('NGA/CY14/CY14_Japan_MEAN.csv',
+                       mean_discrep_percentage=1.0)
 
 
 class ChiouYoungs2014ItalyTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014Italy
+
     def test_mean_italy(self):
         # Data generated from implementation from Yue Hua
         # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
-        self.check('NGA/CY14/CY14_Italy_MEAN.csv',
-                   max_discrep_percentage=1.0)
+        self.check_all('NGA/CY14/CY14_Italy_MEAN.csv',
+                       mean_discrep_percentage=1.0)
 
 
 class ChiouYoungs2014WenchuanTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014Wenchuan
+
     def test_mean_wenchuan(self):
         # Data generated from implementation from Yue Hua
         # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
-        self.check('NGA/CY14/CY14_Wenchuan_MEAN.csv',
-                   max_discrep_percentage=1.0)
+        self.check_all('NGA/CY14/CY14_Wenchuan_MEAN.csv',
+                       mean_discrep_percentage=1.0)
 
 
 class ChiouYoungs2014PEERTestCase(BaseGSIMTestCase):
@@ -116,21 +118,21 @@ class ChiouYoungs2014PEERTestCase(BaseGSIMTestCase):
     # This data is distributed under different license, see LICENSE.txt
     # in tests/gsim/data/NGA
     def test_mean_hanging_wall_normal_slip(self):
-        self.check('NGA/CY14/CY14_MEDIAN_MS_HW_NM.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_MEDIAN_MS_HW_NM.csv',
+                       mean_discrep_percentage=0.05)
 
     def test_mean_hanging_wall_reversed_slip(self):
-        self.check('NGA/CY14/CY14_MEDIAN_MS_HW_RV.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_MEDIAN_MS_HW_RV.csv',
+                       mean_discrep_percentage=0.05)
 
     def test_mean_hanging_wall_strike_slip(self):
-        self.check('NGA/CY14/CY14_MEDIAN_MS_HW_SS.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_MEDIAN_MS_HW_SS.csv',
+                       mean_discrep_percentage=0.05)
 
     def test_total_event_stddev(self):
         # Total Sigma fixes at 0.65
-        self.check('NGA/CY14/CY14_TOTAL_EVENT_SIGMA_PEER.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_TOTAL_EVENT_SIGMA_PEER.csv',
+                       mean_discrep_percentage=0.05)
 
 
 class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
@@ -143,8 +145,8 @@ class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
     # in tests/gsim/data/NGA
 
     def test_mean_near_fault(self):
-        self.check('NGA/CY14/CY14_MEDIAN_RCDPP.csv',
-                   max_discrep_percentage=0.05)
+        self.check_all('NGA/CY14/CY14_MEDIAN_RCDPP.csv',
+                       mean_discrep_percentage=0.05)
 
 
 class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
