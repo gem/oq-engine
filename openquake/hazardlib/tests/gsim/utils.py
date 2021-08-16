@@ -19,8 +19,87 @@ import unittest
 import os
 
 import numpy as np
-from openquake.hazardlib import contexts
+import pandas
+from openquake.baselib.general import all_equals
+from openquake.hazardlib import contexts, imt
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
+
+
+def read_cmaker_df(gsim, csvfnames):
+    """
+    :param gsim:
+        a GSIM instance
+    :param csvfnames:
+        a list of pathnames to CSV files in the format used in
+        hazardlib/tests/gsim/data, i.e. with fields rup_XXX, site_XXX,
+        dist_XXX, result_type and periods
+    :returns: a list RuptureContexts, grouped by rupture parameters
+    """
+    # build a suitable ContextMaker
+    dfs = [pandas.read_csv(fname) for fname in csvfnames]
+    if not all_equals([df.columns for df in dfs]):
+        colset = set.intersection(*[set(df.columns) for df in dfs])
+        cols = [col for col in dfs[0].columns if col in colset]
+        extra = set()
+        for df in dfs:
+            extra.update(set(df.columns) - colset)
+        print('\nThere are extra columns %s' % extra)
+    else:
+        cols = slice(None)
+    df = pandas.concat(df[cols] for df in dfs)
+    imts = []
+    cmap = {}
+    for col in df.columns:
+        try:
+            im = str(imt.from_string(col))
+        except KeyError:
+            pass
+        else:
+            imts.append(im)
+            cmap[col] = im
+    imtls = {im: [0] for im in sorted(imts)}
+    cmaker = contexts.ContextMaker(
+        gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
+    for dist in cmaker.REQUIRES_DISTANCES:
+        name = 'dist_' + dist
+        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
+    for dist in cmaker.REQUIRES_SITES_PARAMETERS:
+        name = 'site_' + dist
+        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
+    for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
+        name = 'rup_' + par
+        if name not in df.columns:  # i.e. missing rake
+            df[name] = np.zeros(len(df), cmaker.dtype[par])
+        else:
+            df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
+    return cmaker, df.rename(columns=cmap)
+
+
+def gen_ctxs(df):
+    """
+    :param df: a DataFrame with a specific structure
+    :yields: RuptureContexts
+    """
+    rrp = [col for col in df.columns if col.startswith('rup_')]
+    pars = [col for col in df.columns if col.startswith(('dist_', 'site_'))]
+    outs = df.result_type.unique()
+    num_outs = len(outs)
+    for rup_params, grp in df.groupby(rrp):
+        ctx = contexts.RuptureContext()
+        for par, rp in zip(rrp, rup_params):
+            setattr(ctx, par[4:], rp)
+            del grp[par]
+        if 'damping' in grp.columns:
+            del grp['damping']
+        for rtype, gr in grp.groupby('result_type'):
+            del gr['result_type']
+            setattr(ctx, rtype, gr)
+        for par in pars:
+            value = grp[grp.result_type == outs[0]][par].to_numpy()
+            setattr(ctx, par[5:], value)  # dist_, site_ parameters
+        ctx.sids = np.arange(len(gr))
+        assert len(gr) == len(grp) / num_outs, (len(gr), len(gr) / num_outs)
+        yield ctx
 
 
 class BaseGSIMTestCase(unittest.TestCase):
@@ -41,22 +120,35 @@ class BaseGSIMTestCase(unittest.TestCase):
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
         gsim = self.GSIM_CLASS(**kwargs)
-        cmaker, df = contexts.read_cmaker_df(gsim, fnames)
-        for ctx in cmaker.from_df(df):
+        out_types = ["MEAN"]
+        for sdt in contexts.STD_TYPES:
+            if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
+                out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
+
+        cmaker, df = read_cmaker_df(gsim, fnames)
+        for ctx in gen_ctxs(df):
             [out] = cmaker.get_mean_stds([ctx])
-            for o, out_type in enumerate(cmaker.out_types):
+            for o, out_type in enumerate(out_types):
+                if not hasattr(ctx, out_type):
+                    # for instance MEAN is missing in zhao_2016_test
+                    continue
                 discrep = (mean_discrep_percentage if out_type == 'MEAN'
                            else std_discrep_percentage)
-                for m, imt in enumerate(cmaker.imtls):
-                    if out_type == 'MEAN' and imt != 'MMI':
+                for m, im in enumerate(cmaker.imtls):
+                    if out_type == 'MEAN' and im != 'MMI':
                         out[o, m] = np.exp(out[o, m])
-                    expected = getattr(ctx, out_type)[imt].to_numpy()
-                    msg = dict(out_type=out_type, imt=imt)
-                    for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
-                        msg[par] = getattr(ctx, par)
+                    expected = getattr(ctx, out_type)[im].to_numpy()
+                    msg = dict(out_type=out_type, imt=im)
                     discrep_percent = np.abs(out[o, m] / expected * 100 - 100)
-                    if (discrep_percent > discrep).any():
-                        msg['expected'] = expected
-                        msg['got'] = out[o, m]
-                        msg['discrep_percent'] = discrep_percent.max()
+                    idxs, = np.where(discrep_percent > discrep)
+                    if len(idxs):
+                        idx = idxs[0]
+                        msg['expected'] = expected[idx]
+                        msg['got'] = out[o, m, idx]
+                        msg['discrep_percent'] = discrep_percent[idx]
+                        for par in (cmaker.REQUIRES_DISTANCES |
+                                    cmaker.REQUIRES_SITES_PARAMETERS):
+                            msg[par] = getattr(ctx, par)[idx]
+                        for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
+                            msg[par] = getattr(ctx, par)
                         raise ValueError(msg)
