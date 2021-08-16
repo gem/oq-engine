@@ -41,9 +41,12 @@ def read_cmaker_df(gsim, csvfnames):
         colset = set.intersection(*[set(df.columns) for df in dfs])
         cols = [col for col in dfs[0].columns if col in colset]
         extra = set()
+        ncols = []
         for df in dfs:
+            ncols.append(len(df.columns))
             extra.update(set(df.columns) - colset)
-        print('\nThere are extra columns %s' % extra)
+        print('\n%s\nThere are %d extra columns %s over a total of %s' %
+              (csvfnames[0], len(extra), extra, ncols))
     else:
         cols = slice(None)
     df = pandas.concat(df[cols] for df in dfs)
@@ -85,6 +88,8 @@ def gen_ctxs(df):
     outs = df.result_type.unique()
     num_outs = len(outs)
     for rup_params, grp in df.groupby(rrp):
+        if len(rrp) == 1:
+            rup_params = [rup_params]
         ctx = contexts.RuptureContext()
         for par, rp in zip(rrp, rup_params):
             setattr(ctx, par[4:], rp)
@@ -116,7 +121,9 @@ class BaseGSIMTestCase(unittest.TestCase):
         print(stats)
 
     def check_all(self, *filenames, mean_discrep_percentage,
-                  std_discrep_percentage, **kwargs):
+                  std_discrep_percentage=None, **kwargs):
+        if std_discrep_percentage is None:
+            std_discrep_percentage =  mean_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
         gsim = self.GSIM_CLASS(**kwargs)
