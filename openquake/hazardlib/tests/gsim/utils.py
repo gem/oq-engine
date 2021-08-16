@@ -102,7 +102,7 @@ def read_cmaker_df(gsim, csvfnames):
     cmap = {}
     for col in df.columns:
         try:
-            im = str(imt.from_string(col))
+            im = str(imt.from_string(col.upper()))
         except KeyError:
             pass
         else:
@@ -112,18 +112,22 @@ def read_cmaker_df(gsim, csvfnames):
     imtls = {im: [0] for im in sorted(imts)}
     cmaker = contexts.ContextMaker(
         gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
+    print(gsim)
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
+        print(name, df[name].unique())
     for dist in cmaker.REQUIRES_SITES_PARAMETERS:
         name = 'site_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
+        print(name, df[name].unique())
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
         if name not in df.columns:  # i.e. missing rake
             df[name] = np.zeros(len(df), cmaker.dtype[par])
         else:
             df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
+        print(name, df[name].unique())
     return cmaker, df.rename(columns=cmap)
 
 

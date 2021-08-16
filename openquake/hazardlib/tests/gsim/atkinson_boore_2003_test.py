@@ -94,9 +94,8 @@ class AtkinsonBoore2003SSlabJapanNSHMP2008TestCase(BaseGSIMTestCase):
     # implementation.
 
     def test_mean(self):
-        self.check_all('AB03/AB03SSlabJapanNSHMP_MEAN.csv',
-                       mean_discrep_percentage=0.2)
+        self.check_mean('AB03/AB03SSlabJapanNSHMP_MEAN.csv',
+                        mean_discrep_percentage=0.2)
 
-    def test_total(self):
-        self.check_all('AB03/AB03SSlabJapanNSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check_total('AB03/AB03SSlabJapanNSHMP_STD_TOTAL.csv',
+                         mean_discrep_percentage=0.1)
