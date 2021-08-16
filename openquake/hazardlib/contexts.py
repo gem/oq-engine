@@ -34,7 +34,7 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, RecordBuilder)
+    AccumDict, DictArray, groupby, RecordBuilder, all_equals)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -292,6 +292,8 @@ class ContextMaker(object):
 
     def from_srcs(self, srcs, sitecol):  # used in disagg.disaggregation
         """
+        :param srcs: a list of Source objects
+        :param sitecol: a SiteCollection instance
         :returns: a list RuptureContexts
         """
         allctxs = []
@@ -301,6 +303,34 @@ class ContextMaker(object):
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 rctxs.append(self.make_rctx(rup))
             allctxs.extend(self.get_ctxs(rctxs, sitecol, src.id))
+        return allctxs
+
+    def from_df(self, df):
+        """
+        :param df: a DataFrame with a specific structure
+        :returns: a list RuptureContexts
+        """
+        allctxs = []
+        rrp = ['rup_' + p for p in self.REQUIRES_RUPTURE_PARAMETERS]
+        # NB: dist before site means that the results are ordered by distance
+        pars = ['dist_' + par for par in self.REQUIRES_DISTANCES] + [
+            'site_' + par for par in self.REQUIRES_SITES_PARAMETERS]
+        for rup_params, grp in df.groupby(rrp):
+            ctx = RuptureContext()
+            for par, rp in zip(self.REQUIRES_RUPTURE_PARAMETERS, rup_params):
+                setattr(ctx, par, rp)
+                del grp['rup_' + par]
+            uniq = numpy.unique(grp[pars].to_numpy(), axis=0)  # shape (N, P)
+            for i, par in enumerate(pars):
+                setattr(ctx, par[5:], uniq[:, i])  # strip site_, dist_
+                del grp[par]
+            if 'damping' in grp.columns:
+                del grp['damping']
+            ctx.sids = numpy.arange(len(uniq))
+            for rtype, gr in grp.groupby('result_type'):
+                del gr['result_type']
+                setattr(ctx, rtype, gr)
+            allctxs.append(ctx)
         return allctxs
 
     def filter(self, sites, rup):
@@ -1189,6 +1219,55 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
                 di = nbins - 1
             dic['%.2f' % rup.mag][di] += 1
     return {trt: AccumDict(dic)}
+
+
+def read_cmaker_df(gsim, csvfnames):
+    """
+    :param gsim:
+        a GSIM instance
+    :param csvfnames:
+        a list of pathnames to CSV files in the format used in
+        hazardlib/tests/gsim/data, i.e. with fields rup_XXX, site_XXX,
+        dist_XXX, result_type and periods
+    :returns: a list RuptureContexts, grouped by rupture parameters
+    """
+    # build a suitable ContextMaker
+    out_types = ["MEAN"]
+    for sdt in STD_TYPES:
+        if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
+            out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
+    dfs = [pandas.read_csv(fname) for fname in csvfnames]
+    if not all_equals([df.columns for df in dfs]):
+        p = len(os.path.commonprefix(csvfnames))
+        shortnames = [f[p:] for f in csvfnames]
+        print('There are different columns across %s' % ', '.join(shortnames))
+        cols = set.intersection(*[set(df.columns) for df in dfs])
+    else:
+        cols = slice(None)
+    df = pandas.concat(df[cols] for df in dfs)
+    imtls = {}
+    cmap = {}
+    for col in df.columns:
+        try:
+            imt = imt_module.from_string(col)
+        except KeyError:
+            pass
+        else:
+            imtls[str(imt)] = [0]
+            cmap[col] = str(imt)
+    cmaker = ContextMaker(
+        gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
+    cmaker.out_types = out_types
+    for dist in cmaker.REQUIRES_DISTANCES:
+        name = 'dist_' + dist
+        df[name] = numpy.array(df[name].to_numpy(), cmaker.dtype[dist])
+    for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
+        name = 'rup_' + par
+        if name not in df.columns:  # i.e. missing rake
+            df[name] = numpy.zeros(len(df), cmaker.dtype[par])
+        else:
+            df[name] = numpy.array(df[name].to_numpy(), cmaker.dtype[par])
+    return cmaker, df.rename(columns=cmap)
 
 
 def read_cmakers(dstore, full_lt=None):
