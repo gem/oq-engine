@@ -69,7 +69,7 @@ class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
 
 # USGS verification tests using independently generated test tables
 # Verification Test Cases - Means and stddevs
-def make_mean_test(alias, key):
+def make_test(alias, key):
     def test_all(self):
         self.check_all(f"usgs_ceus_2019/{alias}_MEAN.csv",
                        f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
@@ -86,7 +86,7 @@ def add_tests(cls):
         if not line.startswith("NGAEastUSGSSammons"):
             continue
         alias, key = line.split()
-        setattr(cls, 'test_all' + key, make_mean_test(alias, key))
+        setattr(cls, 'test_all' + key, make_test(alias, key))
     return cls
 
 
