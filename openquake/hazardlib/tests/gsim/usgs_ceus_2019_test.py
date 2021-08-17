@@ -68,26 +68,17 @@ class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
 
 
 # USGS verification tests using independently generated test tables
-# Verification Test Cases - Means
+# Verification Test Cases - Means and stddevs
 def make_mean_test(alias, key):
     def test_all(self):
         self.check_all(f"usgs_ceus_2019/{alias}_MEAN.csv",
+                       f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
                        mean_discrep_percentage=0.15,
+                       std_discrep_percentage=0.01,
                        gmpe_table=f"nga_east_{key}.hdf5",
                        epistemic_site=False)
     test_all.__name__ = 'test_all' + key
     return test_all
-
-
-# Verification Test Cases - Stddevs
-def make_stddev_test(alias, key):
-    def test_stddev(self):
-        self.check_all(f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
-                       mean_discrep_percentage=0.01,
-                       gmpe_table=f"nga_east_{key}.hdf5",
-                       epistemic_site=False)
-    test_stddev.__name__ = 'test_stddev' + key
-    return test_stddev
 
 
 def add_tests(cls):
@@ -96,7 +87,6 @@ def add_tests(cls):
             continue
         alias, key = line.split()
         setattr(cls, 'test_all' + key, make_mean_test(alias, key))
-        setattr(cls, 'test_stddev' + key, make_stddev_test(alias, key))
     return cls
 
 
