@@ -28,11 +28,11 @@ MAX_DISC = 2.0
 def maketest(phi_model, phi_s2ss_model, sigma_quantile, csvname):
     # choosing DARRAGH_1CCSP, but anything would work
     def test(self):
-        self.check(csvname, max_discrep_percentage=MAX_DISC,
-                   gmpe_table="NGAEast_DARRAGH_1CCSP.hdf5",
-                   phi_model=phi_model,
-                   phi_s2ss_model=phi_s2ss_model,
-                   sigma_quantile=sigma_quantile)
+        self.check_all(csvname, mean_discrep_percentage=MAX_DISC,
+                       gmpe_table="NGAEast_DARRAGH_1CCSP.hdf5",
+                       phi_model=phi_model,
+                       phi_s2ss_model=phi_s2ss_model,
+                       sigma_quantile=sigma_quantile)
         test.__name__ = csvname
     return test
 

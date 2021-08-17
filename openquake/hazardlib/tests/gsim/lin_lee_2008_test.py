@@ -23,24 +23,20 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # test data generated from OpenSHA implementation
 
+
 class LinLee2008SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = LinLee2008SInter
 
-    def test_mean(self):
-        self.check('LL08/LL08SInter_MEAN.csv',
-                    max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('LL08/LL08SInter_MEAN.csv',
+                       'LL08/LL08SInter_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
 
-    def test_total_std(self):
-        self.check('LL08/LL08SInter_STD_TOTAL.csv',
-                    max_discrep_percentage=0.1)
 
 class LinLee2008SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = LinLee2008SSlab
 
-    def test_mean(self):
-        self.check('LL08/LL08SSlab_MEAN.csv',
-                    max_discrep_percentage=0.1)
-
-    def test_total_std(self):
-        self.check('LL08/LL08SSlab_STD_TOTAL.csv',
-                    max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('LL08/LL08SSlab_MEAN.csv',
+                       'LL08/LL08SSlab_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.1)
