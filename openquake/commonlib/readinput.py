@@ -275,7 +275,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}):
 
     :param job_ini:
         Path to configuration file/archive or
-        dictionary of parameters with at least a key "calculation_mode"
+        dictionary of parameters with a key "calculation_mode"
     :param pkg:
         Python package where to find the configuration file (optional)
     :param calculators:

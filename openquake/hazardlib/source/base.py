@@ -359,10 +359,57 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
                 rup.idx = idx
                 return rup
 
-    def modify_adjust_mfd_from_slip(self, slip_rate, rigidity):
+    def modify_set_msr(self, new_msr):
+        """
+        Updates the MSR originally assigned to the source
+
+        :param new_msr:
+            An instance of the :class:`openquake.hazardlib.scalerel.BaseMSR`
+        """
+        self.magnitude_scaling_relationship = new_msr
+
+    def modify_set_slip_rate(self, slip_rate: float):
+        """
+        Updates the slip rate assigned to the source
+
+        :param slip_rate:
+            The value of slip rate [mm/yr]
+        """
+        self.slip_rate = slip_rate
+
+    def modify_set_mmax_truncatedGR(self, mmax: float):
+        """
+        Updates the mmax assigned. This works on for parametric MFDs.s
+
+        :param mmax:
+            The value of the new maximum magnitude
+        """
+        # Check that the current src has a TruncatedGRMFD MFD
+        msg = 'This modification works only when the source MFD is a '
+        msg += 'TruncatedGRMFD'
+        assert self.mfd.__class__.__name__ == 'TruncatedGRMFD', msg
+        self.mfd.max_mag
+
+    def modify_recompute_mmax(self, epsilon: float = 0):
+        """
+        Updates the value of mmax using the msr and the area of the fault
+
+        :param epsilon:
+            Number of standard deviations to be added or substracted
+        """
+        msr = self.magnitude_scaling_relationship
+        area = self.get_fault_surface_area() * 1e6  # area in m^2
+        mag = msr.get_median_mag(area=area, rake=self.rake)
+        std = msr.get_std_dev_mag(area=area, rake=self.rake)
+        self.mfd.max_mag = mag + epsilon * std
+
+    def modify_adjust_mfd_from_slip(self, slip_rate: float, rigidity: float,
+                                    recompute_mmax: float = None):
         """
         :slip_rate:
             A float defining slip rate [in mm]
+        :rigidity:
+            A float defining material rigidity [in GPa]
         :rigidity:
             A float defining material rigidity [in GPa]
         """
