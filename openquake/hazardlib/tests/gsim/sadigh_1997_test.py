@@ -31,18 +31,18 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
     # test data was generated using opensha implementation of GMPE.
     # NB: the deep_soil methods are untested!
 
-    def test_mean_rock(self):
-        self.check('SADIGH97/SADIGH1997_ROCK_MEAN.csv',
-                   max_discrep_percentage=0.4)
+    def test_all_rock(self):
+        self.check_all('SADIGH97/SADIGH1997_ROCK_MEAN.csv',
+                       mean_discrep_percentage=0.4)
 
     def test_total_stddev_rock(self):
-        self.check('SADIGH97/SADIGH1997_ROCK_STD_TOTAL.csv',
-                   max_discrep_percentage=1e-10)
+        self.check_all('SADIGH97/SADIGH1997_ROCK_STD_TOTAL.csv',
+                       mean_discrep_percentage=1e-10)
 
-    def test_mean_soil(self):
-        self.check('SADIGH97/SADIGH1997_SOIL_MEAN.csv',
-                   max_discrep_percentage=0.5)
+    def test_all_soil(self):
+        self.check_all('SADIGH97/SADIGH1997_SOIL_MEAN.csv',
+                       mean_discrep_percentage=0.5)
 
     def test_total_stddev_soil(self):
-        self.check('SADIGH97/SADIGH1997_SOIL_STD_TOTAL.csv',
-                   max_discrep_percentage=1e-10)
+        self.check_all('SADIGH97/SADIGH1997_SOIL_STD_TOTAL.csv',
+                       mean_discrep_percentage=1e-10)
