@@ -29,7 +29,10 @@ NORMALIZE = False
 
 
 def _normalize(float_string):
-    return str(float(float_string))
+    try:
+        return str(float(float_string))
+    except ValueError:  # the string was not a float (i.e. is a siteclass)
+        return float_string
 
 
 def normalize(csvfnames):
