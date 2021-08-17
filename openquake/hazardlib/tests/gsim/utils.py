@@ -25,7 +25,7 @@ from openquake.baselib.general import all_equals
 from openquake.hazardlib import contexts, imt
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 
-NORMALIZE = False
+NORMALIZE = True
 
 
 def _normalize(float_string):
@@ -54,6 +54,7 @@ def normalize(csvfnames):
             allcols.append(fields)
             ifield[fname] = {f: i for i, f in enumerate(fields)}
             data[fname] = list(reader)
+            assert len(data[fname])
             idata[fname] = set()
             for row in data[fname]:
                 tup = tuple(_normalize(v) for v, f in zip(row, fields)
@@ -61,7 +62,6 @@ def normalize(csvfnames):
                 idata[fname].add(tup)
     colset = set.intersection(*[set(cols) for cols in allcols])
     commonset = set.intersection(*[idata[fname] for fname in csvfnames])
-    import pdb; pdb.set_trace()
     assert commonset, 'No common inputs in ' + ' '.join(csvfnames)
     for fname, cols in zip(csvfnames, allcols):
         idx = ifield[fname]
@@ -69,7 +69,7 @@ def normalize(csvfnames):
         writer = csv.writer(open(fname, 'w', newline='', encoding='utf-8'))
         writer.writerow(cols)
         for row in data[fname]:
-            tup = tuple(v for v, f in zip(row, cols)
+            tup = tuple(_normalize(v) for v, f in zip(row, cols)
                         if f.startswith(('site_', 'rup_', 'dist_')))
             if tup in commonset:
                 writer.writerow([row[idx[c]] for c in cols])
