@@ -31,7 +31,7 @@ import numpy
 
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.const import TRT, StdDev
 from openquake.hazardlib import site
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.contexts import RuptureContext
@@ -422,7 +422,7 @@ class GMPETable(GMPE):
     iii) The IML values are then interpolated to the correct distance via
          linear-D|linear-IML interpolation
     """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
+    DEFINED_FOR_TECTONIC_REGION_TYPE = TRT.ACTIVE_SHALLOW_CRUST
 
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
 
