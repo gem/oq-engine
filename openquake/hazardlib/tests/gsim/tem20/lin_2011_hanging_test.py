@@ -31,10 +31,7 @@ DATA_PATH = os.path.join(BASE_PATH, '..', 'data', 'tem20')
 class LinEtAl2011HanginWallCase(BaseGSIMTestCase):
     GSIM_CLASS = Lin2011hanging
 
-    def test_mean(self):
-        self.check(os.path.join(DATA_PATH, 'lin2011_mean_hw.csv'),
-                   max_discrep_percentage=0.1)
-
-    def test_total_std(self):
-        self.check(os.path.join(DATA_PATH, 'lin2011_std_hw.csv'),
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all(os.path.join(DATA_PATH, 'lin2011_mean_hw.csv'),
+                       os.path.join(DATA_PATH, 'lin2011_std_hw.csv'),
+                       mean_discrep_percentage=0.1)
