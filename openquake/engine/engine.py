@@ -277,6 +277,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     """
     Create job records on the database.
 
+    :param job_inis: a list of pathnames or a list of dictionaries
     :returns: a list of LogContext objects
     """
     if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
