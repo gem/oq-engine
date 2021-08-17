@@ -34,75 +34,82 @@ Testing the single station GMPEs magnitude-distance dependent
 class EdwardsFah2013Alpine10BarsTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Alpine10Bars
 
-    def test_mean(self):
-        self.check('EF13a/alp_sd10_table.csv', max_discrep_percentage=0.55)
+    def test_all(self):
+        self.check_all('EF13a/alp_sd10_table.csv',
+                       mean_discrep_percentage=0.55)
 
     def test_std_total(self):
-        self.check('EF13a/ef_2013_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.80)
+        self.check_all('EF13a/ef_2013_phis_ss_embeded.csv',
+                       mean_discrep_percentage=0.80)
 
 
 class EdwardsFah2013Alpine20BarsTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Alpine20Bars
 
-    def test_mean(self):
-        self.check('EF13a/alp_sd20_table.csv', max_discrep_percentage=0.55)
+    def test_all(self):
+        self.check_all('EF13a/alp_sd20_table.csv',
+                       mean_discrep_percentage=0.55)
 
     def test_std_total(self):
-        self.check('EF13a/ef_2013_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.80)
+        self.check_all('EF13a/ef_2013_phis_ss_embeded.csv',
+                       mean_discrep_percentage=0.80)
 
 
 class EdwardsFah2013Alpine30BarsTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Alpine30Bars
 
-    def test_mean(self):
-        self.check('EF13a/alp_sd30_table.csv', max_discrep_percentage=0.55)
+    def test_all(self):
+        self.check_all('EF13a/alp_sd30_table.csv',
+                       mean_discrep_percentage=0.55)
 
     def test_std_total(self):
-        self.check('EF13a/ef_2013_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.80)
+        self.check_all('EF13a/ef_2013_phis_ss_embeded.csv',
+                       mean_discrep_percentage=0.80)
 
 
 class EdwardsFah2013Alpine50BarsTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Alpine50Bars
 
-    def test_mean(self):
-        self.check('EF13a/alp_sd50_table.csv', max_discrep_percentage=0.55)
+    def test_all(self):
+        self.check_all('EF13a/alp_sd50_table.csv',
+                       mean_discrep_percentage=0.55)
 
     def test_std_total(self):
-        self.check('EF13a/ef_2013_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.80)
+        self.check_all('EF13a/ef_2013_phis_ss_embeded.csv',
+                       mean_discrep_percentage=0.80)
 
 
 class EdwardsFah2013Alpine75BarsTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Alpine75Bars
 
-    def test_mean(self):
-        self.check('EF13a/alp_sd75_table.csv', max_discrep_percentage=0.55)
+    def test_all(self):
+        self.check_all('EF13a/alp_sd75_table.csv',
+                       mean_discrep_percentage=0.55)
 
     def test_std_total(self):
-        self.check('EF13a/ef_2013_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.80)
+        self.check_all('EF13a/ef_2013_phis_ss_embeded.csv',
+                       mean_discrep_percentage=0.80)
 
 
 class EdwardsFah2013Alpine90BarsTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Alpine90Bars
 
-    def test_mean(self):
-        self.check('EF13a/alp_sd90_table.csv', max_discrep_percentage=0.55)
+    def test_all(self):
+        self.check_all('EF13a/alp_sd90_table.csv',
+                       mean_discrep_percentage=0.55)
 
     def test_std_total(self):
-        self.check('EF13a/ef_2013_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.80)
+        self.check_all('EF13a/ef_2013_phis_ss_embeded.csv',
+                       mean_discrep_percentage=0.80)
 
 
 class EdwardsFah2013Alpine120BarsTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Alpine120Bars
 
-    def test_mean(self):
-        self.check('EF13a/alp_sd120_table.csv', max_discrep_percentage=0.55)
+    def test_all(self):
+        self.check_all('EF13a/alp_sd120_table.csv',
+                       mean_discrep_percentage=0.55)
 
     def test_std_total(self):
-        self.check('EF13a/ef_2013_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.80)
+        self.check_all('EF13a/ef_2013_phis_ss_embeded.csv',
+                       mean_discrep_percentage=0.80)
