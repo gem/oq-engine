@@ -28,43 +28,43 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class HassaniAtkinson2020SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = HassaniAtkinson2020SInter
 
-    def test_mean(self):
-        self.check('HA20/HassaniAtkinson2020SInter_MEAN.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('HA20/HassaniAtkinson2020SInter_MEAN.csv',
+                       mean_discrep_percentage=0.1)
 
     def test_prop2(self):
-        self.check('HA20/HassaniAtkinson2020SInterProp2_MEAN.csv',
-                   max_discrep_percentage=0.1,
-                   backarc=0.2, forearc_ne=0.5, forearc_sw=0.3)
+        self.check_all('HA20/HassaniAtkinson2020SInterProp2_MEAN.csv',
+                       mean_discrep_percentage=0.1,
+                       backarc=0.2, forearc_ne=0.5, forearc_sw=0.3)
 
     def test_stddev(self):
-        self.check('HA20/HassaniAtkinson2020SInter_STDDEV.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('HA20/HassaniAtkinson2020SInter_STDDEV.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class HassaniAtkinson2020SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = HassaniAtkinson2020SSlab
 
-    def test_mean(self):
-        self.check('HA20/HassaniAtkinson2020SSlab_MEAN.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('HA20/HassaniAtkinson2020SSlab_MEAN.csv',
+                       mean_discrep_percentage=0.1)
 
     def test_fpeak(self):
-        self.check('HA20/HassaniAtkinson2020SSlabFpeak_MEAN.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('HA20/HassaniAtkinson2020SSlabFpeak_MEAN.csv',
+                       mean_discrep_percentage=0.1)
 
     def test_stddev(self):
-        self.check('HA20/HassaniAtkinson2020SSlab_STDDEV.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('HA20/HassaniAtkinson2020SSlab_STDDEV.csv',
+                       mean_discrep_percentage=0.1)
 
 
 class HassaniAtkinson2020AscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = HassaniAtkinson2020Asc
 
-    def test_mean(self):
-        self.check('HA20/HassaniAtkinson2020Asc_MEAN.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('HA20/HassaniAtkinson2020Asc_MEAN.csv',
+                       mean_discrep_percentage=0.1)
 
     def test_stddev(self):
-        self.check('HA20/HassaniAtkinson2020Asc_STDDEV.csv',
-                   max_discrep_percentage=0.1)
+        self.check_all('HA20/HassaniAtkinson2020Asc_STDDEV.csv',
+                       mean_discrep_percentage=0.1)
