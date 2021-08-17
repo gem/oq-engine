@@ -26,13 +26,10 @@ class Lin2009TestCase(BaseGSIMTestCase):
     # Test data were obtained from a Fortran implementation
     # provided by the authors.
 
-    def test_mean(self):
-        self.check('LIN2009/Lin2009_MEAN.csv',
-                   max_discrep_percentage=0.5)
-
-    def test_std_total(self):
-        self.check('LIN2009/Lin2009_TOTAL_STDDEV.csv',
-                   max_discrep_percentage=0.5)
+    def test_all(self):
+        self.check_all('LIN2009/Lin2009_MEAN.csv',
+                       'LIN2009/Lin2009_TOTAL_STDDEV.csv',
+                       mean_discrep_percentage=0.5)
 
 
 class Lin2009AdjustedSigmaTestCase(BaseGSIMTestCase):
@@ -45,5 +42,5 @@ class Lin2009AdjustedSigmaTestCase(BaseGSIMTestCase):
     # Probability Seismic Hazard Mapping of Taiwan
 
     def test_std_total(self):
-        self.check('LIN2009/Lin2009AdjustedSigma_TOTAL_STDDEV.csv',
-                   max_discrep_percentage=0.5)
+        self.check_all('LIN2009/Lin2009AdjustedSigma_TOTAL_STDDEV.csv',
+                       mean_discrep_percentage=0.5)
