@@ -25,7 +25,7 @@ from openquake.baselib.general import all_equals
 from openquake.hazardlib import contexts, imt
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 
-NORMALIZE = True
+NORMALIZE = False
 
 
 def _normalize(float_string):
