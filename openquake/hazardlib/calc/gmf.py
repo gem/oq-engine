@@ -232,8 +232,8 @@ class GmfComputer(object):
                    epsilons(num_events))
         """
         num_sids = len(self.sids)
-        num_outs = len(mean_stds)
-        if num_outs == 1:
+        num_stds = len(mean_stds)
+        if num_stds == 1:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
@@ -245,7 +245,7 @@ class GmfComputer(object):
             return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
-        elif num_outs == 2:
+        elif num_stds == 2:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
             # of interest.
@@ -264,7 +264,7 @@ class GmfComputer(object):
             stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
-        elif num_outs == 3:
+        elif num_stds == 3:
             mean, stddev_inter, stddev_intra = mean_stds
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
@@ -287,7 +287,7 @@ class GmfComputer(object):
             stdi = stddev_inter.max(axis=0)
         else:
             # this cannot happen, unless you pass a wrong mean_stds array
-            raise ValueError('There are %d>3 outputs!' % num_outs)
+            raise ValueError('There are %d>3 stddevs!?' % num_stds)
         return gmf, stdi, epsilons
 
 
