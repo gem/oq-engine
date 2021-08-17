@@ -61,6 +61,7 @@ def normalize(csvfnames):
                 idata[fname].add(tup)
     colset = set.intersection(*[set(cols) for cols in allcols])
     commonset = set.intersection(*[idata[fname] for fname in csvfnames])
+    import pdb; pdb.set_trace()
     assert commonset, 'No common inputs in ' + ' '.join(csvfnames)
     for fname, cols in zip(csvfnames, allcols):
         idx = ifield[fname]

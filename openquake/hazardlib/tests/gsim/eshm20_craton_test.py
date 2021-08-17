@@ -25,29 +25,29 @@ MAX_DISCREP = 0.01
 class ESHM20CratonTestCaseMean(BaseGSIMTestCase):
     GSIM_CLASS = ESHM20Craton
 
-    def test_mean(self):
-        self.check("eshm20_craton/ESHM20_CRATON_MEAN_MEDIAN_MODEL.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_total(self):
-        self.check("eshm20_craton/ESHM20_CRATON_TOTAL_STDDEV_NONERGODIC.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   ergodic=False)
+    def test_all(self):
+        self.check_all(
+            "eshm20_craton/ESHM20_CRATON_MEAN_MEDIAN_MODEL.csv",
+            "eshm20_craton/ESHM20_CRATON_TOTAL_STDDEV_NONERGODIC.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            ergodic=False)
 
 
 class ESHM20CratonTestCasePlus1Sigma(BaseGSIMTestCase):
     GSIM_CLASS = ESHM20Craton
 
     def test_mean(self):
-        self.check("eshm20_craton/ESHM20_CRATON_MEAN_PLUS1SIGMA_MODEL.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   epsilon=1.0)
+        self.check_all(
+            "eshm20_craton/ESHM20_CRATON_MEAN_PLUS1SIGMA_MODEL.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            epsilon=1.0)
 
 
 class ESHM20CratonErgodicTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ESHM20Craton
 
     def test_std_total(self):
-        self.check("eshm20_craton/ESHM20_CRATON_TOTAL_STDDEV_ERGODIC.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   ergodic=True)
+        self.check_all(
+            "eshm20_craton/ESHM20_CRATON_TOTAL_STDDEV_ERGODIC.csv",
+            mean_discrep_percentage=MAX_DISCREP,
+            ergodic=True)
