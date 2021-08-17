@@ -28,26 +28,26 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class TavakoliPezeshk2005MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = TavakoliPezeshk2005MblgAB1987NSHMP2008
 
-    def test_mean(self):
-        self.check('TP05/TP05MblgAB1987NSHMP2008_MEAN.csv',
-                   max_discrep_percentage=0.4)
+    def test_all(self):
+        self.check_all('TP05/TP05MblgAB1987NSHMP2008_MEAN.csv',
+                       mean_discrep_percentage=0.4)
 
     def test_std_total(self):
-        self.check('TP05/TP05MblgAB1987NSHMP2008_STD_TOTAL.csv',
-                   max_discrep_percentage=0.4)
+        self.check_all('TP05/TP05MblgAB1987NSHMP2008_STD_TOTAL.csv',
+                       mean_discrep_percentage=0.4)
 
 
 class TavakoliPezeshk2005MblgJ1996NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = TavakoliPezeshk2005MblgJ1996NSHMP2008
 
-    def test_mean(self):
-        self.check('TP05/TP05MblgJ1996NSHMP2008_MEAN.csv',
-                   max_discrep_percentage=0.4)
+    def test_all(self):
+        self.check_all('TP05/TP05MblgJ1996NSHMP2008_MEAN.csv',
+                       mean_discrep_percentage=0.4)
 
 
 class TavakoliPezeshk2005MwNSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = TavakoliPezeshk2005MwNSHMP2008
 
-    def test_mean(self):
-        self.check('TP05/TP05MwNSHMP2008_MEAN.csv',
-                   max_discrep_percentage=0.4)
+    def test_all(self):
+        self.check_all('TP05/TP05MwNSHMP2008_MEAN.csv',
+                       mean_discrep_percentage=0.4)

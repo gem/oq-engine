@@ -27,18 +27,9 @@ class DerrasEtAl2014TestCase(BaseGSIMTestCase):
     # Tables constructed from Excel implementation supplied as Electronic
     # supplement to the paper
 
-    def test_mean(self):
-        self.check('derras14/DERRAS14_MEAN.csv',
-                   max_discrep_percentage=MAX_DISC)
-
-    def test_std_intra(self):
-        self.check('derras14/DERRAS14_INTRA_EVENT_STDDEV.csv',
-                   max_discrep_percentage=MAX_DISC)
-
-    def test_std_inter(self):
-        self.check('derras14/DERRAS14_INTER_EVENT_STDDEV.csv',
-                   max_discrep_percentage=MAX_DISC)
-
-    def test_std_total(self):
-        self.check('derras14/DERRAS14_TOTAL_STDDEV.csv',
-                   max_discrep_percentage=MAX_DISC)
+    def test_all(self):
+        self.check_all('derras14/DERRAS14_MEAN.csv',
+                       'derras14/DERRAS14_INTRA_EVENT_STDDEV.csv',
+                       'derras14/DERRAS14_INTER_EVENT_STDDEV.csv',
+                       'derras14/DERRAS14_TOTAL_STDDEV.csv',
+                       mean_discrep_percentage=MAX_DISC)
