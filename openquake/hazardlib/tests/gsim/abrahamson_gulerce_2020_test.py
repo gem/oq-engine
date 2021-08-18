@@ -40,13 +40,13 @@ class AbrahamsonGulerce2020SInterTestCase(BaseGSIMTestCase):
     SIGMA_MU_EPSILON = 0.0
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.TOTAL_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=0.1,
-                       region=self.REG, apply_usa_adjustment=self.ADJ,
-                       sigma_mu_epsilon=self.SIGMA_MU_EPSILON)
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1,
+                   region=self.REG, apply_usa_adjustment=self.ADJ,
+                   sigma_mu_epsilon=self.SIGMA_MU_EPSILON)
 
 
 # Non-ergodic sigma test case
@@ -57,10 +57,10 @@ class AbrahamsonGulerce2020SInterNonergodicTestCase(BaseGSIMTestCase):
         "ag2020/AG2020_INTERFACE_GLO__NONERGODIC_INTRA_EVENT_STDDEV.csv"
 
     def test_all(self):
-        self.check_all(self.TOTAL_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=0.1,
-                       ergodic=False)
+        self.check(self.TOTAL_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1,
+                   ergodic=False)
 
 
 # Interface - Alaska

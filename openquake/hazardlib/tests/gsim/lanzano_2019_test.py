@@ -36,8 +36,8 @@ class LanzanoEtAl2019_RJB_OMO_TestCase(BaseGSIMTestCase):
     STD_FILE = "LAN2019/ITA18_RJB_STD_TOTAL.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class LanzanoEtAl2019_RUP_OMO_TestCase(BaseGSIMTestCase):
@@ -48,5 +48,5 @@ class LanzanoEtAl2019_RUP_OMO_TestCase(BaseGSIMTestCase):
     STD_FILE = "LAN2019/ITA18_Rrup_STD_TOTAL.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=0.1)

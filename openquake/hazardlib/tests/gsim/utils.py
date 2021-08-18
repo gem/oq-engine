@@ -23,7 +23,6 @@ import numpy as np
 import pandas
 from openquake.baselib.general import all_equals
 from openquake.hazardlib import contexts, imt
-from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 
 NORMALIZE = False
 
@@ -187,19 +186,10 @@ class BaseGSIMTestCase(unittest.TestCase):
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
     GSIM_CLASS = None
 
-    def check(self, filename, max_discrep_percentage, **kwargs):
-        gsim = self.GSIM_CLASS(**kwargs)
-        with open(os.path.join(self.BASE_DATA_PATH, filename)) as f:
-            errors, stats = check_gsim(gsim, f, max_discrep_percentage)
-        if errors:
-            raise AssertionError(stats)
-        print()
-        print(stats)
-
-    def check_all(self, *filenames, mean_discrep_percentage,
-                  std_discrep_percentage=None, **kwargs):
+    def check(self, *filenames, max_discrep_percentage,
+              std_discrep_percentage=None, **kwargs):
         if std_discrep_percentage is None:
-            std_discrep_percentage = mean_discrep_percentage
+            std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
         if NORMALIZE:
@@ -218,7 +208,7 @@ class BaseGSIMTestCase(unittest.TestCase):
                 if not hasattr(ctx, out_type):
                     # for instance MEAN is missing in zhao_2016_test
                     continue
-                discrep = (mean_discrep_percentage if out_type == 'MEAN'
+                discrep = (max_discrep_percentage if out_type == 'MEAN'
                            else std_discrep_percentage)
                 for m, im in enumerate(cmaker.imtls):
                     if out_type == 'MEAN' and im != 'MMI':

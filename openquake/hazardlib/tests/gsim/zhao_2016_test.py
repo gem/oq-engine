@@ -38,12 +38,12 @@ class ZhaoEtAl2016AscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2016Asc
 
     def test_all(self):
-        self.check_all('zhao16/zhao_crust_mean.csv',
-                       'zhao16/zhao_crust_intra_event.csv',
-                       'zhao16/zhao_crust_inter_event.csv',
-                       'zhao16/zhao_crust_total_sigma.csv',
-                       mean_discrep_percentage=MAX_DISC,
-                       std_discrep_percentage=MAX_DISC)
+        self.check('zhao16/zhao_crust_mean.csv',
+                   'zhao16/zhao_crust_intra_event.csv',
+                   'zhao16/zhao_crust_inter_event.csv',
+                   'zhao16/zhao_crust_total_sigma.csv',
+                   max_discrep_percentage=MAX_DISC,
+                   std_discrep_percentage=MAX_DISC)
 
 
 class ZhaoEtAl2016AscSiteSigmaTestCase(BaseGSIMTestCase):
@@ -51,11 +51,11 @@ class ZhaoEtAl2016AscSiteSigmaTestCase(BaseGSIMTestCase):
 
     # Inter-event standard deviation unchanged from main case - but checking
     def test_all(self):
-        self.check_all('zhao16/zhao_crust_inter_event.csv',
-                       'zhao16/zhao_crust_intra_event_site.csv',
-                       'zhao16/zhao_crust_total_sigma_site.csv',
-                       mean_discrep_percentage=MAX_DISC,
-                       std_discrep_percentage=MAX_DISC)
+        self.check('zhao16/zhao_crust_inter_event.csv',
+                   'zhao16/zhao_crust_intra_event_site.csv',
+                   'zhao16/zhao_crust_total_sigma_site.csv',
+                   max_discrep_percentage=MAX_DISC,
+                   std_discrep_percentage=MAX_DISC)
 
 
 # Upper Mantle
@@ -63,23 +63,23 @@ class ZhaoEtAl2016UpperMantleTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2016UpperMantle
 
     def test_all(self):
-        self.check_all('zhao16/zhao_upper_mantle_mean.csv',
-                       'zhao16/zhao_upper_mantle_intra_event.csv',
-                       'zhao16/zhao_upper_mantle_inter_event.csv',
-                       'zhao16/zhao_upper_mantle_total_sigma.csv',
-                       mean_discrep_percentage=MAX_DISC,
-                       std_discrep_percentage=MAX_DISC)
+        self.check('zhao16/zhao_upper_mantle_mean.csv',
+                   'zhao16/zhao_upper_mantle_intra_event.csv',
+                   'zhao16/zhao_upper_mantle_inter_event.csv',
+                   'zhao16/zhao_upper_mantle_total_sigma.csv',
+                   max_discrep_percentage=MAX_DISC,
+                   std_discrep_percentage=MAX_DISC)
 
 
 class ZhaoEtAl2016UpperMantleSiteSigmaTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2016UpperMantleSiteSigma
 
     def test_std_inter(self):
-        self.check_all('zhao16/zhao_upper_mantle_inter_event.csv',
-                       'zhao16/zhao_upper_mantle_intra_event_site.csv',
-                       'zhao16/zhao_upper_mantle_total_sigma_site.csv',
-                       mean_discrep_percentage=MAX_DISC,
-                       std_discrep_percentage=MAX_DISC)
+        self.check('zhao16/zhao_upper_mantle_inter_event.csv',
+                   'zhao16/zhao_upper_mantle_intra_event_site.csv',
+                   'zhao16/zhao_upper_mantle_total_sigma_site.csv',
+                   max_discrep_percentage=MAX_DISC,
+                   std_discrep_percentage=MAX_DISC)
 
 
 # Subduction Interface
@@ -87,12 +87,12 @@ class ZhaoEtAl2016SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2016SInter
 
     def test_all(self):
-        self.check_all('zhao16/zhao_subduction_interface_mean.csv',
-                       'zhao16/zhao_subduction_interface_intra_event.csv',
-                       'zhao16/zhao_subduction_interface_inter_event.csv',
-                       'zhao16/zhao_subduction_interface_total_sigma.csv',
-                       mean_discrep_percentage=MAX_DISC,
-                       std_discrep_percentage=MAX_DISC)
+        self.check('zhao16/zhao_subduction_interface_mean.csv',
+                   'zhao16/zhao_subduction_interface_intra_event.csv',
+                   'zhao16/zhao_subduction_interface_inter_event.csv',
+                   'zhao16/zhao_subduction_interface_total_sigma.csv',
+                   max_discrep_percentage=MAX_DISC,
+                   std_discrep_percentage=MAX_DISC)
 
 
 class ZhaoEtAl2016SInterSiteSigmaTestCase(BaseGSIMTestCase):
@@ -100,11 +100,11 @@ class ZhaoEtAl2016SInterSiteSigmaTestCase(BaseGSIMTestCase):
 
     # Inter-event standard deviation unchanged from main case - but checking
     def test_all(self):
-        self.check_all('zhao16/zhao_subduction_interface_inter_event.csv',
-                       'zhao16/zhao_subduction_interface_intra_event_site.csv',
-                       'zhao16/zhao_subduction_interface_total_sigma_site.csv',
-                       mean_discrep_percentage=MAX_DISC,
-                       std_discrep_percentage=MAX_DISC)
+        self.check('zhao16/zhao_subduction_interface_inter_event.csv',
+                   'zhao16/zhao_subduction_interface_intra_event_site.csv',
+                   'zhao16/zhao_subduction_interface_total_sigma_site.csv',
+                   max_discrep_percentage=MAX_DISC,
+                   std_discrep_percentage=MAX_DISC)
 
 
 # Subduction In-slab
@@ -114,20 +114,20 @@ class ZhaoEtAl2016SSlabTestCase(BaseGSIMTestCase):
     # Some coefficient rounding errors on very low numbers, increasing
     # tolerable discrepancy
     def test_all(self):
-        self.check_all('zhao16/zhao_subduction_inslab_mean.csv',
-                       'zhao16/zhao_subduction_inslab_intra_event.csv',
-                       'zhao16/zhao_subduction_inslab_inter_event.csv',
-                       'zhao16/zhao_subduction_inslab_total_sigma.csv',
-                       mean_discrep_percentage=0.3,
-                       std_discrep_percentage=MAX_DISC)
+        self.check('zhao16/zhao_subduction_inslab_mean.csv',
+                   'zhao16/zhao_subduction_inslab_intra_event.csv',
+                   'zhao16/zhao_subduction_inslab_inter_event.csv',
+                   'zhao16/zhao_subduction_inslab_total_sigma.csv',
+                   max_discrep_percentage=0.3,
+                   std_discrep_percentage=MAX_DISC)
 
 
 class ZhaoEtAl2016SSlabSiteSigmaTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2016SSlabSiteSigma
 
     def test_all(self):
-        self.check_all('zhao16/zhao_subduction_inslab_inter_event.csv',
-                       'zhao16/zhao_subduction_inslab_intra_event_site.csv',
-                       'zhao16/zhao_subduction_inslab_total_sigma_site.csv',
-                       mean_discrep_percentage=0.3,
-                       std_discrep_percentage=0.3)
+        self.check('zhao16/zhao_subduction_inslab_inter_event.csv',
+                   'zhao16/zhao_subduction_inslab_intra_event_site.csv',
+                   'zhao16/zhao_subduction_inslab_total_sigma_site.csv',
+                   max_discrep_percentage=0.3,
+                   std_discrep_percentage=0.3)

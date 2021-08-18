@@ -27,9 +27,9 @@ class DostEtAl2004TestCase(BaseGSIMTestCase):
     # Tables generated from current implementation - CIRCULAR TEST!
 
     def test_all(self):
-        self.check_all('DOST2004/DOST2004_MEAN.csv',
-                       'DOST2004/DOST2004_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('DOST2004/DOST2004_MEAN.csv',
+                   'DOST2004/DOST2004_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class DostEtAl2004BommerAdjustedTestCase(BaseGSIMTestCase):
@@ -38,8 +38,8 @@ class DostEtAl2004BommerAdjustedTestCase(BaseGSIMTestCase):
     # Tables generated from current implementation - CIRCULAR TEST!
 
     def test_all(self):
-        self.check_all('DOST2004/DOST2004_ADJUSTED_MEAN.csv',
-                       'DOST2004/DOST2004_ADJUSTED_STD_INTRA.csv',
-                       'DOST2004/DOST2004_ADJUSTED_STD_INTER.csv',
-                       'DOST2004/DOST2004_ADJUSTED_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('DOST2004/DOST2004_ADJUSTED_MEAN.csv',
+                   'DOST2004/DOST2004_ADJUSTED_STD_INTRA.csv',
+                   'DOST2004/DOST2004_ADJUSTED_STD_INTER.csv',
+                   'DOST2004/DOST2004_ADJUSTED_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

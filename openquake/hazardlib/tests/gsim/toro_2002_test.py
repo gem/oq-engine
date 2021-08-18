@@ -26,15 +26,15 @@ class ToroEtAl2002TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ToroEtAl2002
 
     def test_all(self):
-        self.check_all('TORO02/T02_MEAN.csv',
-                       'TORO02/T02_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('TORO02/T02_MEAN.csv',
+                   'TORO02/T02_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class ToroEtAl2002SHARETestCase(BaseGSIMTestCase):
     GSIM_CLASS = ToroEtAl2002SHARE
 
     def test_all(self):
-        self.check_all('TORO02/T02SHARE_MEAN.csv',
-                       'TORO02/T02SHARE_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('TORO02/T02SHARE_MEAN.csv',
+                   'TORO02/T02SHARE_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

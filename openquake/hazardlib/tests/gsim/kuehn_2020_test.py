@@ -36,31 +36,31 @@ class KuehnEtAl2020SInterTestCase(BaseGSIMTestCase):
     INTRA_FILE = "kuehn2020/KUEHN2020_INTERFACE_GLOBAL_INTRA_EVENT_STDDEV.csv"
 
     def test_mean(self):
-        self.check_all(self.MEAN_FILE, mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
 
     def test_std(self):
-        self.check_all(self.TOTAL_FILE, self.INTER_FILE, self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.TOTAL_FILE, self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
     def test_mean_mb1(self):
-        self.check_all(
+        self.check(
             "kuehn2020/KUEHN2020_INTERFACE_GLOBAL_Mb7.7_MEAN.csv",
-            mean_discrep_percentage=0.1, m_b=7.7)
+            max_discrep_percentage=0.1, m_b=7.7)
 
     def test_mean_mb2(self):
-        self.check_all(
+        self.check(
             "kuehn2020/KUEHN2020_INTERFACE_GLOBAL_Mb8.1_MEAN.csv",
-            mean_discrep_percentage=0.1, m_b=8.1)
+            max_discrep_percentage=0.1, m_b=8.1)
 
     def test_mean_eps1(self):
-        self.check_all(
+        self.check(
             "kuehn2020/KUEHN2020_INTERFACE_GLOBAL_epsilon1_MEAN.csv",
-            mean_discrep_percentage=0.1, sigma_mu_epsilon=1)
+            max_discrep_percentage=0.1, sigma_mu_epsilon=1)
 
     def test_mean_eps2(self):
-        self.check_all(
+        self.check(
             "kuehn2020/KUEHN2020_INTERFACE_GLOBAL_epsilon-1_MEAN.csv",
-            mean_discrep_percentage=0.1, sigma_mu_epsilon=-1)
+            max_discrep_percentage=0.1, sigma_mu_epsilon=-1)
 
 
 # Inslab
@@ -72,27 +72,27 @@ class KuehnEtAl2020SSlabTestCase(BaseGSIMTestCase):
     INTRA_FILE = "kuehn2020/KUEHN2020_INSLAB_GLOBAL_INTRA_EVENT_STDDEV.csv"
 
     def test_mean(self):
-        self.check_all(self.MEAN_FILE, mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
 
     def test_std(self):
-        self.check_all(self.TOTAL_FILE, self.INTER_FILE, self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.TOTAL_FILE, self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
     def test_mean_mb1(self):
-        self.check_all("kuehn2020/KUEHN2020_INSLAB_GLOBAL_Mb7.4_MEAN.csv",
-                       mean_discrep_percentage=0.1, m_b=7.4)
+        self.check("kuehn2020/KUEHN2020_INSLAB_GLOBAL_Mb7.4_MEAN.csv",
+                   max_discrep_percentage=0.1, m_b=7.4)
 
     def test_mean_mb2(self):
-        self.check_all("kuehn2020/KUEHN2020_INSLAB_GLOBAL_Mb7.8_MEAN.csv",
-                       mean_discrep_percentage=0.1, m_b=7.8)
+        self.check("kuehn2020/KUEHN2020_INSLAB_GLOBAL_Mb7.8_MEAN.csv",
+                   max_discrep_percentage=0.1, m_b=7.8)
 
     def test_mean_eps1(self):
-        self.check_all("kuehn2020/KUEHN2020_INSLAB_GLOBAL_epsilon1_MEAN.csv",
-                       mean_discrep_percentage=0.1, sigma_mu_epsilon=1)
+        self.check("kuehn2020/KUEHN2020_INSLAB_GLOBAL_epsilon1_MEAN.csv",
+                   max_discrep_percentage=0.1, sigma_mu_epsilon=1)
 
     def test_mean_eps2(self):
-        self.check_all("kuehn2020/KUEHN2020_INSLAB_GLOBAL_epsilon-1_MEAN.csv",
-                       mean_discrep_percentage=0.1, sigma_mu_epsilon=-1)
+        self.check("kuehn2020/KUEHN2020_INSLAB_GLOBAL_epsilon-1_MEAN.csv",
+                   max_discrep_percentage=0.1, sigma_mu_epsilon=-1)
 
 
 class KuehnEtAl2020RegionTestCase(BaseGSIMTestCase):
@@ -140,7 +140,7 @@ class KuehnEtAl2020RegionTestCase(BaseGSIMTestCase):
             self.GSIM_CLASS = gcls
             for region, files in self.FILES.items():
                 mean_file, *std_files = [f.format(trt) for f in files]
-                self.check_all(mean_file,
-                               mean_discrep_percentage=0.1, region=region)
-                self.check_all(*std_files,
-                               mean_discrep_percentage=0.1, region=region)
+                self.check(mean_file,
+                           max_discrep_percentage=0.1, region=region)
+                self.check(*std_files,
+                           max_discrep_percentage=0.1, region=region)

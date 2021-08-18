@@ -33,8 +33,8 @@ class LanzanoEtAl2020_ref_TestCase(BaseGSIMTestCase):
     STD_FILE = "LAN2020/LAN2020_REF_STD_TOTAL.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class LanzanoEtAl2020_EC8_TestCase(BaseGSIMTestCase):
@@ -45,8 +45,8 @@ class LanzanoEtAl2020_EC8_TestCase(BaseGSIMTestCase):
     STD_FILE = "LAN2020/LAN2020_EC8_STD_TOTAL.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class LanzanoEtAl2020_Cluster_TestCase(BaseGSIMTestCase):
@@ -57,5 +57,5 @@ class LanzanoEtAl2020_Cluster_TestCase(BaseGSIMTestCase):
     STD_FILE = "LAN2020/LAN2020_CLUSTER_STD_TOTAL.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=0.1)

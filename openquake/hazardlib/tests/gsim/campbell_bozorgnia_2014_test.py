@@ -49,11 +49,11 @@ class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
     STD_TOTAL_FILE = 'CB14/CB2014_STD_TOTAL.csv'
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_INTRA_FILE,
-                       self.STD_INTER_FILE,
-                       self.STD_TOTAL_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   self.STD_INTRA_FILE,
+                   self.STD_INTER_FILE,
+                   self.STD_TOTAL_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class CampbellBozorgnia2014HighQTestCase(CampbellBozorgnia2014TestCase):

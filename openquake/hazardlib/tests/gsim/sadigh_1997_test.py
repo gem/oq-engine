@@ -17,13 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
-
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import RuptureContext
-from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.const import StdDev
-
-import numpy
 
 
 class SadighEtAl1997TestCase(BaseGSIMTestCase):
@@ -32,17 +26,17 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
     # NB: the deep_soil methods are untested!
 
     def test_all_rock(self):
-        self.check_all('SADIGH97/SADIGH1997_ROCK_MEAN.csv',
-                       mean_discrep_percentage=0.4)
+        self.check('SADIGH97/SADIGH1997_ROCK_MEAN.csv',
+                   max_discrep_percentage=0.4)
 
     def test_total_stddev_rock(self):
-        self.check_all('SADIGH97/SADIGH1997_ROCK_STD_TOTAL.csv',
-                       mean_discrep_percentage=1e-10)
+        self.check('SADIGH97/SADIGH1997_ROCK_STD_TOTAL.csv',
+                   max_discrep_percentage=1e-10)
 
     def test_all_soil(self):
-        self.check_all('SADIGH97/SADIGH1997_SOIL_MEAN.csv',
-                       mean_discrep_percentage=0.5)
+        self.check('SADIGH97/SADIGH1997_SOIL_MEAN.csv',
+                   max_discrep_percentage=0.5)
 
     def test_total_stddev_soil(self):
-        self.check_all('SADIGH97/SADIGH1997_SOIL_STD_TOTAL.csv',
-                       mean_discrep_percentage=1e-10)
+        self.check('SADIGH97/SADIGH1997_SOIL_STD_TOTAL.csv',
+                   max_discrep_percentage=1e-10)

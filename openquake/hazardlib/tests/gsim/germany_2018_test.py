@@ -43,7 +43,7 @@ class CauzziEtAl2014RhypTestCase(BaseGSIMTestCase):
     MEAN_FILE = "germany_2018/C14_RHYPO_ADJUSTMENT_MEAN.csv"
 
     def test_mean(self):
-        self.check_all(self.MEAN_FILE, mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
 
 
 class CauzziEtAl2014RhypFiniteRuptureTestCase(BaseGSIMTestCase):
@@ -58,7 +58,7 @@ class CauzziEtAl2014RhypFiniteRuptureTestCase(BaseGSIMTestCase):
     MEAN_FILE = "germany_2018/C14_RHYPO_FINITE_RUPTURE_MEAN.csv"
 
     def test_mean(self):
-        self.check_all(self.MEAN_FILE, mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
 
 
 class DerrasEtAl2014RhypTestCase(CauzziEtAl2014RhypTestCase):

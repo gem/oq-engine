@@ -37,9 +37,9 @@ class ECOS2009TestCase(BaseGSIMTestCase):
     STD_FILE = "ecos_2009/ecos09_stDev.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class ECOS2009HighestTestCase(ECOS2009TestCase):

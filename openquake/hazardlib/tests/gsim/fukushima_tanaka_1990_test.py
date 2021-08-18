@@ -25,15 +25,15 @@ class FukushimaTanaka1990TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FukushimaTanaka1990
 
     def test_all(self):
-        self.check_all('FT1990/FT1990_MEAN.csv',
-                       'FT1990/FT1990_STDTOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('FT1990/FT1990_MEAN.csv',
+                   'FT1990/FT1990_STDTOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class FukushimaTanaka1990SiteTestCase(BaseGSIMTestCase):
     GSIM_CLASS = FukushimaTanakaSite1990
 
     def test_all(self):
-        self.check_all('FT1990/FT1990Site_MEAN.csv',
-                       'FT1990/FT1990Site_STDTOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('FT1990/FT1990Site_MEAN.csv',
+                   'FT1990/FT1990Site_STDTOTAL.csv',
+                   max_discrep_percentage=0.1)

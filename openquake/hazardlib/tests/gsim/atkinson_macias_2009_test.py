@@ -27,7 +27,7 @@ class AtkinsonMacias2009TestCase(BaseGSIMTestCase):
 
     def test_all(self):
         # Some minor discrepancies tests do not pass at 0.5 % or lower
-        self.check_all('AM09/ATKINSON_MACIAS_2009_MEAN.csv',
-                       'AM09/ATKINSON_MACIAS_2009_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.6,
-                       std_discrep_percentage=0.1)
+        self.check('AM09/ATKINSON_MACIAS_2009_MEAN.csv',
+                   'AM09/ATKINSON_MACIAS_2009_STD_TOTAL.csv',
+                   max_discrep_percentage=0.6,
+                   std_discrep_percentage=0.1)

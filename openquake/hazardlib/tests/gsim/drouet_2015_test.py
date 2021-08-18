@@ -30,11 +30,11 @@ class DrouetEtAl2015TestCase(BaseGSIMTestCase):
     INTRA_FILE = "drouet_2015/DROUET2015_INTRA_EVENT.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.TOTAL_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class DrouetEtAl2015withDepthTestCase(DrouetEtAl2015TestCase):

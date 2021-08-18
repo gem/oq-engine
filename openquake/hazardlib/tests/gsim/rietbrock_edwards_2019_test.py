@@ -37,7 +37,7 @@ class RietbrockEdwards2019LowTestCase(BaseGSIMTestCase):
     MEAN_FILE = "RIET2019/low.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, mean_discrep_percentage=MEAN_DISCREP)
+        self.check(self.MEAN_FILE, max_discrep_percentage=MEAN_DISCREP)
 
 
 class RietbrockEdwards2019MeanTestCase(BaseGSIMTestCase):
@@ -47,7 +47,7 @@ class RietbrockEdwards2019MeanTestCase(BaseGSIMTestCase):
     MEAN_FILE = "RIET2019/mean.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, mean_discrep_percentage=MEAN_DISCREP)
+        self.check(self.MEAN_FILE, max_discrep_percentage=MEAN_DISCREP)
 
 
 class RietbrockEdwards2019UpTestCase(BaseGSIMTestCase):
@@ -57,4 +57,4 @@ class RietbrockEdwards2019UpTestCase(BaseGSIMTestCase):
     MEAN_FILE = "RIET2019/up.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, mean_discrep_percentage=MEAN_DISCREP)
+        self.check(self.MEAN_FILE, max_discrep_percentage=MEAN_DISCREP)

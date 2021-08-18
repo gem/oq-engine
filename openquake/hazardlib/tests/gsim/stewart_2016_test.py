@@ -89,10 +89,10 @@ class StewartEtAl2016TestCaseA(BaseGSIMTestCase):
     INTRA_FILE = "SBSA15/SBSA15_CAL_PERIOD_INTRA_STD.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       self.INTER_FILE, self.INTRA_FILE,
-                       mean_discrep_percentage=STDDEV_DISCREP,
-                       region=self.REGION, sof=self.SOF)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=STDDEV_DISCREP,
+                   region=self.REGION, sof=self.SOF)
 
 
 class StewartEtAl2016TestCaseB(StewartEtAl2016TestCaseA):

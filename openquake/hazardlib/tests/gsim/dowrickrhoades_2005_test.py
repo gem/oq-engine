@@ -31,29 +31,29 @@ class DowrickRhoades2005AscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = DowrickRhoades2005Asc
 
     def test_all(self):
-        self.check_all('DOWRICKRHOADES2005/DowrickRhoades2005Asc.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('DOWRICKRHOADES2005/DowrickRhoades2005Asc.csv',
+                   max_discrep_percentage=0.1)
 
 
 class DowrickRhoades2005SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = DowrickRhoades2005SInter
 
     def test_all(self):
-        self.check_all('DOWRICKRHOADES2005/DowrickRhoades2005SInter.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('DOWRICKRHOADES2005/DowrickRhoades2005SInter.csv',
+                   max_discrep_percentage=0.1)
 
 
 class DowrickRhoades2005SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = DowrickRhoades2005SSlab
 
     def test_all(self):
-        self.check_all('DOWRICKRHOADES2005/DowrickRhoades2005SSlab.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('DOWRICKRHOADES2005/DowrickRhoades2005SSlab.csv',
+                   max_discrep_percentage=0.1)
 
 
 class DowrickRhoades2005VolcTestCase(BaseGSIMTestCase):
     GSIM_CLASS = DowrickRhoades2005Volc
 
     def test_all(self):
-        self.check_all('DOWRICKRHOADES2005/DowrickRhoades2005Volc.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('DOWRICKRHOADES2005/DowrickRhoades2005Volc.csv',
+                   max_discrep_percentage=0.1)

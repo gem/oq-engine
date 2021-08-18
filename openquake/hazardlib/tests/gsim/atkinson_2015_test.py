@@ -26,8 +26,8 @@ class Atkinson2015TestCase(BaseGSIMTestCase):
     # https://github.com/bakerjw/GMMs/blob/master/gmms/a_2015_active.m
 
     def test_all(self):
-        self.check_all('ATKINSON2015/ATKINSON2015_MEAN.csv',
-                       'ATKINSON2015/ATKINSON2015_STD_INTRA.csv',
-                       'ATKINSON2015/ATKINSON2015_STD_INTER.csv',
-                       'ATKINSON2015/ATKINSON2015_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('ATKINSON2015/ATKINSON2015_MEAN.csv',
+                   'ATKINSON2015/ATKINSON2015_STD_INTRA.csv',
+                   'ATKINSON2015/ATKINSON2015_STD_INTER.csv',
+                   'ATKINSON2015/ATKINSON2015_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

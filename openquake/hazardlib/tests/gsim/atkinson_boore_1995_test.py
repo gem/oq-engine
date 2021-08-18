@@ -29,33 +29,33 @@ class AtkinsonBoore1995GSCBestTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore1995GSCBest
 
     def test_mean(self):
-        self.check_all('AB95/AB95GSCBest_MEAN.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB95/AB95GSCBest_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check_all('AB95/AB95GSCBest_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB95/AB95GSCBest_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class AtkinsonBoore1995GSCLowerLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore1995GSCLowerLimit
 
     def test_mean(self):
-        self.check_all('AB95/AB95GSCLowerLimit_MEAN.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB95/AB95GSCLowerLimit_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check_all('AB95/AB95GSCLowerLimit_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB95/AB95GSCLowerLimit_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class AtkinsonBoore1995GSCUpperLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore1995GSCUpperLimit
 
     def test_mean(self):
-        self.check_all('AB95/AB95GSCUpperLimit_MEAN.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB95/AB95GSCUpperLimit_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check_all('AB95/AB95GSCLowerLimit_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB95/AB95GSCLowerLimit_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

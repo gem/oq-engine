@@ -53,8 +53,8 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
 
     def test_all(self):
         # Ensure that means match reference dataset
-        self.check_all(self.MEAN_FILE, self.SIGMA_FILE,
-                       mean_discrep_percentage=self.TOL_PERCENT)
+        self.check(self.MEAN_FILE, self.SIGMA_FILE,
+                   max_discrep_percentage=self.TOL_PERCENT)
 
     def test_warning(self):
         # Warning should be thrown for any vs30 below limit for NEHRP class D

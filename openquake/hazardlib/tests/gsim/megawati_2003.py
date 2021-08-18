@@ -24,9 +24,9 @@ class Megawati2003TestCase(BaseGSIMTestCase):
     GSIM_CLASS = MegawatiEtAl2003
 
     def test_all(self):
-        self.check_all('MEA2003/mea2003_mean.csv',
-                       mean_discrep_percentage=1.0)
+        self.check('MEA2003/mea2003_mean.csv',
+                   max_discrep_percentage=1.0)
 
     def test_std_total(self):
-        self.check_all('MEA2003/mea2003_total_std.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('MEA2003/mea2003_total_std.csv',
+                   max_discrep_percentage=0.1)

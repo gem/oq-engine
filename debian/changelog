@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Refactored the GMPE tests, with a speedup of 1-14 times
   * Added a script `utils/build_vtable` to build verification tables
   * `oq info gsim_logic_tree.xml` now displays the logic tree
   * Fixed a bug in the adjustment term in NSHMP2014 breaking the USA model

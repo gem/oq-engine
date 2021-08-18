@@ -25,8 +25,8 @@ class AkkarCagnan2010TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AkkarCagnan2010
 
     def test_all(self):
-        self.check_all('AC10/AC10_MEAN.csv',
-                       'AC10/AC10_STD_TOTAL.csv',
-                       'AC10/AC10_STD_INTRA.csv',
-                       'AC10/AC10_STD_INTER.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AC10/AC10_MEAN.csv',
+                   'AC10/AC10_STD_TOTAL.csv',
+                   'AC10/AC10_STD_INTRA.csv',
+                   'AC10/AC10_STD_INTER.csv',
+                   max_discrep_percentage=0.1)

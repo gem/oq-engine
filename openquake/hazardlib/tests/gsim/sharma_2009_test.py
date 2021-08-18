@@ -63,15 +63,15 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         """
         Ensure that means match reference dataset.
         """
-        self.check_all(
-            self.MEAN_FILE, mean_discrep_percentage=self.TOL_PERCENT)
+        self.check(
+            self.MEAN_FILE, max_discrep_percentage=self.TOL_PERCENT)
 
     def test_std_total(self):
         """
         Ensure that standard deviations match reference dataset.
         """
-        self.check_all(
-            self.SIGMA_FILE, mean_discrep_percentage=self.TOL_PERCENT)
+        self.check(
+            self.SIGMA_FILE, max_discrep_percentage=self.TOL_PERCENT)
 
     def test_warning(self):
         """

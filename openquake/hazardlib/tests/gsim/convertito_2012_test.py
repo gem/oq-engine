@@ -21,6 +21,6 @@ class ConvertitoEtAl2012TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ConvertitoEtAl2012Geysers
 
     def test_all(self):
-        self.check_all('CONV2012/CONV_2012_MEAN.csv',
-                       'CONV2012/CONV_2012_STDDEV.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('CONV2012/CONV_2012_MEAN.csv',
+                   'CONV2012/CONV_2012_STDDEV.csv',
+                   max_discrep_percentage=0.1)

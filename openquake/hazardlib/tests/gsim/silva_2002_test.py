@@ -30,29 +30,29 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class SilvaEtAl2002MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = SilvaEtAl2002MblgAB1987NSHMP2008
 
-    def test_all(self):
-        self.check_all('SILVA02/SILVA02MblgAB1987NSHMP_MEAN.csv',
-                       mean_discrep_percentage=0.4)
+    def test_mean(self):
+        self.check('SILVA02/SILVA02MblgAB1987NSHMP_MEAN.csv',
+                   max_discrep_percentage=0.4)
 
     def test_std_total(self):
-        self.check_all('SILVA02/SILVA02MblgAB1987NSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('SILVA02/SILVA02MblgAB1987NSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class SilvaEtAl2002MblgJ1996NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = SilvaEtAl2002MblgJ1996NSHMP2008
 
-    def test_all(self):
-        self.check_all('SILVA02/SILVA02MblgJ1996NSHMP_MEAN.csv',
-                       mean_discrep_percentage=0.4)
+    def test_mean(self):
+        self.check('SILVA02/SILVA02MblgJ1996NSHMP_MEAN.csv',
+                   max_discrep_percentage=0.4)
 
 
 class SilvaEtAl2002MwNSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = SilvaEtAl2002MwNSHMP2008
 
-    def test_all(self):
-        self.check_all('SILVA02/SILVA02MwNSHMP_MEAN.csv',
-                       mean_discrep_percentage=0.4)
+    def test_mean(self):
+        self.check('SILVA02/SILVA02MwNSHMP_MEAN.csv',
+                   max_discrep_percentage=0.4)
 
 # Test data obtained by from haz43
 
@@ -66,14 +66,14 @@ class SilvaEtAl2002DoubleCornerSaturationTestCase(BaseGSIMTestCase):
     """
     GSIM_CLASS = SilvaEtAl2002DoubleCornerSaturation
 
-    def test_all(self):
-        self.check_all('SILVA02/SilvaEtAl2002DoubleCornerSaturation_MEAN.csv',
-                       mean_discrep_percentage=2.)
+    def test_mean(self):
+        self.check('SILVA02/SilvaEtAl2002DoubleCornerSaturation_MEAN.csv',
+                   max_discrep_percentage=2.)
 
 
 class SilvaEtAl2002SingleCornerSaturationTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SilvaEtAl2002SingleCornerSaturation
 
-    def test_all(self):
-        self.check_all('SILVA02/SilvaEtAl2002SingleCornerSaturation_MEAN.csv',
-                       mean_discrep_percentage=4.)
+    def test_mean(self):
+        self.check('SILVA02/SilvaEtAl2002SingleCornerSaturation_MEAN.csv',
+                   max_discrep_percentage=4.)
