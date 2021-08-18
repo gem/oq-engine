@@ -205,7 +205,6 @@ class RaghukanthIyengar2007(GMPE):
     non_verified = True
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
-
         """
         Implements the following equations:
 

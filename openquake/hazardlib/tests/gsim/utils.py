@@ -90,8 +90,11 @@ def read_cmaker_df(gsim, csvfnames):
     """
     # build a suitable ContextMaker
     dfs = [pandas.read_csv(fname) for fname in csvfnames]
-    if sum(len(df) for df in dfs) == 0:
+    num_rows = sum(len(df) for df in dfs)
+    if num_rows == 0:
         raise ValueError('The files %s are empty!' % ' '.join(csvfnames))
+    print('\n%s' % gsim)
+    print('num_checks = {:_d}'.format(num_rows))
     if not all_equals([sorted(df.columns) for df in dfs]):
         colset = set.intersection(*[set(df.columns) for df in dfs])
         cols = [col for col in dfs[0].columns if col in colset]
@@ -122,7 +125,6 @@ def read_cmaker_df(gsim, csvfnames):
     imtls = {im: [0] for im in sorted(imts)}
     cmaker = contexts.ContextMaker(
         gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
-    print(gsim)
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
@@ -138,6 +140,7 @@ def read_cmaker_df(gsim, csvfnames):
         else:
             df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
         print(name, df[name].unique())
+    print('result_type', df['result_type'].unique())
     return cmaker, df.rename(columns=cmap)
 
 
