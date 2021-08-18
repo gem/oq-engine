@@ -23,7 +23,6 @@ import numpy as np
 import pandas
 from openquake.baselib.general import all_equals
 from openquake.hazardlib import contexts, imt
-from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 
 NORMALIZE = False
 
@@ -186,15 +185,6 @@ def gen_ctxs(df):
 class BaseGSIMTestCase(unittest.TestCase):
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
     GSIM_CLASS = None
-
-    def check(self, filename, max_discrep_percentage, **kwargs):
-        gsim = self.GSIM_CLASS(**kwargs)
-        with open(os.path.join(self.BASE_DATA_PATH, filename)) as f:
-            errors, stats = check_gsim(gsim, f, max_discrep_percentage)
-        if errors:
-            raise AssertionError(stats)
-        print()
-        print(stats)
 
     def check_all(self, *filenames, mean_discrep_percentage,
                   std_discrep_percentage=None, **kwargs):

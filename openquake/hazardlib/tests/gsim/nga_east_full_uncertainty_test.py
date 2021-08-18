@@ -30,7 +30,6 @@ For delta_s2s: Table 5.15
 """
 import os
 import unittest
-from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim import nga_east as ne
 
