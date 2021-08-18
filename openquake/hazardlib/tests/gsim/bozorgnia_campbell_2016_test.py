@@ -62,22 +62,10 @@ STD_TOTAL_FILE = {(0, 0): 'BC15/BC15_GLOBAL_STD_TOTAL.csv',
 class BozorgniaCampbell2016TestCase(BaseGSIMTestCase):
     GSIM_CLASS = BozorgniaCampbell2016
 
-    def test_mean(self):
+    def test_all(self):
         for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
             self.check(MEAN_FILE[sgn, SJ],
-                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
-
-    def test_std_intra(self):
-        for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
-            self.check(STD_INTRA_FILE[sgn, SJ],
-                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
-
-    def test_std_inter(self):
-        for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
-            self.check(STD_INTER_FILE[sgn, SJ],
-                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
-
-    def test_std_total(self):
-        for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
-            self.check(STD_TOTAL_FILE[sgn, SJ],
+                       STD_INTRA_FILE[sgn, SJ],
+                       STD_INTER_FILE[sgn, SJ],
+                       STD_TOTAL_FILE[sgn, SJ],
                        max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)

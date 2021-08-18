@@ -20,10 +20,12 @@ import copy
 import collections
 import numpy
 
+import openquake.hazardlib.scalerel as msr
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, source as ohs
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
+from openquake.hazardlib import valid, InvalidFile
 
 
 class LogicTreeError(Exception):
@@ -88,6 +90,12 @@ def trucMFDFromSlip_absolute(utype, node, filename):
     slip_rate, rigidity = (node.faultActivityData["slipRate"],
                            node.faultActivityData["rigidity"])
     return slip_rate, rigidity
+
+
+@parse_uncertainty.add('setMSRAbsolute')
+def setMSR_absolute(utype, node, filename):
+    tmps = valid.mag_scale_rel(node.text)
+    return valid.SCALEREL[tmps]()
 
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
@@ -249,6 +257,12 @@ def _abGR_absolute(utype, source, value):
     source.mfd.modify('set_ab', dict(a_val=a, b_val=b))
 
 
+@apply_uncertainty.add('bGRAbsolute')
+def _bGR_absolute(utype, source, value):
+    b_val = float(value)
+    source.mfd.modify('set_bGR', dict(b_val=b_val))
+
+
 @apply_uncertainty.add('bGRRelative')
 def _abGR_relative(utype, source, value):
     source.mfd.modify('increment_b', dict(value=value))
@@ -276,6 +290,23 @@ def _trucMFDFromSlip_absolute(utype, source, value):
     slip_rate, rigidity = value
     source.modify('adjust_mfd_from_slip', dict(slip_rate=slip_rate,
                                                rigidity=rigidity))
+
+
+@apply_uncertainty.add('setMSRAbsolute')
+def _setMSR(utype, source, value):
+    msr = value
+    source.modify('set_msr', dict(new_msr=msr))
+
+
+@apply_uncertainty.add('recomputeMmax')
+def _recompute_mmax_absolute(utype, source, value):
+    epsilon = value
+    source.modify('recompute_mmax', dict(epsilon=epsilon))
+
+
+@apply_uncertainty.add('setLowerSeismDepthAbsolute')
+def _setLSD(utype, source, value):
+    source.modify('set_lower_seismogenic_depth', dict(lsd=float(value)))
 
 
 # ######################### apply_uncertainties ########################### #

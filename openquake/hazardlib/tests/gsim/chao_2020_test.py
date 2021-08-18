@@ -34,7 +34,8 @@ class ChaoEtAl2020SInterTestCase(BaseGSIMTestCase):
 
     def test_mean2(self):
         self.check('CHAO20/ChaoEtAl2020SInter_MEAN2.csv',
-                   max_discrep_percentage=0.1, manila=True, geology=False)
+                   max_discrep_percentage=0.1,
+                   manila=True, geology=False)
 
 
 class ChaoEtAl2020SSlabTestCase(BaseGSIMTestCase):
@@ -42,7 +43,8 @@ class ChaoEtAl2020SSlabTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CHAO20/ChaoEtAl2020SSlab_MEAN.csv',
-                   max_discrep_percentage=0.1, aftershocks=True, manila=True)
+                   max_discrep_percentage=0.1,
+                   aftershocks=True, manila=True)
 
     def test_stddev(self):
         self.check('CHAO20/ChaoEtAl2020SSlab_STDDEV.csv',

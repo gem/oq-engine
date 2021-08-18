@@ -28,11 +28,8 @@ and subclasses of same.
 """
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-
 from openquake.hazardlib.gsim.nath_2012 import (
-    NathEtAl2012Lower,
-    NathEtAl2012Upper,
-)
+    NathEtAl2012Lower, NathEtAl2012Upper)
 
 
 class NathEtAl2012LowerTestCase(BaseGSIMTestCase):
@@ -46,17 +43,9 @@ class NathEtAl2012LowerTestCase(BaseGSIMTestCase):
     SIGMA_FILE = 'NTMN12/NTMN12_L_TOTAL_STDDEV.csv'
     TOL_PERCENT = 4.
 
-    def test_mean(self):
-        """
-        Ensure that means match reference dataset.
-        """
-        self.check(self.MEAN_FILE, max_discrep_percentage=self.TOL_PERCENT)
-
-    def test_std_total(self):
-        """
-        Ensure that standard deviations match reference dataset.
-        """
-        self.check(self.SIGMA_FILE, max_discrep_percentage=self.TOL_PERCENT)
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.SIGMA_FILE,
+                   max_discrep_percentage=self.TOL_PERCENT)
 
 
 class NathEtAl2012UpperTestCase(NathEtAl2012LowerTestCase):

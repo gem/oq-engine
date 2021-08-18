@@ -39,25 +39,14 @@ class AbrahamsonGulerce2020SInterTestCase(BaseGSIMTestCase):
     ADJ = False
     SIGMA_MU_EPSILON = 0.0
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.1,
+    def test_all(self):
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1,
                    region=self.REG, apply_usa_adjustment=self.ADJ,
-                   sigma_mu_epsilon = self.SIGMA_MU_EPSILON)
-
-    def test_std_total(self):
-        self.check(self.TOTAL_FILE, max_discrep_percentage=0.1,
-                   region=self.REG, apply_usa_adjustment=self.ADJ,
-                   sigma_mu_epsilon = self.SIGMA_MU_EPSILON)
-
-    def test_std_inter_event(self):
-        self.check(self.INTER_FILE, max_discrep_percentage=0.1,
-                   region=self.REG, apply_usa_adjustment=self.ADJ,
-                   sigma_mu_epsilon = self.SIGMA_MU_EPSILON)
-
-    def test_std_intra_event(self):
-        self.check(self.INTRA_FILE, max_discrep_percentage=0.1,
-                   region=self.REG, apply_usa_adjustment=self.ADJ,
-                   sigma_mu_epsilon = self.SIGMA_MU_EPSILON)
+                   sigma_mu_epsilon=self.SIGMA_MU_EPSILON)
 
 
 # Non-ergodic sigma test case
@@ -67,11 +56,11 @@ class AbrahamsonGulerce2020SInterNonergodicTestCase(BaseGSIMTestCase):
     INTRA_FILE =\
         "ag2020/AG2020_INTERFACE_GLO__NONERGODIC_INTRA_EVENT_STDDEV.csv"
 
-    def test_std_total(self):
-        self.check(self.TOTAL_FILE, max_discrep_percentage=0.1, ergodic=False)
-
-    def test_std_intra_event(self):
-        self.check(self.INTRA_FILE, max_discrep_percentage=0.1, ergodic=False)
+    def test_all(self):
+        self.check(self.TOTAL_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1,
+                   ergodic=False)
 
 
 # Interface - Alaska
@@ -189,7 +178,6 @@ class AbrahamsonGulerce2020SSlabTestCase(AbrahamsonGulerce2020SInterTestCase):
     REG = "GLO"
 
 
-
 # In-slab - Alaska
 class AbrahamsonGulerce2020SSlabAlaskaTestCase(
         AbrahamsonGulerce2020SInterTestCase):
@@ -201,7 +189,7 @@ class AbrahamsonGulerce2020SSlabAlaskaTestCase(
     REG = "USA-AK"
 
 
-## In-slab - Alaska (with adjustment)
+# In-slab - Alaska (with adjustment)
 class AbrahamsonGulerce2020SSlabAlaskaAdjustTestCase(
         AbrahamsonGulerce2020SInterTestCase):
     GSIM_CLASS = AbrahamsonGulerce2020SSlab

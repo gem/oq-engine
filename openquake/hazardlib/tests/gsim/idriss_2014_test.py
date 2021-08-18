@@ -27,10 +27,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class Idriss2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Idriss2014
 
-    def test_mean(self):
+    def test_all(self):
         self.check("IDRISS14/IDRISS_2014_MEAN.csv",
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check("IDRISS14/IDRISS_2014_TOTAL_STD.csv",
+                   "IDRISS14/IDRISS_2014_TOTAL_STD.csv",
                    max_discrep_percentage=0.1)

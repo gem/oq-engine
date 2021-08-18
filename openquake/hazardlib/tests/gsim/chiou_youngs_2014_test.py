@@ -48,7 +48,7 @@ class ChiouYoungs2014TestCase(BaseGSIMTestCase):
 
     def test_mean_hanging_wall_strike_slip(self):
         self.check('NGA/CY14/CY14_MEDIAN_MS_HW_SS.csv',
-                   max_discrep_percentage=0.05)
+                       max_discrep_percentage=0.05)
 
     def test_inter_event_stddev(self):
         # data generated from opensha
@@ -74,7 +74,6 @@ class ChiouYoungs2014TestCase(BaseGSIMTestCase):
         # Test for backward compatibility - and extended test table
         self.check('NGA/CY14/cy14_extended_table_total_stddev.csv',
                    max_discrep_percentage=0.001)
-        
 
 
 # Note that in the regionalisation cases the discrepancy percentage is raised
@@ -82,6 +81,7 @@ class ChiouYoungs2014TestCase(BaseGSIMTestCase):
 # when compared to the verification code
 class ChiouYoungs2014JapanTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014Japan
+
     def test_mean_japan(self):
         # Data generated from implementation from Yue Hua
         # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
@@ -91,6 +91,7 @@ class ChiouYoungs2014JapanTestCase(BaseGSIMTestCase):
 
 class ChiouYoungs2014ItalyTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014Italy
+
     def test_mean_italy(self):
         # Data generated from implementation from Yue Hua
         # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
@@ -100,6 +101,7 @@ class ChiouYoungs2014ItalyTestCase(BaseGSIMTestCase):
 
 class ChiouYoungs2014WenchuanTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014Wenchuan
+
     def test_mean_wenchuan(self):
         # Data generated from implementation from Yue Hua
         # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m

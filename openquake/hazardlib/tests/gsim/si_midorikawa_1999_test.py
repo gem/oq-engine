@@ -22,7 +22,6 @@ from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999Asc, \
     SiMidorikawa1999SSlabNorthEastCorrection, \
     SiMidorikawa1999SInterSouthWestCorrection, \
     SiMidorikawa1999SSlabSouthWestCorrection
-
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 # test data was generated using alternative implementation of GMPE.
 
@@ -31,26 +30,32 @@ class SiMidorikawa1999AscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SiMidorikawa1999Asc
 
     def test_mean(self):
-        self.check('SM99/SM99ASC_MEAN.csv', max_discrep_percentage=0.1)
+        self.check('SM99/SM99ASC_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_mean_pga(self):
-        self.check('SM99/SM99ASC_MEAN_PGA.csv', max_discrep_percentage=0.1)
+        self.check('SM99/SM99ASC_MEAN_PGA.csv',
+                   max_discrep_percentage=0.1)
 
     def test_mean_pga_vs800(self):
-        self.check('SM99/SM99ASC_MEAN_PGA_vs800.csv', max_discrep_percentage=0.1)
+        self.check('SM99/SM99ASC_MEAN_PGA_vs800.csv',
+                   max_discrep_percentage=0.1)
 
     def test_total_stddev(self):
-        self.check('SM99/SM99ASC_STD_TOTAL.csv', max_discrep_percentage=0.1)
+        self.check('SM99/SM99ASC_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class SiMidorikawa1999SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SiMidorikawa1999SInter
 
     def test_mean(self):
-        self.check('SM99/SM99SInter_MEAN.csv', max_discrep_percentage=0.1)
+        self.check('SM99/SM99SInter_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_total_stddev(self):
-        self.check('SM99/SM99SInter_STD_TOTAL.csv', max_discrep_percentage=0.1)
+        self.check('SM99/SM99SInter_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class SiMidorikawa1999SInterNECorrTestCase(BaseGSIMTestCase):
@@ -58,18 +63,15 @@ class SiMidorikawa1999SInterNECorrTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check(
-            'SM99/SM99SInterNECorr_MEAN.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SInterNECorr_MEAN.csv', max_discrep_percentage=0.1)
 
     def test_mean_pga(self):
         self.check(
-            'SM99/SM99SInterNECorr_MEAN_PGA.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SInterNECorr_MEAN_PGA.csv', max_discrep_percentage=0.1)
 
     def test_total_stddev(self):
         self.check(
-            'SM99/SM99SInterNECorr_STD_TOTAL.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SInterNECorr_STD_TOTAL.csv', max_discrep_percentage=0.1)
 
 
 class SiMidorikawa1999SInterSWCorrTestCase(BaseGSIMTestCase):
@@ -77,28 +79,27 @@ class SiMidorikawa1999SInterSWCorrTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check(
-            'SM99/SM99SInterSWCorr_MEAN.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SInterSWCorr_MEAN.csv', max_discrep_percentage=0.1)
 
     def test_mean_pga(self):
         self.check(
-            'SM99/SM99SInterSWCorr_MEAN_PGA.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SInterSWCorr_MEAN_PGA.csv', max_discrep_percentage=0.1)
 
     def test_total_stddev(self):
         self.check(
-            'SM99/SM99SInterSWCorr_STD_TOTAL.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SInterSWCorr_STD_TOTAL.csv', max_discrep_percentage=0.1)
 
 
 class SiMidorikawa1999SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SiMidorikawa1999SSlab
 
     def test_mean(self):
-        self.check('SM99/SM99SSlab_MEAN.csv', max_discrep_percentage=0.1)
+        self.check('SM99/SM99SSlab_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_total_stddev(self):
-        self.check('SM99/SM99SSlab_STD_TOTAL.csv', max_discrep_percentage=0.1)
+        self.check('SM99/SM99SSlab_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class SiMidorikawa1999SSlabNECorrTestCase(BaseGSIMTestCase):
@@ -106,18 +107,15 @@ class SiMidorikawa1999SSlabNECorrTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check(
-            'SM99/SM99SSlabNECorr_MEAN.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SSlabNECorr_MEAN.csv', max_discrep_percentage=0.1)
 
     def test_mean_pga(self):
         self.check(
-            'SM99/SM99SSlabNECorr_MEAN_PGA.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SSlabNECorr_MEAN_PGA.csv', max_discrep_percentage=0.1)
 
     def test_total_stddev(self):
         self.check(
-            'SM99/SM99SSlabNECorr_STD_TOTAL.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SSlabNECorr_STD_TOTAL.csv', max_discrep_percentage=0.1)
 
 
 class SiMidorikawa1999SSlabSWCorrTestCase(BaseGSIMTestCase):
@@ -125,15 +123,12 @@ class SiMidorikawa1999SSlabSWCorrTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check(
-            'SM99/SM99SSlabSWCorr_MEAN.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SSlabSWCorr_MEAN.csv', max_discrep_percentage=0.1)
 
     def test_mean_pga(self):
         self.check(
-            'SM99/SM99SSlabSWCorr_MEAN_PGA.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SSlabSWCorr_MEAN_PGA.csv', max_discrep_percentage=0.1)
 
     def test_total_stddev(self):
         self.check(
-            'SM99/SM99SSlabSWCorr_STD_TOTAL.csv', max_discrep_percentage=0.1
-        )
+            'SM99/SM99SSlabSWCorr_STD_TOTAL.csv', max_discrep_percentage=0.1)

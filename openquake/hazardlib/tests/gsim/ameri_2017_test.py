@@ -53,21 +53,13 @@ class AmeriEtAl2017RjbTestCase(BaseGSIMTestCase):
     # File contaning the results for the Intra-Event Standard Deviation
     INTRA_FILE = "AMERI2017/A17_Rjb_Heteroscedastic_INTRA_EVENT_STDDEV.csv"
 
-    def test_mean(self):
+    def test_all(self):
         self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class AmeriEtAl2017RepiTestCase(AmeriEtAl2017RjbTestCase):
@@ -135,7 +127,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
     def test_calculation_std_total(self):
 
-        DATA_FILE = data/"AMERI2017/A17_Rjb_Homoscedastic_TOTAL_STDDEV.csv"
+        DATA_FILE = data / "AMERI2017/A17_Rjb_Homoscedastic_TOTAL_STDDEV.csv"
         stddev_types = [const.StdDev.TOTAL]
         ctx = gsim.base.RuptureContext()
 
@@ -177,7 +169,8 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
     def test_calculation_std_intra(self):
 
-        DATA_FILE = data/"AMERI2017/A17_Rjb_Homoscedastic_INTRA_EVENT_STDDEV.csv"
+        DATA_FILE = (data / "AMERI2017/A17_Rjb_Homoscedastic_"
+                     "INTRA_EVENT_STDDEV.csv")
         stddev_types = [const.StdDev.INTRA_EVENT]
 
         ctx = gsim.base.RuptureContext()
@@ -220,7 +213,8 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
     def test_calculation_std_inter(self):
 
-        DATA_FILE = data/"AMERI2017/A17_Rjb_Homoscedastic_INTER_EVENT_STDDEV.csv"
+        DATA_FILE = (data /
+                     "AMERI2017/A17_Rjb_Homoscedastic_INTER_EVENT_STDDEV.csv")
         stddev_types = [const.StdDev.INTER_EVENT]
 
         ctx = gsim.base.RuptureContext()
@@ -304,7 +298,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                     per = periods[k]
                     value = np.log(arr[7+k])
                     # convert value to ln(SA) with SA in units of g
-                    if per=='pga':
+                    if per == 'pga':
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
@@ -358,7 +352,8 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
     def test_calculation_std_intra(self):
 
-        DATA_FILE = data/"AMERI2017/A17_Repi_Homoscedastic_INTRA_EVENT_STDDEV.csv"
+        DATA_FILE = (data /
+                     "AMERI2017/A17_Repi_Homoscedastic_INTRA_EVENT_STDDEV.csv")
         stddev_types = [const.StdDev.INTRA_EVENT]
 
         ctx = gsim.base.RuptureContext()
@@ -401,7 +396,8 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
     def test_calculation_std_inter(self):
 
-        DATA_FILE = data/"AMERI2017/A17_Repi_Homoscedastic_INTER_EVENT_STDDEV.csv"
+        DATA_FILE = (data /
+                     "AMERI2017/A17_Repi_Homoscedastic_INTER_EVENT_STDDEV.csv")
         stddev_types = [const.StdDev.INTER_EVENT]
 
         ctx = gsim.base.RuptureContext()
@@ -448,7 +444,7 @@ MEAN_DISCREP = 0.01
 STDDEV_DISCREP = 0.01
 
 
-class Ameri2014TestCase(BaseGSIMTestCase):
+class Ameri2014TestCase(AmeriEtAl2017RjbTestCase):
     """
     Tests the Ameri (2014) GMPE for the case in which Joyner-Boore
     distance is the preferred distance metric, and standard deviation
@@ -463,19 +459,3 @@ class Ameri2014TestCase(BaseGSIMTestCase):
     INTER_FILE = "ameri14/Ameri_2014_inter_event_stddev.csv"
     # File contaning the results for the Intra-Event Standard Deviation
     INTRA_FILE = "ameri14/Ameri_2014_intra_event_stddev.csv"
-
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)

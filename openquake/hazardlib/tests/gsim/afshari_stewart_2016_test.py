@@ -27,10 +27,11 @@ from openquake.hazardlib.gsim.afshari_stewart_2016 import AfshariStewart2016,\
     AfshariStewart2016Japan
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
+
 # Discrepency percentages to be applied to tests
 # Small differences in coefficients from the SCEC BBP implementation in the
 # style-of-faulting term lead to a tolerable discrepency at small magnitudes
-MEAN_DISCREP = 3.0 
+MEAN_DISCREP = 3.0
 STDDEV_DISCREP = 0.1
 
 
@@ -45,21 +46,13 @@ class AfshariStewart2016TestCase(BaseGSIMTestCase):
     # File contaning the results for the Intra-Event Standard Deviation
     INTRA_FILE = "as16/AS16_RSD_INTRA_EVENT_STDDEV.csv"
 
-    def test_mean(self):
+    def test_all(self):
         self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class AfshariStewart2016JapanTestCase(BaseGSIMTestCase):
@@ -70,4 +63,3 @@ class AfshariStewart2016JapanTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check(self.MEAN_FILE,
                    max_discrep_percentage=MEAN_DISCREP)
-

@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+import sys
+import numpy as np
+import pandas
+from itertools import product
+from openquake.hazardlib import imt, valid, contexts
+
+# change the lists below manually
+# imts = ['PGA', '0.1', '1.0', '2.0']
+imts = ['MMI']
+MAG = [5, 6, 7]
+RAKE = [0, 90, -90]
+HYPO_DEPTH = [10, 20]
+RRUP = [10, 20, 50, 100, 200, 300]
+VS30 = [760, 800]
+
+
+def build_df(gsim, imts):
+    result_types = ["MEAN"]
+    for sdt in contexts.STD_TYPES:
+        if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
+            result_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
+    rrp = sorted(gsim.REQUIRES_RUPTURE_PARAMETERS)
+    rdp = sorted(gsim.REQUIRES_DISTANCES)
+    rsp = sorted(gsim.REQUIRES_SITES_PARAMETERS)
+    header = ['rup_' + rp for rp in rrp]
+    header += ['dist_' + dp for dp in rdp]
+    header += ['site_' + sp for sp in rsp]
+    header += ['result_type', 'damping']
+    header += imts
+    gl = globals()
+    all_rupt_values = [gl[rp.upper()] for rp in rrp]
+    all_dist_values = [gl[dp.upper()] for dp in rdp]
+    all_site_values = [gl[sp.upper()] for sp in rsp]
+    zero_imts = tuple([0] * len(imts))
+    recs = []
+    for result_type in result_types:
+        for rupt_values in product(*all_rupt_values):
+            for dist_values in product(*all_dist_values):
+                for site_values in product(*all_site_values):
+                    recs.append(rupt_values + dist_values + site_values +
+                                (result_type, 5.0) + zero_imts)
+    return pandas.DataFrame.from_records(recs, columns=header)
+
+    
+def get_ctx(names, values, grp):
+    ctx = contexts.RuptureContext()
+    pars = [col for col in grp.columns if col.startswith(('dist_', 'site_'))]
+    for name, value in zip(names, values):
+        setattr(ctx, name[4:], value)  # strip rup_
+        for par in pars:
+            setattr(ctx, par[5:], grp[par].to_numpy())  # dist_, site_
+        ctx.sids = np.arange(len(grp))
+    return ctx
+
+
+def main(gsim_str):
+    gsim = valid.gsim(gsim_str)
+    imtls = {imt: [0] for imt in imts}
+    trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
+    cmaker = contexts.ContextMaker(
+        trt.value if trt else "*", [gsim], {'imtls': imtls})
+    df = build_df(gsim, imts)
+    result_types = df.result_type.unique()
+    names = ['rup_' + rp for rp in sorted(gsim.REQUIRES_RUPTURE_PARAMETERS)]
+    recs = []
+    for values, grp in df[df.result_type == "MEAN"].groupby(names):
+        ctx = get_ctx(names, values, grp)
+        [out] = cmaker.get_mean_stds([ctx])
+        for o, rtype in enumerate(result_types):
+            n = 0
+            for _, row in grp.iterrows():
+                row['result_type'] = rtype
+                for m, col in enumerate(imts):
+                    row[col] = out[o, m, n]
+                recs.append(tuple(row))
+                n += 1
+    newdf = pandas.DataFrame.from_records(recs, columns=df.columns)
+    newdf.to_csv(gsim_str + '.csv', index=False, float_format='%.4f')
+
+
+if __name__ == '__main__':
+    main(sys.argv[1])

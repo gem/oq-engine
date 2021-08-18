@@ -38,17 +38,12 @@ class AbrahamsonEtAl2018SInterTestCase(BaseGSIMTestCase):
     INTER_FILE = "bchydro18/BCHYDRO2018_INTERFACE_INTER_EVENT_STDDEV.csv"
     INTRA_FILE = "bchydro18/BCHYDRO2018_INTERFACE_INTRA_EVENT_STDDEV.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.TOTAL_FILE, max_discrep_percentage=0.1)
-
-    def test_std_inter_event(self):
-        self.check(self.INTER_FILE, max_discrep_percentage=0.1)
-
-    def test_std_intra_event(self):
-        self.check(self.INTRA_FILE, max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class AbrahamsonEtAl2018SInterLowTestCase(AbrahamsonEtAl2018SInterTestCase):
@@ -69,17 +64,12 @@ class AbrahamsonEtAl2018SSlabTestCase(BaseGSIMTestCase):
     INTER_FILE = "bchydro18/BCHYDRO2018_INSLAB_INTER_EVENT_STDDEV.csv"
     INTRA_FILE = "bchydro18/BCHYDRO2018_INSLAB_INTRA_EVENT_STDDEV.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.TOTAL_FILE, max_discrep_percentage=0.1)
-
-    def test_std_inter_event(self):
-        self.check(self.INTER_FILE, max_discrep_percentage=0.1)
-
-    def test_std_intra_event(self):
-        self.check(self.INTRA_FILE, max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class AbrahamsonEtAl2018SSlabLowTestCase(AbrahamsonEtAl2018SSlabTestCase):

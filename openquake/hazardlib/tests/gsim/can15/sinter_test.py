@@ -23,12 +23,12 @@ class SinterCan15TestCase(BaseGSIMTestCase):
 
     def test_mean_upp(self):
         self.check('CAN15/GMPEtInterface_high_combo.csv',
-                   max_discrep_percentage=100., sgn=+1)
+                       max_discrep_percentage=100., sgn=+1)
 
     def test_mean_low(self):
         self.check('CAN15/GMPEtInterface_Low_combo.csv',
-                   max_discrep_percentage=900., sgn=-1)
+                       max_discrep_percentage=900., sgn=-1)
 
     def test_mean(self):
         self.check('CAN15/GMPEtInterface_med_combo.csv',
-                   max_discrep_percentage=200.)
+                       max_discrep_percentage=200.)

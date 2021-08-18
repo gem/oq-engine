@@ -36,10 +36,8 @@ class FaccioliCauzzi2006TestCase(BaseGSIMTestCase):
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "faccioli_cauzzi_2006/FaccioliCauzzi2006_stDev.csv"
 
-    def test_mean(self):
+    def test_all(self):
         self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+                   self.STD_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
