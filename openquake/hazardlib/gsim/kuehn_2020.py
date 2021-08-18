@@ -640,11 +640,11 @@ class KuehnEtAl2020SInter(GMPE):
         # For some regions a basin depth term is defined
         if self.region in ("CAS", "JAP"):
             # If region is CAS or JAP then the GMPE needs Z2.5
-            self.REQUIRED_SITES_PARAMETERS = \
+            self.REQUIRES_SITES_PARAMETERS = \
                  self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
         elif self.region in ("NZL", "TWN"):
             # If region is NZL or TWN then the GMPE needs Z1.0
-            self.REQUIRED_SITES_PARAMETERS = \
+            self.REQUIRES_SITES_PARAMETERS = \
                  self.REQUIRES_SITES_PARAMETERS.union({"z1pt0", })
         else:
             pass
@@ -754,8 +754,4 @@ REGION_ALIASES = {
 
 for region in SUPPORTED_REGIONS[1:]:
     add_alias("KuehnEtAl2021SInter" + REGION_ALIASES[region],
-              KuehnEtAl2020SInter,
-              region=region)
-    add_alias("KuehnEtAl2021SSlab" + REGION_ALIASES[region],
-              KuehnEtAl2020SSlab,
-              region=region)
+              KuehnEtAl2020SInter, region=region)
