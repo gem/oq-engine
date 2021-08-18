@@ -105,8 +105,8 @@ class KijkoSmitTest(unittest.TestCase):
         """
         bval, sigma_b, aval, sigma_a = self.ks_ml.calculate(
             self.catalogue, self.config, self.compl)
-        print(bval, sigma_b)
         self.assertAlmostEqual(self.bval, bval, 1)
+        self.assertAlmostEqual(5.81, aval, 2)
 
     def test_kijko_smit_set_reference_magnitude(self):
         completeness_table = np.array([[1900, 1.0]])
@@ -114,4 +114,6 @@ class KijkoSmitTest(unittest.TestCase):
             {'magnitude': np.array([5.0, 6.0]),
              'year': np.array([2000, 2000])})
         config = {'reference_magnitude': 0.0}
-        self.ks_ml.calculate(catalogue, config, completeness_table)
+        bval, sigma_b, aval, sigma_a = self.ks_ml.calculate(
+            catalogue, config, completeness_table)
+        self.assertAlmostEqual(-0.9136, aval, 2)

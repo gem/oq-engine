@@ -141,7 +141,24 @@ class KijkoSmit(SeismicityOccurrence):
         """
         Calculates the rate of events >= ref_mag using the b-value estimator
         and Eq. 10 of Kijko & Smit
-        """
 
-        denominator = np.sum(nyr * np.exp(-bval * (cmag - ref_mag)))
-        return nvalue / denominator
+        :param bval:
+            b-value
+        :param nvalue:
+            Number of earthquakes within the completeness window
+        :param nyr:
+            A vector with the duration [yr] of each completeness interval
+        :param cmag:
+            A vector with the magnitude lower limit of each completeness
+            interval
+        :param
+        """
+        # Computing the rate for eqs above the min magnitude included in the
+        # completeness window
+        mmin = min(cmag)
+        denominator = np.sum(nyr * np.exp(-bval * (cmag - mmin)))
+        rate_above_mmin = nvalue / denominator
+        # Computing aGR
+        agr = np.log10(rate_above_mmin) + bval * mmin
+        # Returning rate above the reference magnitude provided
+        return 10**(agr-bval*ref_mag)
