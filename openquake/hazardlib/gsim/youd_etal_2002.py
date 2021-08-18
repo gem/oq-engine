@@ -30,21 +30,21 @@ from openquake.hazardlib.imt import PGD
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
 
-def __get_mag__(rup, C):
+def _compute_magnitude_term(rup, C):
     """
     Returns the magnitude scaling term
     """
     return C["c0"] + (C["c1"] * rup.mag)
 
 
-def __get_dist__(dists, R, C):
+def _compute_distance_term(dists, R, C):
     """
     Returns the distance scaling term
     """
     return (C["c3"] * dists.repi) + (C["c2"] * np.log10(R))
 
 
-def __get_soil__(sites, C):
+def _compute_site_term(sites, C):
     """
     Returns the distance scaling term
     """
@@ -115,9 +115,9 @@ class YoudEtAl2002(GMPE):
                 ctx.slope = ctx.freeface_ratio
 
             mean[m] = (
-                __get_mag__(ctx, C) +
-                __get_dist__(ctx, R, C) +
-                __get_soil__(ctx, C))
+                _compute_magnitude_term(ctx, C) +
+                _compute_distance_term(ctx, R, C) +
+                _compute_site_term(ctx, C))
             mean[m] = np.log(10.0 ** mean[m])
             sig[m] = np.log(10.0 ** C["sigma"])
 
