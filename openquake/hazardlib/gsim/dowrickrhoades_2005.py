@@ -272,7 +272,6 @@ class DowrickRhoades2005SInter(DowrickRhoades2005Asc):
 
     This class implements the IPE for Subduction Interface events
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
 
@@ -289,7 +288,6 @@ class DowrickRhoades2005SSlab(DowrickRhoades2005Asc):
 
     This class implements the IPE for Subduction Slab events
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Coefficient table (table 7, page 198)
@@ -312,6 +310,4 @@ class DowrickRhoades2005Volc(DowrickRhoades2005Asc):
 
     This class implements the IPE for events with a volcanic source
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
-
