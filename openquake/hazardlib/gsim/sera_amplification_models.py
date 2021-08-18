@@ -228,14 +228,14 @@ class PitilakisEtAl2018(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
     #: Supported intensity measure types are not set
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set((PGA, SA))
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation type
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters are Vs30 and the Pitilakis et al (2018) site
     #: class (others will be added for the GMPE in question)
@@ -502,7 +502,7 @@ class SandikkayaDinsever2018(GMPE):
     experimental = True
 
     #: Supported tectonic region type is undefined
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Shallow Crust"
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
     #: Supported intensity measure types are not set
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
