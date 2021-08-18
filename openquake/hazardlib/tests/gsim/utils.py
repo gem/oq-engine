@@ -123,8 +123,9 @@ def read_cmaker_df(gsim, csvfnames):
             cmap[col] = im
     assert imts
     imtls = {im: [0] for im in sorted(imts)}
+    trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
     cmaker = contexts.ContextMaker(
-        gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
+        trt.value if trt else "*", [gsim], {'imtls': imtls})
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
