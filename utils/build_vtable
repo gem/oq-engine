@@ -76,7 +76,7 @@ def main(gsim_str):
                 recs.append(tuple(row))
                 n += 1
     newdf = pandas.DataFrame.from_records(recs, columns=df.columns)
-    newdf.to_csv(gsim_str + '.csv', index=False, float_format='%.3f')
+    newdf.to_csv(gsim_str + '.csv', index=False, float_format='%.4f')
 
 
 if __name__ == '__main__':
