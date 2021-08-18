@@ -23,10 +23,8 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class MegawatiPan2010TestCase(BaseGSIMTestCase):
     GSIM_CLASS = MegawatiPan2010
 
-    def test_mean(self):
-        self.check('MP2010/MP2010_MEAN.csv',
-                   max_discrep_percentage=1.0)
-
-    def test_std_total(self):
-        self.check('MP2010/MP2010_STDTOTAL.csv',
-                   max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check_all('MP2010/MP2010_MEAN.csv',
+                       'MP2010/MP2010_STDTOTAL.csv',
+                       mean_discrep_percentage=1.0,
+                       std_discrep_percentage=0.1)
