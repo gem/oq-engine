@@ -131,12 +131,12 @@ class KothaEtAl2020TestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020
 
     def test_all(self):
-        self.check_all("kotha20/KOTHA_2020_CENTRAL_MEAN.csv",
-                       mean_discrep_percentage=MAX_DISCREP)
-        self.check_all("kotha20/KOTHA_2020_STDDEV_INTRA_EVENT.csv",
-                       "kotha20/KOTHA_2020_STDDEV_INTER_EVENT.csv",
-                       "kotha20/KOTHA_2020_STDDEV_TOTAL.csv",
-                       mean_discrep_percentage=MAX_DISCREP)
+        self.check("kotha20/KOTHA_2020_CENTRAL_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP)
+        self.check("kotha20/KOTHA_2020_STDDEV_INTRA_EVENT.csv",
+                   "kotha20/KOTHA_2020_STDDEV_INTER_EVENT.csv",
+                   "kotha20/KOTHA_2020_STDDEV_TOTAL.csv",
+                   max_discrep_percentage=MAX_DISCREP)
 
 
 class KothaEtAl2020SiteTestCase(BaseGSIMTestCase):
@@ -145,11 +145,11 @@ class KothaEtAl2020SiteTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020Site
 
     def test_all(self):
-        self.check_all("kotha20/KOTHA_2020_VS30_MEAN.csv",
-                       "kotha20/KOTHA_2020_VS30_STDDEV_INTRA_EVENT.csv",
-                       "kotha20/KOTHA_2020_VS30_STDDEV_INTER_EVENT.csv",
-                       "kotha20/KOTHA_2020_VS30_STDDEV_TOTAL.csv",
-                       mean_discrep_percentage=MAX_DISCREP)
+        self.check("kotha20/KOTHA_2020_VS30_MEAN.csv",
+                   "kotha20/KOTHA_2020_VS30_STDDEV_INTRA_EVENT.csv",
+                   "kotha20/KOTHA_2020_VS30_STDDEV_INTER_EVENT.csv",
+                   "kotha20/KOTHA_2020_VS30_STDDEV_TOTAL.csv",
+                   max_discrep_percentage=MAX_DISCREP)
 
 
 class KothaEtAl2020SlopeTestCase(BaseGSIMTestCase):
@@ -158,11 +158,11 @@ class KothaEtAl2020SlopeTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020Slope
 
     def test_all(self):
-        self.check_all("kotha20/KOTHA_2020_SLOPE_MEAN.csv",
-                       "kotha20/KOTHA_2020_SLOPE_STDDEV_INTRA_EVENT.csv",
-                       "kotha20/KOTHA_2020_SLOPE_STDDEV_INTER_EVENT.csv",
-                       "kotha20/KOTHA_2020_SLOPE_STDDEV_TOTAL.csv",
-                       mean_discrep_percentage=MAX_DISCREP)
+        self.check("kotha20/KOTHA_2020_SLOPE_MEAN.csv",
+                   "kotha20/KOTHA_2020_SLOPE_STDDEV_INTRA_EVENT.csv",
+                   "kotha20/KOTHA_2020_SLOPE_STDDEV_INTER_EVENT.csv",
+                   "kotha20/KOTHA_2020_SLOPE_STDDEV_TOTAL.csv",
+                   max_discrep_percentage=MAX_DISCREP)
 
 
 class KothaEtAl2020ESHM20TestCase(BaseGSIMTestCase):
@@ -170,11 +170,11 @@ class KothaEtAl2020ESHM20TestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020ESHM20
 
     def test_all(self):
-        self.check_all("kotha20/KOTHA_2020_ESHM_CENTRAL_MEAN.csv",
-                       "kotha20/KOTHA_2020_ESHM_STDDEV_INTRA_EVENT.csv",
-                       "kotha20/KOTHA_2020_ESHM_STDDEV_INTER_EVENT.csv",
-                       "kotha20/KOTHA_2020_ESHM_STDDEV_TOTAL.csv",
-                       mean_discrep_percentage=MAX_DISCREP)
+        self.check("kotha20/KOTHA_2020_ESHM_CENTRAL_MEAN.csv",
+                   "kotha20/KOTHA_2020_ESHM_STDDEV_INTRA_EVENT.csv",
+                   "kotha20/KOTHA_2020_ESHM_STDDEV_INTER_EVENT.csv",
+                   "kotha20/KOTHA_2020_ESHM_STDDEV_TOTAL.csv",
+                   max_discrep_percentage=MAX_DISCREP)
 
 
 class KothaEtAl2020ESHM20NonErgodicTestCase(BaseGSIMTestCase):
@@ -182,10 +182,10 @@ class KothaEtAl2020ESHM20NonErgodicTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020ESHM20
 
     def test_stds(self):
-        self.check_all(
+        self.check(
             "kotha20/KOTHA_2020_ESHM_STDDEV_NONERGODIC_INTRA_EVENT.csv",
             "kotha20/KOTHA_2020_ESHM_STDDEV_NONERGODIC_TOTAL.csv",
-            mean_discrep_percentage=MAX_DISCREP,
+            max_discrep_percentage=MAX_DISCREP,
             ergodic=False)
 
 
@@ -194,8 +194,8 @@ class KothaEtAl2020ESHM20FastAttenTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020ESHM20
 
     def test_all(self):
-        self.check_all("kotha20/KOTHA_2020_ESHM_FAST_ATTEN_MEAN.csv",
-                       mean_discrep_percentage=MAX_DISCREP, c3_epsilon=-1.0)
+        self.check("kotha20/KOTHA_2020_ESHM_FAST_ATTEN_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP, c3_epsilon=-1.0)
 
 
 class KothaEtAl2020ESHM20FastC3TestCase(BaseGSIMTestCase):
@@ -203,8 +203,8 @@ class KothaEtAl2020ESHM20FastC3TestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020ESHM20
 
     def test_all(self):
-        self.check_all("kotha20/KOTHA_2020_ESHM_c3_FAST_MEAN.csv",
-                       mean_discrep_percentage=MAX_DISCREP, c3=c3_fast)
+        self.check("kotha20/KOTHA_2020_ESHM_c3_FAST_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP, c3=c3_fast)
 
 
 class KothaEtAl2020ESHM20HighSigmaMuTestCase(BaseGSIMTestCase):
@@ -213,9 +213,9 @@ class KothaEtAl2020ESHM20HighSigmaMuTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020ESHM20
 
     def test_all(self):
-        self.check_all("kotha20/KOTHA_2020_ESHM_HIGH_SIGMA_MU_MEAN.csv",
-                       mean_discrep_percentage=MAX_DISCREP,
-                       sigma_mu_epsilon=1.0)
+        self.check("kotha20/KOTHA_2020_ESHM_HIGH_SIGMA_MU_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   sigma_mu_epsilon=1.0)
 
 
 class KothaEtAl2020ESHM20HighDL2LTestCase(BaseGSIMTestCase):
@@ -223,8 +223,8 @@ class KothaEtAl2020ESHM20HighDL2LTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020ESHM20
 
     def test_all(self):
-        self.check_all("kotha20/KOTHA_2020_ESHM_DL2L_HIGH_MEAN.csv",
-                       mean_discrep_percentage=MAX_DISCREP, dl2l=dl2l_high)
+        self.check("kotha20/KOTHA_2020_ESHM_DL2L_HIGH_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP, dl2l=dl2l_high)
 
 
 class KothaEtAl2020SlopeGeologyTestCase(BaseGSIMTestCase):
@@ -233,9 +233,9 @@ class KothaEtAl2020SlopeGeologyTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2020ESHM20SlopeGeology
 
     def test_all(self):
-        self.check_all(
+        self.check(
             "kotha20/KOTHA_2020_SLOPE_GEOLOGY_MEAN.csv",
             "kotha20/KOTHA_2020_SLOPE_GEOLOGY_INTRA_EVENT_STDDEV.csv",
             "kotha20/KOTHA_2020_SLOPE_GEOLOGY_INTER_EVENT_STDDEV.csv",
             "kotha20/KOTHA_2020_SLOPE_GEOLOGY_TOTAL_STDDEV.csv",
-            mean_discrep_percentage=MAX_DISCREP)
+            max_discrep_percentage=MAX_DISCREP)

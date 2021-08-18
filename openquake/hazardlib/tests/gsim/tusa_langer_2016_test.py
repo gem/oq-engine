@@ -44,9 +44,9 @@ class TusaLanger2016RepiBA08SETestCase(BaseGSIMTestCase):
     STD_FILE = "TL16/TusaLanger2016BA08SE_STD_TOTAL.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class TusaLanger2016RepiBA08DETestCase(TusaLanger2016RepiBA08SETestCase):

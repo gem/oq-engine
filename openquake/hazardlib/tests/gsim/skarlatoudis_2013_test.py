@@ -33,6 +33,6 @@ class SkarlatoudisEtAlSSlab2013TestCase(BaseGSIMTestCase):
     INTRA_FILE = "SKARL13/SKARL13_SSLAB_CENTRAL_STDDEV_INTRA.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.TOTAL_FILE,
-                       self.INTER_FILE, self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, self.TOTAL_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=0.1)

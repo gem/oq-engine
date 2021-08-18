@@ -26,9 +26,9 @@ class ZalachorisRathje2019TestCase(BaseGSIMTestCase):
     # decimals in the coeffs of BSSA14
 
     def test_all(self):
-        self.check_all('Zalachoris/Zalachoris_MEAN.csv',
-                       'Zalachoris/Zalachoris_intra.csv',
-                       'Zalachoris/Zalachoris_inter.csv',
-                       'Zalachoris/Zalachoris_totalsigma.csv',
-                       mean_discrep_percentage=1.0,
-                       std_discrep_percentage=0.2)
+        self.check('Zalachoris/Zalachoris_MEAN.csv',
+                   'Zalachoris/Zalachoris_intra.csv',
+                   'Zalachoris/Zalachoris_inter.csv',
+                   'Zalachoris/Zalachoris_totalsigma.csv',
+                   max_discrep_percentage=1.0,
+                   std_discrep_percentage=0.2)

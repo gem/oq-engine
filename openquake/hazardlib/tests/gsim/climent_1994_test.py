@@ -28,7 +28,7 @@ class ClimentEtAl1994TestCase(BaseGSIMTestCase):
     # The tables have been modified according to the oq-engine test format
 
     def test_all(self):
-        self.check_all('CLI1994/CLI94_MEAN.csv',
-                       'CLI1994/CLI94_TOTAL.csv',
-                       mean_discrep_percentage=0.015,
-                       std_discrep_percentage=0.010)
+        self.check('CLI1994/CLI94_MEAN.csv',
+                   'CLI1994/CLI94_TOTAL.csv',
+                   max_discrep_percentage=0.015,
+                   std_discrep_percentage=0.010)

@@ -32,9 +32,9 @@ class BergeThierryEtAl2003SIGMATestCase(BaseGSIMTestCase):
     GSIM_CLASS = BergeThierryEtAl2003SIGMA
 
     def test_all(self):
-        self.check_all('B03/BergeThierryEtAl2003SIGMA_MEAN.csv',
-                       'B03/BergeThierryEtAl2003SIGMA_TOTAL_STDDEV.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('B03/BergeThierryEtAl2003SIGMA_MEAN.csv',
+                   'B03/BergeThierryEtAl2003SIGMA_TOTAL_STDDEV.csv',
+                   max_discrep_percentage=0.1)
 
 
 class BergeThierryEtAl2003MwWTestCase(BaseGSIMTestCase):
@@ -43,9 +43,9 @@ class BergeThierryEtAl2003MwWTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BergeThierryEtAl2003MwW
 
     def test_all(self):
-        self.check_all('B03/BergeThierryEtAl2003MwW_MEAN.csv',
-                       'B03/BergeThierryEtAl2003MwW_TOTAL_STDDEV.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('B03/BergeThierryEtAl2003MwW_MEAN.csv',
+                   'B03/BergeThierryEtAl2003MwW_TOTAL_STDDEV.csv',
+                   max_discrep_percentage=0.1)
 
 
 class BergeThierryEtAl2003MsTestCase(BaseGSIMTestCase):
@@ -53,9 +53,9 @@ class BergeThierryEtAl2003MsTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BergeThierryEtAl2003Ms
 
     def test_all(self):
-        self.check_all('B03/BergeThierryEtAl2003Ms_MEAN.csv',
-                       'B03/BergeThierryEtAl2003Ms_TOTAL_STDDEV.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('B03/BergeThierryEtAl2003Ms_MEAN.csv',
+                   'B03/BergeThierryEtAl2003Ms_TOTAL_STDDEV.csv',
+                   max_discrep_percentage=0.1)
 
 
 class BergeThierryEtAl2003MwL_MEDTestCase(BaseGSIMTestCase):
@@ -64,9 +64,9 @@ class BergeThierryEtAl2003MwL_MEDTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BergeThierryEtAl2003MwL_MED
 
     def test_all(self):
-        self.check_all('B03/BergeThierryEtAl2003MwL_MED_MEAN.csv',
-                       'B03/BergeThierryEtAl2003MwL_MED_TOTAL_STDDEV.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('B03/BergeThierryEtAl2003MwL_MED_MEAN.csv',
+                   'B03/BergeThierryEtAl2003MwL_MED_TOTAL_STDDEV.csv',
+                   max_discrep_percentage=0.1)
 
 
 class BergeThierryEtAl2003MwL_ITATestCase(BaseGSIMTestCase):
@@ -75,10 +75,10 @@ class BergeThierryEtAl2003MwL_ITATestCase(BaseGSIMTestCase):
     GSIM_CLASS = BergeThierryEtAl2003MwL_ITA
 
     def test_all(self):
-        self.check_all('B03/BergeThierryEtAl2003MwL_ITA_MEAN.csv',
-                       'B03/BergeThierryEtAl2003MwL_ITA_TOTAL_STDDEV.csv',
-                       mean_discrep_percentage=0.3,
-                       std_discrep_percentage=0.1)
+        self.check('B03/BergeThierryEtAl2003MwL_ITA_MEAN.csv',
+                   'B03/BergeThierryEtAl2003MwL_ITA_TOTAL_STDDEV.csv',
+                   max_discrep_percentage=0.3,
+                   std_discrep_percentage=0.1)
 
 
 class BergeThierryEtAl2003MwL_GBLTestCase(BaseGSIMTestCase):
@@ -87,7 +87,7 @@ class BergeThierryEtAl2003MwL_GBLTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BergeThierryEtAl2003MwL_GBL
 
     def test_all(self):
-        self.check_all('B03/BergeThierryEtAl2003MwL_GBL_MEAN.csv',
-                       'B03/BergeThierryEtAl2003MwL_GBL_TOTAL_STDDEV.csv',
-                       mean_discrep_percentage=0.3,
-                       std_discrep_percentage=0.1)
+        self.check('B03/BergeThierryEtAl2003MwL_GBL_MEAN.csv',
+                   'B03/BergeThierryEtAl2003MwL_GBL_TOTAL_STDDEV.csv',
+                   max_discrep_percentage=0.3,
+                   std_discrep_percentage=0.1)

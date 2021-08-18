@@ -26,7 +26,7 @@ class Allen2012TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Allen2012
 
     def test_all(self):
-        self.check_all('A12/ALLEN2012_MEAN.csv',
-                       'A12/ALLEN2012_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+        self.check('A12/ALLEN2012_MEAN.csv',
+                   'A12/ALLEN2012_STD_TOTAL.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)

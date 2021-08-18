@@ -28,8 +28,8 @@ class DerrasEtAl2014TestCase(BaseGSIMTestCase):
     # supplement to the paper
 
     def test_all(self):
-        self.check_all('derras14/DERRAS14_MEAN.csv',
-                       'derras14/DERRAS14_INTRA_EVENT_STDDEV.csv',
-                       'derras14/DERRAS14_INTER_EVENT_STDDEV.csv',
-                       'derras14/DERRAS14_TOTAL_STDDEV.csv',
-                       mean_discrep_percentage=MAX_DISC)
+        self.check('derras14/DERRAS14_MEAN.csv',
+                   'derras14/DERRAS14_INTRA_EVENT_STDDEV.csv',
+                   'derras14/DERRAS14_INTER_EVENT_STDDEV.csv',
+                   'derras14/DERRAS14_TOTAL_STDDEV.csv',
+                   max_discrep_percentage=MAX_DISC)

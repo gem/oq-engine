@@ -28,24 +28,24 @@ class CauzziFaccioli2008SWISS01TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CauzziFaccioli2008SWISS01
 
     def test_all(self):
-        self.check_all('CF08Swiss/CF08_MEAN_VsK_1.csv',
-                       'CF08Swiss/cf_2008_phis_ss_embeded.csv',
-                       mean_discrep_percentage=0.50)
+        self.check('CF08Swiss/CF08_MEAN_VsK_1.csv',
+                   'CF08Swiss/cf_2008_phis_ss_embeded.csv',
+                   max_discrep_percentage=0.50)
 
 
 class CauzziFaccioli2008SWISS04TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CauzziFaccioli2008SWISS04
 
     def test_all(self):
-        self.check_all('CF08Swiss/CF08_MEAN_VsK_4.csv',
-                       'CF08Swiss/cf_2008_phis_ss_embeded.csv',
-                       mean_discrep_percentage=0.50)
+        self.check('CF08Swiss/CF08_MEAN_VsK_4.csv',
+                   'CF08Swiss/cf_2008_phis_ss_embeded.csv',
+                   max_discrep_percentage=0.50)
 
 
 class CauzziFaccioli2008SWISS08TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CauzziFaccioli2008SWISS08
 
     def test_all(self):
-        self.check_all('CF08Swiss/CF08_MEAN_VsK_8.csv',
-                       'CF08Swiss/cf_2008_phis_ss_embeded.csv',
-                       mean_discrep_percentage=0.50)
+        self.check('CF08Swiss/CF08_MEAN_VsK_8.csv',
+                   'CF08Swiss/cf_2008_phis_ss_embeded.csv',
+                   max_discrep_percentage=0.50)

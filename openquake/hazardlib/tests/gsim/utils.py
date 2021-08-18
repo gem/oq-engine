@@ -186,10 +186,10 @@ class BaseGSIMTestCase(unittest.TestCase):
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
     GSIM_CLASS = None
 
-    def check_all(self, *filenames, mean_discrep_percentage,
-                  std_discrep_percentage=None, **kwargs):
+    def check(self, *filenames, max_discrep_percentage,
+              std_discrep_percentage=None, **kwargs):
         if std_discrep_percentage is None:
-            std_discrep_percentage = mean_discrep_percentage
+            std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
         if NORMALIZE:
@@ -208,7 +208,7 @@ class BaseGSIMTestCase(unittest.TestCase):
                 if not hasattr(ctx, out_type):
                     # for instance MEAN is missing in zhao_2016_test
                     continue
-                discrep = (mean_discrep_percentage if out_type == 'MEAN'
+                discrep = (max_discrep_percentage if out_type == 'MEAN'
                            else std_discrep_percentage)
                 for m, im in enumerate(cmaker.imtls):
                     if out_type == 'MEAN' and im != 'MMI':

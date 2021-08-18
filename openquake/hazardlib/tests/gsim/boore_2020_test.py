@@ -41,8 +41,8 @@ class BooreEtAl2020TestCase(BaseGSIMTestCase):
     INTRA_FILE = "BOORE20/Boore_2020_intra_std.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)

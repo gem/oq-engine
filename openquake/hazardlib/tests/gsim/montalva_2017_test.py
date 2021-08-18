@@ -34,11 +34,11 @@ class MontalvaEtAl2017SInterTestCase(BaseGSIMTestCase):
     INTRA_FILE = "mont17/MONTALVA_SINTER_INTRA_EVENT.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.TOTAL_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class MontalvaEtAl2017SSlabTestCase(MontalvaEtAl2017SInterTestCase):

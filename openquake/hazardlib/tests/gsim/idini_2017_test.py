@@ -34,11 +34,11 @@ class IdiniEtAl2017SInterTestCase(BaseGSIMTestCase):
     INTRA_FILE = "Idini2017/IDINI_2017_SINTER_INTRA_EVENT_STDDEV.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.TOTAL_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class IdiniEtAl2017SSlabTestCase(IdiniEtAl2017SInterTestCase):

@@ -85,54 +85,54 @@ class NSHMP2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = NSHMP2014
 
     def test_AbrahamsonEtAl2014Upper(self):
-        self.check_all('NSHMP2014/ASK14_NSHMP_UPPER_MEAN.csv',
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       gmpe_name='AbrahamsonEtAl2014', sgn=1)
+        self.check('NSHMP2014/ASK14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='AbrahamsonEtAl2014', sgn=1)
 
     def test_AbrahamsonEtAl2014Lower(self):
-        self.check_all('NSHMP2014/ASK14_NSHMP_LOWER_MEAN.csv',
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       gmpe_name='AbrahamsonEtAl2014', sgn=-1)
+        self.check('NSHMP2014/ASK14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='AbrahamsonEtAl2014', sgn=-1)
 
     def test_BooreEtAl2014Upper(self):
-        self.check_all('NSHMP2014/BSSA14_NSHMP_UPPER_MEAN.csv',
-                       mean_discrep_percentage=2.0,
-                       gmpe_name='BooreEtAl2014', sgn=1)
+        self.check('NSHMP2014/BSSA14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=2.0,
+                   gmpe_name='BooreEtAl2014', sgn=1)
 
     def test_BooreEtAl2014Lower(self):
-        self.check_all('NSHMP2014/BSSA14_NSHMP_LOWER_MEAN.csv',
-                       mean_discrep_percentage=2.0,
-                       gmpe_name='BooreEtAl2014', sgn=-1)
+        self.check('NSHMP2014/BSSA14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=2.0,
+                   gmpe_name='BooreEtAl2014', sgn=-1)
 
     def test_CampbellBozorgnia2014Upper(self):
-        self.check_all('NSHMP2014/CB14_NSHMP_UPPER_MEAN.csv',
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       gmpe_name='CampbellBozorgnia2014', sgn=1)
+        self.check('NSHMP2014/CB14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='CampbellBozorgnia2014', sgn=1)
 
     def test_CampbellBozorgnia2014Lower(self):
-        self.check_all('NSHMP2014/CB14_NSHMP_LOWER_MEAN.csv',
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       gmpe_name='CampbellBozorgnia2014', sgn=-1)
+        self.check('NSHMP2014/CB14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='CampbellBozorgnia2014', sgn=-1)
 
     def test_ChiouYoungs2014NSHMPUpper(self):
-        self.check_all('NSHMP2014/CY14_NSHMP_UPPER_MEAN.csv',
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       gmpe_name='ChiouYoungs2014', sgn=1)
+        self.check('NSHMP2014/CY14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='ChiouYoungs2014', sgn=1)
 
     def test_ChiouYoungs2014NSHMPLower(self):
-        self.check_all('NSHMP2014/CY14_NSHMP_LOWER_MEAN.csv',
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       gmpe_name='ChiouYoungs2014', sgn=-1)
+        self.check('NSHMP2014/CY14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='ChiouYoungs2014', sgn=-1)
 
     def test_Idriss2014NSHMPUpper(self):
-        self.check_all('NSHMP2014/IDRISS14_NSHMP_UPPER_MEAN.csv',
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       gmpe_name='Idriss2014', sgn=1)
+        self.check('NSHMP2014/IDRISS14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='Idriss2014', sgn=1)
 
     def test_Idriss2014NSHMPLower(self):
-        self.check_all('NSHMP2014/IDRISS14_NSHMP_LOWER_MEAN.csv',
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       gmpe_name='Idriss2014', sgn=-1)
+        self.check('NSHMP2014/IDRISS14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='Idriss2014', sgn=-1)
 
 
 class GeneralEquivalenceTestCase(unittest.TestCase):

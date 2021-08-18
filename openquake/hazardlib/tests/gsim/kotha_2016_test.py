@@ -30,11 +30,11 @@ class KothaEtAl2016ItalyTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2016Italy
 
     def test_all(self):
-        self.check_all("kotha16/KOTHA16_ITALY_MEAN.csv",
-                       "kotha16/KOTHA16_INTRA_STDDEV.csv",
-                       "kotha16/KOTHA16_INTER_STDDEV.csv",
-                       "kotha16/KOTHA16_TOTAL_STDDEV.csv",
-                       mean_discrep_percentage=MAX_DISCREP)
+        self.check("kotha16/KOTHA16_ITALY_MEAN.csv",
+                   "kotha16/KOTHA16_INTRA_STDDEV.csv",
+                   "kotha16/KOTHA16_INTER_STDDEV.csv",
+                   "kotha16/KOTHA16_TOTAL_STDDEV.csv",
+                   max_discrep_percentage=MAX_DISCREP)
 
 
 class KothaEtAl2016TurkeyTestCase(BaseGSIMTestCase):
@@ -44,8 +44,8 @@ class KothaEtAl2016TurkeyTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2016Turkey
 
     def test_all(self):
-        self.check_all("kotha16/KOTHA16_TURKEY_MEAN.csv",
-                       mean_discrep_percentage=MAX_DISCREP)
+        self.check("kotha16/KOTHA16_TURKEY_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP)
 
 
 class KothaEtAl2016OtherTestCase(BaseGSIMTestCase):
@@ -55,5 +55,5 @@ class KothaEtAl2016OtherTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2016Other
 
     def test_all(self):
-        self.check_all("kotha16/KOTHA16_OTHER_MEAN.csv",
-                       mean_discrep_percentage=MAX_DISCREP)
+        self.check("kotha16/KOTHA16_OTHER_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP)

@@ -34,10 +34,10 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FrankelEtAl1996MblgAB1987NSHMP2008
 
     def test_all(self):
-        self.check_all('FRANKEL1996/FRANKEL96MblgAB1987_MEAN.csv',
-                       'FRANKEL1996/FRANKEL96MblgAB1987_STD_TOTAL.csv',
-                       mean_discrep_percentage=1.9,
-                       std_discrep_percentage=0.1)
+        self.check('FRANKEL1996/FRANKEL96MblgAB1987_MEAN.csv',
+                   'FRANKEL1996/FRANKEL96MblgAB1987_STD_TOTAL.csv',
+                   max_discrep_percentage=1.9,
+                   std_discrep_percentage=0.1)
 
     def test_non_supported_imt(self):
         ctx = RuptureContext()
@@ -98,17 +98,17 @@ class FrankelEtAl1996MblgJ1996NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FrankelEtAl1996MblgJ1996NSHMP2008
 
     def test_mean(self):
-        self.check_all('FRANKEL1996/FRANKEL96MblgJ1996_MEAN.csv',
-                       'FRANKEL1996/FRANKEL96MblgJ1996_STD_TOTAL.csv',
-                       mean_discrep_percentage=2.0,
-                       std_discrep_percentage=0.1)
+        self.check('FRANKEL1996/FRANKEL96MblgJ1996_MEAN.csv',
+                   'FRANKEL1996/FRANKEL96MblgJ1996_STD_TOTAL.csv',
+                   max_discrep_percentage=2.0,
+                   std_discrep_percentage=0.1)
 
 
 class FrankelEtAl1996MwNSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FrankelEtAl1996MwNSHMP2008
 
     def test_all(self):
-        self.check_all('FRANKEL1996/FRANKEL96Mw_MEAN.csv',
-                       'FRANKEL1996/FRANKEL96Mw_STD_TOTAL.csv',
-                       mean_discrep_percentage=1.8,
-                       std_discrep_percentage=0.1)
+        self.check('FRANKEL1996/FRANKEL96Mw_MEAN.csv',
+                   'FRANKEL1996/FRANKEL96Mw_STD_TOTAL.csv',
+                   max_discrep_percentage=1.8,
+                   std_discrep_percentage=0.1)

@@ -56,12 +56,12 @@ class CauzziEtAl2014TestCase(BaseGSIMTestCase):
     INTRA_FILE = "C14/CAUZZI_INTRA_STD.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE,
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class CauzziEtAl2014NoSOFTestCase(CauzziEtAl2014TestCase):
@@ -138,9 +138,9 @@ class CauzziEtAl2014Eurocode8scaledTestCase(BaseGSIMTestCase):
     INTRA_FILE = "C14scaled/CAUZZI_EC8_INTRA_STD.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE,
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)

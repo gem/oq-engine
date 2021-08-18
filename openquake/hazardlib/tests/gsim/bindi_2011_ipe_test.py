@@ -38,10 +38,9 @@ class BindiEtAl2011RepiTestCase(BaseGSIMTestCase):
     STD_FILE = "bindi_2011_ipe/Bindi2011_Repi_stDev.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class BindiEtAl2011RepiFixedHTestCase(BaseGSIMTestCase):
@@ -52,7 +51,6 @@ class BindiEtAl2011RepiFixedHTestCase(BaseGSIMTestCase):
     STD_FILE = "bindi_2011_ipe/Bindi_RepiFixedH_stDev.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
