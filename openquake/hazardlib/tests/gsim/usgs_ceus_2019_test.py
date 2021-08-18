@@ -37,24 +37,24 @@ class NGAEastUSGSCEUSUncertaintyEPRITestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
     def test_std(self):
-        self.check_all("usgs_ceus_2019/USGS_CEUS_EPRI_INTRA_EVENT_STDDEV.csv",
-                       "usgs_ceus_2019/USGS_CEUS_EPRI_INTER_EVENT_STDDEV.csv",
-                       "usgs_ceus_2019/USGS_CEUS_EPRI_TOTAL_STDDEV.csv",
-                       mean_discrep_percentage=MAX_DISCREP,
-                       gmpe_table="nga_east_PEER_EX.hdf5",
-                       sigma_model="EPRI")
+        self.check("usgs_ceus_2019/USGS_CEUS_EPRI_INTRA_EVENT_STDDEV.csv",
+                   "usgs_ceus_2019/USGS_CEUS_EPRI_INTER_EVENT_STDDEV.csv",
+                   "usgs_ceus_2019/USGS_CEUS_EPRI_TOTAL_STDDEV.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5",
+                   sigma_model="EPRI")
 
 
 class NGAEastUSGSCEUSUncertaintyPANELTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
     def test_std(self):
-        self.check_all("usgs_ceus_2019/USGS_CEUS_PANEL_INTRA_EVENT_STDDEV.csv",
-                       "usgs_ceus_2019/USGS_CEUS_PANEL_INTER_EVENT_STDDEV.csv",
-                       "usgs_ceus_2019/USGS_CEUS_PANEL_TOTAL_STDDEV.csv",
-                       mean_discrep_percentage=MAX_DISCREP,
-                       gmpe_table="nga_east_PEER_EX.hdf5",
-                       sigma_model="PANEL")
+        self.check("usgs_ceus_2019/USGS_CEUS_PANEL_INTRA_EVENT_STDDEV.csv",
+                   "usgs_ceus_2019/USGS_CEUS_PANEL_INTER_EVENT_STDDEV.csv",
+                   "usgs_ceus_2019/USGS_CEUS_PANEL_TOTAL_STDDEV.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5",
+                   sigma_model="PANEL")
 
 
 # Site Amplification Epistemic Uncertainty Test Cases
@@ -62,21 +62,21 @@ class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
     def test_median(self):
-        self.check_all("usgs_ceus_2019/NGAEAST_SITE_MEDIAN_MEAN.csv",
-                       mean_discrep_percentage=MAX_DISCREP,
-                       gmpe_table="nga_east_PEER_EX.hdf5")
+        self.check("usgs_ceus_2019/NGAEAST_SITE_MEDIAN_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5")
 
 
 # USGS verification tests using independently generated test tables
 # Verification Test Cases - Means and stddevs
 def make_test(alias, key):
     def test_all(self):
-        self.check_all(f"usgs_ceus_2019/{alias}_MEAN.csv",
-                       f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
-                       mean_discrep_percentage=0.15,
-                       std_discrep_percentage=0.01,
-                       gmpe_table=f"nga_east_{key}.hdf5",
-                       epistemic_site=False)
+        self.check(f"usgs_ceus_2019/{alias}_MEAN.csv",
+                   f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
+                   max_discrep_percentage=0.15,
+                   std_discrep_percentage=0.01,
+                   gmpe_table=f"nga_east_{key}.hdf5",
+                   epistemic_site=False)
     test_all.__name__ = 'test_all' + key
     return test_all
 

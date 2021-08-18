@@ -32,22 +32,22 @@ class AtkinsonBoore2003SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore2003SInter
 
     def test_all(self):
-        self.check_all('AB03/AB03SInter_MEAN.csv',
-                       'AB03/AB03SInter_STD_TOTAL.csv',
-                       'AB03/AB03SInter_STD_INTRA.csv',
-                       'AB03/AB03SInter_STD_INTER.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB03/AB03SInter_MEAN.csv',
+                   'AB03/AB03SInter_STD_TOTAL.csv',
+                   'AB03/AB03SInter_STD_INTRA.csv',
+                   'AB03/AB03SInter_STD_INTER.csv',
+                   max_discrep_percentage=0.1)
 
 
 class AtkinsonBoore2003SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore2003SSlab
 
     def test_all(self):
-        self.check_all('AB03/AB03SSlab_MEAN.csv',
-                       'AB03/AB03SSlab_STD_TOTAL.csv',
-                       'AB03/AB03SSlab_STD_INTRA.csv',
-                       'AB03/AB03SSlab_STD_INTER.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB03/AB03SSlab_MEAN.csv',
+                   'AB03/AB03SSlab_STD_TOTAL.csv',
+                   'AB03/AB03SSlab_STD_INTRA.csv',
+                   'AB03/AB03SSlab_STD_INTER.csv',
+                   max_discrep_percentage=0.1)
 
 
 class AtkinsonBoore2003SInterNSHMP2008TestCase(BaseGSIMTestCase):
@@ -55,12 +55,12 @@ class AtkinsonBoore2003SInterNSHMP2008TestCase(BaseGSIMTestCase):
     # test data generated from subrutine 'getABsub' in 'hazSUBXnga.f'
 
     def test_mean(self):
-        self.check_all('AB03/AB03SInterGlobalNSHMP_MEAN.csv',
-                       mean_discrep_percentage=0.5)
+        self.check('AB03/AB03SInterGlobalNSHMP_MEAN.csv',
+                   max_discrep_percentage=0.5)
 
     def test_std_total(self):
-        self.check_all('AB03/AB03SInterGlobalNSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB03/AB03SInterGlobalNSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class AtkinsonBoore2003SSlabNSHMP2008TestCase(BaseGSIMTestCase):
@@ -68,10 +68,10 @@ class AtkinsonBoore2003SSlabNSHMP2008TestCase(BaseGSIMTestCase):
     # test data generated from subrutine 'getABsub' in 'hazgridXnga2.f'
 
     def test_all(self):
-        self.check_all('AB03/AB03SSlabGlobalNSHMP_MEAN.csv',
-                       'AB03/AB03SSlabGlobalNSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.3,
-                       std_discrep_percentage=0.1)
+        self.check('AB03/AB03SSlabGlobalNSHMP_MEAN.csv',
+                   'AB03/AB03SSlabGlobalNSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.3,
+                   std_discrep_percentage=0.1)
 
 
 class AtkinsonBoore2003SSlabCascadiaNSHMP2008TestCase(BaseGSIMTestCase):
@@ -79,10 +79,10 @@ class AtkinsonBoore2003SSlabCascadiaNSHMP2008TestCase(BaseGSIMTestCase):
     # test data generated from subrutine 'getABsub' in 'hazgridXnga2.f'
 
     def test_all(self):
-        self.check_all('AB03/AB03SSlabCascadiaNSHMP_MEAN.csv',
-                       'AB03/AB03SSlabCascadiaNSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.2,
-                       std_discrep_percentage=0.1)
+        self.check('AB03/AB03SSlabCascadiaNSHMP_MEAN.csv',
+                   'AB03/AB03SSlabCascadiaNSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.2,
+                   std_discrep_percentage=0.1)
 
 
 class AtkinsonBoore2003SSlabJapanNSHMP2008TestCase(BaseGSIMTestCase):
@@ -94,8 +94,8 @@ class AtkinsonBoore2003SSlabJapanNSHMP2008TestCase(BaseGSIMTestCase):
     # implementation.
 
     def test_all(self):
-        self.check_all('AB03/AB03SSlabJapanNSHMP_MEAN.csv',
-                       mean_discrep_percentage=0.2)
+        self.check('AB03/AB03SSlabJapanNSHMP_MEAN.csv',
+                   max_discrep_percentage=0.2)
 
-        self.check_all('AB03/AB03SSlabJapanNSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AB03/AB03SSlabJapanNSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

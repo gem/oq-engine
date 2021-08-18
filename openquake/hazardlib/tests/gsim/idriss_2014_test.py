@@ -28,6 +28,6 @@ class Idriss2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Idriss2014
 
     def test_all(self):
-        self.check_all("IDRISS14/IDRISS_2014_MEAN.csv",
-                       "IDRISS14/IDRISS_2014_TOTAL_STD.csv",
-                       mean_discrep_percentage=0.1)
+        self.check("IDRISS14/IDRISS_2014_MEAN.csv",
+                   "IDRISS14/IDRISS_2014_TOTAL_STD.csv",
+                   max_discrep_percentage=0.1)

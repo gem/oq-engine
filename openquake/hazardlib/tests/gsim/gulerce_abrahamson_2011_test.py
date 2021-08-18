@@ -33,11 +33,11 @@ class GulreceAbrahamson2011TestCase(BaseGSIMTestCase):
     GSIM_CLASS = GulerceAbrahamson2011
 
     def test_mean_Fig_7_8(self):
-        self.check_all('GA11/GA11_Fig_7_8_MEAN.csv',
-                       mean_discrep_percentage=4.,
-                       gmpe_name='AbrahamsonSilva2008')
+        self.check('GA11/GA11_Fig_7_8_MEAN.csv',
+                   max_discrep_percentage=4.,
+                   gmpe_name='AbrahamsonSilva2008')
 
     def test_mean_Fig_9_10(self):
-        self.check_all('GA11/GA11_Fig_9_10_MEAN.csv',
-                       mean_discrep_percentage=0.5,
-                       gmpe_name='AbrahamsonSilva2008')
+        self.check('GA11/GA11_Fig_9_10_MEAN.csv',
+                   max_discrep_percentage=0.5,
+                   gmpe_name='AbrahamsonSilva2008')

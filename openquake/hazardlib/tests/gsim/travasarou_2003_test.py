@@ -28,8 +28,8 @@ class TravasarouEtAl2003TestCase(BaseGSIMTestCase):
     GSIM_CLASS = TravasarouEtAl2003
 
     def test_all(self):
-        self.check_all("trav03/TRAV03_MEAN.csv",
-                       "trav03/TRAV03_STDDEV_INTER.csv",
-                       "trav03/TRAV03_STDDEV_INTRA.csv",
-                       "trav03/TRAV03_STDDEV_TOTAL.csv",
-                       mean_discrep_percentage=0.1)
+        self.check("trav03/TRAV03_MEAN.csv",
+                   "trav03/TRAV03_STDDEV_INTER.csv",
+                   "trav03/TRAV03_STDDEV_INTRA.csv",
+                   "trav03/TRAV03_STDDEV_TOTAL.csv",
+                   max_discrep_percentage=0.1)

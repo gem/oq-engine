@@ -29,6 +29,6 @@ class ShahjoueiPezeshk2016TestCase(BaseGSIMTestCase):
     # The data of the values of the mean PGA and SA are in g's.
 
     def test_all(self):
-        self.check_all('SHPZ16/SHPZ16_MEAN.csv',
-                       'SHPZ16/SHPZ16_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.5)
+        self.check('SHPZ16/SHPZ16_MEAN.csv',
+                   'SHPZ16/SHPZ16_STD_TOTAL.csv',
+                   max_discrep_percentage=0.5)

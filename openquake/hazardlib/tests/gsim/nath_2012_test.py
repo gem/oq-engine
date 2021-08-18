@@ -44,8 +44,8 @@ class NathEtAl2012LowerTestCase(BaseGSIMTestCase):
     TOL_PERCENT = 4.
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.SIGMA_FILE,
-                       mean_discrep_percentage=self.TOL_PERCENT)
+        self.check(self.MEAN_FILE, self.SIGMA_FILE,
+                   max_discrep_percentage=self.TOL_PERCENT)
 
 
 class NathEtAl2012UpperTestCase(NathEtAl2012LowerTestCase):

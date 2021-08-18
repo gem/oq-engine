@@ -46,10 +46,8 @@ class Kanno2006ShallowTestCase(BaseGSIMTestCase):
 
     def test_all(self):
         for mean_file, sigma_file in zip(self.MEAN_FILES, self.SIGMA_FILES):
-            self.check_all(mean_file,
-                           mean_discrep_percentage=self.MEAN_TOL)
-            self.check_all(sigma_file,
-                           mean_discrep_percentage=self.MEAN_TOL)
+            self.check(mean_file, max_discrep_percentage=self.MEAN_TOL)
+            self.check(sigma_file, max_discrep_percentage=self.MEAN_TOL)
 
 
 class Kanno2006DeepTestCase(Kanno2006ShallowTestCase):

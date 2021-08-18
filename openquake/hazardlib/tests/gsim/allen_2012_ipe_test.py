@@ -29,9 +29,9 @@ class AllenEtAl2012TestCase(BaseGSIMTestCase):
     SIGMA_FILE = 'a12ipe/AWW_IPE_RRUP_SIGMA.csv'
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.SIGMA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   self.SIGMA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class AllenEtAl2012RhypoTestCase(AllenEtAl2012TestCase):

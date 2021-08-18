@@ -27,17 +27,17 @@ class SomervilleEtAl2009YilgarnCratonTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SomervilleEtAl2009YilgarnCraton
 
     def test_all(self):
-        self.check_all('S09/SOMMERVILLE_YILGARN2009_MEAN.csv',
-                       'S09/SOMMERVILLE_YILGARN2009_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.5,
-                       std_discrep_percentage=0.1)
+        self.check('S09/SOMMERVILLE_YILGARN2009_MEAN.csv',
+                   'S09/SOMMERVILLE_YILGARN2009_STD_TOTAL.csv',
+                   max_discrep_percentage=0.5,
+                   std_discrep_percentage=0.1)
 
 
 class SomervilleEtAl2009NonCratonicTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SomervilleEtAl2009NonCratonic
 
     def test_all(self):
-        self.check_all('S09/SOMMERVILLE_Non_Cratonic2009_MEAN.csv',
-                       'S09/SOMMERVILLE_Non_Cratonic2009_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+        self.check('S09/SOMMERVILLE_Non_Cratonic2009_MEAN.csv',
+                   'S09/SOMMERVILLE_Non_Cratonic2009_STD_TOTAL.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)

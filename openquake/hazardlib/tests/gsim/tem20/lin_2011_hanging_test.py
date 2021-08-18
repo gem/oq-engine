@@ -32,6 +32,6 @@ class LinEtAl2011HanginWallCase(BaseGSIMTestCase):
     GSIM_CLASS = Lin2011hanging
 
     def test_all(self):
-        self.check_all(os.path.join(DATA_PATH, 'lin2011_mean_hw.csv'),
+        self.check(os.path.join(DATA_PATH, 'lin2011_mean_hw.csv'),
                        os.path.join(DATA_PATH, 'lin2011_std_hw.csv'),
-                       mean_discrep_percentage=0.1)
+                       max_discrep_percentage=0.1)

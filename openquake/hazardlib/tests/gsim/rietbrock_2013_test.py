@@ -51,12 +51,12 @@ class RietbrockEtAl2013SelfSimilarTestCase(BaseGSIMTestCase):
     INTRA_FILE = "RIET2013/REA2013_SelfSimilar_IntraStddev.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE,
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class RietbrockEtAl2013MagDependentTestCase(

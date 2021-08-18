@@ -28,37 +28,37 @@ class YuEtAl2013ActiveTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013Ms
 
     def test_all(self):
-        self.check_all('YU2013/yu_2013_mean_active.csv',
-                       'YU2013/yu_2013_stddev_active.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+        self.check('YU2013/yu_2013_mean_active.csv',
+                   'YU2013/yu_2013_stddev_active.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)
 
 
 class YuEtAl2013TibetTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013MsTibet
 
     def test_all(self):
-        self.check_all('YU2013/yu_2013_mean_tibetan.csv',
-                       'YU2013/yu_2013_stddev_tibetan.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+        self.check('YU2013/yu_2013_mean_tibetan.csv',
+                   'YU2013/yu_2013_stddev_tibetan.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)
 
 
 class YuEtAl2013EasternTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013MsEastern
 
     def test_all(self):
-        self.check_all('YU2013/yu_2013_mean_eastern.csv',
-                       'YU2013/yu_2013_stddev_eastern.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+        self.check('YU2013/yu_2013_mean_eastern.csv',
+                   'YU2013/yu_2013_stddev_eastern.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)
 
 
 class YuEtAl2013StableTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013MsStable
 
     def test_all(self):
-        self.check_all('YU2013/yu_2013_mean_stable.csv',
-                       'YU2013/yu_2013_stddev_stable.csv',
-                       mean_discrep_percentage=0.4,
-                       std_discrep_percentage=0.1)
+        self.check('YU2013/yu_2013_mean_stable.csv',
+                   'YU2013/yu_2013_stddev_stable.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)

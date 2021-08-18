@@ -30,7 +30,6 @@ For delta_s2s: Table 5.15
 """
 import os
 import unittest
-from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim import nga_east as ne
 
@@ -555,11 +554,11 @@ class NGAEastUncertaintyTestCase(BaseGSIMTestCase):
         standard deviation, so three checks are executed.
         """
         print(kwargs)
-        self.check_all(filestem + "_INTER_STDDEV.csv",
-                       filestem + "_INTRA_STDDEV.csv",
-                       filestem + "_TOTAL_STDDEV.csv",
-                       mean_discrep_percentage=max_disc,
-                       **kwargs)
+        self.check(filestem + "_INTER_STDDEV.csv",
+                   filestem + "_INTRA_STDDEV.csv",
+                   filestem + "_TOTAL_STDDEV.csv",
+                   max_discrep_percentage=max_disc,
+                   **kwargs)
 
     def test_all_nga_east_uncertainty(self):
         """

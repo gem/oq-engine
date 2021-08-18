@@ -31,10 +31,10 @@ class MunsonThurber1997TestCase(BaseGSIMTestCase):
     # Standard deviation is a fixed value
 
     def test_all(self):
-        self.check_all('MT97/MT97_MEAN.csv',
-                       'MT97/MT97_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.6,
-                       std_discrep_percentage=0.1)
+        self.check('MT97/MT97_MEAN.csv',
+                   'MT97/MT97_STD_TOTAL.csv',
+                   max_discrep_percentage=0.6,
+                   std_discrep_percentage=0.1)
 
 
 class MunsonThurber1997HawaiiTestCase(BaseGSIMTestCase):
@@ -45,7 +45,7 @@ class MunsonThurber1997HawaiiTestCase(BaseGSIMTestCase):
     # Standard deviation is a fixed value
 
     def test_all(self):
-        self.check_all('MT97/MT97_HA_MEAN.csv',
-                       'MT97/MT97_HA_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.6,
-                       std_discrep_percentage=0.1)
+        self.check('MT97/MT97_HA_MEAN.csv',
+                   'MT97/MT97_HA_STD_TOTAL.csv',
+                   max_discrep_percentage=0.6,
+                   std_discrep_percentage=0.1)

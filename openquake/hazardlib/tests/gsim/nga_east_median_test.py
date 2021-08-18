@@ -35,9 +35,9 @@ MAX_DISC = 0.1
 
 def maketest(alias, key):
     def test(self):
-        self.check_all(f"nga_east_median_tables/NGAEast_{key}_MEAN.csv",
-                       mean_discrep_percentage=MAX_DISC,
-                       gmpe_table=f"NGAEast_{key}.hdf5")
+        self.check(f"nga_east_median_tables/NGAEast_{key}_MEAN.csv",
+                   max_discrep_percentage=MAX_DISC,
+                   gmpe_table=f"NGAEast_{key}.hdf5")
         test.__name__ = f'test_{alias}'
     return test
 

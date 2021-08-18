@@ -29,22 +29,22 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class ToroEtAl1997MblgNSHMPTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ToroEtAl1997MblgNSHMP2008
 
-    def test_all(self):
-        self.check_all('TORO97NSHMP/T097MblgNSHMP_MEAN.csv',
-                       mean_discrep_percentage=0.1)
+    def test_mean(self):
+        self.check('TORO97NSHMP/T097MblgNSHMP_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check_all('TORO97NSHMP/T097MblgNSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('TORO97NSHMP/T097MblgNSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class ToroEtAl1997NSHMPTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ToroEtAl1997MwNSHMP2008
 
-    def test_all(self):
-        self.check_all('TORO97NSHMP/T097MwNSHMP_MEAN.csv',
-                       mean_discrep_percentage=0.1)
+    def test_mean(self):
+        self.check('TORO97NSHMP/T097MwNSHMP_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check_all('TORO97NSHMP/T097MwNSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('TORO97NSHMP/T097MwNSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

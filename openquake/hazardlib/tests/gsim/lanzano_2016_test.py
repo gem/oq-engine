@@ -38,9 +38,9 @@ class LanzanoEtAl2016_RJB_TestCase(BaseGSIMTestCase):
     INTRA_FILE = "LAN2016/NI15_RJB_STD_INTRA.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       self.INTER_FILE, self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class LanzanoEtAl2016_Rhypo_TestCase(BaseGSIMTestCase):   
@@ -53,6 +53,6 @@ class LanzanoEtAl2016_Rhypo_TestCase(BaseGSIMTestCase):
     INTRA_FILE = "LAN2016/NI15_Rhypo_STD_INTRA.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       self.INTER_FILE, self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=0.1)

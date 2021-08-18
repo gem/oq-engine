@@ -42,5 +42,5 @@ class Gupta2010SSlabTestCase(BaseGSIMTestCase):
 
     def test_all(self):
         for mean_file, sigma_file in zip(self.MEAN_FILES, self.SIGMA_FILES):
-            self.check_all(mean_file, sigma_file,
-                           mean_discrep_percentage=self.MEAN_TOL)
+            self.check(mean_file, sigma_file,
+                       max_discrep_percentage=self.MEAN_TOL)

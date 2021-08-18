@@ -24,6 +24,6 @@ class Geomatrix1993SSlabNSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Geomatrix1993SSlabNSHMP2008
 
     def test_all(self):
-        self.check_all('GEO93/GEO93NSHMP_MEAN.csv',
-                       'GEO93/GEO93NSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('GEO93/GEO93NSHMP_MEAN.csv',
+                   'GEO93/GEO93NSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

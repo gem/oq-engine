@@ -699,7 +699,7 @@ class GSIMTableQATestCase(BaseGSIMTestCase):
     STD_TOTAL_FILE = "gsimtables/Wcrust_rjb_med_TOTAL.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_TOTAL_FILE,
-                       mean_discrep_percentage=0.7,
-                       gmpe_table=GMPE_TABLE)
+        self.check(self.MEAN_FILE,
+                   self.STD_TOTAL_FILE,
+                   max_discrep_percentage=0.7,
+                   gmpe_table=GMPE_TABLE)

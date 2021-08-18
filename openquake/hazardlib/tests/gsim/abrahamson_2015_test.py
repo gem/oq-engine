@@ -38,11 +38,11 @@ class AbrahamsonEtAl2015SInterTestCase(BaseGSIMTestCase):
     INTRA_FILE = "BCHYDRO/BCHYDRO_SINTER_CENTRAL_STDDEV_INTRA.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.TOTAL_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class AbrahamsonEtAl2015SInterNonErgodicTestCase(BaseGSIMTestCase):
@@ -55,10 +55,10 @@ class AbrahamsonEtAl2015SInterNonErgodicTestCase(BaseGSIMTestCase):
     INTRA_FILE = "BCHYDRO/BCHYDRO_SINTER_CENTRAL_STDDEV_NONERGODIC_INTRA.csv"
 
     def test_all(self):
-        self.check_all(self.TOTAL_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=0.1,
-                       ergodic=False)
+        self.check(self.TOTAL_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1,
+                   ergodic=False)
 
 
 class AbrahamsonEtAl2015SInterHighTestCase(AbrahamsonEtAl2015SInterTestCase):

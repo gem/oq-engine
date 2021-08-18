@@ -30,161 +30,161 @@ class ParkerEtAl2020SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ParkerEtAl2020SInter
 
     def test_all(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInter_MEAN.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('PARKER20/ParkerEtAl2020SInter_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_total_stddev(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInter_TOTAL_STDDEV.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('PARKER20/ParkerEtAl2020SInter_TOTAL_STDDEV.csv',
+                   max_discrep_percentage=0.1)
 
     def test_intra_event_stddev(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInter_INTRA_EVENT_STDDEV.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('PARKER20/ParkerEtAl2020SInter_INTRA_EVENT_STDDEV.csv',
+                   max_discrep_percentage=0.1)
 
     def test_inter_event_stddev(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInter_INTER_EVENT_STDDEV.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('PARKER20/ParkerEtAl2020SInter_INTER_EVENT_STDDEV.csv',
+                   max_discrep_percentage=0.1)
 
     def test_aleutian(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterAleutian_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='AK', saturation_region='Aleutian')
+        self.check('PARKER20/ParkerEtAl2020SInterAleutian_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='AK', saturation_region='Aleutian')
 
     def test_alaska(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterAlaska_MEAN.csv',
-                       mean_discrep_percentage=0.1, region='AK')
+        self.check('PARKER20/ParkerEtAl2020SInterAlaska_MEAN.csv',
+                   max_discrep_percentage=0.1, region='AK')
 
     def test_camn(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterCAMN_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='CAM', saturation_region="CAM_N")
+        self.check('PARKER20/ParkerEtAl2020SInterCAMN_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='CAM', saturation_region="CAM_N")
 
     def test_cams(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterCAMS_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='CAM', saturation_region="CAM_S")
+        self.check('PARKER20/ParkerEtAl2020SInterCAMS_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='CAM', saturation_region="CAM_S")
 
     def test_san(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterSAN_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='SA', saturation_region='SA_N')
+        self.check('PARKER20/ParkerEtAl2020SInterSAN_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='SA', saturation_region='SA_N')
 
     def test_sas(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterSAS_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='SA', saturation_region='SA_S')
+        self.check('PARKER20/ParkerEtAl2020SInterSAS_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='SA', saturation_region='SA_S')
 
     def test_taiwane(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterTaiwanE_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='TW', saturation_region='TW_E')
+        self.check('PARKER20/ParkerEtAl2020SInterTaiwanE_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='TW', saturation_region='TW_E')
 
     def test_taiwanw(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterTaiwanW_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='TW', saturation_region='TW_W')
+        self.check('PARKER20/ParkerEtAl2020SInterTaiwanW_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='TW', saturation_region='TW_W')
 
 
 class ParkerEtAl2020SInterBTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ParkerEtAl2020SInterB
 
     def test_cascadia(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterCascadia_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='Cascadia')
+        self.check('PARKER20/ParkerEtAl2020SInterCascadia_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='Cascadia')
 
     def test_cascadiaout(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterCascadiaOut_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='Cascadia', basin='out')
+        self.check('PARKER20/ParkerEtAl2020SInterCascadiaOut_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='Cascadia', basin='out')
 
     def test_cascadiaseattle(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterCascadiaSeattle_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='Cascadia', basin='Seattle')
+        self.check('PARKER20/ParkerEtAl2020SInterCascadiaSeattle_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='Cascadia', basin='Seattle')
 
     def test_japanpac(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterJapanPac_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='JP', saturation_region='JP_Pac')
+        self.check('PARKER20/ParkerEtAl2020SInterJapanPac_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='JP', saturation_region='JP_Pac')
 
     def test_japanphi(self):
-        self.check_all('PARKER20/ParkerEtAl2020SInterJapanPhi_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='JP', saturation_region='JP_Phi')
+        self.check('PARKER20/ParkerEtAl2020SInterJapanPhi_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='JP', saturation_region='JP_Phi')
 
 
 class ParkerEtAl2020SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ParkerEtAl2020SSlab
 
     def test_all(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlab_MEAN.csv',
-                   mean_discrep_percentage=0.1)
+        self.check('PARKER20/ParkerEtAl2020SSlab_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_aleutian(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabAleutian_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='AK', saturation_region='Aleutian')
+        self.check('PARKER20/ParkerEtAl2020SSlabAleutian_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='AK', saturation_region='Aleutian')
 
     def test_alaska(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabAlaska_MEAN.csv',
-                       mean_discrep_percentage=0.1, region='AK')
+        self.check('PARKER20/ParkerEtAl2020SSlabAlaska_MEAN.csv',
+                   max_discrep_percentage=0.1, region='AK')
 
     def test_camn(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabCAMN_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='CAM', saturation_region="CAM_N")
+        self.check('PARKER20/ParkerEtAl2020SSlabCAMN_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='CAM', saturation_region="CAM_N")
 
     def test_cams(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabCAMS_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='CAM', saturation_region="CAM_S")
+        self.check('PARKER20/ParkerEtAl2020SSlabCAMS_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='CAM', saturation_region="CAM_S")
 
     def test_san(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabSAN_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='SA', saturation_region='SA_N')
+        self.check('PARKER20/ParkerEtAl2020SSlabSAN_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='SA', saturation_region='SA_N')
 
     def test_sas(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabSAS_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='SA', saturation_region='SA_S')
+        self.check('PARKER20/ParkerEtAl2020SSlabSAS_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='SA', saturation_region='SA_S')
 
     def test_taiwane(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabTaiwanE_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='TW', saturation_region='TW_E')
+        self.check('PARKER20/ParkerEtAl2020SSlabTaiwanE_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='TW', saturation_region='TW_E')
 
     def test_taiwanw(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabTaiwanW_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='TW', saturation_region='TW_W')
+        self.check('PARKER20/ParkerEtAl2020SSlabTaiwanW_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='TW', saturation_region='TW_W')
 
 
 class ParkerEtAl2020SSlabBTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ParkerEtAl2020SSlabB
 
     def test_cascadia(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabCascadia_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='Cascadia')
+        self.check('PARKER20/ParkerEtAl2020SSlabCascadia_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='Cascadia')
 
     def test_cascadiaout(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabCascadiaOut_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='Cascadia', basin='out')
+        self.check('PARKER20/ParkerEtAl2020SSlabCascadiaOut_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='Cascadia', basin='out')
 
     def test_cascadiaseattle(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabCascadiaSeattle_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='Cascadia', basin='Seattle')
+        self.check('PARKER20/ParkerEtAl2020SSlabCascadiaSeattle_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='Cascadia', basin='Seattle')
 
     def test_japanpac(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabJapanPac_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='JP', saturation_region='JP_Pac')
+        self.check('PARKER20/ParkerEtAl2020SSlabJapanPac_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='JP', saturation_region='JP_Pac')
 
     def test_japanphi(self):
-        self.check_all('PARKER20/ParkerEtAl2020SSlabJapanPhi_MEAN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='JP', saturation_region='JP_Phi')
+        self.check('PARKER20/ParkerEtAl2020SSlabJapanPhi_MEAN.csv',
+                   max_discrep_percentage=0.1,
+                   region='JP', saturation_region='JP_Phi')

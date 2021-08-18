@@ -28,37 +28,37 @@ class YuEtAl2013MwActiveTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013Mw
 
     def test_all(self):
-        self.check_all('YU2013Mw/yu_2013_mean_active.csv',
-                       mean_discrep_percentage=0.4)
-        self.check_all('YU2013Mw/yu_2013_stddev_active.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('YU2013Mw/yu_2013_mean_active.csv',
+                   max_discrep_percentage=0.4)
+        self.check('YU2013Mw/yu_2013_stddev_active.csv',
+                   max_discrep_percentage=0.1)
 
 
 class YuEtAl2013MwTibetTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013MwTibet
 
     def test_all(self):
-        self.check_all('YU2013Mw/yu_2013_mean_tibetan.csv',
-                       mean_discrep_percentage=0.4)
-        self.check_all('YU2013Mw/yu_2013_stddev_tibetan.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('YU2013Mw/yu_2013_mean_tibetan.csv',
+                   max_discrep_percentage=0.4)
+        self.check('YU2013Mw/yu_2013_stddev_tibetan.csv',
+                   max_discrep_percentage=0.1)
 
 
 class YuEtAl2013MwEasternTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013MwEastern
 
     def test_all(self):
-        self.check_all('YU2013Mw/yu_2013_mean_eastern.csv',
-                       mean_discrep_percentage=0.4)
-        self.check_all('YU2013Mw/yu_2013_stddev_eastern.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('YU2013Mw/yu_2013_mean_eastern.csv',
+                   max_discrep_percentage=0.4)
+        self.check('YU2013Mw/yu_2013_stddev_eastern.csv',
+                   max_discrep_percentage=0.1)
 
 
 class YuEtAl2013MwStableTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013MwStable
 
     def test_all(self):
-        self.check_all('YU2013Mw/yu_2013_mean_stable.csv',
-                       mean_discrep_percentage=0.4)
-        self.check_all('YU2013Mw/yu_2013_stddev_stable.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('YU2013Mw/yu_2013_mean_stable.csv',
+                   max_discrep_percentage=0.4)
+        self.check('YU2013Mw/yu_2013_stddev_stable.csv',
+                   max_discrep_percentage=0.1)

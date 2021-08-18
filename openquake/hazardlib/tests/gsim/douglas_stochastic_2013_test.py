@@ -63,10 +63,10 @@ class Douglas2013TestCaseSD001Q200K005(BaseGSIMTestCase):
     INTRA_FILE = 'DOUG2013/DOUGLAS_2013_STOCHASTIC_INTRA_SD001Q0200K005.csv'
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE, self.STD_FILE,
-                       self.INTER_FILE, self.INTRA_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class Douglas2013TestCaseSD001Q200K020(Douglas2013TestCaseSD001Q200K005):

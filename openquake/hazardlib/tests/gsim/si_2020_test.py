@@ -37,10 +37,10 @@ class SiEtAl2020SInterTestCase(BaseGSIMTestCase):
     INTRA_FILE = "si2020/SI2020_INTERFACE_INTRA_EVENT_STDDEV.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       mean_discrep_percentage=0.1)
-        self.check_all(self.TOTAL_FILE, self.INTER_FILE, self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   max_discrep_percentage=0.1)
+        self.check(self.TOTAL_FILE, self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 # Intraslab

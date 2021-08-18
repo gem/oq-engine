@@ -237,9 +237,9 @@ class TromansEtAl2019TestCaseCentralHomo(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check_all(
+        self.check(
             "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_CENTRAL.csv",
-            mean_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
             branch="central", homoskedastic_sigma=True)
 
 
@@ -251,9 +251,9 @@ class TromansEtAl2019TestCaseLowerHomo(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check_all(
+        self.check(
             "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_LOWER.csv",
-            mean_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
             branch="lower", homoskedastic_sigma=True)
 
 
@@ -265,9 +265,9 @@ class TromansEtAl2019TestCaseUpperHomo(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check_all(
+        self.check(
             "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_UPPER.csv",
-            mean_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
             branch="upper", homoskedastic_sigma=True)
 
 
@@ -279,9 +279,9 @@ class TromansEtAl2019TestCaseCentralHetero(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check_all(
+        self.check(
             "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_CENTRAL.csv",
-            mean_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
             branch="central", homoskedastic_sigma=False)
 
 
@@ -293,9 +293,9 @@ class TromansEtAl2019TestCaseLowerHetero(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check_all(
+        self.check(
             "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_LOWER.csv",
-            mean_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
             branch="lower", homoskedastic_sigma=False)
 
 
@@ -307,7 +307,7 @@ class TromansEtAl2019TestCaseUpperHetero(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check_all(
+        self.check(
             "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_UPPER.csv",
-            mean_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
             branch="upper", homoskedastic_sigma=False)

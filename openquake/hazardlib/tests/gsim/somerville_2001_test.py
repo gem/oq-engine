@@ -27,6 +27,6 @@ class SomervilleEtAl2001NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = SomervilleEtAl2001NSHMP2008
 
     def test_all(self):
-        self.check_all('S01/S01NSHMP_MEAN.csv',
-                       'S01/S01NSHMP_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('S01/S01NSHMP_MEAN.csv',
+                   'S01/S01NSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

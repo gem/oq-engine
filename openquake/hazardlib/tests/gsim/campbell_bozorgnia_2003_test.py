@@ -30,21 +30,21 @@ class CampbellBozorgnia2003NSHMP2007TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CampbellBozorgnia2003NSHMP2007
 
     def test_mean_ss(self):
-        self.check_all('CB03/CB03_MEAN_SS_NSHMP2007.csv',
-                       mean_discrep_percentage=0.2)
+        self.check('CB03/CB03_MEAN_SS_NSHMP2007.csv',
+                   max_discrep_percentage=0.2)
 
     def test_mean_normal(self):
-        self.check_all('CB03/CB03_MEAN_NORMAL_NSHMP2007.csv',
-                       mean_discrep_percentage=0.2)
+        self.check('CB03/CB03_MEAN_NORMAL_NSHMP2007.csv',
+                   max_discrep_percentage=0.2)
 
     def test_mean_thrust(self):
-        self.check_all('CB03/CB03_MEAN_THRUST_NSHMP2007.csv',
-                       mean_discrep_percentage=0.4)
+        self.check('CB03/CB03_MEAN_THRUST_NSHMP2007.csv',
+                   max_discrep_percentage=0.4)
 
     def test_mean_reverse(self):
-        self.check_all('CB03/CB03_MEAN_REVERSE_NSHMP2007.csv',
-                       mean_discrep_percentage=0.3)
+        self.check('CB03/CB03_MEAN_REVERSE_NSHMP2007.csv',
+                   max_discrep_percentage=0.3)
 
     def test_mean_std_total(self):
-        self.check_all('CB03/CB03_STD_TOTAL_NSHMP2007.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('CB03/CB03_STD_TOTAL_NSHMP2007.csv',
+                   max_discrep_percentage=0.1)

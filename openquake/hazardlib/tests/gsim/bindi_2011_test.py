@@ -34,11 +34,11 @@ class BindiEtAl2011TestCase(BaseGSIMTestCase):
     # Tables provided by original authors
 
     def test_all(self):
-        self.check_all('BINDI2011/BINDI2011_MEAN.csv',
-                       'BINDI2011/BINDI2011_STD_INTER.csv',
-                       'BINDI2011/BINDI2011_STD_INTRA.csv',
-                       'BINDI2011/BINDI2011_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('BINDI2011/BINDI2011_MEAN.csv',
+                   'BINDI2011/BINDI2011_STD_INTER.csv',
+                   'BINDI2011/BINDI2011_STD_INTRA.csv',
+                   'BINDI2011/BINDI2011_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class BindiEtAl2011Ita19UppTestCase(BaseGSIMTestCase):
@@ -47,8 +47,8 @@ class BindiEtAl2011Ita19UppTestCase(BaseGSIMTestCase):
     # Tables provided by original authors
 
     def test_mean(self):
-        self.check_all('ITA19/BindiEtAl2011BackboneUPP.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('ITA19/BindiEtAl2011BackboneUPP.csv',
+                   max_discrep_percentage=0.1)
 
 
 class BindiEtAl2011Ita19LowTestCase(BaseGSIMTestCase):
@@ -57,5 +57,5 @@ class BindiEtAl2011Ita19LowTestCase(BaseGSIMTestCase):
     # Tables provided by original authors
 
     def test_mean(self):
-        self.check_all('ITA19/BindiEtAl2011BackboneLOW.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('ITA19/BindiEtAl2011BackboneLOW.csv',
+                   max_discrep_percentage=0.1)
