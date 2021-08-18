@@ -264,7 +264,7 @@ def install(inst, version):
         else:
             pycmd = inst.VENV + '\\Scripts\\python.exe'
     else:
-        pycmd = inst.VENV + '/bin/python'
+        pycmd = inst.VENV + '/bin/python3'
     # upgrade pip
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade', 
                           'pip', 'wheel'])
