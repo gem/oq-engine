@@ -265,8 +265,10 @@ class EngineServerTestCase(unittest.TestCase):
         #
         print("DEBUG")
         #
+        print(resp.headers['Content-Disposition'])
+        #
         # remove output ID digits from the filename
-        cd = re.sub(r'\d', '', resp.headers['content-disposition'][1])
+        cd = re.sub(r'\d', '', resp.headers['Content-Disposition'])
         self.assertEqual(
             cd, 'attachment; filename=output--hazard_map-mean_.csv')
 
