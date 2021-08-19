@@ -140,7 +140,7 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
     t0 = time.time()
     if geometry:
         fnames = [geometry] + fnames
-    sections = []
+    sections = {}
     for fname in fnames:
         logging.info('Reading %s', fname)
         converter.fname = fname
@@ -149,7 +149,9 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
         srcs = collections.defaultdict(list)  # geom_index -> rows
         if fname == geometry:
             for srcnode in root.geometryModel:
-                sections.append(converter.convert_node(srcnode))
+                sec = converter.convert_node(srcnode)
+                sections[sec.sec_id] = sec
+            sections = {sid: sections[sid] for sid in sections}
         elif 'nrml/0.4' in root['xmlns']:
             for srcnode in root.sourceModel:
                 appendrow(converter.convert_node(srcnode),

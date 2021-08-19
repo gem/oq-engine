@@ -119,13 +119,13 @@ class MultiFaultSource(BaseSeismicSource):
 
         # iter on the ruptures
         untilidx = len(self.mags) if untilidx is None else untilidx
+        s = self.sections
         for i in range(fromidx, untilidx):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = self.sections[idxs[0]].surface
             else:
-                s = self.sections
-                sfc = MultiSurface([s[j].surface for j in idxs])
+                sfc = MultiSurface([s[idx].surface for idx in idxs])
             rake = self.rakes[i]
             hypo = self.sections[idxs[0]].surface.get_middle_point()
             yield NonParametricProbabilisticRupture(
