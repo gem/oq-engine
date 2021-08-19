@@ -41,7 +41,6 @@ from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
 from openquake.commands import engine
-from pprint import pprint
 
 
 def loadnpz(lines):
@@ -261,11 +260,8 @@ class EngineServerTestCase(unittest.TestCase):
         hmaps_id = results[2]['id']
         resp = self.c.head('/v1/calc/result/%s?export_type=csv' % hmaps_id)
         # print headers of response
-        print(resp.headers)
-        #
-        print("DEBUG")
-        #
-        print(resp.headers['Content-Disposition'])
+        #print(resp.headers)
+        #print(resp.headers['Content-Disposition'])
         #
         # remove output ID digits from the filename
         cd = re.sub(r'\d', '', resp.headers['Content-Disposition'])
