@@ -94,8 +94,9 @@ class MultiFaultSource(BaseSeismicSource):
 
     def set_sections(self, sections):
         """
-        Check sections and creates an inverted index structure, i.e. a
-        dictionary sec_id->index
+        :param sections: a dictionary sec_id -> FaultSection
+
+        Set the attribute .sections to the passed dictionary
         """
         assert sections
         self.sections = sections
@@ -148,8 +149,8 @@ class MultiFaultSource(BaseSeismicSource):
 
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
-        for sec, pmf in zip(self.sections.values(), self.pmfs):
-            yield sec, pmf
+        for i, rup in enumerate(self.iter_ruptures()):
+            yield rup, self.pmfs[i]
 
     polygon = NP.polygon
     wkt = NP.wkt
