@@ -41,6 +41,7 @@ from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
 from openquake.commands import engine
+from pprint import pprint
 
 
 def loadnpz(lines):
@@ -259,8 +260,13 @@ class EngineServerTestCase(unittest.TestCase):
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
         resp = self.c.head('/v1/calc/result/%s?export_type=csv' % hmaps_id)
+        # print headers of response
+        print(resp.headers)
+        #
+        print("DEBUG")
+        #
         # remove output ID digits from the filename
-        cd = re.sub(r'\d', '', resp._headers['content-disposition'][1])
+        cd = re.sub(r'\d', '', resp.headers['content-disposition'][1])
         self.assertEqual(
             cd, 'attachment; filename=output--hazard_map-mean_.csv')
 
