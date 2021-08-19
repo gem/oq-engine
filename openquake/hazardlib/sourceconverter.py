@@ -944,7 +944,7 @@ class SourceConverter(RuptureConverter):
             fault_trace = self.geo_line(geom)
             as_kite = False
         except Exception:
-            geom = node.kiteFaultGeometry
+            geom = node.kiteSurface
             profiles = self.geo_lines(geom)
 
         msr = valid.SCALEREL[~node.magScaleRel]()
