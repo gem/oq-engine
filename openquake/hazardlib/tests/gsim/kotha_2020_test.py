@@ -130,20 +130,12 @@ class KothaEtAl2020TestCase(BaseGSIMTestCase):
     # Testing the unadjusted version of the original GMPE
     GSIM_CLASS = KothaEtAl2020
 
-    def test_mean(self):
+    def test_all(self):
         self.check("kotha20/KOTHA_2020_CENTRAL_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_intra(self):
         self.check("kotha20/KOTHA_2020_STDDEV_INTRA_EVENT.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_inter(self):
-        self.check("kotha20/KOTHA_2020_STDDEV_INTER_EVENT.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_total(self):
-        self.check("kotha20/KOTHA_2020_STDDEV_TOTAL.csv",
+                   "kotha20/KOTHA_2020_STDDEV_INTER_EVENT.csv",
+                   "kotha20/KOTHA_2020_STDDEV_TOTAL.csv",
                    max_discrep_percentage=MAX_DISCREP)
 
 
@@ -152,20 +144,11 @@ class KothaEtAl2020SiteTestCase(BaseGSIMTestCase):
     # amplification
     GSIM_CLASS = KothaEtAl2020Site
 
-    def test_mean(self):
+    def test_all(self):
         self.check("kotha20/KOTHA_2020_VS30_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_intra(self):
-        self.check("kotha20/KOTHA_2020_VS30_STDDEV_INTRA_EVENT.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_inter(self):
-        self.check("kotha20/KOTHA_2020_VS30_STDDEV_INTER_EVENT.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_total(self):
-        self.check("kotha20/KOTHA_2020_VS30_STDDEV_TOTAL.csv",
+                   "kotha20/KOTHA_2020_VS30_STDDEV_INTRA_EVENT.csv",
+                   "kotha20/KOTHA_2020_VS30_STDDEV_INTER_EVENT.csv",
+                   "kotha20/KOTHA_2020_VS30_STDDEV_TOTAL.csv",
                    max_discrep_percentage=MAX_DISCREP)
 
 
@@ -174,20 +157,11 @@ class KothaEtAl2020SlopeTestCase(BaseGSIMTestCase):
     # amplification
     GSIM_CLASS = KothaEtAl2020Slope
 
-    def test_mean(self):
+    def test_all(self):
         self.check("kotha20/KOTHA_2020_SLOPE_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_intra(self):
-        self.check("kotha20/KOTHA_2020_SLOPE_STDDEV_INTRA_EVENT.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_inter(self):
-        self.check("kotha20/KOTHA_2020_SLOPE_STDDEV_INTER_EVENT.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_total(self):
-        self.check("kotha20/KOTHA_2020_SLOPE_STDDEV_TOTAL.csv",
+                   "kotha20/KOTHA_2020_SLOPE_STDDEV_INTRA_EVENT.csv",
+                   "kotha20/KOTHA_2020_SLOPE_STDDEV_INTER_EVENT.csv",
+                   "kotha20/KOTHA_2020_SLOPE_STDDEV_TOTAL.csv",
                    max_discrep_percentage=MAX_DISCREP)
 
 
@@ -195,20 +169,11 @@ class KothaEtAl2020ESHM20TestCase(BaseGSIMTestCase):
     # Testing the unadjusted version of the ESHM20 calibrated GMPE (ergodic)
     GSIM_CLASS = KothaEtAl2020ESHM20
 
-    def test_mean(self):
+    def test_all(self):
         self.check("kotha20/KOTHA_2020_ESHM_CENTRAL_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_intra(self):
-        self.check("kotha20/KOTHA_2020_ESHM_STDDEV_INTRA_EVENT.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_inter(self):
-        self.check("kotha20/KOTHA_2020_ESHM_STDDEV_INTER_EVENT.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_total(self):
-        self.check("kotha20/KOTHA_2020_ESHM_STDDEV_TOTAL.csv",
+                   "kotha20/KOTHA_2020_ESHM_STDDEV_INTRA_EVENT.csv",
+                   "kotha20/KOTHA_2020_ESHM_STDDEV_INTER_EVENT.csv",
+                   "kotha20/KOTHA_2020_ESHM_STDDEV_TOTAL.csv",
                    max_discrep_percentage=MAX_DISCREP)
 
 
@@ -216,22 +181,19 @@ class KothaEtAl2020ESHM20NonErgodicTestCase(BaseGSIMTestCase):
     # Testing the non-ergodic case
     GSIM_CLASS = KothaEtAl2020ESHM20
 
-    def test_std_intra(self):
-        self.check("kotha20/KOTHA_2020_ESHM_STDDEV_NONERGODIC_INTRA_EVENT.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   ergodic=False)
-
-    def test_std_total(self):
-        self.check("kotha20/KOTHA_2020_ESHM_STDDEV_NONERGODIC_TOTAL.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   ergodic=False)
+    def test_stds(self):
+        self.check(
+            "kotha20/KOTHA_2020_ESHM_STDDEV_NONERGODIC_INTRA_EVENT.csv",
+            "kotha20/KOTHA_2020_ESHM_STDDEV_NONERGODIC_TOTAL.csv",
+            max_discrep_percentage=MAX_DISCREP,
+            ergodic=False)
 
 
 class KothaEtAl2020ESHM20FastAttenTestCase(BaseGSIMTestCase):
     # Testing the case of fast attenuation defined by c3_epsilon
     GSIM_CLASS = KothaEtAl2020ESHM20
 
-    def test_mean(self):
+    def test_all(self):
         self.check("kotha20/KOTHA_2020_ESHM_FAST_ATTEN_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP, c3_epsilon=-1.0)
 
@@ -240,7 +202,7 @@ class KothaEtAl2020ESHM20FastC3TestCase(BaseGSIMTestCase):
     # Testing the case of fast attenuation defined by manually input c3
     GSIM_CLASS = KothaEtAl2020ESHM20
 
-    def test_mean(self):
+    def test_all(self):
         self.check("kotha20/KOTHA_2020_ESHM_c3_FAST_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP, c3=c3_fast)
 
@@ -250,7 +212,7 @@ class KothaEtAl2020ESHM20HighSigmaMuTestCase(BaseGSIMTestCase):
     # sigma mu
     GSIM_CLASS = KothaEtAl2020ESHM20
 
-    def test_mean(self):
+    def test_all(self):
         self.check("kotha20/KOTHA_2020_ESHM_HIGH_SIGMA_MU_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    sigma_mu_epsilon=1.0)
@@ -260,7 +222,7 @@ class KothaEtAl2020ESHM20HighDL2LTestCase(BaseGSIMTestCase):
     # Testing the case of high source region scaling, defined by set dL2L
     GSIM_CLASS = KothaEtAl2020ESHM20
 
-    def test_mean(self):
+    def test_all(self):
         self.check("kotha20/KOTHA_2020_ESHM_DL2L_HIGH_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP, dl2l=dl2l_high)
 
@@ -270,18 +232,10 @@ class KothaEtAl2020SlopeGeologyTestCase(BaseGSIMTestCase):
     # geology
     GSIM_CLASS = KothaEtAl2020ESHM20SlopeGeology
 
-    def test_mean(self):
-        self.check("kotha20/KOTHA_2020_SLOPE_GEOLOGY_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_intra(self):
-        self.check("kotha20/KOTHA_2020_SLOPE_GEOLOGY_INTRA_EVENT_STDDEV.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_inter(self):
-        self.check("kotha20/KOTHA_2020_SLOPE_GEOLOGY_INTER_EVENT_STDDEV.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_total(self):
-        self.check("kotha20/KOTHA_2020_SLOPE_GEOLOGY_TOTAL_STDDEV.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+    def test_all(self):
+        self.check(
+            "kotha20/KOTHA_2020_SLOPE_GEOLOGY_MEAN.csv",
+            "kotha20/KOTHA_2020_SLOPE_GEOLOGY_INTRA_EVENT_STDDEV.csv",
+            "kotha20/KOTHA_2020_SLOPE_GEOLOGY_INTER_EVENT_STDDEV.csv",
+            "kotha20/KOTHA_2020_SLOPE_GEOLOGY_TOTAL_STDDEV.csv",
+            max_discrep_percentage=MAX_DISCREP)

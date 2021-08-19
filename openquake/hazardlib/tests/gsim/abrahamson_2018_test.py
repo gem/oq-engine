@@ -39,11 +39,11 @@ class AbrahamsonEtAl2018SInterTestCase(BaseGSIMTestCase):
     INTRA_FILE = "bchydro18/BCHYDRO2018_INTERFACE_INTRA_EVENT_STDDEV.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.TOTAL_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class AbrahamsonEtAl2018SInterLowTestCase(AbrahamsonEtAl2018SInterTestCase):
@@ -65,11 +65,11 @@ class AbrahamsonEtAl2018SSlabTestCase(BaseGSIMTestCase):
     INTRA_FILE = "bchydro18/BCHYDRO2018_INSLAB_INTRA_EVENT_STDDEV.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.TOTAL_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   self.TOTAL_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class AbrahamsonEtAl2018SSlabLowTestCase(AbrahamsonEtAl2018SSlabTestCase):

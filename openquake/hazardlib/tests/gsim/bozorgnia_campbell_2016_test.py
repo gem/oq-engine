@@ -64,8 +64,8 @@ class BozorgniaCampbell2016TestCase(BaseGSIMTestCase):
 
     def test_all(self):
         for sgn, SJ in itertools.product([-1, 0, 1], [0, 1]):
-            self.check_all(MEAN_FILE[sgn, SJ],
-                           STD_INTRA_FILE[sgn, SJ],
-                           STD_INTER_FILE[sgn, SJ],
-                           STD_TOTAL_FILE[sgn, SJ],
-                           mean_discrep_percentage=0.1, sgn=sgn, SJ=SJ)
+            self.check(MEAN_FILE[sgn, SJ],
+                       STD_INTRA_FILE[sgn, SJ],
+                       STD_INTER_FILE[sgn, SJ],
+                       STD_TOTAL_FILE[sgn, SJ],
+                       max_discrep_percentage=0.1, sgn=sgn, SJ=SJ)

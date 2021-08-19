@@ -36,26 +36,15 @@ class ECOS2009TestCase(BaseGSIMTestCase):
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "ecos_2009/ecos09_stDev.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
-class ECOS2009HighestTestCase(BaseGSIMTestCase):
+class ECOS2009HighestTestCase(ECOS2009TestCase):
     GSIM_CLASS = ECOS2009Highest
     # File containing the results for the Mean
     MEAN_FILE = "ecos_2009/ecos09_H_mean.csv"
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "ecos_2009/ecos09_H_stDev.csv"
-
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)

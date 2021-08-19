@@ -44,12 +44,12 @@ class BindiEtAl2017RjbTestCase(BaseGSIMTestCase):
     INTRA_FILE = "bindi2017/BINDI_2017_RJB_INTRA_EVENT_STDDEV.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       max_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE,
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class BindiEtAl2017RhypoTestCase(BindiEtAl2017RjbTestCase):

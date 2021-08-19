@@ -29,13 +29,13 @@ class AbrahamsonSilva1997TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonSilva1997
 
     def test_mean_ss(self):
-        self.check_all('AS97/AS97_MEAN_SS.csv',
-                       mean_discrep_percentage=0.2)
+        self.check('AS97/AS97_MEAN_SS.csv',
+                   max_discrep_percentage=0.2)
 
     def test_mean_reverse(self):
-        self.check_all('AS97/AS97_MEAN_REVERSE.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AS97/AS97_MEAN_REVERSE.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check_all('AS97/AS97_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AS97/AS97_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

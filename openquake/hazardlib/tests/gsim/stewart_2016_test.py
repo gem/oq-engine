@@ -88,25 +88,11 @@ class StewartEtAl2016TestCaseA(BaseGSIMTestCase):
     # File containing results for the intra-event standard deviation
     INTRA_FILE = "SBSA15/SBSA15_CAL_PERIOD_INTRA_STD.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP, region=self.REGION,
-                   sof=self.SOF)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP, region=self.REGION,
-                   sof=self.SOF)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP, region=self.REGION,
-                   sof=self.SOF)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP, region=self.REGION,
-                   sof=self.SOF)
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=STDDEV_DISCREP,
+                   region=self.REGION, sof=self.SOF)
 
 
 class StewartEtAl2016TestCaseB(StewartEtAl2016TestCaseA):

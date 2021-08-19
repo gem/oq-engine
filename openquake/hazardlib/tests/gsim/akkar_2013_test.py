@@ -26,8 +26,8 @@ class AkkarEtAl2013TestCase(BaseGSIMTestCase):
     # Tables provided by original authors
 
     def test_mean(self):
-        self.check_all('AKKAR13/AKKAR2013_MEAN.csv',
-                       'AKKAR13/AKKAR2013_STD_INTRA.csv',
-                       'AKKAR13/AKKAR2013_STD_INTER.csv',
-                       'AKKAR13/AKKAR2013_STD_TOTAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('AKKAR13/AKKAR2013_MEAN.csv',
+                   'AKKAR13/AKKAR2013_STD_INTRA.csv',
+                   'AKKAR13/AKKAR2013_STD_INTER.csv',
+                   'AKKAR13/AKKAR2013_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

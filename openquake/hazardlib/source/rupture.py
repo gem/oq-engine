@@ -26,7 +26,7 @@ import math
 import itertools
 import json
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import geo, contexts
+from openquake.hazardlib import geo
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import (
     Mesh, RectangularMesh, surface_to_arrays)

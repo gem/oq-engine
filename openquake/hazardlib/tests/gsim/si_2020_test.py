@@ -36,35 +36,17 @@ class SiEtAl2020SInterTestCase(BaseGSIMTestCase):
     INTER_FILE = "si2020/SI2020_INTERFACE_INTER_EVENT_STDDEV.csv"
     INTRA_FILE = "si2020/SI2020_INTERFACE_INTRA_EVENT_STDDEV.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.TOTAL_FILE, max_discrep_percentage=0.1)
-
-    def test_std_inter_event(self):
-        self.check(self.INTER_FILE, max_discrep_percentage=0.1)
-
-    def test_std_intra_event(self):
-        self.check(self.INTRA_FILE, max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check(self.MEAN_FILE,
+                   max_discrep_percentage=0.1)
+        self.check(self.TOTAL_FILE, self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
 
 
 # Intraslab
-class SiEtAl2020SSlabTestCase(BaseGSIMTestCase):
+class SiEtAl2020SSlabTestCase(SiEtAl2020SInterTestCase):
     GSIM_CLASS = SiEtAl2020SSlab
     MEAN_FILE = "si2020/SI2020_INTRASLAB_MEAN.csv"
     TOTAL_FILE = "si2020/SI2020_INTRASLAB_TOTAL_STDDEV.csv"
     INTER_FILE = "si2020/SI2020_INTRASLAB_INTER_EVENT_STDDEV.csv"
     INTRA_FILE = "si2020/SI2020_INTRASLAB_INTRA_EVENT_STDDEV.csv"
-
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.TOTAL_FILE, max_discrep_percentage=0.1)
-
-    def test_std_inter_event(self):
-        self.check(self.INTER_FILE, max_discrep_percentage=0.1)
-
-    def test_std_intra_event(self):
-        self.check(self.INTRA_FILE, max_discrep_percentage=0.1)

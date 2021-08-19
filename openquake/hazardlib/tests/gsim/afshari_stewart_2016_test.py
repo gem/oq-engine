@@ -47,12 +47,12 @@ class AfshariStewart2016TestCase(BaseGSIMTestCase):
     INTRA_FILE = "as16/AS16_RSD_INTRA_EVENT_STDDEV.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE,
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class AfshariStewart2016JapanTestCase(BaseGSIMTestCase):
@@ -61,5 +61,5 @@ class AfshariStewart2016JapanTestCase(BaseGSIMTestCase):
     MEAN_FILE = "as16/AS16_RSD_JAPAN_MEAN.csv"
 
     def test_mean(self):
-        self.check_all(self.MEAN_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP)
+        self.check(self.MEAN_FILE,
+                   max_discrep_percentage=MEAN_DISCREP)

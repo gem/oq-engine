@@ -32,10 +32,10 @@ class Abrahamson2014EtAlTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonEtAl2014
 
     def test_all(self):
-        self.check_all('ASK14/ASK14_ResMEAN_RegCAL.csv',
-                       'ASK14/ASK14_ResStdTot_RegCAL.csv',
-                       'ASK14/ASK14_ResStdPhi_RegCAL.csv',
-                       mean_discrep_percentage=0.1)
+        self.check('ASK14/ASK14_ResMEAN_RegCAL.csv',
+                   'ASK14/ASK14_ResStdTot_RegCAL.csv',
+                   'ASK14/ASK14_ResStdPhi_RegCAL.csv',
+                   max_discrep_percentage=0.1)
 
 
 class Abrahamson2014EtAlRegTWNTestCase(BaseGSIMTestCase):
@@ -48,9 +48,9 @@ class Abrahamson2014EtAlRegTWNTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonEtAl2014
 
     def test_all(self):
-        self.check_all('ASK14/ASK14_ResMEAN_RegTWN.csv',
-                       mean_discrep_percentage=0.3,
-                       region='TWN')
+        self.check('ASK14/ASK14_ResMEAN_RegTWN.csv',
+                   max_discrep_percentage=0.3,
+                   region='TWN')
 
 
 class Abrahamson2014EtAlRegCHNTestCase(BaseGSIMTestCase):
@@ -63,9 +63,9 @@ class Abrahamson2014EtAlRegCHNTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonEtAl2014
 
     def test_mean(self):
-        self.check_all('ASK14/ASK14_ResMEAN_RegCHN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='CHN')
+        self.check('ASK14/ASK14_ResMEAN_RegCHN.csv',
+                   max_discrep_percentage=0.1,
+                   region='CHN')
 
 
 class Abrahamson2014EtAlRegJPNTestCase(BaseGSIMTestCase):
@@ -77,8 +77,8 @@ class Abrahamson2014EtAlRegJPNTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonEtAl2014
 
     def test_mean(self):
-        self.check_all('ASK14/ASK14_ResMEAN_RegJPN.csv',
-                       'ASK14/ASK14_ResStdTot_RegJPN.csv',
-                       'ASK14/ASK14_ResStdPhi_RegJPN.csv',
-                       mean_discrep_percentage=0.1,
-                       region='JPN')
+        self.check('ASK14/ASK14_ResMEAN_RegJPN.csv',
+                   'ASK14/ASK14_ResStdTot_RegJPN.csv',
+                   'ASK14/ASK14_ResStdPhi_RegJPN.csv',
+                   max_discrep_percentage=0.1,
+                   region='JPN')

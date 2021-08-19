@@ -29,11 +29,11 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 MEAN_DISCREP = 0.01
 STDDEV_DISCREP = 0.01
 
-#/////////////////////////////////////////////////////////////////////////////
-##############################################################################
+# ////////////////////////////////////////////////////////////////////////////
+#############################################################################
 #                    Stress Drop = 10 bar
 ##############################################################################
-#/////////////////////////////////////////////////////////////////////////////
+# ////////////////////////////////////////////////////////////////////////////
 
 ################################# Q = 200 ####################################
 
@@ -62,21 +62,11 @@ class Douglas2013TestCaseSD001Q200K005(BaseGSIMTestCase):
     # File containing the results for the inter-event standard deviation
     INTRA_FILE = 'DOUG2013/DOUGLAS_2013_STOCHASTIC_INTRA_SD001Q0200K005.csv'
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class Douglas2013TestCaseSD001Q200K020(Douglas2013TestCaseSD001Q200K005):

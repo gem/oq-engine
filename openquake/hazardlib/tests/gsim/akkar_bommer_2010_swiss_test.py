@@ -27,24 +27,24 @@ class AkkarBommer2010SWISS01TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AkkarBommer2010SWISS01
 
     def test_all(self):
-        self.check_all('AKBO10Swiss/AK10_MEAN_VsK01_Corr.csv',
-                       'AKBO10Swiss/ak2010_phi_ss_embeded.csv',
-                       mean_discrep_percentage=0.50)
+        self.check('AKBO10Swiss/AK10_MEAN_VsK01_Corr.csv',
+                   'AKBO10Swiss/ak2010_phi_ss_embeded.csv',
+                   max_discrep_percentage=0.50)
 
 
 class AkkarBommer2010SWISS04TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AkkarBommer2010SWISS04
 
     def test_all(self):
-        self.check_all('AKBO10Swiss/AK10_MEAN_VsK04_Corr.csv',
-                       'AKBO10Swiss/ak2010_phi_ss_embeded.csv',
-                       mean_discrep_percentage=0.50)
+        self.check('AKBO10Swiss/AK10_MEAN_VsK04_Corr.csv',
+                   'AKBO10Swiss/ak2010_phi_ss_embeded.csv',
+                   max_discrep_percentage=0.50)
 
 
 class AkkarBommer2010SWISS08TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AkkarBommer2010SWISS08
 
     def test_all(self):
-        self.check_all('AKBO10Swiss/AK10_MEAN_VsK08_Corr.csv',
-                       'AKBO10Swiss/ak2010_phi_ss_embeded.csv',
-                       mean_discrep_percentage=0.50)
+        self.check('AKBO10Swiss/AK10_MEAN_VsK08_Corr.csv',
+                   'AKBO10Swiss/ak2010_phi_ss_embeded.csv',
+                   max_discrep_percentage=0.50)

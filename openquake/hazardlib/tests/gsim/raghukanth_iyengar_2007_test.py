@@ -37,8 +37,7 @@ from openquake.hazardlib.gsim.raghukanth_iyengar_2007 import (
     RaghukanthIyengar2007,
     RaghukanthIyengar2007KoynaWarna,
     RaghukanthIyengar2007Southern,
-    RaghukanthIyengar2007WesternCentral,
-)
+    RaghukanthIyengar2007WesternCentral)
 
 
 class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
@@ -52,13 +51,10 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
     SIGMA_FILE = 'RAIY07/RAIY07_PI_STD_TOTAL.csv'
     TOL_PERCENT = 11.
 
-    def test_mean(self):
+    def test_all(self):
         # Ensure that means match reference dataset
-        self.check(self.MEAN_FILE, max_discrep_percentage=self.TOL_PERCENT)
-
-    def test_std_total(self):
-        # Ensure that standard deviations match reference dataset
-        self.check(self.SIGMA_FILE, max_discrep_percentage=self.TOL_PERCENT)
+        self.check(self.MEAN_FILE, self.SIGMA_FILE,
+                   max_discrep_percentage=self.TOL_PERCENT)
 
     def test_warning(self):
         # Warning should be thrown for any vs30 below limit for NEHRP class D

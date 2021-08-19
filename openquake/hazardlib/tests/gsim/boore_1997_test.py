@@ -33,44 +33,44 @@ class BooreEtAl1997TestCase(BaseGSIMTestCase):
     # http://www.stanford.edu/~bakerjw/GMPEs.html
 
     def test_all_normal(self):
-        self.check_all('BJF1997/BJF97_MEAN.csv',
-                       'BJF1997/BJF97_INTRA.csv',
-                       'BJF1997/BJF97_INTER.csv',
-                       'BJF1997/BJF97_TOTAL.csv',
-                       mean_discrep_percentage=0.1,
-                       std_discrep_percentage=1.0)
+        self.check('BJF1997/BJF97_MEAN.csv',
+                   'BJF1997/BJF97_INTRA.csv',
+                   'BJF1997/BJF97_INTER.csv',
+                   'BJF1997/BJF97_TOTAL.csv',
+                   max_discrep_percentage=0.1,
+                   std_discrep_percentage=1.0)
 
 
 class BooreEtAl1997UnspecifiedTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1997GeometricMeanUnspecified
 
     def test_all_normal(self):
-        self.check_all('BJF1997/BJF97_UNC_MEAN.csv',
-                       'BJF1997/BJF97_UNC_INTRA.csv',
-                       'BJF1997/BJF97_UNC_INTER.csv',
-                       'BJF1997/BJF97_UNC_TOTAL.csv',
-                       mean_discrep_percentage=0.5)
+        self.check('BJF1997/BJF97_UNC_MEAN.csv',
+                   'BJF1997/BJF97_UNC_INTRA.csv',
+                   'BJF1997/BJF97_UNC_INTER.csv',
+                   'BJF1997/BJF97_UNC_TOTAL.csv',
+                   max_discrep_percentage=0.5)
 
 
 class BooreEtAl1997ArbitraryTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1997ArbitraryHorizontal
 
     def test_all_normal(self):
-        self.check_all('BJF1997/BJF97_Arb_MEAN.csv',
-                       'BJF1997/BJF97_Arb_INTRA.csv',
-                       'BJF1997/BJF97_Arb_INTER.csv',
-                       'BJF1997/BJF97_Arb_TOTAL.csv',
-                       mean_discrep_percentage=0.1,
-                       std_discrep_percentage=0.5)
+        self.check('BJF1997/BJF97_Arb_MEAN.csv',
+                   'BJF1997/BJF97_Arb_INTRA.csv',
+                   'BJF1997/BJF97_Arb_INTER.csv',
+                   'BJF1997/BJF97_Arb_TOTAL.csv',
+                   max_discrep_percentage=0.1,
+                   std_discrep_percentage=0.5)
 
 
 class BooreEtAl1997ArbitraryUnspecifiedTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1997ArbitraryHorizontalUnspecified
 
     def test_all_normal(self):
-        self.check_all('BJF1997/BJF97_UNC_Arb_MEAN.csv',
-                       'BJF1997/BJF97_UNC_Arb_INTRA.csv',
-                       'BJF1997/BJF97_UNC_Arb_INTER.csv',
-                       'BJF1997/BJF97_UNC_Arb_TOTAL.csv',
-                       mean_discrep_percentage=0.1,
-                       std_discrep_percentage=0.5)
+        self.check('BJF1997/BJF97_UNC_Arb_MEAN.csv',
+                   'BJF1997/BJF97_UNC_Arb_INTRA.csv',
+                   'BJF1997/BJF97_UNC_Arb_INTER.csv',
+                   'BJF1997/BJF97_UNC_Arb_TOTAL.csv',
+                   max_discrep_percentage=0.1,
+                   std_discrep_percentage=0.5)

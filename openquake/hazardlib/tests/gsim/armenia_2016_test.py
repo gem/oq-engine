@@ -48,8 +48,8 @@ class AkkarEtAlRjb2014ArmeniaTestCase(BaseGSIMTestCase):
     MEAN_FILE = "armenia_2016/AKKAR14_ARMENIA_MEAN.csv"
 
     def test_mean(self):
-        self.check_all(self.MEAN_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP)
+        self.check(self.MEAN_FILE,
+                   max_discrep_percentage=MEAN_DISCREP)
 
 
 class BindiEtAl2014RjbArmeniaTestCase(AkkarEtAlRjb2014ArmeniaTestCase):

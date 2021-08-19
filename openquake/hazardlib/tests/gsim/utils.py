@@ -23,13 +23,15 @@ import numpy as np
 import pandas
 from openquake.baselib.general import all_equals
 from openquake.hazardlib import contexts, imt
-from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 
 NORMALIZE = False
 
 
 def _normalize(float_string):
-    return str(float(float_string))
+    try:
+        return str(float(float_string))
+    except ValueError:  # the string was not a float (i.e. is a siteclass)
+        return float_string
 
 
 def normalize(csvfnames):
@@ -54,6 +56,7 @@ def normalize(csvfnames):
             allcols.append(fields)
             ifield[fname] = {f: i for i, f in enumerate(fields)}
             data[fname] = list(reader)
+            assert len(data[fname])
             idata[fname] = set()
             for row in data[fname]:
                 tup = tuple(_normalize(v) for v, f in zip(row, fields)
@@ -68,7 +71,7 @@ def normalize(csvfnames):
         writer = csv.writer(open(fname, 'w', newline='', encoding='utf-8'))
         writer.writerow(cols)
         for row in data[fname]:
-            tup = tuple(v for v, f in zip(row, cols)
+            tup = tuple(_normalize(v) for v, f in zip(row, cols)
                         if f.startswith(('site_', 'rup_', 'dist_')))
             if tup in commonset:
                 writer.writerow([row[idx[c]] for c in cols])
@@ -86,8 +89,11 @@ def read_cmaker_df(gsim, csvfnames):
     """
     # build a suitable ContextMaker
     dfs = [pandas.read_csv(fname) for fname in csvfnames]
-    if sum(len(df) for df in dfs) == 0:
+    num_rows = sum(len(df) for df in dfs)
+    if num_rows == 0:
         raise ValueError('The files %s are empty!' % ' '.join(csvfnames))
+    print('\n%s' % gsim)
+    print('num_checks = {:_d}'.format(num_rows))
     if not all_equals([sorted(df.columns) for df in dfs]):
         colset = set.intersection(*[set(df.columns) for df in dfs])
         cols = [col for col in dfs[0].columns if col in colset]
@@ -114,11 +120,13 @@ def read_cmaker_df(gsim, csvfnames):
         else:
             imts.append(im)
             cmap[col] = im
+    if gsim.__class__.__name__.endswith('AvgSA'):  # special case
+        imts.append('AvgSA')
     assert imts
     imtls = {im: [0] for im in sorted(imts)}
+    trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
     cmaker = contexts.ContextMaker(
-        gsim.DEFINED_FOR_TECTONIC_REGION_TYPE.value, [gsim], {'imtls': imtls})
-    print(gsim)
+        trt.value if trt else "*", [gsim], {'imtls': imtls})
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
@@ -134,6 +142,7 @@ def read_cmaker_df(gsim, csvfnames):
         else:
             df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
         print(name, df[name].unique())
+    print('result_type', df['result_type'].unique())
     return cmaker, df.rename(columns=cmap)
 
 
@@ -177,19 +186,10 @@ class BaseGSIMTestCase(unittest.TestCase):
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
     GSIM_CLASS = None
 
-    def check(self, filename, max_discrep_percentage, **kwargs):
-        gsim = self.GSIM_CLASS(**kwargs)
-        with open(os.path.join(self.BASE_DATA_PATH, filename)) as f:
-            errors, stats = check_gsim(gsim, f, max_discrep_percentage)
-        if errors:
-            raise AssertionError(stats)
-        print()
-        print(stats)
-
-    def check_all(self, *filenames, mean_discrep_percentage,
-                  std_discrep_percentage=None, **kwargs):
+    def check(self, *filenames, max_discrep_percentage,
+              std_discrep_percentage=None, **kwargs):
         if std_discrep_percentage is None:
-            std_discrep_percentage = mean_discrep_percentage
+            std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
         if NORMALIZE:
@@ -208,7 +208,7 @@ class BaseGSIMTestCase(unittest.TestCase):
                 if not hasattr(ctx, out_type):
                     # for instance MEAN is missing in zhao_2016_test
                     continue
-                discrep = (mean_discrep_percentage if out_type == 'MEAN'
+                discrep = (max_discrep_percentage if out_type == 'MEAN'
                            else std_discrep_percentage)
                 for m, im in enumerate(cmaker.imtls):
                     if out_type == 'MEAN' and im != 'MMI':

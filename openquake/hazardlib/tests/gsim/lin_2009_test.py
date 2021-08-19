@@ -26,12 +26,9 @@ class Lin2009TestCase(BaseGSIMTestCase):
     # Test data were obtained from a Fortran implementation
     # provided by the authors.
 
-    def test_mean(self):
+    def test_all(self):
         self.check('LIN2009/Lin2009_MEAN.csv',
-                   max_discrep_percentage=0.5)
-
-    def test_std_total(self):
-        self.check('LIN2009/Lin2009_TOTAL_STDDEV.csv',
+                   'LIN2009/Lin2009_TOTAL_STDDEV.csv',
                    max_discrep_percentage=0.5)
 
 

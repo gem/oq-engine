@@ -26,13 +26,8 @@ for testing of
 :class:`openquake.hazardlib.gsim.kanno_2006.Kanno2006Shallow`
 and subclasses of same.
 """
-
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-
-from openquake.hazardlib.gsim.kanno_2006 import (
-    Kanno2006Shallow,
-    Kanno2006Deep
-)
+from openquake.hazardlib.gsim.kanno_2006 import Kanno2006Shallow, Kanno2006Deep
 
 
 class Kanno2006ShallowTestCase(BaseGSIMTestCase):
@@ -49,19 +44,10 @@ class Kanno2006ShallowTestCase(BaseGSIMTestCase):
     MEAN_TOL = 0.15
     SIGMA_TOL = 0.1
 
-    def test_mean(self):
-        """
-        Ensure that means match reference dataset.
-        """
-        for mean_file in self.MEAN_FILES:
+    def test_all(self):
+        for mean_file, sigma_file in zip(self.MEAN_FILES, self.SIGMA_FILES):
             self.check(mean_file, max_discrep_percentage=self.MEAN_TOL)
-
-    def test_std_total(self):
-        """
-        Ensure that standard deviations match reference dataset.
-        """
-        for sigma_file in self.SIGMA_FILES:
-            self.check(sigma_file, max_discrep_percentage=self.SIGMA_TOL)
+            self.check(sigma_file, max_discrep_percentage=self.MEAN_TOL)
 
 
 class Kanno2006DeepTestCase(Kanno2006ShallowTestCase):

@@ -17,31 +17,23 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.fukushima_tanaka_1990 import (
-    FukushimaTanaka1990,
-    FukushimaTanakaSite1990
-)
+    FukushimaTanaka1990, FukushimaTanakaSite1990)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class FukushimaTanaka1990TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FukushimaTanaka1990
 
-    def test_mean(self):
+    def test_all(self):
         self.check('FT1990/FT1990_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('FT1990/FT1990_STDTOTAL.csv',
+                   'FT1990/FT1990_STDTOTAL.csv',
                    max_discrep_percentage=0.1)
 
 
 class FukushimaTanaka1990SiteTestCase(BaseGSIMTestCase):
     GSIM_CLASS = FukushimaTanakaSite1990
 
-    def test_mean(self):
+    def test_all(self):
         self.check('FT1990/FT1990Site_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('FT1990/FT1990Site_STDTOTAL.csv',
+                   'FT1990/FT1990Site_STDTOTAL.csv',
                    max_discrep_percentage=0.1)

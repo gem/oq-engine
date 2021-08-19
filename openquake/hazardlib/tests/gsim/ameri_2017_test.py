@@ -54,12 +54,12 @@ class AmeriEtAl2017RjbTestCase(BaseGSIMTestCase):
     INTRA_FILE = "AMERI2017/A17_Rjb_Heteroscedastic_INTRA_EVENT_STDDEV.csv"
 
     def test_all(self):
-        self.check_all(self.MEAN_FILE,
-                       self.STD_FILE,
-                       self.INTER_FILE,
-                       self.INTRA_FILE,
-                       mean_discrep_percentage=MEAN_DISCREP,
-                       std_discrep_percentage=STDDEV_DISCREP)
+        self.check(self.MEAN_FILE,
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class AmeriEtAl2017RepiTestCase(AmeriEtAl2017RjbTestCase):
