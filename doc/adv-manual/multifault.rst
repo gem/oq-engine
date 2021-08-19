@@ -1,4 +1,4 @@
-MultiPointSources
+MultiFaultSources
 =============================
 
 Starting from version 3.2, the OpenQuake Engine is able to manage
@@ -7,8 +7,8 @@ MultiFaultSources, which are special sources used for UCERF-like models.
 Unlike regular sources, MultiFaultSources *are not self-consistent*:
 they exist only in relation to a *geometryModel* which is a list of
 surfaces (only *planarSurfaces* and *kiteSurfaces* are supported),
-each one with an ID. MultiFaultSources are lists of ruptures with
-parameters mag, rake, probs_occur and IDs (sectionIndexes) taken from
+each one with an ID. MultiFaultSources are lists of nonparametric ruptures
+with values mag, rake, probs_occur and IDs (sectionIndexes) taken from
 the geometryModel.
 
 The example to study to understand MultiFaultSources, is in the directory
