@@ -684,9 +684,10 @@ class SourceConverter(RuptureConverter):
     def convert_geometryModel(self, node):
         """
         :param node: a geometryModel node
-        :returns: a list of sections
+        :returns: a dictionary sec_id -> section
         """
-        sections = [self.convert_node(secnode) for secnode in node]
+        sections = {secnode["id"]: self.convert_node(secnode)
+                    for secnode in node}
         return sections
 
     def convert_section(self, node):

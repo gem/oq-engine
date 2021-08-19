@@ -699,7 +699,6 @@ def build_source_model_node(source_model):
     return Node('sourceModel', attrs, nodes=nodes)
 
 
-# usage: hdf5write(datastore.hdf5, csm)
 @obj_to_node.add('CompositeSourceModel')
 def build_source_model(csm):
     nodes = [obj_to_node(sg) for sg in csm.src_groups]

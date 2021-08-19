@@ -99,7 +99,7 @@ def to_wkt(geom, coords):
 # https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
 def appendrow(row, rows, chatty, sections=()):
     if row.code == 'F':  # row.coords is a multiFaultSource
-        row.coords.create_inverted_index(sections)
+        row.coords.set_sections(sections)
         row.coords = [row.coords.polygon.coords]
     row.wkt = wkt = to_wkt(row.geom, row.coords)
     if wkt.startswith('POINT'):
