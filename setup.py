@@ -65,7 +65,7 @@ install_requires = [
     'shapely >=1.7, <1.8',
     'docutils >=0.11',
     'decorator >=4.3',
-    'django',
+    'django >=3.2.6',
     'matplotlib',
     'requests >=2.20, <3.0',
     'pyshp ==1.2.3',
