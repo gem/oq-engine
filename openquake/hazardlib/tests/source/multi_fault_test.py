@@ -50,9 +50,9 @@ class MultiFaultTestCase(unittest.TestCase):
         sfc_c = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
 
         # Sections list
-        sections = [FaultSection('0', sfc_a),
-                    FaultSection('1', sfc_b),
-                    FaultSection('2', sfc_c)]
+        sections = {"0": FaultSection('0', sfc_a),
+                    "1": FaultSection('1', sfc_b),
+                    "2": FaultSection('2', sfc_c)}
 
         # Rupture indexes
         rup_idxs = [['0'], ['1'], ['2'], ['0', '1'], ['0', '2'],
@@ -92,5 +92,5 @@ class MultiFaultTestCase(unittest.TestCase):
                                self.pmfs, self.mags, self.rakes)
         with self.assertRaises(ValueError) as ctx:
             mfs.set_sections(self.sections)
-        self.assertEqual('Rupture #2: section "3" does not exists',
-                         str(ctx.exception))
+        expected = 'Rupture #2: section "3" does not exist'
+        self.assertEqual(expected, str(ctx.exception))

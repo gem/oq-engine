@@ -100,7 +100,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         assert sections
         self.sections = sections
-        msg = 'Rupture #{:d}: section "{:s}" does not exists'
+        msg = 'Rupture #{:d}: section "{:s}" does not exist'
         for i in range(len(self.mags)):
             for idx in self.rupture_idxs[i]:
                 if idx not in sections:
