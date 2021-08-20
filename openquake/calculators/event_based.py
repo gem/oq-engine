@@ -29,7 +29,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
-from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.source.rupture import EBRupture, get_ruptures
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi
@@ -284,7 +284,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     'The rupture is too far from the sites! Please check the '
                     'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
-            aw = readinput.get_ruptures(oq.inputs['rupture_model'])
+            aw = get_ruptures(oq.inputs['rupture_model'])
             if list(gsim_lt.values) == ['*']:
                 num_gsims = numpy.array([len(gsim_lt.values['*'])], U32)
             else:
