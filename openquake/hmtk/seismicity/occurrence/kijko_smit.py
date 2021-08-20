@@ -101,15 +101,16 @@ class KijkoSmit(SeismicityOccurrence):
                 nyr[ival] = ctime[ival - 1] - ctime[ival]
             neq[ival] = np.sum(id1)
             # Get a- and b- value for the selected events
-            temp_rec_table = recurrence_table(catalogue.data['magnitude'][id1],
-                                              dmag,
-                                              catalogue.data['year'][id1])
+            if len(id1) > 0:
+                temp_rec_table = recurrence_table(
+                    catalogue.data['magnitude'][id1], dmag,
+                    catalogue.data['year'][id1])
 
-            aki_ml = AkiMaxLikelihood()
-            b_est[ival] = aki_ml._aki_ml(temp_rec_table[:, 0],
-                                         temp_rec_table[:, 1],
-                                         dmag, m_c)[0]
-            ival += 1
+                aki_ml = AkiMaxLikelihood()
+                b_est[ival] = aki_ml._aki_ml(temp_rec_table[:, 0],
+                                             temp_rec_table[:, 1],
+                                             dmag, m_c)[0]
+            #ival += 1
         total_neq = np.float(np.sum(neq))
         bval = self._harmonic_mean(b_est, neq)
         sigma_b = bval / np.sqrt(total_neq)

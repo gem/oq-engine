@@ -126,14 +126,14 @@ def input_checks(catalogue, config, completeness):
         config = {'reference_magnitude': None,
                   'magnitude_interval': 0.1}
     else:
-        if (not 'reference_magnitude' in config.keys()) or\
+        if ('reference_magnitude' not in config.keys()) or\
                 (config['reference_magnitude'] is None):
             ref_mag = 0.
             config['reference_magnitude'] = None
         else:
             ref_mag = config['reference_magnitude']
 
-        if (not 'magnitude_interval' in config.keys()) or \
+        if ('magnitude_interval' not in config.keys()) or \
                 not config['magnitude_interval']:
             dmag = 0.1
         else:
