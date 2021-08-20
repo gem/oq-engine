@@ -707,7 +707,7 @@ class EBRupture(object):
     :param int e0: initial event ID (default 0)
     :param bool scenario: True for scenario ruptures, default False
     """
-    def __init__(self, rupture, source_id, trt_smr, n_occ,
+    def __init__(self, rupture, source_id, trt_smr, n_occ=1,
                  id=None, e0=0, scenario=False):
         assert rupture.rup_id > 0  # sanity check
         self.rupture = rupture

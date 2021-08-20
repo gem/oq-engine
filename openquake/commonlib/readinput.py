@@ -625,8 +625,7 @@ def get_rupture(oqparam):
         an hazardlib rupture
     """
     [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
-    conv = sourceconverter.RuptureConverter(
-        oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
+    conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
     rup.rup_id = oqparam.ses_seed
