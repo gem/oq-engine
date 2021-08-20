@@ -624,7 +624,7 @@ def get_ruptures(fname_csv):
     if not rupture.BaseRupture._code:
         rupture.BaseRupture.init()  # initialize rupture codes
     code = rupture.BaseRupture.str2code
-    aw = hdf5.read_csv(fname_csv, rupture.rupture_dt)
+    aw = hdf5.read_csv(fname_csv, rupture.rup_dt)
     rups = []
     geoms = []
     n_occ = 1
