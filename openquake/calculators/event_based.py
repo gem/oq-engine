@@ -275,9 +275,11 @@ class EventBasedCalculator(base.HazardCalculator):
             rup = readinput.get_rupture(oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
-                                  0, 0, G, e0=i * G) for i in range(ngmfs)]
+                                  'NA', 0, G, e0=i * G, scenario=True)
+                        for i in range(ngmfs)]
             else:  # keep a single rupture with a big occupation number
-                ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
+                ebrs = [EBRupture(rup, 'NA', 0, G * ngmfs, rup.rup_id,
+                                  scenario=True)]
             aw = get_rup_array(ebrs, self.srcfilter)
             if len(aw) == 0:
                 raise RuntimeError(

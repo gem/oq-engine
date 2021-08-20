@@ -701,11 +701,11 @@ class EBRupture(object):
     object.
 
     :param rupture: the underlying rupture
-    :param source_id: ID of the source that generated the rupture
-    :param trt_smr: an integer describing TRT and source model realization
-    :param n_occ: number of occurrences of the rupture
-    :param e0: initial event ID (default 0)
-    :param scenario: distinguish scenario ruptures from event_based ruptures
+    :param str source_id: ID of the source that generated the rupture
+    :param int trt_smr: an integer describing TRT and source model realization
+    :param int n_occ: number of occurrences of the rupture
+    :param int e0: initial event ID (default 0)
+    :param bool scenario: True for scenario ruptures, default False
     """
     def __init__(self, rupture, source_id, trt_smr, n_occ,
                  id=None, e0=0, scenario=False):
@@ -737,7 +737,7 @@ class EBRupture(object):
             splits = numpy.array_split(all_eids, len(rlzs))
             for rlz_id, eids in zip(rlzs, splits):
                 dic[rlz_id] = eids
-        else:
+        else:  # event_based
             j = 0
             histo = general.random_histogram(
                 self.n_occ, len(rlzs), self.rup_id)
@@ -790,8 +790,8 @@ class RuptureProxy(object):
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self.rec['source_id'], self.rec['trt_smr'],
-                        self.rec['n_occ'], self.rec['id'], self.rec['e0'])
-        ebr.scenario = self.scenario
+                        self.rec['n_occ'], self.rec['id'], self.rec['e0'],
+                        self.scenario)
         return ebr
 
 
