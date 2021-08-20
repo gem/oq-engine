@@ -15,7 +15,7 @@ xmlns:gml="http://www.opengis.net/gml"
             id="100"
             name="100"
             >
-                <kiteFaultGeometry>
+                <kiteSurface>
                     <profile>
                         <gml:LineString>
                             <gml:posList>
@@ -30,7 +30,7 @@ xmlns:gml="http://www.opengis.net/gml"
                             </gml:posList>
                         </gml:LineString>
                     </profile>
-                </kiteFaultGeometry>
+                </kiteSurface>
                 <magScaleRel>
                     WC1994
                 </magScaleRel>
