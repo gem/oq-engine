@@ -8,14 +8,14 @@ Unlike regular sources, MultiFaultSources *are not self-consistent*:
 they exist only in relation to a *geometryModel* which is a list of
 surfaces (only *planarSurfaces* and *kiteSurfaces* are supported),
 each one with an ID. MultiFaultSources are lists of nonparametric ruptures
-with values mag, rake, probs_occur and IDs (sectionIndexes) taken from
-the geometryModel.
+with values mag, rake, probs_occur and IDs (called *sectionIndexes*)
+taken from the geometryModel.
 
-The example to study to understand MultiFaultSources, is in the directory
-``qa_tests_data/classical/case_65`` in the engine repo. In this example
-the geometryModel (the file sections.xml) contains two kiteSurfaces
-with IDs ``s1`` and ``s2`` respectively; there is a single single
-MultiFaultSource with the following content:
+In order to understand MultiFaultSources, The example to study is in
+the directory ``qa_tests_data/classical/case_65`` in the engine
+repository. In this example the geometryModel (the file sections.xml)
+contains two kiteSurfaces with IDs ``s1`` and ``s2`` respectively;
+there is a single MultiFaultSource with the following content:
 
 .. code-block:: xml
       <multiFaultSource id="1" name="Test1">
@@ -37,8 +37,8 @@ MultiFaultSource with the following content:
       </multiFaultSource>
 
 The ``probs_occur`` must sum up to 1 and the number of probabilities must
-be uniform across the MultiFaultSource (in this example there always two
-``probs_occur``) for each rupture.
+be uniform across the MultiFaultSource; in this example there always two
+``probs_occur`` for each rupture.
 
 When the engine reads a multiFaultSource XML file, a ``MultiFaultSource``
 object is instantiated. Such object cannot be used until the method
