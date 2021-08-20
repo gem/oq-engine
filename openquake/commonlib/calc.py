@@ -270,9 +270,10 @@ class RuptureImporter(object):
         """
         eid_rlz = []
         for rup in proxies:
-            ebr = EBRupture(Mock(rup_id=rup['seed']), rup['source_id'],
-                            rup['trt_smr'], rup['n_occ'], e0=rup['e0'])
-            ebr.scenario = 'scenario' in self.oqparam.calculation_mode
+            ebr = EBRupture(
+                Mock(rup_id=rup['seed']), rup['source_id'],
+                rup['trt_smr'], rup['n_occ'], e0=rup['e0'],
+                scenario='scenario' in self.oqparam.calculation_mode)
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid, rup['id'], rlz_id))
