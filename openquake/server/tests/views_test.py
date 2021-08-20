@@ -259,9 +259,6 @@ class EngineServerTestCase(unittest.TestCase):
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
         resp = self.c.head('/v1/calc/result/%s?export_type=csv' % hmaps_id)
-        # print headers of response
-        #print(resp.headers)
-        #print(resp.headers['Content-Disposition'])
         #
         # remove output ID digits from the filename
         cd = re.sub(r'\d', '', resp.headers['Content-Disposition'])
