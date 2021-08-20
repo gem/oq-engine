@@ -480,13 +480,12 @@ class RuptureConverter(object):
            :class:`openquake.hazardlib.geo.complexFaultSurface` instance
         3. there is a single griddedSurface node; returns a
            :class:`openquake.hazardlib.geo.GriddedSurface` instance
-        4. there is a list of PlanarSurface nodes; returns a
-           :class:`openquake.hazardlib.geo.MultiSurface` instance
+        5. there is either a single planarSurface or a list of planarSurface
+           nodes; returns a :class:`openquake.hazardlib.geo.PlanarSurface`
+           instance or a :class:`openquake.hazardlib.geo.MultiSurface` instance
         5. there is either a single kiteSurface or a list of kiteSurface
-           nodes; returns a
-           :class:`openquake.hazardlib.geo.KiteSurface` instance
-           or a :class:`openquake.hazardlib.geo.MultiSurface` instance,
-           respectively
+           nodes; returns a :class:`openquake.hazardlib.geo.KiteSurface`
+           instance or a :class:`openquake.hazardlib.geo.MultiSurface` instance
 
         :param surface_nodes: surface nodes as just described
         """
@@ -524,6 +523,8 @@ class RuptureConverter(object):
                         self.rupture_mesh_spacing))
                 surface = geo.MultiSurface(surfaces)
         else:  # a collection of planar surfaces
+            if len(surface_nodes) == 1:
+                return self.geo_planar(surface_nodes[0])
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(planar_surfaces)
         return surface
@@ -684,9 +685,10 @@ class SourceConverter(RuptureConverter):
     def convert_geometryModel(self, node):
         """
         :param node: a geometryModel node
-        :returns: a list of sections
+        :returns: a dictionary sec_id -> section
         """
-        sections = [self.convert_node(secnode) for secnode in node]
+        sections = {secnode["id"]: self.convert_node(secnode)
+                    for secnode in node}
         return sections
 
     def convert_section(self, node):
@@ -943,7 +945,7 @@ class SourceConverter(RuptureConverter):
             fault_trace = self.geo_line(geom)
             as_kite = False
         except Exception:
-            geom = node.kiteFaultGeometry
+            geom = node.kiteSurface
             profiles = self.geo_lines(geom)
 
         msr = valid.SCALEREL[~node.magScaleRel]()

@@ -28,6 +28,7 @@ Contents:
    pandas
    parametric-gmpes
    multipoint
+   multifault
    parallelization
    special-features
    point-source-gridding
