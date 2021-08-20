@@ -266,12 +266,18 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
         if oq.inputs['rupture_model'].endswith('.xml'):
-            self.gsims = [gsim_rlz.value[0] for gsim_rlz in gsim_lt]
+            # check the number of branchsets
+            bsets = len(gsim_lt._ltnode)
+            if bsets > 1:
+                raise InvalidFile(
+                    '%s for a scenario calculation must contain a single '
+                    'branchset, found %d!' % (oq.inputs['job_ini'], bsets))
+            [(trt, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_trt().items()
             self.cmaker = ContextMaker(
-                '*', self.gsims, {'maximum_distance': oq.maximum_distance,
-                                  'minimum_distance': oq.minimum_distance,
-                                  'truncation_level': oq.truncation_level,
-                                  'imtls': oq.imtls})
+                trt, rlzs_by_gsim, {'maximum_distance': oq.maximum_distance,
+                                    'minimum_distance': oq.minimum_distance,
+                                    'truncation_level': oq.truncation_level,
+                                    'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
@@ -305,13 +311,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 'There are no sites within the maximum_distance'
                 ' of %s km from the rupture' % oq.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
-
-        # check the number of branchsets
-        branchsets = len(gsim_lt._ltnode)
-        if len(rup_array) == 1 and branchsets > 1:
-            raise InvalidFile(
-                '%s for a scenario calculation must contain a single '
-                'branchset, found %d!' % (oq.inputs['job_ini'], branchsets))
 
         fake = logictree.FullLogicTree.fake(gsim_lt)
         self.realizations = fake.get_realizations()
