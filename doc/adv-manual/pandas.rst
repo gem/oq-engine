@@ -88,7 +88,7 @@ The ``gmv_0`` refers to the first IMT; here I have shown an example with a
 single IMT, in presence of multiple IMTs you would see multiple columns
 ``gmv_0, gmv_1, gmv_2, ...``. The ``sid`` column refers to the site ID.
 
-As a following step, you can compute the mean hazard curves at each site
+As a following step, you can compute the hazard curves at each site
 from the ground motion values by using the function `gmvs_to_poes`,
 available since engine 3.10:
 
@@ -101,4 +101,8 @@ available since engine 3.10:
    >>> poes = gmvs_to_poes(gmvs, oq.imtls, oq.ses_per_logic_tree_path)
 
 This will return an array of shape (M, L) where M is the number of
-intensity measure types and L the number of levels per IMT.
+intensity measure types and L the number of levels per IMT. This works
+when there is a single realization; in presence of multiple realizations
+one has to collect together set of values corresponding to the same realization
+(this can be done by using the relation ``event_id -> rlz_id``) and apply
+``gmvs_to_poes`` to each set.
