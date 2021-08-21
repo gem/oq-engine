@@ -102,7 +102,12 @@ available since engine 3.10:
 
 This will return an array of shape (M, L) where M is the number of
 intensity measure types and L the number of levels per IMT. This works
-when there is a single realization; in presence of multiple realizations
-one has to collect together set of values corresponding to the same realization
-(this can be done by using the relation ``event_id -> rlz_id``) and apply
-``gmvs_to_poes`` to each set.
+when there is a single realization; in presence of multiple
+realizations one has to collect together set of values corresponding
+to the same realization (this can be done by using the relation
+``event_id -> rlz_id``) and apply ``gmvs_to_poes`` to each
+set. Special care must be taken in the presence of zero events,
+i.e. events producing a zero ground motion value (or below the
+``minimum_intensity``): since such values are not stored you have to
+enlarge the gmvs arrays with the missing zeros, the number of which
+can be determined from the ``events`` table for each realization.
