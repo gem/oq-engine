@@ -78,6 +78,7 @@ extras_require = {
     'cluster': ["python-pam",
                 "django-pam",
                 "gunicorn",
+                "python-prctl",
                 "setproctitle"],
     'osgeo':  [
         'GDAL >= 2.4',
