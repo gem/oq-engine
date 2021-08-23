@@ -1117,7 +1117,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-# used in calculators/classical.py
+# not used at the moment
 def get_effect(mags, sitecol1, gsims_by_trt, oq):
     """
     :params mags:
