@@ -1237,6 +1237,7 @@ def read_cmakers(dstore, full_lt=None):
              'pointsource_distance': oq.pointsource_distance,
              'minimum_distance': oq.minimum_distance,
              'max_sites_disagg': oq.max_sites_disagg,
+             'min_iml': oq.min_iml,
              'imtls': oq.imtls,
              'reqv': oq.get_reqv(),
              'shift_hypo': oq.shift_hypo,
