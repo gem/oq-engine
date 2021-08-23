@@ -45,17 +45,35 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
 events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
-rupture_dt = numpy.dtype([('seed', U32),
-                          ('mag', F32),
-                          ('rake', F32),
-                          ('lon', F32),
-                          ('lat', F32),
-                          ('dep', F32),
-                          ('multiplicity', U32),
-                          ('trt', hdf5.vstr),
-                          ('kind', hdf5.vstr),
-                          ('mesh', hdf5.vstr),
-                          ('extra', hdf5.vstr)])
+rup_dt = numpy.dtype([
+    ('seed', U32),
+    ('mag', F32),
+    ('rake', F32),
+    ('lon', F32),
+    ('lat', F32),
+    ('dep', F32),
+    ('multiplicity', U32),
+    ('trt', hdf5.vstr),
+    ('kind', hdf5.vstr),
+    ('mesh', hdf5.vstr),
+    ('extra', hdf5.vstr)])
+
+rupture_dt = numpy.dtype([
+    ('id', U32),
+    ('seed', U32),
+    ('source_id', '<S16'),
+    ('trt_smr', U16),
+    ('code', U8),
+    ('n_occ', U32),
+    ('mag', F32), ('rake', F32),
+    ('occurrence_rate', F32),
+    ('minlon', F32),
+    ('minlat', F32),
+    ('maxlon', F32),
+    ('maxlat', F32),
+    ('hypo', (F32, 3)),
+    ('geom_id', U32),
+    ('e0', U32)])
 
 code2cls = {}
 
@@ -67,7 +85,7 @@ def to_csv_array(ruptures):
     """
     if not code2cls:
         code2cls.update(BaseRupture.init())
-    arr = numpy.zeros(len(ruptures), rupture_dt)
+    arr = numpy.zeros(len(ruptures), rup_dt)
     for rec, rup in zip(arr, ruptures):
         # s0=number of multi surfaces, s1=number of rows, s2=number of columns
         arrays = surface_to_arrays(rup.surface)  # shape (s0, 3, s1, s2)

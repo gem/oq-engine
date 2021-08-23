@@ -34,7 +34,7 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, RecordBuilder, all_equals)
+    AccumDict, DictArray, groupby, RecordBuilder)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -205,6 +205,10 @@ class ContextMaker(object):
             self.imtls = DictArray(param['hazard_imtls'])
         else:
             raise KeyError('Missing imtls in ContextMaker!')
+        try:
+            self.min_iml = param['min_iml']
+        except KeyError:
+            self.min_iml = [0. for imt in self.imtls]
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
@@ -1113,7 +1117,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-# used in calculators/classical.py
+# not used at the moment
 def get_effect(mags, sitecol1, gsims_by_trt, oq):
     """
     :params mags:
@@ -1233,6 +1237,7 @@ def read_cmakers(dstore, full_lt=None):
              'pointsource_distance': oq.pointsource_distance,
              'minimum_distance': oq.minimum_distance,
              'max_sites_disagg': oq.max_sites_disagg,
+             'min_iml': oq.min_iml,
              'imtls': oq.imtls,
              'reqv': oq.get_reqv(),
              'shift_hypo': oq.shift_hypo,

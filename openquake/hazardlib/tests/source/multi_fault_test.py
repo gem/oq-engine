@@ -50,9 +50,9 @@ class MultiFaultTestCase(unittest.TestCase):
         sfc_c = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
 
         # Sections list
-        sections = [FaultSection('0', sfc_a),
-                    FaultSection('1', sfc_b),
-                    FaultSection('2', sfc_c)]
+        sections = {"0": FaultSection('0', sfc_a),
+                    "1": FaultSection('1', sfc_b),
+                    "2": FaultSection('2', sfc_c)}
 
         # Rupture indexes
         rup_idxs = [['0'], ['1'], ['2'], ['0', '1'], ['0', '2'],
@@ -81,16 +81,16 @@ class MultiFaultTestCase(unittest.TestCase):
         # test instantiation and rupture generation
         src = MultiFaultSource("01", "test", "Moon Crust",
                                self.rup_idxs, self.pmfs, self.mags, self.rakes)
-        src.create_inverted_index(self.sections)
+        src.set_sections(self.sections)
         rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))
 
     def test02(self):
-        # test create_inverted_index, '3' is not a known section ID
+        # test set_sections, '3' is not a known section ID
         rup_idxs = [['0'], ['1'], ['3'], ['0'], ['1'], ['3'], ['0']]
         mfs = MultiFaultSource("01", "test", "Moon Crust", rup_idxs,
                                self.pmfs, self.mags, self.rakes)
         with self.assertRaises(ValueError) as ctx:
-            mfs.create_inverted_index(self.sections)
-        self.assertEqual('Rupture #2: section "3" does not exists',
-                         str(ctx.exception))
+            mfs.set_sections(self.sections)
+        expected = 'Rupture #2: section "3" does not exist'
+        self.assertEqual(expected, str(ctx.exception))

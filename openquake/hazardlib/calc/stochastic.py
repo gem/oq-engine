@@ -28,7 +28,8 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import nofilter
-from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
+from openquake.hazardlib.source.rupture import (
+    BaseRupture, EBRupture, rupture_dt)
 from openquake.hazardlib.geo.mesh import surface_to_arrays
 
 TWO16 = 2 ** 16  # 65,536
@@ -82,15 +83,7 @@ def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
             msg %= (source.source_id, str(err))
             raise_(etype, msg, tb)
 
-
 # ######################## rupture calculator ############################ #
-
-rupture_dt = numpy.dtype([
-    ('id', U32), ('seed', U32), ('source_id', '<S16'), ('trt_smr', U16),
-    ('code', U8), ('n_occ', U32), ('mag', F32), ('rake', F32),
-    ('occurrence_rate', F32),
-    ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
-    ('hypo', (F32, 3)), ('geom_id', U32), ('e0', U32)])
 
 
 # this is really fast

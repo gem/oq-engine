@@ -155,22 +155,22 @@ def build_complex_fault_geometry(fault_source):
     return Node("complexFaultGeometry", nodes=edge_nodes)
 
 
-def build_kite_fault_geometry(fault_source):
+@obj_to_node.add('KiteSurface')
+def build_kite_surface(ksurface):
     """
-    Returns the complex fault source geometry as a Node
-    :param fault_source:
+    Returns the KiteSurface instance as a Node
+
+    :param ksurface:
         Kite fault source model as an instance of the :class:
         `openquake.hazardlib.source.kite_fault.KiteFaultSource`
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
-    num_profiles = len(fault_source.profiles)
     profile_nodes = []
-    for iloc, profile in enumerate(fault_source.profiles):
-        profile_nodes.append(
-            Node("profile", nodes=[build_linestring_node(profile, with_depth=True)]))
-    return Node("kiteFaultGeometry", nodes=profile_nodes)
-
+    for profile in ksurface.profiles:
+        node = build_linestring_node(profile, with_depth=True)
+        profile_nodes.append(Node("profile", nodes=[node]))
+    return Node("kiteSurface", nodes=profile_nodes)
 
 
 @obj_to_node.add('EvenlyDiscretizedMFD')
@@ -624,7 +624,7 @@ def build_kite_fault_source_node(fault_source):
     """
 
     # Parse geometry
-    source_nodes = [build_kite_fault_geometry(fault_source)]
+    source_nodes = [build_kite_surface(fault_source)]
     # Parse common fault source attributes
     source_nodes.extend(get_fault_source_nodes(fault_source))
     return Node("kiteFaultSource",
@@ -659,6 +659,20 @@ def build_multi_fault_source_node(multi_fault_source):
     return Node("multiFaultSource",
                 get_source_attributes(multi_fault_source),
                 nodes=rup_nodes)
+
+
+@obj_to_node.add('FaultSection')
+def build_section(section):
+    """
+    Parses a FaultSection instance to a Node class
+
+    :param section:
+        A FaultSection instance
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    nodes = [obj_to_node(section.surface)]
+    return Node("section", {'id': section.sec_id}, nodes=nodes)
 
 
 @obj_to_node.add('SourceGroup')
@@ -699,7 +713,6 @@ def build_source_model_node(source_model):
     return Node('sourceModel', attrs, nodes=nodes)
 
 
-# usage: hdf5write(datastore.hdf5, csm)
 @obj_to_node.add('CompositeSourceModel')
 def build_source_model(csm):
     nodes = [obj_to_node(sg) for sg in csm.src_groups]
@@ -731,6 +744,8 @@ def write_source_model(dest, sources_or_groups, name=None,
         Source model in different formats
     :param name:
         Name of the source model (if missing, extracted from the filename)
+    :returns:
+        the list of generated filenames
     """
     if isinstance(sources_or_groups, nrml.SourceModel):
         groups = sources_or_groups.src_groups
@@ -751,6 +766,7 @@ def write_source_model(dest, sources_or_groups, name=None,
         del attrs['investigation_time']
     nodes = list(map(obj_to_node, groups))
     ddict = extract_ddict(groups)
+    out = [dest]
     if ddict:
         # remove duplicate content from nodes
         for grp_node in nodes:
@@ -770,14 +786,25 @@ def write_source_model(dest, sources_or_groups, name=None,
                         h[key][:] = v
                     else:
                         h[key] = v
+        out.append(dest5)
 
-    source_model = Node("sourceModel", attrs, nodes=nodes)
+    # produce a geometryModel if there are MultiFaultSources
+    sections = {}
+    for group in groups:
+        for src in group:
+            if hasattr(src, 'sections'):
+                sections.update(src.sections)
+    sections = {sid: sections[sid] for sid in sections}
+    smodel = Node("sourceModel", attrs, nodes=nodes)
     with open(dest, 'wb') as f:
-        nrml.write([source_model], f, '%s')
-    if ddict:
-        return [dest, dest5]
-    else:
-        return [dest]
+        nrml.write([smodel], f, '%s')
+    if sections:
+        secnodes = [obj_to_node(sec) for sec in sections.values()]
+        gmodel = Node("geometryModel", attrs, nodes=secnodes)
+        with open(dest[:-4] + '_sections.xml', 'wb') as f:
+            nrml.write([gmodel], f, '%s')
+            out.append(f.name)
+    return out
 
 
 def tomldump(obj, fileobj=None):

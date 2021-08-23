@@ -53,7 +53,7 @@ GRIDDED = os.path.join(os.path.dirname(__file__),
                        'source_model/gridded.xml')
 
 KITEFAULT = os.path.join(os.path.dirname(__file__),
-                       'source_model/kite-fault-source.xml')
+                         'source_model/kite-fault-source.xml')
 
 TOML = os.path.join(os.path.dirname(__file__), 'expected_sources.toml')
 
