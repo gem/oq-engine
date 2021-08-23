@@ -34,7 +34,7 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, RecordBuilder, all_equals)
+    AccumDict, DictArray, groupby, RecordBuilder)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -205,6 +205,10 @@ class ContextMaker(object):
             self.imtls = DictArray(param['hazard_imtls'])
         else:
             raise KeyError('Missing imtls in ContextMaker!')
+        try:
+            self.min_iml = param['min_iml']
+        except KeyError:
+            self.min_iml = [0. for imt in self.imtls]
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')

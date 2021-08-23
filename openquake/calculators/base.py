@@ -843,6 +843,7 @@ class HazardCalculator(BaseCalculator):
         self.param = dict(individual_curves=oq.individual_curves,
                           ps_grid_spacing=oq.ps_grid_spacing,
                           minimum_distance=oq.minimum_distance,
+                          min_iml=oq.min_iml,
                           collapse_level=int(oq.collapse_level),
                           split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,
