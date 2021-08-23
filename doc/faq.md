@@ -42,8 +42,8 @@ openquake.cfg and add the lines (if for instance you want to use 8 cores)
 [distribution]
 num_cores = 8
 
-If you are on a cluster you must edit the section [zworkers], parameter
-host_cores replacing the `-1` with the number of cores to be used on
+If you are on a cluster you must edit the section [zworkers] and the parameter
+`host_cores`, replacing the `-1` with the number of cores to be used on
 each machine.
 
 ******
