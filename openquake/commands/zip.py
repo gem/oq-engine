@@ -25,7 +25,7 @@ def main(what, archive_zip='', *, risk_file=''):
     Zip into an archive one or two job.ini files with all related files
     """
     if os.path.isdir(what):
-        oqzip.zip_all(what)
+        oqzip.zip_all_jobs(what)
     elif what.endswith('.xml') and '<logicTree' in open(what).read(512):
         # hack to see if the NRML file is of kind logicTree
         oqzip.zip_source_model(what, archive_zip)
