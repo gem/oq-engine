@@ -785,6 +785,14 @@ lin_2009
     :undoc-members:
     :show-inheritance:
 
+lin_2011
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.tem20.lin_2011
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lin_lee_2008
 --------------------------------------------
 
