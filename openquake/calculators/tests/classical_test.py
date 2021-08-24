@@ -23,6 +23,7 @@ import numpy
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import lt, contexts
+from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
@@ -491,7 +492,7 @@ hazard_uhs-std.csv
                       calculation_mode='event_based',
                       ses_per_logic_tree_path='10')
         csv = extract(self.calc.datastore, 'ruptures').array
-        rups = readinput.get_ruptures(general.gettemp(csv))
+        rups = get_ruptures(general.gettemp(csv))
         self.assertEqual(len(rups), 1)
 
         # check what QGIS will be seeing

@@ -29,7 +29,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
-from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.source.rupture import EBRupture, get_ruptures
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi
@@ -270,25 +270,33 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
         if oq.inputs['rupture_model'].endswith('.xml'):
-            self.gsims = [gsim_rlz.value[0] for gsim_rlz in gsim_lt]
+            # check the number of branchsets
+            bsets = len(gsim_lt._ltnode)
+            if bsets > 1:
+                raise InvalidFile(
+                    '%s for a scenario calculation must contain a single '
+                    'branchset, found %d!' % (oq.inputs['job_ini'], bsets))
+            [(trt, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_trt().items()
             self.cmaker = ContextMaker(
-                '*', self.gsims, {'maximum_distance': oq.maximum_distance,
-                                  'minimum_distance': oq.minimum_distance,
-                                  'truncation_level': oq.truncation_level,
-                                  'imtls': oq.imtls})
+                trt, rlzs_by_gsim, {'maximum_distance': oq.maximum_distance,
+                                    'minimum_distance': oq.minimum_distance,
+                                    'truncation_level': oq.truncation_level,
+                                    'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
-                                  0, 0, G, e0=i * G) for i in range(ngmfs)]
+                                  'NA', 0, G, e0=i * G, scenario=True)
+                        for i in range(ngmfs)]
             else:  # keep a single rupture with a big occupation number
-                ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
+                ebrs = [EBRupture(rup, 'NA', 0, G * ngmfs, rup.rup_id,
+                                  scenario=True)]
             aw = get_rup_array(ebrs, self.srcfilter)
             if len(aw) == 0:
                 raise RuntimeError(
                     'The rupture is too far from the sites! Please check the '
                     'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
-            aw = readinput.get_ruptures(oq.inputs['rupture_model'])
+            aw = get_ruptures(oq.inputs['rupture_model'])
             if list(gsim_lt.values) == ['*']:
                 num_gsims = numpy.array([len(gsim_lt.values['*'])], U32)
             else:
@@ -307,13 +315,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 'There are no sites within the maximum_distance'
                 ' of %s km from the rupture' % oq.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
-
-        # check the number of branchsets
-        branchsets = len(gsim_lt._ltnode)
-        if len(rup_array) == 1 and branchsets > 1:
-            raise InvalidFile(
-                '%s for a scenario calculation must contain a single '
-                'branchset, found %d!' % (oq.inputs['job_ini'], branchsets))
 
         fake = logictree.FullLogicTree.fake(gsim_lt)
         self.realizations = fake.get_realizations()

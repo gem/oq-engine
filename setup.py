@@ -65,7 +65,7 @@ install_requires = [
     'shapely >=1.7, <1.8',
     'docutils >=0.11',
     'decorator >=4.3',
-    'django >=1.11, <2.3',
+    'django >=3.2',
     'matplotlib',
     'requests >=2.20, <3.0',
     'pyshp ==1.2.3',
@@ -78,7 +78,7 @@ extras_require = {
     'cluster': ["python-pam",
                 "django-pam",
                 "gunicorn",
-                "python-prctl ==1.6.1",
+                "python-prctl",
                 "setproctitle"],
     'osgeo':  [
         'GDAL >= 2.4',
