@@ -103,7 +103,7 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
 def read_input(hparams):
     """
     :param hparams: a dictionary of hazard parameters
-    :returns: an Input tuple (groups, sitecol, gsim_lt, cmakers)
+    :returns: an Input namedtuple (groups, sitecol, gsim_lt, cmakerdict)
 
     The dictionary must contain the keys
 
