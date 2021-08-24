@@ -34,7 +34,11 @@ xmlns="http://openquake.org/xmlns/nrml/0.4">
   <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4" applyToTectonicRegionType="Volcanic">
     <logicTreeBranch branchID="b4_1">
       <uncertaintyModel>FaccioliEtAl2010</uncertaintyModel>
-      <uncertaintyWeight>1.0</uncertaintyWeight>
+      <uncertaintyWeight>0.60</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b4_2">
+      <uncertaintyModel>TusaLanger2016RepiSP87SE</uncertaintyModel>
+      <uncertaintyWeight>0.40</uncertaintyWeight>
     </logicTreeBranch>
   </logicTreeBranchSet>
 </logicTree>
