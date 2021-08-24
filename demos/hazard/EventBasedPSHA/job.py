@@ -37,7 +37,7 @@ def main(params):
 
 
 if __name__ == '__main__':
-    params = dict(maximum_distance=MagDepDistance.new('300'),
+    params = dict(maximum_distance=MagDepDistance.new('200'),
                   imtls={'PGA': [0]},
                   source_model_file="source_model.xml",
                   area_source_discretization=10,
