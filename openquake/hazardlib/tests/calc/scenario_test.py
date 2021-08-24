@@ -18,7 +18,8 @@
 
 import os
 import unittest
-from openquake.hazardlib.calc import read_input, MagDepDistance, gmf
+from openquake.hazardlib import read_input, MagDepDistance
+from openquake.hazardlib.calc import gmf
 
 CWD = os.path.dirname(__file__)
 RUP_XML = os.path.join(CWD, 'data', 'rup.xml')
