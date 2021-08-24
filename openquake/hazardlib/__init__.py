@@ -160,19 +160,23 @@ def read_input(hparams):
     else:
         raise KeyError('Missing source_model_file or rupture_file')
     trts = set(grp.trt for grp in groups)
+    if 'gsim' in hparams:
+        lt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
+    else:
+        lt = gsim_lt.GsimLogicTree(hparams['gsim_logic_tree_file'], trts)
+
+    # fix source attributes
     idx = 0
+    num_rlzs = lt.get_num_paths()
     for grp_id, sg in enumerate(groups):
         assert len(sg)  # sanity check
         for src in sg:
             src.id = idx
             src.grp_id = grp_id
             src.trt_smr = grp_id
+            src.samples = num_rlzs
             idx += 1
 
-    if 'gsim' in hparams:
-        lt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
-    else:
-        lt = gsim_lt.GsimLogicTree(hparams['gsim_logic_tree_file'], trts)
     cmaker = {}  # trt => cmaker
     for trt, rlzs_by_gsim in lt.get_rlzs_by_gsim_trt().items():
         cmaker[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
@@ -185,6 +189,5 @@ def read_input(hparams):
             for ebr in grp:
                 ebr.n_occ = ngmfs * ngsims
 
- 
     sitecol = _get_sitecol(hparams, lt.req_site_params)
     return Input(groups, sitecol, lt, cmaker)

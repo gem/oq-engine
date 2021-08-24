@@ -29,7 +29,10 @@ def main(params):
     print(inp)
     print(inp.gsim_lt.get_rlzs_by_gsim_trt())
     acc = AccumDict(accum=[])
-    for ebr in sample_ebruptures(inp.groups, inp.cmakerdict):
+    ebrs = sample_ebruptures(inp.groups, inp.cmakerdict)
+    ne = sum(ebr.n_occ for ebr in ebrs)
+    print('There are %d ruptures and %d events' % (len(ebrs), ne))
+    for ebr in ebrs:
         cmaker = inp.cmakerdict[ebr.rupture.tectonic_region_type]
         gmf_dict, _ = GmfComputer(ebr, inp.sitecol, cmaker).compute_all()
         acc += gmf_dict
@@ -41,8 +44,9 @@ if __name__ == '__main__':
                   imtls={'PGA': [0]},
                   source_model_file="source_model.xml",
                   area_source_discretization=10,
-                  ses_seed=42,
-                  investigation_time=5,
+                  ses_seed=24,
+                  ses_per_logic_tree_path=20,
+                  investigation_time=1,
                   site_model_file="site_model.csv",
                   gsim_logic_tree_file="gmpe_logic_tree.xml")
     main(params)
