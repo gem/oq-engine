@@ -56,10 +56,10 @@ def _get_sitecol(hparams, req_site_params):
         sm = unittest.mock.Mock(**hparams)
         mesh = geo.Mesh.from_coords(hparams['sites'])
     elif 'site_model_file' in hparams:
-        sm = _get_site_model(hparams['site_mode_file'], req_site_params)
+        sm = _get_site_model(hparams['site_model_file'], req_site_params)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
     else:
-        raise KeyError('Missing sites or site_mode_file')
+        raise KeyError('Missing sites or site_model_file')
     return site.SiteCollection.from_points(
         mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
 
@@ -111,6 +111,7 @@ def read_input(hparams):
     - "imtls"
     - "source_model_file" or "rupture_model_file"
     - "sites" or "site_model_file"
+    - "gsim" or "gsim_logic_tree_file"
 
     Moreover:
 
@@ -128,6 +129,7 @@ def read_input(hparams):
     - "minimum_magnitude"
     - "discard_trts" (default "")
     - "number_of_logic_tree_samples" (default 0)
+    - "ses_per_logic_tree_path" (default 1)
     """
     assert 'imts' in hparams or 'imtls' in hparams
     assert isinstance(hparams['maximum_distance'], MagDepDistance)
@@ -158,6 +160,15 @@ def read_input(hparams):
     else:
         raise KeyError('Missing source_model_file or rupture_file')
     trts = set(grp.trt for grp in groups)
+    idx = 0
+    for grp_id, sg in enumerate(groups):
+        assert len(sg)  # sanity check
+        for src in sg:
+            src.id = idx
+            src.grp_id = grp_id
+            src.trt_smr = grp_id
+            idx += 1
+
     if 'gsim' in hparams:
         lt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
     else:
@@ -173,5 +184,7 @@ def read_input(hparams):
             ngsims = len(cmaker[grp.trt].gsims)
             for ebr in grp:
                 ebr.n_occ = ngmfs * ngsims
+
+ 
     sitecol = _get_sitecol(hparams, lt.req_site_params)
     return Input(groups, sitecol, lt, cmaker)
