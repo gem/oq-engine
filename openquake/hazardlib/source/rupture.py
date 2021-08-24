@@ -719,6 +719,10 @@ class EBRupture(object):
         self.scenario = scenario
 
     @property
+    def tectonic_region_type(self):
+        return self.rupture.tectonic_region_type
+
+    @property
     def rup_id(self):
         """
         Seed of the rupture
