@@ -183,6 +183,8 @@ class ContextMaker(object):
         self.investigation_time = param.get('investigation_time')
         if self.investigation_time:
             self.tom = registry['PoissonTOM'](self.investigation_time)
+        self.ses_seed = param.get('ses_seed', 42)
+        self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.grp_id = param.get('grp_id', 0)
@@ -1236,6 +1238,8 @@ def read_cmakers(dstore, full_lt=None):
              'investigation_time': oq.investigation_time,
              'pointsource_distance': oq.pointsource_distance,
              'minimum_distance': oq.minimum_distance,
+             'ses_seed': oq.ses_seed,
+             'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
              'max_sites_disagg': oq.max_sites_disagg,
              'min_iml': oq.min_iml,
              'imtls': oq.imtls,
