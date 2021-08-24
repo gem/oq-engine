@@ -46,7 +46,7 @@ if settings.WEBUI:
     ]
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
-        urlpatterns.append(url(r'^%s/' % app_name, include('%s.urls' % app,
+        urlpatterns.append(re_path(r'^%s/' % app_name, include('%s.urls' % app,
                                namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
