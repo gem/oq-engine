@@ -615,77 +615,18 @@ def get_gsim_lt(oqparam, trts=('*',)):
     return gsim_lt
 
 
-def get_ruptures(fname_csv):
-    """
-    Read ruptures in CSV format and return an ArrayWrapper.
-
-    :param fname_csv: path to the CSV file
-    """
-    if not rupture.BaseRupture._code:
-        rupture.BaseRupture.init()  # initialize rupture codes
-    code = rupture.BaseRupture.str2code
-    aw = hdf5.read_csv(fname_csv, rupture.rup_dt)
-    rups = []
-    geoms = []
-    n_occ = 1
-    for u, row in enumerate(aw.array):
-        hypo = row['lon'], row['lat'], row['dep']
-        dic = json.loads(row['extra'])
-        meshes = F32(json.loads(row['mesh']))  # num_surfaces 3D arrays
-        num_surfaces = len(meshes)
-        shapes = []
-        points = []
-        minlons = []
-        maxlons = []
-        minlats = []
-        maxlats = []
-        for mesh in meshes:
-            shapes.extend(mesh.shape[1:])
-            points.extend(mesh.flatten())  # lons + lats + deps
-            minlons.append(mesh[0].min())
-            minlats.append(mesh[1].min())
-            maxlons.append(mesh[0].max())
-            maxlats.append(mesh[1].max())
-        rec = numpy.zeros(1, rupture_dt)[0]
-        rec['seed'] = row['seed']
-        rec['minlon'] = minlon = min(minlons)
-        rec['minlat'] = minlat = min(minlats)
-        rec['maxlon'] = maxlon = max(maxlons)
-        rec['maxlat'] = maxlat = max(maxlats)
-        rec['mag'] = row['mag']
-        rec['hypo'] = hypo
-        rate = dic.get('occurrence_rate', numpy.nan)
-        tup = (u, row['seed'], 'no-source', aw.trts.index(row['trt']),
-               code[row['kind']], n_occ, row['mag'], row['rake'], rate,
-               minlon, minlat, maxlon, maxlat, hypo, u, 0)
-        rups.append(tup)
-        geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
-    if not rups:
-        return ()
-    dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
-    # NB: PMFs for nonparametric ruptures are missing
-    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
-
-
 def get_rupture(oqparam):
     """
-    Read the `rupture_model` file and by filter the site collection
+    Read the `rupture_model` XML file and by filter the site collection
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         an hazardlib rupture
     """
-    rup_model = oqparam.inputs['rupture_model']
-    if rup_model.endswith('.csv'):
-        return rupture.from_array(hdf5.read_csv(rup_model))
-    if rup_model.endswith('.xml'):
-        [rup_node] = nrml.read(rup_model)
-        conv = sourceconverter.RuptureConverter(
-            oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
-        rup = conv.convert_node(rup_node)
-    else:
-        raise ValueError('Unrecognized ruptures model %s' % rup_model)
+    [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+    conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
+    rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
     rup.rup_id = oqparam.ses_seed
     return rup

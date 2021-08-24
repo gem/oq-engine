@@ -20,7 +20,8 @@ Universal installation script for the OpenQuake engine.
 Three installation methods are supported:
 
 1. "server" installation, i.e. system-wide installation on /opt/openquake
-1. "devel_server" installation, i.e. developement system-wide installation on /opt/openquake
+1. "devel_server" installation, i.e. developement system-wide installation on
+    /opt/openquake
 2. "user" installation on $HOME/openquake
 3. "devel" installation on $HOME/openquake from the engine repository
 
@@ -159,6 +160,7 @@ DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
 STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
 
+
 def install_standalone(venv):
     """
     Install the standalone Django applications if possible
@@ -172,6 +174,7 @@ def install_standalone(venv):
                                    '--upgrade', STANDALONE % app], env=env)
         except Exception as exc:
             print('%s: could not install %s' % (exc, STANDALONE % app))
+
 
 def before_checks(inst, remove, usage):
     """
@@ -228,7 +231,7 @@ def before_checks(inst, remove, usage):
     if ((inst is server and os.path.exists(inst.OQ) and
             os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV) or
             (inst is devel_server and os.path.exists(inst.OQ) and
-            os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV)):
+             os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV)):
         sys.exit('Error: there is already a link %s->%s; please remove it' %
                  (inst.OQ, os.readlink(inst.OQ)))
 
@@ -266,7 +269,7 @@ def install(inst, version):
     else:
         pycmd = inst.VENV + '/bin/python'
     # upgrade pip
-    subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade', 
+    subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
                           'pip', 'wheel'])
 
     # install the requirements
@@ -307,15 +310,15 @@ def install(inst, version):
     else:
         oqreal = '%s/bin/oq' % inst.VENV
 
-    if ((inst is server and not os.path.exists(inst.OQ)) or
-       (inst is devel_server and not os.path.exists(inst.OQ))):
+    if (inst is server and not os.path.exists(inst.OQ) or
+       inst is devel_server and not os.path.exists(inst.OQ)):
         os.symlink(oqreal, inst.OQ)
     if inst is user:
         if sys.platform == 'win32':
             print(f'Please activate the virtualenv with {inst.VENV}'
                   '\\Scripts\\activate.bat')
         else:
-            print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
+            print(f'Please add an alias oq={oqreal} in your .bashrc or equiv')
     elif inst is devel:
         if sys.platform == 'win32':
             print(f'Please activate the virtualenv with {inst.VENV}'

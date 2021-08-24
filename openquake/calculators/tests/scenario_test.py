@@ -141,7 +141,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_13(self):
         # multi-rupture scenario
         self.run_calc(case_13.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 340)
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 380)
 
     def test_case_14(self):
         # new Swiss GMPEs
@@ -152,7 +152,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # choosing invalid GMPE
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_15.__file__, 'job.ini')
-        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id='0')"
+        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id='NA')"
                       " CorrelationButNoInterIntraStdDevs", str(ctx.exception))
 
     def test_case_16(self):

@@ -43,8 +43,16 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
-pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
-events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
+
+pmf_dt = numpy.dtype([
+    ('prob', float),
+    ('occ', U32)])
+
+events_dt = numpy.dtype([
+    ('id', U32),
+    ('rup_id', U32),
+    ('rlz_id', U16)])
+
 rup_dt = numpy.dtype([
     ('seed', U32),
     ('mag', F32),
@@ -111,21 +119,6 @@ def to_csv_array(ruptures):
         _fixfloat32(extra)
         rec['extra'] = json.dumps(extra)
     return arr
-
-
-def from_array(aw):
-    """
-    :returns: a list of ruptures from an ArrayWrapper
-    """
-    rups = []
-    names = aw.array.dtype.names
-    for rec in aw.array:
-        dic = dict(zip(names, rec))
-        dic['trt'] = aw.trts[int(dic.pop('trt_smr'))]
-        dic['hypo'] = dic.pop('lon'), dic.pop('lat'), dic.pop('dep')
-        dic.update(json.loads(dic.pop('extra')))
-        rups.append(_get_rupture(dic))
-    return rups
 
 
 def to_arrays(geom):
@@ -705,20 +698,29 @@ class ExportedRupture(object):
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
-    object, containing an array of site indices affected by the rupture,
-    as well as the IDs of the corresponding seismic events.
+    object.
+
+    :param rupture: the underlying rupture
+    :param str source_id: ID of the source that generated the rupture
+    :param int trt_smr: an integer describing TRT and source model realization
+    :param int n_occ: number of occurrences of the rupture
+    :param int e0: initial event ID (default 0)
+    :param bool scenario: True for scenario ruptures, default False
     """
-    def __init__(self, rupture, source_id, trt_smr, n_occ, id=None, e0=0):
-        # NB: when reading an exported ruptures.xml the rup_id will be 0
-        # for the first rupture; it used to be the seed instead
-        assert rupture.rup_id >= 0  # sanity check
+    def __init__(self, rupture, source_id, trt_smr, n_occ=1,
+                 id=None, e0=0, scenario=False):
+        assert rupture.rup_id > 0  # sanity check
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
         self.id = id  # id of the rupture on the DataStore
         self.e0 = e0
-        self.scenario = False
+        self.scenario = scenario
+
+    @property
+    def tectonic_region_type(self):
+        return self.rupture.tectonic_region_type
 
     @property
     def rup_id(self):
@@ -739,7 +741,7 @@ class EBRupture(object):
             splits = numpy.array_split(all_eids, len(rlzs))
             for rlz_id, eids in zip(rlzs, splits):
                 dic[rlz_id] = eids
-        else:
+        else:  # event_based
             j = 0
             histo = general.random_histogram(
                 self.n_occ, len(rlzs), self.rup_id)
@@ -753,49 +755,6 @@ class EBRupture(object):
         :returns: an array of event IDs
         """
         return numpy.arange(self.n_occ, dtype=U32)
-
-    def export(self, events_by_ses):
-        """
-        Yield :class:`Rupture` objects, with all the
-        attributes set, suitable for export in XML format.
-        """
-        rupture = self.rupture
-        new = ExportedRupture(self.id, self.n_occ, events_by_ses)
-        if isinstance(rupture.surface, geo.ComplexFaultSurface):
-            new.typology = 'complexFaultsurface'
-        elif isinstance(rupture.surface, geo.SimpleFaultSurface):
-            new.typology = 'simpleFaultsurface'
-        elif isinstance(rupture.surface, geo.GriddedSurface):
-            new.typology = 'griddedRupture'
-        elif isinstance(rupture.surface, geo.MultiSurface):
-            new.typology = 'multiPlanesRupture'
-        else:
-            new.typology = 'singlePlaneRupture'
-        new.is_from_fault_source = iffs = isinstance(
-            rupture.surface, (geo.ComplexFaultSurface,
-                              geo.SimpleFaultSurface))
-        new.is_gridded_surface = igs = isinstance(
-            rupture.surface, geo.GriddedSurface)
-        new.is_multi_surface = ims = isinstance(
-            rupture.surface, geo.MultiSurface)
-        new.lons, new.lats, new.depths = get_geom(
-            rupture.surface, iffs, ims, igs)
-        new.surface = rupture.surface
-        new.strike = rupture.surface.get_strike()
-        new.dip = rupture.surface.get_dip()
-        new.rake = rupture.rake
-        new.hypocenter = rupture.hypocenter
-        new.tectonic_region_type = rupture.tectonic_region_type
-        new.magnitude = new.mag = rupture.mag
-        new.top_left_corner = None if iffs or ims or igs else (
-            new.lons[0], new.lats[0], new.depths[0])
-        new.top_right_corner = None if iffs or ims or igs else (
-            new.lons[1], new.lats[1], new.depths[1])
-        new.bottom_left_corner = None if iffs or ims or igs else (
-            new.lons[2], new.lats[2], new.depths[2])
-        new.bottom_right_corner = None if iffs or ims or igs else (
-            new.lons[3], new.lats[3], new.depths[3])
-        return new
 
     def __repr__(self):
         return '<%s %d[%d]>' % (
@@ -835,6 +794,58 @@ class RuptureProxy(object):
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self.rec['source_id'], self.rec['trt_smr'],
-                        self.rec['n_occ'], self.rec['id'], self.rec['e0'])
-        ebr.scenario = self.scenario
+                        self.rec['n_occ'], self.rec['id'], self.rec['e0'],
+                        self.scenario)
         return ebr
+
+
+def get_ruptures(fname_csv):
+    """
+    Read ruptures in CSV format and return an ArrayWrapper.
+
+    :param fname_csv: path to the CSV file
+    """
+    if not BaseRupture._code:
+        BaseRupture.init()  # initialize rupture codes
+    code = BaseRupture.str2code
+    aw = hdf5.read_csv(fname_csv, rup_dt)
+    rups = []
+    geoms = []
+    n_occ = 1
+    for u, row in enumerate(aw.array):
+        hypo = row['lon'], row['lat'], row['dep']
+        dic = json.loads(row['extra'])
+        meshes = F32(json.loads(row['mesh']))  # num_surfaces 3D arrays
+        num_surfaces = len(meshes)
+        shapes = []
+        points = []
+        minlons = []
+        maxlons = []
+        minlats = []
+        maxlats = []
+        for mesh in meshes:
+            shapes.extend(mesh.shape[1:])
+            points.extend(mesh.flatten())  # lons + lats + deps
+            minlons.append(mesh[0].min())
+            minlats.append(mesh[1].min())
+            maxlons.append(mesh[0].max())
+            maxlats.append(mesh[1].max())
+        rec = numpy.zeros(1, rupture_dt)[0]
+        rec['seed'] = row['seed']
+        rec['minlon'] = minlon = min(minlons)
+        rec['minlat'] = minlat = min(minlats)
+        rec['maxlon'] = maxlon = max(maxlons)
+        rec['maxlat'] = maxlat = max(maxlats)
+        rec['mag'] = row['mag']
+        rec['hypo'] = hypo
+        rate = dic.get('occurrence_rate', numpy.nan)
+        tup = (u, row['seed'], 'no-source', aw.trts.index(row['trt']),
+               code[row['kind']], n_occ, row['mag'], row['rake'], rate,
+               minlon, minlat, maxlon, maxlat, hypo, u, 0)
+        rups.append(tup)
+        geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
+    if not rups:
+        return ()
+    dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
+    # NB: PMFs for nonparametric ruptures are missing
+    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
