@@ -17,19 +17,19 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from django.conf import settings
-from django.conf.urls import url, include
+from django.urls import re_path, include
 from django.views.generic.base import RedirectView
 
 from openquake.server import views
 
 urlpatterns = [
-    url(r'^v1/engine_version$', views.get_engine_version),
-    url(r'^v1/engine_latest_version$', views.get_engine_latest_version),
-    url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
-    url(r'^v1/valid/', views.validate_nrml),
-    url(r'^v1/available_gsims$', views.get_available_gsims),
-    url(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
-    url(r'^v1/ini_defaults$', views.get_ini_defaults, name="ini_defaults"),
+    re_path(r'^v1/engine_version$', views.get_engine_version),
+    re_path(r'^v1/engine_latest_version$', views.get_engine_latest_version),
+    re_path(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
+    re_path(r'^v1/valid/', views.validate_nrml),
+    re_path(r'^v1/available_gsims$', views.get_available_gsims),
+    re_path(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
+    re_path(r'^v1/ini_defaults$', views.get_ini_defaults, name="ini_defaults"),
 ]
 
 # it is useful to disable the default redirect if the usage is via API only
@@ -37,16 +37,16 @@ urlpatterns = [
 # are also not required anymore for an API-only usage
 if settings.WEBUI:
     urlpatterns += [
-        url(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
-        url(r'^engine/?$', views.web_engine, name="index"),
-        url(r'^engine/(\d+)/outputs$',
+        re_path(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
+        re_path(r'^engine/?$', views.web_engine, name="index"),
+        re_path(r'^engine/(\d+)/outputs$',
             views.web_engine_get_outputs, name="outputs"),
-        url(r'^engine/license$', views.license,
+        re_path(r'^engine/license$', views.license,
             name="license"),
     ]
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
-        urlpatterns.append(url(r'^%s/' % app_name, include('%s.urls' % app,
+        urlpatterns.append(re_path(r'^%s/' % app_name, include('%s.urls' % app,
                                namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
@@ -55,13 +55,13 @@ if settings.LOCKDOWN:
 
     admin.autodiscover()
     urlpatterns += [
-        url(r'^admin/', admin.site.urls),
-        url(r'accounts/login/$', LoginView.as_view(
+        re_path(r'^admin/', admin.site.urls),
+        re_path(r'accounts/login/$', LoginView.as_view(
             template_name='account/login.html'), name="login"),
-        url(r'^accounts/logout/$', LogoutView.as_view(
+        re_path(r'^accounts/logout/$', LogoutView.as_view(
             template_name='account/logout.html'), name="logout"),
-        url(r'^accounts/ajax_login/$', views.ajax_login),
-        url(r'^accounts/ajax_logout/$', views.ajax_logout),
+        re_path(r'^accounts/ajax_login/$', views.ajax_login),
+        re_path(r'^accounts/ajax_logout/$', views.ajax_logout),
     ]
 
 # To enable gunicorn debug without Nginx (to serve static files)

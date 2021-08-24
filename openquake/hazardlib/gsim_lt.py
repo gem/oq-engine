@@ -481,7 +481,7 @@ class GsimLogicTree(object):
         m = len(self.values)  # number of TRTs
         probs = lt.random((n, m), seed, sampling_method)
         brlists = [lt.sample([b for b in self.branches if b.trt == trt],
-                          probs[:, i], sampling_method)
+                             probs[:, i], sampling_method)
                    for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
@@ -498,6 +498,19 @@ class GsimLogicTree(object):
             rlz = Realization(tuple(value), weight, i, tuple(lt_uid))
             rlzs.append(rlz)
         return rlzs
+
+    def get_rlzs_by_gsim_trt(self):
+        """
+        :returns:
+            dictionary trt -> gsim -> all_rlz_ordinals for each gsim in the trt
+        """
+        rlzs = list(self)
+        ddic = {}
+        for i, trt in enumerate(self.values):
+            ddic[trt] = {gsim: [rlz.ordinal for rlz in rlzs
+                                if rlz.value[i] == gsim]
+                         for gsim in self.values[trt]}
+        return ddic
 
     def __iter__(self):
         """

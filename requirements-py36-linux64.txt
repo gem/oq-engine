@@ -19,7 +19,6 @@ https://wheelhouse.openquake.org/v2/linux/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/pbr-5.2.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/six-1.12.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/linux/py/Django-2.2.7-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/sqlparse-0.3.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/certifi-2019.3.9-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/urllib3-1.25.3-py2.py3-none-any.whl
@@ -28,6 +27,9 @@ https://wheelhouse.openquake.org/v2/linux/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/toml-0.10.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.6-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
+
 
 ### python-prctl ###
 # comment the following lines to skip installation

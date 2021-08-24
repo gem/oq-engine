@@ -21,7 +21,8 @@ import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
-from openquake.commonlib import logs, readinput
+from openquake.hazardlib.source.rupture import get_ruptures
+from openquake.commonlib import logs
 from openquake.calculators.views import view, text_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -469,7 +470,7 @@ agg_id
 
         # check that the exported ruptures can be re-imported
         text = extract(self.calc.datastore, 'ruptures').array
-        rups = readinput.get_ruptures(gettemp(text))
+        rups = get_ruptures(gettemp(text))
         aac(rups['n_occ'], [1, 1, 1, 1])
 
     def test_case_4_hazard(self):
