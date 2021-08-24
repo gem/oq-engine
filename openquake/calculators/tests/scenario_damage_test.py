@@ -20,8 +20,6 @@ import os
 import unittest
 import numpy
 
-from openquake.baselib.hdf5 import read_csv
-from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
