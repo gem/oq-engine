@@ -441,8 +441,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat5 = mat6[..., p, :]
+                # mat5 has shape (T, Ma, D, E, Z) for k == 0
+                # and (T, Ma, Lo, La, Z) for k == 1
                 if k == 0 and m == 0 and poe == self.poes_disagg[-1]:
-                    # mat5 has shape (T, Ma, D, E, Z)
                     _disagg_trt[s] = tuple(pprod(mat5[..., 0], axis=(1, 2, 3)))
                 poe2 = pprod(mat5, axis=(0, 1, 2, 3))
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
