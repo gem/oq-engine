@@ -173,7 +173,7 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.info('Sending %s', sg)
             cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], params)
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, srcfilter.sitecol, cmaker))
+                allargs.append((src_group, cmaker, srcfilter.sitecol))
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')

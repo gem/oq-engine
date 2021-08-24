@@ -225,14 +225,14 @@ def sample_cluster(sources, srcfilter, num_ses, param):
 
 
 # NB: there is postfiltering of the ruptures, which is more efficient
-def sample_ruptures(sources, sitecol, cmaker, monitor=Monitor()):
+def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
     """
     :param sources:
         a sequence of sources of the same group
-    :param sitecol:
-        SiteCollection instance used for filtering
     :param cmaker:
         a ContextMaker instance with ses_per_logic_tree_path, ses_seed
+    :param sitecol:
+        SiteCollection instance used for filtering (None for no filtering)
     :param monitor:
         monitor instance
     :yields:
