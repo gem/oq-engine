@@ -280,3 +280,23 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(dict(rup_array=rup_array, calc_times=calc_times,
                              eff_ruptures={grp_id: eff_ruptures}))
+
+
+def sample_ebruptures(src_groups, cmakerdict):
+    """
+    Sample independent sources without filtering.
+
+    :returns: a list of EBRuptures
+    """
+    ebrs = []
+    e0 = 0
+    for sg in src_groups:
+        cmaker = cmakerdict[sg.trt]
+        for src in sg:
+            samples = getattr(src, 'samples', 1)
+            for rup, trt_smr, n_occ in src.sample_ruptures(
+                    samples * cmaker.ses_per_logic_tree_path, cmaker.ses_seed):
+                ebr = EBRupture(rup, src.source_id, trt_smr, n_occ, e0=e0)
+                ebrs.append(ebr)
+                e0 += n_occ
+    return ebrs
