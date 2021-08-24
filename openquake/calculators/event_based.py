@@ -135,6 +135,11 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
+        oq = self.oqparam
+        params = dict(maximum_distance=oq.maximum_distance,
+                      imtls=oq.imtls,
+                      ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+                      ses_seed=oq.ses_seed)
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         sources = self.csm.get_sources()
         # weighting the heavy sources
@@ -166,10 +171,9 @@ class EventBasedCalculator(base.HazardCalculator):
             if not sg.sources:
                 continue
             logging.info('Sending %s', sg)
-            par = self.param.copy()
-            par['gsims'] = gsims_by_trt[sg.trt]
+            cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], params)
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, srcfilter, par))
+                allargs.append((src_group, srcfilter.sitecol, cmaker))
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')

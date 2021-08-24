@@ -27,7 +27,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.calc.filters import nofilter
+from openquake.hazardlib.calc.filters import nofilter, SourceFilter
 from openquake.hazardlib.source.rupture import (
     BaseRupture, EBRupture, rupture_dt)
 from openquake.hazardlib.geo.mesh import surface_to_arrays
@@ -225,31 +225,31 @@ def sample_cluster(sources, srcfilter, num_ses, param):
 
 
 # NB: there is postfiltering of the ruptures, which is more efficient
-def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
+def sample_ruptures(sources, sitecol, cmaker, monitor=Monitor()):
     """
     :param sources:
         a sequence of sources of the same group
-    :param srcfilter:
-        SourceFilter instance used also for bounding box post filtering
-    :param param:
-        a dictionary of additional parameters including
-        ses_per_logic_tree_path
+    :param sitecol:
+        SiteCollection instance used for filtering
+    :param cmaker:
+        a ContextMaker instance with ses_per_logic_tree_path, ses_seed
     :param monitor:
         monitor instance
     :yields:
         dictionaries with keys rup_array, calc_times
     """
+    srcfilter = SourceFilter(sitecol, cmaker.maximum_distance)
     # AccumDict of arrays with 3 elements num_ruptures, num_sites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
-    num_ses = param['ses_per_logic_tree_path']
+    num_ses = cmaker.ses_per_logic_tree_path
     grp_id = sources[0].grp_id
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
     if (getattr(sources, 'atomic', False) and
             getattr(sources, 'cluster', False)):
         eb_ruptures, calc_times = sample_cluster(
-            sources, srcfilter, num_ses, param)
+            sources, srcfilter, num_ses, vars(cmaker))
 
         # Yield ruptures
         er = sum(src.num_ruptures for src, _ in srcfilter.filter(sources))
@@ -272,7 +272,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
             for rup, trt_smr, n_occ in src.sample_ruptures(
-                    samples * num_ses, param['ses_seed']):
+                    samples * num_ses, cmaker.ses_seed):
                 ebr = EBRupture(rup, src.source_id, trt_smr, n_occ)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
