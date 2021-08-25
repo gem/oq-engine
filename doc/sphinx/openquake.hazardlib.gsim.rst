@@ -801,6 +801,14 @@ lin_lee_2008
     :undoc-members:
     :show-inheritance:
 
+manea_2021
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.manea_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 mcverry_2006
 --------------------------------------------
 
