@@ -33,6 +33,7 @@ You have to remove the data directories manually, if you so wish.
 """
 import os
 import sys
+import json
 import shutil
 import socket
 import getpass
@@ -236,6 +237,14 @@ def before_checks(inst, remove, usage):
                  (inst.OQ, os.readlink(inst.OQ)))
 
 
+# this is only called for user or server installations
+def latest_commit(branch):
+    url = 'https://api.github.com/repos/GEM/oq-engine/commits/' + branch
+    with urlopen(url) as f:
+        js = json.loads(f.read())
+    return js['commit']['url'].rsplit('/')[-1]
+
+
 def install(inst, version):
     """
     Install the engine in one of the three possible modes
@@ -286,7 +295,9 @@ def install(inst, version):
     elif '.' in version:  # install an official version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine==' + version])
-    else:  # install a branch from github
+    else:  # install a branch from github (only for user or server)
+        commit = latest_commit(version)
+        print('Installing commit', commit)
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', GITBRANCH % version])
 
