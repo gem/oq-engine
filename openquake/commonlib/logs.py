@@ -176,6 +176,7 @@ class LogContext:
                 user_name,
                 hc_id)
         else:
+            # only works in single-user situations
             self.calc_id = get_last_calc_id() + 1
 
     def get_oqparam(self):

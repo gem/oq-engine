@@ -57,7 +57,9 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
-                        ('min', F32), ('max', F32), ('len', U16)])
+                        ('min', F32), ('max', F32),
+                        ('len', U16)])
+
 
 # this is used for the minimum_intensity dictionaries
 def consistent(dic1, dic2):
