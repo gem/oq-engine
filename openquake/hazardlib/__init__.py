@@ -181,13 +181,13 @@ def read_input(hparams):
     for trt, rlzs_by_gsim in lt.get_rlzs_by_gsim_trt().items():
         cmaker[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
     if rmfname:
-        # for instance for 2 TRTs with 5x1 GSIMs and ngmfs=10, then the
-        # numbers of occupation are 50 and 10 respectively, for a total
-        # of 60 events, see scenario/case_13
+        # for instance for 2 TRTs with 5x2 GSIMs and ngmfs=10, then the
+        # number of occupation is 100 for each rupture, for a total
+        # of 200 events, see scenario/case_13
+        nrlzs = lt.get_num_paths()
         for grp in groups:
-            ngsims = len(cmaker[grp.trt].gsims)
             for ebr in grp:
-                ebr.n_occ = ngmfs * ngsims
+                ebr.n_occ = ngmfs * nrlzs
 
     sitecol = _get_sitecol(hparams, lt.req_site_params)
     return Input(groups, sitecol, lt, cmaker)

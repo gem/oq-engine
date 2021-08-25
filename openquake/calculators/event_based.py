@@ -297,14 +297,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = get_ruptures(oq.inputs['rupture_model'])
-            if list(gsim_lt.values) == ['*']:
-                num_gsims = numpy.array([len(gsim_lt.values['*'])], U32)
-            else:
-                num_gsims = numpy.array(
-                    [len(gsim_lt.values.get(trt, [])) for trt in aw.trts], U32)
             if oq.calculation_mode.startswith('scenario'):
-                # rescale n_occ
-                aw['n_occ'] *= ngmfs * num_gsims[aw['trt_smr']]
+                # rescale n_occ by ngmfs and nrlzs
+                aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
         else:
             raise InvalidFile("Something wrong in %s" % oq.inputs['job_ini'])
         rup_array = aw.array
