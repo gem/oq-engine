@@ -7,12 +7,13 @@ from openquake.hazardlib import imt, valid, contexts
 
 # change the lists below manually
 # imts = ['PGA', '0.1', '1.0', '2.0']
-imts = ['MMI']
-MAG = [5, 6, 7]
-RAKE = [0, 90, -90]
+imts = 'PGA,0.01,0.02,0.05,0.1,0.15,0.2,0.22,0.24,0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.5,2.0,2.5,3.0,3.5,4.0,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0'.split(',')
+MAG = [4, 5, 6, 7]
+RAKE = [-90, 0, 90]
 HYPO_DEPTH = [10, 20]
 RRUP = [10, 20, 50, 100, 200, 300]
-VS30 = [760, 800]
+RJB = [20, 50, 75, 100]
+VS30 = [200, 250, 400, 600, 760]
 
 
 def build_df(gsim, imts):
@@ -72,11 +73,15 @@ def main(gsim_str):
             for _, row in grp.iterrows():
                 row['result_type'] = rtype
                 for m, col in enumerate(imts):
-                    row[col] = out[o, m, n]
+                    if rtype == 'MEAN' and col != 'MMI':
+                        row[col] = np.exp(out[o, m, n])
+                    else:
+                        row[col] = out[o, m, n]
                 recs.append(tuple(row))
                 n += 1
     newdf = pandas.DataFrame.from_records(recs, columns=df.columns)
-    newdf.to_csv(gsim_str + '.csv', index=False, float_format='%.4f')
+    newdf.to_csv(gsim_str + '.csv', index=False, float_format='%.4e')
+    print('Saved', gsim_str + '.csv')
 
 
 if __name__ == '__main__':
