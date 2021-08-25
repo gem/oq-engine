@@ -1,6 +1,5 @@
   [Michele Simionato]
-  * Fixed the number of generated events in multi-rupture scenario
-    calculations with multiple TRTs
+  * Extended the multi-rupture scenario calculator to multiple TRTs
   * Removed the experimental feature `pointsource_distance=?`
   * Refactored the GMPE tests, with a speedup of 1-14 times
   * Added a script `utils/build_vtable` to build verification tables
