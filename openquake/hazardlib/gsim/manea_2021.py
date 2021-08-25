@@ -33,13 +33,13 @@ from openquake.hazardlib.imt import PGA, SA
 from scipy.constants import g
 
 
-def _compute_magnitude_term(C, mag, num_sites):
+def _compute_magnitude_term(C, mag):
     """
     Compute magnitude term
     """
     term01 = (mag - 5.7)
-    mag_term = C['phi0'] + (C['phi1'] * term01) + C['phi2']*(term01**2)
-    return mag_term * np.ones(num_sites)
+    mag_term = C['phi0'] + C['phi1'] * term01 + C['phi2'] * term01**2
+    return mag_term
 
 
 def _compute_distance_term(C, rhypo, arc):
@@ -64,8 +64,8 @@ def _compute_arc_regional_term(C, arc):
         return C['phi6']
 
 
-def _compute_depth_term(C, hypo_depth, num_sites):
-    return (C['phi4']*hypo_depth) * np.ones(num_sites)
+def _compute_depth_term(C, hypo_depth):
+    return C['phi4'] * hypo_depth
 
 
 def _get_site_amplification(C, sites):
@@ -74,9 +74,8 @@ def _get_site_amplification(C, sites):
     """
     ssa, ssb, ssc = _get_site_type_dummy_variables(sites)
 
-    return ((ssc*C['phi11'] + ssb*C['phi10'] +
-            + ssa*C['phi9']) * np.ones(len(sites.vs30)) +
-            + _compute_site_amplif(C, sites))
+    return ((ssc*C['phi11'] + ssb*C['phi10'] + ssa*C['phi9']) +
+            _compute_site_amplif(C, sites))
 
 
 def _get_site_type_dummy_variables(sites):
@@ -85,6 +84,7 @@ def _get_site_type_dummy_variables(sites):
     The recording sites are classified into 3 classes,
     based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
     according to the EC8 (CEN 2003):
+
     class A: Vs30 > 800 m/s
     class B: Vs30 = 360 − 800 m/s
     class C: Vs30 = 180 - 360 m/s
@@ -117,9 +117,9 @@ def get_mean_values(C, ctx, arc):
     """
     Returns the mean values for a specific IMT
     """
-    mean = (_compute_magnitude_term(C, ctx.mag, num_sites=len(ctx.vs30)) +
+    mean = (_compute_magnitude_term(C, ctx.mag) +
             _compute_distance_term(C, ctx.rhypo, arc) +
-            _compute_depth_term(C, ctx.hypo_depth, num_sites=len(ctx.vs30)) +
+            _compute_depth_term(C, ctx.hypo_depth) +
             _get_site_amplification(C, ctx))
     return mean
 
