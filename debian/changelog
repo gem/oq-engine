@@ -1,3 +1,6 @@
+  [Elena Manea, Laurentiu Danciu]
+  * Added the GMPE Manea (2021)
+
   [Michele Simionato]
   * Extended the multi-rupture scenario calculator to multiple TRTs
   * Removed the experimental feature `pointsource_distance=?`
@@ -9,13 +12,13 @@
   [Graeme Weatherill]
   * Implements Abrahamson & Gulerce (2020) NGA Subduction GMPE
 
-  [Nico Kuehn/Graeme Weatherill]
+  [Nico Kuehn, Graeme Weatherill]
   * Implements Kuehn et al. (2020) NGA Subduction GMPE
 
-  [Chung-Han Chan/Jia-Cian Gao]
+  [Chung-Han Chan, Jia-Cian Gao]
   * Implements Lin et al. (2011)
 
-  [Graeme Weatherill/Nico Kuehn]
+  [Graeme Weatherill, Nico Kuehn]
   * Implements Si et al. (2020) NGA Subduction GMPE
 
   [Michele Simionato]
