@@ -57,7 +57,9 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
-                        ('min', F32), ('max', F32), ('len', U16)])
+                        ('min', F32), ('max', F32),
+                        ('len', U16)])
+
 
 # this is used for the minimum_intensity dictionaries
 def consistent(dic1, dic2):
@@ -843,6 +845,7 @@ class HazardCalculator(BaseCalculator):
         self.param = dict(individual_curves=oq.individual_curves,
                           ps_grid_spacing=oq.ps_grid_spacing,
                           minimum_distance=oq.minimum_distance,
+                          min_iml=oq.min_iml,
                           collapse_level=int(oq.collapse_level),
                           split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,

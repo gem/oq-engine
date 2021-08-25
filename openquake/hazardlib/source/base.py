@@ -145,6 +145,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         elif hasattr(self, 'source_file'):
             # unbound UCERFSource
             mags.add(numpy.nan)
+        elif hasattr(self, 'mags'):  # MultiFaultSource
+            mags.update(mag for mag in self.mags if mag >= self.min_mag)
         else:  # nonparametric
             for rup, pmf in self.data:
                 if rup.mag >= self.min_mag:

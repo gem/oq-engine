@@ -139,10 +139,12 @@ class GmfComputer(object):
             self.distribution = scipy.stats.truncnorm(
                 - cmaker.trunclevel, cmaker.trunclevel)
 
-    def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
+    def compute_all(self, sig_eps=None):
         """
         :returns: (dict with fields eid, sid, gmv_...), dt
         """
+        min_iml = self.cmaker.min_iml
+        rlzs_by_gsim = self.cmaker.gsims
         t0 = time.time()
         sids = self.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)

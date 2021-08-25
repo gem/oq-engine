@@ -23,6 +23,8 @@ import numpy
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import lt, contexts
+from openquake.hazardlib.source.rupture import get_ruptures
+from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -490,7 +492,7 @@ hazard_uhs-std.csv
                       calculation_mode='event_based',
                       ses_per_logic_tree_path='10')
         csv = extract(self.calc.datastore, 'ruptures').array
-        rups = readinput.get_ruptures(general.gettemp(csv))
+        rups = get_ruptures(general.gettemp(csv))
         self.assertEqual(len(rups), 1)
 
         # check what QGIS will be seeing
@@ -877,8 +879,17 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f)
 
     def test_case_65(self):
-        # Multi fault source
+        # reading/writing a multiFaultSource
+        oq = readinput.get_oqparam('job.ini', pkg=case_65)
+        csm = readinput.get_composite_source_model(oq)
+        tmpname = general.gettemp()
+        out = write_source_model(tmpname, csm.src_groups)
+        self.assertEqual(out[0], tmpname)
+        self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
+
+        # running the calculation
         self.run_calc(case_65.__file__, 'job.ini')
+
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-4)
 

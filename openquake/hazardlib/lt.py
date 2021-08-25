@@ -20,9 +20,8 @@ import copy
 import collections
 import numpy
 
-import openquake.hazardlib.scalerel as msr
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib import geo, source as ohs
+from openquake.hazardlib import geo, source as ohs, scalerel as msr
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid, InvalidFile

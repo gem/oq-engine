@@ -21,7 +21,7 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     ChiouYoungs2014Japan, ChiouYoungs2014Italy, ChiouYoungs2014Wenchuan)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.calc import ground_motion_fields
+from openquake.hazardlib.calc.gmf import ground_motion_fields
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV
 from openquake.hazardlib.site import Site, SiteCollection

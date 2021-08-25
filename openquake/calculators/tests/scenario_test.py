@@ -139,9 +139,15 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('sig_eps.csv', sig_eps)
 
     def test_case_13(self):
-        # multi-rupture scenario
+        # multi-rupture scenario with 2 ruptures, 10 rlzs, 10 gmfs, 100 sites
         self.run_calc(case_13.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 340)
+        gmf_df = self.calc.datastore.read_df('gmf_data')
+        counts_by_eid = gmf_df[['eid', 'sid']].groupby('eid').count()
+        self.assertEqual(len(counts_by_eid), 200)  # there are 2x10x10 events
+        # the first rupture touches 6 sites, the second 4 sites, so
+        # there are 600+400 = 1000 GMVs
+        self.assertEqual(4*(counts_by_eid.sid == 4).sum(), 400)
+        self.assertEqual(6*(counts_by_eid.sid == 6).sum(), 600)
 
     def test_case_14(self):
         # new Swiss GMPEs
@@ -152,7 +158,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # choosing invalid GMPE
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_15.__file__, 'job.ini')
-        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id='0')"
+        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id='NA')"
                       " CorrelationButNoInterIntraStdDevs", str(ctx.exception))
 
     def test_case_16(self):

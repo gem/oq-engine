@@ -29,6 +29,7 @@ checkcmd zip
 # Make a zipped copy of each demo
 for d in hazard risk; do
     cd ${OQ_DEMOS}/${d}
+    echo ${OQ_DEMOS}/${d}
     for z in *; do
         if [ -d $z ]; then zip -q -r ${z}.zip $z; fi
     done

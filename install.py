@@ -20,7 +20,8 @@ Universal installation script for the OpenQuake engine.
 Three installation methods are supported:
 
 1. "server" installation, i.e. system-wide installation on /opt/openquake
-1. "devel_server" installation, i.e. developement system-wide installation on /opt/openquake
+1. "devel_server" installation, i.e. developement system-wide installation on
+    /opt/openquake
 2. "user" installation on $HOME/openquake
 3. "devel" installation on $HOME/openquake from the engine repository
 
@@ -32,6 +33,8 @@ You have to remove the data directories manually, if you so wish.
 """
 import os
 import sys
+import json
+import glob
 import shutil
 import socket
 import getpass
@@ -159,6 +162,7 @@ DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
 STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
 
+
 def install_standalone(venv):
     """
     Install the standalone Django applications if possible
@@ -172,6 +176,7 @@ def install_standalone(venv):
                                    '--upgrade', STANDALONE % app], env=env)
         except Exception as exc:
             print('%s: could not install %s' % (exc, STANDALONE % app))
+
 
 def before_checks(inst, remove, usage):
     """
@@ -228,9 +233,34 @@ def before_checks(inst, remove, usage):
     if ((inst is server and os.path.exists(inst.OQ) and
             os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV) or
             (inst is devel_server and os.path.exists(inst.OQ) and
-            os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV)):
+             os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV)):
         sys.exit('Error: there is already a link %s->%s; please remove it' %
                  (inst.OQ, os.readlink(inst.OQ)))
+
+
+# this is only called for user or server installations
+def latest_commit(branch):
+    url = 'https://api.github.com/repos/GEM/oq-engine/commits/' + branch
+    with urlopen(url) as f:
+        js = json.loads(f.read())
+    return js['commit']['url'].rsplit('/')[-1]
+
+
+def fix_version(commit, venv):
+    """
+    Fix the file baselib/__init__.py with the git version
+    """
+    path = '/lib/python*/site-packages/openquake/baselib/__init__.py'
+    [fname] = glob.glob(venv + path)
+    lines = []
+    for line in open(fname):
+        if line.startswith('__version__ = ') and '-git' not in line:
+            vers = line.split('=')[1].strip()[1:-1]  # i.e. '3.12.0'
+            lines.append('__version__ = "%s-git%s"\n' % (vers, commit))
+        else:
+            lines.append(line)
+    with open(fname, 'w') as f:
+        f.write(''.join(lines))
 
 
 def install(inst, version):
@@ -265,9 +295,10 @@ def install(inst, version):
             pycmd = inst.VENV + '\\Scripts\\python.exe'
     else:
         pycmd = inst.VENV + '/bin/python3'
+
     # upgrade pip and before check that it is installed in venv
     subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
-    subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade', 
+    subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
                           'pip', 'wheel'])
 
     # install the requirements
@@ -284,9 +315,12 @@ def install(inst, version):
     elif '.' in version:  # install an official version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine==' + version])
-    else:  # install a branch from github
+    else:  # install a branch from github (only for user or server)
+        commit = latest_commit(version)
+        print('Installing commit', commit)
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', GITBRANCH % version])
+        fix_version(commit, inst.VENV)
 
     install_standalone(inst.VENV)
 
@@ -308,15 +342,15 @@ def install(inst, version):
     else:
         oqreal = '%s/bin/oq' % inst.VENV
 
-    if ((inst is server and not os.path.exists(inst.OQ)) or
-       (inst is devel_server and not os.path.exists(inst.OQ))):
+    if (inst is server and not os.path.exists(inst.OQ) or
+       inst is devel_server and not os.path.exists(inst.OQ)):
         os.symlink(oqreal, inst.OQ)
     if inst is user:
         if sys.platform == 'win32':
             print(f'Please activate the virtualenv with {inst.VENV}'
                   '\\Scripts\\activate.bat')
         else:
-            print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
+            print(f'Please add an alias oq={oqreal} in your .bashrc or equiv')
     elif inst is devel:
         if sys.platform == 'win32':
             print(f'Please activate the virtualenv with {inst.VENV}'
