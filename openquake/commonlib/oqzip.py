@@ -24,6 +24,7 @@ from openquake.risklib.asset import Exposure
 from openquake.commonlib import readinput, logictree, oqvalidation
 
 
+# useful for the mosaic files
 def zip_all(directory):
     """
     Zip source models and exposures recursively
@@ -36,6 +37,27 @@ def zip_all(directory):
             if f.endswith('.xml') and 'exposure' in f.lower():
                 zips.append(zip_exposure(os.path.join(cwd, f)))
     total = sum(os.path.getsize(z) for z in zips)
+    logging.info('Generated %s of zipped data', general.humansize(total))
+
+
+# useful for the demos
+def zip_all_jobs(directory):
+    """
+    Zip job.ini files recursively
+    """
+    zips = []
+    for cwd, dirs, files in os.walk(directory):
+        job_inis = [os.path.join(cwd, f) for f in sorted(files)
+                    if f.endswith('.ini')]
+        if not job_inis:
+            continue
+        elif len(job_inis) == 2:
+            job_ini, risk_ini = job_inis
+        else:
+            [job_ini], risk_ini = job_inis, ''
+        archive_zip = job_ini[:-4].replace('_hazard', '') + '.zip'
+        zips.append(zip_job(job_ini, archive_zip, risk_ini))
+        total = sum(os.path.getsize(z) for z in zips)
     logging.info('Generated %s of zipped data', general.humansize(total))
 
 
@@ -97,7 +119,8 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
     oq = oq or oqvalidation.OqParam(**readinput.get_params(job_ini))
     if risk_ini:
         risk_ini = os.path.normpath(os.path.abspath(risk_ini))
-        oqr = readinput.get_oqparam(risk_ini)
+        oqr = readinput.get_oqparam(
+            risk_ini, kw=dict(hazard_calculation_id=1))
         del oqr.inputs['job_ini']
         oq.inputs.update(oqr.inputs)
         oq.shakemap_uri.update(oqr.shakemap_uri)

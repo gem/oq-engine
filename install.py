@@ -33,6 +33,8 @@ You have to remove the data directories manually, if you so wish.
 """
 import os
 import sys
+import json
+import glob
 import shutil
 import socket
 import getpass
@@ -236,6 +238,31 @@ def before_checks(inst, remove, usage):
                  (inst.OQ, os.readlink(inst.OQ)))
 
 
+# this is only called for user or server installations
+def latest_commit(branch):
+    url = 'https://api.github.com/repos/GEM/oq-engine/commits/' + branch
+    with urlopen(url) as f:
+        js = json.loads(f.read())
+    return js['commit']['url'].rsplit('/')[-1]
+
+
+def fix_version(commit, venv):
+    """
+    Fix the file baselib/__init__.py with the git version
+    """
+    path = '/lib/python*/site-packages/openquake/baselib/__init__.py'
+    [fname] = glob.glob(venv + path)
+    lines = []
+    for line in open(fname):
+        if line.startswith('__version__ = ') and '-git' not in line:
+            vers = line.split('=')[1].strip()[1:-1]  # i.e. '3.12.0'
+            lines.append('__version__ = "%s-git%s"\n' % (vers, commit))
+        else:
+            lines.append(line)
+    with open(fname, 'w') as f:
+        f.write(''.join(lines))
+
+
 def install(inst, version):
     """
     Install the engine in one of the three possible modes
@@ -268,7 +295,9 @@ def install(inst, version):
             pycmd = inst.VENV + '\\Scripts\\python.exe'
     else:
         pycmd = inst.VENV + '/bin/python'
-    # upgrade pip
+
+    # upgrade pip and before check that it is installed in venv
+    subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
                           'pip', 'wheel'])
 
@@ -286,9 +315,12 @@ def install(inst, version):
     elif '.' in version:  # install an official version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine==' + version])
-    else:  # install a branch from github
+    else:  # install a branch from github (only for user or server)
+        commit = latest_commit(version)
+        print('Installing commit', commit)
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', GITBRANCH % version])
+        fix_version(commit, inst.VENV)
 
     install_standalone(inst.VENV)
 

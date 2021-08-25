@@ -46,8 +46,6 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile, pmf)
-from openquake.hazardlib.source import rupture
-from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific
@@ -380,7 +378,7 @@ def get_mesh(oqparam, h5=None):
         c = (coords[start:stop] if header[0] == 'site_id'
              else sorted(coords[start:stop]))
         # NB: Notice the sort=False below
-        # Calculations starting from ground motion fields input by the user
+        # Calculations starting from predefined ground motion fields
         # require at least two input files related to the gmf data:
         #   1. A sites.csv file, listing {site_id, lon, lat} tuples
         #   2. A gmfs.csv file, listing {event_id, site_id, gmv[IMT1],
