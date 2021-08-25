@@ -34,6 +34,7 @@ You have to remove the data directories manually, if you so wish.
 import os
 import sys
 import json
+import glob
 import shutil
 import socket
 import getpass
@@ -245,6 +246,23 @@ def latest_commit(branch):
     return js['commit']['url'].rsplit('/')[-1]
 
 
+def fix_version(commit, venv):
+    """
+    Fix the file baselib/__init__.py with the git version
+    """
+    path = '/lib/python*/site-packages/openquake/baselib/__init__.py'
+    [fname] = glob.glob(venv + path)
+    lines = []
+    for line in open(fname):
+        if line.startswith('__version__ = ') and '-git' not in line:
+            vers = line.split('=')[1].strip()[1:-1]  # i.e. '3.12.0'
+            lines.append('__version__ = "%s-git%s"\n' % (vers, commit))
+        else:
+            lines.append(line)
+    with open(fname, 'w') as f:
+        f.write(''.join(lines))
+
+
 def install(inst, version):
     """
     Install the engine in one of the three possible modes
@@ -300,6 +318,7 @@ def install(inst, version):
         print('Installing commit', commit)
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', GITBRANCH % version])
+        fix_version(commit, inst.VENV)
 
     install_standalone(inst.VENV)
 
