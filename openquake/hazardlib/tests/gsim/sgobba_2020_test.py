@@ -57,7 +57,7 @@ def get_epicenters(df):
     return epicenters
 
 
-def check(gmm, tags, ctx, subset_df, sigma):
+def chk(gmm, tags, ctx, subset_df, sigma):
     periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
                SA(period=1.0), SA(period=2.0)]
     stdt = [const.StdDev.TOTAL]
@@ -121,18 +121,18 @@ class Sgobba2020Test(unittest.TestCase):
             subset_df = df.loc[idx]
             ctx = get_ctx(subset_df)
             tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
-            check(SgobbaEtAl2020(cluster=0), tags, ctx, subset_df, sigma=False)
+            chk(SgobbaEtAl2020(cluster=0), tags, ctx, subset_df, sigma=False)
 
     def test_NON_ERGODIC(self):
         fname = 'ValidationTable_MEAN_NERG_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
         for gmm, ctx, subset_df in gen_data(df):
-            check(gmm, tags, ctx, subset_df, sigma=False)
+            chk(gmm, tags, ctx, subset_df, sigma=False)
 
     def test_SIGMA(self):
         fname = 'ValidationTable_STD_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
         for gmm, ctx, subset_df in gen_data(df):
-            check(gmm, tags, ctx, subset_df, sigma=True)
+            chk(gmm, tags, ctx, subset_df, sigma=True)

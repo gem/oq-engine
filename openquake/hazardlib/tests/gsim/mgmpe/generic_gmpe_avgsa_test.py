@@ -196,19 +196,14 @@ class GenericGMPEAvgSaTablesTestCaseAkkar(BaseGSIMTestCase):
     """
     GSIM_CLASS = GenericGmpeAvgSA
 
-    def test_mean(self):
-        self.check('generic_avgsa/GENERIC_GMPE_AVGSA_AKKAR_MEAN.csv',
-                   max_discrep_percentage=0.1,
-                   gmpe_name="BooreAtkinson2008",
-                   avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
-                   corr_func="akkar")
-
-    def test_std_total(self):
-        self.check('generic_avgsa/GENERIC_GMPE_AVGSA_AKKAR_TOTAL_STDDEV.csv',
-                   max_discrep_percentage=0.1,
-                   gmpe_name="BooreAtkinson2008",
-                   avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
-                   corr_func="akkar")
+    def test_all(self):
+        self.check(
+            'generic_avgsa/GENERIC_GMPE_AVGSA_AKKAR_MEAN.csv',
+            'generic_avgsa/GENERIC_GMPE_AVGSA_AKKAR_TOTAL_STDDEV.csv',
+            max_discrep_percentage=0.1,
+            gmpe_name="BooreAtkinson2008",
+            avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
+            corr_func="akkar")
 
 
 class GenericGMPEAvgSaTablesTestCaseBakerJayaram(BaseGSIMTestCase):
@@ -217,17 +212,11 @@ class GenericGMPEAvgSaTablesTestCaseBakerJayaram(BaseGSIMTestCase):
     """
     GSIM_CLASS = GenericGmpeAvgSA
 
-    def test_mean(self):
-        self.check('generic_avgsa/GENERIC_GMPE_AVGSA_BAKER_JAYARAM_MEAN.csv',
-                   max_discrep_percentage=0.1,
-                   gmpe_name="BooreAtkinson2008",
-                   avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
-                   corr_func="baker_jayaram")
-
-    def test_std_total(self):
-        self.check('generic_avgsa/'
-                   'GENERIC_GMPE_AVGSA_BAKER_JAYARAM_TOTAL_STDDEV.csv',
-                   max_discrep_percentage=0.1,
-                   gmpe_name="BooreAtkinson2008",
-                   avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
-                   corr_func="baker_jayaram")
+    def test_all(self):
+        self.check(
+            'generic_avgsa/GENERIC_GMPE_AVGSA_BAKER_JAYARAM_MEAN.csv',
+            'generic_avgsa/GENERIC_GMPE_AVGSA_BAKER_JAYARAM_TOTAL_STDDEV.csv',
+            max_discrep_percentage=0.1,
+            gmpe_name="BooreAtkinson2008",
+            avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
+            corr_func="baker_jayaram")

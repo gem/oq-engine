@@ -26,18 +26,9 @@ class AkkarBommer2010TestCase(BaseGSIMTestCase):
     # Test data were obtained from a tool given by the authors
     # The data of the values of the mean PGA and SA are in m/s2.
 
-    def test_mean(self):
+    def test_all(self):
         self.check('AKBO10/AK10_MEAN.csv',
-                    max_discrep_percentage=0.6)
-
-    def test_std_intra(self):
-        self.check('AKBO10/AK10_STD_INTRA.csv',
-                    max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('AKBO10/AK10_STD_INTER.csv',
-                    max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('AKBO10/AK10_STD_TOTAL.csv',
-                    max_discrep_percentage=0.1)
+                   'AKBO10/AK10_STD_INTRA.csv',
+                   'AKBO10/AK10_STD_INTER.csv',
+                   'AKBO10/AK10_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)

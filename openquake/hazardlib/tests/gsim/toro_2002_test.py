@@ -17,31 +17,24 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.toro_2002 import ToroEtAl2002, ToroEtAl2002SHARE
-
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-import numpy
-
 # Test data generated from OpenSHA implementation.
+
 
 class ToroEtAl2002TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ToroEtAl2002
 
-    def test_mean(self):
+    def test_all(self):
         self.check('TORO02/T02_MEAN.csv',
+                   'TORO02/T02_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
-    def test_std_total(self):
-        self.check('TORO02/T02_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
 
 class ToroEtAl2002SHARETestCase(BaseGSIMTestCase):
     GSIM_CLASS = ToroEtAl2002SHARE
 
-    def test_mean(self):
+    def test_all(self):
         self.check('TORO02/T02SHARE_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('TORO02/T02SHARE_STD_TOTAL.csv',
+                   'TORO02/T02SHARE_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)

@@ -26,7 +26,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
     PHI_SETUP, get_phi_ss, NGAEastGMPE, _get_f760, get_nonlinear_stddev,
-    _get_fv, get_fnl)
+    get_linear_stddev, _get_fv, get_fnl)
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 
 CONSTANTS = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
@@ -101,8 +101,7 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
                                 NGAEastGMPE.CONSTANTS,
                                 is_stddev=True)
         f_lin_stddev = np.sqrt(
-            f760_stddev ** 2. +
-            NGAEastGMPE.get_linear_stddev(
+            f760_stddev ** 2. + get_linear_stddev(
                 C_LIN, ctx.vs30, NGAEastGMPE.CONSTANTS) ** 2)
         # Likewise, the epistemic uncertainty on the linear and nonlinear
         # model are assumed independent and the SRSS is taken

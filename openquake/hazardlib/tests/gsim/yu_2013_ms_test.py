@@ -27,46 +27,38 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class YuEtAl2013ActiveTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013Ms
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YU2013/yu_2013_mean_active.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_total(self):
-        self.check('YU2013/yu_2013_stddev_active.csv',
-                   max_discrep_percentage=0.1)
+                   'YU2013/yu_2013_stddev_active.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)
 
 
 class YuEtAl2013TibetTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013MsTibet
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YU2013/yu_2013_mean_tibetan.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_total(self):
-        self.check('YU2013/yu_2013_stddev_tibetan.csv',
-                   max_discrep_percentage=0.1)
+                   'YU2013/yu_2013_stddev_tibetan.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)
 
 
 class YuEtAl2013EasternTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013MsEastern
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YU2013/yu_2013_mean_eastern.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_total(self):
-        self.check('YU2013/yu_2013_stddev_eastern.csv',
-                   max_discrep_percentage=0.1)
+                   'YU2013/yu_2013_stddev_eastern.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)
 
 
 class YuEtAl2013StableTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013MsStable
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YU2013/yu_2013_mean_stable.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_total(self):
-        self.check('YU2013/yu_2013_stddev_stable.csv',
-                   max_discrep_percentage=0.1)
+                   'YU2013/yu_2013_stddev_stable.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)

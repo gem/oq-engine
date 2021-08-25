@@ -16,21 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.shahjouei_pezeshk_2016 import (ShahjoueiPezeshk2016)
+from openquake.hazardlib.gsim.shahjouei_pezeshk_2016 import (
+    ShahjoueiPezeshk2016)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class ShahjoueiPezeshk2016TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ShahjoueiPezeshk2016
 
-    # Test data were obtained from a MATLAB tool created and verified with original paper by Abhineet Gupta
+    # Test data were obtained from a MATLAB tool created and verified with
+    # original paper by Abhineet Gupta
     # The data of the values of the mean PGA and SA are in g's.
 
-    def test_mean(self):
+    def test_all(self):
         self.check('SHPZ16/SHPZ16_MEAN.csv',
-                    max_discrep_percentage=0.5)
-
-    def test_std_total(self):
-        self.check('SHPZ16/SHPZ16_STD_TOTAL.csv',
-                    max_discrep_percentage=0.5)
-
+                   'SHPZ16/SHPZ16_STD_TOTAL.csv',
+                   max_discrep_percentage=0.5)

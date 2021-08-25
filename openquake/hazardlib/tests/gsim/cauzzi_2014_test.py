@@ -55,21 +55,13 @@ class CauzziEtAl2014TestCase(BaseGSIMTestCase):
     # File containing the inter-event standard deviation test data
     INTRA_FILE = "C14/CAUZZI_INTRA_STD.csv"
 
-    def test_mean(self):
+    def test_all(self):
         self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class CauzziEtAl2014NoSOFTestCase(CauzziEtAl2014TestCase):
@@ -145,19 +137,10 @@ class CauzziEtAl2014Eurocode8scaledTestCase(BaseGSIMTestCase):
     INTER_FILE = "C14scaled/CAUZZI_EC8_INTER_STD.csv"
     INTRA_FILE = "C14scaled/CAUZZI_EC8_INTRA_STD.csv"
 
-    def test_mean(self):
+    def test_all(self):
         self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)

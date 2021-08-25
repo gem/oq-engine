@@ -8,9 +8,10 @@ server {
     server_name  server.openquake.local;
 
     # Maximum upload size
-    client_max_body_size 100m;
+    client_max_body_size 256m;
 
-    access_log  /var/log/nginx/access.log;
+    access_log  /var/log/nginx/access-webui.log;
+    error_log  /var/log/nginx/error-webui.log;
 
     ssl_certificate     /etc/ssl/ssl.crt;
     ssl_certificate_key /etc/ssl/ssl.key;
@@ -29,7 +30,7 @@ server {
         proxy_set_header   Host $host;
         proxy_set_header   X-Forwarded-Proto $scheme;
         proxy_redirect     http:// https://;
-        proxy_pass         http://127.0.0.1:8000;
+        proxy_pass         http://127.0.0.1:8800;
     }
 
     location /static {

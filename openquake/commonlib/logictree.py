@@ -271,6 +271,13 @@ class SourceModelLogicTree(object):
                'applyToSources',
                'applyToSourceType')
 
+    ABSOLUTE_UNCERTAINTIES = ('abGRAbsolute', 'bGRAbsolute',
+                              'maxMagGRAbsolute',
+                              'simpleFaultGeometryAbsolute',
+                              'truncatedGRFromSlipAbsolute',
+                              'complexFaultGeometryAbsolute',
+                              'setMSRAbsolute')
+
     @classmethod
     def fake(cls):
         """
@@ -514,9 +521,7 @@ class SourceModelLogicTree(object):
                     "source models don't define sources of tectonic region "
                     "type '%s'" % filters['applyToTectonicRegionType'])
 
-        if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute',
-                                'simpleFaultGeometryAbsolute',
-                                'complexFaultGeometryAbsolute'):
+        if uncertainty_type in self.ABSOLUTE_UNCERTAINTIES:
             if not filters or not list(filters) == ['applyToSources'] \
                     or not len(filters['applyToSources'].split()) == 1:
                 raise LogicTreeError(

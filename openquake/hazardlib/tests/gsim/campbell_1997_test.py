@@ -30,8 +30,6 @@ class Campbell1997TestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAM97/CAM97_MEAN.csv',
-                   max_discrep_percentage=1.5)
-
-    def test_std_total(self):
-        self.check('CAM97/CAM97_STD_TOTAL.csv',
-                   max_discrep_percentage=0.15)
+                   'CAM97/CAM97_STD_TOTAL.csv',
+                   max_discrep_percentage=1.5,
+                   std_discrep_percentage=0.15)

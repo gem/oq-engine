@@ -26,34 +26,25 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class BooreEtAl1993GSCBestTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1993GSCBest
 
-    def test_mean(self):
+    def test_all(self):
         self.check('B93GSC/B93GSCBest_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('B93GSC/B93GSCBest_STD_TOTAL.csv',
+                   'B93GSC/B93GSCBest_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
 
 class BooreEtAl1993GSCUpperLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1993GSCUpperLimit
 
-    def test_mean(self):
+    def test_all(self):
         self.check('B93GSC/B93GSCUpperLimit_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('B93GSC/B93GSCUpperLimit_STD_TOTAL.csv',
+                   'B93GSC/B93GSCUpperLimit_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
 
 class BooreEtAl1993GSCLowerLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1993GSCLowerLimit
 
-    def test_mean(self):
+    def test_all(self):
         self.check('B93GSC/B93GSCLowerLimit_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('B93GSC/B93GSCLowerLimit_STD_TOTAL.csv',
+                   'B93GSC/B93GSCLowerLimit_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)

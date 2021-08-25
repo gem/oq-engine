@@ -22,21 +22,13 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class ZalachorisRathje2019TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZalachorisRathje2019
 
-    # Tables provided by original authors (George Zalachoris) - he used fewer 
+    # Tables provided by original authors (George Zalachoris) - he used fewer
     # decimals in the coeffs of BSSA14
 
-    def test_mean(self):
+    def test_all(self):
         self.check('Zalachoris/Zalachoris_MEAN.csv',
-                   max_discrep_percentage=1.0)
-
-    def test_std_intra(self):
-        self.check('Zalachoris/Zalachoris_intra.csv',
-                   max_discrep_percentage=0.2)
-
-    def test_std_inter(self):
-        self.check('Zalachoris/Zalachoris_inter.csv',
-                   max_discrep_percentage=0.2)
-
-    def test_std_total(self):
-        self.check('Zalachoris/Zalachoris_totalsigma.csv',
-                   max_discrep_percentage=0.1)
+                   'Zalachoris/Zalachoris_intra.csv',
+                   'Zalachoris/Zalachoris_inter.csv',
+                   'Zalachoris/Zalachoris_totalsigma.csv',
+                   max_discrep_percentage=1.0,
+                   std_discrep_percentage=0.2)

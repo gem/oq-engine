@@ -164,10 +164,16 @@ def main(what, report=False):
         if node[0].tag.endswith('sourceModel'):
             print(source_model_info([node]))
         elif node[0].tag.endswith('logicTree'):
-            sm_nodes = []
-            for smpath in logictree.collect_info(what).smpaths:
-                sm_nodes.append(nrml.read(smpath))
-            print(source_model_info(sm_nodes))
+            bset = node[0][0]
+            if bset.tag.endswith("logicTreeBranchingLevel"):
+                bset = bset[0]
+            if bset.attrib['uncertaintyType'] == 'sourceModel':
+                sm_nodes = []
+                for smpath in logictree.collect_info(what).smpaths:
+                    sm_nodes.append(nrml.read(smpath))
+                print(source_model_info(sm_nodes))
+            elif bset.attrib['uncertaintyType'] == 'gmpeModel':
+                print(logictree.GsimLogicTree(what))
         else:
             print(node.to_str())
     elif what.endswith(('.ini', '.zip')):

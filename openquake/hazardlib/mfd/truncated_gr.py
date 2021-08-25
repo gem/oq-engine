@@ -60,7 +60,7 @@ class TruncatedGRMFD(BaseMFD):
     to a histogram. See :meth:`_get_min_mag_and_num_bins`.
     """
     MODIFICATIONS = {'increment_max_mag', 'set_max_mag', 'increment_b',
-                     'set_ab'}
+                     'set_ab', 'set_bGR'}
 
     def __init__(self, min_mag, max_mag, bin_width, a_val, b_val):
         self.min_mag = min_mag
@@ -236,6 +236,15 @@ class TruncatedGRMFD(BaseMFD):
         is done after assigning a new value to ``max_mag``.
         """
         self.max_mag = value
+
+    def modify_set_bGR(self, b_val: float):
+        """
+        Updates the b_value of the GR relationship.
+
+        :param b_val:
+            The value of the new maximum magnitude
+        """
+        self.b_val = b_val
 
     def modify_increment_b(self, value):
         """

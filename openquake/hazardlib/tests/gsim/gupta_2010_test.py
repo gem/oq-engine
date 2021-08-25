@@ -24,10 +24,7 @@ for testing of :class:`openquake.hazardlib.gsim.gupta_2010.Gupta2010SSlab`.
 """
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-
-from openquake.hazardlib.gsim.gupta_2010 import (
-    Gupta2010SSlab,
-)
+from openquake.hazardlib.gsim.gupta_2010 import Gupta2010SSlab
 
 
 class Gupta2010SSlabTestCase(BaseGSIMTestCase):
@@ -43,16 +40,7 @@ class Gupta2010SSlabTestCase(BaseGSIMTestCase):
     MEAN_TOL = 1e-4
     SIGMA_TOL = 1e-4
 
-    def test_mean(self):
-        """
-        Ensure that means match reference dataset.
-        """
-        for mean_file in self.MEAN_FILES:
-            self.check(mean_file, max_discrep_percentage=self.MEAN_TOL)
-
-    def test_std_total(self):
-        """
-        Ensure that standard deviations match reference dataset.
-        """
-        for sigma_file in self.SIGMA_FILES:
-            self.check(sigma_file, max_discrep_percentage=self.SIGMA_TOL)
+    def test_all(self):
+        for mean_file, sigma_file in zip(self.MEAN_FILES, self.SIGMA_FILES):
+            self.check(mean_file, sigma_file,
+                       max_discrep_percentage=self.MEAN_TOL)

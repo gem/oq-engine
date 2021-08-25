@@ -15,29 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-"""
-Here is an example of how to convert GMFs into mean hazard curves. Works
-in the case of sampling, when the weights are all equal. It keeps
-everything in memory and it is extremely fast.
-NB: parallelization would kill the performance::
 
- def gmvs_to_mean_hcurves(dstore):
-    # Convert GMFs into mean hazard curves. Works by keeping everything in
-    # memory and it is extremely fast.
-    # NB: parallelization would kill the performance.
-    oq = dstore['oqparam']
-    N = len(dstore['sitecol'])
-    M = len(oq.imtls)
-    L1 = oq.imtls.size // M
-    gmf_df = dstore.read_df('gmf_data', 'sid')
-    mean = numpy.zeros((N, 1, M, L1))
-    for sid, df in gmf_df.groupby(gmf_df.index):
-        gmvs = [df[col].to_numpy() for col in df.columns
-                if col.startswith('gmv_')]
-        mean[sid, 0] = calc.gmvs_to_poes(
-            gmvs, oq.imtls, oq.ses_per_logic_tree_path)
-    return mean
-"""
 import itertools
 import warnings
 import logging
@@ -270,9 +248,10 @@ class RuptureImporter(object):
         """
         eid_rlz = []
         for rup in proxies:
-            ebr = EBRupture(Mock(rup_id=rup['seed']), rup['source_id'],
-                            rup['trt_smr'], rup['n_occ'], e0=rup['e0'])
-            ebr.scenario = 'scenario' in self.oqparam.calculation_mode
+            ebr = EBRupture(
+                Mock(rup_id=rup['seed']), rup['source_id'],
+                rup['trt_smr'], rup['n_occ'], e0=rup['e0'],
+                scenario='scenario' in self.oqparam.calculation_mode)
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid, rup['id'], rlz_id))

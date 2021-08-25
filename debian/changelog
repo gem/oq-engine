@@ -1,9 +1,14 @@
   [Michele Simionato]
+  * Extended the multi-rupture scenario calculator to multiple TRTs
+  * Removed the experimental feature `pointsource_distance=?`
+  * Refactored the GMPE tests, with a speedup of 1-14 times
+  * Added a script `utils/build_vtable` to build verification tables
+  * `oq info gsim_logic_tree.xml` now displays the logic tree
   * Fixed a bug in the adjustment term in NSHMP2014 breaking the USA model
 
   [Graeme Weatherill]
   * Implements Abrahamson & Gulerce (2020) NGA Subduction GMPE
-  
+
   [Nico Kuehn/Graeme Weatherill]
   * Implements Kuehn et al. (2020) NGA Subduction GMPE
 
@@ -68,6 +73,7 @@
   [Marco Pagani, Michele Simionato]
   * Implemented MultiFaultSources
   * Added method for computing rjb to kite surfaces
+  * Added support for new epistemic uncertainties in the SSC LT
 
   [Michele Simionato]
   * Fixed newlines in the CSV exports on Windows
@@ -3014,7 +3020,7 @@ python-oq-engine (2.0.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
   * Another export fix: made sure it is run by the current user
-  * Fixed the export: if the export directory does not exists, it is created
+  * Fixed the export: if the export directory does not exist, it is created
   * Introduced the configuration variable `multi_user`, false for source
     installations and true for package installations
   * Fixed the WebUI export

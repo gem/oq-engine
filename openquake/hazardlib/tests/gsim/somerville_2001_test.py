@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.somerville_2001 import SomervilleEtAl2001NSHMP2008
-
+from openquake.hazardlib.gsim.somerville_2001 import (
+    SomervilleEtAl2001NSHMP2008)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from subroutine 'getSomer' in hazgridXnga2.f
@@ -26,10 +26,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class SomervilleEtAl2001NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = SomervilleEtAl2001NSHMP2008
 
-    def test_mean(self):
+    def test_all(self):
         self.check('S01/S01NSHMP_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('S01/S01NSHMP_STD_TOTAL.csv',
+                   'S01/S01NSHMP_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)

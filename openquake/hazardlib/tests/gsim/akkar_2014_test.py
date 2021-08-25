@@ -26,20 +26,11 @@ class AkkarEtAlRjb2014TestCase1(BaseGSIMTestCase):
     # Tables provided by original authors - ensure compatibility with
     # Akkar 2013
 
-    def test_mean(self):
+    def test_all(self):
         self.check('AKKAR13/AKKAR2013_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('AKKAR13/AKKAR2013_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('AKKAR13/AKKAR2013_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('AKKAR13/AKKAR2013_STD_TOTAL.csv',
+                   'AKKAR13/AKKAR2013_STD_INTRA.csv',
+                   'AKKAR13/AKKAR2013_STD_INTER.csv',
+                   'AKKAR13/AKKAR2013_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -48,20 +39,11 @@ class AkkarEtAlRjb2014TestCase2(BaseGSIMTestCase):
 
     # Tables created from Matlab code supplied by the original authors
 
-    def test_mean(self):
+    def test_all(self):
         self.check('AKKAR14/AKKAR_2014_RJB_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('AKKAR14/AKKAR_2014_RJB_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('AKKAR14/AKKAR_2014_RJB_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('AKKAR14/AKKAR_2014_RJB_STD_TOTAL.csv',
+                   'AKKAR14/AKKAR_2014_RJB_STD_INTRA.csv',
+                   'AKKAR14/AKKAR_2014_RJB_STD_INTER.csv',
+                   'AKKAR14/AKKAR_2014_RJB_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -70,20 +52,11 @@ class AkkarEtAlRepi2014TestCase(BaseGSIMTestCase):
 
     # Tables created from Matlab code supplied by the original authors
 
-    def test_mean(self):
+    def test_all(self):
         self.check('AKKAR14/AKKAR_2014_REPI_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('AKKAR14/AKKAR_2014_REPI_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('AKKAR14/AKKAR_2014_REPI_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('AKKAR14/AKKAR_2014_REPI_STD_TOTAL.csv',
+                   'AKKAR14/AKKAR_2014_REPI_STD_INTRA.csv',
+                   'AKKAR14/AKKAR_2014_REPI_STD_INTER.csv',
+                   'AKKAR14/AKKAR_2014_REPI_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -92,18 +65,9 @@ class AkkarEtAlRhypo2014TestCase(BaseGSIMTestCase):
 
     # Tables created from Matlab code supplied by the original authors
 
-    def test_mean(self):
+    def test_all(self):
         self.check('AKKAR14/AKKAR_2014_RHYPO_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('AKKAR14/AKKAR_2014_RHYPO_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('AKKAR14/AKKAR_2014_RHYPO_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('AKKAR14/AKKAR_2014_RHYPO_STD_TOTAL.csv',
+                   'AKKAR14/AKKAR_2014_RHYPO_STD_INTRA.csv',
+                   'AKKAR14/AKKAR_2014_RHYPO_STD_INTER.csv',
+                   'AKKAR14/AKKAR_2014_RHYPO_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)

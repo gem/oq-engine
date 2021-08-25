@@ -24,10 +24,6 @@ Efthimios Sokos (June, 2021)
 import openquake.hazardlib.gsim.boore_2020 as bssa
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# Discrepency percentages to be applied to all tests
-MEAN_DISCREP = 2.0
-STDDEV_DISCREP = 2.0
-
 
 class BooreEtAl2020TestCase(BaseGSIMTestCase):
     """
@@ -35,23 +31,6 @@ class BooreEtAl2020TestCase(BaseGSIMTestCase):
     Style of faulting included - No basin term
     """
     GSIM_CLASS = bssa.BooreEtAl2020
-    MEAN_FILE = "BOORE20/Boore_2020_mean.csv"
-    STD_FILE = "BOORE20/Boore_2020_mean.csv"
-    INTER_FILE = "BOORE20/Boore_2020_inter_std.csv"
-    INTRA_FILE = "BOORE20/Boore_2020_intra_std.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+    def test_all(self):
+        self.check("BOORE20/BooreEtAl2020.csv", max_discrep_percentage=2.)
