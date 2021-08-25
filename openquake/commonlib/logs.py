@@ -156,7 +156,7 @@ class LogContext:
     """
     multi = False
 
-    def __init__(self, job: str, job_ini, log_level='info', log_file=None,
+    def __init__(self, job_ini, job=True, log_level='info', log_file=None,
                  user_name=None, hc_id=None):
         self.job = job
         self.log_level = log_level
@@ -176,6 +176,7 @@ class LogContext:
                 user_name,
                 hc_id)
         else:
+            # only works in single-user situations
             self.calc_id = get_last_calc_id() + 1
 
     def get_oqparam(self):
@@ -246,5 +247,5 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     4. return a LogContext instance associated to a calculation ID
     """
     assert job_or_calc in {"job", "calc"}, job_or_calc
-    return LogContext(job_or_calc == "job", job_ini,
+    return LogContext(job_ini, job_or_calc == "job",
                       log_level, log_file, user_name, hc_id)
