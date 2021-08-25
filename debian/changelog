@@ -1,3 +1,6 @@
+  [Yen-Shin Chen]
+  * Added the Thingbaijam et al. (2017) Magnitude Scaling Law for Strike-slip
+
   [Michele Simionato]
   * Extended the multi-rupture scenario calculator to multiple TRTs
   * Removed the experimental feature `pointsource_distance=?`
