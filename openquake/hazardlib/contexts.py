@@ -1259,8 +1259,7 @@ def read_cmakers(dstore, full_lt=None):
              'grp_id': grp_id})
         cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
         cmaker.trti = trti
-        stop = start + len(rlzs_by_gsim)
-        cmaker.slc = slice(start, stop)
-        start = stop
+        cmaker.start = start
+        start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
     return cmakers

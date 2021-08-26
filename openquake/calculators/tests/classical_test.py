@@ -921,9 +921,7 @@ hazard_uhs-std.csv
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
         ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
-        slc0, slc1 = cmakers[0].slc, cmakers[1].slc
-        self.assertEqual(slc0.stop - slc0.start, 3)
-        self.assertEqual(slc1.stop - slc1.start, 2)
+        self.assertEqual(cmakers[1].start, 3)
 
     def test_case_72(self):
         # reduced USA model

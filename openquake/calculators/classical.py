@@ -261,9 +261,11 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         cmaker = self.cmakers[grp_id]
+        dset = self.datastore['_poes']
         base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
         arr = numpy.array([pmap[sid].array for sid in pmap]).transpose(2, 0, 1)
-        self.datastore['_poes'][cmaker.slc] = arr  # shape GNL
+        for g, mat in enumerate(arr):
+            dset[cmaker.start + g] = mat  # shape NL
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
             for sid in pmap)
