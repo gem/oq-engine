@@ -15,16 +15,16 @@
   </conversions>
 
   <exposureFields>
-    <field oq="id" input="ASSET_ID" />
-    <field oq="lon" input="LONGITUDE" />
-    <field oq="lat" input="LATITUDE" />
-    <field oq="taxonomy" input="TAXONOMY" />
-    <field oq="number" input="BUILDINGS" />
-    <field oq="area" input="AREA_PER_DWELLING_SQM" />
-    <field oq="structural" input="COST_PER_AREA_USD" />
-    <field oq="nonstructural" input="COST_NONSTRUCTURAL_USD" />
-    <field oq="contents" input="COST_CONTENTS_USD" />
-    <field oq="night" input="OCCUPANTS_PER_ASSET" />
+    <field input="ASSET_ID" oq="id"/>
+    <field input="LONGITUDE" oq="lon" />
+    <field input="LATITUDE" oq="lat" />
+    <field input="TAXONOMY" oq="taxonomy" />
+    <field input="BUILDINGS" oq="number" />
+    <field input="AREA_PER_DWELLING_SQM" oq="area" />
+    <field input="COST_PER_AREA_USD" oq="structural" />
+    <field input="COST_NONSTRUCTURAL_USD" oq="nonstructural" />
+    <field input="COST_CONTENTS_USD" oq="contents" />
+    <field input="OCCUPANTS_PER_ASSET" oq="night" />
   </exposureFields>
 
   <occupancyPeriods>night</occupancyPeriods>

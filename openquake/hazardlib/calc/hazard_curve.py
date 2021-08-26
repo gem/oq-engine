@@ -90,12 +90,8 @@ def classical(group, src_filter, cmaker):
     """
     if not hasattr(src_filter, 'sitecol'):  # do not filter
         src_filter = SourceFilter(src_filter, {})
-
-    # Get the parameters assigned to the group
-    src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
     cluster = getattr(group, 'cluster', None)
     trts = set()
-    maxradius = 0
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures may not be set, so it is set here
@@ -104,8 +100,6 @@ def classical(group, src_filter, cmaker):
         if cluster:
             src.temporal_occurrence_model = FatedTOM(time_span=1)
         trts.add(src.tectonic_region_type)
-        if hasattr(src, 'radius'):  # for prefiltered point sources
-            maxradius = max(maxradius, src.radius)
     [trt] = trts  # there must be a single tectonic region type
     assert trt == cmaker.trt, (trt, cmaker.trt)
     cmaker.maximum_distance = src_filter.integration_distance
@@ -121,11 +115,6 @@ def classical(group, src_filter, cmaker):
     extra['task_no'] = cmaker.task_no
     extra['source_id'] = src.source_id
     extra['grp_id'] = src.grp_id
-    extra['maxradius'] = maxradius
-    group_probability = getattr(group, 'grp_probability', None)
-    if src_mutex and group_probability:
-        pmap *= group_probability
-
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(cmaker.imtls, tom, cmaker.gsims, pmap)

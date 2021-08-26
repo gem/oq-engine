@@ -211,11 +211,6 @@ def extract_realizations(dstore, dummy):
     """
     dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
-    if oq.collect_rlzs:
-        arr = numpy.zeros(1, dt)
-        arr['weight'] = 1
-        arr['branch_path'] = '"one-effective-rlz"'
-        return arr
     scenario = 'scenario' in oq.calculation_mode
     rlzs = dstore['full_lt'].rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
