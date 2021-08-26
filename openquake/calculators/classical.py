@@ -220,8 +220,11 @@ def classical(srcs, cmaker, monitor):
     Read the SourceFilter and call the classical calculator in hazardlib
     """
     srcfilter = monitor.read('srcfilter')
+    ntiles = numpy.ceil(len(srcfilter.sitecol) / 10_000)
     cmaker.init_monitoring(monitor)
-    return hazclassical(srcs, srcfilter, cmaker)
+    for tile in srcfilter.sitecol.split_in_tiles(ntiles):
+        sf = SourceFilter(tile, srcfilter.integration_distance)
+        yield hazclassical(srcs, sf, cmaker)
 
 
 class Hazard:
