@@ -319,7 +319,6 @@ class ClassicalCalculator(base.HazardCalculator):
             pmap.grp_id = grp_id
             acc[extra['source_id'].split(':')[0]] = pmap
 
-        self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
             if pmap:
                 self.haz.init(acc, grp_id)
@@ -370,7 +369,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
         self.by_task = {}  # task_no => src_ids
-        self.maxradius = 0
         self.Ns = len(self.csm.source_info)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
@@ -527,10 +525,6 @@ class ClassicalCalculator(base.HazardCalculator):
                              numsites / self.numctxs)
         if psd:
             psdist = max(max(psd.ddic[trt].values()) for trt in psd.ddic)
-            if psdist and self.maxradius >= psdist / 2:
-                logging.warning('The pointsource_distance of %d km is too '
-                                'small compared to a maxradius of %d km',
-                                psdist, self.maxradius)
         self.calc_times.clear()  # save a bit of memory
 
     def set_psd(self):
