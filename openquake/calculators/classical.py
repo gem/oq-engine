@@ -254,6 +254,7 @@ class Hazard:
         if grp_id not in pmaps:
             L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
             pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
+            pmaps[grp_id].grp_id = grp_id
 
     def store_poes(self, grp_id, pmap):
         """
@@ -275,10 +276,11 @@ class Hazard:
         self.datastore['disagg_by_grp'] = self.extreme
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
-                # contains only string keys in case of disaggregation
-                rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
-                self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
-                    self.get_hcurves(pmap, rlzs_by_gsim))
+                if isinstance(key, str):
+                    # contains only string keys in case of disaggregation
+                    rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
+                    self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
+                        self.get_hcurves(pmap, rlzs_by_gsim))
 
 
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
