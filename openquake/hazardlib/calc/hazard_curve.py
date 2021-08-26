@@ -110,11 +110,8 @@ def classical(group, src_filter, cmaker):
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
-    pmap, rup_data, calc_times = PmapMaker(cmaker, src_filter, group).make()
-    extra = {}
-    extra['task_no'] = cmaker.task_no
-    extra['source_id'] = src.source_id
-    extra['grp_id'] = src.grp_id
+    pmap, rup_data, calc_times, extra = PmapMaker(
+        cmaker, src_filter, group).make()
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(cmaker.imtls, tom, cmaker.gsims, pmap)

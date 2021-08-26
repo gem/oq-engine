@@ -174,6 +174,7 @@ class ContextMaker(object):
         param = param
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
+        self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = param.get('collapse_level', False)
         self.trt = trt
         self.gsims = gsims
@@ -767,7 +768,12 @@ class PmapMaker(object):
         else:
             pmap = self._make_src_indep()
         rupdata = self.dictarray(self.rupdata)
-        return pmap, rupdata, self.calc_times
+        extra = {}
+        extra['task_no'] = self.task_no
+        extra['grp_id'] = self.group[0].grp_id
+        if self.disagg_by_src:
+            extra['source_id'] = self.group[0].source_id
+        return pmap, rupdata, self.calc_times, extra
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
@@ -1241,6 +1247,7 @@ def read_cmakers(dstore, full_lt=None):
              'ses_seed': oq.ses_seed,
              'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
              'max_sites_disagg': oq.max_sites_disagg,
+             'disagg_by_src': oq.disagg_by_src,
              'min_iml': oq.min_iml,
              'imtls': oq.imtls,
              'reqv': oq.get_reqv(),

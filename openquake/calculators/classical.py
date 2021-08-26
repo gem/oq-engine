@@ -523,8 +523,6 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.numctxs:
                 logging.info('Average number of sites per context: %d',
                              numsites / self.numctxs)
-        if psd:
-            psdist = max(max(psd.ddic[trt].values()) for trt in psd.ddic)
         self.calc_times.clear()  # save a bit of memory
 
     def set_psd(self):
