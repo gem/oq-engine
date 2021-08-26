@@ -251,6 +251,8 @@ def fix_version(commit, venv):
     Fix the file baselib/__init__.py with the git version
     """
     path = '/lib/python*/site-packages/openquake/baselib/__init__.py'
+    if sys.platform == 'win32':
+        path= '/lib/site-packages/openquake/baselib/__init__.py'
     [fname] = glob.glob(venv + path)
     lines = []
     for line in open(fname):
