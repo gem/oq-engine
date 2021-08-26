@@ -298,7 +298,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
         pmap = dic['pmap']
-        extra = dic['extra']
         ctimes = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
         self.calc_times += ctimes
         srcids = set()
@@ -309,15 +308,15 @@ class ClassicalCalculator(base.HazardCalculator):
             eff_rups += rec[0]
             if rec[0]:
                 eff_sites += rec[1] / rec[0]
-        self.by_task[extra['task_no']] = (
+        self.by_task[dic['task_no']] = (
             eff_rups, eff_sites, sorted(srcids))
-        grp_id = extra.pop('grp_id')
+        grp_id = dic.pop('grp_id')
         self.rel_ruptures[grp_id] += eff_rups
         self.counts[grp_id] -= 1
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
             pmap.grp_id = grp_id
-            acc[extra['source_id'].split(':')[0]] = pmap
+            acc[dic['source_id'].split(':')[0]] = pmap
 
         with self.monitor('aggregate curves'):
             if pmap:

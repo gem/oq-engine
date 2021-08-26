@@ -767,13 +767,14 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        rupdata = self.dictarray(self.rupdata)
-        extra = {}
-        extra['task_no'] = self.task_no
-        extra['grp_id'] = self.group[0].grp_id
+        dic = {'pmap': pmap,
+               'rup_data': self.dictarray(self.rupdata),
+               'calc_times': self.calc_times,
+               'task_no': self.task_no,
+               'grp_id': self.group[0].grp_id}
         if self.disagg_by_src:
-            extra['source_id'] = self.group[0].source_id
-        return pmap, rupdata, self.calc_times, extra
+            dic['source_id'] = self.group[0].source_id
+        return dic
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
