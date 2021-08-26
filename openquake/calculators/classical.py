@@ -221,7 +221,10 @@ def classical(srcs, cmaker, monitor):
     """
     srcfilter = monitor.read('srcfilter')
     cmaker.init_monitoring(monitor)
-    return hazclassical(srcs, srcfilter, cmaker)
+    dic = hazclassical(srcs, srcfilter, cmaker)
+    pmap = dic.pop('pmap')
+    yield dict(pmap=pmap, grp_id=dic['grp_id'], source_id=dic.get('source_id'))
+    yield dic
 
 
 class Hazard:
@@ -251,6 +254,7 @@ class Hazard:
         if grp_id not in pmaps:
             L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
             pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
+            pmaps[grp_id].grp_id = grp_id
 
     def store_poes(self, grp_id, pmap):
         """
@@ -272,10 +276,11 @@ class Hazard:
         self.datastore['disagg_by_grp'] = self.extreme
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
-                # contains only string keys in case of disaggregation
-                rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
-                self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
-                    self.get_hcurves(pmap, rlzs_by_gsim))
+                if isinstance(key, str):
+                    # contains only string keys in case of disaggregation
+                    rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
+                    self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
+                        self.get_hcurves(pmap, rlzs_by_gsim))
 
 
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
@@ -297,37 +302,40 @@ class ClassicalCalculator(base.HazardCalculator):
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
-        pmap = dic['pmap']
-        ctimes = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
-        self.calc_times += ctimes
-        srcids = set()
-        eff_rups = 0
-        eff_sites = 0
-        for srcid, rec in ctimes.items():
-            srcids.add(srcid)
-            eff_rups += rec[0]
-            if rec[0]:
-                eff_sites += rec[1] / rec[0]
-        self.by_task[dic['task_no']] = (
-            eff_rups, eff_sites, sorted(srcids))
-        grp_id = dic.pop('grp_id')
-        self.rel_ruptures[grp_id] += eff_rups
-        self.counts[grp_id] -= 1
-        if self.oqparam.disagg_by_src:
-            # store the poes for the given source
-            pmap.grp_id = grp_id
-            acc[dic['source_id'].split(':')[0]] = pmap
+        elif 'calc_times' in dic:
+            ctimes = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
+            self.calc_times += ctimes
+            srcids = set()
+            eff_rups = 0
+            eff_sites = 0
+            for srcid, rec in ctimes.items():
+                srcids.add(srcid)
+                eff_rups += rec[0]
+                if rec[0]:
+                    eff_sites += rec[1] / rec[0]
+            self.by_task[dic['task_no']] = (
+                eff_rups, eff_sites, sorted(srcids))
+            grp_id = dic.pop('grp_id')
+            self.rel_ruptures[grp_id] += eff_rups
 
+            # store rup_data if there are few sites
+            if self.few_sites and len(dic['rup_data']['src_id']):
+                with self.monitor('saving rup_data'):
+                    store_ctxs(self.datastore, dic['rup_data'], grp_id)
+            return acc
         with self.monitor('aggregate curves'):
+            pmap = dic['pmap']
+            grp_id = dic.pop('grp_id')
+            pmap.grp_id = grp_id
+            source_id = dic.pop('source_id')
+            if source_id:
+                # store the poes for the given source
+                acc[source_id.split(':')[0]] = pmap
             if pmap:
                 self.haz.init(acc, grp_id)
                 acc[grp_id] |= pmap
 
-        # store rup_data if there are few sites
-        if self.few_sites and len(dic['rup_data']['src_id']):
-            with self.monitor('saving rup_data'):
-                store_ctxs(self.datastore, dic['rup_data'], grp_id)
-
+        self.counts[grp_id] -= 1
         if self.counts[grp_id] == 0:
             with self.monitor('saving probability maps'):
                 if grp_id in acc:
