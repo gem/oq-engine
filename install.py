@@ -299,8 +299,17 @@ def install(inst, version):
         pycmd = inst.VENV + '/bin/python'
 
     # upgrade pip and before check that it is installed in venv
-    subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
-    subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
+    if sys.platform != 'win32':
+        subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
+        subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
+                          'pip', 'wheel'])
+    else:
+        if os.path.exists('python\\python._pth.old'):
+            subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
+                'pip', 'wheel'])
+        else:
+            subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
+            subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
                           'pip', 'wheel'])
 
     # install the requirements
