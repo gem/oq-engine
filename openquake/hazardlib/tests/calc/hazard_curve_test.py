@@ -263,6 +263,7 @@ asource = nrml.get('''\
      <hypoDepth depth="10" probability=".5"/>
   </hypoDepthDist>
 </areaSource>''')
+asource.grp_id = 0
 
 
 class NewApiTestCase(unittest.TestCase):
