@@ -122,10 +122,6 @@ def classical(group, src_filter, cmaker):
     extra['source_id'] = src.source_id
     extra['grp_id'] = src.grp_id
     extra['maxradius'] = maxradius
-    group_probability = getattr(group, 'grp_probability', None)
-    if src_mutex and group_probability:
-        pmap *= group_probability
-
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(cmaker.imtls, tom, cmaker.gsims, pmap)
