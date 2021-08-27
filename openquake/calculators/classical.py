@@ -221,10 +221,7 @@ def classical(srcs, cmaker, monitor):
     """
     srcfilter = monitor.read('srcfilter')
     cmaker.init_monitoring(monitor)
-    dic = hazclassical(srcs, srcfilter, cmaker)
-    pmap = dic.pop('pmap')
-    yield dict(pmap=pmap, grp_id=dic['grp_id'], source_id=dic.get('source_id'))
-    yield dic
+    return hazclassical(srcs, srcfilter, cmaker)
 
 
 class Hazard:
@@ -304,32 +301,30 @@ class ClassicalCalculator(base.HazardCalculator):
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
-        elif 'calc_times' in dic:
-            ctimes = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
-            self.calc_times += ctimes
-            srcids = set()
-            eff_rups = 0
-            eff_sites = 0
-            for srcid, rec in ctimes.items():
-                srcids.add(srcid)
-                eff_rups += rec[0]
-                if rec[0]:
-                    eff_sites += rec[1] / rec[0]
-            self.by_task[dic['task_no']] = (
-                eff_rups, eff_sites, sorted(srcids))
-            grp_id = dic.pop('grp_id')
-            self.rel_ruptures[grp_id] += eff_rups
 
-            # store rup_data if there are few sites
-            if self.few_sites and len(dic['rup_data']['src_id']):
-                with self.monitor('saving rup_data'):
-                    store_ctxs(self.datastore, dic['rup_data'], grp_id)
-            return acc
+        ctimes = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
+        self.calc_times += ctimes
+        srcids = set()
+        eff_rups = 0
+        eff_sites = 0
+        for srcid, rec in ctimes.items():
+            srcids.add(srcid)
+            eff_rups += rec[0]
+            if rec[0]:
+                eff_sites += rec[1] / rec[0]
+        self.by_task[dic['task_no']] = (
+            eff_rups, eff_sites, sorted(srcids))
+        grp_id = dic.pop('grp_id')
+        self.rel_ruptures[grp_id] += eff_rups
+
+        # store rup_data if there are few sites
+        if self.few_sites and len(dic['rup_data']['src_id']):
+            with self.monitor('saving rup_data'):
+                store_ctxs(self.datastore, dic['rup_data'], grp_id)
         with self.monitor('aggregate curves'):
             pmap = dic['pmap']
-            grp_id = dic.pop('grp_id')
             pmap.grp_id = grp_id
-            source_id = dic.pop('source_id')
+            source_id = dic.pop('source_id', None)
             if source_id:
                 # store the poes for the given source
                 acc[source_id.split(':')[0]] = pmap
