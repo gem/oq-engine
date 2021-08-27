@@ -224,12 +224,15 @@ def classical(srcs, cmaker, monitor):
 
 def classical_tile(srcs, cmaker, monitor):
     """
-    Read the SourceFilter and call the classical calculator in hazardlib
+    Read the sitecol, split it on tiles and call the classical calculator
+    in hazardlib yielding the results for each tile
     """
     cmaker.init_monitoring(monitor)
     sitecol = monitor.read('sitecol')
     for tile in sitecol.split_in_tiles(cmaker.ntiles):
-        yield hazclassical(srcs, tile, cmaker)
+        res = hazclassical(srcs, tile, cmaker)
+        if res['pmap']:
+            yield res
 
 
 class Hazard:
