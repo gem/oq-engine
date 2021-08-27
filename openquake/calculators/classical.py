@@ -219,7 +219,9 @@ def classical(srcs, cmaker, monitor):
     Read the SourceFilter and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    return hazclassical(srcs, monitor.read('sitecol'), cmaker)
+    sitecol = monitor.read('sitecol')
+    for tile in sitecol.split_in_tiles(2):
+        yield hazclassical(srcs, tile, cmaker)
 
 
 class Hazard:
@@ -587,19 +589,20 @@ class ClassicalCalculator(base.HazardCalculator):
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
+        ntiles = len(self.sitecol.split_in_tiles(2))
         self.counts = AccumDict(accum=0)
         for grp_id in grp_ids:
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
-                self.counts[grp_id] += 1
+                self.counts[grp_id] += ntiles
                 allargs.append((sg, cmakers[grp_id]))
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src else
                         block_splitter(sg, max_weight, get_weight, sort=True))
                 blocks = list(blks)
-                self.counts[grp_id] += len(blocks)
+                self.counts[grp_id] += len(blocks) * ntiles
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
