@@ -216,11 +216,19 @@ def preclassical(srcs, srcfilter, params, monitor):
 
 def classical(srcs, cmaker, monitor):
     """
+    Read the sitecol and call the classical calculator in hazardlib
+    """
+    cmaker.init_monitoring(monitor)
+    return hazclassical(srcs, monitor.read('sitecol'), cmaker)
+
+
+def classical_tile(srcs, cmaker, monitor):
+    """
     Read the SourceFilter and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
     sitecol = monitor.read('sitecol')
-    for tile in sitecol.split_in_tiles(2):
+    for tile in sitecol.split_in_tiles(cmaker.ntiles):
         yield hazclassical(srcs, tile, cmaker)
 
 
@@ -248,10 +256,8 @@ class Hazard:
         """
         Initialize the pmaps dictionary with zeros, if needed
         """
-        if grp_id not in pmaps:
-            L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
-            pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
-            pmaps[grp_id].grp_id = grp_id
+        L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
+        pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
     def store_poes(self, grp_id, pmap):
         """
@@ -329,7 +335,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 # store the poes for the given source
                 acc[source_id.split(':')[0]] = pmap
             if pmap:
-                self.haz.init(acc, grp_id)
+                if grp_id not in acc:
+                    self.haz.init(acc, grp_id)
                 acc[grp_id] |= pmap
 
         self.counts[grp_id] -= 1
@@ -485,7 +492,11 @@ class ClassicalCalculator(base.HazardCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
         args = self.get_args(grp_ids, self.haz.cmakers)
         logging.info('Sending %d tasks', len(args))
-        smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
+        h5 = self.datastore.hdf5
+        if self.N > oq.max_sites_per_tile:
+            smap = parallel.Starmap(classical_tile, args, h5=h5)
+        else:
+            smap = parallel.Starmap(classical, args, h5=h5)
         smap.monitor.save('sitecol', self.sitecol)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -570,11 +581,17 @@ class ClassicalCalculator(base.HazardCalculator):
         :returns: a list of Starmap arguments
         """
         oq = self.oqparam
+        if self.N > oq.max_sites_per_tile:
+            ntiles = numpy.ceil(self.N / oq.max_sites_per_tile)
+        else:
+            ntiles = 1
         allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
-            gsims = cmakers[grp_id].gsims
+            cmaker = cmakers[grp_id]
+            cmaker.ntiles = ntiles
+            gsims = cmaker.gsims
             sg = src_groups[grp_id]
             for src in sg:
                 src.ngsims = len(gsims)
@@ -589,7 +606,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
-        ntiles = len(self.sitecol.split_in_tiles(2))
         self.counts = AccumDict(accum=0)
         for grp_id in grp_ids:
             sg = src_groups[grp_id]
