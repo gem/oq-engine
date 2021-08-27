@@ -1245,6 +1245,7 @@ def read_cmakers(dstore, full_lt=None):
              'collapse_level': int(oq.collapse_level),
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
+             'maximum_distance': oq.maximum_distance,
              'pointsource_distance': oq.pointsource_distance,
              'minimum_distance': oq.minimum_distance,
              'ses_seed': oq.ses_seed,

@@ -218,9 +218,8 @@ def classical(srcs, cmaker, monitor):
     """
     Read the SourceFilter and call the classical calculator in hazardlib
     """
-    srcfilter = monitor.read('srcfilter')
     cmaker.init_monitoring(monitor)
-    return hazclassical(srcs, srcfilter, cmaker)
+    return hazclassical(srcs, monitor.read('sitecol'), cmaker)
 
 
 class Hazard:
@@ -485,7 +484,7 @@ class ClassicalCalculator(base.HazardCalculator):
         args = self.get_args(grp_ids, self.haz.cmakers)
         logging.info('Sending %d tasks', len(args))
         smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
-        smap.monitor.save('srcfilter', self.src_filter())
+        smap.monitor.save('sitecol', self.sitecol)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         pmaps = smap.reduce(self.agg_dicts)
