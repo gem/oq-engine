@@ -18,7 +18,6 @@
 import io
 import time
 import psutil
-import pprint
 import logging
 import operator
 import numpy
