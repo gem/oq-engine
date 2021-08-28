@@ -32,7 +32,7 @@ from openquake.baselib.general import (
     get_nbytes_msg)
 from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
-from openquake.hazardlib.source.base import EPS
+from openquake.hazardlib.source.base import EPS, get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
@@ -106,12 +106,19 @@ def run_preclassical(csm, oqparam, h5):
     if res and h5:
         csm.update_source_info(res['calc_times'], nsites=True)
 
+    acc = AccumDict(accum=0)
+    code2cls = get_code2cls()
     for grp_id, srcs in res.items():
         # srcs can be empty if the minimum_magnitude filter is on
         if srcs and not isinstance(grp_id, str):
             newsg = SourceGroup(srcs[0].tectonic_region_type)
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
+            for src in srcs:
+                acc[src.code] += int(src.num_ruptures)
+    for val, key in sorted((val, key) for key, val in acc.items()):
+        cls = code2cls[key].__name__
+        logging.info('{} ruptures: {:_d}'.format(cls, val))
 
     # sanity check
     for sg in csm.src_groups:

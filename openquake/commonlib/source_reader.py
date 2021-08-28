@@ -390,16 +390,6 @@ class CompositeSourceModel:
             n += src.count_ruptures()
         return n
 
-    def by_typology(self):
-        """
-        :returns: a dictionary source_code -> num_ruptures
-        """
-        acc = general.AccumDict(accum=0)
-        for src in self.get_sources():
-            acc[src.code] += src.num_ruptures
-        items = sorted((val, key) for key, val in acc.items())
-        return {key: val for val, key in items}
-
     def __repr__(self):
         """
         Return a string representation of the composite model
