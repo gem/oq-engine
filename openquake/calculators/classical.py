@@ -47,7 +47,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight
+BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
@@ -212,10 +212,6 @@ def preclassical(srcs, srcfilter, params, monitor):
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
     if params['ps_grid_spacing']:
-        # reduce the weight of CollapsedPointSources
-        for src in dic[grp_id]:
-            if hasattr(src, 'pointsources'):  # CollapsedPointSource
-                src.num_ruptures /= len(src.pointsources)
         dic['ps_grid/%02d' % monitor.task_no] = [
             src for src in dic[grp_id] if src.nsites > EPS]
     return dic
