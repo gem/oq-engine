@@ -463,6 +463,7 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
+                logging.info('Source composition:\n%s', csm.by_typology())
                 mags_by_trt = csm.get_mags_by_trt()
                 oq.maximum_distance.interp(mags_by_trt)
                 for trt in mags_by_trt:
