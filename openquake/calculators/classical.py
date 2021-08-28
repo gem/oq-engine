@@ -94,10 +94,21 @@ def run_preclassical(csm, oqparam, h5):
         oqparam.maximum_distance)
     if csm.sitecol:
         logging.info('Sending %s', srcfilter.sitecol)
+    if oqparam.ps_grid_spacing:
+        # produce a preclassical task for each group
+        allargs = ((srcs, srcfilter, param)
+                   for srcs in sources_by_grp.values())
+    else:
+        # produce many preclassical task
+        maxw = sum(len(srcs) for srcs in sources_by_grp.values()) / (
+            oqparam.concurrent_tasks or 1)
+        allargs = ((blk, srcfilter, param)
+                   for srcs in sources_by_grp.values()
+                   for blk in block_splitter(srcs, maxw))
     res = parallel.Starmap(
-        preclassical,
-        ((srcs, srcfilter, param) for srcs in sources_by_grp.values()),
-        h5=h5, distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
+        preclassical, allargs,  h5=h5,
+        distribute=None if len(sources_by_grp) > 1 else 'no'
+    ).reduce()
 
     if res and res['before'] != res['after']:
         logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
