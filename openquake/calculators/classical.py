@@ -76,8 +76,6 @@ def run_preclassical(csm, oqparam, h5):
     :param oqparam: the parameters in job.ini file
     :param h5: a DataStore instance
     """
-    logging.info('Sending %s', csm.sitecol)
-
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
@@ -94,6 +92,8 @@ def run_preclassical(csm, oqparam, h5):
     srcfilter = SourceFilter(
         csm.sitecol.reduce(10000) if csm.sitecol else None,
         oqparam.maximum_distance)
+    if csm.sitecol:
+        logging.info('Sending %s', srcfilter.sitecol)
     res = parallel.Starmap(
         preclassical,
         ((srcs, srcfilter, param) for srcs in sources_by_grp.values()),
