@@ -20,11 +20,23 @@ seismic sources.
 import abc
 import zlib
 import numpy
+from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 EPS = .01  # used for src.nsites outside the maximum_distance
+
+
+def get_code2cls():
+    """
+    :returns: a dictionary source code -> source class
+    """
+    dic = {}
+    for cls in general.gen_subclasses(BaseSeismicSource):
+        if hasattr(cls, 'code'):
+            dic[cls.code] = cls
+    return dic
 
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):

@@ -32,7 +32,7 @@ from openquake.baselib.general import (
     get_nbytes_msg)
 from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
-from openquake.hazardlib.source.base import EPS
+from openquake.hazardlib.source.base import EPS, get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
@@ -47,7 +47,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight
+BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
@@ -76,8 +76,6 @@ def run_preclassical(csm, oqparam, h5):
     :param oqparam: the parameters in job.ini file
     :param h5: a DataStore instance
     """
-    logging.info('Sending %s', csm.sitecol)
-
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
@@ -94,6 +92,8 @@ def run_preclassical(csm, oqparam, h5):
     srcfilter = SourceFilter(
         csm.sitecol.reduce(10000) if csm.sitecol else None,
         oqparam.maximum_distance)
+    if csm.sitecol:
+        logging.info('Sending %s', srcfilter.sitecol)
     res = parallel.Starmap(
         preclassical,
         ((srcs, srcfilter, param) for srcs in sources_by_grp.values()),
@@ -106,12 +106,19 @@ def run_preclassical(csm, oqparam, h5):
     if res and h5:
         csm.update_source_info(res['calc_times'], nsites=True)
 
+    acc = AccumDict(accum=0)
+    code2cls = get_code2cls()
     for grp_id, srcs in res.items():
         # srcs can be empty if the minimum_magnitude filter is on
         if srcs and not isinstance(grp_id, str):
             newsg = SourceGroup(srcs[0].tectonic_region_type)
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
+            for src in srcs:
+                acc[src.code] += int(src.num_ruptures)
+    for val, key in sorted((val, key) for key, val in acc.items()):
+        cls = code2cls[key].__name__
+        logging.info('{} ruptures: {:_d}'.format(cls, val))
 
     # sanity check
     for sg in csm.src_groups:
@@ -205,10 +212,6 @@ def preclassical(srcs, srcfilter, params, monitor):
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
     if params['ps_grid_spacing']:
-        # reduce the weight of CollapsedPointSources
-        for src in dic[grp_id]:
-            if hasattr(src, 'pointsources'):  # CollapsedPointSource
-                src.num_ruptures /= len(src.pointsources)
         dic['ps_grid/%02d' % monitor.task_no] = [
             src for src in dic[grp_id] if src.nsites > EPS]
     return dic
