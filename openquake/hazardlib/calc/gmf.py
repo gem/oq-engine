@@ -130,11 +130,14 @@ class GmfComputer(object):
         self.sids = sites.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
+
+        self.truncation = None
         if cmaker.trunclevel is None:
             self.distribution = scipy.stats.norm()
         elif cmaker.trunclevel == 0:
             self.distribution = None
         else:
+            self.truncation = cmaker.trunclevel
             assert cmaker.trunclevel > 0, cmaker.trunclevel
             self.distribution = scipy.stats.truncnorm(
                 - cmaker.trunclevel, cmaker.trunclevel)
@@ -271,6 +274,13 @@ class GmfComputer(object):
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
+
+            if self.truncation is not None:
+                scaling = ((stddev_inter + stddev_inter) /
+                           (stddev_inter**2 + stddev_intra**2)**0.5)
+                self.distribution = scipy.stats.truncnorm(
+                    - self.truncation*scaling, self.truncation*scaling)
+
             intra_residual = stddev_intra * rvs(
                 self.distribution, num_sids, num_events)
 
