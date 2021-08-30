@@ -279,7 +279,7 @@ class GmfComputer(object):
                 scaling = ((stddev_inter + stddev_inter) /
                            (stddev_inter**2 + stddev_intra**2)**0.5)
                 self.distribution = scipy.stats.truncnorm(
-                    -self.truncation*scaling, self.truncation*scaling)
+                    -1*self.truncation*scaling, self.truncation*scaling)
 
             intra_residual = stddev_intra * rvs(
                 self.distribution, num_sids, num_events)
