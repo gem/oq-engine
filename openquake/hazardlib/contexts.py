@@ -247,7 +247,6 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.pmap_mon = monitor('creating pmap', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
 
     def read_ctxs(self, dstore, slc=None):
@@ -765,11 +764,10 @@ class PmapMaker(object):
         self.rupdata = []
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-        with self.pmap_mon:
-            if self.src_mutex:
-                pmap = self._make_src_mutex()
-            else:
-                pmap = self._make_src_indep()
+        if self.src_mutex:
+            pmap = self._make_src_mutex()
+        else:
+            pmap = self._make_src_indep()
         dic = {'pmap': pmap,
                'rup_data': self.dictarray(self.rupdata),
                'calc_times': self.calc_times,

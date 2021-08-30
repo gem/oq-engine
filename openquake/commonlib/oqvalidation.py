@@ -984,6 +984,12 @@ class OqParam(valid.ParamSet):
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
 
+        # check for tiling
+        if self.max_sites_disagg > self.max_sites_per_tile:
+            raise ValueError(
+                'max_sites_disagg is larger than max_sites_per_tile! (%d>%d)'
+                % (self.max_sites_disagg, self.max_sites_per_tile))
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and self.poes:
