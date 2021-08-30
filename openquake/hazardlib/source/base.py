@@ -74,8 +74,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         w = self.num_ruptures * self.ngsims * (.1 if self.nsites == EPS else 1)
-        if not hasattr(self, 'nodal_plane_distribution'):  # not pointlike
-            w *= 10  # increase weight of non point sources
+        if hasattr(self, 'data'):  # nonparametric rupture
+            w *= 20  # increase weight 20 times
+        elif not hasattr(self, 'nodal_plane_distribution'):  # not pointlike
+            w *= 5  # increase weight of non point sources
         return w
 
     @property
