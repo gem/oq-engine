@@ -20,11 +20,23 @@ seismic sources.
 import abc
 import zlib
 import numpy
+from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 EPS = .01  # used for src.nsites outside the maximum_distance
+
+
+def get_code2cls():
+    """
+    :returns: a dictionary source code -> source class
+    """
+    dic = {}
+    for cls in general.gen_subclasses(BaseSeismicSource):
+        if hasattr(cls, 'code'):
+            dic[cls.code] = cls
+    return dic
 
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
@@ -62,8 +74,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         w = self.num_ruptures * self.ngsims * (.1 if self.nsites == EPS else 1)
-        if not hasattr(self, 'nodal_plane_distribution'):  # not pointlike
-            w *= 10  # increase weight of non point sources
+        if hasattr(self, 'data'):  # nonparametric rupture
+            w *= 20  # increase weight 20 times
+        elif not hasattr(self, 'nodal_plane_distribution'):  # not pointlike
+            w *= 5  # increase weight of non point sources
         return w
 
     @property

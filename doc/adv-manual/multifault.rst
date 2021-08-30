@@ -18,6 +18,7 @@ contains two kiteSurfaces with IDs ``s1`` and ``s2`` respectively;
 there is a single MultiFaultSource with the following content:
 
 .. code-block:: xml
+
       <multiFaultSource id="1" name="Test1">
 	<multiPlanesRupture probs_occur="0.8 0.2">
 	  <magnitude>5.0</magnitude>

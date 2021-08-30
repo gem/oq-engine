@@ -87,9 +87,9 @@ By default the engine allows to compute economic losses; in that case the
 coefficients depends on the taxonomy and the consequence model can be
 represented as a CSV file like the following:
 
-===================	========	============	========	==========	===========	==========	
+===================	============	============	========	==========	===========	==========	
  taxonomy          	 consequence  	 loss_type  	 slight 	 moderate 	 extensive 	 complete 	
--------------------	--------	------------	--------	----------	-----------	----------	
+-------------------	------------	------------	--------	----------	-----------	----------	
  CR_LFINF-DUH_H2   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
  CR_LFINF-DUH_H4   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
  MCF_LWAL-DNO_H3   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
@@ -99,7 +99,7 @@ represented as a CSV file like the following:
  W-WS_LPB-DNO_H1   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
  W-WWD_LWAL-DNO_H1 	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
  MR_LWAL-DNO_H3    	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
-===================	========	============	========	==========	===========	==========	
+===================	============	============	========	==========	===========	==========	
 
 The first field in the header is the name of a tag in the exposure; in
 this case it is the taxonomy but it could be any other tag — for instance,

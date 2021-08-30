@@ -21,7 +21,7 @@ The damage distributions will have differences within 10%.
 
 **Expected Runtimes and Outputs**
 
-Expected runtime for event damage calculation: < 5 minutes
+Expected runtime for event damage calculation: ~1 minute
 
 Outputs:
 

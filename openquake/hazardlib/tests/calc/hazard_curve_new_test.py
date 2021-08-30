@@ -91,8 +91,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                               PMF([(0.7, 0), (0.3, 1)]),
                                               "Geothermal")
         site = Site(Point(0.0, 0.0), 800, z1pt0=100., z2pt5=1.)
-        s_filter = SourceFilter(SiteCollection([site]), {})
-        self.sites = s_filter
+        self.sites = SiteCollection([site])
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
         gsim = SadighEtAl1997()
         self.gsim_by_trt = {"Active Shallow Crust": gsim}

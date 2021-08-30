@@ -48,7 +48,7 @@ It should now be possible to develop with the engine. Calculation data will be s
 
 ## `user` installation
 
-If you do not need to modify the engine codebase or develop new features with the engine, but intend to use it as an application, you should install the `user` installation (on Windows / macOS) or the `server` installation (on Linux). The `user` installation is also the recommended option for Linux, in the case where you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
+If you do not need to modify the engine codebase or develop new features with the engine, but intend to use it as an application, you should perform an `user` installation (on Windows / macOS) or a `server` installation (on Linux). The `user` installation is also the recommended option for Linux, in the case where you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
 
 on macOS and Linux:
 ```

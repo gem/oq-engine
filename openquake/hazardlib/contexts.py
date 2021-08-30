@@ -174,6 +174,7 @@ class ContextMaker(object):
         param = param
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
+        self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = param.get('collapse_level', False)
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
@@ -246,6 +247,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
+        self.pmap_mon = monitor('creating pmap', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
 
     def read_ctxs(self, dstore, slc=None):
@@ -763,12 +765,19 @@ class PmapMaker(object):
         self.rupdata = []
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-        if self.src_mutex:
-            pmap = self._make_src_mutex()
-        else:
-            pmap = self._make_src_indep()
-        rupdata = self.dictarray(self.rupdata)
-        return pmap, rupdata, self.calc_times
+        with self.pmap_mon:
+            if self.src_mutex:
+                pmap = self._make_src_mutex()
+            else:
+                pmap = self._make_src_indep()
+        dic = {'pmap': pmap,
+               'rup_data': self.dictarray(self.rupdata),
+               'calc_times': self.calc_times,
+               'task_no': self.task_no,
+               'grp_id': self.group[0].grp_id}
+        if self.disagg_by_src:
+            dic['source_id'] = self.group[0].source_id
+        return dic
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
@@ -1237,11 +1246,13 @@ def read_cmakers(dstore, full_lt=None):
              'collapse_level': int(oq.collapse_level),
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
+             'maximum_distance': oq.maximum_distance,
              'pointsource_distance': oq.pointsource_distance,
              'minimum_distance': oq.minimum_distance,
              'ses_seed': oq.ses_seed,
              'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
              'max_sites_disagg': oq.max_sites_disagg,
+             'disagg_by_src': oq.disagg_by_src,
              'min_iml': oq.min_iml,
              'imtls': oq.imtls,
              'reqv': oq.get_reqv(),
@@ -1250,8 +1261,7 @@ def read_cmakers(dstore, full_lt=None):
              'grp_id': grp_id})
         cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
         cmaker.trti = trti
-        stop = start + len(rlzs_by_gsim)
-        cmaker.slc = slice(start, stop)
-        start = stop
+        cmaker.start = start
+        start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
     return cmakers
