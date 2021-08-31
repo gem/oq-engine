@@ -416,7 +416,8 @@ class EventBasedCalculator(base.HazardCalculator):
         L = oq.imtls.size
         L1 = L // (M or 1)
         # check seed dependency unless the number of GMFs is huge
-        if 'gmf_data' in self.datastore:
+        if 'gmf_data' in self.datastore and self.datastore.getsize(
+                'gmf_data/gmv_0') < 4E9:
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
             logging.warning(msg)
