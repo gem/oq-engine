@@ -1,5 +1,5 @@
 The release 3.12 is the result of 6 months of work involving nearly
-600 pull requests and touching all aspects on the engine.
+600 pull requests and touching all aspects of the engine.
 
 Most of the work went in the optimization/enhancement of the
 risk calculators (most notably the event based risk and damage
