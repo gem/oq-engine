@@ -147,4 +147,5 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     def post_execute(self, acc):
         for grp_id, poes in acc.items():
             poes = poes.transpose(2, 0, 1)  # NLG -> GNL
-            self.datastore['poes'][self.cmakers[grp_id].slc] = poes
+            for g, mat in enumerate(poes):
+                self.datastore['poes'][self.cmakers[grp_id].start + g] = mat

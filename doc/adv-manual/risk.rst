@@ -116,33 +116,46 @@ obtained from a full-enumeration of these branches is nearly the same
 as the distribution of the hazard or loss results obtained from a
 full-enumeration of the entire logic-tree.
 
-Disabling the propagation of vulnerability uncertainty to losses
+Disabling the computation of the epsilon matrix
 ----------------------------------------------------------------
 
-The vulnerability functions using continuous distributions
-(such as the lognormal distribution or beta distribution) to 
-characterize the uncertainty in the loss ratio conditional on the
-shaking intensity level, specify the mean loss ratios and the corresponding
-coefficients of variation for a set of intensity levels.
-They are used to build the so called epsilon matrix within the engine,
-which is how loss ratios are sampled from the distribution for each asset.
+The vulnerability functions using continuous distributions (lognormal/beta)
+to characterize the uncertainty in the loss ratio, specify the mean loss
+ratios and the corresponding coefficients of variation for a set of intensity
+levels. They are used to build the so called epsilon matrix within the engine,
+governing how loss ratios are sampled from the distribution for each asset.
 
-There is clearly a performance penalty associated with the propagation
+There is clearly a performance/memory penalty associated with the propagation
 of uncertainty in the vulnerability to losses. The epsilon matrix has 
-to be computed and stored, and then the worker processes have to read it, 
-which involves large quantities of data transfer and memory usage.
-
-Setting
+to be computed and its size is huge (for instance with 1 million events
+and 1 million assets the epsilon matrix require 8 TB of RAM) so in large
+calculation it is impossible to generate it. In the past the only solution
+was setting
 
 ``ignore_covs = true``
 
-in your `job.ini` file will result in the engine using just the mean loss
-ratio conditioned on the shaking intensity and ignoring the uncertainty.
-This tradeoff of not propagating the vulnerabilty uncertainty to the loss
-estimates can lead to a significant boost in performance and tractability.
+in the `job.ini` file. Then the engine would compute just the mean loss
+ratios by ignoring the uncertainty.
+Since engine 3.12 there is a better solution: setting
+
+``ignore_master_seed = true``
+
+in the `job.ini` file. Then the engine will compute the mean loss
+ratios but also store information about the uncertainty of the results
+in the asset loss table, in the column "variance", by using the formulae
+
+.. math::
+
+    variance &= \Sigma_i \sigma_i^2 & for\ asset\_correl=0 \\
+    variance &= (\Sigma_i \sigma_i)^2 & for\ asset\_correl=1
+
+in terms of the variance of each asset for the event and intensity level in
+consideration, extracted from the asset loss and the
+coefficients of variation. People interested in the details should look at
+the implementation in https://github.com/gem/oq-engine/blob/master/openquake/risklib/scientific.py.
 
 The asset loss table
--------------------------------------------
+====================
 
 When performing an event based risk calculation the engine
 keeps in memory a table with the losses for each asset and each event,

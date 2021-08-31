@@ -22,6 +22,7 @@ from openquake.commonlib import datastore, logictree
 from openquake.calculators.extract import clusterize
 
 
+# NB: this is not fully implemented yet!
 def main(calc_id: int, *, k: int = 5):
     """
     Reduce the logic tree of a given calculation, which must be of kind
