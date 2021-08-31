@@ -401,6 +401,12 @@ minimum_intensity:
   Example: *minimum_intensity = {'PGA': .01}*.
   Default: empty dictionary
 
+maximum_intensity:
+  If set, ground motion values above the *maximum_intensity* are
+  capped.
+  Example: *maximum_intensity = {'PGA': 10.}*.
+  Default: empty dictionary
+
 minimum_magnitude:
   If set, ruptures below the *minimum_magnitude* are discarded.
   Example: *minimum_magnitude = 5.0*.
@@ -783,6 +789,7 @@ class OqParam(valid.ParamSet):
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
+    maximum_intensity = valid.Param(valid.floatdict, {})  # IMT -> maxIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
@@ -1155,7 +1162,7 @@ class OqParam(valid.ParamSet):
     @property
     def min_iml(self):
         """
-        :returns: a dictionary of intensities, one per IMT
+        :returns: a vector of intensities, one per IMT
         """
         mini = self.minimum_intensity
         if mini:
@@ -1167,6 +1174,22 @@ class OqParam(valid.ParamSet):
         if 'default' in mini:
             del mini['default']
         return numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+
+    @property
+    def max_iml(self):
+        """
+        :returns: a vector of intensities, one per IMT
+        """
+        maxi = self.maximum_intensity
+        if maxi:
+            for imt in self.imtls:
+                try:
+                    maxi[imt] = calc.filters.getdefault(maxi, imt)
+                except KeyError:
+                    maxi[imt] = 0
+        if 'default' in maxi:
+            del maxi['default']
+        return numpy.array([maxi.get(imt) or 1E10 for imt in self.imtls])
 
     def levels_per_imt(self):
         """

@@ -255,6 +255,7 @@ class GmfGetter(object):
         self.oqparam = oqparam
         self.amplifier = amplifier
         self.sec_perils = sec_perils
+        self.max_iml = oqparam.max_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
@@ -361,16 +362,24 @@ class GmfGetter(object):
         times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
                             time_dt)
         times.sort(order='rup_id')
-        res = dict(gmfdata=strip_zeros(gmfdata), hcurves=hcurves, times=times,
+        res = dict(gmfdata=regularize(gmfdata, self.max_iml),
+                   hcurves=hcurves, times=times,
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt))
         return res
 
 
-def strip_zeros(gmf_df):
-    # remove the rows with all zero values
-    df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
-    ok = df.to_numpy().sum(axis=1) > 0
-    return gmf_df[ok]
+def regularize(gmf_df, max_iml):
+    """
+    Remove the rows with all zero values and cap the values above
+    the maximum intensity
+    """
+    arr = gmf_df[gmf_df.columns[3:]].to_numpy()  # strip eid, sid, rlz
+    for m, iml in enumerate(max_iml):
+        col = f"gmv_{m}"
+        gmvs = arr[:, m]
+        gmvs[gmvs > iml] = iml
+        gmf_df[col] = gmvs
+    return gmf_df[arr.sum(axis=1) > 0]
 
 
 def weight_ruptures(rup_array, srcfilter, trt_by, scenario):
