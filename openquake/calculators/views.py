@@ -776,16 +776,17 @@ def view_extreme_gmvs(token, dstore):
     if imt0.startswith(('PGA', 'SA(')):
         gmpe = GmpeExtractor(dstore)
         df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
-        extreme_df = df[df.gmv_0 > maxgmv].copy()
+        extreme_df = df[df.gmv_0 > maxgmv].rename(
+            columns={'gmv_0': imt0})
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
         trt_smrs = dstore['ruptures']['trt_smr'][extreme_df.rup]
-        extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id']).rename(
-            columns={'gmv_0': imt0})
+        extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id'])
         exdf = extreme_df.sort_values(imt0).groupby('sid').head(1)
         if len(exdf):
-            msg += '\nThere are extreme GMVs, use oq show extreme_gmvs:10'
+            msg += ('\nThere are extreme GMVs, run `oq show extreme_gmvs:%s`'
+                    'to see them' % maxgmv)
             if ':' in token:
                 msg += '\n%s' % exdf.set_index('rup')
         return msg
