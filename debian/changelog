@@ -1,4 +1,5 @@
   [Michele Simionato]
+￼ * Fixed a bug in the adjustment term in NSHMP2014 breaking the USA model
   * Fixed the sanity check in event_based_damage giving false warnings
   * Fixed the corner case when there are zero events per realization in
     scenario_damage
