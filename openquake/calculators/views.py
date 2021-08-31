@@ -781,10 +781,13 @@ def view_extreme_gmvs(token, dstore):
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
         trt_smrs = dstore['ruptures']['trt_smr'][extreme_df.rup]
-        extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id'])
-        exdf = extreme_df.sort_values('gmv_0').groupby('sid').head(1)
+        extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id']).rename(
+            columns={'gmv_0': imt0})
+        exdf = extreme_df.sort_values(imt0).groupby('sid').head(1)
         if len(exdf):
-            msg += '\nThere are extreme GMVs\n%s' % exdf.set_index('rup')
+            msg += '\nThere are extreme GMVs, use oq show extreme_gmvs:10'
+            if ':' in token:
+                msg += '\n%s' % exdf.set_index('rup')
         return msg
     return msg + '\nCould not extract extreme GMVs for ' + imt0
 
