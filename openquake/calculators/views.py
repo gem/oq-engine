@@ -784,7 +784,7 @@ def view_extreme_gmvs(token, dstore):
         extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id'])
         exdf = extreme_df.sort_values('gmv_0').groupby('sid').head(1)
         if len(exdf):
-            msg += '\nThere are extreme GMVs\n%s' % exdf
+            msg += '\nThere are extreme GMVs\n%s' % exdf.set_index('rup')
         return msg
     return msg + '\nCould not extract extreme GMVs for ' + imt0
 
