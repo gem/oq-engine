@@ -1202,7 +1202,6 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     lst = []
     aggkey = assetcol.tagcol.get_aggkey(aggby)
     K = len(aggkey)
-    agg_number = numpy.zeros(K + 1, U32)
     if aggby:
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [
@@ -1221,9 +1220,6 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
             key2i = {key: i for i, key in enumerate(aggkey)}
             kids = [key2i[tuple(t)] for t in assetcol[aggby]]
         dstore['assetcol/kids'] = U16(kids)
-        agg_number[:K] = general.fast_agg(kids, assetcol['value-number'], M=K)
-    agg_number[K] = assetcol['value-number'].sum()
-    dstore['agg_number'] = agg_number
     lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
