@@ -36,6 +36,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, text_table
+from openquake.server.db.actions import DISPLAY_NAME
 
 
 def source_model_info(sm_nodes):
@@ -121,9 +122,11 @@ def main(what, report=False):
     elif what == 'exports':
         dic = groupby(export, operator.itemgetter(0),
                       lambda group: [r[1] for r in group])
+        items = [(DISPLAY_NAME.get(exporter, '?'), exporter, formats)
+                 for exporter, formats in dic.items()]
         n = 0
-        for exporter, formats in dic.items():
-            print(exporter, formats)
+        for dispname, exporter, formats in sorted(items):
+            print(dispname, '"%s"' % exporter, formats)
             n += len(formats)
         print('There are %d exporters defined.' % n)
     elif what == 'extracts':
