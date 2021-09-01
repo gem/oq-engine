@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved error message for `area_source_discretization` too large
+  * Improved command `oq info exports`
   * Internal: changed the signature of hazardlib.calc.hazard_curve.classical
   * Extended the multi-rupture scenario calculator to multiple TRTs
   * Removed the experimental feature `pointsource_distance=?`
