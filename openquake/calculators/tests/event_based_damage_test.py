@@ -109,7 +109,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
 
     def test_case_15(self):
-        # test with sampling
+        # test with sampling and both fatalities and losses
         self.run_calc(case_15.__file__, 'job.ini')
 
         # check damages-rlzs

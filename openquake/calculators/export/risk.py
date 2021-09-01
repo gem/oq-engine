@@ -22,7 +22,7 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, writers
+from openquake.baselib import hdf5, writers, general
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -541,16 +541,6 @@ def export_agg_risk_csv(ekey, dstore):
     return [fname]
 
 
-def rename(df, damage_states):
-    cols = {}
-    for col in df.columns:
-        if col.startswith('dmg_'):
-            cols[col] = damage_states[int(col[4:])]
-        else:
-            cols[col] = col
-    return df.rename(columns=cols)
-
-
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
     """
@@ -563,6 +553,8 @@ def export_aggcurves_csv(ekey, dstore):
     lossnames = numpy.array(oq.loss_names)
     aggtags = get_agg_tags(dstore, oq.aggregate_by)
     df = dstore.read_df('aggcurves')
+    consequences = [col for col in df.columns
+                    if col in scientific.KNOWN_CONSEQUENCES]
     for tagname, tags in aggtags.items():
         df[tagname] = tags[df.agg_id]
     df['loss_type'] = lossnames[df.loss_id.to_numpy()]
@@ -576,9 +568,17 @@ def export_aggcurves_csv(ekey, dstore):
     md['effective_time'] = (
         oq.investigation_time * oq.ses_per_logic_tree_path * R)
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
-    dmg_states = ['nodamage'] + md['limit_states'].split()
 
     # aggcurves
     del df['agg_id']
-    writer.save(rename(df, dmg_states), dest, comment=md)
+
+    edic = general.AccumDict(accum=[])
+    for cons in consequences:
+        for col in df.columns:
+            if col not in scientific.KNOWN_CONSEQUENCES:
+                edic[col].extend(df[col])
+            elif col == cons:
+                edic['conseq_value'].extend(df[col])
+                edic['conseq_type'].extend([col] * len(df))
+    writer.save(pandas.DataFrame(edic), dest, comment=md)
     return [dest]
