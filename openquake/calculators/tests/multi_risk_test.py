@@ -39,7 +39,8 @@ class MultiRiskTestCase(CalculatorTestCase):
 
         # check extract
         md = json.loads(extract(self.calc.datastore, 'exposure_metadata').json)
-        ae(md['names'], ['number', 'occupants_night', 'value-structural'])
+        ae(md['names'],
+           ['value-number', 'occupants_night', 'value-structural'])
         ae(md['multi_risk'], ['collapse-structural-ASH_DRY',
                               'collapse-structural-ASH_WET',
                               'loss-structural-ASH_DRY',
@@ -65,7 +66,8 @@ class MultiRiskTestCase(CalculatorTestCase):
 
         # check extract
         md = json.loads(extract(self.calc.datastore, 'exposure_metadata').json)
-        ae(md['names'], ['number', 'occupants_night', 'value-structural'])
+        ae(md['names'],
+           ['value-number', 'occupants_night', 'value-structural'])
         ae(md['multi_risk'], ['collapse-structural-ASH_DRY',
                               'collapse-structural-ASH_WET',
                               'loss-structural-ASH_DRY',

@@ -638,7 +638,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     asset_dt = numpy.dtype(
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
          ('ordinal', U32), ('lon', F32), ('lat', F32),
-         ('site_id', U32), ('number', F32), ('area', F32)] + [
+         ('site_id', U32), ('value-number', F32), ('area', F32)] + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
@@ -654,7 +654,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                     value = asset.asset_id
                 elif field == 'ordinal':
                     value = asset.ordinal
-                elif field == 'number':
+                elif field == 'value-number':
                     value = asset.number
                 elif field == 'area':
                     value = asset.area
