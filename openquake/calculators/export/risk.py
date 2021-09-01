@@ -65,6 +65,11 @@ def get_agg_tags(dstore, aggregate_by):
     return agg_tags
 
 
+def _loss_type(ln):
+    if ln[-4:] == '_ins':
+        return ln[:-4]
+    return ln
+
 # this is used by event_based_risk and ebrisk
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
@@ -94,7 +99,7 @@ def export_agg_curve_rlzs(ekey, dstore):
         avalue = aggvalue[dic['agg_id']]
         for tagname in oq.aggregate_by:
             dic[tagname] = agg_tags[tagname][dic['agg_id']]
-        tot = numpy.array([avalue[i][ln]
+        tot = numpy.array([avalue[i][_loss_type(ln)]
                            for i, ln in enumerate(dic['loss_type'])])
         dic['loss_ratio'] = dic['loss_value'] / tot
         dic['annual_frequency_of_exceedence'] = 1 / dic['return_period']
