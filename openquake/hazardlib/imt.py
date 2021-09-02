@@ -142,7 +142,7 @@ def CAV():
 
 def RSD():
     """
-    Relative significant duration, 5-95% of :def:`Arias intensity<IA>`,
+    Relative significant duration, 5-95% of :class:`Arias intensity<IA>`,
     in seconds.
     """
     return IMT('RDS')

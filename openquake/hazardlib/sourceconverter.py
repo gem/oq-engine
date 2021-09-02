@@ -471,6 +471,8 @@ class RuptureConverter(object):
 
     def convert_surfaces(self, surface_nodes):
         """
+        :param surface_nodes: surface nodes as described below
+
         Utility to convert a list of surface nodes into a single hazardlib
         surface. There are four possibilities:
 
@@ -480,14 +482,12 @@ class RuptureConverter(object):
            :class:`openquake.hazardlib.geo.complexFaultSurface` instance
         3. there is a single griddedSurface node; returns a
            :class:`openquake.hazardlib.geo.GriddedSurface` instance
-        5. there is either a single planarSurface or a list of planarSurface
+        4. there is either a single planarSurface or a list of planarSurface
            nodes; returns a :class:`openquake.hazardlib.geo.PlanarSurface`
            instance or a :class:`openquake.hazardlib.geo.MultiSurface` instance
         5. there is either a single kiteSurface or a list of kiteSurface
            nodes; returns a :class:`openquake.hazardlib.geo.KiteSurface`
            instance or a :class:`openquake.hazardlib.geo.MultiSurface` instance
-
-        :param surface_nodes: surface nodes as just described
         """
         surface_node = surface_nodes[0]
         if surface_node.tag.endswith('simpleFaultGeometry'):
