@@ -178,10 +178,10 @@ class GulerceAbrahamson2011(GMPE):
     This model follows the same functional form as in AS08 by Abrahamson &
     Silva (2008) with minor modifications to the underlying parameters.
 
-    **Reference:**
+    Reference:
 
-    Gulerce, Z. & Abrahamson, N. (2011). Site-Specific Design Spectra for
-    Vertical Ground Motion *Earthquake Spectra*, *27*(4), 1023-1047.
+    Gulerce, Z. & Abrahamson, N. (2011), "Site-Specific Design Spectra for
+    Vertical Ground Motion", Earthquake Spectra, 27(4), 1023-1047.
     """
     #: Supported tectonic region type is active shallow crust, as part of the
     #: NGA-West1 Database; re-defined here for clarity.

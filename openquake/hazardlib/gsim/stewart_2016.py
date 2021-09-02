@@ -41,11 +41,11 @@ class StewartEtAl2016(BooreEtAl2014):
     Note that this is a more updated version than the GMPE described in the
     original PEER Report 2013/24.
 
-    **Reference:**
+    Reference:
 
     Stewart, J., Boore, D., Seyhan, E., & Atkinson, G. (2016). NGA-West2
     Equations for Predicting Vertical-Component PGA, PGV, and 5%-Damped PSA
-    from Shallow Crustal Earthquakes. *Earthquake Spectra*, *32*(2), 1005-1031.
+    from Shallow Crustal Earthquakes. Earthquake Spectra, 32(2), 1005-1031.
     """
     region = "CAL"
 

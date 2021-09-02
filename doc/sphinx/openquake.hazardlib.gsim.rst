@@ -116,15 +116,9 @@ allen_2012_ipe
     :undoc-members:
     :show-inheritance:
 
-ameri_2014
----------------------------------------------------
-.. automodule:: openquake.hazardlib.gsim.ameri_2014
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ameri_2017
 ---------------------------------------------------
+
 .. automodule:: openquake.hazardlib.gsim.ameri_2017
     :members:
     :undoc-members:
@@ -132,6 +126,7 @@ ameri_2017
 
 armenia_2016
 ---------------------------------------------------
+
 .. automodule:: openquake.hazardlib.gsim.armenia_2016
     :members:
     :undoc-members:
@@ -585,14 +580,6 @@ eshm20_craton
     :undoc-members:
     :show-inheritance:
 
-faccioli_2010
----------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.faccioli_2010
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 faccioli_cauzzi_2006
 ---------------------------------------------
 
@@ -809,13 +796,6 @@ mcverry_2006
     :undoc-members:
     :show-inheritance:
 
-mcverry_2006_chch
---------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.mcverry_2006_chch
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 megawati_2003
 ---------------------------------------------
@@ -894,14 +874,6 @@ nrcan15_site_term
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.mgmpe.nrcan15_site_term
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-nrcan15_site_term_linear
-------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.mgmpe.nrcan15_site_term_linear
     :members:
     :undoc-members:
     :show-inheritance:

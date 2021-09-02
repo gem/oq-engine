@@ -19,7 +19,7 @@
 """
 Implements SERA site amplification models
 class:`PitilakisEtAl2018`, `PitilakisEtAl2020`, `Eurocode8Amplification`,
-      `Eurocode8AmplificationDefault`,`SandikkayaDinsever2018`
+`Eurocode8AmplificationDefault`,`SandikkayaDinsever2018`
 """
 import numpy as np
 import copy
