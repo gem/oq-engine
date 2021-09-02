@@ -7,11 +7,13 @@ from openquake.hazardlib import imt, valid, contexts
 
 # change the lists below manually
 # imts = ['PGA', '0.1', '1.0', '2.0']
-imts = 'PGA,0.01,0.02,0.05,0.1,0.15,0.2,0.22,0.24,0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.5,2.0,2.5,3.0,3.5,4.0,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0'.split(',')
-MAG = [4, 5, 6, 7]
+imts = '0.5	0.55	0.6	0.65	0.7	0.75	0.8	0.85	0.9	0.95'.split()
+MAG = [6, 6.5, 7, 7.5, 8]
 RAKE = [-90, 0, 90]
 HYPO_DEPTH = [10, 20]
 RRUP = [10, 20, 50, 100, 200, 300]
+RHYPO = [300, 400, 500]
+AZIMUTH = [30, 45, 60, 90]
 RJB = [20, 50, 75, 100]
 VS30 = [200, 250, 400, 600, 760]
 
@@ -66,6 +68,8 @@ def main(gsim_str):
     names = ['rup_' + rp for rp in sorted(gsim.REQUIRES_RUPTURE_PARAMETERS)]
     recs = []
     for values, grp in df[df.result_type == "MEAN"].groupby(names):
+        if len(names) == 1:
+            values = [values]
         ctx = get_ctx(names, values, grp)
         [out] = cmaker.get_mean_stds([ctx])
         for o, rtype in enumerate(result_types):
