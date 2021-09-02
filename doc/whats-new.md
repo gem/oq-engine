@@ -362,10 +362,10 @@ now works with a single parameter in the `job.ini` which is used for all GMPEs.
 This is simpler and more consistent than the previous approach that required
 changing the gsim logic tree XML file by adding an attribute to each GMPE.
 
-- For single site classical calculations now the engine automatically
+- For single-site classical calculations now the engine automatically
 stores individual hazard curves for each realization.
 
-- The hazard curve and USH exporters now export the `custom_site_id`
+- The hazard curve and UHS exporters now export the `custom_site_id`
 parameter if defined.
 
 - We improved the universal installer, especially on Windows.
