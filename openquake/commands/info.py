@@ -32,6 +32,7 @@ from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
+from openquake.risklib import scientific
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
@@ -157,6 +158,11 @@ def main(what, report=False):
     elif what == 'sources':
         for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)
+    elif what == 'consequences':
+        known = scientific.KNOWN_CONSEQUENCES
+        print('The following %d consequences are implemented:' % len(known))
+        for cons in known:
+            print(cons)
     elif os.path.isdir(what) and report:
         with Monitor('info', measuremem=True) as mon:
             with mock.patch.object(logging.root, 'info'):  # reduce logging
