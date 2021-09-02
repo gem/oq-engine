@@ -8,13 +8,10 @@ from openquake.calculators.extract import read_ebrupture
 
 def max_gmv0(calc_id: int, rup_id: int):
     dstore = read(calc_id)
-    rlzs_by_gsim = dstore['full_lt'].get_rlzs_by_gsim()
     sitecol = dstore['sitecol']
     ebr = read_ebrupture(dstore, rup_id)
-    trt = ebr.tectonic_region_type
     cmaker = read_cmaker(dstore, ebr.trt_smr)
-    gc = GmfComputer(ebr, sitecol, cmaker)
-    dic, dt = gc.compute_all()
+    dic, dt = GmfComputer(ebr, sitecol, cmaker).compute_all()
     return max(dic['gmv_0'])
 
 
