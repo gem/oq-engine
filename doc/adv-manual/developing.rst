@@ -266,7 +266,7 @@ array([106.40112646])
 array([105.8963247])
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site
-parameters, so calling ``ctx.vs30`` will raise an ``AttributeError``m
+parameters, so calling ``ctx.vs30`` will raise an ``AttributeError``
 but in general the contexts contains also arrays of site parameters.
 There is also an array of indices telling which are the sites affected
 by the rupture associated to the context:
