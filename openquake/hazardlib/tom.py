@@ -178,7 +178,7 @@ class PoissonTOM(BaseTOM):
             calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`.
         :returns:
             2D numpy array containing probabilities of no exceedance. First
-￼           dimension represents sites, second dimension intensity measure
+            dimension represents sites, second dimension intensity measure
             levels.
 
         The probability is computed as exp(-occurrence_rate * time_span * poes)
