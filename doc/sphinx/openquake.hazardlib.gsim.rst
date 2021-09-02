@@ -172,13 +172,6 @@ atkinson_macias_2009
     :undoc-members:
     :show-inheritance:
 
-base
-------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.base
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 baumont_2018
 ------------------------------------
@@ -332,14 +325,6 @@ bradley_2013
     :undoc-members:
     :show-inheritance:
 
-bradley_2013b
---------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.bradley_2013b
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 campbell_1997
 ---------------------------------------------
 
@@ -388,13 +373,6 @@ cauzzi_2014
     :undoc-members:
     :show-inheritance:
 
-cauzzi_2014scaled
--------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.cauzzi_2014scaled
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 cauzzi_faccioli_2008
 ----------------------------------------------------

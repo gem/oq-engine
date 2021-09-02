@@ -68,7 +68,7 @@ sap
 writers module
 ----------------------------------
 
-.. automodule:: openquake.commonlib.writers
+.. automodule:: openquake.baselib.writers
     :members:
     :undoc-members:
     :show-inheritance:
