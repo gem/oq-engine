@@ -122,7 +122,7 @@ calculation even faster and more memory efficient than before, at the price of
 losing information about the specific realizations.
 
 For continental scale calculations setting `collect_rlzs = true` can
-make the difference between begin able to run a calculation and being
+make the difference between being able to run a calculation and being
 unable to do so due to memory constraint or computational constraints.
 
 Finally the scenario from CSV ruptures calculators have been
@@ -185,7 +185,7 @@ simple is the GMPE is simple, but it can be quite difficult if the GMPE
 depends from other GMPEs in complex ways. Should you encounter any
 compatibility issue, please contact us.
 
-On the bright side, if are just using library GMPEs by calling the method
+On the bright side, if you are just using library GMPEs by calling the method
 `.get_mean_and_stddevs`, your application should work exactly as
 before. We tried very hard to keep backward compatibility as much as
 possible.
