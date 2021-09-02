@@ -9,14 +9,13 @@ from openquake.calculators.extract import read_ebrupture
 def max_gmv0(calc_id: int, rup_id: int):
     dstore = read(-1)
     oq = dstore['oqparam']
-    gsim_lt = dstore['full_lt'].gsim_lt
+    rlzs_by_gsim = dstore['full_lt'].get_rlzs_by_gsim()
     sitecol = dstore['sitecol']
     ebr = read_ebrupture(dstore, 359)
     trt = ebr.tectonic_region_type
-    rlzs_by_gsim = gsim_lt.get_rlzs_by_gsim_trt()[trt]
     param = dict(imtls=oq.imtls, min_iml=oq.min_iml,
                  truncation_level=oq.truncation_level)
-    cmaker = ContextMaker(trt, rlzs_by_gsim, param)
+    cmaker = ContextMaker(trt, rlzs_by_gsim[ebr.trt_smr], param)
     gc = GmfComputer(ebr, sitecol, cmaker)
     dic, dt = gc.compute_all()
     return max(dic['gmv_0'])
