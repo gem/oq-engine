@@ -182,7 +182,7 @@ everything works without it. The plan is to keep it that way.
 
 Work on hazardlib
 -----------------
-
+### Refactoring of the GMPE library
 The GMPE library has been completely rewritten and the API for
 implementing new GMPEs has changed significantly. That means that if
 you have written a GMPE with the old API it will not work anymore once
@@ -216,6 +216,7 @@ are listed here for completeness sake:
   with COEFF must be instances of the the CoeffsTable class, which has been
   refactored too
 
+### Other updates
 There was also a lot of activity not related to the refactoring:
 
 - we added a `hazardlib.cross_correlation` module to compute the correlation
@@ -235,20 +236,24 @@ There was also a lot of activity not related to the refactoring:
 - we changed how the SiteCollection is stored so that it can be read
   with pandas.
 
+### New GMPEs
 Finally, many new GMPEs have been contributed.
 
-Graeme Weatherill has contributed the Abrahamson & Gulerce (2020) NGA
+- [Graeme Weatherill](https://github.com/g-weatherill) 
+has contributed the Abrahamson & Gulerce (2020) NGA
 Subduction Model as well as the Ameri (2014) Rjb GMPE. Moreover, he
 has updated the Atkinson (2015) GMPE in accordance with the
 indications of the original author.  He also updated the
 KothaEtAl2020ESHMSlopeGeology GMPE, following changes to the
 underlying geology dataset.
 
-Nico Kuehn and Graeme Weatherill have contributed the
+- [Nico Kuehn](https://github.com/nikuehn) and 
+[Graeme Weatherill](https://github.com/g-weatherill) have contributed the
 NGA Subduction ground motion model of Si, Midorikawa and Kishida (2020)
 as well as the Kuehn et al. (2020) NGA Subduction Model.
 
-Stanley Sayson contributed the Gulerce and Abrahamson (2011) GMPE
+- [Stanley Sayson](https://github.com/stansays) contributed 
+the Gulerce and Abrahamson (2011) GMPE
 for the vertical-to-horizontal (V/H) ratio model derived using
 ground motions from the PEER NGA-West1 Project.
 Moreover he contributed the SBSA15b GMPE by Stewart et al. (2016)
@@ -257,15 +262,15 @@ PEER NGA-West2 Project, as well as the GMPE by Bozorgnia & Campbell (2016)
 for vertical-to-horizontal (V/H) ratio. Finally he fixed a few bugs in
 the Campbell and Bozorgnia (2014) GMPE.
 
-Chung-Han Chan and Jia-Cian Gao have contributed a couple of GMPEs
+- Chung-Han Chan and Jia-Cian Gao have contributed a couple of GMPEs
 for the Taiwan 2020 hazard model (TEM): Lin2011foot and Lin2011hanging.
 
-Pablo Heresi has contributed the Idini (2017)￼GMPE.
+- [Pablo Heresi](https://github.com/pheresi) has contributed the Idini (2017) GMPE.
 
-Cladia Mascandola has contribute the Lanzano et al (2020) GMPE and
-the Sgobba et al. (2020) GMPE.
+- [Cladia Mascandola](https://github.com/mascandola) has contributed 
+the Lanzano et al (2020) GMPE and the Sgobba et al. (2020) GMPE.
 
-Laurentiu Danciu has contributed the Boore (2020) GMPE.
+- [Laurentiu Danciu](https://github.com/danciul) has contributed the Boore (2020) GMPE.
 
 Bugfixes
 --------
@@ -302,25 +307,24 @@ that now the Input Preparation Toolkit (IPT) also work with GMPE aliases.
 New checks and warnings
 -----------------------
 
-Years ago we restricted the `asset_correlation` parameter to be 0 or 1.
+- Years ago we restricted the `asset_correlation` parameter to be 0 or 1.
 Setting an unsupported value now raises a clear error early in the
 calculation an not in the middle of it, also for scenario risk calculations.
 
-We added a check to forbid `-Inf` in the sources. This happened to people
+- We added a check to forbid `-Inf` in the sources. This happened to people
 generating the source model automatically, where the XML file contained
 things like
+ ```xml
+ <truncGutenbergRichterMFD aValue="-Inf" bValue="0.90" maxMag="6.5" minMag="4.5"/>
+ ```
 
-<truncGutenbergRichterMFD
- aValue="-Inf" bValue="0.90" maxMag="6.5" minMag="4.5"
-/>
-
-We added an early check to discover situations in which the user mistakenly
+- We added an early check to discover situations in which the user mistakenly
 uses fragility functions in place of vulnerability functions or viceversa.
 
-The warning about discardable tectonic region types now appears in all
+- The warning about discardable tectonic region types now appears in all
 calculations, not only in classical calculations.
 
-A warning is now printed if the loss curves appear to be numerically instable.
+- A warning is now printed if the loss curves appear to be numerically instable.
 
 oq commands
 -----------
@@ -346,10 +350,11 @@ option.
 Other changes
 -------------
 
-- As usual the inner format of the datastore has changed in several places
-and in particular the event loss table has been renamed from `losses_by_event`
-into `risk_by_event`, since now can be populated also by the event damage
-calculator with consequences different than losses.
+- As often is the case with every new release, 
+the inner format of the datastore has changed in several places,
+and in particular, the event loss table has been renamed from `losses_by_event`
+to `risk_by_event`, since this table can now also be populated by the event-based 
+damage calculator, with consequences other than economic losses.
 
 - The XML exporter for the ruptures, deprecated years ago, has been finally
 removed. You should use the CSV exporter instead.
