@@ -1620,15 +1620,15 @@ class OqParam(valid.ParamSet):
         sampling_method must be early_weights, only the mean is available,
         and number_of_logic_tree_samples must be greater than 1.
         """
-        if self.collect_rlzs is False:
-            return True
-        elif self.calculation_mode == 'event_based_damage':
+        if self.calculation_mode == 'event_based_damage':
             if not self.investigation_time:
                 ini = self.inputs['job_ini']
                 raise InvalidFile('Missing investigation_time in %s' % ini)
             self.collect_rlzs = True
             return True
-        if self.hazard_calculation_id:
+        elif self.collect_rlzs is False:
+            return True
+        elif self.hazard_calculation_id:
             n = self._parent.number_of_logic_tree_samples
             if n == 0:
                 raise ValueError('collect_rlzs=true can only be specified if '
