@@ -1064,15 +1064,18 @@ class OqParam(valid.ParamSet):
         Set self.loss_names
         """
         from openquake.commonlib import datastore  # avoid circular import
+        if self.hazard_calculation_id:
+            with datastore.read(self.hazard_calculation_id) as ds:
+                self._parent = ds['oqparam']
+        else:
+            self._parent = None
         # set all_cost_types
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
         costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             try:
-                with datastore.read(self.hazard_calculation_id) as ds:
-                    parent = ds['oqparam']
-                    self._risk_files = rfs = get_risk_files(parent.inputs)
-                    costtypes = set(rt.rsplit('/')[1] for rt in rfs)
+                self._risk_files = rfs = get_risk_files(self._parent.inputs)
+                costtypes = set(rt.rsplit('/')[1] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
         self.all_cost_types = sorted(costtypes)
@@ -1623,8 +1626,16 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile('Missing investigation_time in %s' % ini)
             self.collect_rlzs = True
             return True
-        if self.collect_rlzs is False or self.hazard_calculation_id:
+        elif self.collect_rlzs is False:
             return True
+        elif self.hazard_calculation_id:
+            n = self._parent.number_of_logic_tree_samples
+            if n == 0:
+                raise ValueError('collect_rlzs=true can only be specified if '
+                                 'the parent hazard calculation used sampling')
+            elif n != self.number_of_logic_tree_samples:
+                raise ValueError('Please specify number_of_logic_tree_samples'
+                                 '=%d' % n)
         hstats = list(self.hazard_stats())
         nostats = not hstats or hstats == ['mean']
         return nostats and self.number_of_logic_tree_samples > 1 and (
