@@ -309,7 +309,7 @@ class GmfGetter(object):
 
     def get_gmfdata(self, mon=performance.Monitor()):
         """
-        :returns: a DataFrame with fields eid, sid, gmv_...
+        :returns: a DataFrame with fields eid, sid, gmv_X, ...
         """
         alldata = general.AccumDict(accum=[])
         self.sig_eps = []
