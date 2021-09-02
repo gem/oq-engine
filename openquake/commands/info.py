@@ -159,8 +159,9 @@ def main(what, report=False):
         for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)
     elif what == 'consequences':
-        print('The following kind of consequences are implemented:')
-        for cons in scientific.KNOWN_CONSEQUENCES:
+        known = scientific.KNOWN_CONSEQUENCES
+        print('The following %d consequences are implemented:' % len(known))
+        for cons in known:
             print(cons)
     elif os.path.isdir(what) and report:
         with Monitor('info', measuremem=True) as mon:
