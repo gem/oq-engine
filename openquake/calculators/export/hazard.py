@@ -394,7 +394,7 @@ def export_gmf_data_csv(ekey, dstore):
     arr = dstore['sitecol'][['lon', 'lat']]
     sids = numpy.arange(len(arr), dtype=U32)
     sites = util.compose_arrays(sids, arr, 'site_id')
-    writers.write_csv(f, sites)
+    writers.write_csv(f, sites, comment=dstore.metadata)
     fname = dstore.build_fname('gmf', 'data', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         df, fname, comment=dstore.metadata)
@@ -405,7 +405,8 @@ def export_gmf_data_csv(ekey, dstore):
         sig_eps.sort(order='eid')
         header = list(sig_eps.dtype.names)
         header[0] = 'event_id'
-        writers.write_csv(sig_eps_csv, sig_eps, header=header)
+        writers.write_csv(sig_eps_csv, sig_eps, header=header,
+                          comment=dstore.metadata)
         return [fname, sig_eps_csv, f]
     else:
         return [fname, f]
@@ -541,7 +542,7 @@ def export_disagg_csv_xml(ekey, dstore):
 def export_realizations(ekey, dstore):
     data = extract(dstore, 'realizations').array
     path = dstore.export_path('realizations.csv')
-    writers.write_csv(path, data, fmt='%.7e')
+    writers.write_csv(path, data, fmt='%.7e', comment=dstore.metadata)
     return [path]
 
 
@@ -549,7 +550,8 @@ def export_realizations(ekey, dstore):
 def export_events(ekey, dstore):
     events = dstore['events'][()]
     path = dstore.export_path('events.csv')
-    writers.write_csv(path, events, fmt='%s', renamedict=dict(id='event_id'))
+    writers.write_csv(path, events, fmt='%s', renamedict=dict(id='event_id'),
+                      comment=dstore.metadata)
     return [path]
 
 
