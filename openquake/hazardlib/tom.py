@@ -168,10 +168,6 @@ class PoissonTOM(BaseTOM):
 
     def get_probability_no_exceedance(self, occurrence_rate, poes):
         """
-        The probability is computed using the following formula ::
-
-            e ** (-occurrence_rate * time_span * poes)
-
         :param occurrence_rate:
             The average number of events per year.
         :param poes:
@@ -180,9 +176,11 @@ class PoissonTOM(BaseTOM):
             ground motion level at a site. First dimension represent sites,
             second dimension intensity measure levels. ``poes`` can be obtained
             calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`.
-        :return:
+        :returns:
             2D numpy array containing probabilities of no exceedance. First
-￼            dimension represents sites, second dimension intensity measure
-￼            levels.
+            dimension represents sites, second dimension intensity measure
+            levels.
+
+        The probability is computed as exp(-occurrence_rate * time_span * poes)
         """
         return numpy.exp(- occurrence_rate * self.time_span * poes)

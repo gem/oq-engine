@@ -102,6 +102,8 @@ class Kanno2006Shallow(GMPE):
     #: standard deviation is tabulated.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
+
     #: "Coefficients p and q were derived by regression analysis on the
     #: residuals averaged at intervals of every 100 m/sec in AVS30." (p. 884)
     REQUIRES_SITES_PARAMETERS = {'vs30'}

@@ -73,11 +73,3 @@ util module
     :members:
     :undoc-members:
     :show-inheritance:
-
-writers module
-----------------------------------
-
-.. automodule:: openquake.commonlib.writers
-    :members:
-    :undoc-members:
-    :show-inheritance:

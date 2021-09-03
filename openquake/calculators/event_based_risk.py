@@ -119,7 +119,7 @@ def aggreg(outputs, crmodel, AR, kids, rlz_id, param, monitor):
 
 def event_based_risk(df, param, monitor):
     """
-    :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
+    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param param: a dictionary of parameters coming from the job.ini
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays

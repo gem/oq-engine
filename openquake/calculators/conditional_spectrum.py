@@ -83,6 +83,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         Compute the conditional spectrum
         """
+        logging.warning('Initial NOT WORKING version of the calculator; '
+                        'DO NOT USE!')
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt']
         self.trts = list(self.full_lt.gsim_lt.values)

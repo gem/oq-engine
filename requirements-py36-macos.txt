@@ -24,6 +24,7 @@ https://wheelhouse.openquake.org/v2/macos/py/requests-2.22.0-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v2/macos/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/toml-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.6-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
 
 

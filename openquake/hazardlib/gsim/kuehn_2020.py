@@ -564,13 +564,14 @@ class KuehnEtAl2020SInter(GMPE):
     The GMM define a "global" model as well as a set of region-specific
     coefficients (and in some cases methods). The coefficients are defined for
     seven specific subduction regions (with their region codes):
-        * Alaska (USA-AK)
-        * Cascadia (CAS)
-        * Central America & Mexico (CAM)
-        * Japan (JPM)
-        * New Zealand (NZL)
-        * South America (SAM)
-        * Taiwan (TWN)
+
+    - Alaska (USA-AK)
+    - Cascadia (CAS)
+    - Central America & Mexico (CAM)
+    - Japan (JPM)
+    - New Zealand (NZL)
+    - South America (SAM)
+    - Taiwan (TWN)
 
     In the original model defined by the authors, three of the regions
     (JPN, CAM, SAM) define a forearc/backarc dependent anelastic attenuation
@@ -725,14 +726,15 @@ class KuehnEtAl2020SSlab(KuehnEtAl2020SInter):
     Implements NGA Subduction model of Kuehn et al. (2020) for Intraslab events
 
     This class implements the global model.
-    Adjustments with respect to the interface model are
-        different constant
-        different magnitude scaling coefficent
-        different geometrical spreading coefficient
-        no magnitude break adjustment at long periods
-        different depth scaling and adjustment to break point
-        different depth centering and break point
-        different default magnitude break point
+    Adjustments with respect to the interface model are:
+
+    - different constant
+    - different magnitude scaling coefficent
+    - different geometrical spreading coefficient
+    - no magnitude break adjustment at long periods
+    - different depth scaling and adjustment to break point
+    - different depth centering and break point
+    - different default magnitude break point
     """
 
     #: Supported tectonic region type is subduction in-slab

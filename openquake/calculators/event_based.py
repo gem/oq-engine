@@ -416,13 +416,11 @@ class EventBasedCalculator(base.HazardCalculator):
         L = oq.imtls.size
         L1 = L // (M or 1)
         # check seed dependency unless the number of GMFs is huge
-        if ('gmf_data' in self.datastore and
-                self.datastore.getsize('gmf_data') < 1E9):
-            logging.info('Checking seed dependency')
-            err = views.view('gmf_error', self.datastore)
-            if err > .05:
-                logging.warning('Your results are expected to have a large '
-                                'dependency from ses_seed')
+        if 'gmf_data' in self.datastore and self.datastore.getsize(
+                'gmf_data/gmv_0') < 4E9:
+            logging.info('Checking stored GMFs')
+            msg = views.view('extreme_gmvs', self.datastore)
+            logging.warning(msg)
         if oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can

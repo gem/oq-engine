@@ -35,7 +35,7 @@ F32 = numpy.float32
 U32 = numpy.uint32
 U16 = numpy.uint16
 U8 = numpy.uint8
-KNOWN_CONSEQUENCES = 'losses collapsed injured fatalities homeless'
+KNOWN_CONSEQUENCES = 'losses collapsed injured fatalities homeless'.split()
 
 
 def pairwise(iterable):
