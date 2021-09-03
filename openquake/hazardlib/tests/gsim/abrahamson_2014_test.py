@@ -31,9 +31,12 @@ class Abrahamson2014EtAlTestCase(BaseGSIMTestCase):
 
     GSIM_CLASS = AbrahamsonEtAl2014
 
-    def test_all(self):
+    def test_median(self):
         self.check('ASK14/ASK14_ResMEAN_RegCAL.csv',
-                   'ASK14/ASK14_ResStdTot_RegCAL.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std(self):
+        self.check('ASK14/ASK14_ResStdTot_RegCAL.csv',
                    'ASK14/ASK14_ResStdPhi_RegCAL.csv',
                    max_discrep_percentage=0.1)
 
@@ -49,7 +52,7 @@ class Abrahamson2014EtAlRegTWNTestCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check('ASK14/ASK14_ResMEAN_RegTWN.csv',
-                   max_discrep_percentage=0.3,
+                   max_discrep_percentage=0.5,
                    region='TWN')
 
 
@@ -78,7 +81,11 @@ class Abrahamson2014EtAlRegJPNTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('ASK14/ASK14_ResMEAN_RegJPN.csv',
-                   'ASK14/ASK14_ResStdTot_RegJPN.csv',
+                   max_discrep_percentage=0.1,
+                   region='JPN')
+
+    def test_std(self):
+        self.check('ASK14/ASK14_ResStdTot_RegJPN.csv',
                    'ASK14/ASK14_ResStdPhi_RegJPN.csv',
                    max_discrep_percentage=0.1,
                    region='JPN')
