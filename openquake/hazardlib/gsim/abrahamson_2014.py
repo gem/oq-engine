@@ -497,10 +497,6 @@ class AbrahamsonEtAl2014(GMPE):
             # f10 =_get_soil_depth_term(self.region, C, ctx.z1pt0, ctx.vs30)
             # fre = _get_regional_term(self.region, C, imt, ctx.vs30, ctx.rrup)
 
-            if str(imt) == 'SA(2.0)':
-                #print(self.region, fre, f5)
-                pass
-
             # get the mean value
             mean[m] = (_get_basic_term(C, ctx) +
                        _get_hanging_wall_term(C, ctx) +
