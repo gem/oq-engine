@@ -1,10 +1,11 @@
 # What’s New in the OpenQuake-engine, v3.12
-The 3.12 release is the result of 6 months of work involving nearly
-600 pull requests and touching all aspects of the engine.
+
+The 3.12 release is the result of 6 months of work involving around
+550 pull requests and touching all aspects of the engine.
 
 Most of the work went into the optimization/enhancement of the
-risk calculators (most notably the event based risk and damage
-calculators) and a full rewrite of the GMPE library, 
+risk calculators - notably the event based risk and damage
+calculators - and into a full rewrite of the GMPE library, 
 described in this post:
 https://groups.google.com/g/openquake-users/c/Tj5t1rJ7MX0/m/BHLrOPt6AQAJ
 
@@ -15,6 +16,7 @@ New risk features
 -----------------
 
 ### Flexible field names in exposure csv files
+
 Before engine 3.11 the header names of the columns in a CSV exposure was
 hard-coded and therefore one had to manually rename columns to strictly
 match the names required by the engine from any pre-existing exposure files.
@@ -28,33 +30,34 @@ An example is given here:\
 https://github.com/gem/oq-engine/blob/engine-3.12/openquake/qa_tests_data/scenario/case_16/Example_Exposure.xml
 
 ### Other exposure-related improvements
+
 - The reading of CSV exposures has been optimized by using pandas internally.
 
 - We added an option to ignore encoding errors by skipping any
 offending characters. The reason is that often exposures are a
-patchwork of CSV files of unknown encoding.\
- \
- `ignore_encoding_errors = true`\
- \
- should be used only as a last resort: if possible, you should
- convert all of your exposures into UTF-8, the only encoding supported
- by the engine. However, in case there are a few bad characters in a
- description or geographic region, it is better to have a mispelling in
- the description or region name when exporting the results rather than
- having the entire calculation fail.
+patchwork of CSV files of unknown encoding. `ignore_encoding_errors = true`
+should be used only as a last resort: if possible, you should
+convert all of your exposures into UTF-8, the only encoding supported
+by the engine. However, in case there are a few bad characters in a
+description or geographic region, it is better to have a mispelling in
+the description or region name when exporting the results rather than
+having the entire calculation fail.
 
 ### ShakeMaps interactivity enhancements
+
 There was a nontrivial amount of work on the ShakeMaps module, mostly
-contributed by [Nicolas Schmid](https://github.com/schmidni) of ETH Zurich. Now it is possible to
+contributed by [Nicolas Schmid](https://github.com/schmidni) of ETH Zurich.
+Now it is possible to
 read a ShakeMap from a custom URL (or local file) and not only from
 the USGS site. It is also possible to read ShakeMaps in ShapeFile
 format, as well as many other formats (.xml, .zip, .npy). Moreover we
 now support the MMI intensity measure type if spatial and cross
 correlation are disabled. The advanced manual has been updated with
-the new features, see
+the new features, see\
 https://docs.openquake.org/oq-engine/advanced/risk-features.html#scenarios-from-shakemaps
 
 ### Risk calculations starting from GMFs in HDF5
+
 It is now possible to run risk calculations starting from GMFs
 in HDF5 format by setting the option
 
@@ -180,8 +183,6 @@ a 54x speedup when computing the mean hazard curves - but sadly not the
 real bottlenecks. `numba` is not a dependency of the engine and
 everything works without it. The plan is to keep it that way.
 
-Work on hazardlib
------------------
 ### Refactoring of the GMPE library
 The GMPE library has been completely rewritten and the API for
 implementing new GMPEs has changed significantly. That means that if
@@ -235,8 +236,10 @@ There was also a lot of activity not related to the refactoring:
   parameters
 - we changed how the SiteCollection is stored so that it can be read
   with pandas.
+- we changed the signature of the function `calc.hazard_curve.classical`
 
 ### New GMPEs
+
 Finally, many new GMPEs have been contributed.
 
 - [Graeme Weatherill](https://github.com/g-weatherill) 
@@ -275,10 +278,13 @@ the Lanzano et al (2020) GMPE and the Sgobba et al. (2020) GMPE.
 Bugfixes
 --------
 
-- We fixed a couple of bugs in the CSV writer. First, the encoding was
+- We fixed a few bugs in the CSV exporters. First, the encoding was
 not specified, thus causing issues when exporting exposure data on
 systems with a non-UTF8 locale (affecting a Chinese user). Second,
 the CSV exporters on Windows were not producing the right line ending.
+Finally, we fixed some CSV exporters that were not generating the
+usual pre-header line with the metadata of the calculation, such
+as the date and the engine version.
 
 - There was a bug in scenario damage calculations, happening (rarely)
 in situations with very few events and causing an IndexError in the
@@ -321,10 +327,18 @@ things like
 - We added an early check to discover situations in which the user mistakenly
 uses fragility functions in place of vulnerability functions or viceversa.
 
+- We added a warning if extreme ground motion values (larger than 10g) are
+  generated by the engine. This often happens for sites extremely close to
+  a fault.
+
 - The warning about discardable tectonic region types now appears in all
 calculations, not only in classical calculations.
 
 - A warning is now printed if the loss curves appear to be numerically instable.
+
+- Setting a too large `area_source_discretization` parameter was
+breaking the engine with an ugly error; now you get a clear error
+message.
 
 oq commands
 -----------
@@ -343,6 +357,9 @@ uniform hazard spectra from different realizations clustered together.
 disaggregation outputs in traditional format (i.e. Bazzurro and Cornell 1999),
 where the probabilities sum up to 1.
 
+- We added a new command `oq info consequences` listing the kind of supported
+consequences.
+
 - The command `oq --version` now gives the git hash if the engine was
 installed with the universal installer using the `--version=master`
 option.
@@ -350,22 +367,24 @@ option.
 Other changes
 -------------
 
-- As often is the case with every new release, 
-the inner format of the datastore has changed in several places,
-and in particular, the event loss table has been renamed from `losses_by_event`
-to `risk_by_event`, since this table can now also be populated by the event-based 
-damage calculator, with consequences other than economic losses.
+- As often is the case with every new release, the inner format of the
+datastore has changed in several places, and in particular, the event
+loss table has been renamed from `losses_by_event` to `risk_by_event`,
+since this table can now also be populated by the event-based damage
+calculator, with consequences other than economic losses.
 
 - The XML exporter for the ruptures, deprecated years ago, has been finally
 removed. You should use the CSV exporter instead.
 
 - The experimental feature "pointsource_distance=?" has been removed. It was
-complicating the engine without giving a clear benefit.
+complicating the engine without giving a significant benefit.
 
-- The special feature `minimum_distance` (https://docs.openquake.org/oq-engine/advanced/special-features.html#the-minimum-distance-parameter)
-now works with a single parameter in the `job.ini` which is used for all GMPEs.
-This is simpler and more consistent than the previous approach that required
-changing the gsim logic tree XML file by adding an attribute to each GMPE.
+- The special feature `minimum_distance`
+(https://docs.openquake.org/oq-engine/advanced/special-features.html#the-minimum-distance-parameter)
+now works with a single parameter in the `job.ini` which is used for
+all GMPEs.  This is simpler and more consistent than the previous
+approach that required changing the gsim logic tree XML file by adding
+an attribute to each GMPE.
 
 - For single-site classical calculations now the engine automatically
 stores individual hazard curves for each realization.
@@ -376,3 +395,5 @@ parameter if defined.
 - We improved the universal installer, especially on Windows.
 
 - We upgraded Django to release 3.2.6.
+
+- We updated the documentation (including the API docs) and the demos.
