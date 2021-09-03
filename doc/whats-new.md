@@ -120,7 +120,7 @@ exposed as a CSV file, due to the sheer amount of data involved.
 - Aggregation by tag has been optimized - their calculation now utilizes all
 available cores and a lot less memory - and is documented in the advanced
 manual, see the section\
-https://docs.openquake.org/oq-engine/advanced/risk.html#aggregating-by-multiple-tags\
+https://docs.openquake.org/oq-engine/advanced/risk.html#aggregating-by-multiple-tags
 
 - Moreover, it is now possible to set the parameter\
 \
@@ -225,6 +225,8 @@ are listed here for completeness sake:
 
 There was also a lot of activity not related to the refactoring:
 
+- we fixed a bug in the Abrahamson et al. (2014) GMPE and updated the
+  verification tables
 - we added a `hazardlib.cross_correlation` module to compute the correlation
   between different intensity measure types
 - we implemented MultiFaultSources, a new typology of sources to

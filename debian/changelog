@@ -1,5 +1,6 @@
   [Marco Pagani]
-  * Updated verification tables for Abrahamson et al. (2014) and checked values with other public resources.
+  * Updated verification tables for Abrahamson et al. (2014) and checked
+    values with other public resources.
 
   [Michele Simionato]
   * Added command `oq info consequences`
