@@ -355,12 +355,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 if grp_id not in acc:
                     self.haz.init(acc, grp_id)
                 acc[grp_id] |= pmap
-
-        self.counts[grp_id] -= 1
-        if self.counts[grp_id] == 0:
-            with self.monitor('saving probability maps'):
-                if grp_id in acc:
-                    self.haz.store_poes(grp_id, acc.pop(grp_id))
         return acc
 
     def create_dsets(self):
@@ -523,6 +517,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_calculation_id:
             self.haz.store_disagg()
         self.store_info(psd)
+        with self.monitor('saving probability maps'):
+            for grp_id in list(pmaps):
+                if isinstance(grp_id, int):
+                    self.haz.store_poes(grp_id, pmaps.pop(grp_id))
         return True
 
     def store_info(self, psd):
@@ -623,19 +621,16 @@ class ClassicalCalculator(base.HazardCalculator):
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
-        self.counts = AccumDict(accum=0)
         for grp_id in grp_ids:
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
-                self.counts[grp_id] += ntiles
                 allargs.append((sg, cmakers[grp_id]))
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src else
                         block_splitter(sg, max_weight, get_weight, sort=True))
                 blocks = list(blks)
-                self.counts[grp_id] += len(blocks) * ntiles
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
