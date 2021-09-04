@@ -436,6 +436,7 @@ class DataStore(collections.abc.MutableMapping):
         :param key: key to a dataset containing a structured array
         :param field: a field in the structured array
         :returns: sorted, unique values
+
         Works with chunks of 1M records
         """
         unique = set()

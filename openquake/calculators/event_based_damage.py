@@ -73,7 +73,7 @@ def zero_dmgcsq(assetcol, crmodel):
 
 def event_based_damage(df, param, monitor):
     """
-    :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
+    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param param: a dictionary of parameters coming from the job.ini
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))

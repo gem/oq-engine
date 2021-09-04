@@ -26,7 +26,7 @@ http://www.daveboore.com/pubs_online/sbsa15_gm_tmr_programs_and_sample_files.zip
 Modified the .ctl input file for FORTRAN program to include additional test
 iterations for SOF and regional cases
 """
-from openquake.hazardlib.gsim.boore_2014 import StewartEtAl2016
+from openquake.hazardlib.gsim.stewart_2016 import StewartEtAl2016
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test Case A:

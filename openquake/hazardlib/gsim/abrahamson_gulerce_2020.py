@@ -541,15 +541,16 @@ class AbrahamsonGulerce2020SInter(GMPE):
 
     The model is regionalised, defining specific adjustment factors for
     (invoking region term in parenthesis):
-    * Global ("GLO" - for application to any subduction region for which
-                    no region-specific adjustment is defined)
-    * Alaska ("USA-AK")
-    * Cascadia ("CAS")
-    * Central America & Mexico ("CAM")
-    * Japan ("JPN")
-    * New Zealand ("NZL")
-    * South America ("SAM")
-    * Taiwan ("TWN")
+
+    - Global ("GLO" - for application to any subduction region for which
+      no region-specific adjustment is defined)
+    - Alaska ("USA-AK")
+    - Cascadia ("CAS")
+    - Central America & Mexico ("CAM")
+    - Japan ("JPN")
+    - New Zealand ("NZL")
+    - South America ("SAM")
+    - Taiwan ("TWN")
 
     The region-specific adjustments primarily affect the constant term,
     the anelastic attenuation term and the linear Vs30 scaling term. In

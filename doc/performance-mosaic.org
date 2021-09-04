@@ -5,30 +5,40 @@ machine with 120 cores, 480 GB of RAM (kind HB120rs_v2).
 * Engine 3.12
 
 ** EUR
-"computing mean_std" is twice as fast even if "get_poes" is 20% slower.
-More memory is needed (88G > 53G). "build_hazard" is 34x faster.
-The slowest task is 245.1s. All is good.
+"computing mean_std" is twice as fast and get_poes 25% faster.
+More memory is needed (73G > 53G). "build_hazard" is 34x faster.
+The slowest task is 336s. All is good.
 
-| calc_40, maxmem=87.9 GB | time_sec | memory_mb | counts    |
+#+BEGIN_EXAMPLE
+| calc_93, maxmem=72.9 GB | time_sec | memory_mb | counts    |
 |-------------------------+----------+-----------+-----------|
-| total classical         | 87_436   | 687.1     | 628       |
-| get_poes                | 55_972   | 0.0       | 21_186    |
-| composing pnes          | 19_279   | 0.0       | 9_557_638 |
-| computing mean_std      | 17_526   | 0.0       | 21_186    |
-| make_contexts           | 9_402    | 0.0       | 9_582_215 |
-| ClassicalCalculator.run | 1_375    | 4_906     | 1         |
-| total build_hazard      | 756.2    | 23.7      | 240       |
-
+| total classical         | 84_582   | 573.3     | 376       |
+| get_poes                | 35_969   | 0.0       | 9_557_638 |
+| composing pnes          | 18_605   | 0.0       | 9_557_638 |
+| computing mean_std      | 16_151   | 0.0       | 21_186    |
+| make_contexts           | 9_307    | 0.0       | 9_582_215 |
+| ClassicalCalculator.run | 1_436    | 5_366     | 1         |
+| total build_hazard      | 755.2    | 23.8      | 240       |    
+#+END_EXAMPLE
 ** SAM
 
-The slow task issue is NOT solved:
+The slow task issue is solved:
 
+#+BEGIN_EXAMPLE
 | operation-duration | counts | mean    | stddev | min     | max     |
 |--------------------+--------+---------+--------+---------+---------|
-| classical          | 712    | 268.9   | 96%    | 16.0    | 2_832   |
+| classical          | 393    | 499.8   | 38%    | 45.7    | 1_339   |
 
-A *lot* more memory is needed, 162G > 48G.
+$ oq show task:classical:-1
+taskno=383, eff_ruptures=30216, eff_sites=17155, duration=1339 s
+sources="src_09_6pt25 src_09_6pt35 src_09_6pt45 src_09_6pt55 src_09_6pt65 src_09_6pt75"
 
+#+END_EXAMPLE
+
+The slowest task is till related to the grid sources.
+A *lot* more memory is needed, 124G > 48G, but the calculation is faster.
+
+#+BEGIN_EXAMPLE
 | calc_41, maxmem=161.5 GB | time_sec | memory_mb | counts     |
 |--------------------------+----------+-----------+------------|
 | total classical          | 191_460  | 1_678     | 712        |
@@ -39,6 +49,7 @@ A *lot* more memory is needed, 162G > 48G.
 | ClassicalCalculator.run  | 4_626    | 5_727     | 1          |
 | total build_hazard       | 265.3    | 14.6      | 240        |
 
+#+END_EXAMPLE
 ** CAN
 
 "computing mean_std" is 20% faster, "total build_hazard" 17x faster,
@@ -56,19 +67,26 @@ A *lot* more memory is needed, 162G > 48G.
 
 ** USA
 
-The calculation is totally dominated by "get_poes" and uses a lot of memory.
+The calculation is totally dominated by "computing mean_std"
+and uses a lot of memory.
 
-| calc_48, maxmem=160.8 GB | time_sec | memory_mb | counts     |
+#+BEGIN_EXAMPLE
+| calc_94, maxmem=216.5 GB | time_sec | memory_mb | counts     |
 |--------------------------+----------+-----------+------------|
-| total classical          | 538_310  | 1_286     | 662        |
-| get_poes                 | 235_928  | 0.0       | 17_423_053 |
-| computing mean_std       | 174_373  | 0.0       | 10_159     |
-| composing pnes           | 68_761   | 0.0       | 17_423_053 |
-| make_contexts            | 47_199   | 0.0       | 17_424_669 |
-| ClassicalCalculator.run  | 8_165    | 4_789     | 1          |
-| total build_hazard       | 2_835    | 85.9      | 240        |
+| total classical          | 227_284  | 2_728     | 421        |
+| computing mean_std       | 159_085  | 0.0       | 10_154     |
+| get_poes                 | 37_591   | 0.0       | 17_204_335 |
+| make_contexts            | 15_979   | 0.0       | 17_205_985 |
+| composing pnes           | 6_831    | 0.0       | 17_204_335 |
+| ClassicalCalculator.run  | 2_672    | 2_737     | 1          |
+| total build_hazard       | 240.6    | 10.4      | 238        |
 
-The slowest task takes 5_672s. "build_hazard" is 30x faster.
+| operation-duration | counts | mean    | stddev | min     | max     |
+|--------------------+--------+---------+--------+---------+---------|
+| classical          | 421    | 539.9   | 65%    | 5.82039 | 1_458   |  
+#+END_EXAMPLE
+
+The slowest task is 7x faster. "build_hazard" is 30x faster.
 
 * Engine 3.11
 

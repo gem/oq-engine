@@ -153,6 +153,11 @@ class InfoTestCase(unittest.TestCase):
             sap.runline('openquake.commands info -r ' + path)
         self.assertIn('report.rst', str(p))
 
+    def test_consequences(self):
+        with Print.patch() as p:
+            sap.runline('openquake.commands info consequences')
+        self.assertIn('consequences are implemented', str(p))
+
 
 class TidyTestCase(unittest.TestCase):
     def test_ok(self):
