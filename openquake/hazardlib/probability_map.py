@@ -223,6 +223,7 @@ class ProbabilityMap(dict):
                 arr[i] = self[sid].array[:, g]
             except KeyError:
                 pass
+        arr[arr == 1.] = .9999999999999999  # avoid issues in classical_damage
         return arr
 
     @property

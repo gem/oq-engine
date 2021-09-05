@@ -288,7 +288,6 @@ class Hazard:
         with self.mon:
             cmaker = self.cmakers[grp_id]
             dset = self.datastore['_poes']
-            base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
             if slc.start is None:
                 slc = slice(0, self.N)
             for g in range(pmap.shape_z):
