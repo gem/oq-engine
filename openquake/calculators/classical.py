@@ -247,6 +247,7 @@ def classical_tile(srcs, cmaker, monitor):
     for tile in sitecol.split_in_tiles(cmaker.ntiles):
         res = hazclassical(srcs, tile, cmaker)
         if res['pmap']:
+            res['slc'] = slice(tile.sids.min(), tile.sids.max() + 1)
             yield res
 
 
@@ -263,6 +264,7 @@ class Hazard:
         self.sids = pgetter.sids
         self.srcidx = srcidx
         self.mon = mon
+        self.N = len(dstore['sitecol/sids'])
         extreme = []
         n = len(full_lt.sm_rlzs)
         for grp_id, indices in enumerate(dstore['trt_smrs']):
@@ -278,19 +280,21 @@ class Hazard:
         L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
         pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
-    def store_poes(self, grp_id, pmap):
+    def store_poes(self, grp_id, pmap, slc=slice(None)):
         """
         Store the pmap of the given group inside the _poes dataset
         """
         with self.mon:
+            if slc.start is None:
+                sids = numpy.arange(self.N)
+            else:
+                sids = numpy.arange(slc.start, slc.stop)  # N' sites
             cmaker = self.cmakers[grp_id]
             dset = self.datastore['_poes']
             base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
-            arr = numpy.array(
-                [pmap[sid].array for sid in pmap]
-            ).transpose(2, 0, 1)
-            for g, mat in enumerate(arr):
-                dset[cmaker.start + g] = mat  # shape NL
+            arr = numpy.array([pmap[sid].array for sid in sids])
+            for g in range(arr.shape[-1]):
+                dset[cmaker.start + g, slc] = arr[:, :, g]  # shape N'L
             extreme = max(
                 get_extreme_poe(pmap[sid].array, self.imtls)
                 for sid in pmap)
@@ -350,6 +354,7 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
         with self.monitor('aggregate curves'):
+            slc = dic.get('slc', slice(None))
             pmap = dic['pmap']
             pmap.grp_id = grp_id
             source_id = dic.pop('source_id', None)
@@ -358,7 +363,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc[source_id.split(':')[0]] = pmap
             if pmap:
                 if self.counts[grp_id] == 1:
-                    self.haz.store_poes(grp_id, pmap)
+                    self.haz.store_poes(grp_id, pmap, slc)
                 else:
                     acc[grp_id] |= pmap
         return acc
@@ -449,16 +454,17 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
         nlevels = self.oqparam.imtls.size
-        poes_shape = (len(rlzs_by_g), self.N, nlevels)  # GNL
-        size = numpy.prod(poes_shape) * 8
+        poes_shape = G, N, L = len(rlzs_by_g), self.N, nlevels
+        N1 = min(N, self.oqparam.max_sites_per_tile)
+        size = G * N1 * L * 8
         bytes_per_grp = size / len(self.grp_ids)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         logging.info('Requiring %s for full ProbabilityMap of shape %s',
-                     humansize(size), poes_shape)
+                     humansize(size), (G, N1, L))
         maxlen = max(len(rbs) for rbs in rlzs_by_gsim_list)
-        maxsize = maxlen * self.N * self.oqparam.imtls.size * 8
+        maxsize = maxlen * N1 * self.oqparam.imtls.size * 8
         logging.info('Requiring %s for max ProbabilityMap of shape %s',
-                     humansize(maxsize), (maxlen, self.N, nlevels))
+                     humansize(maxsize), (maxlen, N1, nlevels))
         if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
@@ -510,7 +516,6 @@ class ClassicalCalculator(base.HazardCalculator):
                           self.monitor('saving probability maps'))
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
-        logging.info('Sending %d tasks', len(args))
         h5 = self.datastore.hdf5
         if self.N > oq.max_sites_per_tile:
             smap = parallel.Starmap(classical_tile, args, h5=h5)
@@ -523,6 +528,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for grp_id, num_tasks in self.counts.items():
             if num_tasks > 1:
                 self.haz.init(acc, grp_id)
+        logging.info('Sending %d tasks', len(args))
         pmaps = smap.reduce(self.agg_dicts, acc)
         logging.debug("busy time: %s", smap.busytime)
         self.haz.store_disagg(pmaps)
