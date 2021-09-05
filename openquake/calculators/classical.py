@@ -237,6 +237,7 @@ def classical(srcs, cmaker, monitor):
     return hazclassical(srcs, monitor.read('sitecol'), cmaker)
 
 
+# the best test is sslt/job.ini in oq-risk-tests
 def classical_tile(srcs, cmaker, monitor):
     """
     Read the sitecol, split it on tiles and call the classical calculator
@@ -285,13 +286,13 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         with self.mon:
+            cmaker = self.cmakers[grp_id]
+            dset = self.datastore['_poes']
+            base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
             if slc.start is None:
                 sids = numpy.arange(self.N)
             else:
                 sids = numpy.arange(slc.start, slc.stop)  # N' sites
-            cmaker = self.cmakers[grp_id]
-            dset = self.datastore['_poes']
-            base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
             arr = numpy.array([pmap[sid].array for sid in sids])
             for g in range(arr.shape[-1]):
                 dset[cmaker.start + g, slc] = arr[:, :, g]  # shape N'L
@@ -453,29 +454,30 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
-        nlevels = self.oqparam.imtls.size
-        poes_shape = G, N, L = len(rlzs_by_g), self.N, nlevels
-        N1 = min(N, self.oqparam.max_sites_per_tile)
-        size = G * N1 * L * 8
-        bytes_per_grp = size / len(self.grp_ids)
-        avail = min(psutil.virtual_memory().available, config.memory.limit)
-        logging.info('Requiring %s for full ProbabilityMap of shape %s',
-                     humansize(size), (G, N1, L))
-        maxlen = max(len(rbs) for rbs in rlzs_by_gsim_list)
-        maxsize = maxlen * N1 * self.oqparam.imtls.size * 8
-        logging.info('Requiring %s for max ProbabilityMap of shape %s',
-                     humansize(maxsize), (maxlen, N1, nlevels))
-        if avail < bytes_per_grp:
-            raise MemoryError(
-                'You have only %s of free RAM' % humansize(avail))
-        elif avail < size:
-            logging.warning('You have only %s of free RAM' % humansize(avail))
+        poes_shape = G, N, L = len(rlzs_by_g), self.N, self.oqparam.imtls.size
+        self.check_memory(G, N, L, [len(rbs) for rbs in rlzs_by_gsim_list])
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
         # NB: it is CRITICAL for performance to have shape GNL and not NLG
         # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
         self.datastore.create_dset('_poes', F64, poes_shape)
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
+
+    def check_memory(self, G, N, L, num_gs):
+        N1 = min(N, self.oqparam.max_sites_per_tile)
+        size = G * N * L * 8
+        bytes_per_grp = size / len(self.grp_ids)
+        avail = min(psutil.virtual_memory().available, config.memory.limit)
+        logging.info('Requiring %s for full ProbabilityMap of shape %s',
+                     humansize(size), (G, N, L))
+        maxsize = max(num_gs) * N1 * self.oqparam.imtls.size * 8
+        logging.info('Requiring %s for max ProbabilityMap of shape %s',
+                     humansize(maxsize), (max(num_gs), N1, L))
+        if avail < bytes_per_grp:
+            raise MemoryError(
+                'You have only %s of free RAM' % humansize(avail))
+        elif avail < size:
+            logging.warning('You have only %s of free RAM' % humansize(avail))
 
     def execute(self):
         """
@@ -516,6 +518,7 @@ class ClassicalCalculator(base.HazardCalculator):
                           self.monitor('saving probability maps'))
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
+        logging.info('grp_id->ntasks: %s', list(self.counts.values()))
         h5 = self.datastore.hdf5
         if self.N > oq.max_sites_per_tile:
             smap = parallel.Starmap(classical_tile, args, h5=h5)

@@ -689,6 +689,7 @@ def view_global_hazard(token, dstore):
     return numpy.array([res], dt(imtls))
 
 
+@view.add('global_hmaps')
 def view_global_hmaps(token, dstore):
     """
     Display the global hazard maps for the calculation. They are
