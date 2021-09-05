@@ -20,6 +20,7 @@ import time
 import psutil
 import logging
 import operator
+import collections
 import numpy
 try:
     from PIL import Image
@@ -253,7 +254,7 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, pgetter, srcidx):
+    def __init__(self, dstore, full_lt, pgetter, srcidx, mon):
         self.datastore = dstore
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
@@ -261,6 +262,7 @@ class Hazard:
         self.imtls = pgetter.imtls
         self.sids = pgetter.sids
         self.srcidx = srcidx
+        self.mon = mon
         extreme = []
         n = len(full_lt.sm_rlzs)
         for grp_id, indices in enumerate(dstore['trt_smrs']):
@@ -280,16 +282,19 @@ class Hazard:
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        cmaker = self.cmakers[grp_id]
-        dset = self.datastore['_poes']
-        base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
-        arr = numpy.array([pmap[sid].array for sid in pmap]).transpose(2, 0, 1)
-        for g, mat in enumerate(arr):
-            dset[cmaker.start + g] = mat  # shape NL
-        extreme = max(
-            get_extreme_poe(pmap[sid].array, self.imtls)
-            for sid in pmap)
-        self.extreme[grp_id]['extreme_poe'] = extreme
+        with self.mon:
+            cmaker = self.cmakers[grp_id]
+            dset = self.datastore['_poes']
+            base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
+            arr = numpy.array(
+                [pmap[sid].array for sid in pmap]
+            ).transpose(2, 0, 1)
+            for g, mat in enumerate(arr):
+                dset[cmaker.start + g] = mat  # shape NL
+            extreme = max(
+                get_extreme_poe(pmap[sid].array, self.imtls)
+                for sid in pmap)
+            self.extreme[grp_id]['extreme_poe'] = extreme
 
     def store_disagg(self, pmaps=None):
         """
@@ -352,9 +357,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 # store the poes for the given source
                 acc[source_id.split(':')[0]] = pmap
             if pmap:
-                if grp_id not in acc:
-                    self.haz.init(acc, grp_id)
-                acc[grp_id] |= pmap
+                if self.counts[grp_id] == 1:
+                    self.haz.store_poes(grp_id, pmap)
+                else:
+                    acc[grp_id] |= pmap
         return acc
 
     def create_dsets(self):
@@ -500,8 +506,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
-        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
+        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx,
+                          self.monitor('saving probability maps'))
         args = self.get_args(grp_ids, self.haz.cmakers)
+        self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
         logging.info('Sending %d tasks', len(args))
         h5 = self.datastore.hdf5
         if self.N > oq.max_sites_per_tile:
@@ -511,16 +519,19 @@ class ClassicalCalculator(base.HazardCalculator):
         smap.monitor.save('sitecol', self.sitecol)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
-        pmaps = smap.reduce(self.agg_dicts)
+        acc = {}
+        for grp_id, num_tasks in self.counts.items():
+            if num_tasks > 1:
+                self.haz.init(acc, grp_id)
+        pmaps = smap.reduce(self.agg_dicts, acc)
         logging.debug("busy time: %s", smap.busytime)
         self.haz.store_disagg(pmaps)
         if not oq.hazard_calculation_id:
             self.haz.store_disagg()
         self.store_info(psd)
-        with self.monitor('saving probability maps'):
-            for grp_id in list(pmaps):
-                if isinstance(grp_id, int):
-                    self.haz.store_poes(grp_id, pmaps.pop(grp_id))
+        for grp_id in list(pmaps):
+            if isinstance(grp_id, int):
+                self.haz.store_poes(grp_id, pmaps.pop(grp_id))
         return True
 
     def store_info(self, psd):
