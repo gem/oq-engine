@@ -290,10 +290,8 @@ class Hazard:
             dset = self.datastore['_poes']
             base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
             if slc.start is None:
-                sids = numpy.arange(self.N)
-            else:
-                sids = numpy.arange(slc.start, slc.stop)  # N' sites
-            arr = numpy.array([pmap[sid].array for sid in sids])
+                slc = slice(0, self.N)
+            arr = pmap.array(slc.start, slc.stop)
             for g in range(arr.shape[-1]):
                 dset[cmaker.start + g, slc] = arr[:, :, g]  # shape N'L
             extreme = max(
@@ -515,7 +513,7 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx,
-                          self.monitor('saving probability maps'))
+                          self.monitor('storing _poes'))
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.counts.values()))

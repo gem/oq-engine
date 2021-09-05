@@ -531,7 +531,7 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            poes = fix_ones(readinput.pmap).array(len(haz_sitecol))
+            poes = fix_ones(readinput.pmap).array(0, len(haz_sitecol))
             self.datastore['_poes'] = poes.transpose(2, 0, 1)  # shape GNL
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
