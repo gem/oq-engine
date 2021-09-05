@@ -530,16 +530,16 @@ class ClassicalCalculator(base.HazardCalculator):
             if num_tasks > 1:
                 self.haz.init(acc, grp_id)
         logging.info('Sending %d tasks', len(args))
-        pmaps = smap.reduce(self.agg_dicts, acc)
+        smap.reduce(self.agg_dicts, acc)
         logging.debug("busy time: %s", smap.busytime)
-        self.haz.store_disagg(pmaps)
+        self.haz.store_disagg(acc)
         if not oq.hazard_calculation_id:
             self.haz.store_disagg()
         self.store_info(psd)
         logging.info('Saving _poes')
-        for grp_id in list(pmaps):
+        for grp_id in list(acc):
             if isinstance(grp_id, int):
-                self.haz.store_poes(grp_id, pmaps.pop(grp_id))
+                self.haz.store_poes(grp_id, acc.pop(grp_id))
         return True
 
     def store_info(self, psd):
