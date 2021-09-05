@@ -213,14 +213,14 @@ class ProbabilityMap(dict):
         """The ordered keys of the map as a numpy.uint32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
-    def array(self, start, stop):
+    def array(self, start, stop, g):
         """
-        An array of shape (stop-start, L, I)
+        An array of shape (stop-start, L)
         """
-        arr = numpy.zeros((stop-start, self.shape_y, self.shape_z))
+        arr = numpy.zeros((stop-start, self.shape_y))
         for i, sid in enumerate(range(start, stop)):
             try:
-                arr[i] = self[sid].array
+                arr[i] = self[sid].array[:, g]
             except KeyError:
                 pass
         return arr

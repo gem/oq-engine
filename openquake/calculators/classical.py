@@ -291,9 +291,9 @@ class Hazard:
             base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
             if slc.start is None:
                 slc = slice(0, self.N)
-            arr = pmap.array(slc.start, slc.stop)
-            for g in range(arr.shape[-1]):
-                dset[cmaker.start + g, slc] = arr[:, :, g]  # shape N'L
+            for g in range(pmap.shape_z):
+                arr = pmap.array(slc.start, slc.stop, g)  # shape N'L
+                dset[cmaker.start + g, slc] = arr
             extreme = max(
                 get_extreme_poe(pmap[sid].array, self.imtls)
                 for sid in pmap)
@@ -352,19 +352,19 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.few_sites and len(dic['rup_data']['src_id']):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
-        with self.monitor('aggregate curves'):
-            slc = dic.get('slc', slice(None))
-            pmap = dic['pmap']
-            pmap.grp_id = grp_id
-            source_id = dic.pop('source_id', None)
-            if source_id:
-                # store the poes for the given source
-                acc[source_id.split(':')[0]] = pmap
-            if pmap:
-                if self.counts[grp_id] == 1:
-                    self.haz.store_poes(grp_id, pmap, slc)
-                else:
-                    acc[grp_id] |= pmap
+
+        slc = dic.get('slc', slice(None))
+        pmap = dic['pmap']
+        pmap.grp_id = grp_id
+        source_id = dic.pop('source_id', None)
+        if source_id:
+            # store the poes for the given source
+            acc[source_id.split(':')[0]] = pmap
+        if pmap:
+            if self.counts[grp_id] == 1:
+                self.haz.store_poes(grp_id, pmap, slc)
+            else:
+                acc[grp_id] |= pmap
         return acc
 
     def create_dsets(self):
@@ -513,7 +513,7 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx,
-                          self.monitor('storing _poes'))
+                          self.monitor('storing _poes', measuremem=True))
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.counts.values()))
@@ -536,6 +536,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_calculation_id:
             self.haz.store_disagg()
         self.store_info(psd)
+        logging.info('Saving _poes')
         for grp_id in list(pmaps):
             if isinstance(grp_id, int):
                 self.haz.store_poes(grp_id, pmaps.pop(grp_id))
