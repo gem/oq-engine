@@ -20,6 +20,7 @@ import time
 import psutil
 import logging
 import operator
+import collections
 import numpy
 try:
     from PIL import Image
@@ -236,6 +237,7 @@ def classical(srcs, cmaker, monitor):
     return hazclassical(srcs, monitor.read('sitecol'), cmaker)
 
 
+# the best test is sslt/job.ini in oq-risk-tests
 def classical_tile(srcs, cmaker, monitor):
     """
     Read the sitecol, split it on tiles and call the classical calculator
@@ -246,6 +248,7 @@ def classical_tile(srcs, cmaker, monitor):
     for tile in sitecol.split_in_tiles(cmaker.ntiles):
         res = hazclassical(srcs, tile, cmaker)
         if res['pmap']:
+            res['slc'] = slice(tile.sids.min(), tile.sids.max() + 1)
             yield res
 
 
@@ -253,7 +256,7 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, pgetter, srcidx):
+    def __init__(self, dstore, full_lt, pgetter, srcidx, mon):
         self.datastore = dstore
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
@@ -261,6 +264,8 @@ class Hazard:
         self.imtls = pgetter.imtls
         self.sids = pgetter.sids
         self.srcidx = srcidx
+        self.mon = mon
+        self.N = len(dstore['sitecol/sids'])
         extreme = []
         n = len(full_lt.sm_rlzs)
         for grp_id, indices in enumerate(dstore['trt_smrs']):
@@ -276,20 +281,22 @@ class Hazard:
         L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
         pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
-    def store_poes(self, grp_id, pmap):
+    def store_poes(self, grp_id, pmap, slc=slice(None)):
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        cmaker = self.cmakers[grp_id]
-        dset = self.datastore['_poes']
-        base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
-        arr = numpy.array([pmap[sid].array for sid in pmap]).transpose(2, 0, 1)
-        for g, mat in enumerate(arr):
-            dset[cmaker.start + g] = mat  # shape NL
-        extreme = max(
-            get_extreme_poe(pmap[sid].array, self.imtls)
-            for sid in pmap)
-        self.extreme[grp_id]['extreme_poe'] = extreme
+        with self.mon:
+            cmaker = self.cmakers[grp_id]
+            dset = self.datastore['_poes']
+            if slc.start is None:
+                slc = slice(0, self.N)
+            for g in range(pmap.shape_z):
+                arr = pmap.array(slc.start, slc.stop, g)  # shape N'L
+                dset[cmaker.start + g, slc] = arr
+            extreme = max(
+                get_extreme_poe(pmap[sid].array, self.imtls)
+                for sid in pmap)
+            self.extreme[grp_id]['extreme_poe'] = extreme
 
     def store_disagg(self, pmaps=None):
         """
@@ -344,16 +351,18 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.few_sites and len(dic['rup_data']['src_id']):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
-        with self.monitor('aggregate curves'):
-            pmap = dic['pmap']
-            pmap.grp_id = grp_id
-            source_id = dic.pop('source_id', None)
-            if source_id:
-                # store the poes for the given source
-                acc[source_id.split(':')[0]] = pmap
-            if pmap:
-                if grp_id not in acc:
-                    self.haz.init(acc, grp_id)
+
+        slc = dic.get('slc', slice(None))
+        pmap = dic['pmap']
+        pmap.grp_id = grp_id
+        source_id = dic.pop('source_id', None)
+        if source_id:
+            # store the poes for the given source
+            acc[source_id.split(':')[0]] = pmap
+        if pmap:
+            if self.counts[grp_id] == 1:
+                self.haz.store_poes(grp_id, pmap, slc)
+            else:
                 acc[grp_id] |= pmap
         return acc
 
@@ -442,28 +451,30 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
-        nlevels = self.oqparam.imtls.size
-        poes_shape = (len(rlzs_by_g), self.N, nlevels)  # GNL
-        size = numpy.prod(poes_shape) * 8
-        bytes_per_grp = size / len(self.grp_ids)
-        avail = min(psutil.virtual_memory().available, config.memory.limit)
-        logging.info('Requiring %s for full ProbabilityMap of shape %s',
-                     humansize(size), poes_shape)
-        maxlen = max(len(rbs) for rbs in rlzs_by_gsim_list)
-        maxsize = maxlen * self.N * self.oqparam.imtls.size * 8
-        logging.info('Requiring %s for max ProbabilityMap of shape %s',
-                     humansize(maxsize), (maxlen, self.N, nlevels))
-        if avail < bytes_per_grp:
-            raise MemoryError(
-                'You have only %s of free RAM' % humansize(avail))
-        elif avail < size:
-            logging.warning('You have only %s of free RAM' % humansize(avail))
+        poes_shape = G, N, L = len(rlzs_by_g), self.N, self.oqparam.imtls.size
+        self.check_memory(G, N, L, [len(rbs) for rbs in rlzs_by_gsim_list])
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
         # NB: it is CRITICAL for performance to have shape GNL and not NLG
         # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
         self.datastore.create_dset('_poes', F64, poes_shape)
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
+
+    def check_memory(self, G, N, L, num_gs):
+        N1 = min(N, self.oqparam.max_sites_per_tile)
+        size = G * N * L * 8
+        bytes_per_grp = size / len(self.grp_ids)
+        avail = min(psutil.virtual_memory().available, config.memory.limit)
+        logging.info('Requiring %s for full ProbabilityMap of shape %s',
+                     humansize(size), (G, N, L))
+        maxsize = max(num_gs) * N1 * self.oqparam.imtls.size * 8
+        logging.info('Requiring %s for max ProbabilityMap of shape %s',
+                     humansize(maxsize), (max(num_gs), N1, L))
+        if avail < bytes_per_grp:
+            raise MemoryError(
+                'You have only %s of free RAM' % humansize(avail))
+        elif avail < size:
+            logging.warning('You have only %s of free RAM' % humansize(avail))
 
     def execute(self):
         """
@@ -500,9 +511,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
-        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
+        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx,
+                          self.monitor('storing _poes', measuremem=True))
         args = self.get_args(grp_ids, self.haz.cmakers)
-        logging.info('Sending %d tasks', len(args))
+        self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
+        logging.info('grp_id->ntasks: %s', list(self.counts.values()))
         h5 = self.datastore.hdf5
         if self.N > oq.max_sites_per_tile:
             smap = parallel.Starmap(classical_tile, args, h5=h5)
@@ -511,16 +524,21 @@ class ClassicalCalculator(base.HazardCalculator):
         smap.monitor.save('sitecol', self.sitecol)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
-        pmaps = smap.reduce(self.agg_dicts)
+        acc = {}
+        for grp_id, num_tasks in self.counts.items():
+            if num_tasks > 1:
+                self.haz.init(acc, grp_id)
+        logging.info('Sending %d tasks', len(args))
+        smap.reduce(self.agg_dicts, acc)
         logging.debug("busy time: %s", smap.busytime)
-        self.haz.store_disagg(pmaps)
+        self.haz.store_disagg(acc)
         if not oq.hazard_calculation_id:
             self.haz.store_disagg()
         self.store_info(psd)
-        with self.monitor('saving probability maps'):
-            for grp_id in list(pmaps):
-                if isinstance(grp_id, int):
-                    self.haz.store_poes(grp_id, pmaps.pop(grp_id))
+        logging.info('Saving _poes')
+        for grp_id in list(acc):
+            if isinstance(grp_id, int):
+                self.haz.store_poes(grp_id, acc.pop(grp_id))
         return True
 
     def store_info(self, psd):

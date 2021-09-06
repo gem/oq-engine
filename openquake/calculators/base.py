@@ -96,23 +96,6 @@ class InvalidCalculationID(Exception):
     """
 
 
-def fix_ones(pmap):
-    """
-    Physically, an extremely small intensity measure level can have an
-    extremely large probability of exceedence, however that probability
-    cannot be exactly 1 unless the level is exactly 0. Numerically, the
-    PoE can be 1 and this give issues when calculating the damage (there
-    is a log(0) in
-    :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
-    Here we solve the issue by replacing the unphysical probabilities 1
-    with .9999999999999999 (the float64 closest to 1).
-    """
-    for sid in pmap:
-        array = pmap[sid].array
-        array[array == 1.] = .9999999999999999
-    return pmap
-
-
 def build_weights(realizations):
     """
     :returns: an array with the realization weights of shape R
@@ -531,8 +514,8 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            poes = fix_ones(readinput.pmap).array(len(haz_sitecol))
-            self.datastore['_poes'] = poes.transpose(2, 0, 1)  # shape GNL
+            poes = readinput.pmap.array(0, len(haz_sitecol), 0)  # shape NL
+            self.datastore['_poes'] = poes.reshape(1, self.N, -1)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['rlzs_by_g'] = sum(
