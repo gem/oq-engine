@@ -177,6 +177,7 @@ class ContextMaker(object):
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = param.get('collapse_level', False)
+        self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
