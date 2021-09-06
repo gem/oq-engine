@@ -133,7 +133,7 @@ class CostCalculator(object):
         vars(self).update(attrs)
         self.cost_types = dict(zip(self.loss_types, array['cost_type']))
         self.area_types = dict(zip(self.loss_types, array['area_type']))
-        self.units = dict(zip(self.loss_types, array['unit']))
+        self.units = dict(zip(self.loss_types, decode(array['unit'])))
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, vars(self))

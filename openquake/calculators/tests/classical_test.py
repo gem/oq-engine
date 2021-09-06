@@ -380,8 +380,9 @@ hazard_uhs-std.csv
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
         numpy.testing.assert_equal(
-            list(df.index), ['SFLT1;0', 'COMFLT1;0', 'CHAR1;0', 'CHAR1;1',
-                             'CHAR1;2', 'COMFLT1;1', 'SFLT1;1'])
+            decode(list(df.index)),
+            ['SFLT1;0', 'COMFLT1;0', 'CHAR1;0', 'CHAR1;1',
+             'CHAR1;2', 'COMFLT1;1', 'SFLT1;1'])
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')

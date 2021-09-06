@@ -36,6 +36,7 @@ from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, RecordBuilder)
 from openquake.baselib.performance import Monitor
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
@@ -1256,7 +1257,7 @@ def read_cmakers(dstore, full_lt=None):
              'shift_hypo': oq.shift_hypo,
              'af': af,
              'grp_id': grp_id})
-        cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
+        cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
         cmaker.trti = trti
         cmaker.start = start
         start += len(rlzs_by_gsim)
