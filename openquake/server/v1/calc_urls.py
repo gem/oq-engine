@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from django.urls import re_path, include
+from django.urls import re_path
 from openquake.server import views
 
 # each url is prefixed with /v1/calc/
