@@ -719,7 +719,7 @@ def extract_agg_curves(dstore, what):
     idx = -1
     if tagnames:
         for i, tags in enumerate(dstore['agg_keys'][:][tagnames]):
-            if list(tags) == tagvalues:
+            if decode([v for v in tags]) == tagvalues:
                 idx = i
                 break
     if qdic['rlzs']:
