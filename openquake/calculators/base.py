@@ -788,8 +788,8 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            tmap = readinput.taxonomy_mapping(
-                self.oqparam, self.assetcol.tagcol.taxonomy)
+            taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
+            tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
             self.crmodel.tmap = tmap
             taxonomies = set()
             for ln in oq.loss_names:
