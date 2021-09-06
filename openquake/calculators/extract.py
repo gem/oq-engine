@@ -117,9 +117,11 @@ def parse(query_string, info={}):
     """
     qdic = parse_qs(query_string)
     loss_types = info.get('loss_types', [])
-    for key, val in qdic.items():  # for instance, convert site_id to an int
+    for key, val in sorted(qdic.items()):
+        # convert site_id to an int, loss_type to an int, etc
         if key == 'loss_type':
             qdic[key] = [loss_types[k] for k in val]
+            qdic['lt'] = val
         else:
             qdic[key] = [lit_eval(v) for v in val]
     if info:
@@ -642,6 +644,7 @@ def extract_tot_curves(dstore, what):
     """
     info = get_info(dstore)
     qdic = parse(what, info)
+    lt = qdic['lt']
     k = qdic['k']  # rlz or stat index
     [l] = qdic['loss_type']  # loss type index
     if qdic['rlzs']:
@@ -663,7 +666,8 @@ def extract_tot_curves(dstore, what):
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:  # relative
-        arr /= dstore['agg_values'][K, l]
+        tot, = dstore['agg_values'][K][lt]
+        arr /= tot
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
     attrs = dict(shape_descr=['return_period', 'kind'])
@@ -710,6 +714,7 @@ def extract_agg_curves(dstore, what):
     for a in ('k', 'rlzs', 'kind', 'loss_type', 'absolute'):
         del tagdict[a]
     k = qdic['k']  # rlz or stat index
+    lt = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
     tagnames = sorted(tagdict)
     if set(tagnames) != set(info['tagnames']):
@@ -737,7 +742,7 @@ def extract_agg_curves(dstore, what):
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue = dstore['agg_values'][idx, l]  # shape K, L
+        evalue, = dstore['agg_values'][idx][lt]
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)

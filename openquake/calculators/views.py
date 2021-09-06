@@ -532,7 +532,7 @@ def view_num_units(token, dstore):
     taxo = dstore['assetcol/tagcol/taxonomy'][()]
     counts = collections.Counter()
     for asset in dstore['assetcol']:
-        counts[taxo[asset['taxonomy']]] += asset['number']
+        counts[taxo[asset['taxonomy']]] += asset['value-number']
     data = sorted(counts.items())
     data.append(('*ALL*', sum(d[1] for d in data)))
     return numpy.array(data, dt('taxonomy num_units'))

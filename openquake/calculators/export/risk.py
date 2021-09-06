@@ -65,13 +65,18 @@ def get_agg_tags(dstore, aggregate_by):
     return agg_tags
 
 
+def _loss_type(ln):
+    if ln[-4:] == '_ins':
+        return ln[:-4]
+    return ln
+
 # this is used by event_based_risk and ebrisk
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     lnames = numpy.array(oq.loss_names)
     agg_tags = get_agg_tags(dstore, oq.aggregate_by)
-    aggvalue = dstore['agg_values'][()]  # shape (K+1, L)
+    aggvalue = dstore['agg_values'][()]  # shape K+1
     md = dstore.metadata
     md['risk_investigation_time'] = (
         oq.risk_investigation_time or oq.investigation_time)
@@ -90,11 +95,13 @@ def export_agg_curve_rlzs(ekey, dstore):
             logging.warning('No data for %s', md['kind'])
             continue
         dic = {col: df[col].to_numpy() for col in dataf.columns}
-        dic['loss_type'] = lnames[dic['lti']]
+        dic['loss_type'] = lnames[dic.pop('lti')]
+        avalue = aggvalue[dic['agg_id']]
         for tagname in oq.aggregate_by:
             dic[tagname] = agg_tags[tagname][dic['agg_id']]
-        dic['loss_ratio'] = dic['loss_value'] / aggvalue[
-            dic['agg_id'], dic.pop('lti')]
+        tot = numpy.array([avalue[i][_loss_type(ln)]
+                           for i, ln in enumerate(dic['loss_type'])])
+        dic['loss_ratio'] = dic['loss_value'] / tot
         dic['annual_frequency_of_exceedence'] = 1 / dic['return_period']
         del dic['agg_id']
         dest = dstore.build_fname(md['kind'], '', 'csv')
@@ -118,7 +125,7 @@ def export_agg_losses(ekey, dstore):
     tagcol = dstore['assetcol/tagcol']
     aggtags = list(tagcol.get_aggkey(aggregate_by).values())
     aggtags.append(('*total*',) * len(aggregate_by))
-    expvalue = dstore['agg_values'][()]  # shape (K+1, L)
+    expvalue = dstore['agg_values'][()]  # shape K+1
     tagnames = tuple(aggregate_by)
     header = ('loss_type',) + tagnames + (
         'loss_value', 'exposed_value', 'loss_ratio')
@@ -126,12 +133,13 @@ def export_agg_losses(ekey, dstore):
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time or
                    oq.investigation_time))
+    lnames = oq.loss_names
     for r, ros in enumerate(rlzs_or_stats):
         ros = ros if isinstance(ros, str) else 'rlz-%03d' % ros
         rows = []
         for (k, l), loss in numpy.ndenumerate(value[:, r]):
             if loss:  # many tag combinations are missing
-                evalue = expvalue[k, l]
+                evalue = expvalue[k][lnames[l]]
                 row = aggtags[k] + (loss, evalue, loss / evalue)
                 rows.append((oq.loss_names[l],) + row)
         dest = dstore.build_fname(name, ros, 'csv')
