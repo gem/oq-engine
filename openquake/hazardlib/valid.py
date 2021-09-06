@@ -64,12 +64,16 @@ class FromFile(object):
     external file and not computed with a GSIM.
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
+    REQUIRES_RUPTURE_PARAMETERS = set()
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     DEFINED_FOR_REFERENCE_VELOCITY = None
     kwargs = {}
 
     def init(self):
+        pass
+
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         pass
 
     def __repr__(self):
