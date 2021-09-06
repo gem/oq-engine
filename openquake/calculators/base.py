@@ -749,8 +749,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['cost_calculator'] = exposure.cost_calculator
             if hasattr(readinput.exposure, 'exposures'):
-                self.datastore['assetcol/exposures'] = (
-                    numpy.array(exposure.exposures, hdf5.vstr))
+                self.datastore.getitem('assetcol')['exposures'] = numpy.array(
+                    exposure.exposures, hdf5.vstr)
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
             if oq.region:
