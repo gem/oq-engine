@@ -598,7 +598,7 @@ class FaccioliEtAl2010(CauzziFaccioli2008):
     plus site and faulting style terms (equations 3 and 5, page 3).
     Spectral acceleration (SA) values are obtained from displacement response
     spectrum  (DSR) values (as provided by the original equations) using the
-    following formula ::
+    following formula::
 
         SA = DSR * (2 * π / T) ** 2
 

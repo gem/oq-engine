@@ -749,8 +749,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['cost_calculator'] = exposure.cost_calculator
             if hasattr(readinput.exposure, 'exposures'):
-                self.datastore['assetcol/exposures'] = (
-                    numpy.array(exposure.exposures, hdf5.vstr))
+                self.datastore.getitem('assetcol')['exposures'] = numpy.array(
+                    exposure.exposures, hdf5.vstr)
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
             if oq.region:
@@ -788,8 +788,8 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            tmap = readinput.taxonomy_mapping(
-                self.oqparam, self.assetcol.tagcol.taxonomy)
+            taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
+            tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
             self.crmodel.tmap = tmap
             taxonomies = set()
             for ln in oq.loss_names:
@@ -1219,7 +1219,12 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         else:
             key2i = {key: i for i, key in enumerate(aggkey)}
             kids = [key2i[tuple(t)] for t in assetcol[aggby]]
-        dstore['assetcol/kids'] = U16(kids)
+        if 'assetcol' in set(dstore):
+            grp = dstore.getitem('assetcol')
+        else:
+            grp = dstore.hdf5.create_group('assetcol')
+        if 'kids' not in grp:
+            grp['kids'] = U16(kids)
     lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)

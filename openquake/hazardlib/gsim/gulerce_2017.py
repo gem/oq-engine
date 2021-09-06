@@ -368,11 +368,11 @@ class GulerceEtAl2017(GMPE):
     Note that this is a more updated version than the GMPE described in the
     original PEER Report 2013/24.
 
-    **Reference:**
+    Reference:
 
-    Gulerce, Z., Kamai, R., Abrahamson, N., & Silva, W. (2017). Ground Motion
+    Gulerce, Z., Kamai, R., Abrahamson, N., & Silva, W. (2017) "Ground Motion
     Prediction Equations for the Vertical Ground Motion Component Based on the
-    NGA-W2 Database. *Earthquake Spectra*, *33*(2), 499-528.
+    NGA-W2 Database", Earthquake Spectra, 33(2), 499-528.
     """
     region = "CAL"
 

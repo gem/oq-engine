@@ -36,6 +36,7 @@ from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, RecordBuilder)
 from openquake.baselib.performance import Monitor
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
@@ -176,6 +177,7 @@ class ContextMaker(object):
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = param.get('collapse_level', False)
+        self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
@@ -246,7 +248,6 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.pmap_mon = monitor('creating pmap', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
 
     def read_ctxs(self, dstore, slc=None):
@@ -764,11 +765,10 @@ class PmapMaker(object):
         self.rupdata = []
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-        with self.pmap_mon:
-            if self.src_mutex:
-                pmap = self._make_src_mutex()
-            else:
-                pmap = self._make_src_indep()
+        if self.src_mutex:
+            pmap = self._make_src_mutex()
+        else:
+            pmap = self._make_src_indep()
         dic = {'pmap': pmap,
                'rup_data': self.dictarray(self.rupdata),
                'calc_times': self.calc_times,
@@ -1258,9 +1258,41 @@ def read_cmakers(dstore, full_lt=None):
              'shift_hypo': oq.shift_hypo,
              'af': af,
              'grp_id': grp_id})
-        cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
+        cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
         cmaker.trti = trti
         cmaker.start = start
         start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
     return cmakers
+
+
+def read_cmaker(dstore, trt_smr):
+    """
+    :param dstore: a DataStore-like object
+    :returns: a ContextMaker instance
+    """
+    oq = dstore['oqparam']
+    full_lt = dstore['full_lt']
+    trts = list(full_lt.gsim_lt.values)
+    trt = trts[trt_smr // len(full_lt.sm_rlzs)]
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim()[trt_smr]
+    mags = dstore['source_mags']
+    md = MagDepDistance.new(str(oq.maximum_distance))
+    md.interp({trt: mags[trt][:] for trt in mags})
+    cmaker = ContextMaker(
+        trt, rlzs_by_gsim,
+        {'truncation_level': oq.truncation_level,
+         'collapse_level': int(oq.collapse_level),
+         'num_epsilon_bins': oq.num_epsilon_bins,
+         'investigation_time': oq.investigation_time,
+         'maximum_distance': md,
+         'minimum_distance': oq.minimum_distance,
+         'ses_seed': oq.ses_seed,
+         'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
+         'max_sites_disagg': oq.max_sites_disagg,
+         'disagg_by_src': oq.disagg_by_src,
+         'min_iml': oq.min_iml,
+         'imtls': oq.imtls,
+         'reqv': oq.get_reqv(),
+         'shift_hypo': oq.shift_hypo})
+    return cmaker

@@ -142,8 +142,8 @@ def CAV():
 
 def RSD():
     """
-    Relative significant duration, 5-95% of :def:`Arias intensity
-    <IA>`, in seconds.
+    Relative significant duration, 5-95% of :class:`Arias intensity<IA>`,
+    in seconds.
     """
     return IMT('RDS')
 
@@ -157,16 +157,16 @@ def RSD595(IMT):
 
 def RSD575():
     """
-    Relative significant duration, 5-75% of :class:`Arias intensity
-    <IA>`, in seconds.
+    Relative significant duration, 5-75% of :class:`Arias intensity<IA>`,
+    in seconds.
     """
     return IMT('RSD575')
 
 
 def RSD2080():
     """
-    Relative significant duration, 20-80% of :class:`Arias intensity
-    <IA>`, in seconds.
+    Relative significant duration, 20-80% of :class:`Arias intensity<IA>`,
+    in seconds.
     """
     return IMT('RSD2080')
 

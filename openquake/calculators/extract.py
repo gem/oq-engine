@@ -724,7 +724,7 @@ def extract_agg_curves(dstore, what):
     idx = -1
     if tagnames:
         for i, tags in enumerate(dstore['agg_keys'][:][tagnames]):
-            if list(tags) == tagvalues:
+            if decode([v for v in tags]) == tagvalues:
                 idx = i
                 break
     if qdic['rlzs']:
@@ -1546,3 +1546,15 @@ def clusterize(hmaps, rlzs, k):
         paths = [encode(path) for path in grp['path']]
         tbl.append((label, logictree.collect_paths(paths), centroid[label]))
     return numpy.array(tbl, dt), labels
+
+
+def read_ebrupture(dstore, rup_id):
+    """
+    :param dstore: a DataStore instance
+    :param rup_id: an integer rupture ID
+    :returns: an EBRupture instance
+    """
+    [getter] = getters.get_rupture_getters(
+        dstore, slc=slice(rup_id, rup_id + 1))
+    [proxy] = getter.get_proxies()
+    return proxy.to_ebr(getter.trt)

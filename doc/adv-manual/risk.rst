@@ -146,8 +146,8 @@ in the asset loss table, in the column "variance", by using the formulae
 
 .. math::
 
-    variance &= \Sigma_i \sigma_i^2 & for\ asset\_correl=0 \\
-    variance &= (\Sigma_i \sigma_i)^2 & for\ asset\_correl=1
+    variance &= \Sigma_i \sigma_i^2 \ for\ asset\_correl=0 \\
+    variance &= (\Sigma_i \sigma_i)^2 \ for\ asset\_correl=1
 
 in terms of the variance of each asset for the event and intensity level in
 consideration, extracted from the asset loss and the

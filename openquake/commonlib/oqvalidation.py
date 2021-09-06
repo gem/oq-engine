@@ -487,7 +487,7 @@ reference_depth_to_2pt5km_per_sec:
 reference_vs30_type:
   Used when there is no site model to specify a global vs30 type.
   The choices are "inferred" or "measured"
-  Example: *reference_vs30_type = inferred".
+  Example: *reference_vs30_type = inferred"*.
   Default: "measured"
 
 reference_vs30_value:
@@ -574,10 +574,10 @@ shakemap_id:
 shakemap_uri:
   Dictionary used in ShakeMap calculations to specify a ShakeMap. Must contain
   a key named "kind" with values "usgs_id", "usgs_xml" or "file_npy".
-  Example: *shakemap_uri = {
-     "kind": "usgs_xml",
-     "grid_url": "file:///home/michele/usp000fjta/grid.xml",
-     "uncertainty_url": "file:///home/michele/usp000fjta/uncertainty.xml"*.
+  Example: shakemap_uri = {
+  "kind": "usgs_xml",
+  "grid_url": "file:///home/michele/usp000fjta/grid.xml",
+  "uncertainty_url": "file:///home/michele/usp000fjta/uncertainty.xml"}.
   Default: empty dictionary
 
 shift_hypo:
@@ -984,6 +984,12 @@ class OqParam(valid.ParamSet):
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
 
+        # check for tiling
+        if self.max_sites_disagg > self.max_sites_per_tile:
+            raise ValueError(
+                'max_sites_disagg is larger than max_sites_per_tile! (%d>%d)'
+                % (self.max_sites_disagg, self.max_sites_per_tile))
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and self.poes:
@@ -1064,15 +1070,18 @@ class OqParam(valid.ParamSet):
         Set self.loss_names
         """
         from openquake.commonlib import datastore  # avoid circular import
+        if self.hazard_calculation_id:
+            with datastore.read(self.hazard_calculation_id) as ds:
+                self._parent = ds['oqparam']
+        else:
+            self._parent = None
         # set all_cost_types
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
         costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             try:
-                with datastore.read(self.hazard_calculation_id) as ds:
-                    parent = ds['oqparam']
-                    self._risk_files = rfs = get_risk_files(parent.inputs)
-                    costtypes = set(rt.rsplit('/')[1] for rt in rfs)
+                self._risk_files = rfs = get_risk_files(self._parent.inputs)
+                costtypes = set(rt.rsplit('/')[1] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
         self.all_cost_types = sorted(costtypes)
@@ -1623,8 +1632,16 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile('Missing investigation_time in %s' % ini)
             self.collect_rlzs = True
             return True
-        if self.collect_rlzs is False or self.hazard_calculation_id:
+        elif self.collect_rlzs is False:
             return True
+        elif self.hazard_calculation_id:
+            n = self._parent.number_of_logic_tree_samples
+            if n == 0:
+                raise ValueError('collect_rlzs=true can only be specified if '
+                                 'the parent hazard calculation used sampling')
+            elif n != self.number_of_logic_tree_samples:
+                raise ValueError('Please specify number_of_logic_tree_samples'
+                                 '=%d' % n)
         hstats = list(self.hazard_stats())
         nostats = not hstats or hstats == ['mean']
         return nostats and self.number_of_logic_tree_samples > 1 and (
