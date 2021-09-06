@@ -336,7 +336,8 @@ class RiskModel(object):
             investigation_time=self.investigation_time,
             risk_investigation_time=rtime,
             steps_per_interval=self.steps_per_interval)
-        res = numpy.array([a['number'] * damage for a in assets.to_records()])
+        res = numpy.array([a['value-number'] * damage
+                           for a in assets.to_records()])
         return res
 
     def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen):
