@@ -102,7 +102,7 @@ class CollapseTestCase(unittest.TestCase):
         res = classical(srcs, self.sitecol, cmaker)
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
-        curve = pmap.array(N)[0, :, 0]
+        curve = pmap.array(0, N, 0)[0]
         return curve, srcs, effrups, weights
 
     # this tests also the collapsing of the ruptures happening in contexts.py
