@@ -1,3 +1,5 @@
+python3-oq-engine (3.12.0-1~xenial01) xenial; urgency=low
+
   [Marco Pagani]
   * Updated verification tables for Abrahamson et al. (2014) and checked
     values with other public resources.
@@ -142,8 +144,6 @@
   * Added a check for the case of `aValue=-Inf` in the truncatedGR MFD
   * Extended the engine to read XML ShakeMaps from arbitrary sources (in
     particular local path names and web sites different from the USGS site)
-  * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
-    thus breaking the QGIS plugin on Windows
   * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11
     format
   * scenario_risk calculations starting from ruptures in CSV format now
@@ -159,7 +159,6 @@
     calculations
   * Weighted the heavy sources in parallel in event based calculations
   * Supported zero coefficient of variations with the beta distribution
-  * Fixed a bug in the agg_curves exporter with aggregate_by=id
   * Internal: changed how the agg_loss_table is stored
   * Fixed the avg_losses exporter when aggregate_by=id
   * Fully merged the calculators scenario_risk, event_based_risk and ebrisk and
@@ -168,6 +167,20 @@
   * Storing the agg_loss_table as 64 bit floats instead of 32 bit floats
   * Changed the algorithm used to generate the epsilons to avoid storing the
     epsilon matrix
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 06 Sep 2021 08:17:53 +0000
+
+python3-oq-engine (3.11.3-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
+    thus breaking the QGIS plugin on Windows
+  * Fix a bug when reusing a hazard calculation without `aggregate_by` for a
+    risk calculation with `aggregate_by`
+  * Fixed the aggregate curves exporter for `aggregate_by=id`: it was exporting
+    b'asset_id' instead of asset_id
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 22 Mar 2021 09:00:22 +0000
 
 python3-oq-engine (3.11.2-1~xenial01) xenial; urgency=low
 

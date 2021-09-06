@@ -233,7 +233,7 @@ class DataStore(collections.abc.MutableMapping):
         self.open('a')
         try:
             self.hdf5.swmr_mode = True
-        except ValueError:  # already set
+        except (ValueError, RuntimeError):  # already set
             pass
 
     def set_attrs(self, key, **kw):
