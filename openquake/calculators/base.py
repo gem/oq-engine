@@ -1220,7 +1220,12 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         else:
             key2i = {key: i for i, key in enumerate(aggkey)}
             kids = [key2i[tuple(t)] for t in assetcol[aggby]]
-        dstore.getitem('assetcol')['kids'] = U16(kids)
+        if 'assetcol' in set(dstore):
+            grp = dstore.getitem('assetcol')
+        else:
+            grp = dstore.hdf5.create_group('assetcol')
+        if 'kids' not in grp:
+            grp['kids'] = U16(kids)
         agg_number[:K] = general.fast_agg(kids, assetcol['number'], M=K)
     agg_number[K] = assetcol['number'].sum()
     dstore['agg_number'] = agg_number
