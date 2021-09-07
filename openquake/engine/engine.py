@@ -245,8 +245,10 @@ def run_calc(log):
                      calc.oqparam.hazard_calculation_id)
         logging.info('Using engine version %s', __version__)
         msg = check_obsolete_version(oqparam.calculation_mode)
-        if msg:
-            logging.warning(msg)
+        # NB: disabling the warning should be done only for users with
+        # an updated LTS version, but we are doing it for all users
+        # if msg:
+        #    logging.warning(msg)
         calc.from_engine = True
         if config.zworkers['host_cores']:
             set_concurrent_tasks_default(calc)
@@ -387,20 +389,6 @@ def check_obsolete_version(calculation_mode='WebUI'):
         tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
         latest = version_triple(tag_name)
-    except KeyError:  # 'tag_name' not found
-        # NOTE: for unauthenticated requests, the rate limit allows for up
-        # to 60 requests per hour. Therefore, sometimes the api returns the
-        # following message:
-        # b'{"message":"API rate limit exceeded for aaa.aaa.aaa.aaa. (But'
-        # ' here\'s the good news: Authenticated requests get a higher rate'
-        # ' limit. Check out the documentation for more details.)",'
-        # ' "documentation_url":'
-        # ' "https://developer.github.com/v3/#rate-limiting"}'
-        msg = ('An error occurred while calling %s/engine/latest to check'
-               ' if the installed version of the engine is up to date.\n'
-               '%s' % (OQ_API, data.decode('utf8')))
-        logging.warning(msg)
-        return
     except Exception:  # page not available or wrong version tag
         msg = ('An error occurred while calling %s/engine/latest to check'
                ' if the installed version of the engine is up to date.' %
