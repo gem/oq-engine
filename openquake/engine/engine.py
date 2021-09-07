@@ -248,9 +248,7 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
         logging.info('Using engine version %s', __version__)
-        msg = check_obsolete_version(oqparam.calculation_mode)
-        if msg:
-            logging.warning(msg)
+        check_obsolete_version(oqparam.calculation_mode)
         calc.from_engine = True
         tb = 'None\n'
         try:
