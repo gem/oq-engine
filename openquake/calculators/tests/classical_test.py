@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
-    case_71, case_72, case_73)
+    case_70, case_71, case_72, case_73)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -907,6 +907,12 @@ hazard_uhs-std.csv
 
         files = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
+
+    def test_case_70(self):
+        # test bug https://github.com/gem/oq-engine/pull/7158
+        self.run_calc(case_70.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
     def test_case_71(self):
         # test with oversampling
