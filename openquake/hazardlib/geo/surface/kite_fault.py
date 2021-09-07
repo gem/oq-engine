@@ -915,8 +915,6 @@ def update_rdist(rdist, az12, angle, sd):
     gamma = 180.0 - (alpha + beta)
     assert gamma > 0
     rdist_new = ratio * np.sin(np.radians(gamma))
-    if rdist_new < 0:
-        import pdb; pdb.set_trace()
     assert (rdist_new) > 0
     return rdist_new
 
