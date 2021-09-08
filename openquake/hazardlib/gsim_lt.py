@@ -512,6 +512,15 @@ class GsimLogicTree(object):
                          for gsim in self.values[trt]}
         return ddic
 
+    def get_rlzs_by_g(self):
+        """
+        :returns: an array of lists
+        """
+        lst = []
+        for rlzs_by_gsim in self.get_rlzs_by_gsim_trt().values():
+            lst.extend(rlzs_by_gsim.values())
+        return numpy.array(lst)
+
     def __iter__(self):
         """
         Yield :class:`openquake.commonlib.logictree.Realization` instances

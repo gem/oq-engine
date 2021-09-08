@@ -308,11 +308,14 @@ class ContextMaker(object):
         :returns: a list RuptureContexts
         """
         allctxs = []
+        cnt = 0
         for i, src in enumerate(srcs):
             src.id = i
             rctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
+                rup.rup_id = cnt
                 rctxs.append(self.make_rctx(rup))
+                cnt += 1
             allctxs.extend(self.get_ctxs(rctxs, sitecol, src.id))
         return allctxs
 

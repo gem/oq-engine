@@ -181,8 +181,11 @@ def read_input(hparams, **extra):
             idx += 1
 
     cmaker = {}  # trt => cmaker
+    start = 0
     for trt, rlzs_by_gsim in lt.get_rlzs_by_gsim_trt().items():
         cmaker[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
+        cmaker[trt].start = start
+        start += len(rlzs_by_gsim)
     if rmfname:
         # for instance for 2 TRTs with 5x2 GSIMs and ngmfs=10, then the
         # number of occupation is 100 for each rupture, for a total

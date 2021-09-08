@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel name="Model 1">
+        <sourceGroup name="group 1" tectonicRegion="TRTA" >
+            <simpleFaultSource id="s1" name="First Fault Source">
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -1.0 -1.0 0.0 -1.0 1.0 0.0
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip> 90.0 </dip>
+                    <upperSeismoDepth>0.0</upperSeismoDepth>
+                    <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel> WC1994 </magScaleRel>
+                <ruptAspectRatio> 2.0 </ruptAspectRatio>
+                <incrementalMFD minMag="6.55" binWidth="0.1">                   
+                    <occurRates>0.0023</occurRates>
+                </incrementalMFD>
+                <rake>90.0</rake>
+            </simpleFaultSource>
+        </sourceGroup>
+        <sourceGroup name="group 2" tectonicRegion="TRTB" >
+            <simpleFaultSource id="s2" name="Second Fault Source">
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -2.0 -1.0 0.0 -2.0 1.0 0.0
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip> 45.0 </dip>
+                    <upperSeismoDepth>0.0</upperSeismoDepth>
+                    <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel> WC1994 </magScaleRel>
+                <ruptAspectRatio> 2.0 </ruptAspectRatio>
+                <incrementalMFD minMag="6.25" binWidth="0.1">                   
+                    <occurRates>0.0033</occurRates>
+                </incrementalMFD>
+                <rake>60.0</rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
