@@ -41,6 +41,7 @@ from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
+from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -146,6 +147,16 @@ def use_recarray(gsims):
                for gsim in gsims)
 
 
+def get_afe(probs, poes, investigation_time):
+    """
+    :param probs: an array of probabilities of one or more exceedance
+    :param poes: an array of probabilities of exceedance
+    :param investigation_time: investigation time in years
+    :returns: the annual frequencies of exceedance
+    """
+    return -numpy.log((1. - probs) ** poes) / investigation_time
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -190,6 +201,7 @@ class ContextMaker(object):
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
+        self.correl_model = param.get('correl_model')
         self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
         self.use_recarray = use_recarray(gsims)
@@ -581,6 +593,34 @@ class ContextMaker(object):
                             arr[1 + s, m, start:stop] = stds[s]
                     start = stop
             out.append(arr)
+        return out
+
+    def get_cond_spectra(self, ctxs, imti, iml):
+        """
+        :param ctxs: a list of single-site contexts
+        :returns: an array of shape (G, 2, M)
+        """
+        assert self.tom
+        assert all(len(ctx.sids) == 1 for ctx in ctxs)
+        out = numpy.zeros((len(self.gsims), 2, len(self.imtls)))
+        mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)
+        imt_ref = self.imts[imti]
+        rho = numpy.array([self.correl_model.get_correlation(imt_ref, imt)
+                           for imt in self.imts])
+        ms = range(len(self.imts))
+        probs = self.tom.get_probability_one_or_more_occurrences(
+            numpy.array([ctx.occurrence_rate for ctx in ctxs]))
+        for g, (mu, sig) in enumerate(mean_stds):
+            eps = (iml - mu) / sig  # shape (M, N)
+            poes = _truncnorm_sf(self.trunclevel, eps)
+            prob = 1. - numpy.prod((1. - probs) ** poes)  # composite prob
+            ws = -numpy.log((1. - probs) ** poes) / self.investigation_time / (
+                -numpy.log(1. - prob) / self.investigation_time)
+            for m in ms:
+                cs_mean = ws * (mu[m] + rho[m] * eps[m] * sig[m])
+                out[g, 0, m] = cs_mean.sum()
+                cs_std = ws * (sig[m]**2 * (1. - rho[m]**2))
+                out[g, 1, m] = cs_std.sum()
         return out
 
     def gen_poes(self, ctxs):
