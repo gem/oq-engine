@@ -114,23 +114,22 @@ class CondSpectraTestCase(unittest.TestCase):
 
     def test_6_rlzs(self):
         # test with 2x3 realizations and TRTA, TRTB
+        # rlzs_by_g = 012, 345, 03, 14, 25
         inp = read_input(
             PARAM, source_model_file=os.path.join(CWD, 'data', 'sm02.xml'))
         rlzs = list(inp.gsim_lt)
         imti = 4  # corresponds to SA(0.2)
         iml = np.log(1.001392E-01)
         specs = []
-        num_gsims = []
         for src_group in inp.groups:
             cmaker = inp.cmakerdict[src_group.trt]
-            num_gsims.append(len(cmaker.gsims))
             ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-            specs.append(cmaker.get_cond_spectra(ctxs, imti, iml))
-        ranges = [range(ng) for ng in num_gsims]
-        spectra = []
-        for a, b in itertools.product(*ranges):
-            spectra.append(specs[0][a] + specs[1][b])
-
+            specs.extend(cmaker.get_cond_spectra(ctxs, imti, iml))
+        rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()
+        spectra = np.zeros((len(rlzs), 2, len(cmaker.imts)))
+        for g, rlz_ids in enumerate(rlzs_by_g):
+            for r in rlz_ids:
+                spectra[r] += specs[g]
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra6.csv')
         # spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
