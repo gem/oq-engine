@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import unittest
+import itertools
 import numpy as np
 from numpy.testing import assert_allclose as aac
 import pandas
@@ -73,12 +74,12 @@ def plot(spectrum, imts):
 
 
 # used to create the expected file the first time
-def spectra_to_df(spectra, cmaker):
+def spectra_to_df(spectra, imts, rlzs):
     dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
-    for g, gsim in enumerate(cmaker.gsims):
-        c, s = spectra[g]
-        for m, imt in enumerate(cmaker.imts):
-            dic['rlz_id'].append(g)
+    for rlz in rlzs:
+        c, s = spectra[rlz.ordinal]
+        for m, imt in enumerate(imts):
+            dic['rlz_id'].append(rlz.ordinal)
             dic['period'].append(imt.period)
             dic['cs_exp'].append(np.exp(c[m]))
             dic['cs_std'].append(np.sqrt(s[m]))
@@ -87,10 +88,9 @@ def spectra_to_df(spectra, cmaker):
 
 class CondSpectraTestCase(unittest.TestCase):
 
-    def test_2_rlz(self):
+    def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
         inp = read_input(PARAM)
-        rlzs = list(inp.gsim_lt)
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         ctxs = cmaker.from_srcs(src_group, inp.sitecol)
@@ -100,13 +100,47 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
-        # spectra_to_df(spectra, cmaker).to_csv(
+        # rlzs = list(inp.gsim_lt)
+        # spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
         #     expected, index=False, line_terminator='\r\n')
         df = pandas.read_csv(expected)
         for g, gsim in enumerate(cmaker.gsims):
             dfg = df[df.rlz_id == g]
             aac(dfg.cs_exp, np.exp(spectra[g, 0]))
             aac(dfg.cs_std, np.sqrt(spectra[g, 1]))
+
+        # to plot the spectra uncomment the following line
+        # plot(spectra[0], cmaker.imts)
+
+    def test_6_rlzs(self):
+        # test with 2x3 realizations and TRTA, TRTB
+        inp = read_input(
+            PARAM, source_model_file=os.path.join(CWD, 'data', 'sm02.xml'))
+        rlzs = list(inp.gsim_lt)
+        imti = 4  # corresponds to SA(0.2)
+        iml = np.log(1.001392E-01)
+        specs = []
+        num_gsims = []
+        for src_group in inp.groups:
+            cmaker = inp.cmakerdict[src_group.trt]
+            num_gsims.append(len(cmaker.gsims))
+            ctxs = cmaker.from_srcs(src_group, inp.sitecol)
+            specs.append(cmaker.get_cond_spectra(ctxs, imti, iml))
+        ranges = [range(ng) for ng in num_gsims]
+        spectra = []
+        for a, b in itertools.product(*ranges):
+            spectra.append(specs[0][a] + specs[1][b])
+
+        # check the result
+        expected = os.path.join(CWD, 'expected', 'spectra6.csv')
+        # spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
+        #    expected, index=False, line_terminator='\r\n')
+        df = pandas.read_csv(expected)
+        for rlz in rlzs:
+            r = rlz.ordinal
+            df_rlz = df[df.rlz_id == r]
+            aac(df_rlz.cs_exp, np.exp(spectra[r][0]))
+            aac(df_rlz.cs_std, np.sqrt(spectra[r][1]))
 
         # to plot the spectra uncomment the following line
         # plot(spectra[0], cmaker.imts)

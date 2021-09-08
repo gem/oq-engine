@@ -15,5 +15,21 @@ xmlns="http://openquake.org/xmlns/nrml/0.4">
         </logicTreeBranch>
     </logicTreeBranchSet>
 
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                      applyToTectonicRegionType="TRTB">
+        <logicTreeBranch branchID="b21">
+            <uncertaintyModel>Atkinson2008prime</uncertaintyModel>
+            <uncertaintyWeight>0.2</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="b22">
+            <uncertaintyModel>ToroEtAl2002</uncertaintyModel>
+            <uncertaintyWeight>0.4</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="b23">
+            <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
+            <uncertaintyWeight>0.4</uncertaintyWeight>
+        </logicTreeBranch>
+    </logicTreeBranchSet>
+
 </logicTree>
 </nrml>
