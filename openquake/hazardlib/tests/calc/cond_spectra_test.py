@@ -26,7 +26,7 @@ from openquake.hazardlib.calc.filters import MagDepDistance
 
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')
-GSIM_XML = os.path.join(CWD, 'data', 'lt01.xml')
+GSIM_XML = os.path.join(CWD, 'data', 'lt02.xml')
 
 PARAM = dict(source_model_file=SOURCES_XML,
              gsim_logic_tree_file=GSIM_XML,
@@ -74,12 +74,11 @@ def plot(spectrum, imts):
 
 # used to create the expected file the first time
 def spectra_to_df(spectra, cmaker):
-    dic = dict(gsim=[], period=[], cs_exp=[], cs_std=[])
+    dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
     for g, gsim in enumerate(cmaker.gsims):
-        gs = str(gsim)
         c, s = spectra[g]
         for m, imt in enumerate(cmaker.imts):
-            dic['gsim'].append(gs)
+            dic['rlz_id'].append(g)
             dic['period'].append(imt.period)
             dic['cs_exp'].append(np.exp(c[m]))
             dic['cs_std'].append(np.sqrt(s[m]))
@@ -87,32 +86,11 @@ def spectra_to_df(spectra, cmaker):
 
 
 class CondSpectraTestCase(unittest.TestCase):
-    def test_1(self):
-        # test with a single fault source producing 100 ruptures and a single
-        # GMPE BooreAtkinson2008; there are 11 periods
+
+    def test_2_rlz(self):
+        # test with two GMPEs, 1 TRT
         inp = read_input(PARAM)
-        [cmaker] = inp.cmakerdict.values()
-        [src_group] = inp.groups
-        ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-        imti = 4  # corresponds to SA(0.2)
-        iml = np.log(1.001392E-01)
-        spectra = cmaker.get_cond_spectra(ctxs, imti, iml)
-
-        # check the result
-        expected = os.path.join(CWD, 'expected', 'spectra1.csv')
-        # spectra_to_df(spectra, cmaker).to_csv(
-        #     expected, index=False, line_terminator='\r\n')
-        df = pandas.read_csv(expected)
-        aac(df.cs_exp, np.exp(spectra[0, 0]))
-        aac(df.cs_std, np.sqrt(spectra[0, 1]))
-
-        # to plot the spectra uncomment the following line
-        # plot(spectra[0], cmaker.imts)
-
-    def test_2(self):
-        # test with two GMPEs
-        inp = read_input(
-            PARAM, gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt02.xml'))
+        rlzs = list(inp.gsim_lt)
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         ctxs = cmaker.from_srcs(src_group, inp.sitecol)
@@ -126,7 +104,7 @@ class CondSpectraTestCase(unittest.TestCase):
         #     expected, index=False, line_terminator='\r\n')
         df = pandas.read_csv(expected)
         for g, gsim in enumerate(cmaker.gsims):
-            dfg = df[df.gsim == str(gsim)]
+            dfg = df[df.rlz_id == g]
             aac(dfg.cs_exp, np.exp(spectra[g, 0]))
             aac(dfg.cs_std, np.sqrt(spectra[g, 1]))
 
