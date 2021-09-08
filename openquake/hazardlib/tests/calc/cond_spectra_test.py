@@ -108,3 +108,27 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # to plot the spectra uncomment the following line
         # plot(spectra[0], cmaker.imts)
+
+    def test_2(self):
+        # test with two GMPEs
+        inp = read_input(
+            PARAM, gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt02.xml'))
+        [cmaker] = inp.cmakerdict.values()
+        [src_group] = inp.groups
+        ctxs = cmaker.from_srcs(src_group, inp.sitecol)
+        imti = 4  # corresponds to SA(0.2)
+        iml = np.log(1.001392E-01)
+        spectra = cmaker.get_cond_spectra(ctxs, imti, iml)
+
+        # check the result
+        expected = os.path.join(CWD, 'expected', 'spectra2.csv')
+        # spectra_to_df(spectra, cmaker).to_csv(
+        #     expected, index=False, line_terminator='\r\n')
+        df = pandas.read_csv(expected)
+        for g, gsim in enumerate(cmaker.gsims):
+            dfg = df[df.gsim == str(gsim)]
+            aac(dfg.cs_exp, np.exp(spectra[g, 0]))
+            aac(dfg.cs_std, np.sqrt(spectra[g, 1]))
+
+        # to plot the spectra uncomment the following line
+        # plot(spectra[0], cmaker.imts)
