@@ -41,6 +41,7 @@ from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
+from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -190,6 +191,7 @@ class ContextMaker(object):
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
+        self.correl_model = param.get('correl_model')
         self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
         self.use_recarray = use_recarray(gsims)
@@ -581,6 +583,39 @@ class ContextMaker(object):
                             arr[1 + s, m, start:stop] = stds[s]
                     start = stop
             out.append(arr)
+        return out
+
+    # see http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
+    def get_cond_spectra(self, ctxs, imti, iml):
+        """
+        :param ctxs: list of single-site contexts
+        :param imti: IMT index in the range 0..M-1
+        :param iml: intensity measure level for the IMT specified by the index
+        :returns: array of shape (G, 2, M)
+
+        For each gsim the conditional spectrum is a pair (mean, variance)
+        of vectors with M components, being M the number of IMTs
+        """
+        assert self.tom
+        assert all(len(ctx.sids) == 1 for ctx in ctxs)
+        out = numpy.zeros((len(self.gsims), 2, len(self.imtls)))
+        mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)
+        imt_ref = self.imts[imti]
+        rho = numpy.array([self.correl_model.get_correlation(imt_ref, imt)
+                           for imt in self.imts])
+        ms = range(len(self.imts))
+        probs = self.tom.get_probability_one_or_more_occurrences(
+            numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape N
+        for g, (mu, sig) in enumerate(mean_stds):
+            eps = (iml - mu[imti]) / sig[imti]  # shape N
+            poes = _truncnorm_sf(self.trunclevel, eps)  # shape N
+            prob = 1. - numpy.prod((1. - probs) ** poes)  # composite prob
+            ws = numpy.log((1. - probs) ** poes) / self.investigation_time / (
+                numpy.log(1. - prob) / self.investigation_time)  # rup weights
+            for m in ms:
+                # for each IMT average over the ruptures
+                out[g, 0, m] = ws @ (mu[m] + rho[m] * eps * sig[m])
+                out[g, 1, m] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
 
     def gen_poes(self, ctxs):
