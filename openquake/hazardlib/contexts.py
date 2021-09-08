@@ -587,8 +587,13 @@ class ContextMaker(object):
 
     def get_cond_spectra(self, ctxs, imti, iml):
         """
-        :param ctxs: a list of single-site contexts
-        :returns: an array of shape (G, 2, M)
+        :param ctxs: list of single-site contexts
+        :param imti: IMT index in the range 0..M-1
+        :param iml: intensity measure level for the IMT specified by the index
+        :returns: array of shape (G, 2, M)
+
+        For each gsim the conditional spectrum is a pair (mean, variance)
+        of vectors with M components, being M the number of IMTs
         """
         assert self.tom
         assert all(len(ctx.sids) == 1 for ctx in ctxs)
