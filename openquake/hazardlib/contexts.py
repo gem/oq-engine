@@ -147,16 +147,6 @@ def use_recarray(gsims):
                for gsim in gsims)
 
 
-def get_afe(probs, poes, investigation_time):
-    """
-    :param probs: an array of probabilities of one or more exceedance
-    :param poes: an array of probabilities of exceedance
-    :param investigation_time: investigation time in years
-    :returns: the annual frequencies of exceedance
-    """
-    return -numpy.log((1. - probs) ** poes) / investigation_time
-
-
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -614,13 +604,13 @@ class ContextMaker(object):
             eps = (iml - mu) / sig  # shape (M, N)
             poes = _truncnorm_sf(self.trunclevel, eps)
             prob = 1. - numpy.prod((1. - probs) ** poes)  # composite prob
-            ws = -numpy.log((1. - probs) ** poes) / self.investigation_time / (
-                -numpy.log(1. - prob) / self.investigation_time)
+            ws = numpy.log((1. - probs) ** poes) / self.investigation_time / (
+                numpy.log(1. - prob) / self.investigation_time)  # rup weights
             for m in ms:
                 cs_mean = ws * (mu[m] + rho[m] * eps[m] * sig[m])
                 out[g, 0, m] = cs_mean.sum()
-                cs_std = ws * (sig[m]**2 * (1. - rho[m]**2))
-                out[g, 1, m] = cs_std.sum()
+                cs_std2 = ws * (sig[m]**2 * (1. - rho[m]**2))
+                out[g, 1, m] = cs_std2.sum()
         return out
 
     def gen_poes(self, ctxs):

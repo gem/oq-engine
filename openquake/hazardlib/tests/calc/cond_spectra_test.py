@@ -70,6 +70,7 @@ def plot(spectrum, imts):
     plt.show()
 
 
+# used to create the expected file the first time
 def spectra_to_df(spectra, cmaker):
     dic = dict(gsim=[], period=[], cs_mean=[], cs_std=[])
     for g, gsim in enumerate(cmaker.gsims):
