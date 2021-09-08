@@ -120,17 +120,22 @@ class CondSpectraTestCase(unittest.TestCase):
         rlzs = list(inp.gsim_lt)
         imti = 4  # corresponds to SA(0.2)
         iml = np.log(1.001392E-01)
+
+        # compute the spectra by trt
         specs = []
         for src_group in inp.groups:
             cmaker = inp.cmakerdict[src_group.trt]
             ctxs = cmaker.from_srcs(src_group, inp.sitecol)
             specs.extend(cmaker.get_cond_spectra(ctxs, imti, iml))
+
+        # compose the spectra by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
         rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()
         spectra = np.zeros((len(rlzs), 2, len(cmaker.imts)))
         for g, rlz_ids in enumerate(rlzs_by_g):
             for r in rlz_ids:
                 spectra[r] += specs[g]
-        # check the result
+
+        # check the results
         expected = os.path.join(CWD, 'expected', 'spectra6.csv')
         # spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
         #    expected, index=False, line_terminator='\r\n')
