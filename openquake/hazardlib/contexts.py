@@ -607,9 +607,9 @@ class ContextMaker(object):
             ws = numpy.log((1. - probs) ** poes) / self.investigation_time / (
                 numpy.log(1. - prob) / self.investigation_time)  # rup weights
             for m in ms:
-                cs_mean = ws * (mu[imti] + rho[m] * eps * sig[imti])
+                cs_mean = ws * (mu[m] + rho[m] * eps * sig[m])
                 out[g, 0, m] = cs_mean.sum()
-                cs_std2 = ws * (sig[imti]**2 * (1. - rho[m]**2))
+                cs_std2 = ws * (sig[m]**2 * (1. - rho[m]**2))
                 out[g, 1, m] = cs_std2.sum()
         return out
 
