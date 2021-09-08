@@ -74,14 +74,14 @@ def plot(spectrum, imts):
 
 # used to create the expected file the first time
 def spectra_to_df(spectra, cmaker):
-    dic = dict(gsim=[], period=[], cs_mean=[], cs_std=[])
+    dic = dict(gsim=[], period=[], cs_exp=[], cs_std=[])
     for g, gsim in enumerate(cmaker.gsims):
         gs = str(gsim)
         c, s = spectra[g]
         for m, imt in enumerate(cmaker.imts):
             dic['gsim'].append(gs)
             dic['period'].append(imt.period)
-            dic['cs_mean'].append(np.exp(c[m]))
+            dic['cs_exp'].append(np.exp(c[m]))
             dic['cs_std'].append(np.sqrt(s[m]))
     return pandas.DataFrame(dic)
 
@@ -97,13 +97,13 @@ class CondSpectraTestCase(unittest.TestCase):
         imti = 4  # corresponds to SA(0.2)
         iml = np.log(1.001392E-01)
         spectra = cmaker.get_cond_spectra(ctxs, imti, iml)
-        # spectra_to_df(spectra, cmaker).to_csv(
-        #    'expected/spectra1.csv', index=False, line_terminator='\r\n')
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra1.csv')
+        # spectra_to_df(spectra, cmaker).to_csv(
+        #     expected, index=False, line_terminator='\r\n')
         df = pandas.read_csv(expected)
-        aac(df.cs_mean, np.exp(spectra[0, 0]))
+        aac(df.cs_exp, np.exp(spectra[0, 0]))
         aac(df.cs_std, np.sqrt(spectra[0, 1]))
 
         # to plot the spectra uncomment the following line
