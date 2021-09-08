@@ -585,6 +585,7 @@ class ContextMaker(object):
             out.append(arr)
         return out
 
+    # see http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
     def get_cond_spectra(self, ctxs, imti, iml):
         """
         :param ctxs: list of single-site contexts
@@ -612,6 +613,7 @@ class ContextMaker(object):
             ws = numpy.log((1. - probs) ** poes) / self.investigation_time / (
                 numpy.log(1. - prob) / self.investigation_time)  # rup weights
             for m in ms:
+                # for each IMT average over the ruptures
                 out[g, 0, m] = ws @ (mu[m] + rho[m] * eps * sig[m])
                 out[g, 1, m] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
