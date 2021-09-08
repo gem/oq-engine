@@ -599,17 +599,17 @@ class ContextMaker(object):
                            for imt in self.imts])
         ms = range(len(self.imts))
         probs = self.tom.get_probability_one_or_more_occurrences(
-            numpy.array([ctx.occurrence_rate for ctx in ctxs]))
+            numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape N
         for g, (mu, sig) in enumerate(mean_stds):
-            eps = (iml - mu) / sig  # shape (M, N)
-            poes = _truncnorm_sf(self.trunclevel, eps)
+            eps = (iml - mu[imti]) / sig[imti]  # shape N
+            poes = _truncnorm_sf(self.trunclevel, eps)  # shape N
             prob = 1. - numpy.prod((1. - probs) ** poes)  # composite prob
             ws = numpy.log((1. - probs) ** poes) / self.investigation_time / (
                 numpy.log(1. - prob) / self.investigation_time)  # rup weights
             for m in ms:
-                cs_mean = ws * (mu[m] + rho[m] * eps[m] * sig[m])
+                cs_mean = ws * (mu[imti] + rho[m] * eps * sig[imti])
                 out[g, 0, m] = cs_mean.sum()
-                cs_std2 = ws * (sig[m]**2 * (1. - rho[m]**2))
+                cs_std2 = ws * (sig[imti]**2 * (1. - rho[m]**2))
                 out[g, 1, m] = cs_std2.sum()
         return out
 

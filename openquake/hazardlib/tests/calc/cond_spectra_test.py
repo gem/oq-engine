@@ -35,6 +35,8 @@ PARAM = dict(source_model_file=SOURCES_XML,
              reference_depth_to_2pt5km_per_sec=5,
              reference_depth_to_1pt0km_per_sec=100,
              maximum_distance=MagDepDistance.new('200'),
+             rupture_mesh_spacing=5.,
+             width_of_mfd_bin=1.,
              investigation_time=1,
              truncation_level=3,
              correl_model=BakerJayaram2008(),
@@ -86,7 +88,7 @@ def spectra_to_df(spectra, cmaker):
 
 class CondSpectraTestCase(unittest.TestCase):
     def test_1(self):
-        # test with a single source producing 100 ruptures and a single
+        # test with a single fault source producing 100 ruptures and a single
         # GMPE BooreAtkinson2008; there are 11 periods
         inp = read_input(PARAM)
         [cmaker] = inp.cmakerdict.values()
