@@ -607,10 +607,8 @@ class ContextMaker(object):
             ws = numpy.log((1. - probs) ** poes) / self.investigation_time / (
                 numpy.log(1. - prob) / self.investigation_time)  # rup weights
             for m in ms:
-                cs_mean = ws * (mu[m] + rho[m] * eps * sig[m])
-                out[g, 0, m] = cs_mean.sum()
-                cs_std2 = ws * (sig[m]**2 * (1. - rho[m]**2))
-                out[g, 1, m] = cs_std2.sum()
+                out[g, 0, m] = ws @ (mu[m] + rho[m] * eps * sig[m])
+                out[g, 1, m] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
 
     def gen_poes(self, ctxs):
