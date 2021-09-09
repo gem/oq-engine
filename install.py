@@ -416,11 +416,12 @@ def remove(inst):
     if inst is server or inst is devel_server:
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
-            service_path = '/usr/lib/systemd/system/' + service_name
+            service_path = '/etc/systemd/system/' + service_name
             if os.path.exists(service_path):
                 subprocess.check_call(['systemctl', 'stop', service_name])
                 print('stopped ' + service_name)
                 os.remove(service_path)
+                print('removed ' + service_name)
         subprocess.check_call(['systemctl', 'daemon-reload'])
     shutil.rmtree(inst.VENV)
     print('%s has been removed' % inst.VENV)
