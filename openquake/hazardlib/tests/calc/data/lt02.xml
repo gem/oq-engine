@@ -10,7 +10,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4">
             <uncertaintyWeight>0.4</uncertaintyWeight>
         </logicTreeBranch>
         <logicTreeBranch branchID="b12">
-            <uncertaintyModel>BooreAtkinson2011</uncertaintyModel>
+            <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
             <uncertaintyWeight>0.6</uncertaintyWeight>
         </logicTreeBranch>
     </logicTreeBranchSet>

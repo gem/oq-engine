@@ -514,7 +514,7 @@ class GsimLogicTree(object):
 
     def get_rlzs_by_g(self):
         """
-        :returns: an array of lists
+        :returns: an array of lists of g-indices
         """
         lst = []
         for rlzs_by_gsim in self.get_rlzs_by_gsim_trt().values():

@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import unittest
-import itertools
 import numpy as np
 from numpy.testing import assert_allclose as aac
 import pandas
@@ -25,10 +24,11 @@ from openquake.hazardlib import read_input, valid
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import MagDepDistance
 
+OVERWRITE_EXPECTED = False
+
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')
 GSIM_XML = os.path.join(CWD, 'data', 'lt02.xml')
-
 PARAM = dict(source_model_file=SOURCES_XML,
              gsim_logic_tree_file=GSIM_XML,
              sites=[(0, -0.8)],
@@ -52,24 +52,26 @@ PARAM = dict(source_model_file=SOURCES_XML,
                     "SA(0.75)": valid.logscale(0.005, 2.13, 45),
                     "SA(1.0)": valid.logscale(0.005, 2.13, 45),
                     "SA(2.0)": valid.logscale(0.005, 2.13, 45)})
+imti = 4  # corresponds to SA(0.2)
+iml = np.log(1.001392E-01)
 
 
 # useful while debugging
-def plot(spectrum, imts):
+def plot(spectra, imts):
     import matplotlib.pyplot as plt
     periods = [im.period for im in imts]
     fig, axs = plt.subplots(1, 2)
-    print(np.exp(spectrum[0]))
-    axs[0].plot(periods, np.exp(spectrum[0]), 'x-')
-    axs[1].plot(periods, np.sqrt(spectrum[1]), 'x-')
+    for spectrum in spectra:
+        axs[0].plot(periods, np.exp(spectrum[0]), 'x-')
+        axs[1].plot(periods, np.sqrt(spectrum[1]), 'x-')
     axs[0].grid(which='both')
     axs[1].grid(which='both')
     axs[0].set_xscale('log')
     axs[1].set_xscale('log')
     axs[0].set_yscale('log')
     axs[0].set_ylim([1e-3, 10])
-    axs[0].set_xlabel('Mean spectrum, Period[s]')
-    axs[1].set_xlabel('Std spectrum, Period[s]')
+    axs[0].set_xlabel('Mean spectra, Period[s]')
+    axs[1].set_xlabel('Std spectra, Period[s]')
     plt.show()
 
 
@@ -77,16 +79,52 @@ def plot(spectrum, imts):
 def spectra_to_df(spectra, imts, rlzs):
     dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
     for rlz in rlzs:
-        c, s = spectra[rlz.ordinal]
+        mea, var = spectra[rlz.ordinal]
         for m, imt in enumerate(imts):
             dic['rlz_id'].append(rlz.ordinal)
             dic['period'].append(imt.period)
-            dic['cs_exp'].append(np.exp(c[m]))
-            dic['cs_std'].append(np.sqrt(s[m]))
+            dic['cs_exp'].append(np.exp(mea[m]))
+            dic['cs_std'].append(np.sqrt(var[m]))
     return pandas.DataFrame(dic)
 
 
 class CondSpectraTestCase(unittest.TestCase):
+
+    def test_point(self):
+        # point source with 3 ruptures, checking additivity
+        inp = read_input(
+            PARAM, source_model_file=os.path.join(CWD, 'data', 'point.xml'),
+            gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'))
+        [cmaker] = inp.cmakerdict.values()
+        [src_group] = inp.groups
+        ctxs = cmaker.from_srcs(src_group, inp.sitecol)
+        aac([ctx.occurrence_rate for ctx in ctxs], [0.00018, 0.00018, 0.00054])
+        ctxs1 = ctxs[:2]
+        ctxs2 = ctxs[2:]
+
+        # check that the total spectra is a weighted mean of the two
+        # rupture spectra; the weight is the same for all IMTs
+        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, iml)
+        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, iml)
+        comp_spectra = (c1 + c2) / (s1 + s2)
+        c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+        aac(comp_spectra, c / s)
+
+    def test_1_rlz(self):
+        # test with one GMPE, 1 TRT, checking additivity
+        inp = read_input(
+            PARAM, gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'))
+        [cmaker] = inp.cmakerdict.values()
+        [src_group] = inp.groups
+        ctxs = cmaker.from_srcs(src_group, inp.sitecol)
+        assert len(ctxs) == 100
+        ctxs1 = ctxs[:50]
+        ctxs2 = ctxs[50:]
+
+        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, iml)
+        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, iml)
+        c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+        aac((c1 + c2) / (s1 + s2), c / s)
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
@@ -94,23 +132,24 @@ class CondSpectraTestCase(unittest.TestCase):
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-        imti = 4  # corresponds to SA(0.2)
-        iml = np.log(1.001392E-01)
-        spectra = cmaker.get_cond_spectra(ctxs, imti, iml)
+        c_, s_ = cmaker.get_cs_contrib(ctxs, imti, iml)
+        spectra = [c / g for c, g in zip(c_, s_)]
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
-        # rlzs = list(inp.gsim_lt)
-        # spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
-        #     expected, index=False, line_terminator='\r\n')
+        if OVERWRITE_EXPECTED:
+            rlzs = list(inp.gsim_lt)
+            spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
+                expected, index=False, line_terminator='\r\n',
+                float_format='%.6f')
         df = pandas.read_csv(expected)
         for g, gsim in enumerate(cmaker.gsims):
             dfg = df[df.rlz_id == g]
-            aac(dfg.cs_exp, np.exp(spectra[g, 0]))
-            aac(dfg.cs_std, np.sqrt(spectra[g, 1]))
+            aac(dfg.cs_exp, np.exp(spectra[g][0]), atol=1e-6)
+            aac(dfg.cs_std, np.sqrt(spectra[g][1]), atol=1e-6)
 
         # to plot the spectra uncomment the following line
-        # plot(spectra[0], cmaker.imts)
+        # plot(spectra, cmaker.imts)
 
     def test_6_rlzs(self):
         # test with 2x3 realizations and TRTA, TRTB
@@ -118,33 +157,40 @@ class CondSpectraTestCase(unittest.TestCase):
         inp = read_input(
             PARAM, source_model_file=os.path.join(CWD, 'data', 'sm02.xml'))
         rlzs = list(inp.gsim_lt)
-        imti = 4  # corresponds to SA(0.2)
-        iml = np.log(1.001392E-01)
+        R = len(rlzs)
 
-        # compute the spectra by trt
-        specs = []
+        # compute the contributions by trt
+        all_cs = []
         for src_group in inp.groups:
             cmaker = inp.cmakerdict[src_group.trt]
             ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-            specs.extend(cmaker.get_cond_spectra(ctxs, imti, iml))
+            c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+            for cs in zip(c, s):
+                all_cs.append(cs)
 
-        # compose the spectra by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
+        # compose the contributions by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
         rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()
-        spectra = np.zeros((len(rlzs), 2, len(cmaker.imts)))
+        nums = np.zeros((R, 2, len(cmaker.imts)))
+        denums = np.zeros(R)
         for g, rlz_ids in enumerate(rlzs_by_g):
+            c, s = all_cs[g]
             for r in rlz_ids:
-                spectra[r] += specs[g]
+                nums[r] += c
+                denums[r] += s
+        spectra = [nums[r] / denums[r] for r in range(R)]
 
         # check the results
         expected = os.path.join(CWD, 'expected', 'spectra6.csv')
-        # spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
-        #    expected, index=False, line_terminator='\r\n')
+        if OVERWRITE_EXPECTED:
+            spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
+                expected, index=False, line_terminator='\r\n',
+                float_format='%.6f')
         df = pandas.read_csv(expected)
         for rlz in rlzs:
             r = rlz.ordinal
             df_rlz = df[df.rlz_id == r]
-            aac(df_rlz.cs_exp, np.exp(spectra[r][0]))
-            aac(df_rlz.cs_std, np.sqrt(spectra[r][1]))
+            aac(df_rlz.cs_exp, np.exp(spectra[r][0]), atol=1e-6)
+            aac(df_rlz.cs_std, np.sqrt(spectra[r][1]), atol=1e-6)
 
         # to plot the spectra uncomment the following line
-        # plot(spectra[0], cmaker.imts)
+        # plot(spectra, cmaker.imts)

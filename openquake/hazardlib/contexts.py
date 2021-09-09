@@ -589,37 +589,39 @@ class ContextMaker(object):
         return out
 
     # see http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cond_spectra(self, ctxs, imti, iml):
+    def get_cs_contrib(self, ctxs, imti, iml):
         """
         :param ctxs: list of single-site contexts
         :param imti: IMT index in the range 0..M-1
         :param iml: intensity measure level for the IMT specified by the index
-        :returns: array of shape (G, 2, M)
+        :returns: two arrays num, denum of shape (G, 2, M) an (G,) respectively
 
-        For each gsim the conditional spectrum is a pair (mean, variance)
-        of vectors with M components, being M the number of IMTs
+        Compute the contributions to the conditional spectra, in a form
+        suitable for later composition. The spectra themselves are
+        computable as <sum nums>/<sum denums> for each GSIM index.
         """
         assert self.tom
         assert all(len(ctx.sids) == 1 for ctx in ctxs)
-        out = numpy.zeros((len(self.gsims), 2, len(self.imtls)))
+        G = len(self.gsims)
+        num = numpy.zeros((G, 2, len(self.imtls)))
         mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)
         imt_ref = self.imts[imti]
         rho = numpy.array([self.correl_model.get_correlation(imt_ref, imt)
                            for imt in self.imts])
         ms = range(len(self.imts))
+        # probs = 1 - exp(-occurrence_rates*time_span)
         probs = self.tom.get_probability_one_or_more_occurrences(
             numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape N
+        denum = numpy.zeros(G)
         for g, (mu, sig) in enumerate(mean_stds):
             eps = (iml - mu[imti]) / sig[imti]  # shape N
             poes = _truncnorm_sf(self.trunclevel, eps)  # shape N
-            prob = 1. - numpy.prod((1. - probs) ** poes)  # composite prob
-            ws = numpy.log((1. - probs) ** poes) / self.investigation_time / (
-                numpy.log(1. - prob) / self.investigation_time)  # rup weights
+            ws = -numpy.log((1. - probs) ** poes) / self.investigation_time
+            denum[g] = ws.sum()  # weights not summing up to 1
             for m in ms:
-                # for each IMT average over the ruptures
-                out[g, 0, m] = ws @ (mu[m] + rho[m] * eps * sig[m])
-                out[g, 1, m] = ws @ (sig[m]**2 * (1. - rho[m]**2))
-        return out
+                num[g, 0, m] = ws @ (mu[m] + rho[m] * eps * sig[m])
+                num[g, 1, m] = ws @ (sig[m]**2 * (1. - rho[m]**2))
+        return num, denum
 
     def gen_poes(self, ctxs):
         """

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+  <sourceModel name="Point Source with two ruptures">
+    <sourceGroup name="group 1" tectonicRegion="TRTA">
+      <pointSource id="point" name="Point Source">
+        <pointGeometry>
+          <gml:Point><gml:pos>0 -0.4</gml:pos></gml:Point>
+          <upperSeismoDepth>0</upperSeismoDepth>
+          <lowerSeismoDepth>10</lowerSeismoDepth>
+        </pointGeometry>
+        <magScaleRel>WC1994</magScaleRel>
+        <ruptAspectRatio>1.5</ruptAspectRatio>
+        <truncGutenbergRichterMFD aValue="3" bValue="1" maxMag="7" minMag="6"/>
+        <nodalPlaneDist>
+          <nodalPlane dip="30" probability="1" rake="0" strike="45"/>
+        </nodalPlaneDist>
+        <hypoDepthDist>
+          <hypoDepth depth="6" probability=".2"/>
+          <hypoDepth depth="4" probability=".2"/>
+          <hypoDepth depth="2" probability=".6"/>
+        </hypoDepthDist>
+      </pointSource>
+    </sourceGroup>
+  </sourceModel>
+</nrml>
