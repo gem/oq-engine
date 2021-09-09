@@ -324,9 +324,9 @@ def install(inst, version):
     elif version is None:  # install the stable version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine'])
-    elif '.' in version:  # install an official version
-        subprocess.check_call([pycmd, '-m', 'pip', 'install',
-                               '--upgrade', 'openquake.engine==' + version])
+    #elif '.' in version:  # install an official version
+    #    subprocess.check_call([pycmd, '-m', 'pip', 'install',
+    #                           '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)
         print('Installing commit', commit)
