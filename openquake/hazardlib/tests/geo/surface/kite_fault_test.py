@@ -224,7 +224,6 @@ class KinkedKiteSurfaceTestCase(unittest.TestCase):
                Point(0.23, 0.28, 15.0)]
         self.profiles1.append(Line(tmp))
 
-
     def test_build_kinked_mesh_01(self):
         # Trivial case - Fault dipping at about 45 degrees
 
