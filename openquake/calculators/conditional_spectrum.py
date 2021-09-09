@@ -31,6 +31,17 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 
 
+def to_spectra(nums, denums):
+    """
+    Creating R conditional spectra starting from R+R components
+    """
+    out = []
+    for num, denum in zip(nums, denums):
+        mea, var = num / denum
+        out.append((numpy.exp(mea), numpy.sqrt(var)))
+    return numpy.array(out)  # shape R, 2, M
+
+
 def conditional_spectrum(dstore, slc, cmaker, imti, iml, monitor):
     """
     :param dstore:
@@ -106,6 +117,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         G = sum(len(rbg) for rbg in rlzs_by_gsim)
         self.datastore.create_dset('cs-rlzs', float, (self.R, 2, self.M))
+        self.datastore.create_dset('cs-stats', float, (1, 2, self.M))
         self.datastore.create_dset('_c', float, (G, 2, self.M))
         self.datastore.create_dset('_s', float, (G,))
         G = max(len(rbg) for rbg in rlzs_by_gsim)
@@ -147,7 +159,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             for r in rlzs:
                 nums[r] += c
                 denums[r] += s
-        for r in range(self.R):
-            mea, var = nums[r] / denums[r]
-            spe, std = numpy.exp(mea), numpy.sqrt(var)
-            self.datastore['cs-rlzs'][r] = numpy.array([spe, std])
+        self.datastore['cs-rlzs'] = to_spectra(nums, denums)
+
+        # build mean spectrum
+        weights = self.datastore['weights'][:]
+        num = numpy.average(nums, weights=weights, axis=0)
+        denum = numpy.average(denums, weights=weights)
+        self.datastore['cs-stats'] = to_spectra([num], [denum])
