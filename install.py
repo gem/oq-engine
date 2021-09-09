@@ -137,7 +137,7 @@ SERVICE = '''\
 [Unit]
 Description=The OpenQuake Engine {service}
 Documentation=https://github.com/gem/oq-engine/
-After=network.target
+After= {afterservice}
 
 [Service]
 User=openquake
@@ -377,6 +377,9 @@ def install(inst, version):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/' + service_name
+            afterservice = 'network.target'
+            if 'webui' in service:
+                afterservice = 'network.target dbserver.service'
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
