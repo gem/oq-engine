@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import unittest
-import itertools
 import numpy as np
 from numpy.testing import assert_allclose as aac
 import pandas
@@ -52,6 +51,8 @@ PARAM = dict(source_model_file=SOURCES_XML,
                     "SA(0.75)": valid.logscale(0.005, 2.13, 45),
                     "SA(1.0)": valid.logscale(0.005, 2.13, 45),
                     "SA(2.0)": valid.logscale(0.005, 2.13, 45)})
+imti = 4  # corresponds to SA(0.2)
+iml = np.log(1.001392E-01)
 
 
 # useful while debugging
@@ -88,15 +89,50 @@ def spectra_to_df(spectra, imts, rlzs):
 
 class CondSpectraTestCase(unittest.TestCase):
 
+    def test_point(self):
+        # point source with 3 ruptures, checking additivity
+        inp = read_input(
+            PARAM, source_model_file=os.path.join(CWD, 'data', 'point.xml'),
+            gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'))
+        [cmaker] = inp.cmakerdict.values()
+        [src_group] = inp.groups
+        ctxs = cmaker.from_srcs(src_group, inp.sitecol)
+        aac([ctx.occurrence_rate for ctx in ctxs], [0.00018, 0.00018, 0.00054])
+        ctxs1 = ctxs[:2]
+        ctxs2 = ctxs[2:]
+
+        # check that the total spectra is a weighted mean of the two
+        # rupture spectra; the weight is the same for all IMTs
+        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, iml)
+        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, iml)
+        comp_spectra = (c1 + c2) / (s1 + s2)
+        c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+        aac(comp_spectra, c / s)
+
+    def test_1_rlz(self):
+        # test with one GMPE, 1 TRT, checking additivity
+        inp = read_input(
+            PARAM, gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'))
+        [cmaker] = inp.cmakerdict.values()
+        [src_group] = inp.groups
+        ctxs = cmaker.from_srcs(src_group, inp.sitecol)
+        assert len(ctxs) == 100
+        ctxs1 = ctxs[:50]
+        ctxs2 = ctxs[50:]
+
+        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, iml)
+        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, iml)
+        c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+        aac((c1 + c2) / (s1 + s2), c / s)
+
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
         inp = read_input(PARAM)
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-        imti = 4  # corresponds to SA(0.2)
-        iml = np.log(1.001392E-01)
-        spectra = cmaker.get_cond_spectra(ctxs, imti, iml)
+        c_, s_ = cmaker.get_cs_contrib(ctxs, imti, iml)
+        spectra = [c / g for c, g in zip(c_, s_)]
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
@@ -106,8 +142,8 @@ class CondSpectraTestCase(unittest.TestCase):
         df = pandas.read_csv(expected)
         for g, gsim in enumerate(cmaker.gsims):
             dfg = df[df.rlz_id == g]
-            aac(dfg.cs_exp, np.exp(spectra[g, 0]))
-            aac(dfg.cs_std, np.sqrt(spectra[g, 1]))
+            aac(dfg.cs_exp, np.exp(spectra[g][0]))
+            aac(dfg.cs_std, np.sqrt(spectra[g][1]))
 
         # to plot the spectra uncomment the following line
         # plot(spectra[0], cmaker.imts)
@@ -118,15 +154,15 @@ class CondSpectraTestCase(unittest.TestCase):
         inp = read_input(
             PARAM, source_model_file=os.path.join(CWD, 'data', 'sm02.xml'))
         rlzs = list(inp.gsim_lt)
-        imti = 4  # corresponds to SA(0.2)
-        iml = np.log(1.001392E-01)
 
         # compute the spectra by trt
         specs = []
         for src_group in inp.groups:
             cmaker = inp.cmakerdict[src_group.trt]
             ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-            specs.extend(cmaker.get_cond_spectra(ctxs, imti, iml))
+            c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+            for cg, sg in zip(c, s):
+                specs.append(cg / sg)
 
         # compose the spectra by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
         rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()
