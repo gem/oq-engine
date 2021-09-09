@@ -191,7 +191,7 @@ class ContextMaker(object):
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
-        self.correl_model = param.get('correl_model')
+        self.cross_correl = param.get('cross_correl')
         self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
         self.use_recarray = use_recarray(gsims)
@@ -606,7 +606,7 @@ class ContextMaker(object):
         num = numpy.zeros((G, 2, len(self.imtls)))
         mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)
         imt_ref = self.imts[imti]
-        rho = numpy.array([self.correl_model.get_correlation(imt_ref, imt)
+        rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
         ms = range(len(self.imts))
         # probs = 1 - exp(-occurrence_rates*time_span)
@@ -1296,6 +1296,7 @@ def read_cmakers(dstore, full_lt=None):
              'imtls': oq.imtls,
              'reqv': oq.get_reqv(),
              'shift_hypo': oq.shift_hypo,
+             'cross_correl': oq.cross_correl,
              'af': af,
              'grp_id': grp_id})
         cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
