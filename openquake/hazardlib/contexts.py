@@ -598,7 +598,7 @@ class ContextMaker(object):
 
         Compute the contributions to the conditional spectra, in a form
         suitable for later composition. The spectra themselves are
-        computable as num[g] / denum[g] for each GSIM index g.
+        computable as <sum nums>/<sum denums> for each GSIM index.
         """
         assert self.tom
         assert all(len(ctx.sids) == 1 for ctx in ctxs)

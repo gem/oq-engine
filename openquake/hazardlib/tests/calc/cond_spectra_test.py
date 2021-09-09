@@ -78,12 +78,12 @@ def plot(spectrum, imts):
 def spectra_to_df(spectra, imts, rlzs):
     dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
     for rlz in rlzs:
-        c, s = spectra[rlz.ordinal]
+        mea, var = spectra[rlz.ordinal]
         for m, imt in enumerate(imts):
             dic['rlz_id'].append(rlz.ordinal)
             dic['period'].append(imt.period)
-            dic['cs_exp'].append(np.exp(c[m]))
-            dic['cs_std'].append(np.sqrt(s[m]))
+            dic['cs_exp'].append(np.exp(mea[m]))
+            dic['cs_std'].append(np.sqrt(var[m]))
     return pandas.DataFrame(dic)
 
 
@@ -154,22 +154,27 @@ class CondSpectraTestCase(unittest.TestCase):
         inp = read_input(
             PARAM, source_model_file=os.path.join(CWD, 'data', 'sm02.xml'))
         rlzs = list(inp.gsim_lt)
+        R = len(rlzs)
 
-        # compute the spectra by trt
-        specs = []
+        # compute the contributions by trt
+        all_cs = []
         for src_group in inp.groups:
             cmaker = inp.cmakerdict[src_group.trt]
             ctxs = cmaker.from_srcs(src_group, inp.sitecol)
             c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
-            for cg, sg in zip(c, s):
-                specs.append(cg / sg)
+            for cs in zip(c, s):
+                all_cs.append(cs)
 
-        # compose the spectra by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
+        # compose the contributions by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
         rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()
-        spectra = np.zeros((len(rlzs), 2, len(cmaker.imts)))
+        nums = np.zeros((R, 2, len(cmaker.imts)))
+        denums = np.zeros(R)
         for g, rlz_ids in enumerate(rlzs_by_g):
+            c, s = all_cs[g]
             for r in rlz_ids:
-                spectra[r] += specs[g]
+                nums[r] += c
+                denums[r] += s
+        spectra = [nums[r] / denums[r] for r in range(R)]
 
         # check the results
         expected = os.path.join(CWD, 'expected', 'spectra6.csv')
