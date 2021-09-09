@@ -226,7 +226,7 @@ def before_checks(inst, remove, usage):
                      (inst.DBPORT, cmd, inst.DBPORT))
 
     # check if there is an installation from packages
-    if ((inst is server and os.path.exists('/etc/openquake/openquake.cfg'))
+    if (inst is server and os.path.exists('/etc/openquake/openquake.cfg')
         or (inst is devel_server and
             os.path.exists('/etc/openquake/openquake.cfg'))):
         sys.exit(PACKAGES)
