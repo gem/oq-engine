@@ -382,7 +382,8 @@ def install(inst, version):
                 afterservice = 'network.target dbserver.service'
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
-                    srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
+                    srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
+                            afterservice=afterservice)
                     f.write(srv)
             subprocess.check_call(
                 ['systemctl', 'enable', '--now', service_name])
