@@ -32,7 +32,7 @@ from openquake.baselib import __version__, hdf5, python3compat
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
-from openquake.hazardlib import correlation, stats, calc
+from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree
@@ -169,7 +169,9 @@ coordinate_bin_width:
   Default: no default
 
 cross_correlation:
-  Used in ShakeMap calculations. Valid choices are "yes", "no" "full",
+  When used in Conditional Spectrum calculation is the name of a cross
+  correlation class (i.e. "BakerJayaram2008").
+  When used in ShakeMap calculations the valid choices are "yes", "no" "full",
   same as for *spatial_correlation*.
   Example: *cross_correlation = no*.
   Default: "yes"
@@ -281,6 +283,20 @@ iml_disagg:
   and level.
   Example: *iml_disagg = {'PGA': 0.02}*.
   Default: no default
+
+iml_ref:
+  Reference intensity measure level used together with the imt_ref parameter
+  to compute the conditional spectrum
+  Example: *iml_ref = 0.1*.
+  Default: no default
+
+imt_ref:
+  Reference intensity measure type used together with the iml_ref parameter
+  to compute the conditional spectrum. The imt_ref must belong to the list
+  of IMTs of the calculation.
+  Example: *imt_ref = SA(0.15)*.
+  Default: no default
+
 
 individual_curves:
   When set, store the individual hazard curves and/or individual risk curves
@@ -731,7 +747,7 @@ class OqParam(valid.ParamSet):
         valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
-    cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
+    cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
     description = valid.Param(valid.utf8_not_empty, "no description")
@@ -758,6 +774,8 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
+    iml_ref = valid.Param(valid.positivefloat)
+    imt_ref = valid.Param(valid.intensity_measure_type)
     individual_curves = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
@@ -1018,6 +1036,11 @@ class OqParam(valid.ParamSet):
                     and self.num_rlzs_disagg is not None):
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
+
+        # checks for conditional_spectrum
+        if self.calculation_mode == 'conditional_spectrum':
+            if list(self.hazard_stats()) != ['mean']:
+                raise InvalidFile('%s: only the mean is supported' % job_ini)
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
@@ -1363,6 +1386,15 @@ class OqParam(valid.ParamSet):
         correl_model_cls = getattr(
             correlation, '%sCorrelationModel' % correl_name)
         return correl_model_cls(**self.ground_motion_correlation_params)
+
+    @property
+    def cross_correl(self):
+        """
+        Return a cross correlation object (or None). See
+        :mod:`openquake.hazardlib.cross_correlation` for more info.
+        """
+        fac = getattr(cross_correlation, self.cross_correlation, lambda: None)
+        return fac()
 
     def get_kinds(self, kind, R):
         """

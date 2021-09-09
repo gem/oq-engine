@@ -40,7 +40,7 @@ PARAM = dict(source_model_file=SOURCES_XML,
              width_of_mfd_bin=1.,
              investigation_time=1,
              truncation_level=3,
-             correl_model=BakerJayaram2008(),
+             cross_correl=BakerJayaram2008(),
              imtls={"SA(0.05)": valid.logscale(0.005, 2.13, 45),
                     "SA(0.075)": valid.logscale(0.005, 2.13, 45),
                     "SA(0.1)": valid.logscale(0.005, 2.13, 45),
@@ -88,7 +88,7 @@ def spectra_to_df(spectra, imts, rlzs):
     return pandas.DataFrame(dic)
 
 
-class CondSpectraTestCase(unittest.TestCase):
+class ConditionalSpectraTestCase(unittest.TestCase):
 
     def test_point(self):
         # point source with 3 ruptures, checking additivity
