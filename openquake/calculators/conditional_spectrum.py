@@ -117,8 +117,16 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         G = sum(len(rbg) for rbg in rlzs_by_gsim)
         P = self.P = len(oq.poes) if oq.poes else 1
+        if oq.poes:  # extract imls from the "mean" hazard map
+            imls = self.datastore.sel('hmaps-stats', stat='mean')[0, 0, imti]
+        else:
+            imls = [oq.iml_ref]
         self.datastore.create_dset('cs-rlzs', float, (P, self.R, 2, self.M))
+        self.datastore.set_shape_descr(
+                'cs-rlzs', poe_id=P, rlz_id=self.R, cs=2, m=self.M)
         self.datastore.create_dset('cs-stats', float, (P, 1, 2, self.M))
+        self.datastore.set_shape_descr(
+                'cs-stats', poe_id=P, stat='mean', cs=2, m=self.M)
         self.datastore.create_dset('_c', float, (G, P, 2, self.M))
         self.datastore.create_dset('_s', float, (G, P,))
         G = max(len(rbg) for rbg in rlzs_by_gsim)
@@ -142,7 +150,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             cmaker = self.cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, imti, [oq.iml_ref]))
+            smap.submit((dstore, slc, cmaker, imti, imls))
         return smap.reduce()
 
     def post_execute(self, acc):
