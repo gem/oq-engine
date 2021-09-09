@@ -24,3 +24,6 @@ class ConditionalSpectrumTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
+
+    def test_case_2(self):
+        self.run_calc(case_1.__file__, 'job_poes.ini')
