@@ -24,10 +24,11 @@ from openquake.hazardlib import read_input, valid
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import MagDepDistance
 
+OVERWRITE_EXPECTED = False
+
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')
 GSIM_XML = os.path.join(CWD, 'data', 'lt02.xml')
-
 PARAM = dict(source_model_file=SOURCES_XML,
              gsim_logic_tree_file=GSIM_XML,
              sites=[(0, -0.8)],
@@ -56,21 +57,21 @@ iml = np.log(1.001392E-01)
 
 
 # useful while debugging
-def plot(spectrum, imts):
+def plot(spectra, imts):
     import matplotlib.pyplot as plt
     periods = [im.period for im in imts]
     fig, axs = plt.subplots(1, 2)
-    print(np.exp(spectrum[0]))
-    axs[0].plot(periods, np.exp(spectrum[0]), 'x-')
-    axs[1].plot(periods, np.sqrt(spectrum[1]), 'x-')
+    for spectrum in spectra:
+        axs[0].plot(periods, np.exp(spectrum[0]), 'x-')
+        axs[1].plot(periods, np.sqrt(spectrum[1]), 'x-')
     axs[0].grid(which='both')
     axs[1].grid(which='both')
     axs[0].set_xscale('log')
     axs[1].set_xscale('log')
     axs[0].set_yscale('log')
     axs[0].set_ylim([1e-3, 10])
-    axs[0].set_xlabel('Mean spectrum, Period[s]')
-    axs[1].set_xlabel('Std spectrum, Period[s]')
+    axs[0].set_xlabel('Mean spectra, Period[s]')
+    axs[1].set_xlabel('Std spectra, Period[s]')
     plt.show()
 
 
@@ -136,17 +137,19 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
-        # rlzs = list(inp.gsim_lt)
-        # spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
-        #     expected, index=False, line_terminator='\r\n')
+        if OVERWRITE_EXPECTED:
+            rlzs = list(inp.gsim_lt)
+            spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
+                expected, index=False, line_terminator='\r\n',
+                float_format='%.6f')
         df = pandas.read_csv(expected)
         for g, gsim in enumerate(cmaker.gsims):
             dfg = df[df.rlz_id == g]
-            aac(dfg.cs_exp, np.exp(spectra[g][0]))
-            aac(dfg.cs_std, np.sqrt(spectra[g][1]))
+            aac(dfg.cs_exp, np.exp(spectra[g][0]), atol=1e-6)
+            aac(dfg.cs_std, np.sqrt(spectra[g][1]), atol=1e-6)
 
         # to plot the spectra uncomment the following line
-        # plot(spectra[0], cmaker.imts)
+        # plot(spectra, cmaker.imts)
 
     def test_6_rlzs(self):
         # test with 2x3 realizations and TRTA, TRTB
@@ -178,14 +181,16 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # check the results
         expected = os.path.join(CWD, 'expected', 'spectra6.csv')
-        # spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
-        #    expected, index=False, line_terminator='\r\n')
+        if OVERWRITE_EXPECTED:
+            spectra_to_df(spectra, cmaker.imts, rlzs).to_csv(
+                expected, index=False, line_terminator='\r\n',
+                float_format='%.6f')
         df = pandas.read_csv(expected)
         for rlz in rlzs:
             r = rlz.ordinal
             df_rlz = df[df.rlz_id == r]
-            aac(df_rlz.cs_exp, np.exp(spectra[r][0]))
-            aac(df_rlz.cs_std, np.sqrt(spectra[r][1]))
+            aac(df_rlz.cs_exp, np.exp(spectra[r][0]), atol=1e-6)
+            aac(df_rlz.cs_std, np.sqrt(spectra[r][1]), atol=1e-6)
 
         # to plot the spectra uncomment the following line
-        # plot(spectra[0], cmaker.imts)
+        # plot(spectra, cmaker.imts)
