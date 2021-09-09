@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.conditional_spectrum import case_1
 
@@ -24,5 +23,4 @@ from openquake.qa_tests_data.conditional_spectrum import case_1
 class ConditionalSpectrumTestCase(CalculatorTestCase):
 
     def test_case_1(self):
-        raise unittest.SkipTest
         self.run_calc(case_1.__file__, 'job.ini')

@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Conditional spectrum calculator
+Conditional spectrum calculator, inspired by the disaggregation calculator
 """
 import logging
 import operator
@@ -31,7 +31,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 
 
-def conditional_spectrum(dstore, slc, cmaker, monitor):
+def conditional_spectrum(dstore, slc, cmaker, imti, iml, monitor):
     """
     :param dstore:
         a DataStore instance
@@ -39,16 +39,25 @@ def conditional_spectrum(dstore, slc, cmaker, monitor):
         a slice of ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
+    :param imti:
+        IMT index in the range 0..M-1
+    :param iml:
+        intensity measure level associated to the IMT index
     :param monitor:
         monitor of the currently running job
     :returns:
         dictionary grp_id -> poes of shape (N, L, G)
     """
+    res = {}
+    G = len(cmaker.gsims)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs = cmaker.read_ctxs(dstore, slc)
-        N = len(dstore['sitecol/sids'])
-    return {cmaker.grp_id: cmaker.get_pmap(ctxs).array(0, N, 0)}
+        c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+        for g in range(G):
+            res['_c', cmaker.start + g] = c[g]
+            res['_s', cmaker.start + g] = s[g]
+    return res
 
 
 @base.calculators.add('conditional_spectrum')
@@ -63,13 +72,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         Check the number of sites and the absence of atomic groups
         """
-        if self.N >= 32768:
-            raise ValueError('You can disaggregate at max 32,768 sites')
-        few = self.oqparam.max_sites_disagg
-        if self.N > few:
-            raise ValueError(
-                'The number of sites is to disaggregate is %d, but you have '
-                'max_sites_disagg=%d' % (self.N, few))
+        assert self.N == 1, self.N
         if hasattr(self, 'csm'):
             for sg in self.csm.src_groups:
                 if sg.atomic:
@@ -83,13 +86,11 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         Compute the conditional spectrum
         """
-        logging.warning('Initial NOT WORKING version of the calculator; '
-                        'DO NOT USE!')
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt']
         self.trts = list(self.full_lt.gsim_lt.values)
-        [self.poe] = oq.poes_disagg
         self.imts = list(oq.imtls)
+        imti = self.imts.index(oq.imt_ref)
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
@@ -103,9 +104,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         totweight = rdata['nsites'].sum()
         trt_smrs = dstore['trt_smrs'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        L = oq.imtls.size
-        poes_shape = (sum(len(rbg) for rbg in rlzs_by_gsim), self.N, L)
-        self.datastore.create_dset('poes', float, poes_shape)
+        G = sum(len(rbg) for rbg in rlzs_by_gsim)
+        self.datastore.create_dset('cs-rlzs', float, (self.R, 2, self.M))
+        self.datastore.create_dset('_c', float, (G, 2, self.M))
+        self.datastore.create_dset('_s', float, (G,))
         G = max(len(rbg) for rbg in rlzs_by_gsim)
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
@@ -127,27 +129,25 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             cmaker = self.cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker))
-        results = smap.reduce(self.agg_result)
-        return results
-
-    def agg_result(self, acc, result):
-        """
-        Collect the results coming from compute_disagg into self.results.
-
-        :param acc: dictionary grp_id -> NLG
-        :param result: dictionary grp_id -> NLG
-        """
-        with self.monitor('aggregating results'):
-            [(grp_id, poes)] = result.items()
-            if grp_id not in acc:
-                acc[grp_id] = poes
-            else:
-                acc[grp_id] = 1 - (1 - acc[grp_id]) * (1 - poes)
-        return acc
+            smap.submit((dstore, slc, cmaker, imti, oq.iml_ref))
+        return smap.reduce()
 
     def post_execute(self, acc):
-        for grp_id, poes in acc.items():
-            poes = poes.transpose(2, 0, 1)  # NLG -> GNL
-            for g, mat in enumerate(poes):
-                self.datastore['poes'][self.cmakers[grp_id].start + g] = mat
+        # store the conditional spectrum contributions in the datasets _c, _s
+        for (key, gidx), arr in acc.items():
+            self.datastore[key][gidx] = arr
+
+        # build conditional spectra for each realization
+        rlzs_by_g = self.datastore['rlzs_by_g'][()]
+        nums = numpy.zeros((self.R, 2, self.M))
+        denums = numpy.zeros(self.R)
+        for g, rlzs in enumerate(rlzs_by_g):
+            c = acc['_c', g]
+            s = acc['_s', g]
+            for r in rlzs:
+                nums[r] += c
+                denums[r] += s
+        for r in range(self.R):
+            mea, var = nums[r] / denums[r]
+            spe, std = numpy.exp(mea), numpy.sqrt(var)
+            self.datastore['cs-rlzs'][r] = numpy.array([spe, std])
