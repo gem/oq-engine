@@ -1037,6 +1037,11 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
 
+        # checks for conditional_spectrum
+        if self.calculation_mode == 'conditional_spectrum':
+            if list(self.hazard_stats()) != ['mean']:
+                raise InvalidFile('%s: only the mean is supported' % job_ini)
+
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
             if self.conditional_loss_poes:
@@ -1385,10 +1390,11 @@ class OqParam(valid.ParamSet):
     @property
     def cross_correl(self):
         """
-        Return a cross correlation object. See
+        Return a cross correlation object (or None). See
         :mod:`openquake.hazardlib.cross_correlation` for more info.
         """
-        return getattr(cross_correlation, self.cross_correlation)()
+        fac = getattr(cross_correlation, self.cross_correlation, lambda: None)
+        return fac()
 
     def get_kinds(self, kind, R):
         """
