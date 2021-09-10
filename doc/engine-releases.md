@@ -1,4 +1,4 @@
-Engine releases: LTS vs STS
+Engine releases
 ===========================
 
 Since March 2021 engine releases are divided in two categories:
