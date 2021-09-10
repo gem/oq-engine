@@ -21,10 +21,11 @@ from openquake.baselib.general import AccumDict
 from openquake.hazardlib import read_input
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import MagDepDistance
-from openquake.hazardlib.calc.stochastic import sample_ebruptures
+from openquake.hazardlib.calc.stochastic import sample_ebruptures, get_ebr_df
 
 
 def main(params):
+    # example with 2x2=4 realizations with weights .36, .24, .24, .16
     inp = read_input(params)
     print(inp)
     print(inp.gsim_lt.get_rlzs_by_gsim_trt())
@@ -32,6 +33,8 @@ def main(params):
     ebrs = sample_ebruptures(inp.groups, inp.cmakerdict)
     ne = sum(ebr.n_occ for ebr in ebrs)
     print('There are %d ruptures and %d events' % (len(ebrs), ne))
+    df = get_ebr_df(ebrs, inp.gsim_lt)
+    print(df.groupby('rlz').count())  # there are 8, 9, 11, 8 events per rlz
     for ebr in ebrs:
         cmaker = inp.cmakerdict[ebr.rupture.tectonic_region_type]
         gmf_dict, _ = GmfComputer(ebr, inp.sitecol, cmaker).compute_all()
