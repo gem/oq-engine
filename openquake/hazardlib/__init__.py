@@ -182,7 +182,9 @@ def read_input(hparams, **extra):
 
     cmaker = {}  # trt => cmaker
     start = 0
-    for trt, rlzs_by_gsim in lt.get_rlzs_by_gsim_trt().items():
+    n = hparams.get('number_of_logic_tree_samples', 0)
+    s = hparams.get('random_seed', 42)
+    for trt, rlzs_by_gsim in lt.get_rlzs_by_gsim_trt(n, s).items():
         cmaker[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
         cmaker[trt].start = start
         start += len(rlzs_by_gsim)

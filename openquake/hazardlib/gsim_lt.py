@@ -471,7 +471,7 @@ class GsimLogicTree(object):
             [trt] = self.values
         return sorted(self.values[trt])
 
-    def sample(self, n, seed, sampling_method):
+    def sample(self, n, seed, sampling_method='early_weights'):
         """
         :param n: number of samples
         :param seed: random seed
@@ -499,12 +499,22 @@ class GsimLogicTree(object):
             rlzs.append(rlz)
         return rlzs
 
-    def get_rlzs_by_gsim_trt(self):
+    def get_rlzs_by_gsim_trt(self, samples=0, seed=42,
+                             sampling_method='early_weights'):
         """
+        :param samples:
+            number of realizations to sample (if 0, use full enumeration)
+        :param seed:
+            seed to use for the sampling
+        :param sampling_method:
+            sampling method, by default 'early_weights'
         :returns:
             dictionary trt -> gsim -> all_rlz_ordinals for each gsim in the trt
         """
-        rlzs = list(self)
+        if samples:
+            rlzs = self.sample(samples, seed, sampling_method)
+        else:
+            rlzs = list(self)
         ddic = {}
         for i, trt in enumerate(self.values):
             ddic[trt] = {gsim: [rlz.ordinal for rlz in rlzs
@@ -547,4 +557,3 @@ class GsimLogicTree(object):
                  (b.trt, b.id, b.gsim, b.weight['weight'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
-
