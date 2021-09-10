@@ -23,12 +23,20 @@ from openquake.qa_tests_data.conditional_spectrum import case_1
 
 class ConditionalSpectrumTestCase(CalculatorTestCase):
 
-    def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job.ini')
+    def test_case_1_iml(self):
+        # test with 2x3=6 realizations and one IML
+        self.run_calc(case_1.__file__, 'job.ini', concurrent_tasks='4')
+        [fname] = export(('cond-spectra', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/conditional-spectrum.csv', fname)
+
+        # check independence from concurrent_tasks
+        self.run_calc(case_1.__file__, 'job.ini', concurrent_tasks='8',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('cond-spectra', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/conditional-spectrum.csv', fname)
 
     def test_case_1_poes(self):
+        # test with 2x3=6 realizations and two IMLs
         self.run_calc(case_1.__file__, 'job_poes.ini')
         f0, f1 = export(('cond-spectra', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/conditional-spectrum-0.csv', f0)
