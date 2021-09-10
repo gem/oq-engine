@@ -127,36 +127,36 @@ time is
 ``eff_time = 50 years x 250 ses x 4 rlz = 50,000 years``
 
 You can sample the ruptures with the following commands,
-assuming you are inside the demo directory:
+assuming you are inside the demo directory::
 
->>> from openquake.hazardlib.contexts import ContextMaker
->>> from openquake.commonlib import readinput
->>> from openquake.hazardlib.calc.stochastic import sample_ebruptures
->>> oq = readinput.get_oqparam('job.ini')
->>> gsim_lt = readinput.get_gsim_lt(oq)
->>> csm = readinput.get_composite_source_model(oq)
->>> rlzs_by_gsim_trt = gsim_lt.get_rlzs_by_gsim_trt(
-...     oq.number_of_logic_tree_samples, oq.random_seed)
->>> cmakerdict = {trt: ContextMaker(trt, rbg, vars(oq))
-..                     for trt, rbg in rlzs_by_gsim_trt.items()}
->>> ebruptures = sample_ebruptures(csm.src_groups, cmakerdict)
+ >> from openquake.hazardlib.contexts import ContextMaker
+ >> from openquake.commonlib import readinput
+ >> from openquake.hazardlib.calc.stochastic import sample_ebruptures
+ >> oq = readinput.get_oqparam('job.ini')
+ >> gsim_lt = readinput.get_gsim_lt(oq)
+ >> csm = readinput.get_composite_source_model(oq)
+ >> rlzs_by_gsim_trt = gsim_lt.get_rlzs_by_gsim_trt(
+ ..     oq.number_of_logic_tree_samples, oq.random_seed)
+ >> cmakerdict = {trt: ContextMaker(trt, rbg, vars(oq))
+ .                     for trt, rbg in rlzs_by_gsim_trt.items()}
+ >> ebruptures = sample_ebruptures(csm.src_groups, cmakerdict)
 
 Then you can extract the events associated to the ruptures with
-the function `get_ebr_df` which returns a DataFrame:
+the function `get_ebr_df` which returns a DataFrame::
 
->>> from openquake.hazardlib.calc.stochastic import get_ebr_df
->>> ebr_df = get_ebr_df(ebruptures, cmakerdict)
+ >> from openquake.hazardlib.calc.stochastic import get_ebr_df
+ >> ebr_df = get_ebr_df(ebruptures, cmakerdict)
 
 Such DataFrame has fields `eid` (event ID) and `rlz` (realization number)
 and it is indexed by the ordinal of the rupture. For instance it can be
-used to determine the number of events per realization:
+used to determine the number of events per realization::
 
->>> ebr_df.groupby('rlz').count()
-      eid
-rlz      
-0    7842
-1    7709
-2    7893
-3    7856
+ >> ebr_df.groupby('rlz').count()
+       eid
+ rlz      
+ 0    7842
+ 1    7709
+ 2    7893
+ 3    7856
 
 Notice that the number of events is more or less the same for each realization.
