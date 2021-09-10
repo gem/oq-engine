@@ -24,6 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, general
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.calculators import base
 
@@ -117,16 +118,18 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         G = sum(len(rbg) for rbg in rlzs_by_gsim)
         P = self.P = len(oq.poes) if oq.poes else 1
+        self.periods = [from_string(imt).period for imt in self.imts]
         if oq.poes:  # extract imls from the "mean" hazard map
-            imls = self.datastore.sel('hmaps-stats', stat='mean')[0, 0, imti]
+            self.imls = self.datastore.sel(
+                'hmaps-stats', stat='mean')[0, 0, imti]
         else:
-            imls = [oq.iml_ref]
+            self.imls = [oq.iml_ref]
         self.datastore.create_dset('cs-rlzs', float, (P, self.R, 2, self.M))
         self.datastore.set_shape_descr(
                 'cs-rlzs', poe_id=P, rlz_id=self.R, cs=2, m=self.M)
-        self.datastore.create_dset('cs-stats', float, (P, 1, 2, self.M))
+        self.datastore.create_dset('cond-spectra', float, (P, 2, self.M))
         self.datastore.set_shape_descr(
-                'cs-stats', poe_id=P, stat='mean', cs=2, m=self.M)
+            'cond-spectra', poe_id=P, cs=['spec', 'std'], period=self.periods)
         self.datastore.create_dset('_c', float, (G, P, 2, self.M))
         self.datastore.create_dset('_s', float, (G, P,))
         G = max(len(rbg) for rbg in rlzs_by_gsim)
@@ -150,7 +153,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             cmaker = self.cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, imti, imls))
+            smap.submit((dstore, slc, cmaker, imti, self.imls))
         return smap.reduce()
 
     def post_execute(self, acc):
@@ -175,4 +178,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         weights = self.datastore['weights'][:]
         num = numpy.average(nums, weights=weights, axis=1)  # (P, 2, M)
         denum = numpy.average(denums, weights=weights, axis=1)  # (P,)
-        self.datastore['cs-stats'] = to_spectra(num, denum)
+        self.datastore['cond-spectra'][:] = to_spectra(num, denum)
+        attrs = dict(imls=self.imls, periods=self.periods)
+        if self.oqparam.poes:
+            attrs['poes'] = self.oqparam.poes
+        self.datastore.set_attrs('cond-spectra', **attrs)

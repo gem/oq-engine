@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.export import export
 from openquake.qa_tests_data.conditional_spectrum import case_1
 
 
@@ -24,6 +25,11 @@ class ConditionalSpectrumTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
+        [fname] = export(('cond-spectra', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/conditional-spectrum.csv', fname)
 
-    def test_case_2(self):
+    def test_case_1_poes(self):
         self.run_calc(case_1.__file__, 'job_poes.ini')
+        f0, f1 = export(('cond-spectra', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/conditional-spectrum-0.csv', f0)
+        self.assertEqualFiles('expected/conditional-spectrum-1.csv', f1)
