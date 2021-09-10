@@ -33,7 +33,7 @@ def main(params):
     ebrs = sample_ebruptures(inp.groups, inp.cmakerdict)
     ne = sum(ebr.n_occ for ebr in ebrs)
     print('There are %d ruptures and %d events' % (len(ebrs), ne))
-    df = get_ebr_df(ebrs, inp.gsim_lt)
+    df = get_ebr_df(ebrs, inp.cmakerdict)
     print(df.groupby('rlz').count())  # there are 8, 9, 11, 8 events per rlz
     for ebr in ebrs:
         cmaker = inp.cmakerdict[ebr.rupture.tectonic_region_type]
