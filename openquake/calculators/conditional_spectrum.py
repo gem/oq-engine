@@ -24,6 +24,8 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, general
+from openquake.commonlib.calc import compute_hazard_maps
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.calculators import base
 
@@ -31,9 +33,12 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 
 
+# helper function to be used when saving the spectra as an array
 def to_spectra(nums, denums):
     """
-    Creating R conditional spectra starting from R+R components
+    :param nums: a sequence of R components of kind "c", each with M values
+    :param denums: a sequence of R components of kind "s", each with M values
+    :returns: conditional spectra as an array of shape (R, 2, M)
     """
     out = []
     for num, denum in zip(nums, denums):
@@ -42,32 +47,33 @@ def to_spectra(nums, denums):
     return numpy.array(out)  # shape R, 2, M
 
 
-def conditional_spectrum(dstore, slc, cmaker, imti, iml, monitor):
+# the core task to be run in parallel
+def conditional_spectrum(dstore, slc, cmaker, imti, imls, monitor):
     """
     :param dstore:
         a DataStore instance
     :param slc:
-        a slice of ruptures
+        a slice of contexts
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param imti:
         IMT index in the range 0..M-1
-    :param iml:
-        intensity measure level associated to the IMT index
+    :param imls:
+        intensity measure levels associated to the IMT index
     :param monitor:
         monitor of the currently running job
     :returns:
-        dictionary grp_id -> poes of shape (N, L, G)
+        dictionary key -> conditional spectrum contribution
     """
     res = {}
     G = len(cmaker.gsims)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs = cmaker.read_ctxs(dstore, slc)
-        c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+        c, s = cmaker.get_cs_contrib(ctxs, imti, imls)
         for g in range(G):
-            res['_c', cmaker.start + g] = c[g]
-            res['_s', cmaker.start + g] = s[g]
+            res['_c', cmaker.start + g] = c[:, g]
+            res['_s', cmaker.start + g] = s[:, g]
     return res
 
 
@@ -115,11 +121,24 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         totweight = rdata['nsites'].sum()
         trt_smrs = dstore['trt_smrs'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
-        G = sum(len(rbg) for rbg in rlzs_by_gsim)
-        self.datastore.create_dset('cs-rlzs', float, (self.R, 2, self.M))
-        self.datastore.create_dset('cs-stats', float, (1, 2, self.M))
-        self.datastore.create_dset('_c', float, (G, 2, self.M))
-        self.datastore.create_dset('_s', float, (G,))
+        G_ = sum(len(rbg) for rbg in rlzs_by_gsim)
+        self.periods = [from_string(imt).period for imt in self.imts]
+        if oq.imls_ref:
+            self.imls = oq.imls_ref
+        else:  # extract imls from the "mean" hazard map
+            curve = self.datastore.sel(
+                'hcurves-stats', stat='mean')[0, 0, imti]
+            [self.imls] = compute_hazard_maps(
+                curve, oq.imtls[oq.imt_ref], oq.poes)  # there is 1 site
+        self.P = P = len(self.imls)
+        self.datastore.create_dset('cs-rlzs', float, (P, self.R, 2, self.M))
+        self.datastore.set_shape_descr(
+                'cs-rlzs', poe_id=P, rlz_id=self.R, cs=2, m=self.M)
+        self.datastore.create_dset('cond-spectra', float, (P, 2, self.M))
+        self.datastore.set_shape_descr(
+            'cond-spectra', poe_id=P, cs=['spec', 'std'], period=self.periods)
+        self.datastore.create_dset('_c', float, (G_, P, 2, self.M))
+        self.datastore.create_dset('_s', float, (G_, P,))
         G = max(len(rbg) for rbg in rlzs_by_gsim)
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
@@ -141,28 +160,33 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             cmaker = self.cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, imti, oq.iml_ref))
+            smap.submit((dstore, slc, cmaker, imti, self.imls))
         return smap.reduce()
 
     def post_execute(self, acc):
         # store the conditional spectrum contributions in the datasets _c, _s
-        for (key, gidx), arr in acc.items():
-            self.datastore[key][gidx] = arr
+        for (key, g_), arr in acc.items():
+            self.datastore[key][g_] = arr
 
         # build conditional spectra for each realization
         rlzs_by_g = self.datastore['rlzs_by_g'][()]
-        nums = numpy.zeros((self.R, 2, self.M))
-        denums = numpy.zeros(self.R)
-        for g, rlzs in enumerate(rlzs_by_g):
-            c = acc['_c', g]
-            s = acc['_s', g]
+        nums = numpy.zeros((self.P, self.R, 2, self.M))
+        denums = numpy.zeros((self.P, self.R))
+        for g_, rlzs in enumerate(rlzs_by_g):
+            c = acc['_c', g_]
+            s = acc['_s', g_]
             for r in rlzs:
-                nums[r] += c
-                denums[r] += s
-        self.datastore['cs-rlzs'] = to_spectra(nums, denums)
+                nums[:, r] += c
+                denums[:, r] += s
+        for p in range(self.P):
+            self.datastore['cs-rlzs'][p] = to_spectra(nums[p], denums[p])
 
         # build mean spectrum
         weights = self.datastore['weights'][:]
-        num = numpy.average(nums, weights=weights, axis=0)
-        denum = numpy.average(denums, weights=weights)
-        self.datastore['cs-stats'] = to_spectra([num], [denum])
+        num = numpy.average(nums, weights=weights, axis=1)  # (P, 2, M)
+        denum = numpy.average(denums, weights=weights, axis=1)  # (P,)
+        self.datastore['cond-spectra'][:] = to_spectra(num, denum)
+        attrs = dict(imls=self.imls, periods=self.periods)
+        if self.oqparam.poes:
+            attrs['poes'] = self.oqparam.poes
+        self.datastore.set_attrs('cond-spectra', **attrs)

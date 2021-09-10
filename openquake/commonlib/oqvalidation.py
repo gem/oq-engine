@@ -284,14 +284,14 @@ iml_disagg:
   Example: *iml_disagg = {'PGA': 0.02}*.
   Default: no default
 
-iml_ref:
-  Reference intensity measure level used together with the imt_ref parameter
+imls_ref:
+  Reference intensity measure levels used together with the imt_ref parameter
   to compute the conditional spectrum
-  Example: *iml_ref = 0.1*.
-  Default: no default
+  Example: *imls_ref = 0.1 0.2*.
+  Default: empty list
 
 imt_ref:
-  Reference intensity measure type used together with the iml_ref parameter
+  Reference intensity measure type used together with the imls_ref parameter
   to compute the conditional spectrum. The imt_ref must belong to the list
   of IMTs of the calculation.
   Example: *imt_ref = SA(0.15)*.
@@ -774,7 +774,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    iml_ref = valid.Param(valid.positivefloat)
+    imls_ref = valid.Param(valid.positivefloats, [])
     imt_ref = valid.Param(valid.intensity_measure_type)
     individual_curves = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
@@ -1039,7 +1039,10 @@ class OqParam(valid.ParamSet):
 
         # checks for conditional_spectrum
         if self.calculation_mode == 'conditional_spectrum':
-            if list(self.hazard_stats()) != ['mean']:
+            if not self.imls_ref and not self.poes:
+                raise InvalidFile("%s: you must specify poes or imls_ref"
+                                  % job_ini)
+            elif list(self.hazard_stats()) != ['mean']:
                 raise InvalidFile('%s: only the mean is supported' % job_ini)
 
         # checks for classical_damage

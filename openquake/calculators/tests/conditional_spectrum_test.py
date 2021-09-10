@@ -17,10 +17,29 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.export import export
 from openquake.qa_tests_data.conditional_spectrum import case_1
 
 
 class ConditionalSpectrumTestCase(CalculatorTestCase):
 
     def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job.ini')
+        # test with 2x3=6 realizations and two poes
+        self.run_calc(case_1.__file__, 'job.ini', concurrent_tasks='4')
+        f0, f1 = export(('cond-spectra', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/conditional-spectrum-0.csv', f0)
+        self.assertEqualFiles('expected/conditional-spectrum-1.csv', f1)
+        hc_id = str(self.calc.datastore.calc_id)
+
+        # check independence from concurrent_tasks
+        self.run_calc(case_1.__file__, 'job.ini', concurrent_tasks='8',
+                      hazard_calculation_id=hc_id)
+        f0, f1 = export(('cond-spectra', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/conditional-spectrum-0.csv', f0)
+        self.assertEqualFiles('expected/conditional-spectrum-1.csv', f1)
+
+        # now run with imls_ref=0.1, thus ignoring the poes
+        self.run_calc(case_1.__file__, 'job.ini', imls_ref="0.1",
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('cond-spectra', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/conditional-spectrum.csv', fname)

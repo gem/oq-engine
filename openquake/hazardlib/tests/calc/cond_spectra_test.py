@@ -53,7 +53,7 @@ PARAM = dict(source_model_file=SOURCES_XML,
                     "SA(1.0)": valid.logscale(0.005, 2.13, 45),
                     "SA(2.0)": valid.logscale(0.005, 2.13, 45)})
 imti = 4  # corresponds to SA(0.2)
-iml = np.log(1.001392E-01)
+imls = [np.log(1.001392E-01)]
 
 
 # useful while debugging
@@ -88,7 +88,7 @@ def spectra_to_df(spectra, imts, rlzs):
     return pandas.DataFrame(dic)
 
 
-class ConditionalSpectraTestCase(unittest.TestCase):
+class CondSpectraTestCase(unittest.TestCase):
 
     def test_point(self):
         # point source with 3 ruptures, checking additivity
@@ -104,10 +104,10 @@ class ConditionalSpectraTestCase(unittest.TestCase):
 
         # check that the total spectra is a weighted mean of the two
         # rupture spectra; the weight is the same for all IMTs
-        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, iml)
-        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, iml)
+        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, imls)
+        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, imls)
         comp_spectra = (c1 + c2) / (s1 + s2)
-        c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+        c, s = cmaker.get_cs_contrib(ctxs, imti, imls)
         aac(comp_spectra, c / s)
 
     def test_1_rlz(self):
@@ -121,9 +121,9 @@ class ConditionalSpectraTestCase(unittest.TestCase):
         ctxs1 = ctxs[:50]
         ctxs2 = ctxs[50:]
 
-        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, iml)
-        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, iml)
-        c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, imls)
+        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, imls)
+        c, s = cmaker.get_cs_contrib(ctxs, imti, imls)
         aac((c1 + c2) / (s1 + s2), c / s)
 
     def test_2_rlzs(self):
@@ -132,8 +132,8 @@ class ConditionalSpectraTestCase(unittest.TestCase):
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-        c_, s_ = cmaker.get_cs_contrib(ctxs, imti, iml)
-        spectra = [c / g for c, g in zip(c_, s_)]
+        [c_], [s_] = cmaker.get_cs_contrib(ctxs, imti, imls)
+        spectra = [c / s for c, s in zip(c_, s_)]
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
@@ -164,7 +164,7 @@ class ConditionalSpectraTestCase(unittest.TestCase):
         for src_group in inp.groups:
             cmaker = inp.cmakerdict[src_group.trt]
             ctxs = cmaker.from_srcs(src_group, inp.sitecol)
-            c, s = cmaker.get_cs_contrib(ctxs, imti, iml)
+            [c], [s] = cmaker.get_cs_contrib(ctxs, imti, imls)
             for cs in zip(c, s):
                 all_cs.append(cs)
 

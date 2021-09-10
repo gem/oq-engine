@@ -359,6 +359,25 @@ def export_hmaps_xml(ekey, dstore):
     return sorted(fnames)
 
 
+@export.add(('cond-spectra', 'csv'))
+def export_cond_spectra(ekey, dstore):
+    dset = dstore[ekey[0]]  # shape (P, 2, M)
+    periods = dset.attrs['periods']
+    imls = dset.attrs['imls']
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fnames = []
+    for p, iml in enumerate(imls):
+        fname = dstore.export_path('conditional-spectrum-%d.csv' % p)
+        df = pandas.DataFrame(dict(sa_period=periods,
+                                   spectrum_val=dset[p, 0],
+                                   spectrum_std=dset[p, 1]))
+        comment = dstore.metadata.copy()
+        comment['iml'] = iml
+        writer.save(df, fname, comment=comment)
+        fnames.append(fname)
+    return fnames
+
+
 def _extract(hmap, imt, j):
     # hmap[imt] can be a tuple or a scalar if j=0
     tup = hmap[imt]
@@ -469,7 +488,8 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'), ('disagg', 'xml'))
+@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'),
+            ('disagg', 'xml'))
 def export_disagg_csv_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
