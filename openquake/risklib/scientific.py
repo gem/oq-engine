@@ -951,8 +951,8 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
-    numpy.putmask(imls, imls < min_val, min_val)
-    numpy.putmask(imls, imls > max_val, max_val)
+    imls[imls < min_val] = min_val
+    imls[imls > max_val] = max_val
 
     # interpolate the hazard curve
     poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
