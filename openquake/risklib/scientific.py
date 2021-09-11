@@ -906,8 +906,8 @@ def classical_damage(
         imls = numpy.array(fragility_functions._interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         assert min_val > 0, hazard_imls  # sanity check
-        numpy.putmask(imls, imls < min_val, min_val)
-        numpy.putmask(imls, imls > max_val, max_val)
+        imls[imls < min_val] = min_val
+        imls[imls > max_val] = max_val
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
         imls = hazard_imls
