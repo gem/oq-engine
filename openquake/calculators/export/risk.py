@@ -22,7 +22,7 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, writers, general
+from openquake.baselib import hdf5, writers, general, python3compat
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -58,8 +58,8 @@ def get_agg_tags(dstore, aggregate_by):
     if aggregate_by:
         agg_keys = dstore['agg_keys'][:]
         for tagname in aggregate_by:
-            agg_tags[tagname] = numpy.concatenate(
-                [agg_keys[tagname], ['*total*']])
+            keys = python3compat.decode(agg_keys[tagname])
+            agg_tags[tagname] = numpy.concatenate([keys, ['*total*']])
     else:
         agg_tags = {}
     return agg_tags
@@ -69,6 +69,7 @@ def _loss_type(ln):
     if ln[-4:] == '_ins':
         return ln[:-4]
     return ln
+
 
 # this is used by event_based_risk and ebrisk
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
@@ -578,9 +579,11 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
 
     # aggcurves
-    del df['agg_id']
+    agg_id = df.pop('agg_id')
 
+    agg_values = dstore['agg_values'][:]
     edic = general.AccumDict(accum=[])
+    [loss_type] = df.loss_type.unique()
     for cons in consequences:
         for col in df.columns:
             if col not in scientific.KNOWN_CONSEQUENCES:
@@ -588,5 +591,8 @@ def export_aggcurves_csv(ekey, dstore):
             elif col == cons:
                 edic['conseq_value'].extend(df[col])
                 edic['conseq_type'].extend([col] * len(df))
+                aval = scientific.get_agg_value(
+                    cons, agg_values, agg_id, loss_type)
+                edic['conseq_ratio'].extend(df[col] / aval)
     writer.save(pandas.DataFrame(edic), dest, comment=md)
     return [dest]
