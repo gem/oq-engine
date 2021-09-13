@@ -25,7 +25,7 @@ def main(cmd):
     """
     start/stop the workers, or return their status
     """
-    if (cmd != 'status' and config.dbserver.multi_user and
+    if (cmd != 'status' and config.multi_user and
             getpass.getuser() not in 'openquake'):
         sys.exit('oq workers only works in single user mode')
     if p.OQDIST in ('dask', 'celery', 'zmq'):

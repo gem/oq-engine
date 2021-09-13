@@ -52,7 +52,6 @@ vhost = openquake
 celery_queue = celery
 
 [dbserver]
-multi_user = true
 file = /var/lib/openquake/db.sqlite3
 # daemon bind address; must be a valid IP address
 listen = 0.0.0.0

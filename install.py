@@ -72,7 +72,6 @@ class server:
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
-    multi_user = true
     file = %s
     shared_dir = /var/lib
     ''' % (DBPORT, DBPATH)
@@ -91,7 +90,6 @@ class devel_server:
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
-    multi_user = true
     file = %s
     shared_dir = /var/lib
     ''' % (DBPORT, DBPATH)

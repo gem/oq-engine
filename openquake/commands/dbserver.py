@@ -32,7 +32,7 @@ def main(cmd,
     """
     start/stop/restart the database server, or return its status
     """
-    if config.dbserver.multi_user and getpass.getuser() != 'openquake':
+    if config.multi_user and getpass.getuser() != 'openquake':
         sys.exit('oq dbserver only works in single user mode')
 
     status = dbs.get_status()

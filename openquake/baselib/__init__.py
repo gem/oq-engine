@@ -18,6 +18,7 @@
 
 import os
 import sys
+import getpass
 import numpy
 import scipy
 import pandas
@@ -59,8 +60,8 @@ d = os.path.dirname
 base = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
 # 'virtualenv' still uses 'real_prefix' also on Python 3
 # removal of this breaks Travis
-if (hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix')
-                                    and sys.base_prefix != sys.prefix)):
+if hasattr(sys, 'real_prefix') or (
+        hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
     config.paths = [base, os.path.join(sys.prefix, 'openquake.cfg')]
 else:  # installation from sources or packages, search in $HOME or /etc
     config.paths = [base, '/etc/openquake/openquake.cfg', '~/openquake.cfg']
@@ -125,11 +126,14 @@ def positiveint(flag):
 
 
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
-            multi_user=positiveint, serialize_jobs=positiveint,
-            strict=positiveint, code=exec)
+            serialize_jobs=positiveint, strict=positiveint, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
+
+
+# wether the engine is installed in /home/<user> or not
+config['multi_user'] = not __file__.startswith('/home/' + getpass.getuser())
