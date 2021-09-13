@@ -227,4 +227,5 @@ class BaseGSIMTestCase(unittest.TestCase):
                             msg[par] = getattr(ctx, par)[idx]
                         for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
                             msg[par] = getattr(ctx, par)
+                        import pdb; pdb.set_trace()
                         raise ValueError(msg)
