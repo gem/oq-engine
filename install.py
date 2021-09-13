@@ -137,7 +137,7 @@ SERVICE = '''\
 [Unit]
 Description=The OpenQuake Engine {service}
 Documentation=https://github.com/gem/oq-engine/
-After=network.target
+After= {afterservice}
 
 [Service]
 User=openquake
@@ -226,7 +226,7 @@ def before_checks(inst, remove, usage):
                      (inst.DBPORT, cmd, inst.DBPORT))
 
     # check if there is an installation from packages
-    if ((inst is server and os.path.exists('/etc/openquake/openquake.cfg'))
+    if (inst is server and os.path.exists('/etc/openquake/openquake.cfg')
         or (inst is devel_server and
             os.path.exists('/etc/openquake/openquake.cfg'))):
         sys.exit(PACKAGES)
@@ -377,9 +377,13 @@ def install(inst, version):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/' + service_name
+            afterservice = 'network.target'
+            if 'webui' in service:
+                afterservice = 'network.target dbserver.service'
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
-                    srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
+                    srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
+                            afterservice=afterservice)
                     f.write(srv)
             subprocess.check_call(
                 ['systemctl', 'enable', '--now', service_name])
@@ -412,11 +416,12 @@ def remove(inst):
     if inst is server or inst is devel_server:
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
-            service_path = '/usr/lib/systemd/system/' + service_name
+            service_path = '/etc/systemd/system/' + service_name
             if os.path.exists(service_path):
                 subprocess.check_call(['systemctl', 'stop', service_name])
                 print('stopped ' + service_name)
                 os.remove(service_path)
+                print('removed ' + service_name)
         subprocess.check_call(['systemctl', 'daemon-reload'])
     shutil.rmtree(inst.VENV)
     print('%s has been removed' % inst.VENV)
