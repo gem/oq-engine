@@ -508,11 +508,6 @@ class AssetCollection(object):
         dic = {tagname: self[tagname] for tagname in tagnames}
         for field in self.fields:
             dic[field] = self['value-' + field]
-        #for ln in loss_names:
-        #    if ln.endswith('_ins'):
-        #        dic[ln] = self['value-' + ln[:-4]]
-        #    elif ln in self.fields:
-        #        dic[ln] = self['value-' + ln]
         value_dt = [(f, float) for f in self.fields]
         agg_values = numpy.zeros(K+1, value_dt)
         df = pandas.DataFrame(dic)
