@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added `conseq_ratio` in the aggcurves exporter for event_based_damage
   * Added a `conditional_spectrum` calculator
   * Fixed an array<->scalar bug in abrahamson_gulerce_2020
   * Restored the classical tiling calculator
