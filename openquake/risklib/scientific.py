@@ -1415,6 +1415,26 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         return dmgdist @ coeffs * asset['occupants_night']
 
 
+def get_agg_value(consequence, agg_values, agg_id, loss_type):
+    """
+    :returns:
+        sum of the values corresponding to agg_id for the given consequence
+    """
+    aval = agg_values[agg_id]
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
+    elif consequence == 'losses':
+        return aval[loss_type]
+    elif consequence == 'collapsed':
+        return aval['number']
+    elif consequence == 'injured':
+        return aval['occupants_night']
+    elif consequence == 'fatalities':
+        return aval['occupants_night']
+    elif consequence == 'homeless':
+        return aval['occupants_night']
+
+
 if __name__ == '__main__':
     # plots of the beta distribution in terms of mean and stddev
     # see https://en.wikipedia.org/wiki/Beta_distribution
