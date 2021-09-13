@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the ShakeMap calculator failing with a TypeError:
+    get_array_usgs_id() got an unexpected keyword argument 'id'
   * Added `conseq_ratio` in the aggcurves exporter for event_based_damage
   * Added a `conditional_spectrum` calculator
   * Fixed an array<->scalar bug in abrahamson_gulerce_2020

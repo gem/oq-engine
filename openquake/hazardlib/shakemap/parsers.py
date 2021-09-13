@@ -190,11 +190,11 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 
 
 @get_array.add('usgs_id')
-def get_array_usgs_id(kind, usgs_id):
+def get_array_usgs_id(kind, id):
     """
     Download a ShakeMap from the USGS site
     """
-    url = SHAKEMAP_URL.format(usgs_id)
+    url = SHAKEMAP_URL.format(id)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[
         'properties']['products']['shakemap'][-1]['contents']
