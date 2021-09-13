@@ -33,10 +33,6 @@ except ImportError:
         "Do nothing"
 
 
-class TimeoutError(RuntimeError):
-    pass
-
-
 def _streamer():
     # streamer for zmq workers running on the master node
     port = int(config.zworkers.ctrl_port)
