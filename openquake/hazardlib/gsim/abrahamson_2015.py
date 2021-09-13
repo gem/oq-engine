@@ -118,7 +118,6 @@ def _compute_disterm(trt, C1, theta2, theta14, theta3, ctx, c4, theta9,
 
 
 def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
-    backarc = np.bool_(ctx.backarc)
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         dists = ctx.rrup
         a, b = C['theta15'], C['theta16']
@@ -130,6 +129,7 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     else:
         raise NotImplementedError(trt)
     if faba_model is None:
+        backarc = np.bool_(ctx.backarc)
         f_faba = np.zeros_like(dists)
         # Term only applies to backarc ctx (F_FABA = 0. for forearc)
         fixed_dists = dists[backarc]
