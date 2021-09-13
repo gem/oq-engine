@@ -391,6 +391,8 @@ class AssetCollection(object):
                              (exp_periods, self.occupancy_periods))
         self.fields = [f[6:] for f in self.array.dtype.names
                        if f.startswith('value-')]
+        self.occfields = [f for f in self.array.dtype.names
+                          if f.startswith('occupants')]
 
     @property
     def tagnames(self):
@@ -508,12 +510,9 @@ class AssetCollection(object):
         dic = {tagname: self[tagname] for tagname in tagnames}
         for field in self.fields:
             dic[field] = self['value-' + field]
-        #for ln in loss_names:
-        #    if ln.endswith('_ins'):
-        #        dic[ln] = self['value-' + ln[:-4]]
-        #    elif ln in self.fields:
-        #        dic[ln] = self['value-' + ln]
-        value_dt = [(f, float) for f in self.fields]
+        for field in self.occfields:
+            dic[field] = self[field]
+        value_dt = [(f, float) for f in self.fields + self.occfields]
         agg_values = numpy.zeros(K+1, value_dt)
         df = pandas.DataFrame(dic)
         if tagnames:
@@ -589,6 +588,7 @@ class AssetCollection(object):
                  'occupancy_periods': op,
                  'tot_sites': self.tot_sites,
                  'fields': ' '.join(self.fields),
+                 'occfields': ' '.join(self.occfields),
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, tagcol=self.tagcol), attrs
@@ -598,6 +598,7 @@ class AssetCollection(object):
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
         self.fields = attrs['fields'].split()
+        self.occfields = attrs['occfields'].split()
         self.nbytes = attrs['nbytes']
         self.array = dic['array'][()]
         self.tagcol = dic['tagcol']
