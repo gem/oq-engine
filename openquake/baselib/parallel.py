@@ -207,7 +207,7 @@ except ImportError:
 
 from openquake.baselib import config, hdf5, workerpool, version
 from openquake.baselib.python3compat import decode
-from openquake.baselib.zeromq import zmq, Socket
+from openquake.baselib.zeromq import zmq, Socket, TimeoutError
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
