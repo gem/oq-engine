@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the ShakeMap calculator failing with a TypeError:
+  get_array_usgs_id() got an unexpected keyword argument 'id'
+
 python3-oq-engine (3.12.0-1~xenial01) xenial; urgency=low
 
   [Marco Pagani]
