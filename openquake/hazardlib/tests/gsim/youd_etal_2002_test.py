@@ -28,7 +28,7 @@ class YoudEtAl2002TestCase(BaseGSIMTestCase):
     def test_mean(self):
         
         self.check('YOUD04/Youd2004_MEAN.csv',
-                   max_discrep_percentage=0.33)
+                   max_discrep_percentage=0.44)
 
     def test_std_total(self):
         self.check('YOUD04/Youd2004_STDDEV.csv',
