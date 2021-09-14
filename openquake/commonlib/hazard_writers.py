@@ -428,6 +428,7 @@ class HazardMapXMLWriter(HazardMapWriter):
             nrml.write(list(root), fh)
 
 
+# not used anymore; to be removed
 class DisaggXMLWriter(object):
     """
     :param dest:

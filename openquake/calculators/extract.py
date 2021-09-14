@@ -1168,7 +1168,8 @@ def extract_disagg(dstore, what):
 
     matrix = out[..., z]
     if traditional and traditional != '0':
-        matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg[z])
+        if matrix.any():  # nonzero
+            matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg[z])
 
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
