@@ -135,4 +135,5 @@ if 'OQ_DISTRIBUTE' not in os.environ:
 
 
 # wether the engine is installed in /home/<user> or not
-config['multi_user'] = not __file__.startswith(os.path.expanduser('~'))
+config['multi_user'] = (False if sys.platform in 'win32 darwin' else
+                        not __file__.startswith(os.path.expanduser('~')))
