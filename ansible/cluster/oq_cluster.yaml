@@ -47,9 +47,11 @@
       when: "'master' in group_names" 
 
     - name: Run install script from github repo only on master node
-      shell: cd /home.dev/openquake && 
-        git clone https://github.com/gem/oq-engine.git && cd oq-engine 
-        && python3.8 ./install.py devel_server --version={oq_version}
+      shell: |
+        cd /home.dev/openquake 
+        git clone https://github.com/gem/oq-engine.git 
+        cd oq-engine 
+        python3.8 ./install.py devel_server --version {{ oq_version }}
       changed_when: false
       register: oq_install
       when: "'master' in group_names" 
