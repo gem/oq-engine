@@ -35,7 +35,7 @@ aae = numpy.testing.assert_almost_equal
 
 class DisaggregationTestCase(CalculatorTestCase):
 
-    def assert_curves_ok(self, expected, test_dir, fmt='xml', delta=None):
+    def assert_curves_ok(self, expected, test_dir, fmt='csv', delta=None):
         self.run_calc(test_dir, 'job.ini', calculation_mode='classical')
         hc_id = self.calc.datastore.calc_id
         out = self.run_calc(test_dir, 'job.ini', exports=fmt,
@@ -48,18 +48,9 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         self.assert_curves_ok(
-            ['rlz-0-PGA-sid-0-poe-0_Lon_Lat.csv',
-             'rlz-0-PGA-sid-0-poe-0_Mag.csv',
-             'rlz-0-PGA-sid-0-poe-0_Mag_Dist.csv',
-             'rlz-0-PGA-sid-0-poe-1_Lon_Lat.csv',
-             'rlz-0-PGA-sid-0-poe-1_Mag.csv',
-             'rlz-0-PGA-sid-0-poe-1_Mag_Dist.csv',
-             'rlz-0-SA(0.025)-sid-0-poe-0_Lon_Lat.csv',
-             'rlz-0-SA(0.025)-sid-0-poe-0_Mag.csv',
-             'rlz-0-SA(0.025)-sid-0-poe-0_Mag_Dist.csv',
-             'rlz-0-SA(0.025)-sid-0-poe-1_Lon_Lat.csv',
-             'rlz-0-SA(0.025)-sid-0-poe-1_Mag.csv',
-             'rlz-0-SA(0.025)-sid-0-poe-1_Mag_Dist.csv'],
+            ['Lon_Lat-0.csv', 'Lon_Lat-1.csv',
+             'Mag-0.csv', 'Mag-1.csv',
+             'Mag_Dist-0.csv', 'Mag_Dist-1.csv'],
             case_1.__file__,
             fmt='csv')
 
@@ -68,20 +59,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         # site #0 is partially discarded
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.assert_curves_ok(
-            ['rlz-0-SA(0.1)-sid-0.xml',
-             'rlz-0-SA(0.1)-sid-1.xml',
-             'rlz-1-SA(0.1)-sid-0.xml',
-             'rlz-1-SA(0.1)-sid-1.xml',
-             'rlz-2-SA(0.1)-sid-1.xml',
-             'rlz-3-SA(0.1)-sid-1.xml'],
-            case_2.__file__)
-
-        # check that the CSV exporter does not break
-        fnames = export(('disagg', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles(
-                'expected_output/%s' % strip_calc_id(fname), fname)
+        self.assert_curves_ok(['Mag-0.csv', 'Mag-1.csv'], case_2.__file__)
 
         # test extract disagg_layer for Mag
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
@@ -111,9 +89,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # this is case with number of lon/lat bins different for site 0/site 1
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
-
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 32)  # 1 sid x 8 keys x 2 poe x 2 imt
+        self.assertEqual(len(fnames), 16)  # 2 sid x 8 keys x 2 poe x 2 imt
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
@@ -176,12 +153,11 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # test normal disaggregation
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/rlz-0-PGA-sid-0-poe-1_TRT.csv', fname)
+        self.assertEqualFiles('expected/TRT-0.csv', fname)
 
         # test conditional disaggregation
         [fname] = export(('disagg_traditional', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/rlz-0-PGA-sid-0-poe-1-cond_TRT.csv',
-                              fname)
+        self.assertEqualFiles('expected/TRT-traditional-0.csv', fname)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
@@ -191,7 +167,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         os.remove(fname)
 
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt
+        self.assertEqual(len(fnames), 16)  # 2 sid x 8 keys x 2 poe x 2 imt
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(

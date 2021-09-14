@@ -496,9 +496,7 @@ def export_disagg_csv_xml(ekey, dstore):
     hmap4 = dstore['hmap4']
     N, M, P, Z = hmap4.shape
     imts = list(oq.imtls)
-    rlzs = dstore['full_lt'].get_realizations()
     fnames = []
-    writercls = hazard_writers.DisaggXMLWriter
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
     if ekey[0] == 'disagg_traditional':
@@ -507,54 +505,31 @@ def export_disagg_csv_xml(ekey, dstore):
     else:
         trad = ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
-    for s, m, p, z in iproduct(N, M, P, Z):
-        dic = {k: dstore['disagg/' + k][s, m, p, ..., z]
-               for k in oq.disagg_outputs}
-        if sum(arr.sum() for arr in dic.values()) == 0:  # no data
-            continue
-        imt = from_string(imts[m])
-        r = hmap4.rlzs[s, z]
-        rlz = rlzs[r]
-        iml = hmap4[s, m, p, z]
-        poe_agg = dstore['poe4'][s, m, p, z]
-        fname = dstore.export_path(
-            'rlz-%d-%s-sid-%d-poe-%d.xml' % (r, imt, s, p))
+    metadata = dstore.metadata
+    for s in range(N):
         lon, lat = sitecol.lons[s], sitecol.lats[s]
-        metadata = dstore.metadata
-        imt_name = 'SA' if imt.string.startswith('SA') else imt.string
         metadata.update(investigation_time=oq.investigation_time,
-                        imt=imt_name,
-                        smlt_path='_'.join(rlz.sm_lt_path),
-                        gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
                         mag_bin_edges=bins['Mag'].tolist(),
                         dist_bin_edges=bins['Dist'].tolist(),
                         lon_bin_edges=bins['Lon'][s].tolist(),
                         lat_bin_edges=bins['Lat'][s].tolist(),
                         eps_bin_edges=bins['Eps'].tolist(),
-                        tectonic_region_types=decode(bins['TRT'].tolist()))
-        if ekey[1] == 'xml':
-            metadata['sa_period'] = getattr(imt, 'period', None) or None
-            metadata['sa_damping'] = getattr(imt, 'damping', None)
-            writer = writercls(fname, **metadata)
-            data = []
-            for k in oq.disagg_outputs:
-                data.append(DisaggMatrix(poe_agg, iml, k.split('_'), dic[k]))
-            writer.serialize(data)
+                        tectonic_region_types=decode(bins['TRT'].tolist()),
+                        lon=lon, lat=lat)
+        for k in oq.disagg_outputs:
+            header = k.lower().split('_') + ['poe']
+            values = []
+            for m, p, z in iproduct(M, P, Z):
+                imt = from_string(imts[m])
+                values.append(extract(dstore, ex % (k, imt, s, p, z)))
+            com = {key: value for key, value in metadata.items()
+                   if value is not None and key not in skip_keys}
+            com.update(metadata)
+            fname = dstore.export_path('%s%s-%d.csv' % (k, trad, s))
+            vals = numpy.concatenate(values)
+            writers.write_csv(fname, vals, header=header,
+                              comment=com, fmt='%.5E')
             fnames.append(fname)
-        else:  # csv
-            metadata['poe'] = poe_agg
-            for k in oq.disagg_outputs:
-                header = k.lower().split('_') + ['poe']
-                com = {key: value for key, value in metadata.items()
-                       if value is not None and key not in skip_keys}
-                com.update(metadata)
-                fname = dstore.export_path(
-                    'rlz-%d-%s-sid-%d-poe-%d%s_%s.csv' %
-                    (r, imt, s, p, trad, k))
-                values = extract(dstore, ex % (k, imt, s, p, z))
-                writers.write_csv(fname, values, header=header,
-                                  comment=com, fmt='%.5E')
-                fnames.append(fname)
     return sorted(fnames)
 
 
