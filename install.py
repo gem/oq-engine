@@ -178,10 +178,13 @@ def install_standalone(venv):
             print('%s: could not install %s' % (exc, STANDALONE % app))
 
 
-def before_checks(inst, remove, usage):
+def before_checks(inst, port, remove, usage):
     """
     Checks to perform before the installation
     """
+    if port:
+        inst.DBPORT = int(port)
+
     # check python version
     if PYVER < (3, 6):
         sys.exit('Error: you need at least Python 3.6, but you have %s' %
@@ -221,9 +224,8 @@ def before_checks(inst, remove, usage):
             sock.close()
         if errcode == 0:  # no error, the DbServer is up
             sys.exit('There is DbServer running on port %d from a previous '
-                     'installation. Please run `%s`. '
-                     'If it does not work, try `sudo fuser -k %d/tcp`' %
-                     (inst.DBPORT, cmd, inst.DBPORT))
+                     'installation. Please change the port or run `%s`'
+                     (inst.DBPORT, cmd))
 
     # check if there is an installation from packages
     if (inst is server and os.path.exists('/etc/openquake/openquake.cfg')
@@ -303,15 +305,15 @@ def install(inst, version):
     if sys.platform != 'win32':
         subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                          'pip', 'wheel'])
+                               'pip', 'wheel'])
     else:
         if os.path.exists('python\\python._pth.old'):
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                'pip', 'wheel'])
+                                   'pip', 'wheel'])
         else:
             subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                          'pip', 'wheel'])
+                                   'pip', 'wheel'])
 
     # install the requirements
     req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
@@ -383,7 +385,7 @@ def install(inst, version):
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
-                            afterservice=afterservice)
+                                         afterservice=afterservice)
                     f.write(srv)
             subprocess.check_call(
                 ['systemctl', 'enable', '--now', service_name])
@@ -443,10 +445,12 @@ if __name__ == '__main__':
                         help="disinstall the engine")
     parser.add_argument("--version",
                         help="version to install (default stable)")
+    parser.add_argument("--port",
+                        help="DbServer port (default 1907 or 1908)")
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.remove, parser.format_usage())
+        before_checks(inst, args.port, args.remove, parser.format_usage())
         if args.remove:
             remove(inst)
         else:
