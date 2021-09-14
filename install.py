@@ -435,19 +435,21 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("inst", choices=['server', 'user', 'devel',
-                                         'devel_server'],
-                        default='server', nargs='?',
-                        help='the kind of installation you want '
-                        '(default server)')
+    parser.add_argument("inst",
+                        choices=['server', 'user', 'devel', 'devel_server'],
+                        nargs='?',
+                        help='the kind of installation you want')
     parser.add_argument("--remove",  action="store_true",
                         help="disinstall the engine")
     parser.add_argument("--version",
                         help="version to install (default stable)")
     args = parser.parse_args()
-    inst = globals()[args.inst]
-    before_checks(inst, args.remove, parser.format_usage())
-    if args.remove:
-        remove(inst)
+    if args.inst:
+        inst = globals()[args.inst]
+        before_checks(inst, args.remove, parser.format_usage())
+        if args.remove:
+            remove(inst)
+        else:
+            install(inst, args.version)
     else:
-        install(inst, args.version)
+        sys.exit("Please specify the kind of installation")
