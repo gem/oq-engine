@@ -1,7 +1,7 @@
 ---
 # vars file for oqengine
-engine_release: "3.11.2"
-req_py38: https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-linux64.txt
+engine_release: "3.12.0"
+req_py38: https://raw.githubusercontent.com/gem/oq-engine/engine-3.12/requirements-py38-linux64.txt
 venv_dir: /opt/openquake
 venv_bin: "{{ venv_dir }}/bin"
 
