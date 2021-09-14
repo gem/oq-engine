@@ -18,7 +18,6 @@
 
 import os
 import sys
-import getpass
 import numpy
 import scipy
 import pandas
@@ -136,4 +135,4 @@ if 'OQ_DISTRIBUTE' not in os.environ:
 
 
 # wether the engine is installed in /home/<user> or not
-config['multi_user'] = not __file__.startswith('/home/' + getpass.getuser())
+config['multi_user'] = not __file__.startswith(os.path.expanduser('~'))
