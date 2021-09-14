@@ -48,11 +48,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         self.assert_curves_ok(
-            ['Lon_Lat-0.csv', 'Lon_Lat-1.csv',
-             'Mag-0.csv', 'Mag-1.csv',
-             'Mag_Dist-0.csv', 'Mag_Dist-1.csv'],
-            case_1.__file__,
-            fmt='csv')
+            ['Lon_Lat-0.csv', 'Mag-0.csv', 'Mag_Dist-0.csv'], case_1.__file__)
 
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
@@ -90,7 +86,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 16)  # 2 sid x 8 keys x 2 poe x 2 imt
+        print([os.path.basename(f) for f in fnames])
+        self.assertEqual(len(fnames), 10)  # 2 sid x 8 keys x 2 poe x 2 imt
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(

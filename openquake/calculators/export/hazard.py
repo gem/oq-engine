@@ -520,20 +520,27 @@ def export_disagg_csv_xml(ekey, dstore):
         for k in oq.disagg_outputs:
             header = ['imt', 'iml', 'rlz'] + k.lower().split('_') + ['poe']
             values = []
+            nonzeros = []
             for m, p, z in iproduct(M, P, Z):
                 imt = imts[m]
                 r = hmap4.rlzs[s, z]
                 rlz = rlzs[r].ordinal
                 iml = hmap4[s, m, p, z]
-                for row in extract(dstore, ex % (k, imt, s, p, z)):
+                aw = extract(dstore, ex % (k, imt, s, p, z))
+                if 'trt' in header:
+                    nonzeros.append(True)
+                else:
+                    nonzeros.append(aw[:, -1].any())  # nonzero poes
+                for row in aw:
                     values.append((imt, iml, rlz) + tuple(row))
-            com = {key: value for key, value in metadata.items()
-                   if value is not None and key not in skip_keys}
-            com.update(metadata)
-            fname = dstore.export_path('%s%s-%d.csv' % (k, trad, s))
-            writers.write_csv(fname, values, header=header,
-                              comment=com, fmt='%.5E')
-            fnames.append(fname)
+            if any(nonzeros):
+                com = {key: value for key, value in metadata.items()
+                       if value is not None and key not in skip_keys}
+                com.update(metadata)
+                fname = dstore.export_path('%s%s-%d.csv' % (k, trad, s))
+                writers.write_csv(fname, values, header=header,
+                                  comment=com, fmt='%.5E')
+                fnames.append(fname)
     return sorted(fnames)
 
 
