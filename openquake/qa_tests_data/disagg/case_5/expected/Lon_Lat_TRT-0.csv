@@ -1,6 +1,6 @@
-#,,,"generated_by='OpenQuake engine 3.13.0-git89ee76d03d', start_date='2021-09-14T07:13:50', checksum=3819865844, investigation_time=1.0, mag_bin_edges=[6.0, 7.0], dist_bin_edges=[0.0, 40.0, 80.0, 120.0, 160.0, 200.0], lon_bin_edges=[-75.80445236037271, -74.0, -72.19554763962729], lat_bin_edges=[2.80136, 4.6, 6.398639999999999], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Deep Seismicity'], lon=-74.0, lat=4.6"
-lon,lat,trt,poe
--74.90222618018635,3.7006799999999997,Deep Seismicity,0.0
--74.90222618018635,5.499319999999999,Deep Seismicity,5.8300793314147725e-06
--73.09777381981365,3.7006799999999997,Deep Seismicity,0.0
--73.09777381981365,5.499319999999999,Deep Seismicity,9.464204820242017e-05
+#,,,,,,"generated_by='OpenQuake engine 3.13.0-git190756f0da', start_date='2021-09-14T07:40:54', checksum=3819865844, investigation_time=1.0, mag_bin_edges=[6.0, 7.0], dist_bin_edges=[0.0, 40.0, 80.0, 120.0, 160.0, 200.0], lon_bin_edges=[-75.80445236037271, -74.0, -72.19554763962729], lat_bin_edges=[2.80136, 4.6, 6.398639999999999], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Deep Seismicity'], lon=-74.0, lat=4.6"
+imt,iml,rlz,lon,lat,trt,poe
+PGA,1.20339E-02,0,-74.90222618018635,3.7006799999999997,Deep Seismicity,0.0
+PGA,1.20339E-02,0,-74.90222618018635,5.499319999999999,Deep Seismicity,5.8300793314147725e-06
+PGA,1.20339E-02,0,-73.09777381981365,3.7006799999999997,Deep Seismicity,0.0
+PGA,1.20339E-02,0,-73.09777381981365,5.499319999999999,Deep Seismicity,9.464204820253119e-05

@@ -116,7 +116,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # test the CSVs are readable
         for fname in fnames:
-            hdf5.read_csv(fname)
+            hdf5.read_csv(fname, {'imt': str, None: float})
 
         # test extract disagg_layer for Lon_Lat
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Lon_Lat&'

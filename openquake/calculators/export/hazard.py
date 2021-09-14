@@ -494,6 +494,7 @@ def export_disagg_csv_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     hmap4 = dstore['hmap4']
+    rlzs = dstore['full_lt'].get_realizations()
     N, M, P, Z = hmap4.shape
     imts = list(oq.imtls)
     fnames = []
@@ -517,17 +518,20 @@ def export_disagg_csv_xml(ekey, dstore):
                         tectonic_region_types=decode(bins['TRT'].tolist()),
                         lon=lon, lat=lat)
         for k in oq.disagg_outputs:
-            header = k.lower().split('_') + ['poe']
+            header = ['imt', 'iml', 'rlz'] + k.lower().split('_') + ['poe']
             values = []
             for m, p, z in iproduct(M, P, Z):
-                imt = from_string(imts[m])
-                values.append(extract(dstore, ex % (k, imt, s, p, z)))
+                imt = imts[m]
+                r = hmap4.rlzs[s, z]
+                rlz = rlzs[r].ordinal
+                iml = hmap4[s, m, p, z]
+                for row in extract(dstore, ex % (k, imt, s, p, z)):
+                    values.append((imt, iml, rlz) + tuple(row))
             com = {key: value for key, value in metadata.items()
                    if value is not None and key not in skip_keys}
             com.update(metadata)
             fname = dstore.export_path('%s%s-%d.csv' % (k, trad, s))
-            vals = numpy.concatenate(values)
-            writers.write_csv(fname, vals, header=header,
+            writers.write_csv(fname, values, header=header,
                               comment=com, fmt='%.5E')
             fnames.append(fname)
     return sorted(fnames)
