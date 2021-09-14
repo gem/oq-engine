@@ -119,7 +119,8 @@
         - "{{groups['worker']}}"
 
     - name: execute ssh for first time with openquake user
-      command: ssh -l openquake -o "StrictHostKeyChecking no" "{{hostvars[item]['ansible_default_ipv4']['address']}}"
+      shell: |
+        ssh -l openquake -o "StrictHostKeyChecking no" "{{hostvars[item]['ansible_default_ipv4']['address']}}"
       become: true
       become_user: root
       loop: "{{ groups['worker'] }}"
