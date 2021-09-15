@@ -859,6 +859,7 @@ def get_crmodel(oqparam):
             arrays = []
             for fname in fnames:
                 arr = hdf5.read_csv(fname, dtypedict).array
+                arrays.append(arr)
                 for no, row in enumerate(arr, 2):
                     if row['loss_type'] not in loss_types:
                         msg = '%s: %s is not a recognized loss type, line=%d'
