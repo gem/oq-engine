@@ -303,6 +303,11 @@ individual_rlzs:
   Example: *individual_rlzs = true*.
   Default: False
 
+individual_curves:
+  Legacy name for `individual_rlzs`, it should not be used.
+  Example: *individual_curves = true*.
+  Default: False
+
 inputs:
   INTERNAL. Dictionary with the input files paths.
 
