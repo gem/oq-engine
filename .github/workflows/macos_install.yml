@@ -2,8 +2,8 @@ name: MacOS Install engine for 3.6, 3.7 and 3.8
 'on':
   schedule:
     - cron: "0 1 * * *"
-  push:
-    branches: [ macos11 ]
+  #push:
+    #branches: [ macos11 ]
 
 jobs:
 
