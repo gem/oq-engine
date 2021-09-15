@@ -20,7 +20,6 @@ import re
 import ast
 import csv
 import copy
-import json
 import zlib
 import pickle
 import shutil
@@ -36,7 +35,7 @@ import numpy
 import pandas
 import requests
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
 from openquake.baselib.python3compat import zip
@@ -45,7 +44,7 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile, pmf)
+    source, geo, site, imt, valid, sourceconverter, nrml, pmf)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific
@@ -855,10 +854,17 @@ def get_crmodel(oqparam):
             dtypedict = {
                 by: str, 'consequence': str, 'loss_type': str, None: float}
 
-            # i.e. collapsed.csv, fatalities.csv, ...
-            array = numpy.concatenate([
-                hdf5.read_csv(fname, dtypedict).array for fname in fnames])
+            # i.e. files collapsed.csv, fatalities.csv, ... with headers
+            # taxonomy,consequence,loss_type,slight,moderate,extensive
+            arrays = []
+            for fname in fnames:
+                arr = hdf5.read_csv(fname, dtypedict).array
+                for no, row in enumerate(arr, 2):
+                    if row['loss_type'] not in loss_types:
+                        msg = '%s: %s is not a recognized loss type, line=%d'
+                        raise InvalidFile(msg % (fname, row['loss_type'], no))
 
+            array = numpy.concatenate(arrays)
             dic = group_array(array, 'consequence')
             for consequence, group in dic.items():
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
