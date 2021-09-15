@@ -246,7 +246,7 @@ class UCERFSource(BaseSeismicSource):
                 idist = self.src_filter.integration_distance(DEFAULT_TRT)
             else:
                 # in classical
-                return range(len(bg_locations))
+                return numpy.arange(len(bg_locations))
             distances = min_geodetic_distance(
                 self.src_filter.sitecol.xyz,
                 (bg_locations[:, 0], bg_locations[:, 1]))
