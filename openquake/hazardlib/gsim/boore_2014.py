@@ -19,27 +19,12 @@
 """
 Module exports :class:`BooreEtAl2014`,
                :class:`BooreEtAl2014HighQ`,
-               :class:`BooreEtAl2014LowQ`,
-               :class:`BooreEtAl2014CaliforniaBasin`,
-               :class:`BooreEtAl2014HighQCaliforniaBasin`,
-               :class:`BooreEtAl2014LowQCaliforniaBasin`,
-               :class:`BooreEtAl2014JapanBasin`,
-               :class:`BooreEtAl2014HighQJapanBasin`,
-               :class:`BooreEtAl2014LowQJapanBasin`,
-               :class:`BooreEtAl2014NoSOF`,
-               :class:`BooreEtAl2014HighQNoSOF`,
-               :class:`BooreEtAl2014LowQNoSOF`,
-               :class:`BooreEtAl2014CaliforniaBasinNoSOF`,
-               :class:`BooreEtAl2014HighQCaliforniaBasinNoSOF`,
-               :class:`BooreEtAl2014LowQCaliforniaBasinNoSOF`,
-               :class:`BooreEtAlJ2014apanBasinNoSOF`,
-               :class:`BooreEtAl2014HighQJapanBasinNoSOF`,
-               :class:`BooreEtAl2014LowQJapanBasinNoSOF`
+               :class:`BooreEtAl2014LowQ`
 """
 import numpy as np
 
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -298,9 +283,12 @@ class BooreEtAl2014(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    region = "nobasin"
     kind = "base"
-    sof = True
+
+    def __init__(self, region='nobasin', sof=True, **kwargs):
+        super().__init__(**kwargs)
+        self.region = region
+        self.sof = sof
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """
@@ -683,42 +671,6 @@ def california_basin_model(vs30):
     return np.exp(model)
 
 
-class BooreEtAl2014CaliforniaBasin(BooreEtAl2014):
-    """
-    Implements the Boore et al. (2014) GMPE under the conditions that the
-    global (average Q) attenuation model is preferred and the basin model is
-    considered to be represented by the "California" case
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-    region = "CAL"
-
-
-class BooreEtAl2014HighQCaliforniaBasin(BooreEtAl2014HighQ):
-    """
-    Implements the Boore et al. (2014) GMPE under the conditions that the
-    high Q attenuation model is preferred and the basin model is
-    considered to be represented by the "California" case
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-    region = "CAL"
-
-
-class BooreEtAl2014LowQCaliforniaBasin(BooreEtAl2014LowQ):
-    """
-    Implements the Boore et al. (2014) GMPE under the conditions that the
-    high Q attenuation model is preferred and the basin model is
-    considered to be represented by the "California" case
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-    region = "CAL"
-
-
 def japan_basin_model(vs30):
     """
     Returns the centred z1.0 (mu_z1) based on the Japan model
@@ -731,140 +683,9 @@ def japan_basin_model(vs30):
     return np.exp(model)
 
 
-class BooreEtAl2014JapanBasin(BooreEtAl2014):
-    """
-    Implements the Boore et al. (2014) GMPE under the conditions that the
-    global (average Q) attenuation model is preferred and the basin model is
-    considered to be represented by the "Japan" case
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-    region = "JPN"
-
-
-class BooreEtAl2014HighQJapanBasin(BooreEtAl2014HighQ):
-    """
-    Implements the Boore et al. (2014) GMPE under the conditions that the
-    high Q attenuation model is preferred and the basin model is
-    considered to be represented by the "Japan" case
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-    region = "JPN"
-
-
-class BooreEtAl2014LowQJapanBasin(BooreEtAl2014LowQ):
-    """
-    Implements the Boore et al. (2014) GMPE under the conditions that the
-    low Q attenuation model is preferred and the basin model is
-    considered to be represented by the "Japan" case
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-    region = "JPN"
-
-
-class BooreEtAl2014NoSOF(BooreEtAl2014):
-    """
-    The Boore et al. (2014) GMPE can consider the case in which the
-    style-of-faulting is unspecified. In this case the GMPE is no longer
-    dependent on rake.
-    """
-    #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-    sof = False
-
-
-class BooreEtAl2014HighQNoSOF(BooreEtAl2014HighQ):
-    """
-    The Boore et al. (2014) GMPE, implemented for the High Q regions, for the
-    case in which the style-of-faulting is unspecified.
-    """
-    #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-    sof = False
-
-
-class BooreEtAl2014LowQNoSOF(BooreEtAl2014LowQ):
-    """
-    The Boore et al. (2014) GMPE, implemented for the Low Q regions, for the
-    case in which the style-of-faulting is unspecified.
-    """
-    #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-    sof = False
-
-
-class BooreEtAl2014CaliforniaBasinNoSOF(BooreEtAl2014NoSOF):
-    """
-    The Boore et al. (2014) GMPE, implemented for global (average Q) regions,
-    for the case when style of faulting is unspecficied and the California
-    basin depth model is required
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-    region = "CAL"
-
-
-class BooreEtAl2014HighQCaliforniaBasinNoSOF(BooreEtAl2014HighQNoSOF):
-    """
-    The Boore et al. (2014) GMPE, implemented for high Q regions,
-    for the case when style of faulting is unspecficied and the California
-    basin depth model is required
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-    region = "CAL"
-
-
-class BooreEtAl2014LowQCaliforniaBasinNoSOF(BooreEtAl2014LowQNoSOF):
-    """
-    The Boore et al. (2014) GMPE, implemented for high Q regions,
-    for the case when style of faulting is unspecficied and the California
-    basin depth model is required
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-    region = "CAL"
-
-
-class BooreEtAl2014JapanBasinNoSOF(BooreEtAl2014NoSOF):
-    """
-    The Boore et al. (2014) GMPE, implemented for global (average Q) regions,
-    for the case when style of faulting is unspecficied and the California
-    basin depth model is required
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-    region = "JPN"
-
-
-class BooreEtAl2014HighQJapanBasinNoSOF(BooreEtAl2014HighQNoSOF):
-    """
-    The Boore et al. (2014) GMPE, implemented for high Q regions,
-    for the case when style of faulting is unspecficied and the California
-    basin depth model is required
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-    region = "JPN"
-
-
-class BooreEtAl2014LowQJapanBasinNoSOF(BooreEtAl2014LowQNoSOF):
-    """
-    The Boore et al. (2014) GMPE, implemented for high Q regions,
-    for the case when style of faulting is unspecficied and the California
-    basin depth model is required
-    """
-    #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
-    #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-    region = "JPN"
+for cls in (BooreEtAl2014LowQ, BooreEtAl2014HighQ, BooreEtAl2014):
+    add_alias(f'{cls.__name__}CaliforniaBasin', cls, region="CAL")
+    add_alias(f'{cls.__name__}CaliforniaBasinNoSOF', cls, region="CAL", sof=0)
+    add_alias(f'{cls.__name__}JapanBasin', cls, region="JPN")
+    add_alias(f'{cls.__name__}JapanBasinNoSOF', cls, region="JPN", sof=0)
+    add_alias(f'{cls.__name__}NoSOF', cls, sof=0)
