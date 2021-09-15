@@ -704,10 +704,10 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol.complete)
         R = len(self.realizations)
-        if oq.individual_curves is None:  # not specified in the job.ini
-            individual_curves = (N == 1) * (R > 1)
+        if oq.individual_rlzs is None:  # not specified in the job.ini
+            individual_rlzs = (N == 1) * (R > 1)
         else:
-            individual_curves = oq.individual_curves
+            individual_rlzs = oq.individual_rlzs
         hstats = oq.hazard_stats()
         # initialize datasets
         P = len(oq.poes)
@@ -719,7 +719,7 @@ class ClassicalCalculator(base.HazardCalculator):
             L = oq.imtls.size
         L1 = self.L1 = L // M
         S = len(hstats)
-        if R > 1 and individual_curves or not hstats:
+        if R > 1 and individual_rlzs or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_descr(
                 'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
@@ -746,7 +746,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(
                 dstore, self.weights, t.sids, oq.imtls, oq.poes),
-             N, hstats, individual_curves, oq.max_sites_disagg,
+             N, hstats, individual_rlzs, oq.max_sites_disagg,
              self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
         if self.few_sites:
@@ -806,13 +806,13 @@ def make_hmap_png(hmap, lons, lats):
     return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
 
 
-def build_hazard(pgetter, N, hstats, individual_curves,
+def build_hazard(pgetter, N, hstats, individual_rlzs,
                  max_sites_disagg, amplifier, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param N: the total number of sites
     :param hstats: a list of pairs (statname, statfunc)
-    :param individual_curves: if True, also build the individual curves
+    :param individual_rlzs: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
     :param amplifier: instance of Amplifier or None
     :param monitor: instance of Monitor
@@ -837,7 +837,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}
-    if R > 1 and individual_curves or not hstats:
+    if R > 1 and individual_rlzs or not hstats:
         pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
         if poes:
             pmap_by_kind['hmaps-rlzs'] = [
@@ -865,7 +865,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
                     if poes:
                         hmap = calc.make_hmap(sc, imtls, poes, sid)
                         pmap_by_kind['hmaps-stats'][s].update(hmap)
-            if R > 1 and individual_curves or not hstats:
+            if R > 1 and individual_rlzs or not hstats:
                 for r, pmap in enumerate(pmap_by_kind['hcurves-rlzs']):
                     pmap[sid] = pc.extract(r)
                 if poes:

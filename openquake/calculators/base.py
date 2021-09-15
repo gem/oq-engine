@@ -825,7 +825,7 @@ class HazardCalculator(BaseCalculator):
                for lt in oq.loss_names}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
-        self.param = dict(individual_curves=oq.individual_curves,
+        self.param = dict(individual_rlzs=oq.individual_rlzs,
                           ps_grid_spacing=oq.ps_grid_spacing,
                           minimum_distance=oq.minimum_distance,
                           min_iml=oq.min_iml,
