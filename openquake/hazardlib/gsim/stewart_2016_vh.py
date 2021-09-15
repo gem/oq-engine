@@ -109,7 +109,7 @@ class StewartEtAl2016NoSOFVH(StewartEtAl2016VH):
     dependent on rake.
     """
     VGMPE = stewart_2016.StewartEtAl2016(sof=False)
-    HGMPE = boore_2014.BooreEtAl2014NoSOF()
+    HGMPE = boore_2014.BooreEtAl2014(sof=False)
 
 
 class StewartEtAl2016RegCHNNoSOFVH(StewartEtAl2016RegCHNVH):
@@ -120,7 +120,7 @@ class StewartEtAl2016RegCHNNoSOFVH(StewartEtAl2016RegCHNVH):
     dependent on rake.
     """
     VGMPE = stewart_2016.StewartEtAl2016(region='CHN', sof=False)
-    HGMPE = boore_2014.BooreEtAl2014HighQNoSOF()
+    HGMPE = boore_2014.BooreEtAl2014HighQ(sof=False)
 
 
 class StewartEtAl2016RegJPNNoSOFVH(StewartEtAl2016RegJPNVH):
@@ -130,4 +130,4 @@ class StewartEtAl2016RegJPNNoSOFVH(StewartEtAl2016RegJPNVH):
     unspecified. In this case the GMPE is no longer dependent on rake.
     """
     VGMPE = stewart_2016.StewartEtAl2016(region='JPN', sof=False)
-    HGMPE = boore_2014.BooreEtAl2014LowQNoSOF()
+    HGMPE = boore_2014.BooreEtAl2014LowQ(sof=False)
