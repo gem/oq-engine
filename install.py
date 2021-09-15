@@ -77,6 +77,12 @@ class server:
     shared_dir = /var/lib
     ''' % (DBPORT, DBPATH)
 
+    @classmethod
+    def exit(cls):
+        return f'''There is a DbServer running on port {cls.DBPORT} from a
+previous installation. Please stop the server with the commandx
+`sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`'''
+
 
 class devel_server:
     """
@@ -95,6 +101,7 @@ class devel_server:
     file = %s
     shared_dir = /var/lib
     ''' % (DBPORT, DBPATH)
+    exit = server.exit
 
 
 class user:
@@ -120,11 +127,18 @@ class user:
     DBPORT = 1908
     CONFIG = ''
 
+    @classmethod
+    def exit(cls):
+        return f'''There is a DbServer running on port {cls.DBPORT} from a
+previous installation. Please stop the server with the command
+`oq dbserver stop` or set a different port with the --port option'''
+
 
 class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
+    exit = user.exit
 
 
 PACKAGES = '''It looks like you have an installation from packages.
@@ -214,18 +228,13 @@ def before_checks(inst, port, remove, usage):
 
     # check if there is a DbServer running
     if not remove:
-        cmd = ('sudo systemctl stop openquake-dbserver' if (
-            inst is server or inst is devel_server) else 'oq dbserver stop')
-        cmd = ('oq dbserver stop')
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             errcode = sock.connect_ex(('localhost', inst.DBPORT))
         finally:
             sock.close()
         if errcode == 0:  # no error, the DbServer is up
-            sys.exit('There is DbServer running on port %d from a previous '
-                     'installation. Please change the port or run `%s`'
-                     (inst.DBPORT, cmd))
+            inst.exit()
 
     # check if there is an installation from packages
     if (inst is server and os.path.exists('/etc/openquake/openquake.cfg')
