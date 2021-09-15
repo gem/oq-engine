@@ -3,6 +3,9 @@ name: Linux Install engine for 3.6, 3.7 and 3.8
 on:
   schedule:
     - cron: "0 4 * * *"
+  push:
+    branches: [ requirements ]
+
 jobs:
 
   install_and_test:
