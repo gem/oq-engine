@@ -214,3 +214,9 @@ separated: since they have all the same weigths, you can trivially
 compute average quantities. AkkarBommer2010 will count more than SadighEtAl1997
 simply because there are 9 times more events for it (actually 9130/991 = 9.2,
 but the rate will tend to 9 when the effective time will tend to infinite).
+
+NB: just to be clear, normally realizations are not in one-to-one
+correspondence with GMPEs. In this example it is true only because there is
+a single tectonic region type. Normally there are multiple tectonic
+region types and a realization is associated to a tuple of GMPEs: there is
+a GMPE for each tectonic region type in the logic tree.
