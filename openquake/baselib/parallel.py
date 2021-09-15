@@ -614,15 +614,6 @@ class IterResult(object):
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
-    # prctl is still useful (on Linux) to terminate all spawned processes
-    # when master is killed via SIGKILL
-    try:
-        import prctl
-    except ImportError:
-        pass
-    else:
-        # if the parent dies, the children die
-        prctl.set_pdeathsig(signal.SIGKILL)
 
 
 def getargnames(task_func):

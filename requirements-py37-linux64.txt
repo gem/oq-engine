@@ -29,12 +29,6 @@ https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.6-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
 
-
-### python-prctl ###
-# comment the following lines to skip installation
-# of python-prctl (optional feature)
-https://wheelhouse.openquake.org/v3/linux/py37/python_prctl-1.6.1-cp37-cp37m-manylinux1_x86_64.whl
-
 ### Celery ###
 # comment the following lines to skip installation
 # of celery (optional feature)
