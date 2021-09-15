@@ -32,15 +32,6 @@ https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
 
 
-### Celery ###
-# comment the following lines to skip installation
-# of celery (optional feature)
-https://wheelhouse.openquake.org/v2/linux/py/vine-1.1.4-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/linux/py/amqp-2.2.2-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/linux/py/kombu-4.1.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/linux/py/billiard-3.5.0.3-py3-none-any.whl
-https://wheelhouse.openquake.org/v2/linux/py/celery-4.1.0-py2.py3-none-any.whl
-
 ### Plotting ###
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)
