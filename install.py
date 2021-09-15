@@ -445,12 +445,12 @@ if __name__ == '__main__':
                         help="disinstall the engine")
     parser.add_argument("--version",
                         help="version to install (default stable)")
-    parser.add_argument("--port",
+    parser.add_argument("--dbport",
                         help="DbServer port (default 1907 or 1908)")
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.port, args.remove, parser.format_usage())
+        before_checks(inst, args.dbport, args.remove, parser.format_usage())
         if args.remove:
             remove(inst)
         else:
