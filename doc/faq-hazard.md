@@ -6,15 +6,15 @@
 
 By default the engine only exports statistical results, i.e. the mean
 hazard curves/maps/uhs. If you want the individual results you must set
-`individual_curves=true` in the job.ini files. Please take care: if you have
+`individual_rlzs=true` in the job.ini files. Please take care: if you have
 thousands of realizations (which is quite common) the data transfer
 and disk space requirements will be thousands of times larger than
 just returning the mean results: the calculation might fail. This is
-why by default `individual_curves` is false.
+why by default `individual_rlzs` is false.
 
-### Argh, I forgot to set `individual_curves`! Must I repeat the calculation?
+### Argh, I forgot to set `individual_rlzs`! Must I repeat the calculation?
 
-No, just set `individual_curves=true` in the job.ini and run
+No, just set `individual_rlzs=true` in the job.ini and run
 ```bash
 $ oq engine --run job.ini --hc=<ID> --exports csv
 ```
