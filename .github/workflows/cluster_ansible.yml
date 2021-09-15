@@ -1,7 +1,9 @@
 name: cluster_ansible
 'on':
+  schedule:
+    - cron: "0 12 * * *"
   push:
-    branches: [ opensuse ]
+    branches: [ macos11 ]
 
 jobs:
 
