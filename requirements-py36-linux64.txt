@@ -10,6 +10,7 @@ https://wheelhouse.openquake.org/v2/linux/py36/pandas-1.1.5-cp36-cp36m-manylinux
 https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/setuptools-56.0.0-py3-none-any.whl 
 https://wheelhouse.openquake.org/v2/linux/py36/h5py-3.1.0-cp36-cp36m-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v2/linux/py36/setproctitle-1.2.2-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/numpy-1.18.2-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/scipy-1.4.1-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/pyzmq-19.0.0-cp36-cp36m-manylinux1_x86_64.whl
