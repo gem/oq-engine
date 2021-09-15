@@ -136,8 +136,8 @@ if 'OQ_DISTRIBUTE' not in os.environ:
 
 # wether the engine was installed as multi_user (linux root) or not
 if sys.platform in 'win32 darwin':
-    config['multi_user'] = False
+    config.multi_user = False
 else:  # linux
     import pwd
     install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
-    config['multi_user'] = install_user == 'root'
+    config.multi_user = install_user == 'root'
