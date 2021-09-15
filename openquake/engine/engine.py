@@ -109,13 +109,13 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         dskeys.add('realizations')
     hdf5 = dstore.hdf5
     if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
-        if oq.hazard_stats() or oq.individual_curves or len(rlzs) == 1:
+        if oq.hazard_stats() or oq.individual_rlzs or len(rlzs) == 1:
             dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if len(rlzs) > 1 and not oq.individual_curves and not oq.collect_rlzs:
+    if len(rlzs) > 1 and not oq.individual_rlzs and not oq.collect_rlzs:
         for out in ['avg_losses-rlzs', 'agg_losses-rlzs', 'agg_curves-rlzs']:
             if out in dskeys:
                 dskeys.remove(out)

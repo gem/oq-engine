@@ -30,7 +30,7 @@ than 20 lines of code:
    def main(job_ini):
        with logs.init('job', job_ini) as log:
            calc = calculators(log.get_oqparam(), log.calc_id)
-           calc.run(individual_curves='true', shutdown=True)
+           calc.run(individual_rlzs='true', shutdown=True)
            print('The hazard curves are in %s::/hcurves-rlzs'
                 % calc.datastore.filename)
 

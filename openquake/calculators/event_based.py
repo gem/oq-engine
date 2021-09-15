@@ -427,7 +427,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
             # NB: in the future we may want to save to individual hazard
-            # curves if oq.individual_curves is set; for the moment we
+            # curves if oq.individual_rlzs is set; for the moment we
             # save the statistical curves only
             hstats = oq.hazard_stats()
             S = len(hstats)
@@ -438,7 +438,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 # logic tree reduction mechanism during refactoring
                 raise AssertionError('Expected %d pmaps, got %d' %
                                      (len(weights), len(pmaps)))
-            if oq.individual_curves:
+            if oq.individual_rlzs:
                 logging.info('Saving individual hazard curves')
                 self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
                 self.datastore.set_shape_descr(

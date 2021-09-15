@@ -297,11 +297,10 @@ imt_ref:
   Example: *imt_ref = SA(0.15)*.
   Default: no default
 
-
-individual_curves:
+individual_rlzs:
   When set, store the individual hazard curves and/or individual risk curves
   for each realization.
-  Example: *individual_curves = true*.
+  Example: *individual_rlzs = true*.
   Default: False
 
 inputs:
@@ -776,7 +775,7 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     imls_ref = valid.Param(valid.positivefloats, [])
     imt_ref = valid.Param(valid.intensity_measure_type)
-    individual_curves = valid.Param(valid.boolean, None)
+    individual_rlzs = individual_curves = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -1415,7 +1414,7 @@ class OqParam(valid.ParamSet):
             yield kind
             return
         # default: yield stats (and realizations if required)
-        if R > 1 and self.individual_curves or not stats:
+        if R > 1 and self.individual_rlzs or not stats:
             for r in range(R):
                 yield 'rlz-%03d' % r
         yield from stats

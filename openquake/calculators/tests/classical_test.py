@@ -300,7 +300,7 @@ hazard_uhs-std.csv
                 case_16.__file__)
 
         # test that the single realization export fails because
-        # individual_curves was false
+        # individual_rlzs was false
         with self.assertRaises(KeyError) as ctx:
             export(('hcurves/rlz-3', 'csv'), self.calc.datastore)
         self.assertIn('hcurves-rlzs', str(ctx.exception))
