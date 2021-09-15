@@ -102,7 +102,6 @@ Users wanting to know the nitty-gritty details should look at the
 code, inside hazardlib/source/base.py, in the method
 ``src.sample_ruptures(eff_num_ses, ses_seed)``.
 
-
 The case of multiple tectonic region types and realizations
 -----------------------------------------------------------
 
@@ -160,3 +159,64 @@ used to determine the number of events per realization::
  3    7856
 
 Notice that the number of events is more or less the same for each realization.
+This is a general fact, valid also in the case of sampling, a consequence
+of the random algorithm used to associate the events to the realizations.
+
+The difference between full enumeration and sampling
+--------------------------------------------------------------
+
+Users are often confused about the difference between full enumeration and
+sampling. For this reason the engine distribution comes
+with a pedagogical example that consider an extremely simplified situation
+where there is a single site, a single rupture and only two GMPEs.
+You can find the example in the engine repository under the directory
+`openquake/qa_tests_data/event_based/case_3`. If you look at the gsim
+logic tree file, the two GMPEs are AkkarBommer2010 (with weight .9)
+and SadighEtAl1997 (with weight .1).
+
+The parameters in the job.ini are
+
+investigation_time = 1
+ses_per_logic_tree_path = 5000
+number_of_logic_tree_paths = 0
+
+Since there are 2 realizations the effective investigation time is of
+10,000 years. If you ran the calculation you will generate (at least
+with version 3.13 of the engine, the details may change with the version)
+10,121 events, since the occurrence rate of the rupture was chosen to be 1.
+Roughly half of the events will be associated with the first GMPE
+(AkkarBommer2010) and half with the second GMPE (SadighEtAl1997).
+Actually, if you look at the test the precise numbers will be
+5191 and 4930 events, i.e. 51% and 49% rathen than 50% and 50%, but this
+is expected and by increasing the investigation time you can get closer
+to the ideal equipartion. Therefore, even if the AkkarBommer2010 GMPE
+is 9 times more probable than the SadighEtAl1997, *this is not reflected
+in the event set*. It means that when performing a computation (for instance
+to compute the mean ground motion field, or the average loss) one
+has to keep the two realizations distinct, and only at the end to
+perform the weighted average.
+
+The situation is the opposite when sampling is used. In order to get the
+same effective investigation time of 10,000 years you should change the
+parameters in the job.ini to
+
+investigation_time = 1
+ses_per_logic_tree_path = 1
+number_of_logic_tree_paths = 10000
+
+Now there are 10,000 realizations, not 2, and they *all have the same
+weight .0001*. The number of events per realization is still roughly
+constant (around 1) and there are still 10121 events, however now *the
+original weights are reflected in the event set*.  In particular there
+are 9130 events associated to the AkkarBommer2010 GMPE and 991 events
+associated to the SadighEtAl1997 GMPE. There is no no to keep the realizations
+separated: since they have all the same weigths, you can trivially
+compute average quantities. AkkarBommer2010 will count more than SadighEtAl1997
+simply because there are 9 times more events for it (actually 9130/991 = 9.2,
+but the rate will tend to 9 when the effective time will tend to infinite).
+
+NB: just to be clear, normally realizations are not in one-to-one
+correspondence with GMPEs. In this example it is true only because there is
+a single tectonic region type. Normally there are multiple tectonic
+region types and a realization is associated to a tuple of GMPEs: there is
+a GMPE for each tectonic region type in the logic tree.
