@@ -51,8 +51,7 @@
         cd /home.dev/openquake 
         git clone https://github.com/gem/oq-engine.git 
         cd oq-engine 
-        python3.8 ./install.py devel_server --version {{ oq_version }}
-      changed_when: false
+        python3.8 ./install.py server --version={{ oq_version }}
       register: oq_install
       when: "'master' in group_names" 
    
