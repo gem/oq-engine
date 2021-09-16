@@ -174,11 +174,11 @@ You can find the example in the engine repository under the directory
 logic tree file, the two GMPEs are AkkarBommer2010 (with weight .9)
 and SadighEtAl1997 (with weight .1).
 
-The parameters in the job.ini are
+The parameters in the job.ini are::
 
-investigation_time = 1
-ses_per_logic_tree_path = 5000
-number_of_logic_tree_paths = 0
+ investigation_time = 1
+ ses_per_logic_tree_path = 5000
+ number_of_logic_tree_paths = 0
 
 Since there are 2 realizations the effective investigation time is of
 10,000 years. If you ran the calculation you will generate (at least
@@ -198,11 +198,11 @@ perform the weighted average.
 
 The situation is the opposite when sampling is used. In order to get the
 same effective investigation time of 10,000 years you should change the
-parameters in the job.ini to
+parameters in the job.ini to::
 
-investigation_time = 1
-ses_per_logic_tree_path = 1
-number_of_logic_tree_paths = 10000
+ investigation_time = 1
+ ses_per_logic_tree_path = 1
+ number_of_logic_tree_paths = 10000
 
 Now there are 10,000 realizations, not 2, and they *all have the same
 weight .0001*. The number of events per realization is still roughly
