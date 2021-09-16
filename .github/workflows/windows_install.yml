@@ -45,4 +45,4 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
+          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
