@@ -495,6 +495,7 @@ def export_disagg_csv_xml(ekey, dstore):
     sitecol = dstore['sitecol']
     hmap4 = dstore['hmap4']
     rlzs = dstore['full_lt'].get_realizations()
+    best_rlzs = dstore['best_rlzs'][:]
     N, M, P, Z = hmap4.shape
     imts = list(oq.imtls)
     fnames = []
@@ -509,6 +510,8 @@ def export_disagg_csv_xml(ekey, dstore):
     metadata = dstore.metadata
     for s in range(N):
         lon, lat = sitecol.lons[s], sitecol.lats[s]
+        weights = numpy.array([rlzs[r].weight['weight'] for r in best_rlzs[s]])
+        weights /= weights.sum()  # normalize to 1
         metadata.update(investigation_time=oq.investigation_time,
                         mag_bin_edges=bins['Mag'].tolist(),
                         dist_bin_edges=bins['Dist'].tolist(),
@@ -516,6 +519,8 @@ def export_disagg_csv_xml(ekey, dstore):
                         lat_bin_edges=bins['Lat'][s].tolist(),
                         eps_bin_edges=bins['Eps'].tolist(),
                         tectonic_region_types=decode(bins['TRT'].tolist()),
+                        rlz_ids=best_rlzs[s].tolist(),
+                        weights=weights.tolist(),
                         lon=lon, lat=lat)
         for k in oq.disagg_outputs:
             header = ['imt', 'iml', 'rlz'] + k.lower().split('_') + ['poe']
