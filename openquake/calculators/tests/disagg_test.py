@@ -33,6 +33,16 @@ from openquake.qa_tests_data.disagg import (
 aae = numpy.testing.assert_almost_equal
 
 
+def compute_mean(fname, *keys):
+    keys = [k.lower() for k in keys]
+    aw = hdf5.read_csv(fname, {'imt': str, 'rlz': int, None: float})
+    dframe = aw.to_dframe()
+    out = []
+    for mag, df in dframe.groupby(keys):
+        out.append((mag, numpy.average(df.poe, weights=aw.weights)))
+    return out
+
+
 class DisaggregationTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, fmt='csv', delta=None):
@@ -56,6 +66,10 @@ class DisaggregationTestCase(CalculatorTestCase):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok(['Mag-0.csv', 'Mag-1.csv'], case_2.__file__)
+
+        # check we can read the exported files and compute the mean
+        compute_mean(os.path.join(os.path.dirname(case_2.__file__),
+                                  'expected_output/Mag-0.csv'), 'Mag')
 
         # test extract disagg_layer for Mag
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
