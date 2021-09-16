@@ -1,3 +1,6 @@
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.1.0
+
   [Michele Simionato]
   * Renamed the parameter `individual_curves` -> `individual_rlzs`
   * Reduced the number of disaggregation outputs and removed the long-time
