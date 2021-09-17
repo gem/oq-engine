@@ -1,3 +1,6 @@
+.. _oq-commands:
+
+
 Some useful `oq` commands
 =================================
 

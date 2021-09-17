@@ -93,7 +93,7 @@ to know the nitty-gritty details.
 
 Our recommendation is to use the command ``oq prepare_site_model`` to
 apply such logic before starting a calculation and thus producing a
-custom site model file tailored to your exposure. ``oq prepare_site_model` is
+custom site model file tailored to your exposure. ``oq prepare_site_model`` is
 documented together with the other oq commands in in :ref:`oq-commands`.
 
 
