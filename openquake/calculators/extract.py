@@ -516,7 +516,7 @@ def extract_sources(dstore, what):
         codes = [code.encode('utf8') for code in codes]
     fields = 'source_id code num_sites eff_ruptures'
     info = dstore['source_info'][()][fields.split()]
-    wkt = dstore['source_wkt'][()]
+    wkt = decode(dstore['source_wkt'][()])
     arrays = []
     if source_ids is not None:
         logging.info('Extracting sources with ids: %s', source_ids)
@@ -539,7 +539,7 @@ def extract_sources(dstore, what):
         raise ValueError('There  no sources')
     info = numpy.concatenate(arrays)
     wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
-    src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
+    src_gz = gzip.compress(';'.join(decode(info['source_id'])).encode('utf8'))
     oknames = [name for name in info.dtype.names  # avoid pickle issues
                if name not in ('source_id', 'trt_smrs')]
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
