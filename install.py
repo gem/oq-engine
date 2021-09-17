@@ -340,7 +340,7 @@ def install(inst, version):
         commit = latest_commit(version)
         print('Installing commit', commit)
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
-                               '--upgrade', GITBRANCH % version])
+                               '--upgrade', GITBRANCH % commit])
         fix_version(commit, inst.VENV)
 
     install_standalone(inst.VENV)
