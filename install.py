@@ -381,8 +381,8 @@ def install(inst, version):
                   '/bin/activate')
 
     # create systemd services
-    if ((inst is server and os.path.exists('/usr/lib/systemd/system')) or
-       (inst is devel_server and os.path.exists('/usr/lib/systemd/system'))):
+    if ((inst is server and os.path.exists('/run/systemd/system')) or
+       (inst is devel_server and os.path.exists('/run/systemd/system'))):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/' + service_name
