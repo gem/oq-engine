@@ -54,6 +54,48 @@ reduce the size of your computation when there are a large number of
 small magnitude ruptures or low intensity GMFs being generated, which may have
 a negligible impact on the damage or losses, and thus could be safely discarded.
 
+region_grid_spacing
+---------------------
+
+In our experience, the most common error made by out users is to
+compute the hazard at the sites of the exposure. The issue is that it
+very possible to have exposures with millions of assets on millions of
+distinct hazard sites. Computing the GMFs for millions of sites is
+hard or even impossible (there is a limit of 4 billion rows on the
+size of the GMF table in the datastore).  Even in the cases when
+computing the hazard is possible, then computing the risk starting
+from an extremely large amount of GMFs will likely be impossible, due
+to memory/runtime constraints.
+
+The second most common error is to use an extremely fine grid for the
+site model. Remember that if you have a resolution of 250 meters, a
+square of 250 km x 250 km will contain one million sites, which is
+definitely too much. The engine when designed when the site models
+had resolutions around 5-10 km, i.e. of the same order of the hazard
+grid, while nowadays the vs30 fields have a much larger resolution.
+
+Both problems can be solved in a simple way by specifying the
+``region_grid_spacing`` parameter. Make it large enough that the
+resulting number of sites becomes reasonable and you are done.
+You will loose some precision, but that is preferable to not
+being able to run the calculation. You will need to run a sensitivity
+analysis with different values of ``region_grid_spacing`` parameter
+to make sure that you get consistent results, but that's it.
+
+Once a ``region_grid_spacing`` is specified, the engine computes the
+convex hull of the exposure sites and builds a grid of hazard sites,
+associating the site parameters from the closest site in the site model
+and discarding sites in region where there are no assets (i.e. more
+distant than ``region_grid_spacing * sqrt(2)``). The precise logic
+is encoded in the function
+``openquake.commonlib.readinput.get_sitecol_assetcol``, if you want
+to know the nitty-gritty details.
+
+Our recommendation is to use the command ``oq prepare_site_model`` to
+apply such logic before starting a calculation and thus producing a
+custom site model file tailored to your exposure. ``oq prepare_site_model` is
+documented together with the other oq commands in in :ref:`oq-commands`.
+
 
 Collapsing of branches
 ----------------------

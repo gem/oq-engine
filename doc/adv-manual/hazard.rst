@@ -27,7 +27,7 @@ of realizations.
 
 Once you have tuned the reduced computation, you can have an idea of the time
 required for the full calculation. It will be less than linear with the number
-of sites, so if you reduced your sites by a factor by a number of 100, the
+of sites, so if you reduced your sites by a factor of 100, the
 full computation will take a lot less than 100 times the time of the reduced
 calculation (fortunately). Still, the full calculation can be impossible because
 of the memory/data transfer requirements, especially in the case of event based

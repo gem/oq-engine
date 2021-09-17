@@ -997,11 +997,17 @@ def taxonomy_mapping(oqparam, taxonomies):
 
 
 def _taxonomy_mapping(filename, taxonomies):
-    tmap_df = pandas.read_csv(filename)
+    try:
+        tmap_df = pandas.read_csv(filename, converters=dict(weight=float))
+    except Exception as e:
+        raise e.__class__('%s while reading %s' % (e, filename))
     if 'weight' not in tmap_df:
         tmap_df['weight'] = 1.
 
-    assert set(tmap_df) == {'taxonomy', 'conversion', 'weight'}
+    assert set(tmap_df) in ({'taxonomy', 'conversion', 'weight'},
+                            {'taxonomy', 'risk_id', 'weight'})
+    # NB: conversion was the old name in the header for engine <= 3.12
+    risk_id = 'risk_id' if 'risk_id' in tmap_df.columns else 'conversion'
     dic = dict(list(tmap_df.groupby('taxonomy')))
     taxonomies = taxonomies[1:]  # strip '?'
     missing = set(taxonomies) - set(dic)
@@ -1014,7 +1020,7 @@ def _taxonomy_mapping(filename, taxonomies):
         if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
                               (filename, taxo))
-        lst.append([(rec['conversion'], rec['weight'])
+        lst.append([(rec[risk_id], rec['weight'])
                     for r, rec in recs.iterrows()])
     return lst
 
