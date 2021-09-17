@@ -15,7 +15,6 @@ jobs:
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
-        #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8]
@@ -32,13 +31,8 @@ jobs:
         run: python -c "import sys; print(sys.version)"
       - name: Install engine on developer mode
         run: |
-          #git status
-          #$PY_VER="py${{ matrix.python-version }}"
-          #$py = $PY_VER.replace(".","")
           set PIP_DEFAULT_TIMEOUT=100
           python -m pip install pip wheel setuptools --upgrade
-          #python -m pip install install -r requirements-$py-win64.txt
-          #python -m pip install -e .
           python install.py devel
         shell: cmd
       - name: Run demos to test installation
