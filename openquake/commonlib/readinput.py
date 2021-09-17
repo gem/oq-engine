@@ -997,7 +997,10 @@ def taxonomy_mapping(oqparam, taxonomies):
 
 
 def _taxonomy_mapping(filename, taxonomies):
-    tmap_df = pandas.read_csv(filename)
+    try:
+        tmap_df = pandas.read_csv(filename, converters=dict(weight=float))
+    except Exception as e:
+        raise e.__class__('%s while reading %s' % (e, filename))
     if 'weight' not in tmap_df:
         tmap_df['weight'] = 1.
 
