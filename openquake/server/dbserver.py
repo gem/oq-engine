@@ -21,6 +21,7 @@ import sys
 import time
 import sqlite3
 import logging
+import getpass
 import threading
 import subprocess
 
@@ -159,7 +160,7 @@ def ensure_on():
     Start the DbServer if it is off
     """
     if get_status() == 'not-running':
-        if config.multi_user:
+        if config.multi_user and getpass.getuser() != 'openquake':
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically; NB: I tried to use
