@@ -12,7 +12,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "0 23 * * *"
+    - cron: "30 23 * * *"
   push:
     branches: [ ci ]
 

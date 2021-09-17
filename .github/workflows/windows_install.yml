@@ -2,7 +2,7 @@ name: Windows Install engine for 3.6, 3.7 and 3.8
 
 on:
   schedule:
-    - cron: "00 23 * * *"
+    - cron: "00 22 * * *"
   push:
     branches: [ requirements ]
 
