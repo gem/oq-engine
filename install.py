@@ -252,7 +252,7 @@ def latest_commit(branch):
     url = 'https://api.github.com/repos/GEM/oq-engine/commits/' + branch
     with urlopen(url) as f:
         js = json.loads(f.read())
-    return js['commit']['url'].rsplit('/')[-1]
+    return js['sha']
 
 
 def fix_version(commit, venv):
