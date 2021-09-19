@@ -485,13 +485,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
 
         # check null realizations in the single site case
-        if self.N == 1:
-            best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
-            for (s, z), r in numpy.ndenumerate(best_rlzs):
-                lst = []
-                for key in out:
-                    if out[key][s, ..., z].sum() == 0:
-                        lst.append(key)
-                if lst:
-                    logging.warning('No %s contributions for site=%d, rlz=%d',
-                                    lst, s, r)
+        best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
+        for (s, z), r in numpy.ndenumerate(best_rlzs):
+            lst = []
+            for key in out:
+                if out[key][s, ..., z].sum() == 0:
+                    lst.append(key)
+            if lst:
+                logging.warning('No %s contributions for site=%d, rlz=%d',
+                                lst, s, r)
