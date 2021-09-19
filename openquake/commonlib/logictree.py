@@ -315,6 +315,7 @@ class SourceModelLogicTree(object):
             raise LogicTreeError(
                 root, self.filename, "missing logicTree node")
         self.shortener = {}
+        self.branchsets = []
         self.parse_tree(tree)
 
         # determine if the logic tree is source specific
@@ -369,12 +370,11 @@ class SourceModelLogicTree(object):
                        for filtername in self.FILTERS
                        if filtername in branchset_node.attrib)
         self.validate_filters(branchset_node, uncertainty_type, filters)
-
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
+
         branchset = BranchSet(uncertainty_type, len(self.bsetdict), filters)
         self.bsetdict[attrs.pop('branchSetID')] = attrs
         self.validate_branchset(branchset_node, depth, branchset)
-
         self.parse_branches(branchset_node, branchset)
         if self.root_branchset is None:  # not set yet
             self.num_paths = 1
@@ -388,7 +388,8 @@ class SourceModelLogicTree(object):
                 for branch in self.previous_branches:
                     branch.bset = branchset
         self.previous_branches = branchset.branches
-        self.num_paths *= len(branchset.branches)
+        self.num_paths *= len(branchset)
+        self.branchsets.append(branchset)
 
     def get_num_paths(self):
         """
