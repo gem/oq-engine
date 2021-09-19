@@ -269,6 +269,9 @@ will convert the sources in .csv format. Both are fully supported by QGIS.
 The CSV format has the advantage of being transparent and easily editable;
 it also can be imported in a geospatial database like Postgres, if needed.
 
+.. _prepare_site_model:
+
+
 prepare_site_model
 ------------------
 
