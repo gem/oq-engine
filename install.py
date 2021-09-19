@@ -32,6 +32,7 @@ The calculations will NOT be removed since they live in
 You have to remove the data directories manually, if you so wish.
 """
 import os
+import re
 import sys
 import json
 import glob
@@ -333,7 +334,7 @@ def install(inst, version):
     elif version is None:  # install the stable version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine'])
-    elif '.' in version:  # install an official version
+    elif re.match(version, r'\d+(\.\d+)+'):  # install an official version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github (only for user or server)
