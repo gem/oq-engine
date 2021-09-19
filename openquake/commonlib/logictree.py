@@ -317,13 +317,20 @@ class SourceModelLogicTree(object):
         self.shortener = {}
         self.parse_tree(tree)
 
-    @property
-    def on_each_source(self):
-        """
-        True if there is an applyToSources for each source.
-        """
-        return (self.info.applytosources and
-                self.info.applytosources == self.source_ids)
+        # determine if the logic tree is source specific
+        dicts = list(self.bsetdict.values())[1:]
+        if not dicts:
+            self.is_source_specific = False
+            return
+        for dic in dicts:
+            ats = dic.get('applyToSources')
+            if not ats:
+                self.is_source_specific = False
+                return
+            elif len(ats.split()) != 1:
+                self.is_source_specific = False
+                return
+        self.is_source_specific = True
 
     def parse_tree(self, tree_node):
         """

@@ -685,7 +685,7 @@ def get_full_lt(oqparam):
                 'use sampling instead of full enumeration or reduce the '
                 'source model with oq reduce_sm' % p)
         logging.info('Total number of logic tree paths = {:_d}'.format(p))
-    if source_model_lt.on_each_source:
+    if source_model_lt.is_source_specific:
         logging.info('There is a logic tree on each source')
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     return full_lt
