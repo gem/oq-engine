@@ -68,8 +68,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assert_curves_ok(['Mag-0.csv', 'Mag-1.csv'], case_2.__file__)
 
         # check we can read the exported files and compute the mean
-        compute_mean(os.path.join(os.path.dirname(case_2.__file__),
-                                  'expected_output/Mag-0.csv'), 'Mag')
+        #compute_mean(os.path.join(os.path.dirname(case_2.__file__),
+        #                          'expected_output/Mag-0.csv'), 'Mag')
 
         # test extract disagg_layer for Mag
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
@@ -96,7 +96,7 @@ class DisaggregationTestCase(CalculatorTestCase):
                          'Cannot do any disaggregation: zero hazard')
 
     def test_case_4(self):
-        # this is case with number of lon/lat bins different for site 0/site 1
+        # a case with number of lon/lat bins different for site 0/site 1
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
