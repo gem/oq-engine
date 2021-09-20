@@ -38,7 +38,7 @@ POECOL = re.compile(r'poe\d+')
 
 def compute_mean(fname, *keys):
     keys = [k.lower() for k in keys]
-    aw = hdf5.read_csv(fname, {'imt': str, 'rlz': int, None: float})
+    aw = hdf5.read_csv(fname, {'imt': str, 'poe': str, None: float})
     dframe = aw.to_dframe()
     out = []
     poecols = [col for col in dframe.columns if POECOL.match(col)]

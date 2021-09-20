@@ -488,8 +488,7 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'),
-            ('disagg', 'xml'))
+@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
@@ -508,6 +507,12 @@ def export_disagg_csv(ekey, dstore):
         trad = ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     metadata = dstore.metadata
+    poes_disagg = ['nan'] * P
+    for p in range(P):
+        try:
+            poes_disagg[p] = str(oq.poes_disagg[p])
+        except IndexError:
+            pass
     for s in range(N):
         lon, lat = sitecol.lons[s], sitecol.lats[s]
         weights = numpy.array([rlzs[r].weight['weight'] for r in best_rlzs[s]])
@@ -524,7 +529,7 @@ def export_disagg_csv(ekey, dstore):
                         lon=lon, lat=lat)
         for k in oq.disagg_outputs:
             splits = k.lower().split('_')
-            header = (['imt', 'poe_id'] + splits +
+            header = (['imt', 'poe'] + splits +
                       ['poe%d' % z for z in range(Z)])
             values = []
             nonzeros = []
@@ -538,7 +543,7 @@ def export_disagg_csv(ekey, dstore):
                 else:
                     nonzeros.append(poes.any())  # nonzero poes
                 for row in aw:
-                    values.append([imt, p] + list(row))
+                    values.append([imt, poes_disagg[p]] + list(row))
             if any(nonzeros):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}
