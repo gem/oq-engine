@@ -389,7 +389,7 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     def test_case_14(self):
-        # sampling of a logic tree of kind `on_each_source`
+        # sampling of a logic tree of kind `is_source_specific`
         out = self.run_calc(case_14.__file__, 'job.ini', exports='csv')
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)

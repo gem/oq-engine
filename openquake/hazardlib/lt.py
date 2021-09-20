@@ -687,6 +687,9 @@ class BranchSet(object):
                 break
         return pairs
 
+    def __len__(self):
+        return len(self.branches)
+
     def __str__(self):
         return repr(self.branches)
 
