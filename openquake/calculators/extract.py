@@ -1178,14 +1178,16 @@ def extract_disagg(dstore, what):
     axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
             else ax for ax in axis]
     values = None
-    if len(axis) == 1:
-        values = numpy.array([axis[0], matrix.flatten()]).T
-    else:
+    if len(axis) == 1:  # i.e. Mag or Dist
+        values = numpy.array([axis[0], matrix])  # i.e. shape (2, 3)
+    else:  # i.e. Mag_Dist
+        # axis = [[5.5, 6.5, 7.5], [12.5, 37.5, 62.5, 87.5]]
         grids = numpy.meshgrid(*axis, indexing='ij')
-        values = [g.flatten() for g in grids]
-        values.append(matrix.flatten())
-        values = numpy.array(values).T
-    return ArrayWrapper(values, qdict)
+        # with the 2 axis above there 2 grids of shape (3, 4) each
+        values = [g.flatten() for g in grids] + [matrix.flatten()]
+        # list of arrays of lenghts [12, 12, 12]
+        values = numpy.array(values)  # shape (3, 12)
+    return ArrayWrapper(values.T, qdict)
 
 
 def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
