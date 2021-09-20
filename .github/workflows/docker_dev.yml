@@ -4,15 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Image Tag 
+        description: Image Tag
         default: nightly
         required: true
       git-ref:
-        description: Git Ref 
+        description: Git Ref
         default: master
         required: true
   schedule:
-    - cron: "0 23 * * *"
+    - cron: "30 23 * * *"
+  push:
+    branches: [ ci ]
 
 jobs:
   docker:
@@ -55,7 +57,8 @@ jobs:
         run: |
           docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.dev docker
           docker image ls
-          time docker run openquake/engine:$DOCKER_TAG "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
-          echo " push image engine with tag nightly on docker hub "
+          #time docker run openquake/engine:$DOCKER_TAG "(oq dbserver start &) ; sleep 10 ; (oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true")"
+          time docker run openquake/engine:$DOCKER_TAG "(oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true")"
+          echo " push image engine with tag nightly on ocker hub "
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
           docker push openquake/engine:$DOCKER_TAG

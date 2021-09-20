@@ -33,7 +33,8 @@ from openquake.baselib.performance import compile, numba
 from openquake.hazardlib import const
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
-from openquake.hazardlib.contexts import KNOWN_DISTANCES, RuptureContext
+from openquake.hazardlib.contexts import (
+    KNOWN_DISTANCES, full_context, ContextMaker)
 from openquake.hazardlib.contexts import *  # for backward compatibility
 
 
@@ -172,13 +173,12 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     Base class for all the ground shaking intensity models.
 
     A Ground Shaking Intensity Model (GSIM) defines a set of equations
-    for computing mean and standard deviation of a Normal distribution
+    for computing mean and standard deviation of a normal distribution
     representing the variability of an intensity measure (or of its logarithm)
     at a site given an earthquake rupture.
 
     This class is not intended to be subclassed directly, instead
-    the actual GSIMs should subclass :class:`GMPE`
-
+    the actual GSIMs should subclass :class:`GMPE`.
 
     Subclasses of both must implement :meth:`get_mean_and_stddevs`
     and all the class attributes with names starting from ``DEFINED_FOR``
@@ -363,14 +363,15 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         sig = numpy.zeros((1, N))
         tau = numpy.zeros((1, N))
         phi = numpy.zeros((1, N))
-        if not isinstance(rup, RuptureContext):
-            ctx = RuptureContext()
-            vars(ctx).update(vars(rup))
-            vars(ctx).update(vars(sites))
-            vars(ctx).update(vars(dists))
+        if sites is not rup or dists is not rup:
+            # convert three old-style contexts to a single new-style context
+            ctx = full_context(sites, rup, dists)
         else:
-            ctx = rup
-        self.compute(rup, [imt], mean, sig, tau, phi)
+            ctx = rup  # rup is already a good object
+        if self.compute.__annotations__.get("ctx") is numpy.recarray:
+            cmaker = ContextMaker('*', [self], {'imtls': {imt: [0]}})
+            ctx = cmaker.recarray([ctx])
+        self.compute(ctx, [imt], mean, sig, tau, phi)
         stddevs = []
         for stddev_type in stddev_types:
             if stddev_type == const.StdDev.TOTAL:
@@ -446,12 +447,20 @@ class GMPE(GroundShakingIntensityModel):
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """
-        To be overridden in subclasses.
+        :param ctx: a RuptureContext object or a numpy recarray of size N
+        :param imts: a list of M Intensity Measure Types
+        :param mean: an array of shape (M, N) for the means
+        :param sig: an array of shape (M, N) for the TOTAL stddevs
+        :param tau: an array of shape (M, N) for the INTER_EVENT stddevs
+        :param phi: an array of shape (M, N) for the INTRA_EVENT stddevs
+
+        To be overridden in subclasses with a procedure filling the
+        arrays and returning None.
         """
         raise NotImplementedError
 
     # the ctxs are used in avg_poe_gmpe
-    def get_poes(self, mean_std, cmaker, ctxs=()):
+    def get_poes(self, mean_std, cmaker, ctx):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -486,7 +495,7 @@ class GMPE(GroundShakingIntensityModel):
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, m] += s * self.adjustment
+                    ms[0, m] += s * ctx.adjustment
                 outs.append(_get_poes(ms, loglevels, trunclevel))
             arr[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):

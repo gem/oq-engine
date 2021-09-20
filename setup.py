@@ -56,7 +56,7 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'setuptools',
-    'h5py >=2.10, <2.11',
+    'h5py >=2.10, <3.2',
     'numpy >=1.18, <1.20',
     'scipy >=1.3, <1.7',
     'pandas >=0.25, <1.3',
@@ -65,7 +65,7 @@ install_requires = [
     'shapely >=1.7, <1.8',
     'docutils >=0.11',
     'decorator >=4.3',
-    'django >=1.11, <2.3',
+    'django >=3.2',
     'matplotlib',
     'requests >=2.20, <3.0',
     'pyshp ==1.2.3',
@@ -78,7 +78,6 @@ extras_require = {
     'cluster': ["python-pam",
                 "django-pam",
                 "gunicorn",
-                "python-prctl ==1.6.1",
                 "setproctitle"],
     'osgeo':  [
         'GDAL >= 2.4',
@@ -112,6 +111,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',

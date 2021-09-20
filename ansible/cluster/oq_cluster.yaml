@@ -12,6 +12,7 @@
     venv_bin: "{{ venv_dir }}/bin"
     server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
     worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(' -1,') }} -1"
+    oq_version: master
 
   pre_tasks:
     - name: ping hosts
@@ -45,9 +46,12 @@
         mode: '0644'
       when: "'master' in group_names" 
 
-    - name: Run install script from github repo  only on master node
-      shell: cd /home.dev/openquake && git clone https://github.com/gem/oq-engine.git && cd oq-engine && python3.8 ./install.py devel_server
-      changed_when: false
+    - name: Run install script from github repo only on master node
+      shell: |
+        cd /home.dev/openquake 
+        git clone https://github.com/gem/oq-engine.git 
+        cd oq-engine 
+        python3.8 ./install.py server --version={{ oq_version }}
       register: oq_install
       when: "'master' in group_names" 
    

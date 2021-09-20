@@ -25,6 +25,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 # Test data generated from subroutine getCamp2000 in hazFXv7.f fotran code
 # availble from http://earthquake.usgs.gov/hazards/products/ak/2007/software/
 
+
 class CampbellBozorgnia2003NSHMP2007TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CampbellBozorgnia2003NSHMP2007
 

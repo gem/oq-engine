@@ -23,7 +23,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class Megawati2003TestCase(BaseGSIMTestCase):
     GSIM_CLASS = MegawatiEtAl2003
 
-    def test_mean(self):
+    def test_all(self):
         self.check('MEA2003/mea2003_mean.csv',
                    max_discrep_percentage=1.0)
 

@@ -39,19 +39,12 @@ class GulerceEtAl2017TestCase(BaseGSIMTestCase):
     Test the default California model, the total standard deviation and the
     within-event standard deviation. The between-event std is implicitly tested
     """
-
     GSIM_CLASS = GulerceEtAl2017
 
-    def test_mean(self):
+    def test_all(self):
         self.check('GKAS16/GKAS16_ResMEAN_RegCAL.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('GKAS16/GKAS16_ResStdTot_RegCAL.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('GKAS16/GKAS16_ResStdPhi_RegCAL.csv',
+                   'GKAS16/GKAS16_ResStdTot_RegCAL.csv',
+                   'GKAS16/GKAS16_ResStdPhi_RegCAL.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -61,7 +54,6 @@ class GulerceEtAl2017RegTWNTestCase(BaseGSIMTestCase):
     Standard deviation model is not tested since it's the same used for the
     default model.
     """
-
     GSIM_CLASS = GulerceEtAl2017RegTWN
 
     def test_mean(self):
@@ -75,7 +67,6 @@ class GulerceEtAl2017RegITATestCase(BaseGSIMTestCase):
     Standard deviation model is not tested since it's the same used for the
     default model.
     """
-
     GSIM_CLASS = GulerceEtAl2017RegITA
 
     def test_mean(self):
@@ -89,7 +80,6 @@ class GulerceEtAl2017RegMIDTestCase(BaseGSIMTestCase):
     Standard deviation model is not tested since it's the same used for the
     default model.
     """
-
     GSIM_CLASS = GulerceEtAl2017RegMID
 
     def test_mean(self):
@@ -103,7 +93,6 @@ class GulerceEtAl2017RegCHNTestCase(BaseGSIMTestCase):
     Standard deviation model is not tested since it's the same used for the
     default model.
     """
-
     GSIM_CLASS = GulerceEtAl2017RegCHN
 
     def test_mean(self):
@@ -118,14 +107,8 @@ class GulerceEtAl2017RegJPNTestCase(BaseGSIMTestCase):
     """
     GSIM_CLASS = GulerceEtAl2017RegJPN
 
-    def test_mean(self):
+    def test_all(self):
         self.check('GKAS16/GKAS16_ResMEAN_RegJPN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('GKAS16/GKAS16_ResStdTot_RegJPN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('GKAS16/GKAS16_ResStdPhi_RegJPN.csv',
+                   'GKAS16/GKAS16_ResStdTot_RegJPN.csv',
+                   'GKAS16/GKAS16_ResStdPhi_RegJPN.csv',
                    max_discrep_percentage=0.1)

@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.gulerce_abrahamson_2011 import \
-                                                GulerceAbrahamson2011
-
+from openquake.hazardlib.gsim.gulerce_abrahamson_2011 import (
+    GulerceAbrahamson2011)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+
 
 class GulreceAbrahamson2011TestCase(BaseGSIMTestCase):
     """
@@ -36,6 +36,7 @@ class GulreceAbrahamson2011TestCase(BaseGSIMTestCase):
         self.check('GA11/GA11_Fig_7_8_MEAN.csv',
                    max_discrep_percentage=4.,
                    gmpe_name='AbrahamsonSilva2008')
+
     def test_mean_Fig_9_10(self):
         self.check('GA11/GA11_Fig_9_10_MEAN.csv',
                    max_discrep_percentage=0.5,

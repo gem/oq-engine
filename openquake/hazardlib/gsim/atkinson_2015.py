@@ -20,7 +20,6 @@
 Module exports :class:'Atkinson2015'
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
 
@@ -58,20 +57,13 @@ def _get_effective_distance(mag):
         return 1.0
 
 
-def _get_stddevs(C, num_sites, stddev_types):
+def _get_stddevs(C):
     """
     Return standard deviations, converting from log10 to log
     """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(
-                np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(np.log(10.0 ** C["tau"]) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.log(10.0 ** C["phi"]) + np.zeros(num_sites))
-    return stddevs
+    return [np.log(10.0 ** C["sigma"]),
+            np.log(10.0 ** C["tau"]),
+            np.log(10.0 ** C["phi"])]
 
 
 class Atkinson2015(GMPE):
@@ -105,23 +97,23 @@ class Atkinson2015(GMPE):
     #: Required distance measure is hypocentral distance
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        imean = (_get_magnitude_term(C, rup.mag) +
-                 _get_distance_term(C, dists.rhypo, rup.mag))
-        # Convert mean from cm/s and cm/s/s
-        if imt.string.startswith(('PGA', 'SA')):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            mean = np.log(10.0 ** imean)
-        stddevs = _get_stddevs(C, len(dists.rhypo), stddev_types)
-        return mean, stddevs
+            imean = (_get_magnitude_term(C, ctx.mag) +
+                     _get_distance_term(C, ctx.rhypo, ctx.mag))
+            # Convert mean from cm/s and cm/s/s
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                mean[m] = np.log(10.0 ** imean)
+            sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT         c0      c1         c2      c3         c4    phi    tau    sigma

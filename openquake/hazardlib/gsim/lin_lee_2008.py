@@ -61,7 +61,7 @@ class LinLee2008SInter(GMPE):
     #: Supported standard deviation types is total, see equation 10 page 226.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    DEFINED_FOR_REFERENCE_VELOCITY = 360
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).

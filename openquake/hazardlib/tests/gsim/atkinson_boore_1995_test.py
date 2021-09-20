@@ -19,8 +19,7 @@
 from openquake.hazardlib.gsim.atkinson_boore_1995 import (
     AtkinsonBoore1995GSCBest,
     AtkinsonBoore1995GSCLowerLimit,
-    AtkinsonBoore1995GSCUpperLimit
-)
+    AtkinsonBoore1995GSCUpperLimit)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data provided by Geological Survey of Canada
@@ -28,7 +27,6 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 class AtkinsonBoore1995GSCBestTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore1995GSCBest
-
 
     def test_mean(self):
         self.check('AB95/AB95GSCBest_MEAN.csv',
@@ -42,7 +40,6 @@ class AtkinsonBoore1995GSCBestTestCase(BaseGSIMTestCase):
 class AtkinsonBoore1995GSCLowerLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore1995GSCLowerLimit
 
-
     def test_mean(self):
         self.check('AB95/AB95GSCLowerLimit_MEAN.csv',
                    max_discrep_percentage=0.1)
@@ -54,7 +51,6 @@ class AtkinsonBoore1995GSCLowerLimitTestCase(BaseGSIMTestCase):
 
 class AtkinsonBoore1995GSCUpperLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore1995GSCUpperLimit
-
 
     def test_mean(self):
         self.check('AB95/AB95GSCUpperLimit_MEAN.csv',

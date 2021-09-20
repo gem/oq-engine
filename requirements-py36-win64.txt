@@ -7,7 +7,8 @@
 # h5py, Shapely, psutil
 https://wheelhouse.openquake.org/v2/linux/py/setuptools-56.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/pytz-2019.1-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/windows/py36/h5py-2.10.0-cp36-cp36m-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py36/h5py-3.1.0-cp36-cp36m-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py36/setproctitle-1.2.2-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/numpy-1.18.2-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/scipy-1.4.1-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/pandas-1.1.5-cp36-cp36m-win_amd64.whl
@@ -18,7 +19,6 @@ https://wheelhouse.openquake.org/v2/windows/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/pbr-5.2.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/six-1.12.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/windows/py/Django-2.2.7-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/sqlparse-0.3.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/certifi-2019.3.9-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/urllib3-1.25.3-py2.py3-none-any.whl
@@ -27,6 +27,10 @@ https://wheelhouse.openquake.org/v2/windows/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/toml-0.10.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.6-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
+
 
 ### Plotting ###
 # comment the following lines to skip installation

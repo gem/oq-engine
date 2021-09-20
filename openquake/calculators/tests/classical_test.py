@@ -23,6 +23,8 @@ import numpy
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import lt, contexts
+from openquake.hazardlib.source.rupture import get_ruptures
+from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -38,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
-    case_71)
+    case_70, case_71, case_72, case_73)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -298,7 +300,7 @@ hazard_uhs-std.csv
                 case_16.__file__)
 
         # test that the single realization export fails because
-        # individual_curves was false
+        # individual_rlzs was false
         with self.assertRaises(KeyError) as ctx:
             export(('hcurves/rlz-3', 'csv'), self.calc.datastore)
         self.assertIn('hcurves-rlzs', str(ctx.exception))
@@ -378,8 +380,9 @@ hazard_uhs-std.csv
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
         numpy.testing.assert_equal(
-            list(df.index), ['SFLT1;0', 'COMFLT1;0', 'CHAR1;0', 'CHAR1;1',
-                             'CHAR1;2', 'COMFLT1;1', 'SFLT1;1'])
+            decode(list(df.index)),
+            ['SFLT1;0', 'COMFLT1;0', 'CHAR1;0', 'CHAR1;1',
+             'CHAR1;2', 'COMFLT1;1', 'SFLT1;1'])
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
@@ -490,7 +493,7 @@ hazard_uhs-std.csv
                       calculation_mode='event_based',
                       ses_per_logic_tree_path='10')
         csv = extract(self.calc.datastore, 'ruptures').array
-        rups = readinput.get_ruptures(general.gettemp(csv))
+        rups = get_ruptures(general.gettemp(csv))
         self.assertEqual(len(rups), 1)
 
         # check what QGIS will be seeing
@@ -877,8 +880,17 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f)
 
     def test_case_65(self):
-        # Multi fault source
+        # reading/writing a multiFaultSource
+        oq = readinput.get_oqparam('job.ini', pkg=case_65)
+        csm = readinput.get_composite_source_model(oq)
+        tmpname = general.gettemp()
+        out = write_source_model(tmpname, csm.src_groups)
+        self.assertEqual(out[0], tmpname)
+        self.assertEqual(out[1], tmpname[:-4] + '_sections.xml')
+
+        # running the calculation
         self.run_calc(case_65.__file__, 'job.ini')
+
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-4)
 
@@ -896,6 +908,12 @@ hazard_uhs-std.csv
         files = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
 
+    def test_case_70(self):
+        # test bug https://github.com/gem/oq-engine/pull/7158
+        self.run_calc(case_70.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
     def test_case_71(self):
         # test with oversampling
         # there are 6 potential paths 1A 1B 1C 2A 2B 2C
@@ -910,6 +928,16 @@ hazard_uhs-std.csv
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
         ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
-        slc0, slc1 = cmakers[0].slc, cmakers[1].slc
-        self.assertEqual(slc0.stop - slc0.start, 3)
-        self.assertEqual(slc1.stop - slc1.start, 2)
+        self.assertEqual(cmakers[1].start, 3)
+
+    def test_case_72(self):
+        # reduced USA model
+        self.run_calc(case_72.__file__, 'job.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+
+    def test_case_73(self):
+        # test LT
+        self.run_calc(case_73.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)

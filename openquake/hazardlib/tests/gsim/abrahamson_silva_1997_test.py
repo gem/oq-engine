@@ -24,6 +24,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 # (subroutine getAS in HazFXv.f code) available from
 # http://earthquake.usgs.gov/hazards/products/ak/2007/software/
 
+
 class AbrahamsonSilva1997TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonSilva1997
 

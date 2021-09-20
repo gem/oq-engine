@@ -27,7 +27,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-def _compute_attenuation(rup, dists, imt, C):
+def _compute_attenuation(ctx, imt, C):
     """
     Compute the second term of the equation described on p. 1866:
 
@@ -35,14 +35,14 @@ def _compute_attenuation(rup, dists, imt, C):
     [(c4 + c5 * M) * max{ min{ log10(R/70.), log10(140./70.) }, 0.}] +
     [(c8 + c9 * M) * max{ log10(R/140.), 0}] "
     """
-    vec = np.ones(len(dists.rrup))
+    vec = np.ones(len(ctx.rrup))
 
-    a1 = (np.log10(np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0)),
+    a1 = (np.log10(np.sqrt(ctx.rrup ** 2.0 + C['c11'] ** 2.0)),
           np.log10(70. * vec))
 
     a = np.column_stack([a1[0], a1[1]])
 
-    b3 = (np.log10(np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0) /
+    b3 = (np.log10(np.sqrt(ctx.rrup ** 2.0 + C['c11'] ** 2.0) /
                    (70. * vec)),
           np.log10((140. / 70.) * vec))
 
@@ -50,57 +50,53 @@ def _compute_attenuation(rup, dists, imt, C):
     b1 = ([np.min(b2, axis=1), 0. * vec])
     b = np.column_stack([b1[0], b1[1]])
 
-    c1 = (np.log10(np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0) /
+    c1 = (np.log10(np.sqrt(ctx.rrup ** 2.0 + C['c11'] ** 2.0) /
           (140.) * vec), 0. * vec)
     c = np.column_stack([c1[0], c1[1]])
 
-    return (((C['c4'] + C['c5'] * rup.mag) * np.min(a, axis=1)) +
-            ((C['c6'] + C['c7'] * rup.mag) * np.max(b, axis=1)) +
-            ((C['c8'] + C['c9'] * rup.mag) * np.max(c, axis=1)))
+    return (((C['c4'] + C['c5'] * ctx.mag) * np.min(a, axis=1)) +
+            ((C['c6'] + C['c7'] * ctx.mag) * np.max(b, axis=1)) +
+            ((C['c8'] + C['c9'] * ctx.mag) * np.max(c, axis=1)))
 
 
-def _compute_distance(rup, dists, imt, C):
+def _compute_distance(ctx, imt, C):
     """
     Compute the third term of the equation described on p. 1866:
 
     " c10 * R "
     """
-    return (C['c10'] * np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0))
+    return (C['c10'] * np.sqrt(ctx.rrup ** 2.0 + C['c11'] ** 2.0))
 
 
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     Compute the first term of the equation described on p. 1866:
 
     "c1 + (c2 * M) + (c3 * M**2) "
     """
-    return C['c1'] + (C['c2'] * rup.mag) + (C['c3'] * (rup.mag ** 2))
+    return C['c1'] + (C['c2'] * ctx.mag) + (C['c3'] * (ctx.mag ** 2))
 
 
-def _compute_standard_dev(rup, imt, C):
+def _compute_standard_dev(ctx, imt, C):
     """
     Compute the the standard deviation in terms of magnitude
     described on p. 1866, eq. 6
     """
     sigma_mean = 0.
-    if rup.mag <= 7.0:
-        sigma_mean = (C['c12'] * rup.mag) + C['c13']
-    elif rup.mag > 7.0:
-        sigma_mean = (-0.00695 * rup.mag) + C['c14']
+    if ctx.mag <= 7.0:
+        sigma_mean = (C['c12'] * ctx.mag) + C['c13']
+    elif ctx.mag > 7.0:
+        sigma_mean = (-0.00695 * ctx.mag) + C['c14']
     return sigma_mean
 
 
-def _get_stddevs(C, stddev_types, rup, imt, num_sites):
+def _get_stddev(C, ctx, imt):
     """
     Return standard deviations as defined in eq. 6 and 7, pag. 1866,
     based on table 2, p. 1865.
     """
-    stddevs = []
-    for stddev_type in stddev_types:
-        sigma_mean = _compute_standard_dev(rup, imt, C)
-        sigma_tot = np.sqrt((sigma_mean ** 2) + (C['SigmaReg'] ** 2))
-        stddevs.append(sigma_tot + np.zeros(num_sites))
-    return stddevs
+    sigma_mean = _compute_standard_dev(ctx, imt, C)
+    return np.sqrt(sigma_mean ** 2 + C['SigmaReg'] ** 2)
 
 
 class PezeshkEtAl2011(GMPE):
@@ -142,28 +138,19 @@ class PezeshkEtAl2011(GMPE):
     #: 1861, eq. 5 page 1866).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_attenuation(rup, dists, imt, C) +
-                 _compute_distance(rup, dists, imt, C))
-
-        mean = np.log(10.0 ** (imean))
-
-        istddevs = _get_stddevs(C, stddev_types, rup, imt,
-                                num_sites=len(dists.rrup))
-
-        stddevs = np.log(10.0 ** np.array(istddevs))
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_attenuation(ctx, imt, C) +
+                     _compute_distance(ctx, imt, C))
+            mean[m] = np.log(10.0 ** imean)
+            sig[m] = np.log(10.0 ** _get_stddev(C, ctx, imt))
 
     #: Equation coefficients, described in Table 2 on pp. 1865
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -197,7 +184,7 @@ class PezeshkEtAl2011(GMPE):
 class PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
     """
     Adaptation of Pezeshk et al. (2011) to amplify the ground motions from
-    the original hard rock (Vs30 > 2000 m/s) sites to the NEHRP B/C site class
+    the original hard rock (Vs30 > 2000 m/s) ctx to the NEHRP B/C site class
     using the factors of Atkinson and Adams (2013) (Table 2)
     Note:
     1) Correction at PGA is distance dependent in the original paper. Here
@@ -208,17 +195,16 @@ class PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C_AMP = self.COEFFS_SITE[imt]
-        # Get method from superclass
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-        return mean + C_AMP["F"] * np.log(10.), stddevs
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            C_AMP = self.COEFFS_SITE[imt]
+            mean[m] += C_AMP["F"] * np.log(10.)
 
     COEFFS_SITE = CoeffsTable(sa_damping=5, table="""
     IMT         F

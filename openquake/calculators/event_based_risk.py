@@ -119,7 +119,7 @@ def aggreg(outputs, crmodel, AR, kids, rlz_id, param, monitor):
 
 def event_based_risk(df, param, monitor):
     """
-    :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
+    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param param: a dictionary of parameters coming from the job.ini
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
@@ -211,7 +211,7 @@ def ebrisk(rupgetter, param, monitor):
                            param['amplifier'])
     with mon_haz:
         for c in gg.gen_computers(mon_rup):
-            data, time_by_rup = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
+            data, time_by_rup = c.compute_all()
             if len(data):
                 for key, val in data.items():
                     alldata[key].extend(data[key])
@@ -280,7 +280,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.param['sec_losses'] = sec_losses
         self.param['aggregate_by'] = oq.aggregate_by
-        self.param['min_iml'] = oq.min_iml
         self.param['M'] = len(oq.all_imts())
         self.param['N'] = self.N
         self.param['K'] = len(self.aggkey)

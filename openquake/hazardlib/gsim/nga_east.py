@@ -456,18 +456,18 @@ def get_nonlinear_stddev(C_NL, vs30):
     return sigma_f2
 
 
-def get_hard_rock_mean(self, rctx, dctx, imt, stddev_types):
+def get_hard_rock_mean(self, ctx, imt):
     """
     Returns the mean and standard deviations for the reference very hard
     rock condition (Vs30 = 3000 m/s)
     """
     # Return Distance Tables
-    imls = _return_tables(self, rctx.mag, imt, "IMLs")
+    imls = _return_tables(self, ctx.mag, imt, "IMLs")
     # Get distance vector for the given magnitude
-    idx = np.searchsorted(self.m_w, rctx.mag)
+    idx = np.searchsorted(self.m_w, ctx.mag)
     dists = self.distances[:, 0, idx - 1]
     # Get mean and standard deviations
-    mean = _get_mean(self.kind, self.distance_type, imls, dctx, dists)
+    mean = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
     return np.log(mean)
 
 
@@ -522,30 +522,18 @@ def get_site_amplification_sigma(self, sites, f_rk, C_LIN, C_F760, C_NL):
     return np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
 
 
-def get_stddevs(self, mag, imt, stddev_types, num_sites):
+def get_stddevs(self, mag, imt):
     """
     Returns the standard deviations for either the ergodic or
     non-ergodic models
     """
-    stddevs = []
     if self.__class__.__name__.endswith('TotalSigma'):
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                sigma = _get_total_sigma(self, imt, mag)
-                stddevs.append(sigma + np.zeros(num_sites))
-        return stddevs
-    # else compute all stddevs
+        return [_get_total_sigma(self, imt, mag), 0., 0.]
+
     tau = _get_tau(self, imt, mag)
     phi = _get_phi(self, imt, mag)
-    sigma = np.sqrt(tau ** 2. + phi ** 2.)
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(sigma + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(num_sites))
-    return stddevs
+    sigma = np.sqrt(tau ** 2 + phi ** 2)
+    return [sigma, tau, phi]
 
 
 def _get_tau(self, imt, mag):
@@ -564,6 +552,29 @@ def _get_phi(self, imt, mag):
         C = self.PHI_S2SS[imt]
         phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
     return phi
+
+
+def get_mean_amp(self, ctx, imt):
+    # Get the PGA on the reference rock condition
+    if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+        rock_imt = PGA()
+    else:
+        rock_imt = SA(0.01)
+    pga_r = get_hard_rock_mean(self, ctx, rock_imt)
+
+    # Get the desired spectral acceleration on rock
+    if imt.string != "PGA":
+        # Calculate the ground motion at required spectral period for
+        # the reference rock
+        mean = get_hard_rock_mean(self, ctx, imt)
+    else:
+        # Avoid re-calculating PGA if that was already done!
+        mean = np.copy(pga_r)
+
+    amp = get_site_amplification(self, imt, np.exp(pga_r), ctx)
+    mean += amp
+
+    return mean, amp, pga_r
 
 
 class NGAEastGMPE(GMPETable):
@@ -706,31 +717,14 @@ class NGAEastGMPE(GMPETable):
             assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
         super().__init__(**kwargs)
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
-        # Get the PGA on the reference rock condition
-        if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
-            rock_imt = PGA()
-        else:
-            rock_imt = SA(0.01)
-        pga_r = get_hard_rock_mean(self, rctx, dctx, rock_imt, stddev_types)
-
-        # Get the desired spectral acceleration on rock
-        if imt.string != "PGA":
-            # Calculate the ground motion at required spectral period for
-            # the reference rock
-            mean = get_hard_rock_mean(self, rctx, dctx, imt, stddev_types)
-        else:
-            # Avoid re-calculating PGA if that was already done!
-            mean = np.copy(pga_r)
-
-        mean += get_site_amplification(self, imt, np.exp(pga_r), sctx)
-        # Get standard deviation model
-        nsites = getattr(dctx, self.distance_type).shape
-        stddevs = get_stddevs(self, rctx.mag, imt, stddev_types, nsites)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            mean[m], _, _ = get_mean_amp(self, ctx, imt)
+            # Get standard deviation model
+            sig[m], tau[m], phi[m] = get_stddevs(self, ctx.mag, imt)
 
     # Seven constants: vref, vL, vU, vw1, vw2, wt1 and wt2
     CONSTANTS = {"vref": 760., "vL": 200., "vU": 2000.0,

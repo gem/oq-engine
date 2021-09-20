@@ -24,6 +24,7 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, source as ohs
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
+from openquake.hazardlib import valid
 
 
 class LogicTreeError(Exception):
@@ -88,6 +89,12 @@ def trucMFDFromSlip_absolute(utype, node, filename):
     slip_rate, rigidity = (node.faultActivityData["slipRate"],
                            node.faultActivityData["rigidity"])
     return slip_rate, rigidity
+
+
+@parse_uncertainty.add('setMSRAbsolute')
+def setMSR_absolute(utype, node, filename):
+    tmps = valid.mag_scale_rel(node.text)
+    return valid.SCALEREL[tmps]()
 
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
@@ -249,6 +256,12 @@ def _abGR_absolute(utype, source, value):
     source.mfd.modify('set_ab', dict(a_val=a, b_val=b))
 
 
+@apply_uncertainty.add('bGRAbsolute')
+def _bGR_absolute(utype, source, value):
+    b_val = float(value)
+    source.mfd.modify('set_bGR', dict(b_val=b_val))
+
+
 @apply_uncertainty.add('bGRRelative')
 def _abGR_relative(utype, source, value):
     source.mfd.modify('increment_b', dict(value=value))
@@ -276,6 +289,23 @@ def _trucMFDFromSlip_absolute(utype, source, value):
     slip_rate, rigidity = value
     source.modify('adjust_mfd_from_slip', dict(slip_rate=slip_rate,
                                                rigidity=rigidity))
+
+
+@apply_uncertainty.add('setMSRAbsolute')
+def _setMSR(utype, source, value):
+    msr = value
+    source.modify('set_msr', dict(new_msr=msr))
+
+
+@apply_uncertainty.add('recomputeMmax')
+def _recompute_mmax_absolute(utype, source, value):
+    epsilon = value
+    source.modify('recompute_mmax', dict(epsilon=epsilon))
+
+
+@apply_uncertainty.add('setLowerSeismDepthAbsolute')
+def _setLSD(utype, source, value):
+    source.modify('set_lower_seismogenic_depth', dict(lsd=float(value)))
 
 
 # ######################### apply_uncertainties ########################### #
@@ -333,19 +363,21 @@ def random(size, seed, sampling_method='early_weights'):
     You can compare montecarlo sampling with latin square sampling with
     the following code:
 
-    import matplotlib.pyplot as plt
-    samples, seed = 10, 42
-    x, y = random((samples, 2), seed, 'early_latin').T
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.scatter(x, y, color='green')  # points on a latin square
-    x, y = random((samples, 2), seed, 'early_weights').T
-    plt.scatter(x, y, color='red')  # points NOT on a latin square
-    for x in numpy.arange(0, 1, 1/samples):
-        for y in numpy.arange(0, 1, 1/samples):
-            plt.axvline(x)
-            plt.axhline(y)
-    plt.show()
+    .. code-block:
+
+       import matplotlib.pyplot as plt
+       samples, seed = 10, 42
+       x, y = random((samples, 2), seed, 'early_latin').T
+       plt.xlim([0, 1])
+       plt.ylim([0, 1])
+       plt.scatter(x, y, color='green')  # points on a latin square
+       x, y = random((samples, 2), seed, 'early_weights').T
+       plt.scatter(x, y, color='red')  # points NOT on a latin square
+       for x in numpy.arange(0, 1, 1/samples):
+           for y in numpy.arange(0, 1, 1/samples):
+               plt.axvline(x)
+               plt.axhline(y)
+       plt.show()
     """
     numpy.random.seed(seed)
     xs = numpy.random.uniform(size=size)
@@ -654,6 +686,9 @@ class BranchSet(object):
             if bset is None:
                 break
         return pairs
+
+    def __len__(self):
+        return len(self.branches)
 
     def __str__(self):
         return repr(self.branches)

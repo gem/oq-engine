@@ -202,7 +202,7 @@ class AtkinsonBoore2003SInter(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    DEFINED_FOR_REFERENCE_VELOCITY = 600
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
 
     #: Required site parameters is Vs30, used to distinguish between NEHRP
     #: soil classes, see paragraph 'Functional Form', page 1706

@@ -6,7 +6,8 @@
 # h5py, Shapely, psutil, Basemap
 https://wheelhouse.openquake.org/v3/windows/py/setuptools-56.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/pytz-2019.1-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/windows/py38/h5py-2.10.0-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/setproctitle-1.2.2-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/h5py-3.1.0-cp38-cp38-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py38/numpy-1.18.2-cp38-cp38-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py38/scipy-1.4.1-cp38-cp38-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py38/pandas-1.1.5-cp38-cp38-win_amd64.whl
@@ -17,7 +18,6 @@ https://wheelhouse.openquake.org/v3/windows/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/pbr-5.2.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/six-1.12.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/windows/py/Django-2.2.7-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/sqlparse-0.3.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/certifi-2019.3.9-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/chardet-3.0.4-py2.py3-none-any.whl
@@ -26,6 +26,9 @@ https://wheelhouse.openquake.org/v3/windows/py/urllib3-1.25.3-py2.py3-none-any.w
 https://wheelhouse.openquake.org/v3/windows/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/toml-0.10.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.6-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
 
 ### Plotting ###
 # comment the following lines to skip installation

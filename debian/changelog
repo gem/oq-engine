@@ -1,3 +1,44 @@
+  [Michele Simionato]
+  * Improved error checking when reading the taxonomy mapping file
+  * Renamed conversion -> risk_id in the header of the taxonomy mapping file
+
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.1.0
+
+  [Michele Simionato]
+  * Renamed the parameter `individual_curves` -> `individual_rlzs`
+  * Reduced the number of disaggregation outputs and removed the long-time
+    deprecated XML exporters
+  * Fixed the ShakeMap calculator failing with a TypeError:
+    get_array_usgs_id() got an unexpected keyword argument 'id'
+  * Added `conseq_ratio` in the aggcurves exporter for event_based_damage
+  * Added a `conditional_spectrum` calculator
+  * Fixed an array<->scalar bug in abrahamson_gulerce_2020
+  * Restored the classical tiling calculator
+
+python3-oq-engine (3.12.0-1~xenial01) xenial; urgency=low
+
+  [Marco Pagani]
+  * Updated verification tables for Abrahamson et al. (2014) and checked
+    values with other public resources.
+
+  [Michele Simionato]
+  * Added command `oq info consequences`
+  * Improved error message for `area_source_discretization` too large
+  * Improved command `oq info exports`
+  * Internal: changed the signature of hazardlib.calc.hazard_curve.classical
+  * Extended the multi-rupture scenario calculator to multiple TRTs
+  * Removed the experimental feature `pointsource_distance=?`
+  * Refactored the GMPE tests, with a speedup of 1-14 times
+  * Added a script `utils/build_vtable` to build verification tables
+  * `oq info gsim_logic_tree.xml` now displays the logic tree
+  * Fixed a bug in the adjustment term in NSHMP2014 breaking the USA model
+
+  [Graeme Weatherill]
+  * Implements Abrahamson & Gulerce (2020) NGA Subduction GMPE
+
+  [Nico Kuehn/Graeme Weatherill]
+  * Implements Kuehn et al. (2020) NGA Subduction GMPE
 
   [Chung-Han Chan/Jia-Cian Gao]
   * Implements Lin et al. (2011)
@@ -60,6 +101,7 @@
   [Marco Pagani, Michele Simionato]
   * Implemented MultiFaultSources
   * Added method for computing rjb to kite surfaces
+  * Added support for new epistemic uncertainties in the SSC LT
 
   [Michele Simionato]
   * Fixed newlines in the CSV exports on Windows
@@ -120,8 +162,6 @@
   * Added a check for the case of `aValue=-Inf` in the truncatedGR MFD
   * Extended the engine to read XML ShakeMaps from arbitrary sources (in
     particular local path names and web sites different from the USGS site)
-  * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
-    thus breaking the QGIS plugin on Windows
   * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11
     format
   * scenario_risk calculations starting from ruptures in CSV format now
@@ -137,7 +177,6 @@
     calculations
   * Weighted the heavy sources in parallel in event based calculations
   * Supported zero coefficient of variations with the beta distribution
-  * Fixed a bug in the agg_curves exporter with aggregate_by=id
   * Internal: changed how the agg_loss_table is stored
   * Fixed the avg_losses exporter when aggregate_by=id
   * Fully merged the calculators scenario_risk, event_based_risk and ebrisk and
@@ -146,6 +185,20 @@
   * Storing the agg_loss_table as 64 bit floats instead of 32 bit floats
   * Changed the algorithm used to generate the epsilons to avoid storing the
     epsilon matrix
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 06 Sep 2021 08:17:53 +0000
+
+python3-oq-engine (3.11.3-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
+    thus breaking the QGIS plugin on Windows
+  * Fix a bug when reusing a hazard calculation without `aggregate_by` for a
+    risk calculation with `aggregate_by`
+  * Fixed the aggregate curves exporter for `aggregate_by=id`: it was exporting
+    b'asset_id' instead of asset_id
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 22 Mar 2021 09:00:22 +0000
 
 python3-oq-engine (3.11.2-1~xenial01) xenial; urgency=low
 
@@ -3006,7 +3059,7 @@ python-oq-engine (2.0.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
   * Another export fix: made sure it is run by the current user
-  * Fixed the export: if the export directory does not exists, it is created
+  * Fixed the export: if the export directory does not exist, it is created
   * Introduced the configuration variable `multi_user`, false for source
     installations and true for package installations
   * Fixed the WebUI export

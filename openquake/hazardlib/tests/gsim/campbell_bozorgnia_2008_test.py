@@ -28,61 +28,75 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # As of September 2013 the CAV model has not been included in the test suite
 
+
 class CampbellBozorgnia2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CampbellBozorgnia2008
 
     def test_mean_reverse_faulting(self):
-        self.check('CB08/CB08_RV_MEAN.csv', max_discrep_percentage=0.1)
+        self.check('CB08/CB08_RV_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_mean_normal_faulting(self):
-        self.check('CB08/CB08_NM_MEAN.csv', max_discrep_percentage=0.1)
-        
+        self.check('CB08/CB08_NM_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
     def test_mean_strike_slip_faulting(self):
-        self.check('CB08/CB08_SS_MEAN.csv', max_discrep_percentage=0.1)
+        self.check('CB08/CB08_SS_MEAN.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_inter_reverse(self):
-        self.check('CB08/CB08_RV_STD_INTER.csv', max_discrep_percentage=0.1)
-        
+        self.check('CB08/CB08_RV_STD_INTER.csv',
+                   max_discrep_percentage=0.1)
+
     def test_std_inter_normal(self):
-        self.check('CB08/CB08_NM_STD_INTER.csv', max_discrep_percentage=0.1)
-        
+        self.check('CB08/CB08_NM_STD_INTER.csv',
+                   max_discrep_percentage=0.1)
+
     def test_std_inter_strike_slip(self):
-        self.check('CB08/CB08_SS_STD_INTER.csv', max_discrep_percentage=0.1)
+        self.check('CB08/CB08_SS_STD_INTER.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_intra_reverse(self):
-        self.check('CB08/CB08_RV_STD_INTRA.csv', max_discrep_percentage=0.1)
-    
+        self.check('CB08/CB08_RV_STD_INTRA.csv',
+                   max_discrep_percentage=0.1)
+
     def test_std_intra_normal(self):
-        self.check('CB08/CB08_NM_STD_INTRA.csv', max_discrep_percentage=0.1)
-        
+        self.check('CB08/CB08_NM_STD_INTRA.csv',
+                   max_discrep_percentage=0.1)
+
     def test_std_intra_strike_slip(self):
-        self.check('CB08/CB08_SS_STD_INTRA.csv', max_discrep_percentage=0.1)
+        self.check('CB08/CB08_SS_STD_INTRA.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_total_reverse(self):
-        self.check('CB08/CB08_RV_STD_TOTAL.csv', max_discrep_percentage=0.1)
-    
+        self.check('CB08/CB08_RV_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
     def test_std_total_normal(self):
-        self.check('CB08/CB08_NM_STD_TOTAL.csv', max_discrep_percentage=0.1)
-    
+        self.check('CB08/CB08_NM_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
     def test_std_total_strike_slip(self):
-        self.check('CB08/CB08_SS_STD_TOTAL.csv', max_discrep_percentage=0.1)
+        self.check('CB08/CB08_SS_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
 
 class CampbellBozorgnia2008ArbitraryTestCase(BaseGSIMTestCase):
     # This second class tests the implementation for the Arbitrary horizontal
-    # component of ground motion. As this inherits the original class and 
+    # component of ground motion. As this inherits the original class and
     # modifies only the calculation of the total sigma, only the total sigma
     # output is tested
-    
+
     GSIM_CLASS = CampbellBozorgnia2008Arbitrary
-    
+
     def test_std_total_reverse(self):
         self.check('CB08/CB08_RV_STD_TOTAL_ARBITRARY.csv',
                    max_discrep_percentage=0.1)
-    
+
     def test_std_total_normal(self):
         self.check('CB08/CB08_NM_STD_TOTAL_ARBITRARY.csv',
                    max_discrep_percentage=0.1)
-    
+
     def test_std_total_strike_slip(self):
         self.check('CB08/CB08_SS_STD_TOTAL_ARBITRARY.csv',
                    max_discrep_percentage=0.1)

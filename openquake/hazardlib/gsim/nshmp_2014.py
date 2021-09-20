@@ -79,17 +79,15 @@ class NSHMP2014(base.GMPE):
         self.gsim = cls()  # underlying gsim
         super().__init__(**kwargs)
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        mean, stddevs = self.gsim.get_mean_and_stddevs(
-            sctx, rctx, dctx, imt, stddev_types)
-        # return mean increased by the adjustment factor and standard deviation
-        self.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
-        return mean + self.sgn * self.adjustment, stddevs
+        self.gsim.compute(ctx, imts, mean, sig, tau, phi)
+        ctx.adjustment = nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
+        mean[:] += self.sgn * ctx.adjustment
 
 
 # populate gsim_aliases

@@ -65,7 +65,7 @@ class LossCurveExporter(object):
         if spec and not spec.startswith(('ref-', 'sid-')):
             raise ValueError('Wrong specification in %s' % what)
         elif spec == '':  # export losses for all assets
-            aids = range(len(self.assetcol.array))
+            aids = slice(0, len(self.assetcol.array))
             arefs = self.asset_refs
         elif spec.startswith('sid-'):  # passed the site ID
             sid = int(spec[4:])

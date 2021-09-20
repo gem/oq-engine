@@ -13,19 +13,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.convertito_2012 import (
-    ConvertitoEtAl2012Geysers
-)
+from openquake.hazardlib.gsim.convertito_2012 import ConvertitoEtAl2012Geysers
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class ConvertitoEtAl2012TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ConvertitoEtAl2012Geysers
 
-    def test_mean(self):
+    def test_all(self):
         self.check('CONV2012/CONV_2012_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('CONV2012/CONV_2012_STDDEV.csv',
+                   'CONV2012/CONV_2012_STDDEV.csv',
                    max_discrep_percentage=0.1)

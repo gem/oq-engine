@@ -15,43 +15,45 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
-import unittest
 from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
         MorikawaFujiwara2013Crustal,
         MorikawaFujiwara2013SubInterfaceNE,
         MorikawaFujiwara2013SubSlabSW,
-        MorikawaFujiwara2013SubSlabNE
-        )
+        MorikawaFujiwara2013SubSlabNE)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class MorikawaFujiwara2013CrustalTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013Crustal
 
-    def test_mean(self):
-        self.check('MF13/mean_crustal.csv', max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check('MF13/mean_crustal.csv',
+                   max_discrep_percentage=0.1)
 
     def test_sigma(self):
-        self.check('MF13/total_std_crustal.csv', max_discrep_percentage=0.1)
+        self.check('MF13/total_std_crustal.csv',
+                   max_discrep_percentage=0.1)
 
 
 class MorikawaFujiwara2013InterfaceTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013SubInterfaceNE
 
-    def test_mean(self):
-        self.check('MF13/mean_interface_NE.csv', max_discrep_percentage=0.25)
+    def test_all(self):
+        self.check('MF13/mean_interface_NE.csv',
+                   max_discrep_percentage=0.25)
 
 
 class MorikawaFujiwara2013IntraSlabTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013SubSlabNE
 
-    def test_mean(self):
-        self.check('MF13/mean_intraslab_NE.csv', max_discrep_percentage=0.2)
+    def test_all(self):
+        self.check('MF13/mean_intraslab_NE.csv',
+                   max_discrep_percentage=0.2)
 
 
 class MorikawaFujiwara2013IntraSlabSWTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013SubSlabSW
 
-    def test_mean(self):
-        self.check('MF13/mean_intraslab_SW.csv', max_discrep_percentage=0.3)
+    def test_all(self):
+        self.check('MF13/mean_intraslab_SW.csv',
+                   max_discrep_percentage=0.3)

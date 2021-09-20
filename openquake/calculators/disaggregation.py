@@ -441,8 +441,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat5 = mat6[..., p, :]
+                # mat5 has shape (T, Ma, D, E, Z) for k == 0
+                # and (T, Ma, Lo, La, Z) for k == 1
                 if k == 0 and m == 0 and poe == self.poes_disagg[-1]:
-                    # mat5 has shape (T, Ma, D, E, Z)
                     _disagg_trt[s] = tuple(pprod(mat5[..., 0], axis=(1, 2, 3)))
                 poe2 = pprod(mat5, axis=(0, 1, 2, 3))
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
@@ -482,3 +483,14 @@ class DisaggregationCalculator(base.HazardCalculator):
             NML1 = len(vcurves), self.M, oq.imtls.size // self.M
             self.datastore['_vcurves'] = numpy.array(vcurves).reshape(NML1)
             self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
+
+        # check null realizations in the single site case, see disagg/case_2
+        best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
+        for (s, z), r in numpy.ndenumerate(best_rlzs):
+            lst = []
+            for key in out:
+                if out[key][s, ..., z].sum() == 0:
+                    lst.append(key)
+            if lst:
+                logging.warning('No %s contributions for site=%d, rlz=%d',
+                                lst, s, r)

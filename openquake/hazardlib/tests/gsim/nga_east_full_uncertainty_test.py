@@ -30,7 +30,6 @@ For delta_s2s: Table 5.15
 """
 import os
 import unittest
-from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim import nga_east as ne
 
@@ -547,33 +546,19 @@ class NGAEastUncertaintyTestCase(BaseGSIMTestCase):
     "central" and "high" branch
     """
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+    GSIM_CLASS = ne.NGAEastGMPE
 
-    def check(self, gsim, filename, max_discrep_percentage):
-        filename = os.path.join(self.BASE_DATA_PATH, filename)
-        errors, stats, sctx, rctx, dctx = check_gsim(
-            gsim, open(filename), max_discrep_percentage)
-        s_att = self.get_context_attributes(sctx)
-        r_att = self.get_context_attributes(rctx)
-        d_att = self.get_context_attributes(dctx)
-        self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
-        self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
-        self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
-        if errors:
-            raise AssertionError(stats)
-        print()
-        print(stats)
-
-    def _test_uncertainty_model(self, gsim, filestem, max_disc=MAX_DISC):
+    def _test_uncertainty_model(self, filestem, max_disc=MAX_DISC, **kwargs):
         """
         Each uncertainty model describes an inter-event, intra-event and total
         standard deviation, so three checks are executed.
         """
-        # INTER-EVENT
-        self.check(gsim, filestem + "_INTER_STDDEV.csv", max_disc)
-        # INTRA-EVENT
-        self.check(gsim, filestem + "_INTRA_STDDEV.csv", max_disc)
-        # TOTAL
-        self.check(gsim, filestem + "_TOTAL_STDDEV.csv", max_disc)
+        print(kwargs)
+        self.check(filestem + "_INTER_STDDEV.csv",
+                   filestem + "_INTRA_STDDEV.csv",
+                   filestem + "_TOTAL_STDDEV.csv",
+                   max_discrep_percentage=max_disc,
+                   **kwargs)
 
     def test_all_nga_east_uncertainty(self):
         """
@@ -600,13 +585,12 @@ class NGAEastUncertaintyTestCase(BaseGSIMTestCase):
             else:
                 phi_s2ss_model = None
             phi_s2ss_quantile = QUANTILE[phi_s2ss_branch]
-            # Instantiate GSIM
-            gsim = ne.NGAEastGMPE(
+            # Run Checks
+            self._test_uncertainty_model(
+                filestem, MAX_DISC,
                 gmpe_table="NGAEast_DARRAGH_1CCSP.hdf5",
                 tau_model=tau_model, phi_model=phi_model,
                 phi_s2ss_model=phi_s2ss_model,
                 tau_quantile=tau_quantile,
                 phi_ss_quantile=phi_quantile,
                 phi_s2ss_quantile=phi_s2ss_quantile)
-            # Run Checks
-            self._test_uncertainty_model(gsim, filestem, MAX_DISC)

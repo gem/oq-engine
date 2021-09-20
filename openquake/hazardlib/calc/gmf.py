@@ -25,6 +25,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
@@ -138,10 +139,12 @@ class GmfComputer(object):
             self.distribution = scipy.stats.truncnorm(
                 - cmaker.trunclevel, cmaker.trunclevel)
 
-    def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
+    def compute_all(self, sig_eps=None):
         """
-        :returns: (dict with fields eid, sid, gmv_...), dt
+        :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
+        min_iml = self.cmaker.min_iml
+        rlzs_by_gsim = self.cmaker.gsims
         t0 = time.time()
         sids = self.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
@@ -213,7 +216,7 @@ class GmfComputer(object):
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
-                    (gsim, imt, self.source_id.decode('utf8'),
+                    (gsim, imt, decode(self.source_id),
                      exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
@@ -231,8 +234,8 @@ class GmfComputer(object):
                    epsilons(num_events))
         """
         num_sids = len(self.sids)
-        num_outs = len(mean_stds)
-        if num_outs == 1:
+        num_stds = len(mean_stds)
+        if num_stds == 1:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
@@ -244,7 +247,7 @@ class GmfComputer(object):
             return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
-        elif num_outs == 2:
+        elif num_stds == 2:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
             # of interest.
@@ -263,7 +266,7 @@ class GmfComputer(object):
             stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
-        elif num_outs == 3:
+        elif num_stds == 3:
             mean, stddev_inter, stddev_intra = mean_stds
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
@@ -284,6 +287,9 @@ class GmfComputer(object):
             gmf = to_imt_unit_values(
                 mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
+        else:
+            # this cannot happen, unless you pass a wrong mean_stds array
+            raise ValueError('There are %d>3 stddevs!?' % num_stds)
         return gmf, stdi, epsilons
 
 

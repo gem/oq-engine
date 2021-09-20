@@ -23,10 +23,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class Geomatrix1993SSlabNSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Geomatrix1993SSlabNSHMP2008
 
-    def test_mean(self):
+    def test_all(self):
         self.check('GEO93/GEO93NSHMP_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('GEO93/GEO93NSHMP_STD_TOTAL.csv',
+                   'GEO93/GEO93NSHMP_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)

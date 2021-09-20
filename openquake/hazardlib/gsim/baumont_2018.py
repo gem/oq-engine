@@ -28,26 +28,15 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
 
 
-def _compute_mean(C, rup, dists):
+def _compute_mean(C, ctx):
     """
     Compute mean value defined by equation on 2293
     """
-    term01 = C['beta'] * (np.log10(dists.rhypo))
-    term02 = C['gamma'] * dists.rhypo
-    mean = C['c1'] + C['c2'] * rup.mag + term01 + term02
+    term01 = C['beta'] * (np.log10(ctx.rhypo))
+    term02 = C['gamma'] * ctx.rhypo
+    mean = C['c1'] + C['c2'] * ctx.mag + term01 + term02
 
     return mean
-
-
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return total standard deviation.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        stddevs.append(np.sqrt(C['be']**2+C['we']**2) + np.zeros(num_sites))
-
-    return stddevs
 
 
 class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
@@ -96,19 +85,16 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
 
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
-
-        mean = _compute_mean(C, rup, dists)
-        stddevs = _get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, ctx)
+            sig[m] = np.sqrt(C['be'] ** 2 + C['we'] ** 2)
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper

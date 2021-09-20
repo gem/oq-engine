@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Single Section ASC"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <kiteFaultSource
+            id="100"
+            name="100"
+            >
+                <kiteSurface>
+                    <profile>
+                        <gml:LineString>
+                            <gml:posList>
+                                -70.08384 18.7094 0.0 -70.12579 18.65738 20.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </profile>
+                    <profile>
+                        <gml:LineString>
+                            <gml:posList>
+                                -69.92753 18.59614 0.0 -69.96945 18.54411 20.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </profile>
+                </kiteSurface>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="6.0"
+                >
+                    <occurRates>
+                        0.0 0.0 1.5290255383473264e-05 0.0 1.5326561594194795e-05 0.0 7.681477006412535e-06 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    0.0
+                </rake>
+            </kiteFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

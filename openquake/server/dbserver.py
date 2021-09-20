@@ -21,6 +21,7 @@ import sys
 import time
 import sqlite3
 import logging
+import getpass
 import threading
 import subprocess
 
@@ -145,7 +146,7 @@ def check_foreign():
     """
     Check if we the DbServer is the right one
     """
-    if not config.dbserver.multi_user:
+    if not config.multi_user:
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
@@ -159,7 +160,7 @@ def ensure_on():
     Start the DbServer if it is off
     """
     if get_status() == 'not-running':
-        if config.dbserver.multi_user:
+        if config.multi_user and getpass.getuser() != 'openquake':
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically; NB: I tried to use
@@ -209,7 +210,7 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
     actions.reset_is_running(db)
 
     # start the dbserver
-    if hasattr(os, 'fork') and not (config.dbserver.multi_user or foreground):
+    if hasattr(os, 'fork') and not (config.multi_user or foreground):
         # needed for https://github.com/gem/oq-engine/issues/3211
         # but only if multi_user = False, otherwise init/supervisor
         # will loose control of the process

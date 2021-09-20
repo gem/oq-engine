@@ -2,6 +2,8 @@ name: MacOS Install engine for 3.6, 3.7 and 3.8
 'on':
   schedule:
     - cron: "0 1 * * *"
+  push:
+    branches: [ requirements ]
 
 jobs:
 
@@ -10,22 +12,22 @@ jobs:
     strategy:
       matrix:
         #os: [macos-latest, windows-latest, ubuntu-latest]
-        os: [macos-10.15]
+        os: [macos-10.15, macos-11]
         python-version: [3.6, 3.7, 3.8]
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
         #with:
           #  ref: cleanup
-      - name: Set up Python3 
+      - name: Set up Python3
         uses: actions/setup-python@v2
         with:
           python-version:  ${{ matrix.python-version }}
       - name: Install pytest to use with oqengine
         run: pip3 install pytest
-      - name: Run Installation of oq-engine in devel mode 
+      - name: Run Installation of oq-engine in devel mode
         run: |
-            #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
+            #PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
             #echo $PY_VER
             export PIP_DEFAULT_TIMEOUT=100
             pip3 install -U pip wheel setuptools
@@ -36,4 +38,4 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           oq --version
-          oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
+          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"

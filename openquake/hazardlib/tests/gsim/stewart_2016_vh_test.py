@@ -88,26 +88,16 @@ class StewartEtAl2016VHTestCaseA(BaseGSIMTestCase):
     # File containing results for the intra-event standard deviation
     INTRA_FILE = "SBSA15b/SBSA15b_CAL_PERIOD_INTRA_STD.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class StewartEtAl2016VHTestCaseB(StewartEtAl2016VHTestCaseA):
     """
-    Tests the Stewart et al. (2016) V/H GMPE for the "global {default}" 
+    Tests the Stewart et al. (2016) V/H GMPE for the "global {default}"
     conditions: Style of faulting included - "Global" Q model
     """
     GSIM_CLASS = SBSAb.StewartEtAl2016VH

@@ -39,12 +39,8 @@ class LanzanoLuzi2019shallowTestCase(BaseGSIMTestCase):
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "LL19/LanzanoLuzi2019shallow_STD_TOTAL.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
                    max_discrep_percentage=0.1)
 
 
@@ -56,10 +52,6 @@ class LanzanoLuzi2019deepTestCase(BaseGSIMTestCase):
     MEAN_FILE = "LL19/LanzanoLuzi2019deep_MEAN.csv"
     STD_FILE = "LL19/LanzanoLuzi2019deep_STD_TOTAL.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
                    max_discrep_percentage=0.1)

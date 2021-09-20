@@ -26,31 +26,16 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _get_stddevs(C, stddev_types, rup, imt, num_sites):
-    """
-    Return standard deviations as defined in eq. 4 and 5, page 744,
-    based on table 8, page 744.
-    Eq. 5 yields std dev in natural log, so convert to log10
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        sigma_mean = _compute_standard_dev(rup, imt, C)
-        sigma_tot = np.sqrt((sigma_mean ** 2) + (C['SigmaReg'] ** 2))
-        sigma_tot = np.log10(np.exp(sigma_tot))
-        stddevs.append(sigma_tot + np.zeros(num_sites))
-    return stddevs
-
-
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     Compute the first term of the equation described on p. 742:
 
     "c1 + (c2 * M) + (c3 * M**2) "
     """
-    return C['c1'] + (C['c2'] * rup.mag) + (C['c3'] * (rup.mag ** 2))
+    return C['c1'] + (C['c2'] * ctx.mag) + (C['c3'] * (ctx.mag ** 2))
 
 
-def _compute_attenuation(rup, dists, imt, C):
+def _compute_attenuation(ctx, imt, C):
     """
     Compute the second term of the equation described on p. 742:
 
@@ -58,39 +43,39 @@ def _compute_attenuation(rup, dists, imt, C):
     [(c6 + c7 * M) * max{ min{ log10(R/60.), log10(120./60.) }, 0.}] +
     [(c8 + c9 * M) * max{ log10(R/120.), 0}] "
     """
-    vec = np.ones(len(dists.rjb))
+    vec = np.ones(len(ctx.rjb))
 
-    a1 = (np.log10(np.sqrt(dists.rjb ** 2.0 + C['c11'] ** 2.0)),
+    a1 = (np.log10(np.sqrt(ctx.rjb ** 2.0 + C['c11'] ** 2.0)),
           np.log10(60. * vec))
 
     a = np.column_stack([a1[0], a1[1]])
 
-    b3 = (np.log10(np.sqrt(dists.rjb ** 2.0 + C['c11'] ** 2.0) /
+    b3 = (np.log10(np.sqrt(ctx.rjb ** 2.0 + C['c11'] ** 2.0) /
                    (60. * vec)), np.log10((120. / 60.) * vec))
 
     b2 = np.column_stack([b3[0], b3[1]])
     b1 = ([np.min(b2, axis=1), 0. * vec])
     b = np.column_stack([b1[0], b1[1]])
 
-    c1 = (np.log10(np.sqrt(dists.rjb ** 2.0 + C['c11'] ** 2.0) /
+    c1 = (np.log10(np.sqrt(ctx.rjb ** 2.0 + C['c11'] ** 2.0) /
           (120.) * vec), 0. * vec)
     c = np.column_stack([c1[0], c1[1]])
 
-    return (((C['c4'] + C['c5'] * rup.mag) * np.min(a, axis=1)) +
-            ((C['c6'] + C['c7'] * rup.mag) * np.max(b, axis=1)) +
-            ((C['c8'] + C['c9'] * rup.mag) * np.max(c, axis=1)))
+    return (((C['c4'] + C['c5'] * ctx.mag) * np.min(a, axis=1)) +
+            ((C['c6'] + C['c7'] * ctx.mag) * np.max(b, axis=1)) +
+            ((C['c8'] + C['c9'] * ctx.mag) * np.max(c, axis=1)))
 
 
-def _compute_distance(rup, dists, imt, C):
+def _compute_distance(ctx, imt, C):
     """
     Compute the third term of the equation described on p. 742:
 
     " c10 * R "
     """
-    return (C['c10'] * np.sqrt(dists.rjb ** 2.0 + C['c11'] ** 2.0))
+    return (C['c10'] * np.sqrt(ctx.rjb ** 2.0 + C['c11'] ** 2.0))
 
 
-def _compute_standard_dev(rup, imt, C):
+def _compute_standard_dev(ctx, imt, C):
     """
     Compute the the standard deviation in terms of magnitude
     described on page 744, eq. 4
@@ -100,10 +85,10 @@ def _compute_standard_dev(rup, imt, C):
         psi = -6.898E-3
     else:
         psi = -3.054E-5
-    if rup.mag <= 6.5:
-        sigma_mean = (C['c12'] * rup.mag) + C['c13']
-    elif rup.mag > 6.5:
-        sigma_mean = (psi * rup.mag) + C['c14']
+    if ctx.mag <= 6.5:
+        sigma_mean = (C['c12'] * ctx.mag) + C['c13']
+    elif ctx.mag > 6.5:
+        sigma_mean = (psi * ctx.mag) + C['c14']
     return sigma_mean
 
 
@@ -152,28 +137,24 @@ class ShahjoueiPezeshk2016(GMPE):
     #: not verified warning
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
 
-        # Extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_attenuation(ctx, imt, C) +
+                     _compute_distance(ctx, imt, C))
 
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_attenuation(rup, dists, imt, C) +
-                 _compute_distance(rup, dists, imt, C))
+            mean[m] = np.log(10.0 ** imean)
 
-        mean = np.log(10.0 ** (imean))
-
-        istddevs = _get_stddevs(C, stddev_types, rup, imt, len(dists.rjb))
-
-        stddevs = np.log(10.0 ** np.array(istddevs))
-
-        return mean, stddevs
+            sigma_mean = _compute_standard_dev(ctx, imt, C)
+            sigma_tot = np.sqrt(sigma_mean ** 2 + C['SigmaReg'] ** 2)
+            sig[m] = np.log(10.0 ** np.log10(np.exp(sigma_tot)))
 
     #: Equation coefficients, described in Table 2 on pp. 1865
     COEFFS = CoeffsTable(sa_damping=5, table="""

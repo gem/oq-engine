@@ -255,14 +255,15 @@ class GmfGetter(object):
         self.oqparam = oqparam
         self.amplifier = amplifier
         self.sec_perils = sec_perils
-        self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
         md = (filters.MagDepDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
-        param = {'imtls': oqparam.imtls, 'maximum_distance': md,
+        param = {'imtls': oqparam.imtls,
+                 'min_iml': oqparam.min_iml,
+                 'maximum_distance': md,
                  'minimum_distance': oqparam.minimum_distance,
                  'truncation_level': oqparam.truncation_level}
         self.cmaker = ContextMaker(
@@ -308,14 +309,13 @@ class GmfGetter(object):
 
     def get_gmfdata(self, mon=performance.Monitor()):
         """
-        :returns: a DataFrame with fields eid, sid, gmv_...
+        :returns: a DataFrame with fields eid, sid, gmv_X, ...
         """
         alldata = general.AccumDict(accum=[])
         self.sig_eps = []
         self.times = []  # rup_id, nsites, dt
         for computer in self.gen_computers(mon):
-            data, dt = computer.compute_all(
-                self.min_iml, self.rlzs_by_gsim, self.sig_eps)
+            data, dt = computer.compute_all(self.sig_eps)
             self.times.append((computer.ebrupture.id, len(computer.sids), dt))
             for key in data:
                 alldata[key].extend(data[key])

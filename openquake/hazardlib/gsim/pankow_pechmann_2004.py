@@ -65,52 +65,47 @@ class PankowPechmann2004(GMPE):
     #: but not for SA and Standard Deviations
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        C = self.COEFFS[imt]
-        num_sites = len(dists.rjb)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            M = ctx.mag - 6
+            R = np.sqrt(ctx.rjb ** 2 + C['h'] ** 2)
 
-        M = rup.mag - 6
-        R = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
+            # In the original formulation of the GMPE, distinction is only made
+            # between rock and soil ctx, which I assumed separated by the Vs30
+            # value of 910m/s (see equation 5 of the paper)
+            gamma = np.array([0 if v > 910. else 1 for v in ctx.vs30])
 
-        # In the original formulation of the GMPE, distinction is only made
-        # between rock and soil sites, which I assumed separated by the Vs30
-        # value of 910m/s (see equation 5 of the paper)
-        gamma = np.array([0 if v > 910. else 1 for v in sites.vs30])
+            mean[m] = (C['b1'] +
+                       C['b2'] * M +
+                       C['b3'] * M ** 2 +
+                       C['b5'] * np.log10(R) +
+                       C['b6'] * gamma)
 
-        mean = np.zeros_like(R)
+            # Convert from base 10 to base e
+            mean[m] /= np.log10(np.e)
 
-        mean += (C['b1'] +
-                 C['b2'] * M +
-                 C['b3'] * M ** 2 +
-                 C['b5'] * np.log10(R) +
-                 C['b6'] * gamma)
+            # Converting PSV to PSA
+            if imt != PGA() and imt != PGV():
+                omega = 2.*np.pi/imt.period
+                mean[m] += np.log(omega/(gravity*100))
 
-        # Convert from base 10 to base e
-        mean /= np.log10(np.e)
+            # Computing standard deviation
+            if (self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
+                    'Random horizontal'):
+                # Using equation 8 of the paper,
+                # corrected as indicated in the erratum
+                Sr = np.sqrt(C['SlZ']**2 + (C['S3'] / np.sqrt(2))**2)
+            else:
+                Sr = C['SlZ']
 
-        # Converting PSV to PSA
-        if imt != PGA() and imt != PGV():
-            omega = 2.*np.pi/imt.period
-            mean += np.log(omega/(gravity*100))
-
-        # Computing standard deviation
-        if self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT == 'Random horizontal':
-            # Using equation 8 of the paper,
-            # corrected as indicated in the erratum
-            Sr = np.sqrt(C['SlZ']**2 + (C['S3']/np.sqrt(2))**2)
-        else:
-            Sr = C['SlZ']
-        stddevs = [np.zeros(num_sites) + Sr for _ in stddev_types]
-
-        # Convert from base 10 to base e
-        stddevs = [sd/np.log10(np.e) for sd in stddevs]
-
-        return mean, stddevs
+            # Convert from base 10 to base e
+            sig[m] = Sr / np.log10(np.e)
 
     #: coefficient table provided by GSC (corrected as in the erratum)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

@@ -20,10 +20,23 @@ seismic sources.
 import abc
 import zlib
 import numpy
+from openquake.baselib import general
+from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 EPS = .01  # used for src.nsites outside the maximum_distance
+
+
+def get_code2cls():
+    """
+    :returns: a dictionary source code -> source class
+    """
+    dic = {}
+    for cls in general.gen_subclasses(BaseSeismicSource):
+        if hasattr(cls, 'code'):
+            dic[cls.code] = cls
+    return dic
 
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
@@ -61,8 +74,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         w = self.num_ruptures * self.ngsims * (.1 if self.nsites == EPS else 1)
-        if not hasattr(self, 'nodal_plane_distribution'):  # not pointlike
-            w *= 10  # increase weight of non point sources
+        if hasattr(self, 'data'):  # nonparametric rupture
+            w *= 20  # increase weight 20 times
+        elif not hasattr(self, 'nodal_plane_distribution'):  # not pointlike
+            w *= 5  # increase weight of non point sources
         return w
 
     @property
@@ -144,6 +159,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         elif hasattr(self, 'source_file'):
             # unbound UCERFSource
             mags.add(numpy.nan)
+        elif hasattr(self, 'mags'):  # MultiFaultSource
+            mags.update(mag for mag in self.mags if mag >= self.min_mag)
         else:  # nonparametric
             for rup, pmf in self.data:
                 if rup.mag >= self.min_mag:
@@ -280,6 +297,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         If either rupture aspect ratio or rupture mesh spacing is not positive
         (if not None).
     """
+
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model):
@@ -356,3 +374,74 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
                     rup.rup_id = self.rup_id
                 rup.idx = idx
                 return rup
+
+    def modify_set_msr(self, new_msr):
+        """
+        Updates the MSR originally assigned to the source
+
+        :param new_msr:
+            An instance of the :class:`openquake.hazardlib.scalerel.BaseMSR`
+        """
+        self.magnitude_scaling_relationship = new_msr
+
+    def modify_set_slip_rate(self, slip_rate: float):
+        """
+        Updates the slip rate assigned to the source
+
+        :param slip_rate:
+            The value of slip rate [mm/yr]
+        """
+        self.slip_rate = slip_rate
+
+    def modify_set_mmax_truncatedGR(self, mmax: float):
+        """
+        Updates the mmax assigned. This works on for parametric MFDs.s
+
+        :param mmax:
+            The value of the new maximum magnitude
+        """
+        # Check that the current src has a TruncatedGRMFD MFD
+        msg = 'This modification works only when the source MFD is a '
+        msg += 'TruncatedGRMFD'
+        assert self.mfd.__class__.__name__ == 'TruncatedGRMFD', msg
+        self.mfd.max_mag
+
+    def modify_recompute_mmax(self, epsilon: float = 0):
+        """
+        Updates the value of mmax using the msr and the area of the fault
+
+        :param epsilon:
+            Number of standard deviations to be added or substracted
+        """
+        msr = self.magnitude_scaling_relationship
+        area = self.get_fault_surface_area() * 1e6  # area in m^2
+        mag = msr.get_median_mag(area=area, rake=self.rake)
+        std = msr.get_std_dev_mag(area=area, rake=self.rake)
+        self.mfd.max_mag = mag + epsilon * std
+
+    def modify_adjust_mfd_from_slip(self, slip_rate: float, rigidity: float,
+                                    recompute_mmax: float = None):
+        """
+        :slip_rate:
+            A float defining slip rate [in mm]
+        :rigidity:
+            A float defining material rigidity [in GPa]
+        :rigidity:
+            A float defining material rigidity [in GPa]
+        """
+        # Check that the current src has a TruncatedGRMFD MFD
+        msg = 'This modification works only when the source MFD is a '
+        msg += 'TruncatedGRMFD'
+        assert self.mfd.__class__.__name__ == 'TruncatedGRMFD', msg
+        # Compute moment
+        area = self.get_fault_surface_area() * 1e6  # area in m^2
+        rigidity *= 1e9  # rigidity in Pa
+        slip_rate *= 1e-3  # slip rate in m
+        mo = rigidity * area * slip_rate
+        # Update the MFD
+        min_mag = self.mfd.min_mag
+        max_mag = self.mfd.max_mag
+        bin_w = self.mfd.bin_width
+        b_val = self.mfd.b_val
+        self.mfd = mfd.TruncatedGRMFD.from_moment(min_mag, max_mag, bin_w,
+                                                  b_val, mo)

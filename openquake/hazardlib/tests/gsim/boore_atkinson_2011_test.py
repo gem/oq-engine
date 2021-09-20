@@ -28,7 +28,7 @@ class BooreAtkinson2011TestCase(BaseGSIMTestCase):
     # D. Boore - http://daveboore.com/ (checked on 2014.01.08)
     # Code name: nga08_gm_tmr.for
 
-    def test_mean_normal(self):
+    def test_normal(self):
         self.check('BA11/BA11_MEDIAN.csv',
                    max_discrep_percentage=1.1)
 
@@ -38,6 +38,6 @@ class Atkinson2008primeTestCase(BaseGSIMTestCase):
 
     # Test data created using GMPE adjustment factor
 
-    def test_mean_normal(self):
+    def test_normal(self):
         self.check('BA11/A08_BA11_MEAN.csv',
                    max_discrep_percentage=1.1)

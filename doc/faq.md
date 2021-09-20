@@ -26,13 +26,25 @@ have a look at [FAQ related to cluster deployments](faq-cluster.md).
 
 ### Help! Should I disable Hyperthreading?
 
-It depends. If you have memory issues, for sure you should disable
+Normally, yes. If you have memory issues, for sure you should disable
 HyperThreading since it will save you a lot of memory.
 If memory is not not a issue, enabling HyperThreading may still be a bad
 idea: depending on the hardware and the software (in particular the patches
-for Spectre/Meltdown) it may slow down your system. The only way to assess
+for Spectre/Meltdown) it may slow down your system. The only sure way to assess
 the effect of HyperThreading is to run a (big) calculation with HyperThreading
 and one without, and then compare the runtimes.
+
+### Help! I want to limit the number of cores used by the engine
+
+If you are on a single machine, the way to do it is to edit the file
+openquake.cfg and add the lines (if for instance you want to use 8 cores)
+
+[distribution]
+num_cores = 8
+
+If you are on a cluster you must edit the section [zworkers] and the parameter
+`host_cores`, replacing the `-1` with the number of cores to be used on
+each machine.
 
 ******
 
@@ -229,7 +241,7 @@ urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certifica
 Please have a look at `/Applications/Python 3.6/ReadMe.rtf` for possible solutions. If unsure run from a terminal the following command:
 
 ```bash
-sudo /Applications/Python\ 3.6/install_certificates.command
+sudo /Applications/Python\ 3.6/install_certificates.command  # NB: use the appropriate Python version!
 ```
 
 ******

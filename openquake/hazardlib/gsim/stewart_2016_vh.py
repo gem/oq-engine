@@ -24,47 +24,13 @@ Module exports :class:`StewartEtAl2016VH`,
                :class:`StewartEtAl2016RegCHNNoSOFVH`,
                :class:`StewartEtAl2016RegJPNNoSOFVH`,
 """
-
-import numpy as np
-
-from openquake.hazardlib.gsim import bozorgnia_campbell_2016_vh, boore_2014
-from openquake.hazardlib.gsim.base import GMPE
+from openquake.hazardlib.gsim import (
+    bozorgnia_campbell_2016_vh, boore_2014, stewart_2016)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _get_stddevs(cls, C, sites, rup, dists, imt, stddev_types):
-    """
-    Returns the inter-event, intra-event, and total standard deviations
-    """
-    C_V = cls.VGMPE.COEFFS[imt]
-    C_H = cls.HGMPE.COEFFS[imt]
-    inter_std = [const.StdDev.INTER_EVENT]
-    intra_std = [const.StdDev.INTRA_EVENT]
-    num_sites = len(sites.vs30)
-
-    tau_v = boore_2014._get_stddevs("stewart", C_V, rup, dists, sites,
-                                    inter_std)
-    tau_h = boore_2014._get_stddevs("base", C_H, rup, dists, sites, inter_std)
-    phi_v = boore_2014._get_stddevs("stewart", C_V, rup, dists, sites,
-                                    intra_std)
-    phi_h = boore_2014._get_stddevs("base", C_H, rup, dists, sites, intra_std)
-    tau = bozorgnia_campbell_2016_vh._get_tau_vh(C, rup.mag, tau_v, tau_h)
-    phi = bozorgnia_campbell_2016_vh._get_phi_vh(C, rup.mag, phi_v, phi_h)
-
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
-                            np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau + np.zeros(num_sites))
-    # return std dev values for each stddev type in site collection
-    return stddevs
-
-class StewartEtAl2016VH(GMPE):
+class StewartEtAl2016VH(bozorgnia_campbell_2016_vh.BozorgniaCampbell2016VH):
     """
     Implements the SBSA15b GMPE by Stewart et al. (2016)
     vertical-to-horizontal ratio (V/H) for ground motions from the PEER
@@ -76,13 +42,13 @@ class StewartEtAl2016VH(GMPE):
     Note that this is a more updated version than the GMPE described in the
     original PEER Report 2013/24.
 
-    **Reference:**
+    Reference:
 
     Stewart, J., Boore, D., Seyhan, E., & Atkinson, G. (2016). NGA-West2
     Equations for Predicting Vertical-Component PGA, PGV, and 5%-Damped PSA
-    from Shallow Crustal Earthquakes. *Earthquake Spectra*, *32*(2), 1005-1031.
+    from Shallow Crustal Earthquakes. Earthquake Spectra, 32(2), 1005-1031.
     """
-    VGMPE = boore_2014.StewartEtAl2016()
+    VGMPE = stewart_2016.StewartEtAl2016()
     HGMPE = boore_2014.BooreEtAl2014()
 
     #: Supported tectonic region type is active shallow crust; see title.
@@ -94,54 +60,28 @@ class StewartEtAl2016VH(GMPE):
 
     #: Supported intensity measure component is the
     #: :attr:`~openquake.hazardlib.const.IMC.VERTICAL_TO_HORIZONTAL_RATIO`
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
-                                        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO)
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory Variability Model".
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are taken from the V and H models
     REQUIRES_SITES_PARAMETERS = (
         VGMPE.REQUIRES_SITES_PARAMETERS |
-        HGMPE.REQUIRES_SITES_PARAMETERS
-    )
+        HGMPE.REQUIRES_SITES_PARAMETERS)
 
     #: Required rupture parameters are taken from the V and H models
     REQUIRES_RUPTURE_PARAMETERS = (
         VGMPE.REQUIRES_RUPTURE_PARAMETERS |
-        HGMPE.REQUIRES_RUPTURE_PARAMETERS
-    )
+        HGMPE.REQUIRES_RUPTURE_PARAMETERS)
 
     #: Required distance measures are taken from the V and H models
     REQUIRES_DISTANCES = (
         VGMPE.REQUIRES_DISTANCES |
-        HGMPE.REQUIRES_DISTANCES
-    )
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # Extract dictionary of coefficients specific to required IMT
-        C = bozorgnia_campbell_2016_vh.BozorgniaCampbell2016VH.COEFFS[imt]
-        # VGMPE Functional Form, Equation 1
-        mean_v = self.VGMPE.get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)[0]
-        # HGMPE The Ground Motion Prediction Equations, Equation 1
-        mean_h = self.HGMPE.get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)[0]
-        # Equation 12 (in natural log units)
-        mean = mean_v - mean_h
-        # Get standard deviations
-        stddevs = _get_stddevs(self, C, sites, rup, dists, imt, stddev_types)
-        return mean, stddevs
+        HGMPE.REQUIRES_DISTANCES)
 
 
 class StewartEtAl2016RegCHNVH(StewartEtAl2016VH):
@@ -149,15 +89,16 @@ class StewartEtAl2016RegCHNVH(StewartEtAl2016VH):
     This class implements the Stewart et al. (2016) V/H model considering the
     correction to the path scaling term for High Q regions (e.g. China)
     """
-    VGMPE = boore_2014.StewartEtAl2016(region='CHN')
+    VGMPE = stewart_2016.StewartEtAl2016(region='CHN')
     HGMPE = boore_2014.BooreEtAl2014HighQ()
+
 
 class StewartEtAl2016RegJPNVH(StewartEtAl2016VH):
     """
     This class implements the Stewart et al. (2016) V/H model considering the
     correction to the path scaling term for Low Q regions (e.g. Japan)
     """
-    VGMPE = boore_2014.StewartEtAl2016(region='JPN')
+    VGMPE = stewart_2016.StewartEtAl2016(region='JPN')
     HGMPE = boore_2014.BooreEtAl2014LowQ()
 
 
@@ -167,8 +108,8 @@ class StewartEtAl2016NoSOFVH(StewartEtAl2016VH):
     style-of-faulting is unspecified. In this case the GMPE is no longer
     dependent on rake.
     """
-    VGMPE = boore_2014.StewartEtAl2016(sof=False)
-    HGMPE = boore_2014.BooreEtAl2014NoSOF()
+    VGMPE = stewart_2016.StewartEtAl2016(sof=False)
+    HGMPE = boore_2014.BooreEtAl2014(sof=False)
 
 
 class StewartEtAl2016RegCHNNoSOFVH(StewartEtAl2016RegCHNVH):
@@ -178,8 +119,8 @@ class StewartEtAl2016RegCHNNoSOFVH(StewartEtAl2016RegCHNVH):
     unspecified. In this case the GMPE is no longer
     dependent on rake.
     """
-    VGMPE = boore_2014.StewartEtAl2016(region='CHN', sof=False)
-    HGMPE = boore_2014.BooreEtAl2014HighQNoSOF()
+    VGMPE = stewart_2016.StewartEtAl2016(region='CHN', sof=False)
+    HGMPE = boore_2014.BooreEtAl2014HighQ(sof=False)
 
 
 class StewartEtAl2016RegJPNNoSOFVH(StewartEtAl2016RegJPNVH):
@@ -188,5 +129,5 @@ class StewartEtAl2016RegJPNNoSOFVH(StewartEtAl2016RegJPNVH):
     datasets, (e.g. Japan) for the case in which the style-of-faulting is
     unspecified. In this case the GMPE is no longer dependent on rake.
     """
-    VGMPE = boore_2014.StewartEtAl2016(region='JPN', sof=False)
-    HGMPE = boore_2014.BooreEtAl2014LowQNoSOF()
+    VGMPE = stewart_2016.StewartEtAl2016(region='JPN', sof=False)
+    HGMPE = boore_2014.BooreEtAl2014LowQ(sof=False)

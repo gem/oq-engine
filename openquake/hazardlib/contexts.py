@@ -34,16 +34,19 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, block_splitter, RecordBuilder)
+    AccumDict, DictArray, groupby, RecordBuilder)
 from openquake.baselib.performance import Monitor
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
+from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
+STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -146,17 +149,36 @@ def use_recarray(gsims):
 
 class ContextMaker(object):
     """
-    A class to manage the creation of contexts for distances, sites, rupture.
+    A class to manage the creation of contexts and to compute mean/stddevs
+    and possibly PoEs.
+
+    :param trt: a tectonic region type string
+    :param gsims: a list of GSIMs or a dictionary gsim -> rlz indices
+    :param param:
+       a dictionary of parameters like the maximum_distance, the IMTLs,
+       the investigation time, etc
+
+    NB: the trt can be different from the tectonic region type for which
+    the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
     rup_indep = True
     tom = None
 
-    def __init__(self, trt, gsims, param=None, monitor=Monitor()):
-        param = param or {}  # empty in the gmpe-smtk
+    @property
+    def dtype(self):
+        """
+        :returns: dtype of the underlying ctx_builder
+        """
+        return self.ctx_builder.dtype
+
+    def __init__(self, trt, gsims, param, monitor=Monitor()):
+        param = param
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
+        self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = param.get('collapse_level', False)
+        self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
@@ -165,8 +187,11 @@ class ContextMaker(object):
         self.investigation_time = param.get('investigation_time')
         if self.investigation_time:
             self.tom = registry['PoissonTOM'](self.investigation_time)
+        self.ses_seed = param.get('ses_seed', 42)
+        self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
+        self.cross_correl = param.get('cross_correl')
         self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
         self.use_recarray = use_recarray(gsims)
@@ -186,8 +211,11 @@ class ContextMaker(object):
         elif 'hazard_imtls' in param:
             self.imtls = DictArray(param['hazard_imtls'])
         else:
-            self.imtls = {}
-        self.imts = tuple(imt_module.from_string(imt) for imt in self.imtls)
+            raise KeyError('Missing imtls in ContextMaker!')
+        try:
+            self.min_iml = param['min_iml']
+        except KeyError:
+            self.min_iml = [0. for imt in self.imtls]
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
@@ -275,14 +303,19 @@ class ContextMaker(object):
 
     def from_srcs(self, srcs, sitecol):  # used in disagg.disaggregation
         """
+        :param srcs: a list of Source objects
+        :param sitecol: a SiteCollection instance
         :returns: a list RuptureContexts
         """
         allctxs = []
+        cnt = 0
         for i, src in enumerate(srcs):
             src.id = i
             rctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
+                rup.rup_id = cnt
                 rctxs.append(self.make_rctx(rup))
+                cnt += 1
             allctxs.extend(self.get_ctxs(rctxs, sitecol, src.id))
         return allctxs
 
@@ -496,15 +529,17 @@ class ContextMaker(object):
             return ~pmap if rup_indep else pmap
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs, stdtype):
+    def get_mean_stds(self, ctxs, stdtype=StdDev.ALL):
         """
         :param ctxs: a list of contexts
         :param stdtype: a standard deviation type
         :returns: a list of G arrays of shape (O, M, N) with mean and stddevs
         """
+        if not hasattr(self, 'imts'):
+            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
-        M = len(self.imts)
+        M = len(self.imtls)
         out = []
         if self.use_recarray:
             ctxs = [self.recarray(ctxs)]
@@ -516,6 +551,9 @@ class ContextMaker(object):
                     stypes = (StdDev.TOTAL,)
                 else:
                     stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
+            elif stdtype == StdDev.ALL:
+                stypes = tuple(sdt for sdt in STD_TYPES if sdt in
+                               gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
             else:
                 stypes = (stdtype,)
             S = len(stypes)
@@ -550,27 +588,68 @@ class ContextMaker(object):
             out.append(arr)
         return out
 
+    # see http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
+    def get_cs_contrib(self, ctxs, imti, imls):
+        """
+        :param ctxs:
+           list of single-site contexts
+        :param imti:
+            IMT index in the range 0..M-1
+        :param imls:
+            P intensity measure levels for the IMT specified by the index
+        :returns:
+            two arrays num, denum of shape (P, G, 2, M) and (P, G) respectively
+
+        Compute the contributions to the conditional spectra, in a form
+        suitable for later composition.
+        """
+        assert self.tom
+        assert all(len(ctx.sids) == 1 for ctx in ctxs)
+        G = len(self.gsims)
+        M = len(self.imtls)
+        P = len(imls)
+        num = numpy.zeros((P, G, 2, M))
+        mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)
+        imt_ref = self.imts[imti]
+        rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
+                           for imt in self.imts])
+        ms = range(len(self.imts))
+        # probs = 1 - exp(-occurrence_rates*time_span)
+        probs = self.tom.get_probability_one_or_more_occurrences(
+            numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape N
+        denum = numpy.zeros((P, G))
+        for p in range(P):
+            for g, (mu, sig) in enumerate(mean_stds):
+                eps = (imls[p] - mu[imti]) / sig[imti]  # shape N
+                poes = _truncnorm_sf(self.trunclevel, eps)  # shape N
+                ws = -numpy.log((1. - probs) ** poes) / self.investigation_time
+                denum[p, g] = ws.sum()  # weights not summing up to 1
+                for m in ms:
+                    num[p, g, 0, m] = ws @ (mu[m] + rho[m] * eps * sig[m])
+                    num[p, g, 1, m] = ws @ (sig[m]**2 * (1. - rho[m]**2))
+        return num, denum
+
     def gen_poes(self, ctxs):
         """
         :param ctxs: a list of C context objects
         :yields: poes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
-        nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
-        N = nsites.sum()
-        poes = numpy.zeros((N, self.loglevels.size, len(self.gsims)))
         with self.gmf_mon:
             mean_stdt = self.get_mean_stds(ctxs, StdDev.TOTAL)
-        with self.poe_mon:
-            for g, gsim in enumerate(self.gsims):
-                # builds poes of shape (N, L, G)
-                if self.af:  # kernel amplification method
-                    poes[:, :, g] = get_poes_site(mean_stdt[g], self, ctxs)
-                else:  # regular case
-                    poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
         s = 0
-        for n in nsites:
-            yield poes[s:s+n]
+        for ctx in ctxs:
+            with self.poe_mon:
+                n = len(ctx)
+                poes = numpy.zeros((n, self.loglevels.size, len(self.gsims)))
+                for g, gsim in enumerate(self.gsims):
+                    ms = mean_stdt[g][:, :, s:s+n]
+                    # builds poes of shape (n, L, G)
+                    if self.af:  # kernel amplification method
+                        poes[:, :, g] = get_poes_site(ms, self, ctx)
+                    else:  # regular case
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctx)
+            yield poes
             s += n
 
 
@@ -736,8 +815,14 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        rupdata = self.dictarray(self.rupdata)
-        return pmap, rupdata, self.calc_times
+        dic = {'pmap': pmap,
+               'rup_data': self.dictarray(self.rupdata),
+               'calc_times': self.calc_times,
+               'task_no': self.task_no,
+               'grp_id': self.group[0].grp_id}
+        if self.disagg_by_src:
+            dic['source_id'] = self.group[0].source_id
+        return dic
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
@@ -827,6 +912,10 @@ class SitesContext(BaseContext):
             for slot in slots:
                 setattr(self, slot, getattr(sitecol, slot))
 
+    # used in the SMTK
+    def __len__(self):
+        return len(self.sids)
+
 
 class DistancesContext(BaseContext):
     """
@@ -877,6 +966,40 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
+def full_context(sites, rup, dctx=None):
+    """
+    :returns: a full RuptureContext with all the relevant attributes
+    """
+    self = RuptureContext()
+    for par, val in vars(rup).items():
+        setattr(self, par, val)
+    if hasattr(sites, 'array'):  # is a SiteCollection
+        for par in sites.array.dtype.names:
+            setattr(self, par, sites[par])
+    else:  # sites is a SitesContext
+        for par, val in vars(sites).items():
+            setattr(self, par, val)
+    if dctx:
+        for par, val in vars(dctx).items():
+            setattr(self, par, val)
+    return self
+
+
+def get_mean_stds(gsims, ctx, imts, stdtype=StdDev.ALL):
+    """
+    :param gsims: a list of G GSIMs
+    :param ctx: a RuptureContext or a recarray of size N
+    :param imts: a list of M IMTs
+    :param stdtype: a standard deviation type (TOTAL, EVENT, etc)
+    :returns:
+        an array of shape (G, O, M, N) obtained by applying the
+        given GSIMs, ctx amd imts
+    """
+    imtls = {imt.string: [0] for imt in imts}
+    cmaker = ContextMaker('*', gsims, {'imtls': imtls})
+    return numpy.array(cmaker.get_mean_stds([ctx], stdtype))
+
+
 # mock of a rupture used in the tests and in the SMTK
 class RuptureContext(BaseContext):
     """
@@ -893,21 +1016,6 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
-
-    @classmethod
-    def full(cls, rup, sites, dctx=None):
-        """
-        :returns: a full context with all the relevant attributes
-        """
-        self = cls()
-        for par, val in vars(rup).items():
-            setattr(self, par, val)
-        for par in sites.array.dtype.names:
-            setattr(self, par, sites[par])
-        if dctx:
-            for par, val in vars(dctx).items():
-                setattr(self, par, val)
-        return self
 
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
@@ -1066,7 +1174,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-# used in calculators/classical.py
+# not used at the moment
 def get_effect(mags, sitecol1, gsims_by_trt, oq):
     """
     :params mags:
@@ -1183,18 +1291,55 @@ def read_cmakers(dstore, full_lt=None):
              'collapse_level': int(oq.collapse_level),
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
+             'maximum_distance': oq.maximum_distance,
              'pointsource_distance': oq.pointsource_distance,
              'minimum_distance': oq.minimum_distance,
+             'ses_seed': oq.ses_seed,
+             'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
              'max_sites_disagg': oq.max_sites_disagg,
+             'disagg_by_src': oq.disagg_by_src,
+             'min_iml': oq.min_iml,
              'imtls': oq.imtls,
              'reqv': oq.get_reqv(),
              'shift_hypo': oq.shift_hypo,
+             'cross_correl': oq.cross_correl,
              'af': af,
              'grp_id': grp_id})
-        cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
+        cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
         cmaker.trti = trti
-        stop = start + len(rlzs_by_gsim)
-        cmaker.slc = slice(start, stop)
-        start = stop
+        cmaker.start = start
+        start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
     return cmakers
+
+
+def read_cmaker(dstore, trt_smr):
+    """
+    :param dstore: a DataStore-like object
+    :returns: a ContextMaker instance
+    """
+    oq = dstore['oqparam']
+    full_lt = dstore['full_lt']
+    trts = list(full_lt.gsim_lt.values)
+    trt = trts[trt_smr // len(full_lt.sm_rlzs)]
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim()[trt_smr]
+    mags = dstore['source_mags']
+    md = MagDepDistance.new(str(oq.maximum_distance))
+    md.interp({trt: mags[trt][:] for trt in mags})
+    cmaker = ContextMaker(
+        trt, rlzs_by_gsim,
+        {'truncation_level': oq.truncation_level,
+         'collapse_level': int(oq.collapse_level),
+         'num_epsilon_bins': oq.num_epsilon_bins,
+         'investigation_time': oq.investigation_time,
+         'maximum_distance': md,
+         'minimum_distance': oq.minimum_distance,
+         'ses_seed': oq.ses_seed,
+         'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
+         'max_sites_disagg': oq.max_sites_disagg,
+         'disagg_by_src': oq.disagg_by_src,
+         'min_iml': oq.min_iml,
+         'imtls': oq.imtls,
+         'reqv': oq.get_reqv(),
+         'shift_hypo': oq.shift_hypo})
+    return cmaker

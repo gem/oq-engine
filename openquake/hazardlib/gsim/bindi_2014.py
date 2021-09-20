@@ -61,14 +61,14 @@ def _get_magnitude_scaling_term(C, mag):
         return C["e1"] + (C["b3"] * dmag)
 
 
-def _get_mean(kind, sof, C, rup, dists, sites):
+def _get_mean(kind, sof, C, ctx, dists):
     """
     Returns the mean ground motion
     """
-    sof_term = _get_style_of_faulting_term(C, rup) if sof else 0.
-    return (_get_magnitude_scaling_term(C, rup.mag) +
-            _get_distance_scaling_term(C, dists, rup.mag) +
-            _get_site_amplification_term(kind, C, sites.vs30) + sof_term)
+    sof_term = _get_style_of_faulting_term(C, ctx) if sof else 0.
+    return (_get_magnitude_scaling_term(C, ctx.mag) +
+            _get_distance_scaling_term(C, dists, ctx.mag) +
+            _get_site_amplification_term(kind, C, ctx.vs30) + sof_term)
 
 
 _get_site_amplification_term = CallableDict()
@@ -101,22 +101,7 @@ def _get_site_amplification_term_2(kind, C, vs30):
     return f_s
 
 
-def _get_stddevs(C, stddev_types, num_sites):
-    """
-    Return standard deviations as defined in table 2.
-    """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(C['phi'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-    return stddevs
-
-
-def _get_style_of_faulting_term(C, rup):
+def _get_style_of_faulting_term(C, ctx):
     """
     Returns the style-of-faulting term.
     Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -128,10 +113,10 @@ def _get_style_of_faulting_term(C, rup):
     as rake is required as an input variable
     """
     SS, NS, RS = 0.0, 0.0, 0.0
-    if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+    if np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
         # strike-slip
         SS = 1.0
-    elif rup.rake > 30.0 and rup.rake < 150.0:
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
         # reverse
         RS = 1.0
     else:
@@ -196,29 +181,28 @@ class BindiEtAl2014Rjb(GMPE):
         self.adjustment_factor = np.log(adjustment_factor)
         [self.dist_type] = self.REQUIRES_DISTANCES
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
+        dists = getattr(ctx, self.dist_type)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = _get_mean(self.kind, self.sof, C, ctx, dists)
+            if imt.string.startswith(('PGA', 'SA')):
+                # Convert units to g,
+                # but only for PGA and SA (not PGV)
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV
+                mean[m] = np.log(10.0 ** imean)
 
-        C = self.COEFFS[imt]
-        imean = _get_mean(self.kind, self.sof, C, rup,
-                          getattr(dists, self.dist_type), sites)
-        if imt.string.startswith(('PGA', 'SA')):
-            # Convert units to g,
-            # but only for PGA and SA (not PGV):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
-
-        istddevs = _get_stddevs(C, stddev_types, len(sites.vs30))
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        return mean + self.adjustment_factor, stddevs
+            mean[m] += self.adjustment_factor
+            sig[m] = np.log(10.0 ** C['sigma'])
+            tau[m] = np.log(10.0 ** C['tau'])
+            phi[m] = np.log(10.0 ** C['phi'])
 
     #: Coefficients from Table 2
 

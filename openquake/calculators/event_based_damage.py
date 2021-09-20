@@ -73,7 +73,7 @@ def zero_dmgcsq(assetcol, crmodel):
 
 def event_based_damage(df, param, monitor):
     """
-    :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
+    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param param: a dictionary of parameters coming from the job.ini
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
@@ -116,9 +116,9 @@ def event_based_damage(df, param, monitor):
                         # the Messina test in oq-risk-tests becomes 10x
                         # slower even if it has only 25_736 assets:
                         # scenario_damage.bin_ddd(
-                        #     fractions[a], asset['number'],
+                        #     fractions[a], asset['value-number'],
                         #     param['master_seed'] + a)
-                        ddd[a] *= asset['number']
+                        ddd[a] *= asset['value-number']
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
                             ddd[a, :, ci[name]] = values
@@ -212,7 +212,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         ac_df = self.datastore.read_df(
             'aggcurves', sel=dict(agg_id=self.param['K']))
-        number = self.assetcol['number'].sum()
+        number = self.assetcol['value-number'].sum()
         for (loss_id, period), df in ac_df.groupby(
                 ['loss_id', 'return_period']):
             tot = sum(df[col].sum() for col in df.columns
@@ -228,7 +228,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         A, L, Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
-        number = self.assetcol['number']
+        number = self.assetcol['value-number']
         for li in range(L):
             self.dmgcsq[:, li, 0] = (
                 number * self.E - self.dmgcsq[:, li, 1:D].sum(axis=1))

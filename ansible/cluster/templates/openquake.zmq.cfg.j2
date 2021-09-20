@@ -14,8 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 [distribution]
-# set multi_node = true if are on a cluster
-multi_node = true
 oq_distribute = zmq
 # make sure workers are terminated when tasks are revoked
 terminate_workers_on_revoke = true
@@ -34,8 +32,6 @@ hard_mem_limit = 98
 # RabbitMQ server address
 
 [dbserver]
-# enable multi_user if you have a multiple user installation
-multi_user = true
 file = {{ workdir_services }}/oqdata/db.sqlite3
 # daemon bind address; must be a valid IP address
 # example: 0.0.0.0

@@ -36,20 +36,10 @@ MAX_DISCREP = 0.01
 class NGAEastUSGSCEUSUncertaintyEPRITestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
-    def test_std_intra(self):
+    def test_std(self):
         self.check("usgs_ceus_2019/USGS_CEUS_EPRI_INTRA_EVENT_STDDEV.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   gmpe_table="nga_east_PEER_EX.hdf5",
-                   sigma_model="EPRI")
-
-    def test_std_inter(self):
-        self.check("usgs_ceus_2019/USGS_CEUS_EPRI_INTER_EVENT_STDDEV.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   gmpe_table="nga_east_PEER_EX.hdf5",
-                   sigma_model="EPRI")
-
-    def test_std_total(self):
-        self.check("usgs_ceus_2019/USGS_CEUS_EPRI_TOTAL_STDDEV.csv",
+                   "usgs_ceus_2019/USGS_CEUS_EPRI_INTER_EVENT_STDDEV.csv",
+                   "usgs_ceus_2019/USGS_CEUS_EPRI_TOTAL_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_table="nga_east_PEER_EX.hdf5",
                    sigma_model="EPRI")
@@ -58,20 +48,10 @@ class NGAEastUSGSCEUSUncertaintyEPRITestCase(BaseGSIMTestCase):
 class NGAEastUSGSCEUSUncertaintyPANELTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
-    def test_std_intra(self):
+    def test_std(self):
         self.check("usgs_ceus_2019/USGS_CEUS_PANEL_INTRA_EVENT_STDDEV.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   gmpe_table="nga_east_PEER_EX.hdf5",
-                   sigma_model="PANEL")
-
-    def test_std_inter(self):
-        self.check("usgs_ceus_2019/USGS_CEUS_PANEL_INTER_EVENT_STDDEV.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   gmpe_table="nga_east_PEER_EX.hdf5",
-                   sigma_model="PANEL")
-
-    def test_std_total(self):
-        self.check("usgs_ceus_2019/USGS_CEUS_PANEL_TOTAL_STDDEV.csv",
+                   "usgs_ceus_2019/USGS_CEUS_PANEL_INTER_EVENT_STDDEV.csv",
+                   "usgs_ceus_2019/USGS_CEUS_PANEL_TOTAL_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_table="nga_east_PEER_EX.hdf5",
                    sigma_model="PANEL")
@@ -88,26 +68,17 @@ class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
 
 
 # USGS verification tests using independently generated test tables
-# Verification Test Cases - Means
-def make_mean_test(alias, key):
-    def test_mean(self):
+# Verification Test Cases - Means and stddevs
+def make_test(alias, key):
+    def test_all(self):
         self.check(f"usgs_ceus_2019/{alias}_MEAN.csv",
+                   f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
                    max_discrep_percentage=0.15,
+                   std_discrep_percentage=0.01,
                    gmpe_table=f"nga_east_{key}.hdf5",
                    epistemic_site=False)
-    test_mean.__name__ = 'test_mean' + key
-    return test_mean
-
-
-# Verification Test Cases - Stddevs
-def make_stddev_test(alias, key):
-    def test_stddev(self):
-        self.check(f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
-                   max_discrep_percentage=0.01,
-                   gmpe_table=f"nga_east_{key}.hdf5",
-                   epistemic_site=False)
-    test_stddev.__name__ = 'test_stddev' + key
-    return test_stddev
+    test_all.__name__ = 'test_all' + key
+    return test_all
 
 
 def add_tests(cls):
@@ -115,8 +86,7 @@ def add_tests(cls):
         if not line.startswith("NGAEastUSGSSammons"):
             continue
         alias, key = line.split()
-        setattr(cls, 'test_mean' + key, make_mean_test(alias, key))
-        setattr(cls, 'test_stddev' + key, make_stddev_test(alias, key))
+        setattr(cls, 'test_all' + key, make_test(alias, key))
     return cls
 
 

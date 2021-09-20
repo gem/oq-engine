@@ -17,20 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.allen_2012 import Allen2012
-
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-import numpy
-
 # Test data generated from EQRM implementation.
+
 
 class Allen2012TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Allen2012
 
-    def test_mean(self):
+    def test_all(self):
         self.check('A12/ALLEN2012_MEAN.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_total(self):
-        self.check('A12/ALLEN2012_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'A12/ALLEN2012_STD_TOTAL.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)

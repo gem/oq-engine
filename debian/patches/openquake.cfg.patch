@@ -2,15 +2,11 @@ Index: oq-engine/openquake/engine/openquake.cfg
 ===================================================================
 --- a/openquake/engine/openquake.cfg
 +++ b/openquake/engine/openquake.cfg
-@@ -44,9 +44,9 @@
+@@ -44,7 +44,7 @@
  celery_queue = celery
  
  [dbserver]
--# enable multi_user if you have a multiple user installation
--multi_user = false
 -file = ~/oqdata/db.sqlite3
-+# run in multi_user mode
-+multi_user = true
 +file = /var/lib/openquake/db.sqlite3
  # daemon bind address; must be a valid IP address
  # example: 0.0.0.0

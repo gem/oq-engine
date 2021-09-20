@@ -33,9 +33,9 @@ CONSTS = {'Mh': 5.0,
           'PseudoDepth': 6.0}
 
 
-def _get_distance_term(C, mag, dists):
+def _get_distance_term(C, mag, ctx):
     term1 = C['c1']*(mag-C['Mref']) + C['c2']
-    tmp = np.sqrt(dists.rjb ** 2 + CONSTS['PseudoDepth'] ** 2)
+    tmp = np.sqrt(ctx.rjb ** 2 + CONSTS['PseudoDepth'] ** 2)
     term2 = np.log10(tmp / CONSTS['Rref'])
     term3 = C['c3'] * (tmp-CONSTS['Rref'])
     return term1 * term2 + term3
@@ -52,7 +52,7 @@ _get_site_correction = CallableDict()
 
 
 @_get_site_correction.add("ref")
-def _get_site_correction_1(kind, sites, C):
+def _get_site_correction_1(kind, ctx, C):
     """
     Compute the fourth term of the equation 1 described on paragraph :
     The functional form Fs in Eq. (1) represents the site amplification and
@@ -61,24 +61,24 @@ def _get_site_correction_1(kind, sites, C):
     while Cj are dummy variables used to denote two different
     site classes
     """
-    s_others = np.zeros(len(sites.siteclass))
-    list_sites = [x.decode('utf-8') for x in sites.siteclass]
+    s_others = np.zeros(len(ctx.siteclass))
+    list_sites = [x.decode('utf-8') for x in ctx.siteclass]
     idx = [index for index, value in enumerate(list_sites) if value != 'A']
     s_others[idx] = 1.0
     return (C['s_other'] * s_others)
 
 
 @_get_site_correction.add("ec8")
-def _get_site_correction_2(kind, sites, C):
-    ssb, ssc, ssd, sse = _get_site_type_dummy_variables(kind, sites)
+def _get_site_correction_2(kind, ctx, C):
+    ssb, ssc, ssd, sse = _get_site_type_dummy_variables(kind, ctx)
     return ((C['sB'] * ssb) + (C['sC'] * ssc) +
             (C['sD'] * ssd) + (C['sE'] * sse))
 
 
 @_get_site_correction.add("cluster")
-def _get_site_correction_3(kind, sites, C):
+def _get_site_correction_3(kind, ctx, C):
     cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9 = _get_site_type_dummy_variables(
-        kind, sites)
+        kind, ctx)
     return ((C['s2'] * cl2) + (C['s3'] * cl3) + (C['s4'] * cl4) +
             (C['s5'] * cl5) + (C['s6'] * cl6) + (C['s7'] * cl7) +
             (C['s8'] * cl8) + (C['s9'] * cl9))
@@ -88,16 +88,16 @@ _get_site_type_dummy_variables = CallableDict()
 
 
 @_get_site_type_dummy_variables.add("ec8")
-def _get_site_type_dummy_variables_1(kind, sites):
+def _get_site_type_dummy_variables_1(kind, ctx):
     """
     Get site type dummy variables for five different EC8 site classes
     """
-    ssb = np.zeros(len(sites.siteclass))
-    ssc = np.zeros(len(sites.siteclass))
-    ssd = np.zeros(len(sites.siteclass))
-    sse = np.zeros(len(sites.siteclass))
+    ssb = np.zeros(len(ctx.siteclass))
+    ssc = np.zeros(len(ctx.siteclass))
+    ssd = np.zeros(len(ctx.siteclass))
+    sse = np.zeros(len(ctx.siteclass))
 
-    list_sites = [x.decode('utf-8') for x in sites.siteclass]
+    list_sites = [x.decode('utf-8') for x in ctx.siteclass]
     idx = [index for index, value in enumerate(list_sites) if value == 'B']
     ssb[idx] = 1.0
     idx = [index for index, value in enumerate(list_sites) if value == 'C']
@@ -110,21 +110,21 @@ def _get_site_type_dummy_variables_1(kind, sites):
 
 
 @_get_site_type_dummy_variables.add("cluster")
-def _get_site_type_dummy_variables_2(kind, sites):
+def _get_site_type_dummy_variables_2(kind, ctx):
     """
     Get site type dummy variables.
     The recording sites are classified into 9 different clusters.
     """
-    cl2 = np.zeros(len(sites.siteclass))
-    cl3 = np.zeros(len(sites.siteclass))
-    cl4 = np.zeros(len(sites.siteclass))
-    cl5 = np.zeros(len(sites.siteclass))
-    cl6 = np.zeros(len(sites.siteclass))
-    cl7 = np.zeros(len(sites.siteclass))
-    cl8 = np.zeros(len(sites.siteclass))
-    cl9 = np.zeros(len(sites.siteclass))
+    cl2 = np.zeros(len(ctx.siteclass))
+    cl3 = np.zeros(len(ctx.siteclass))
+    cl4 = np.zeros(len(ctx.siteclass))
+    cl5 = np.zeros(len(ctx.siteclass))
+    cl6 = np.zeros(len(ctx.siteclass))
+    cl7 = np.zeros(len(ctx.siteclass))
+    cl8 = np.zeros(len(ctx.siteclass))
+    cl9 = np.zeros(len(ctx.siteclass))
 
-    list_sites = [x.decode('utf-8') for x in sites.siteclass]
+    list_sites = [x.decode('utf-8') for x in ctx.siteclass]
     idx = [index for index, value in enumerate(list_sites) if value == '2']
     cl2[idx] = 1.0
     idx = [index for index, value in enumerate(list_sites) if value == '3']
@@ -142,20 +142,6 @@ def _get_site_type_dummy_variables_2(kind, sites):
     idx = [index for index, value in enumerate(list_sites) if value == '9']
     cl9[idx] = 1.0
     return cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9
-
-
-def _get_stddevs(C, stddev_types, num_sites):
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 +
-                                   C['phi_0'] ** 2) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2) +
-                           np.zeros(num_sites))
-    return stddevs
 
 
 class LanzanoEtAl2020_ref(GMPE):
@@ -196,22 +182,23 @@ class LanzanoEtAl2020_ref(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
+        for m, imt in enumerate(imts):
+            # Ergodic coeffs
+            C = self.COEFFS[imt]
+            # Get mean
+            mean[m] = (C['a'] + _get_magnitude_term(C, ctx.mag) +
+                       _get_distance_term(C, ctx.mag, ctx) +
+                       _get_site_correction(self.kind, ctx, C))
+            # To natural logarithm and fraction of g
+            mean[m] = np.log(10.0 ** mean[m] / (gravity_acc * 100))
+            # Get stds
 
-        # Ergodic coeffs
-        C = self.COEFFS[imt]
-        # Get mean
-        mean = (C['a'] + _get_magnitude_term(C, rup.mag) +
-                _get_distance_term(C, rup.mag, dists) +
-                _get_site_correction(self.kind, sites, C))
-        # To natural logarithm and fraction of g
-        mean = np.log(10.0**mean / (gravity_acc * 100))
-        # Get stds
-        istddevs = _get_stddevs(
-            C, stddev_types, num_sites=len(sites.siteclass))
-        stds = np.log(10.0 ** np.array(istddevs))
-        # mean_LogNatural = np.log((10 ** mean) * 1e-2 / g)
-        return mean, stds
+            sig[m] = np.log(10.0 ** np.sqrt(
+                C['tau'] ** 2 + C['phi_S2S'] ** 2 + C['phi_0'] ** 2))
+            tau[m] = np.log(10.0 ** C['tau'])
+            phi[m] = np.log(10.0 ** np.sqrt(
+                C['phi_S2S'] ** 2 + C['phi_0'] ** 2))
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
 IMT                 a                   b1                  b2                  c1                  c2                  c3                      s_other             Mref                tau                 phi_S2S             phi_0               sigma

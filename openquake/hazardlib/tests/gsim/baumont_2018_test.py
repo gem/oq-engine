@@ -21,7 +21,8 @@ Implements the tests for Bindi et al. (2011) GMPE for macroseismic intensity
 
 Test data generated from source code provided by Philippe Roth
 """
-from openquake.hazardlib.gsim.baumont_2018 import BaumontEtAl2018High2210IAVGDC30n7
+from openquake.hazardlib.gsim.baumont_2018 import (
+    BaumontEtAl2018High2210IAVGDC30n7)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
@@ -36,10 +37,7 @@ class BaumontEtAl2018High2210IAVGDC30n7TestCase(BaseGSIMTestCase):
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "baumont_2018/BaumontEtAl2018High2210IAVGDC30n7_stDev.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)

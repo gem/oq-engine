@@ -32,7 +32,8 @@
     </logicTreeBranchSet>
 
     <logicTreeBranchSet uncertaintyType="truncatedGRFromSlipAbsolute"
-                        branchSetID="bs2" applyToBranches="b21">
+        branchSetID="bs2" applyToBranches="b21"
+        applyToSources="src1">
 
         <logicTreeBranch branchID="b31">
             <uncertaintyModel>

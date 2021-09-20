@@ -29,7 +29,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.12.0'
+__version__ = '3.13.0'
 __version__ += git_suffix(__file__)
 
 version = dict(engine=__version__,
@@ -59,8 +59,8 @@ d = os.path.dirname
 base = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
 # 'virtualenv' still uses 'real_prefix' also on Python 3
 # removal of this breaks Travis
-if (hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix')
-                                    and sys.base_prefix != sys.prefix)):
+if hasattr(sys, 'real_prefix') or (
+        hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
     config.paths = [base, os.path.join(sys.prefix, 'openquake.cfg')]
 else:  # installation from sources or packages, search in $HOME or /etc
     config.paths = [base, '/etc/openquake/openquake.cfg', '~/openquake.cfg']
@@ -125,11 +125,19 @@ def positiveint(flag):
 
 
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
-            multi_user=positiveint, serialize_jobs=positiveint,
-            strict=positiveint, code=exec)
+            serialize_jobs=positiveint, strict=positiveint, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
+
+
+# wether the engine was installed as multi_user (linux root) or not
+if sys.platform in 'win32 darwin':
+    config.multi_user = False
+else:  # linux
+    import pwd
+    install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
+    config.multi_user = install_user == 'root'

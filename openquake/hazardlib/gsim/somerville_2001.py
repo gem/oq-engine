@@ -58,17 +58,6 @@ def _compute_mean(C, mag, rjb):
     return mean
 
 
-def _compute_stddevs(C, num_sites, stddev_types):
-    """
-    Return total standard deviation.
-    """
-    stddevs = []
-    for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + C['sigma'])
-
-    return stddevs
-
-
 class SomervilleEtAl2001NSHMP2008(GMPE):
     """
     Implements GMPE developed by P. Somerville, N. Collins, N. Abrahamson,
@@ -117,23 +106,16 @@ class SomervilleEtAl2001NSHMP2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        C = self.COEFFS[imt]
-
-        mean = _compute_mean(C, rup.mag, dists.rjb)
-        mean = clip_mean(imt, mean)
-
-        stddevs = _compute_stddevs(C, dists.rjb.size, stddev_types)
-
-        return mean, stddevs
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = clip_mean(imt, _compute_mean(C, ctx.mag, ctx.rjb))
+            sig[m] = C['sigma']        
 
     #: Coefficient table obtained from coefficient arrays (a1, a2, a3, a4,
     #: a5, a6, a7, sig0) defined in subroutine getSomer in hazgridXnga2.f

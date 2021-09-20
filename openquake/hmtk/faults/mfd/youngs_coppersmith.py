@@ -149,8 +149,8 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        self.mmax_sigma = mfd_conf.get(
-            'Maximum_Magnitude_Uncertainty', None) or msr.get_std_dev_mag(rake)
+        self.mmax_sigma = (mfd_conf.get('Maximum_Magnitude_Uncertainty', None)
+                           or msr.get_std_dev_mag(None, rake))
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
         '''
@@ -303,8 +303,9 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        self.mmax_sigma = mfd_conf.get(
-            'Maximum_Magnitude_Uncertainty', None) or msr.get_std_dev_mag(rake)
+        self.mmax_sigma = (mfd_conf.get('Maximum_Magnitude_Uncertainty', None)
+                           or msr.get_std_dev_mag(None, rake))
+
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
         '''

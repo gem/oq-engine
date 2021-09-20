@@ -20,7 +20,6 @@ import re
 import ast
 import csv
 import copy
-import json
 import zlib
 import pickle
 import shutil
@@ -36,7 +35,7 @@ import numpy
 import pandas
 import requests
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
 from openquake.baselib.python3compat import zip
@@ -45,9 +44,7 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile, pmf)
-from openquake.hazardlib.source import rupture
-from openquake.hazardlib.calc.stochastic import rupture_dt
+    source, geo, site, imt, valid, sourceconverter, nrml, pmf)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific
@@ -275,7 +272,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}):
 
     :param job_ini:
         Path to configuration file/archive or
-        dictionary of parameters with at least a key "calculation_mode"
+        dictionary of parameters with a key "calculation_mode"
     :param pkg:
         Python package where to find the configuration file (optional)
     :param calculators:
@@ -380,7 +377,7 @@ def get_mesh(oqparam, h5=None):
         c = (coords[start:stop] if header[0] == 'site_id'
              else sorted(coords[start:stop]))
         # NB: Notice the sort=False below
-        # Calculations starting from ground motion fields input by the user
+        # Calculations starting from predefined ground motion fields
         # require at least two input files related to the gmf data:
         #   1. A sites.csv file, listing {site_id, lon, lat} tuples
         #   2. A gmfs.csv file, listing {event_id, site_id, gmv[IMT1],
@@ -583,6 +580,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
+            # NB: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE can be != trt,
+            # but it is not an error, it is actually the most common case!
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             {StdDev.TOTAL}):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
@@ -603,85 +602,28 @@ def get_gsim_lt(oqparam, trts=('*',)):
         logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     gsim_lt_cache[key] = gsim_lt
-
-    old_style = count_old_style(gsim_lt)
-    no_vect = count_no_vect(gsim_lt)
-    logging.info('There are %d old style GMPEs', old_style)
-    logging.info('There are %d not vectorized GMPEs', no_vect)
+    if trts != ('*',):  # not in get_input_files
+        old_style = count_old_style(gsim_lt)
+        no_vect = count_no_vect(gsim_lt)
+        if old_style:
+            logging.info('There are %d old style GMPEs', old_style)
+        if no_vect:
+            logging.info('There are %d not vectorized GMPEs', no_vect)
     return gsim_lt
-
-
-def get_ruptures(fname_csv):
-    """
-    Read ruptures in CSV format and return an ArrayWrapper.
-
-    :param fname_csv: path to the CSV file
-    """
-    if not rupture.BaseRupture._code:
-        rupture.BaseRupture.init()  # initialize rupture codes
-    code = rupture.BaseRupture.str2code
-    aw = hdf5.read_csv(fname_csv, rupture.rupture_dt)
-    rups = []
-    geoms = []
-    n_occ = 1
-    for u, row in enumerate(aw.array):
-        hypo = row['lon'], row['lat'], row['dep']
-        dic = json.loads(row['extra'])
-        meshes = F32(json.loads(row['mesh']))  # num_surfaces 3D arrays
-        num_surfaces = len(meshes)
-        shapes = []
-        points = []
-        minlons = []
-        maxlons = []
-        minlats = []
-        maxlats = []
-        for mesh in meshes:
-            shapes.extend(mesh.shape[1:])
-            points.extend(mesh.flatten())  # lons + lats + deps
-            minlons.append(mesh[0].min())
-            minlats.append(mesh[1].min())
-            maxlons.append(mesh[0].max())
-            maxlats.append(mesh[1].max())
-        rec = numpy.zeros(1, rupture_dt)[0]
-        rec['seed'] = row['seed']
-        rec['minlon'] = minlon = min(minlons)
-        rec['minlat'] = minlat = min(minlats)
-        rec['maxlon'] = maxlon = max(maxlons)
-        rec['maxlat'] = maxlat = max(maxlats)
-        rec['mag'] = row['mag']
-        rec['hypo'] = hypo
-        rate = dic.get('occurrence_rate', numpy.nan)
-        tup = (u, row['seed'], 'no-source', aw.trts.index(row['trt']),
-               code[row['kind']], n_occ, row['mag'], row['rake'], rate,
-               minlon, minlat, maxlon, maxlat, hypo, u, 0)
-        rups.append(tup)
-        geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
-    if not rups:
-        return ()
-    dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
-    # NB: PMFs for nonparametric ruptures are missing
-    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
 def get_rupture(oqparam):
     """
-    Read the `rupture_model` file and by filter the site collection
+    Read the `rupture_model` XML file and by filter the site collection
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         an hazardlib rupture
     """
-    rup_model = oqparam.inputs['rupture_model']
-    if rup_model.endswith('.csv'):
-        return rupture.from_array(hdf5.read_csv(rup_model))
-    if rup_model.endswith('.xml'):
-        [rup_node] = nrml.read(rup_model)
-        conv = sourceconverter.RuptureConverter(
-            oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
-        rup = conv.convert_node(rup_node)
-    else:
-        raise ValueError('Unrecognized ruptures model %s' % rup_model)
+    [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+    conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
+    rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
     rup.rup_id = oqparam.ses_seed
     return rup
@@ -743,7 +685,7 @@ def get_full_lt(oqparam):
                 'use sampling instead of full enumeration or reduce the '
                 'source model with oq reduce_sm' % p)
         logging.info('Total number of logic tree paths = {:_d}'.format(p))
-    if source_model_lt.on_each_source:
+    if source_model_lt.is_source_specific:
         logging.info('There is a logic tree on each source')
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     return full_lt
@@ -912,10 +854,18 @@ def get_crmodel(oqparam):
             dtypedict = {
                 by: str, 'consequence': str, 'loss_type': str, None: float}
 
-            # i.e. collapsed.csv, fatalities.csv, ...
-            array = numpy.concatenate([
-                hdf5.read_csv(fname, dtypedict).array for fname in fnames])
+            # i.e. files collapsed.csv, fatalities.csv, ... with headers
+            # taxonomy,consequence,loss_type,slight,moderate,extensive
+            arrays = []
+            for fname in fnames:
+                arr = hdf5.read_csv(fname, dtypedict).array
+                arrays.append(arr)
+                for no, row in enumerate(arr, 2):
+                    if row['loss_type'] not in loss_types:
+                        msg = '%s: %s is not a recognized loss type, line=%d'
+                        raise InvalidFile(msg % (fname, row['loss_type'], no))
 
+            array = numpy.concatenate(arrays)
             dic = group_array(array, 'consequence')
             for consequence, group in dic.items():
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
@@ -1047,11 +997,17 @@ def taxonomy_mapping(oqparam, taxonomies):
 
 
 def _taxonomy_mapping(filename, taxonomies):
-    tmap_df = pandas.read_csv(filename)
+    try:
+        tmap_df = pandas.read_csv(filename, converters=dict(weight=float))
+    except Exception as e:
+        raise e.__class__('%s while reading %s' % (e, filename))
     if 'weight' not in tmap_df:
         tmap_df['weight'] = 1.
 
-    assert set(tmap_df) == {'taxonomy', 'conversion', 'weight'}
+    assert set(tmap_df) in ({'taxonomy', 'conversion', 'weight'},
+                            {'taxonomy', 'risk_id', 'weight'})
+    # NB: conversion was the old name in the header for engine <= 3.12
+    risk_id = 'risk_id' if 'risk_id' in tmap_df.columns else 'conversion'
     dic = dict(list(tmap_df.groupby('taxonomy')))
     taxonomies = taxonomies[1:]  # strip '?'
     missing = set(taxonomies) - set(dic)
@@ -1064,7 +1020,7 @@ def _taxonomy_mapping(filename, taxonomies):
         if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
                               (filename, taxo))
-        lst.append([(rec['conversion'], rec['weight'])
+        lst.append([(rec[risk_id], rec['weight'])
                     for r, rec in recs.iterrows()])
     return lst
 

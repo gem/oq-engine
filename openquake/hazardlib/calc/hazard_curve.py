@@ -28,9 +28,9 @@ than 20 lines of code:
    from openquake.calculators.base import calculators
 
    def main(job_ini):
-       with logs.init('calc', job_ini) as log:
+       with logs.init('job', job_ini) as log:
            calc = calculators(log.get_oqparam(), log.calc_id)
-           calc.run(individual_curves='true', shutdown=True)
+           calc.run(individual_rlzs='true', shutdown=True)
            print('The hazard curves are in %s::/hcurves-rlzs'
                 % calc.datastore.filename)
 
@@ -78,7 +78,7 @@ def _cluster(imtls, tom, gsims, pmap):
     return pmap
 
 
-def classical(group, src_filter, cmaker):
+def classical(group, sitecol, cmaker):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -88,14 +88,9 @@ def classical(group, src_filter, cmaker):
     :returns:
         a dictionary with keys pmap, calc_times, rup_data, extra
     """
-    if not hasattr(src_filter, 'sitecol'):  # do not filter
-        src_filter = SourceFilter(src_filter, {})
-
-    # Get the parameters assigned to the group
-    src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
+    src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
     trts = set()
-    maxradius = 0
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures may not be set, so it is set here
@@ -104,8 +99,6 @@ def classical(group, src_filter, cmaker):
         if cluster:
             src.temporal_occurrence_model = FatedTOM(time_span=1)
         trts.add(src.tectonic_region_type)
-        if hasattr(src, 'radius'):  # for prefiltered point sources
-            maxradius = max(maxradius, src.radius)
     [trt] = trts  # there must be a single tectonic region type
     assert trt == cmaker.trt, (trt, cmaker.trt)
     cmaker.maximum_distance = src_filter.integration_distance
@@ -116,21 +109,11 @@ def classical(group, src_filter, cmaker):
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
-    pmap, rup_data, calc_times = PmapMaker(cmaker, src_filter, group).make()
-    extra = {}
-    extra['task_no'] = cmaker.task_no
-    extra['source_id'] = src.source_id
-    extra['grp_id'] = src.grp_id
-    extra['maxradius'] = maxradius
-    group_probability = getattr(group, 'grp_probability', None)
-    if src_mutex and group_probability:
-        pmap *= group_probability
-
+    dic = PmapMaker(cmaker, src_filter, group).make()
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
-        pmap = _cluster(cmaker.imtls, tom, cmaker.gsims, pmap)
-    return dict(pmap=pmap, calc_times=calc_times,
-                rup_data=rup_data, extra=extra)
+        dic['pmap'] = _cluster(cmaker.imtls, tom, cmaker.gsims, dic['pmap'])
+    return dic
 
 
 # not used in the engine, only in tests and possibly notebooks
@@ -194,6 +177,9 @@ def calc_hazard_curves(
     pmap = ProbabilityMap(imtls.size, 1)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
+    sitecol = getattr(srcfilter, 'sitecol', srcfilter)
+    if sitecol is not srcfilter:
+        param['maximum_distance'] = srcfilter.integration_distance
     for group in groups:
         trt = group.trt
         cmaker = ContextMaker(trt, [gsim_by_trt[trt]], param, mon)
@@ -201,14 +187,13 @@ def calc_hazard_curves(
             if not src.nsites:  # not set
                 src.nsites = 1
         if group.atomic:  # do not split
-            it = [classical(group, srcfilter, cmaker)]
+            it = [classical(group, sitecol, cmaker)]
         else:  # split the group and apply `classical` in parallel
             it = apply(
-                classical, (group.sources, srcfilter, cmaker),
+                classical, (group.sources, sitecol, cmaker),
                 weight=operator.attrgetter('weight'))
         for dic in it:
             pmap |= dic['pmap']
-    sitecol = getattr(srcfilter, 'sitecol', srcfilter)
     return pmap.convert(imtls, len(sitecol.complete))
 
 
@@ -227,7 +212,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap, rup_data, calc_times = PmapMaker(cmaker, srcfilter, [src]).make()
+    pmap = PmapMaker(cmaker, srcfilter, [src]).make()['pmap']
     if not pmap:  # filtered away
         zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
         return ProbabilityCurve(zero)

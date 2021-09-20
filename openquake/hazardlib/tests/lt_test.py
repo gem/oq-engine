@@ -67,10 +67,8 @@ class CollapseTestCase(unittest.TestCase):
         bs0.branches[0].bset = bs1
 
         # setup sitecol, srcfilter, gsims, imtls
-        sitecol = site.SiteCollection(
+        self.sitecol = site.SiteCollection(
             [site.Site(Point(0, 0), numpy.array([760.]))])
-        self.srcfilter = calc.filters.SourceFilter(
-            sitecol, calc.filters.MagDepDistance.new('200'))
         self.gsims = [valid.gsim('ToroEtAl2002')]
         self.imtls = DictArray({'PGA': valid.logscale(.01, 1, 5)})
         self.sg = sourceconverter.SourceGroup(ps.tectonic_region_type, [ps])
@@ -94,16 +92,17 @@ class CollapseTestCase(unittest.TestCase):
             weights.append(weight)
         for i, src in enumerate(srcs):
             src.id = i
-        N = len(self.srcfilter.sitecol.complete)
+        N = len(self.sitecol.complete)
         time_span = srcs[0].temporal_occurrence_model.time_span
         params = dict(imtls=self.imtls, truncation_level2=2,
-                      collapse_level=2, investigation_time=time_span)
+                      collapse_level=2, investigation_time=time_span,
+                      maximum_distance=calc.filters.MagDepDistance.new('200'))
         cmaker = contexts.ContextMaker(
             srcs[0].tectonic_region_type, self.gsims, params)
-        res = classical(srcs, self.srcfilter, cmaker)
+        res = classical(srcs, self.sitecol, cmaker)
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
-        curve = pmap.array(N)[0, :, 0]
+        curve = pmap.array(0, N, 0)[0]
         return curve, srcs, effrups, weights
 
     # this tests also the collapsing of the ruptures happening in contexts.py

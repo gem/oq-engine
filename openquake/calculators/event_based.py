@@ -29,7 +29,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
-from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.source.rupture import EBRupture, get_ruptures
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi
@@ -135,6 +135,11 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
+        oq = self.oqparam
+        params = dict(maximum_distance=oq.maximum_distance,
+                      imtls=oq.imtls,
+                      ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+                      ses_seed=oq.ses_seed)
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         sources = self.csm.get_sources()
         # weighting the heavy sources
@@ -166,10 +171,9 @@ class EventBasedCalculator(base.HazardCalculator):
             if not sg.sources:
                 continue
             logging.info('Sending %s', sg)
-            par = self.param.copy()
-            par['gsims'] = gsims_by_trt[sg.trt]
+            cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], params)
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, srcfilter, par))
+                allargs.append((src_group, cmaker, srcfilter.sitecol))
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
@@ -266,33 +270,36 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
         if oq.inputs['rupture_model'].endswith('.xml'):
-            self.gsims = [gsim_rlz.value[0] for gsim_rlz in gsim_lt]
+            # check the number of branchsets
+            bsets = len(gsim_lt._ltnode)
+            if bsets > 1:
+                raise InvalidFile(
+                    '%s for a scenario calculation must contain a single '
+                    'branchset, found %d!' % (oq.inputs['job_ini'], bsets))
+            [(trt, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_trt().items()
             self.cmaker = ContextMaker(
-                '*', self.gsims, {'maximum_distance': oq.maximum_distance,
-                                  'minimum_distance': oq.minimum_distance,
-                                  'truncation_level': oq.truncation_level,
-                                  'imtls': oq.imtls})
+                trt, rlzs_by_gsim, {'maximum_distance': oq.maximum_distance,
+                                    'minimum_distance': oq.minimum_distance,
+                                    'truncation_level': oq.truncation_level,
+                                    'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
-                                  0, 0, G, e0=i * G) for i in range(ngmfs)]
+                                  'NA', 0, G, e0=i * G, scenario=True)
+                        for i in range(ngmfs)]
             else:  # keep a single rupture with a big occupation number
-                ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
+                ebrs = [EBRupture(rup, 'NA', 0, G * ngmfs, rup.rup_id,
+                                  scenario=True)]
             aw = get_rup_array(ebrs, self.srcfilter)
             if len(aw) == 0:
                 raise RuntimeError(
                     'The rupture is too far from the sites! Please check the '
                     'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
-            aw = readinput.get_ruptures(oq.inputs['rupture_model'])
-            if list(gsim_lt.values) == ['*']:
-                num_gsims = numpy.array([len(gsim_lt.values['*'])], U32)
-            else:
-                num_gsims = numpy.array(
-                    [len(gsim_lt.values.get(trt, [])) for trt in aw.trts], U32)
+            aw = get_ruptures(oq.inputs['rupture_model'])
             if oq.calculation_mode.startswith('scenario'):
-                # rescale n_occ
-                aw['n_occ'] *= ngmfs * num_gsims[aw['trt_smr']]
+                # rescale n_occ by ngmfs and nrlzs
+                aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
         else:
             raise InvalidFile("Something wrong in %s" % oq.inputs['job_ini'])
         rup_array = aw.array
@@ -303,13 +310,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 'There are no sites within the maximum_distance'
                 ' of %s km from the rupture' % oq.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
-
-        # check the number of branchsets
-        branchsets = len(gsim_lt._ltnode)
-        if len(rup_array) == 1 and branchsets > 1:
-            raise InvalidFile(
-                '%s for a scenario calculation must contain a single '
-                'branchset, found %d!' % (oq.inputs['job_ini'], branchsets))
 
         fake = logictree.FullLogicTree.fake(gsim_lt)
         self.realizations = fake.get_realizations()
@@ -416,20 +416,18 @@ class EventBasedCalculator(base.HazardCalculator):
         L = oq.imtls.size
         L1 = L // (M or 1)
         # check seed dependency unless the number of GMFs is huge
-        if ('gmf_data' in self.datastore and
-                self.datastore.getsize('gmf_data') < 1E9):
-            logging.info('Checking seed dependency')
-            err = views.view('gmf_error', self.datastore)
-            if err > .05:
-                logging.warning('Your results are expected to have a large '
-                                'dependency from ses_seed')
+        if 'gmf_data' in self.datastore and self.datastore.getsize(
+                'gmf_data/gmv_0') < 4E9:
+            logging.info('Checking stored GMFs')
+            msg = views.view('extreme_gmvs', self.datastore)
+            logging.warning(msg)
         if oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
             # NB: in the future we may want to save to individual hazard
-            # curves if oq.individual_curves is set; for the moment we
+            # curves if oq.individual_rlzs is set; for the moment we
             # save the statistical curves only
             hstats = oq.hazard_stats()
             S = len(hstats)
@@ -440,7 +438,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 # logic tree reduction mechanism during refactoring
                 raise AssertionError('Expected %d pmaps, got %d' %
                                      (len(weights), len(pmaps)))
-            if oq.individual_curves:
+            if oq.individual_rlzs:
                 logging.info('Saving individual hazard curves')
                 self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
                 self.datastore.set_shape_descr(

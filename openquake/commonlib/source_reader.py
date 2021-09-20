@@ -145,21 +145,21 @@ def fix_geometry_sections(smdict):
         else:
             raise RuntimeError('Unknown model %s' % mod)
 
-    # merge the sections
-    sections = []
+    # merge and reorder the sections
+    sections = {}
     for gmod in gmodels:
-        sections.extend(gmod.sections)
-    sections.sort(key=operator.attrgetter('sec_id'))
-    nrml.check_unique([sec.sec_id for sec in sections])
+        sections.update(gmod.sections)
+    sections = {sid: sections[sid] for sid in sorted(sections)}
+    nrml.check_unique(sections)
 
     # fix the MultiFaultSources
     for smod in smodels:
         for sg in smod.src_groups:
             for src in sg:
-                if hasattr(src, 'create_inverted_index'):
+                if hasattr(src, 'set_sections'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
-                    src.create_inverted_index(sections)
+                    src.set_sections(sections)
 
 
 def _build_groups(full_lt, smdict):

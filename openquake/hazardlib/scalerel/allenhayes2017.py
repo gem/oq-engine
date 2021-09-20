@@ -60,7 +60,7 @@ class AllenHayesInterfaceLinear(BaseMSRSigma, BaseASRSigma):
         """
         return (log10(area)+3.63)/0.96
 
-    def get_std_dev_mag(self, rake):
+    def get_std_dev_mag(self, area, rake):
         """
         Standard deviation on the magnitude for the Allen and Hayes (2017)
         area relation.
@@ -109,7 +109,7 @@ class AllenHayesInterfaceBilinear(BaseMSRSigma, BaseASRSigma):
         else:
             return (log10(area)-2.23)/0.31
 
-    def get_std_dev_mag(self, rake):
+    def get_std_dev_mag(self, area, rake):
         """
         Standard deviation on the magnitude for the Allen and Hayes (2017)
         area relation.
@@ -151,7 +151,7 @@ class AllenHayesIntraslab(BaseMSRSigma, BaseASRSigma):
         """
         return (log10(area)+3.89)/0.96
 
-    def get_std_dev_mag(self, rake):
+    def get_std_dev_mag(self, area, rake):
         """
         Standard deviation on the magnitude for the Strasser et al. (2010)
         area relation.

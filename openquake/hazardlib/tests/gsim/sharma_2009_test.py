@@ -59,17 +59,19 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
     SIGMA_FILE = 'SDBK09/SDBK09_STD_TOTAL.csv'
     TOL_PERCENT = 1e-5
 
-    def test_mean(self):
+    def test_all(self):
         """
         Ensure that means match reference dataset.
         """
-        self.check(self.MEAN_FILE, max_discrep_percentage=self.TOL_PERCENT)
+        self.check(
+            self.MEAN_FILE, max_discrep_percentage=self.TOL_PERCENT)
 
     def test_std_total(self):
         """
         Ensure that standard deviations match reference dataset.
         """
-        self.check(self.SIGMA_FILE, max_discrep_percentage=self.TOL_PERCENT)
+        self.check(
+            self.SIGMA_FILE, max_discrep_percentage=self.TOL_PERCENT)
 
     def test_warning(self):
         """
@@ -81,6 +83,7 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         ctx.mag = np.array([6.5])
         ctx.rjb = np.array([100.])
         ctx.vs30 = np.array([2000.])
+        ctx.sids = [0]
         im_type = sorted(gmpe.COEFFS.sa_coeffs)[0]
         std_types = list(gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 

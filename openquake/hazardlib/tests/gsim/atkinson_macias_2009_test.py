@@ -24,12 +24,10 @@ class AtkinsonMacias2009TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonMacias2009
 
     # Verification tables provided by G. M. Atkinson
-    
-    def test_mean(self):
+
+    def test_all(self):
         # Some minor discrepancies tests do not pass at 0.5 % or lower
         self.check('AM09/ATKINSON_MACIAS_2009_MEAN.csv',
-                   max_discrep_percentage=0.6)
-
-    def test_std_total(self):
-        self.check('AM09/ATKINSON_MACIAS_2009_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'AM09/ATKINSON_MACIAS_2009_STD_TOTAL.csv',
+                   max_discrep_percentage=0.6,
+                   std_discrep_percentage=0.1)

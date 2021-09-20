@@ -57,7 +57,9 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
-                        ('min', F32), ('max', F32), ('len', U16)])
+                        ('min', F32), ('max', F32),
+                        ('len', U16)])
+
 
 # this is used for the minimum_intensity dictionaries
 def consistent(dic1, dic2):
@@ -92,23 +94,6 @@ class InvalidCalculationID(Exception):
     Raised when running a post-calculation on top of an incompatible
     pre-calculation
     """
-
-
-def fix_ones(pmap):
-    """
-    Physically, an extremely small intensity measure level can have an
-    extremely large probability of exceedence, however that probability
-    cannot be exactly 1 unless the level is exactly 0. Numerically, the
-    PoE can be 1 and this give issues when calculating the damage (there
-    is a log(0) in
-    :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
-    Here we solve the issue by replacing the unphysical probabilities 1
-    with .9999999999999999 (the float64 closest to 1).
-    """
-    for sid in pmap:
-        array = pmap[sid].array
-        array[array == 1.] = .9999999999999999
-    return pmap
 
 
 def build_weights(realizations):
@@ -529,8 +514,8 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            poes = fix_ones(readinput.pmap).array(len(haz_sitecol))
-            self.datastore['_poes'] = poes.transpose(2, 0, 1)  # shape GNL
+            poes = readinput.pmap.array(0, len(haz_sitecol), 0)  # shape NL
+            self.datastore['_poes'] = poes.reshape(1, self.N, -1)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['rlzs_by_g'] = sum(
@@ -747,8 +732,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['cost_calculator'] = exposure.cost_calculator
             if hasattr(readinput.exposure, 'exposures'):
-                self.datastore['assetcol/exposures'] = (
-                    numpy.array(exposure.exposures, hdf5.vstr))
+                self.datastore.getitem('assetcol')['exposures'] = numpy.array(
+                    exposure.exposures, hdf5.vstr)
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
             if oq.region:
@@ -786,8 +771,8 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            tmap = readinput.taxonomy_mapping(
-                self.oqparam, self.assetcol.tagcol.taxonomy)
+            taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
+            tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
             self.crmodel.tmap = tmap
             taxonomies = set()
             for ln in oq.loss_names:
@@ -840,9 +825,10 @@ class HazardCalculator(BaseCalculator):
                for lt in oq.loss_names}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
-        self.param = dict(individual_curves=oq.individual_curves,
+        self.param = dict(individual_rlzs=oq.individual_rlzs,
                           ps_grid_spacing=oq.ps_grid_spacing,
                           minimum_distance=oq.minimum_distance,
+                          min_iml=oq.min_iml,
                           collapse_level=int(oq.collapse_level),
                           split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,
@@ -1199,7 +1185,6 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     lst = []
     aggkey = assetcol.tagcol.get_aggkey(aggby)
     K = len(aggkey)
-    agg_number = numpy.zeros(K + 1, U32)
     if aggby:
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [
@@ -1217,15 +1202,16 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         else:
             key2i = {key: i for i, key in enumerate(aggkey)}
             kids = [key2i[tuple(t)] for t in assetcol[aggby]]
-        dstore['assetcol/kids'] = U16(kids)
-        agg_number[:K] = general.fast_agg(kids, assetcol['number'], M=K)
-    agg_number[K] = assetcol['number'].sum()
-    dstore['agg_number'] = agg_number
+        if 'assetcol' in set(dstore):
+            grp = dstore.getitem('assetcol')
+        else:
+            grp = dstore.hdf5.create_group('assetcol')
+        if 'kids' not in grp:
+            grp['kids'] = U16(kids)
     lst.append('*total*')
     if assetcol.get_value_fields():
-        dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
-        dstore.set_shape_descr(
-            'agg_values', aggregation=lst, loss_type=lossnames)
+        dstore['agg_values'] = assetcol.get_agg_values(aggby)
+        dstore.set_shape_descr('agg_values', aggregation=lst)
     return aggkey if aggby else {}
 
 

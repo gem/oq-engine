@@ -138,6 +138,7 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
         self.ctx.rake = 0.
         self.ctx.rjb = np.array([5., 10., 20., 50., 100.])
         self.ctx.vs30 = 500. * np.ones(5)
+        self.ctx.sids = np.arange(5)
 
     def _compare_arrays(self, arr1, arr2, diffs):
         """
@@ -190,14 +191,13 @@ class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
     Tests the Tromans et al (2019) GMPE with the sigma mu adjustment
     """
     def setUp(self):
-        """
-        """
         self.gsim = TromansEtAl2019SigmaMu
         self.ctx = RuptureContext()
         self.ctx.mag = 6.5
         self.ctx.rake = 0.
         self.ctx.rjb = np.array([5., 10., 20., 50., 100.])
         self.ctx.vs30 = 500. * np.ones(5)
+        self.ctx.sids = np.arange(5)
 
     def test_alatik_youngs_factors(self):
         self.assertAlmostEqual(
@@ -237,9 +237,10 @@ class TromansEtAl2019TestCaseCentralHomo(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_CENTRAL.csv",
-                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
-                   branch="central", homoskedastic_sigma=True)
+        self.check(
+            "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_CENTRAL.csv",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            branch="central", homoskedastic_sigma=True)
 
 
 class TromansEtAl2019TestCaseLowerHomo(BaseGSIMTestCase):
@@ -250,9 +251,10 @@ class TromansEtAl2019TestCaseLowerHomo(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_LOWER.csv",
-                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
-                   branch="lower", homoskedastic_sigma=True)
+        self.check(
+            "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_LOWER.csv",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            branch="lower", homoskedastic_sigma=True)
 
 
 class TromansEtAl2019TestCaseUpperHomo(BaseGSIMTestCase):
@@ -263,9 +265,10 @@ class TromansEtAl2019TestCaseUpperHomo(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_UPPER.csv",
-                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
-                   branch="upper", homoskedastic_sigma=True)
+        self.check(
+            "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_UPPER.csv",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            branch="upper", homoskedastic_sigma=True)
 
 
 class TromansEtAl2019TestCaseCentralHetero(BaseGSIMTestCase):
@@ -290,9 +293,10 @@ class TromansEtAl2019TestCaseLowerHetero(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_LOWER.csv",
-                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
-                   branch="lower", homoskedastic_sigma=False)
+        self.check(
+            "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_LOWER.csv",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            branch="lower", homoskedastic_sigma=False)
 
 
 class TromansEtAl2019TestCaseUpperHetero(BaseGSIMTestCase):
@@ -303,6 +307,7 @@ class TromansEtAl2019TestCaseUpperHetero(BaseGSIMTestCase):
     GSIM_CLASS = TromansEtAl2019
 
     def test_std_total(self):
-        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_UPPER.csv",
-                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
-                   branch="upper", homoskedastic_sigma=False)
+        self.check(
+            "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_UPPER.csv",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            branch="upper", homoskedastic_sigma=False)

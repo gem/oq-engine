@@ -133,8 +133,11 @@ def dotname2cls(dotname):
 
 def get_nbytes(dset):
     """
-    :returns: get the size of the underlying array or None if the dataset
-    is actually a group.
+    :param dset:
+        an HDF5 group or dataset
+    :returns:
+        the size of the underlying array or None if the dataset
+        is actually a group.
     """
     if hasattr(dset, 'dtype'):
         # else extract nbytes from the underlying array

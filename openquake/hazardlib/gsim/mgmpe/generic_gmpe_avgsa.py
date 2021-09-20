@@ -23,7 +23,7 @@ import abc
 import numpy as np
 from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import AvgSA, SA
 from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 
@@ -56,8 +56,8 @@ class GenericGmpeAvgSA(GMPE):
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([AvgSA])
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {AvgSA}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
 
     def __init__(self, gmpe_name, avg_periods, corr_func='none', **kwargs):
@@ -96,38 +96,23 @@ class GenericGmpeAvgSA(GMPE):
         # Check if this GMPE has the necessary requirements
         # TO-DO
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
+        :param imts: must be a single IMT of kind AvgSA
         """
-        mean_list = []
-        stddvs_list = []
+        sas = [SA(period) for period in self.avg_periods]
+        [out] = contexts.get_mean_stds(
+            [self.gmpe], ctx, sas, const.StdDev.TOTAL)
 
-        # Loop over averaging periods
-        for period in self.avg_periods:
-            imt_local = SA(float(period))
-            # compute mean and standard deviation
-            mean, stddvs = self.gmpe.get_mean_and_stddevs(sites, rup, dists,
-                                                          imt_local,
-                                                          [const.StdDev.TOTAL])
-            mean_list.append(mean)
-            stddvs_list.append(stddvs[0])  # Support only for total!
-
-        mean_avgsa = 0.
         stddvs_avgsa = 0.
-
         for i1 in range(self.tnum):
-            mean_avgsa += mean_list[i1]
+            mean[:] += out[0, i1]
             for i2 in range(self.tnum):
                 rho = self.corr_func(i1, i2)
-                stddvs_avgsa += (rho * stddvs_list[i1] * stddvs_list[i2])
+                stddvs_avgsa += rho * out[1, i1] * out[1, i2]
 
-        mean_avgsa /= self.tnum
-        stddvs_avgsa = np.sqrt(stddvs_avgsa)/self.tnum
-
-        return mean_avgsa, [stddvs_avgsa]
+        mean[:] /= self.tnum
+        sig[:] = np.sqrt(stddvs_avgsa) / self.tnum
 
 
 class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):

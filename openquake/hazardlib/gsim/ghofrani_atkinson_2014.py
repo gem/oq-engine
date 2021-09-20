@@ -169,7 +169,7 @@ class GhofraniAtkinson2014(GMPE):
             C = self.COEFFS[imt]
 
             imean = (_get_magnitude_term(C, ctx.mag) +
-                     _get_distance_term(C, ctx.rrup, ctx.backarc) +
+                     _get_distance_term(C, ctx.rrup, np.bool_(ctx.backarc)) +
                      _get_site_term(C, ctx.vs30) +
                      _get_scaling_term(self.kind, C, ctx.rrup))
             # Convert mean from cm/s and cm/s/s and from common logarithm to
