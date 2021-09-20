@@ -137,8 +137,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         self.datastore.create_dset('cond-spectra', float, (P, 2, self.M))
         self.datastore.set_shape_descr(
             'cond-spectra', poe_id=P, cs=['spec', 'std'], period=self.periods)
-        self.datastore.create_dset('_c', float, (G_, P, 2, self.M))
-        self.datastore.create_dset('_s', float, (G_, P,))
+        self.datastore.create_dset('_c', float, (G_, P, 2, self.M, self.N))
+        self.datastore.create_dset('_s', float, (G_, P, self.N))
         G = max(len(rbg) for rbg in rlzs_by_gsim)
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
@@ -170,22 +170,25 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         # build conditional spectra for each realization
         rlzs_by_g = self.datastore['rlzs_by_g'][()]
-        nums = numpy.zeros((self.P, self.R, 2, self.M))
-        denums = numpy.zeros((self.P, self.R))
+        nums = numpy.zeros((self.P, self.R, 2, self.M, self.N))
+        denums = numpy.zeros((self.P, self.R, self.N))
         for g_, rlzs in enumerate(rlzs_by_g):
             c = acc['_c', g_]
             s = acc['_s', g_]
             for r in rlzs:
                 nums[:, r] += c
                 denums[:, r] += s
-        for p in range(self.P):
-            self.datastore['cs-rlzs'][p] = to_spectra(nums[p], denums[p])
+        for n in range(self.N):
+            for p in range(self.P):
+                self.datastore['cs-rlzs'][n, ..., p] = to_spectra(
+                    nums[p, ..., n], denums[p, :, n])
 
         # build mean spectrum
         weights = self.datastore['weights'][:]
-        num = numpy.average(nums, weights=weights, axis=1)  # (P, 2, M)
-        denum = numpy.average(denums, weights=weights, axis=1)  # (P,)
-        self.datastore['cond-spectra'][:] = to_spectra(num, denum)
+        for n in range(self.N):
+            num = numpy.average(nums[..., n], weights=weights, axis=1)
+            denum = numpy.average(denums[..., n], weights=weights, axis=1)
+            self.datastore['cond-spectra'][n] = to_spectra(num, denum)
         attrs = dict(imls=self.imls, periods=self.periods)
         if self.oqparam.poes:
             attrs['poes'] = self.oqparam.poes

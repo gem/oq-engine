@@ -133,7 +133,8 @@ class CondSpectraTestCase(unittest.TestCase):
         [src_group] = inp.groups
         ctxs = cmaker.from_srcs(src_group, inp.sitecol)
         [c_], [s_] = cmaker.get_cs_contrib(ctxs, imti, imls)
-        spectra = [c / s for c, s in zip(c_, s_)]
+        spectra = [c[..., 0] / s[..., 0] for c, s in zip(c_, s_)]
+        import pdb; pdb.set_trace()
 
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
@@ -170,8 +171,8 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # compose the contributions by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
         rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()
-        nums = np.zeros((R, 2, len(cmaker.imts)))
-        denums = np.zeros(R)
+        nums = np.zeros((R, 2, len(cmaker.imts), 1))
+        denums = np.zeros((R, 1))
         for g, rlz_ids in enumerate(rlzs_by_g):
             c, s = all_cs[g]
             for r in rlz_ids:

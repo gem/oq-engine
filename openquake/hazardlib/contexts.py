@@ -589,11 +589,11 @@ class ContextMaker(object):
         return out
 
     # see http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-    def get_cs_contrib(self, ctxs, imti, imls):
+    def get_cs_contrib(self, ctxs, m, imls):
         """
         :param ctxs:
-           list of single-site contexts
-        :param imti:
+           list of contexts defined on N sites
+        :param m:
             IMT index in the range 0..M-1
         :param imls:
             P intensity measure levels for the IMT specified by the index
@@ -604,29 +604,36 @@ class ContextMaker(object):
         suitable for later composition.
         """
         assert self.tom
-        assert all(len(ctx.sids) == 1 for ctx in ctxs)
+        N = len(ctxs[0].sids)
+        assert all(len(ctx) == N for ctx in ctxs[1:])
+        C = len(ctxs)
         G = len(self.gsims)
         M = len(self.imtls)
         P = len(imls)
-        num = numpy.zeros((P, G, 2, M))
+        num = numpy.zeros((P, G, 2, M, N))
         mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)
-        imt_ref = self.imts[imti]
+        imt_ref = self.imts[m]
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
         ms = range(len(self.imts))
         # probs = 1 - exp(-occurrence_rates*time_span)
         probs = self.tom.get_probability_one_or_more_occurrences(
-            numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape N
-        denum = numpy.zeros((P, G))
-        for p in range(P):
-            for g, (mu, sig) in enumerate(mean_stds):
-                eps = (imls[p] - mu[imti]) / sig[imti]  # shape N
-                poes = _truncnorm_sf(self.trunclevel, eps)  # shape N
-                ws = -numpy.log((1. - probs) ** poes) / self.investigation_time
-                denum[p, g] = ws.sum()  # weights not summing up to 1
-                for m in ms:
-                    num[p, g, 0, m] = ws @ (mu[m] + rho[m] * eps * sig[m])
-                    num[p, g, 1, m] = ws @ (sig[m]**2 * (1. - rho[m]**2))
+            numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape C
+        denum = numpy.zeros((P, G, N))
+        for n in range(N):
+            slc = slice(n*C, n*C + C)
+            for p in range(P):
+                for g, (mu, sig) in enumerate(mean_stds):
+                    eps = (imls[p] - mu[m, slc]) / sig[m, slc]  # shape C
+                    poes = _truncnorm_sf(self.trunclevel, eps)  # shape C
+                    ws = -numpy.log(
+                        (1. - probs) ** poes) / self.investigation_time
+                    denum[p, g, n] = ws.sum()  # weights not summing up to 1
+                    for m in ms:
+                        num[p, g, 0, m, n] = ws @ (
+                            mu[m] + rho[m] * eps * sig[m])
+                        num[p, g, 1, m, n] = ws @ (
+                            sig[m]**2 * (1. - rho[m]**2))
         return num, denum
 
     def gen_poes(self, ctxs):
