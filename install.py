@@ -141,10 +141,9 @@ class devel(user):
 
 
 PACKAGES = '''It looks like you have an installation from packages.
-Please remove it with `sudo apt remove python3-oq-engine`
-on Debian derivatives or with `sudo yum remove python3-oq-engine`
-on Red Hat derivatives. If it does not work, just remove everything with
-sudo rm -rf /opt/openquake /etc/openquake/openquake.cfg /usr/bin/oq
+Please remove it with `sudo apt remove oq-python38` on Debian derivatives
+or with `sudo yum remove python3-oq-engine` on Red Hat derivatives.
+Then give the command `sudo rm -rf /opt/openquake /etc/openquake/openquake.cfg`
 '''
 SERVICE = '''\
 [Unit]
@@ -236,9 +235,8 @@ def before_checks(inst, port, remove, usage):
             inst.exit()
 
     # check if there is an installation from packages
-    if (inst is server and os.path.exists('/etc/openquake/openquake.cfg')
-        or (inst is devel_server and
-            os.path.exists('/etc/openquake/openquake.cfg'))):
+    if inst in (server, devel_server) and os.path.exists(
+            '/etc/openquake/openquake.cfg'):
         sys.exit(PACKAGES)
     if ((inst is server and os.path.exists(inst.OQ) and
             os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV) or
@@ -382,8 +380,8 @@ def install(inst, version):
                   '/bin/activate')
 
     # create systemd services
-    if ((inst is server and os.path.exists('/usr/lib/systemd/system')) or
-       (inst is devel_server and os.path.exists('/usr/lib/systemd/system'))):
+    if ((inst is server and os.path.exists('/run/systemd/system')) or
+       (inst is devel_server and os.path.exists('/run/systemd/system'))):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/' + service_name

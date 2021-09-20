@@ -92,16 +92,30 @@ Calculation data will be stored in `$HOME/oqdata`.
 
 ## `server` installation
 
-If you are on a Linux machine _and_ you have root permissions, the recommended installation method is `server`. In this case, the engine will work
-with multiple users and two system V services will be automatically installed and started: `openquake-dbserver` and `openquake-webui`.
+If you are on a Linux machine _and_ you have root permissions, the
+recommended installation method is `server`. In this case, the engine
+will work with multiple users and two system V services will be
+automatically installed and started: `openquake-dbserver` and
+`openquake-webui`.
 
 ```
 $ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ sudo -H /usr/bin/python3 install.py server
 ```
 
-The installation script will automatically create a user called `openquake` and will install the engine in the directory `/opt/openquake`.
-Calculation data will be stored in `/var/lib/openquake/oqdata`.
+The installation script will automatically create a user called
+`openquake` and will install the engine in the directory
+`/opt/openquake`.  Calculation data will be stored in
+`/var/lib/openquake/oqdata`.
+
+*NB*: if you already have an engine installation made with debian or rpm
+packages, before installing the new version you must uninstall the old
+version, make sure that the dbserver and webui services are actually
+stopped and then also remove the directory `/opt/openquake` and the
+configuration file `/etc/openquake/openquake.cfg`. If you want to
+preserve some configuration (like the [zworkers] section which is needed
+on a cluster) you should keep a copy of `/etc/openquake/openquake.cfg`
+and move it inside `/opt/openquake` once the new installation is finished.
 
 ## `devel_server` installation
 
