@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import unittest
 import numpy
@@ -32,14 +33,19 @@ from openquake.qa_tests_data.disagg import (
 
 aae = numpy.testing.assert_almost_equal
 
+POECOL = re.compile(r'poe\d+')
+
 
 def compute_mean(fname, *keys):
     keys = [k.lower() for k in keys]
     aw = hdf5.read_csv(fname, {'imt': str, 'rlz': int, None: float})
     dframe = aw.to_dframe()
     out = []
-    for mag, df in dframe.groupby(keys):
-        out.append((mag, numpy.average(df.poe, weights=aw.weights)))
+    poecols = [col for col in dframe.columns if POECOL.match(col)]
+    for key, df in dframe.groupby(keys):
+        poes = [df[col].to_numpy() for col in poecols]
+        [avg] = numpy.average(poes, weights=aw.weights, axis=0)
+        out.append((key, avg))
     return out
 
 
@@ -68,8 +74,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assert_curves_ok(['Mag-0.csv', 'Mag-1.csv'], case_2.__file__)
 
         # check we can read the exported files and compute the mean
-        #compute_mean(os.path.join(os.path.dirname(case_2.__file__),
-        #                          'expected_output/Mag-0.csv'), 'Mag')
+        compute_mean(os.path.join(os.path.dirname(case_2.__file__),
+                                  'expected_output/Mag-0.csv'), 'Mag')
 
         # test extract disagg_layer for Mag
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
