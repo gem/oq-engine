@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import unittest
 import numpy
@@ -32,14 +33,19 @@ from openquake.qa_tests_data.disagg import (
 
 aae = numpy.testing.assert_almost_equal
 
+POECOL = re.compile(r'poe\d+')
+
 
 def compute_mean(fname, *keys):
     keys = [k.lower() for k in keys]
-    aw = hdf5.read_csv(fname, {'imt': str, 'rlz': int, None: float})
+    aw = hdf5.read_csv(fname, {'imt': str, 'poe': str, None: float})
     dframe = aw.to_dframe()
     out = []
-    for mag, df in dframe.groupby(keys):
-        out.append((mag, numpy.average(df.poe, weights=aw.weights)))
+    poecols = [col for col in dframe.columns if POECOL.match(col)]
+    for key, df in dframe.groupby(keys):
+        poes = [df[col].to_numpy() for col in poecols]
+        [avg] = numpy.average(poes, weights=aw.weights, axis=0)
+        out.append((key, avg))
     return out
 
 
@@ -96,7 +102,7 @@ class DisaggregationTestCase(CalculatorTestCase):
                          'Cannot do any disaggregation: zero hazard')
 
     def test_case_4(self):
-        # this is case with number of lon/lat bins different for site 0/site 1
+        # a case with number of lon/lat bins different for site 0/site 1
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)

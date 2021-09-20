@@ -484,7 +484,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.datastore['_vcurves'] = numpy.array(vcurves).reshape(NML1)
             self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
 
-        # check null realizations in the single site case
+        # check null realizations in the single site case, see disagg/case_2
         best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
         for (s, z), r in numpy.ndenumerate(best_rlzs):
             lst = []

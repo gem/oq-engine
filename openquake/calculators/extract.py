@@ -1131,7 +1131,7 @@ def get_ruptures_within(dstore, bbox):
 @extract.add('disagg')
 def extract_disagg(dstore, what):
     """
-    Extract a disaggregation output
+    Extract a disaggregation output as a 2D array.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
     disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
@@ -1142,7 +1142,6 @@ def extract_disagg(dstore, what):
     poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
     traditional = qdict.get('traditional')
-    z = int(qdict['z'][0]) if 'z' in qdict else None
 
     def get(v, sid):
         if len(v.shape) == 2:
@@ -1152,24 +1151,12 @@ def extract_disagg(dstore, what):
     imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
     m = imt2m[imt]
-    out = dstore['disagg/' + label][sid, m, poe_id]
+    matrix = dstore['disagg/' + label][sid, m, poe_id]  # shape (..., Z)
     poe_agg = dstore['poe4'][sid, m, poe_id]
-    if z is None:  # compute stats
-        best = dstore['best_rlzs'][sid]
-        rlzs = [rlz for rlz in dstore['full_lt'].get_realizations()
-                if rlz.ordinal in best]
-        weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
-        weights /= weights.sum()  # normalize to 1
-        matrix = out @ weights
-        attrs = {k: bins[k] for k in label.split('_')}
-        attrs.update(site_id=[sid], imt=[imt], poe_id=[poe_id],
-                     kind=label)
-        return ArrayWrapper(matrix, attrs)
-
-    matrix = out[..., z]
+    Z = len(poe_agg)
     if traditional and traditional != '0':
         if matrix.any():  # nonzero
-            matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg[z])
+            matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
@@ -1177,15 +1164,25 @@ def extract_disagg(dstore, what):
     # compute axis mid points
     axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
             else ax for ax in axis]
-    values = None
-    if len(axis) == 1:
-        values = numpy.array([axis[0], matrix.flatten()]).T
-    else:
+    if len(axis) == 1:  # i.e. Mag or Dist
+        values = numpy.array([axis[0]] + list(matrix.T))  # i.e. shape (2, 3)
+    else:  # i.e. Mag_Dist
+        # axis = [[5.5, 6.5, 7.5], [12.5, 37.5, 62.5, 87.5]]
         grids = numpy.meshgrid(*axis, indexing='ij')
-        values = [g.flatten() for g in grids]
-        values.append(matrix.flatten())
-        values = numpy.array(values).T
-    return ArrayWrapper(values, qdict)
+        # with the 2 axis above there are 2 grids of shape (3, 4) each
+        values = [g.flatten() for g in grids] + [matrix[..., z].flatten()
+                                                 for z in range(Z)]
+        # list of arrays of lenghts [12, 12, 12]
+        values = numpy.array(values)  # shape (3, 12)
+    attrs = qdict.copy()
+    for k in disag_tup:
+        attrs[k] = bins[k]
+    attrs['kind'] = disag_tup
+    attrs['rlzs'] = dstore['best_rlzs'][sid]
+    weights = numpy.array([dstore['weights'][r] for r in attrs['rlzs']])
+    weights /= weights.sum()
+    attrs['weights'] = weights
+    return ArrayWrapper(values.T, attrs)
 
 
 def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):

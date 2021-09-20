@@ -241,14 +241,15 @@ def make_figure_disagg(extractors, what):
     fig = plt.figure()
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
+    kind = disagg.kind
+    ndims = len(kind)
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    y = disagg.array
+    poes = disagg.array[:, ndims:]  # from the right columns
+    y = numpy.average(poes, weights=disagg.weights, axis=-1)
     print(y)
-    ndims = len(y.shape)
-    axis = disagg.kind.split('_')
-    bins = getattr(disagg, axis[0])
+    bins = getattr(disagg, kind[0])
     ncalcs = len(extractors)
     width = (bins[1] - bins[0]) * 0.5
     x = middle(bins) if ncalcs == 1 else middle(bins) - width
@@ -256,7 +257,7 @@ def make_figure_disagg(extractors, what):
         ax = fig.add_subplot(1, 1, 1)
         ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
                       (disagg.kind, sid, imt, poe_id, oq.investigation_time))
-        ax.set_xlabel(axis[0])
+        ax.set_xlabel(kind[0])
         ax.set_xticks(bins)
         ax.bar(x, y, width)
         for ex in extractors[1:]:
@@ -264,28 +265,30 @@ def make_figure_disagg(extractors, what):
         return plt
     if ncalcs > 1:
         raise NotImplementedError('Comparison for %s' % disagg.kind)
+    shape = [len(getattr(disagg, ax)) - 1 for ax in kind]
     # 2D images
     if ndims == 2:
-        y = y.reshape(y.shape + (1,))
+        y = y.reshape(shape + [1])
         zbins = ['']
-    else:
-        zbins = getattr(disagg, axis[2])
+    else:  # ndims == 3
+        y = y.reshape(shape)
+        zbins = getattr(disagg, kind[2])
     Z = y.shape[-1]
     axes = []
     for z in range(Z):
         arr = y[:, :, z]
         ax = fig.add_subplot(Z, 1, z + 1)
         axes.append(ax)
-        ax.set_ylabel(axis[1])
-        ax.set_title(zbins[z])
-        vbins = getattr(disagg, axis[1])  # vertical bins
+        ax.set_xlabel('%s, %s=%s' % (kind[0], kind[2], zbins[z]))
+        ax.set_ylabel(kind[1])
+        vbins = getattr(disagg, kind[1])  # vertical bins
         cmap = cm.get_cmap('jet', 100)
         extent = bins[0], bins[-1], vbins[0], vbins[-1]
         im = ax.imshow(arr, cmap=cmap, extent=extent,
                        aspect='auto', vmin=y.min(), vmax=y.max())
         # stacked bar chart
         # stacked_bar(ax, x, y.T, width)
-        # ys = ['%.1f' % y for y in getattr(disagg, axis[1])]
+        # ys = ['%.1f' % y for y in getattr(disagg, kind[1])]
         # ax.legend(ys)
     fig.colorbar(im, ax=axes)
     return plt
