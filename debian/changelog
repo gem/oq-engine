@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the disaggregation Mag_Lon_Lat exporter header mixup
   * Fixed the ShakeMap calculator failing with a TypeError:
     get_array_usgs_id() got an unexpected keyword argument 'id'
   * Fixed the Abrahamson Gulerce GMPE failing with a scalar<->array error

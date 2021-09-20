@@ -1167,11 +1167,6 @@ def extract_disagg(dstore, what):
 
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
-    if disag_tup == ('Mag', 'Lon', 'Lat'):
-        matrix = numpy.swapaxes(matrix, 0, 1)
-        matrix = numpy.swapaxes(matrix, 1, 2)
-        disag_tup = ('Lon', 'Lat', 'Mag')
-
     axis = [bins[k] for k in disag_tup]
     # compute axis mid points
     axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float

@@ -1,6 +1,6 @@
-#,,,"generated_by='OpenQuake engine 3.10.0-git0647c7c132', start_date='2020-05-05T04:31:39', checksum=1136041000, smlt_path='b1', gsimlt_path='b21', imt='PGA', investigation_time=1.0, lon=-74.0, lat=4.6, poe='0.0001000', iml='1.2217387e-02', rlz=0"
+#,,,"generated_by='OpenQuake engine 3.12.0-gitea1507eb2d', start_date='2021-09-20T06:13:34', checksum=3819865844, investigation_time=1.0, imt='PGA', smlt_path='b1', gsimlt_path='b21', lon=-74.0, lat=4.6, mag_bin_edges=[6.0, 7.0], dist_bin_edges=[0.0, 40.0, 80.0, 120.0, 160.0, 200.0], lon_bin_edges=[-75.80445236037271, -74.0, -72.19554763962729], lat_bin_edges=[2.80136, 4.6, 6.398639999999999], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Deep Seismicity'], poe=0.00010047157576320576"
 mag,lon,lat,poe
--7.49022E+01,3.70068E+00,6.50000E+00,0.00000E+00
--7.49022E+01,5.49932E+00,6.50000E+00,5.52501E-06
--7.30978E+01,3.70068E+00,6.50000E+00,0.00000E+00
--7.30978E+01,5.49932E+00,6.50000E+00,9.47140E-05
+6.50000E+00,-7.49022E+01,3.70068E+00,0.00000E+00
+6.50000E+00,-7.49022E+01,5.49932E+00,5.83008E-06
+6.50000E+00,-7.30978E+01,3.70068E+00,0.00000E+00
+6.50000E+00,-7.30978E+01,5.49932E+00,9.46420E-05
