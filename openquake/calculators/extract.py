@@ -1131,7 +1131,7 @@ def get_ruptures_within(dstore, bbox):
 @extract.add('disagg')
 def extract_disagg(dstore, what):
     """
-    Extract a disaggregation output
+    Extract a disaggregation output as a 2D array.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
     disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
@@ -1174,7 +1174,15 @@ def extract_disagg(dstore, what):
                                                  for z in range(Z)]
         # list of arrays of lenghts [12, 12, 12]
         values = numpy.array(values)  # shape (3, 12)
-    return ArrayWrapper(values.T, qdict)
+    attrs = qdict.copy()
+    for k in disag_tup:
+        attrs[k] = bins[k]
+    attrs['kind'] = disag_tup
+    attrs['rlzs'] = dstore['best_rlzs'][sid]
+    weights = numpy.array([dstore['weights'][r] for r in attrs['rlzs']])
+    weights /= weights.sum()
+    attrs['weights'] = weights
+    return ArrayWrapper(values.T, attrs)
 
 
 def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):

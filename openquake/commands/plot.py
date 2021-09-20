@@ -241,13 +241,14 @@ def make_figure_disagg(extractors, what):
     fig = plt.figure()
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
+    axis = disagg.kind
+    ndims = len(axis)
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    y = disagg.array
+    poes = disagg.array[:, ndims:]  # from the right columns
+    y = numpy.average(poes, weights=disagg.weights, axis=-1)
     print(y)
-    ndims = len(y.shape)
-    axis = disagg.kind.split('_')
     bins = getattr(disagg, axis[0])
     ncalcs = len(extractors)
     width = (bins[1] - bins[0]) * 0.5
@@ -262,13 +263,14 @@ def make_figure_disagg(extractors, what):
         for ex in extractors[1:]:
             ax.bar(x + width, ex.get(what).array, width)
         return plt
+    raise NotImplementedError(disagg.kind)
     if ncalcs > 1:
         raise NotImplementedError('Comparison for %s' % disagg.kind)
     # 2D images
     if ndims == 2:
         y = y.reshape(y.shape + (1,))
         zbins = ['']
-    else:
+    else:  # ndims == 3
         zbins = getattr(disagg, axis[2])
     Z = y.shape[-1]
     axes = []
