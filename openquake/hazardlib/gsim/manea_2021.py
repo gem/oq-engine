@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2021 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,13 +21,12 @@ Created on Mon August 24, 2021
 Authors: elena.manea@infp.ro, laurentiu.danciu@sed.ethz.ch
 
 
-Module exports: `ManeaEtAl2021fore`
-                `ManeaEtAl2021back`
-                `ManeaEtAl2021along'
+Module exports: `ManeaEtAl2021`
+
 """
 
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from scipy.constants import g
@@ -38,34 +37,41 @@ def _compute_magnitude_term(C, mag):
     Compute magnitude term
     """
     term01 = (mag - 5.7)
-    mag_term = C['phi0'] + C['phi1'] * term01 + C['phi2'] * term01**2
+    mag_term = C['phi0'] + C['phi1'] * term01 + C['phi2']*term01**2
     return mag_term
 
 
-def _compute_distance_term(C, rhypo, arc):
+def _compute_distance_term(C, rhypo, backarc):
     """
     Compute distance term and regional term
     """
     term = (C['phi3'] * np.log(rhypo) +
-            _compute_arc_regional_term(C, arc) * rhypo)
+            +_compute_arc_regional_term(C, backarc) * rhypo)
     return term
 
 
-def _compute_arc_regional_term(C, arc):
+def _compute_arc_regional_term(C, backarc):
     """
     Compute regional term - location with respect to the arc:
-    0(back-arc sites), 2 - fore-arc sites, 1 - along-arc sites
+    back-arc sites (0 used in the paper/ 1 in OQ),
+    fore-arc sites (2 used in the paper paper / 0 in OQ),
+    along-arc sites (1 used in the paper / 2 in OQ)
     """
-    if arc == 2:
-        return C['phi7']
-    elif arc == 1:
-        return C['phi5']
-    else:  # arc=0
-        return C['phi6']
+    term = np.zeros(len(backarc))
+    #fore-arc sites
+    idx = (backarc == 0)
+    term[idx] = C['phi7']
+    #along-arc sites
+    idx = (backarc == 2)
+    term[idx] = C['phi5']
+    # back-arc sites
+    idx = (backarc == 1)
+    term[idx] = C['phi6']
+    return term
 
 
 def _compute_depth_term(C, hypo_depth):
-    return C['phi4'] * hypo_depth
+    return C['phi4']*hypo_depth
 
 
 def _get_site_amplification(C, sites):
@@ -74,8 +80,9 @@ def _get_site_amplification(C, sites):
     """
     ssa, ssb, ssc = _get_site_type_dummy_variables(sites)
 
-    return ((ssc*C['phi11'] + ssb*C['phi10'] + ssa*C['phi9']) +
-            _compute_site_amplif(C, sites))
+    return ((ssc*C['phi11'] + ssb*C['phi10'] +
+            + ssa*C['phi9']) * np.ones(len(sites.vs30)) +
+            + _compute_site_amplif(C, sites))
 
 
 def _get_site_type_dummy_variables(sites):
@@ -84,7 +91,6 @@ def _get_site_type_dummy_variables(sites):
     The recording sites are classified into 3 classes,
     based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
     according to the EC8 (CEN 2003):
-
     class A: Vs30 > 800 m/s
     class B: Vs30 = 360 − 800 m/s
     class C: Vs30 = 180 - 360 m/s
@@ -110,57 +116,50 @@ def _compute_site_amplif(C, sites):
     If f0 is not defined, please set it equal with the reference frequency
     (fref=15, attributed to the reference site condition-rock sites)
     """
-    return C['phi8'] * np.log(sites.f0 / 15)
+    return C['phi8'] * np.log(sites.f0/15)
 
 
-def get_mean_values(C, ctx, arc):
+def get_mean_values(C, ctx):
     """
     Returns the mean values for a specific IMT
-    """
+    """    
     mean = (_compute_magnitude_term(C, ctx.mag) +
-            _compute_distance_term(C, ctx.rhypo, arc) +
+            _compute_distance_term(C, ctx.rhypo, ctx.backarc) +
             _compute_depth_term(C, ctx.hypo_depth) +
             _get_site_amplification(C, ctx))
     return mean
 
 
-class ManeaEtAl2021fore(GMPE):
+class ManeaEtAl2021(GMPE):
     """
     Implements the Subduction GMPE developed by Elena Florinela Manea,
     Carmen Ortanza Cioflan and Laurentiu Danciu, otherwise known as the
     "Ground-motion models for Vrancea intermediate-depth earthquakes
     (Earthquake Spectra,2021,87552930211032985), for subduction inslab events.
-    This class is defined for sites located in the gfrearc area
-    https://journals.sagepub.com/doi/abs/10.1177/87552930211032985
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
-
+    #: Supported intensity measure component is the geometric mean component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
-
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
-
+        const.StdDev.TOTAL,
+        const.StdDev.INTER_EVENT,
+        const.StdDev.INTRA_EVENT}
     #: Required site measure as Vs30, fundamental frequency of resonance
     #: (if unknown set it as 15 - rock sites),
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'f0'}
-
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'f0', 'backarc'}
     #: Required rupture parameters are magnitude and depth for the inslab model
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
-
     #: Required distance measure is hypocentral distance
     REQUIRES_DISTANCES = {'rhypo'}
-
-    #: arc set to 2 for fore - arc sites
-    arc = 2
+    
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
                 C = self.COEFFS[imt]
                 # compute mean and convert from cm/s**2 to g
                 mean[m] = np.log(np.exp(
-                    get_mean_values(C, ctx, self.arc)) * 1e-2 / g)
+                    get_mean_values(C, ctx)) * 1e-2 / g)
                 # Get standard deviations
                 tau[m] = C["tau"]
                 phi[m] = C["phi"]
@@ -280,19 +279,3 @@ class ManeaEtAl2021fore(GMPE):
    9.9000  -3.665753   2.233205    0.334535    0.154174    0.004926    -0.008418   -0.008095   -0.006933   -0.058529   -0.412660   0.265804    0.382110    0.881617    0.157471    0.895570
    10.000  -3.589180   2.227312    0.337769    0.127973    0.005004    -0.008280   -0.007953   -0.006790   -0.057341   -0.404070   0.270101    0.390929    0.884076    0.157986    0.898081
              """)
-
-
-class ManeaEtAl2021back(ManeaEtAl2021fore):
-    """
-    ManeaEtAl2021back - Manea et al(2021) subduction in-slab GMPE for sites
-    located in the back-arc area.
-    """
-    arc = 0
-
-
-class ManeaEtAl2021along(ManeaEtAl2021fore):
-    """
-    ManeaEtAl2021along - Manea et al(2021) subduction in-slab GMPE for sites
-    located in the along-arc area.
-    """
-    arc = 1
