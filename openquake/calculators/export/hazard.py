@@ -359,20 +359,28 @@ def export_hmaps_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('cond-spectra', 'csv'))
+@export.add(('cs-stats', 'csv'))
 def export_cond_spectra(ekey, dstore):
-    dset = dstore[ekey[0]]  # shape (P, 2, M)
+    sitecol = dstore['sitecol']
+    dset = dstore[ekey[0]]  # shape (1, M, N, 2, P)
     periods = dset.attrs['periods']
     imls = dset.attrs['imls']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fnames = []
-    for p, iml in enumerate(imls):
-        fname = dstore.export_path('conditional-spectrum-%d.csv' % p)
-        df = pandas.DataFrame(dict(sa_period=periods,
-                                   spectrum_val=dset[p, 0],
-                                   spectrum_std=dset[p, 1]))
+    for n in sitecol.sids:
+        spe = dset[0, :, n, 0]  # shape M, P
+        std = dset[0, :, n, 1]  # shape M, P
+        fname = dstore.export_path('conditional-spectrum-%d.csv' % n)
+        dic = dict(sa_period=periods)
+        for p in range(len(imls)):
+            dic['val%d' % p] = spe[:, p]
+            dic['std%d' % p] = std[:, p]
+        df = pandas.DataFrame(dic)
         comment = dstore.metadata.copy()
-        comment['iml'] = iml
+        comment['imls'] = list(imls)
+        comment['site_id'] = n
+        comment['lon'] = sitecol.lons[n]
+        comment['lat'] = sitecol.lats[n]
         writer.save(df, fname, comment=comment)
         fnames.append(fname)
     return fnames
