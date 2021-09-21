@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID="lt1">
+
+<!-- 1.0 Logic Tree for Active Shallow Crust -->
+
+        <logicTreeBranchingLevel branchingLevelID="_bl01">
+            <logicTreeBranchSet branchSetID="_bs01" uncertaintyType="gmpeModel"
+                    applyToTectonicRegionType="Active Shallow Crust">
+
+                <logicTreeBranch branchID="AkkarEtAlRjb2014">
+                    <uncertaintyModel>
+			[ModifiableGMPE]
+			gmpe.AkkarEtAlRjb2014={}
+			add_delta_std_to_total_std.delta=-0.33
+		    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="ChiouYoungs2014">
+                    <uncertaintyModel>
+			[ModifiableGMPE]
+			gmpe.ChiouYoungs2014={}
+			add_delta_std_to_total_std.delta=-0.40
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="ZhaoEtAl2006Asc">
+                    <uncertaintyModel>
+			[ModifiableGMPE]
+			gmpe.ZhaoEtAl2006Asc={}
+			add_delta_std_to_total_std.delta=-0.41
+		    </uncertaintyModel>
+                    <uncertaintyWeight>0.34</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+<!-- 2.0 Logic Tree for Interface Zone -->
+
+        <logicTreeBranchingLevel branchingLevelID="_bl02">
+
+            <logicTreeBranchSet branchSetID="_bs02" uncertaintyType="gmpeModel"
+                    applyToTectonicRegionType="Subduction Interface">
+
+                <logicTreeBranch branchID="AbrahamsonEtAl2015SInter">
+                    <uncertaintyModel>
+			[ModifiableGMPE]
+			gmpe.AbrahamsonEtAl2015SInter={}
+			add_delta_std_to_total_std.delta=-0.28
+		    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="ZhaoEtAl2006SInter">
+                    <uncertaintyModel>
+			[ModifiableGMPE]
+			gmpe.ZhaoEtAl2006SInter={}
+			add_delta_std_to_total_std.delta=-0.39
+		    </uncertaintyModel>
+                    <uncertaintyWeight>0.34</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="AbrahamsonGulerce2020SInter">
+                    <uncertaintyModel>
+			[ModifiableGMPE]
+			gmpe.AbrahamsonGulerce2020SInter = {}
+			add_delta_std_to_total_std.delta=-0.36
+		    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+<!-- 3.0 Logic Tree for IntraSlab Zone -->
+
+        <logicTreeBranchingLevel branchingLevelID="_bl03">
+            <logicTreeBranchSet branchSetID="_bs03" uncertaintyType="gmpeModel"
+                    applyToTectonicRegionType="Subduction IntraSlab">
+
+                <logicTreeBranch branchID="AbrahamsonGulerce2020SSlabb">
+                    <uncertaintyModel>
+			[ModifiableGMPE]
+			gmpe.AbrahamsonGulerce2020SSlab = {}
+			add_delta_std_to_total_std.delta=-0.35
+		    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="AbrahamsonEtAl2015SSlab">
+                    <uncertaintyModel>
+			[ModifiableGMPE]
+			gmpe.AbrahamsonEtAl2015SSlab={}
+			add_delta_std_to_total_std.delta=-0.29	
+		    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="ZhaoEtAl2006SSlab">
+                    <uncertaintyModel>
+			[ModifiableGMPE]
+			gmpe.ZhaoEtAl2006SSlab={}
+			add_delta_std_to_total_std.delta=-0.38
+		    </uncertaintyModel>
+                    <uncertaintyWeight>0.34</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

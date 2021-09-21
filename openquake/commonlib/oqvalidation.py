@@ -32,7 +32,7 @@ from openquake.baselib import __version__, hdf5, python3compat
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
-from openquake.hazardlib import correlation, stats, calc
+from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree
@@ -169,7 +169,9 @@ coordinate_bin_width:
   Default: no default
 
 cross_correlation:
-  Used in ShakeMap calculations. Valid choices are "yes", "no" "full",
+  When used in Conditional Spectrum calculation is the name of a cross
+  correlation class (i.e. "BakerJayaram2008").
+  When used in ShakeMap calculations the valid choices are "yes", "no" "full",
   same as for *spatial_correlation*.
   Example: *cross_correlation = no*.
   Default: "yes"
@@ -282,9 +284,27 @@ iml_disagg:
   Example: *iml_disagg = {'PGA': 0.02}*.
   Default: no default
 
-individual_curves:
+imls_ref:
+  Reference intensity measure levels used together with the imt_ref parameter
+  to compute the conditional spectrum
+  Example: *imls_ref = 0.1 0.2*.
+  Default: empty list
+
+imt_ref:
+  Reference intensity measure type used together with the imls_ref parameter
+  to compute the conditional spectrum. The imt_ref must belong to the list
+  of IMTs of the calculation.
+  Example: *imt_ref = SA(0.15)*.
+  Default: no default
+
+individual_rlzs:
   When set, store the individual hazard curves and/or individual risk curves
   for each realization.
+  Example: *individual_rlzs = true*.
+  Default: False
+
+individual_curves:
+  Legacy name for `individual_rlzs`, it should not be used.
   Example: *individual_curves = true*.
   Default: False
 
@@ -487,7 +507,7 @@ reference_depth_to_2pt5km_per_sec:
 reference_vs30_type:
   Used when there is no site model to specify a global vs30 type.
   The choices are "inferred" or "measured"
-  Example: *reference_vs30_type = inferred".
+  Example: *reference_vs30_type = inferred"*.
   Default: "measured"
 
 reference_vs30_value:
@@ -574,10 +594,10 @@ shakemap_id:
 shakemap_uri:
   Dictionary used in ShakeMap calculations to specify a ShakeMap. Must contain
   a key named "kind" with values "usgs_id", "usgs_xml" or "file_npy".
-  Example: *shakemap_uri = {
-     "kind": "usgs_xml",
-     "grid_url": "file:///home/michele/usp000fjta/grid.xml",
-     "uncertainty_url": "file:///home/michele/usp000fjta/uncertainty.xml"*.
+  Example: shakemap_uri = {
+  "kind": "usgs_xml",
+  "grid_url": "file:///home/michele/usp000fjta/grid.xml",
+  "uncertainty_url": "file:///home/michele/usp000fjta/uncertainty.xml"}.
   Default: empty dictionary
 
 shift_hypo:
@@ -731,7 +751,7 @@ class OqParam(valid.ParamSet):
         valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
-    cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
+    cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
     description = valid.Param(valid.utf8_not_empty, "no description")
@@ -758,7 +778,9 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    individual_curves = valid.Param(valid.boolean, None)
+    imls_ref = valid.Param(valid.positivefloats, [])
+    imt_ref = valid.Param(valid.intensity_measure_type)
+    individual_rlzs = individual_curves = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -984,6 +1006,12 @@ class OqParam(valid.ParamSet):
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
 
+        # check for tiling
+        if self.max_sites_disagg > self.max_sites_per_tile:
+            raise ValueError(
+                'max_sites_disagg is larger than max_sites_per_tile! (%d>%d)'
+                % (self.max_sites_disagg, self.max_sites_per_tile))
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and self.poes:
@@ -1012,6 +1040,14 @@ class OqParam(valid.ParamSet):
                     and self.num_rlzs_disagg is not None):
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
+
+        # checks for conditional_spectrum
+        if self.calculation_mode == 'conditional_spectrum':
+            if not self.imls_ref and not self.poes:
+                raise InvalidFile("%s: you must specify poes or imls_ref"
+                                  % job_ini)
+            elif list(self.hazard_stats()) != ['mean']:
+                raise InvalidFile('%s: only the mean is supported' % job_ini)
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
@@ -1064,15 +1100,18 @@ class OqParam(valid.ParamSet):
         Set self.loss_names
         """
         from openquake.commonlib import datastore  # avoid circular import
+        if self.hazard_calculation_id:
+            with datastore.read(self.hazard_calculation_id) as ds:
+                self._parent = ds['oqparam']
+        else:
+            self._parent = None
         # set all_cost_types
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
         costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             try:
-                with datastore.read(self.hazard_calculation_id) as ds:
-                    parent = ds['oqparam']
-                    self._risk_files = rfs = get_risk_files(parent.inputs)
-                    costtypes = set(rt.rsplit('/')[1] for rt in rfs)
+                self._risk_files = rfs = get_risk_files(self._parent.inputs)
+                costtypes = set(rt.rsplit('/')[1] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
         self.all_cost_types = sorted(costtypes)
@@ -1355,6 +1394,15 @@ class OqParam(valid.ParamSet):
             correlation, '%sCorrelationModel' % correl_name)
         return correl_model_cls(**self.ground_motion_correlation_params)
 
+    @property
+    def cross_correl(self):
+        """
+        Return a cross correlation object (or None). See
+        :mod:`openquake.hazardlib.cross_correlation` for more info.
+        """
+        fac = getattr(cross_correlation, self.cross_correlation, lambda: None)
+        return fac()
+
     def get_kinds(self, kind, R):
         """
         Yield 'rlz-000', 'rlz-001', ...', 'mean', 'quantile-0.1', ...
@@ -1371,7 +1419,7 @@ class OqParam(valid.ParamSet):
             yield kind
             return
         # default: yield stats (and realizations if required)
-        if R > 1 and self.individual_curves or not stats:
+        if R > 1 and self.individual_rlzs or not stats:
             for r in range(R):
                 yield 'rlz-%03d' % r
         yield from stats
@@ -1623,8 +1671,16 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile('Missing investigation_time in %s' % ini)
             self.collect_rlzs = True
             return True
-        if self.collect_rlzs is False or self.hazard_calculation_id:
+        elif self.collect_rlzs is False:
             return True
+        elif self.hazard_calculation_id:
+            n = self._parent.number_of_logic_tree_samples
+            if n == 0:
+                raise ValueError('collect_rlzs=true can only be specified if '
+                                 'the parent hazard calculation used sampling')
+            elif n != self.number_of_logic_tree_samples:
+                raise ValueError('Please specify number_of_logic_tree_samples'
+                                 '=%d' % n)
         hstats = list(self.hazard_stats())
         nostats = not hstats or hstats == ['mean']
         return nostats and self.number_of_logic_tree_samples > 1 and (

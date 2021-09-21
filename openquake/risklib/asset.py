@@ -133,7 +133,7 @@ class CostCalculator(object):
         vars(self).update(attrs)
         self.cost_types = dict(zip(self.loss_types, array['cost_type']))
         self.area_types = dict(zip(self.loss_types, array['area_type']))
-        self.units = dict(zip(self.loss_types, array['unit']))
+        self.units = dict(zip(self.loss_types, decode(array['unit'])))
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
@@ -352,7 +352,7 @@ class TagCollection(object):
         self.tagnames = [decode(name) for name in attrs['tagnames']]
         sizes = []
         for tagname in dic:
-            setattr(self, tagname, dic[tagname][()])
+            setattr(self, tagname, decode(dic[tagname][()]))
             sizes.append(len(dic[tagname]))
         # sanity check to protect against /home/michele/oqdata/calc_10826.hdf5
         numpy.testing.assert_equal(sorted(sizes), sorted(attrs['tagsizes']))
@@ -391,6 +391,8 @@ class AssetCollection(object):
                              (exp_periods, self.occupancy_periods))
         self.fields = [f[6:] for f in self.array.dtype.names
                        if f.startswith('value-')]
+        self.occfields = [f for f in self.array.dtype.names
+                          if f.startswith('occupants')]
 
     @property
     def tagnames(self):
@@ -495,25 +497,23 @@ class AssetCollection(object):
         """
         return [f for f in self.array.dtype.names if f.startswith('value-')]
 
-    def get_agg_values(self, loss_names, tagnames):
+    def get_agg_values(self, tagnames):
         """
-        :param loss_names:
-            the relevant loss_names
         :param tagnames:
             tagnames
         :returns:
-            an array of shape (K+1, L)
+            a structured array of length K+1 with the value fields
         """
         aggkey = {key: k for k, key in enumerate(
             self.tagcol.get_aggkey(tagnames))}
-        K, L = len(aggkey), len(loss_names)
+        K = len(aggkey)
         dic = {tagname: self[tagname] for tagname in tagnames}
-        for ln in loss_names:
-            if ln.endswith('_ins'):
-                dic[ln] = self['value-' + ln[:-4]]
-            elif ln in self.fields:
-                dic[ln] = self['value-' + ln]
-        agg_values = numpy.zeros((K+1, L))
+        for field in self.fields:
+            dic[field] = self['value-' + field]
+        for field in self.occfields:
+            dic[field] = self[field]
+        value_dt = [(f, float) for f in self.fields + self.occfields]
+        agg_values = numpy.zeros(K+1, value_dt)
         df = pandas.DataFrame(dic)
         if tagnames:
             df = df.set_index(list(tagnames))
@@ -524,9 +524,9 @@ class AssetCollection(object):
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
-                agg_values[aggkey[key], :] = numpy.array(grp.sum())
+                agg_values[aggkey[key]] = tuple(grp.sum())
         if self.fields:  # missing in scenario_damage case_8
-            agg_values[-1, :] = [df[ln].sum() for ln in loss_names]
+            agg_values[K] = tuple(df.sum())
         return agg_values
 
     def reduce(self, sitecol):
@@ -588,6 +588,7 @@ class AssetCollection(object):
                  'occupancy_periods': op,
                  'tot_sites': self.tot_sites,
                  'fields': ' '.join(self.fields),
+                 'occfields': ' '.join(self.occfields),
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, tagcol=self.tagcol), attrs
@@ -597,6 +598,7 @@ class AssetCollection(object):
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
         self.fields = attrs['fields'].split()
+        self.occfields = attrs['occfields'].split()
         self.nbytes = attrs['nbytes']
         self.array = dic['array'][()]
         self.tagcol = dic['tagcol']
@@ -638,7 +640,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     asset_dt = numpy.dtype(
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
          ('ordinal', U32), ('lon', F32), ('lat', F32),
-         ('site_id', U32), ('number', F32), ('area', F32)] + [
+         ('site_id', U32), ('value-number', F32), ('area', F32)] + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
@@ -654,7 +656,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                     value = asset.asset_id
                 elif field == 'ordinal':
                     value = asset.ordinal
-                elif field == 'number':
+                elif field == 'value-number':
                     value = asset.number
                 elif field == 'area':
                     value = asset.area

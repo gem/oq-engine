@@ -129,11 +129,12 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     else:
         raise NotImplementedError(trt)
     if faba_model is None:
+        backarc = np.bool_(ctx.backarc)
         f_faba = np.zeros_like(dists)
         # Term only applies to backarc ctx (F_FABA = 0. for forearc)
-        fixed_dists = dists[ctx.backarc]
+        fixed_dists = dists[backarc]
         fixed_dists[fixed_dists < min_dist] = min_dist
-        f_faba[ctx.backarc] = a + b * np.log(fixed_dists / 40.)
+        f_faba[backarc] = a + b * np.log(fixed_dists / 40.)
         return f_faba
 
     # in BCHydro subclasses
@@ -274,7 +275,6 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: subduction interface, or on the backarc. This boolean is a vector
     #: containing True for a backarc site or False for a forearc or
     #: unknown site.
-
     REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
     #: Required rupture parameters are magnitude for the interface model

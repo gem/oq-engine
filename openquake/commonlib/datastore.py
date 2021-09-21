@@ -233,7 +233,7 @@ class DataStore(collections.abc.MutableMapping):
         self.open('a')
         try:
             self.hdf5.swmr_mode = True
-        except ValueError:  # already set
+        except (ValueError, RuntimeError):  # already set
             pass
 
     def set_attrs(self, key, **kw):
@@ -436,6 +436,7 @@ class DataStore(collections.abc.MutableMapping):
         :param key: key to a dataset containing a structured array
         :param field: a field in the structured array
         :returns: sorted, unique values
+
         Works with chunks of 1M records
         """
         unique = set()

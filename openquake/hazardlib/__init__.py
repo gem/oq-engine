@@ -100,7 +100,7 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
     return ebrs
 
 
-def read_input(hparams):
+def read_input(hparams, **extra):
     """
     :param hparams: a dictionary of hazard parameters
     :returns: an Input namedtuple (groups, sitecol, gsim_lt, cmakerdict)
@@ -131,6 +131,9 @@ def read_input(hparams):
     - "number_of_logic_tree_samples" (default 0)
     - "ses_per_logic_tree_path" (default 1)
     """
+    if extra:
+        hparams = hparams.copy()
+        hparams.update(extra)
     assert 'imts' in hparams or 'imtls' in hparams
     assert isinstance(hparams['maximum_distance'], MagDepDistance)
     smfname = hparams.get('source_model_file')
@@ -178,8 +181,13 @@ def read_input(hparams):
             idx += 1
 
     cmaker = {}  # trt => cmaker
-    for trt, rlzs_by_gsim in lt.get_rlzs_by_gsim_trt().items():
+    start = 0
+    n = hparams.get('number_of_logic_tree_samples', 0)
+    s = hparams.get('random_seed', 42)
+    for trt, rlzs_by_gsim in lt.get_rlzs_by_gsim_trt(n, s).items():
         cmaker[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
+        cmaker[trt].start = start
+        start += len(rlzs_by_gsim)
     if rmfname:
         # for instance for 2 TRTs with 5x2 GSIMs and ngmfs=10, then the
         # number of occupation is 100 for each rupture, for a total

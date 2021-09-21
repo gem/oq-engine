@@ -246,13 +246,34 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-6)
 
-    def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
+    def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs, 10,000 years
         self.run_calc(case_3.__file__, 'job.ini')
-        [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-data.csv', f)
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)
 
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f)
+
+        # check association events <-> GSIMs are 50-50 for full enum
+        rlzs = self.calc.datastore['full_lt'].get_realizations()
+        gsim = [rlz.gsim_rlz.value[0] for rlz in rlzs]
+        edf = self.calc.datastore.read_df('events', 'id')
+        edf['gsim'] = [gsim[r] for r in edf.rlz_id]
+        A, S = edf.groupby('gsim').rlz_id.count()
+        self.assertEqual(A, 5191)  # AkkarBommer2010 assocs
+        self.assertEqual(S, 4930)  # SadighEtAl1997 assocs
+
+        # check association events <-> GSIMs are 90-10 for sampling
+        self.run_calc(case_3.__file__, 'job.ini',
+                      number_of_logic_tree_samples=10000,
+                      ses_per_logic_tree_path=1)
+        rlzs = self.calc.datastore['full_lt'].get_realizations()
+        gsim = [rlz.gsim_rlz.value[0] for rlz in rlzs]
+        edf = self.calc.datastore.read_df('events', 'id')
+        edf['gsim'] = [gsim[r] for r in edf.rlz_id]
+        A, S = edf.groupby('gsim').rlz_id.count()
+        self.assertEqual(A, 9130)  # AkkarBommer2010 assocs
+        self.assertEqual(S, 991)   # SadighEtAl1997 assocs
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
@@ -368,7 +389,7 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     def test_case_14(self):
-        # sampling of a logic tree of kind `on_each_source`
+        # sampling of a logic tree of kind `is_source_specific`
         out = self.run_calc(case_14.__file__, 'job.ini', exports='csv')
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)

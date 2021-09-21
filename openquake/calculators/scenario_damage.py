@@ -118,13 +118,13 @@ def scenario_damage(riskinputs, param, monitor):
                     for asset, fractions in zip(assets, out[loss_type]):
                         aid = asset['ordinal']
                         if float_dmg_dist:
-                            damages = fractions * asset['number']
+                            damages = fractions * asset['value-number']
                             if sec_sims:
                                 run_sec_sims(
                                     damages, gmf_df, sec_sims, seed + aid)
                         else:
                             damages = bin_ddd(
-                                fractions, asset['number'], seed + aid)
+                                fractions, asset['value-number'], seed + aid)
                         # damages has shape E', D with E' == len(eids)
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for e, ddd in enumerate(damages):
@@ -136,7 +136,7 @@ def scenario_damage(riskinputs, param, monitor):
                                     (aid, eid, lti) + tuple(dmg) + conseq)
                                 d_event[eid][lti] += ddd[1:]
                         tot = damages.sum(axis=0)  # (E', D) -> D
-                        nodamage = asset['number'] * (ne - len(damages))
+                        nodamage = asset['value-number'] * (ne - len(damages))
                         tot[0] += nodamage
                         res['d_asset'].append((lti, r, aid, tot))
                         for name, values in csq.items():
@@ -159,16 +159,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     def pre_execute(self):
         oq = self.oqparam
         super().pre_execute()
-        num_floats = floats_in(self.assetcol['number'])
+        num_floats = floats_in(self.assetcol['value-number'])
         if num_floats:
             logging.warning(
                 'The exposure contains %d non-integer asset numbers: '
                 'using floating point damage distributions', num_floats)
-        bad = self.assetcol['number'] > 2**32 - 1
+        bad = self.assetcol['value-number'] > 2**32 - 1
         for ass in self.assetcol[bad]:
             aref = self.assetcol.tagcol.id[ass['id']]
             logging.error("The asset %s has number=%s > 2^32-1!",
-                          aref, ass['number'])
+                          aref, ass['value-number'])
         self.param['secondary_simulations'] = oq.secondary_simulations
         self.param['float_dmg_dist'] = oq.float_dmg_dist or num_floats
         self.param['asset_damage_dt'] = self.crmodel.asset_damage_dt(
@@ -233,7 +233,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
 
-        tot = self.assetcol['number'].sum()
+        tot = self.assetcol['value-number'].sum()
         dt = F32 if self.param['float_dmg_dist'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
@@ -275,7 +275,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             rst = views.text_table(df, ext='org')
             logging.info('Portfolio damage\n%s' % rst)
         num_assets = avg.sum(axis=1)  # by loss_type
-        expected = self.assetcol['number'].sum()
+        expected = self.assetcol['value-number'].sum()
         nums = set(num_assets) | {expected}
         if len(nums) > 1:
             numdic = dict(expected=expected)

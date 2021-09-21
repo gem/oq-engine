@@ -131,9 +131,8 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.dtype, float)
-        for arr in (cll.vs30measured, cll.backarc):
-            self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.dtype, bool)
+        self.assertEqual(cll.vs30measured.dtype, numpy.bool_)
+        self.assertEqual(cll.backarc.dtype, numpy.uint8)
         self.assertEqual(len(cll), 2)
 
         # test split_in_tiles

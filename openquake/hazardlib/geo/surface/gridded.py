@@ -125,7 +125,7 @@ class GriddedSurface(BaseSurface):
             Float value, the vertical distance between the earth surface
             and the shallowest point in surface's top edge in km.
         """
-        raise NotImplementedError('GriddedSurface')
+        return self.mesh.depths.min()
 
     def get_strike(self):
         """

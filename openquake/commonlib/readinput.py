@@ -20,7 +20,6 @@ import re
 import ast
 import csv
 import copy
-import json
 import zlib
 import pickle
 import shutil
@@ -36,7 +35,7 @@ import numpy
 import pandas
 import requests
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
 from openquake.baselib.python3compat import zip
@@ -45,7 +44,7 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile, pmf)
+    source, geo, site, imt, valid, sourceconverter, nrml, pmf)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific
@@ -686,7 +685,7 @@ def get_full_lt(oqparam):
                 'use sampling instead of full enumeration or reduce the '
                 'source model with oq reduce_sm' % p)
         logging.info('Total number of logic tree paths = {:_d}'.format(p))
-    if source_model_lt.on_each_source:
+    if source_model_lt.is_source_specific:
         logging.info('There is a logic tree on each source')
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     return full_lt
@@ -855,10 +854,18 @@ def get_crmodel(oqparam):
             dtypedict = {
                 by: str, 'consequence': str, 'loss_type': str, None: float}
 
-            # i.e. collapsed.csv, fatalities.csv, ...
-            array = numpy.concatenate([
-                hdf5.read_csv(fname, dtypedict).array for fname in fnames])
+            # i.e. files collapsed.csv, fatalities.csv, ... with headers
+            # taxonomy,consequence,loss_type,slight,moderate,extensive
+            arrays = []
+            for fname in fnames:
+                arr = hdf5.read_csv(fname, dtypedict).array
+                arrays.append(arr)
+                for no, row in enumerate(arr, 2):
+                    if row['loss_type'] not in loss_types:
+                        msg = '%s: %s is not a recognized loss type, line=%d'
+                        raise InvalidFile(msg % (fname, row['loss_type'], no))
 
+            array = numpy.concatenate(arrays)
             dic = group_array(array, 'consequence')
             for consequence, group in dic.items():
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
@@ -990,11 +997,17 @@ def taxonomy_mapping(oqparam, taxonomies):
 
 
 def _taxonomy_mapping(filename, taxonomies):
-    tmap_df = pandas.read_csv(filename)
+    try:
+        tmap_df = pandas.read_csv(filename, converters=dict(weight=float))
+    except Exception as e:
+        raise e.__class__('%s while reading %s' % (e, filename))
     if 'weight' not in tmap_df:
         tmap_df['weight'] = 1.
 
-    assert set(tmap_df) == {'taxonomy', 'conversion', 'weight'}
+    assert set(tmap_df) in ({'taxonomy', 'conversion', 'weight'},
+                            {'taxonomy', 'risk_id', 'weight'})
+    # NB: conversion was the old name in the header for engine <= 3.12
+    risk_id = 'risk_id' if 'risk_id' in tmap_df.columns else 'conversion'
     dic = dict(list(tmap_df.groupby('taxonomy')))
     taxonomies = taxonomies[1:]  # strip '?'
     missing = set(taxonomies) - set(dic)
@@ -1007,7 +1020,7 @@ def _taxonomy_mapping(filename, taxonomies):
         if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
                               (filename, taxo))
-        lst.append([(rec['conversion'], rec['weight'])
+        lst.append([(rec[risk_id], rec['weight'])
                     for r, rec in recs.iterrows()])
     return lst
 

@@ -8,7 +8,7 @@ User=openquake
 Group=openquake
 Environment=
 #in WorkingDirectory use the folder of the sources from what are installed the engine
-WorkingDirectory=/usr/src/oq-engine/openquake/server
+WorkingDirectory=/usr/share/openquake/engine
 #in ExecStart use the folder of venv
 ExecStart=/opt/openquake/bin/python3 -m openquake.server.manage runserver 127.0.0.1:8800 --noreload
 # Using gunicorn (Nginx or another webserver is needed for static content)

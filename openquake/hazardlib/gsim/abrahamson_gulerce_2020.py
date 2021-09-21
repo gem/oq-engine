@@ -230,10 +230,17 @@ def get_rupture_depth_scaling_term(C, trt, ctx):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         # Not defined for interface events
         return 0.0
-    f_dep = C["a11"] * (ctx.ztor - 50.0)
-    f_dep[ctx.ztor > 200.0] = C["a11"] * 150.0
-    idx = ctx.ztor <= 50.0
-    f_dep[idx] = C["a8"] * (ctx.ztor[idx] - 50.0)
+    if isinstance(ctx.ztor, np.ndarray):
+        f_dep = C["a11"] * (ctx.ztor - 50.0)
+        f_dep[ctx.ztor > 200.0] = C["a11"] * 150.0
+        idx = ctx.ztor <= 50.0
+        f_dep[idx] = C["a8"] * (ctx.ztor[idx] - 50.0)
+    elif ctx.ztor > 200.0:
+        f_dep = C["a11"] * 150.0
+    elif ctx.ztor <= 50.0:
+        f_dep = C["a8"] * (ctx.ztor - 50.0)
+    else:
+        f_dep = C["a11"] * (ctx.ztor - 50.0)
     return f_dep
 
 
@@ -316,7 +323,7 @@ def get_acceleration_on_reference_rock(C, trt, region, ctx, apply_adjustment):
     PGA. Overrides the Vs30 values and removes any basin depth terms
     """
     # Set all Vs30 to 1000 m/s
-    vs30 = 1000.0 * np.ones(ctx.vs30.shape)
+    vs30 = np.full_like(ctx.vs30, 1000.)
     # On rock the amplification is only linear, so PGA1000 is not used
     # set to a null array
     null_pga1000 = np.zeros(vs30.shape)
@@ -541,15 +548,16 @@ class AbrahamsonGulerce2020SInter(GMPE):
 
     The model is regionalised, defining specific adjustment factors for
     (invoking region term in parenthesis):
-    * Global ("GLO" - for application to any subduction region for which
-                    no region-specific adjustment is defined)
-    * Alaska ("USA-AK")
-    * Cascadia ("CAS")
-    * Central America & Mexico ("CAM")
-    * Japan ("JPN")
-    * New Zealand ("NZL")
-    * South America ("SAM")
-    * Taiwan ("TWN")
+
+    - Global ("GLO" - for application to any subduction region for which
+      no region-specific adjustment is defined)
+    - Alaska ("USA-AK")
+    - Cascadia ("CAS")
+    - Central America & Mexico ("CAM")
+    - Japan ("JPN")
+    - New Zealand ("NZL")
+    - South America ("SAM")
+    - Taiwan ("TWN")
 
     The region-specific adjustments primarily affect the constant term,
     the anelastic attenuation term and the linear Vs30 scaling term. In

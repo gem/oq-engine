@@ -532,7 +532,7 @@ def view_num_units(token, dstore):
     taxo = dstore['assetcol/tagcol/taxonomy'][()]
     counts = collections.Counter()
     for asset in dstore['assetcol']:
-        counts[taxo[asset['taxonomy']]] += asset['number']
+        counts[taxo[asset['taxonomy']]] += asset['value-number']
     data = sorted(counts.items())
     data.append(('*ALL*', sum(d[1] for d in data)))
     return numpy.array(data, dt('taxonomy num_units'))
@@ -689,6 +689,7 @@ def view_global_hazard(token, dstore):
     return numpy.array([res], dt(imtls))
 
 
+@view.add('global_hmaps')
 def view_global_hmaps(token, dstore):
     """
     Display the global hazard maps for the calculation. They are
@@ -725,15 +726,6 @@ def view_gmf(token, dstore):
     return str(gmf)
 
 
-def get_gmv0(dstore):
-    # returns dict gmf_error, extreme_ruptures
-    eids = dstore['gmf_data/eid'][:]
-    gmvs = dstore['gmf_data/gmv_0'][:]
-    sids = dstore['gmf_data/sid'][:]
-    df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
-    return df
-
-
 def binning_error(values, eids, nbins=10):
     """
     :param values: E values
@@ -746,15 +738,6 @@ def binning_error(values, eids, nbins=10):
     df = pandas.DataFrame({'val': values}, eids)
     res = df.groupby(eids % nbins).val.sum()
     return res.std() / res.mean()
-
-
-@view.add('gmf_error')
-def view_gmf_error(token, dstore):
-    """
-    Display a gmf relative error for seed dependency
-    """
-    return binning_error(
-        dstore['gmf_data/gmv_0'][:], dstore['gmf_data/eid'][:])
 
 
 class GmpeExtractor(object):
@@ -782,17 +765,33 @@ def view_extreme_gmvs(token, dstore):
     else:
         maxgmv = 10  # 10g is default value defining extreme GMVs
     imt0 = list(dstore['oqparam'].imtls)[0]
+
+    eids = dstore['gmf_data/eid'][:]
+    gmvs = dstore['gmf_data/gmv_0'][:]
+    sids = dstore['gmf_data/sid'][:]
+    msg = ''
+    err = binning_error(gmvs, eids)
+    if err > .05:
+        msg += ('Your results are expected to have a large dependency '
+                'from ses_seed')
     if imt0.startswith(('PGA', 'SA(')):
         gmpe = GmpeExtractor(dstore)
-        df = get_gmv0(dstore)
-        extreme_df = df[df.gmv_0 > maxgmv].copy()
+        df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
+        extreme_df = df[df.gmv_0 > maxgmv].rename(
+            columns={'gmv_0': imt0})
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
         trt_smrs = dstore['ruptures']['trt_smr'][extreme_df.rup]
         extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id'])
-        return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
-    return 'Could not do anything for ' + imt0
+        exdf = extreme_df.sort_values(imt0).groupby('sid').head(1)
+        if len(exdf):
+            msg += ('\nThere are extreme GMVs, run `oq show extreme_gmvs:%s`'
+                    'to see them' % maxgmv)
+            if ':' in token:
+                msg += '\n%s' % exdf.set_index('rup')
+        return msg
+    return msg + '\nCould not extract extreme GMVs for ' + imt0
 
 
 @view.add('mean_disagg')

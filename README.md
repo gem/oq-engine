@@ -29,11 +29,17 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/openquake.engine.svg)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/gem/oq-engine.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/gem/oq-engine/context:python)
 
-### Current stable
+### Current LTS release (if in doubt, install this)
 
-Current stable version is the **OpenQuake Engine 3.11** 'Wegener'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.11#openquake-engine.
+Current Long Term Support version is the **OpenQuake Engine 3.11** 'Wegener'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.11#openquake-engine.
 
 * [What's new](../engine-3.11/doc/whats-new.md)
+
+### Current release (for users needing the latest features)
+
+Current stable version is the **OpenQuake Engine 3.12**. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.12#openquake-engine.
+
+* [What's new](../engine-3.12/doc/whats-new.md)
 
 ## Documentation (master tree)
 

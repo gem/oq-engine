@@ -23,6 +23,9 @@ from openquake.hazardlib.geo.mesh import Mesh
 POINTS = [Point(0, 0, 0.1), Point(0, 1, 0), Point(1, 1, 0.1),
           Point(1, 0, 0.1)]
 
+POINTS2 = [Point(0, 0, 5), Point(0, 1, 8), Point(1, 1, 9),
+          Point(1, 0, 9)]
+
 POINTSIDL = [Point(179.5, 0, 0.1), Point(179.5, 1, 0), Point(-179.5, 1, 0.1),
              Point(-179.5, 0, 0.1)]
 
@@ -32,6 +35,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
     def setUp(self):
         self.surf = GriddedSurface.from_points_list(POINTS)
         self.mesh = Mesh(np.array([1.]), np.array([2.]), np.array([3.]))
+        self.surf2 = GriddedSurface.from_points_list(POINTS2)
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
@@ -54,7 +58,12 @@ class GriddedSurfaceTestCase(unittest.TestCase):
                           self.surf)
 
     def test_get_top_edge_depth(self):
-        self.assertRaises(NotImplementedError, self.surf.get_top_edge_depth)
+        depth = self.surf.get_top_edge_depth()
+        self.assertEqual(depth, 0)
+
+    def test_get_top_edge_depth_nonzero(self):
+        depth = self.surf2.get_top_edge_depth()
+        self.assertEqual(depth, 5)
 
     def test_get_ry0_distance(self):
         self.assertRaises(NotImplementedError, self.surf.get_ry0_distance,

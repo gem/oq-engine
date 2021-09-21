@@ -173,13 +173,12 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     Base class for all the ground shaking intensity models.
 
     A Ground Shaking Intensity Model (GSIM) defines a set of equations
-    for computing mean and standard deviation of a Normal distribution
+    for computing mean and standard deviation of a normal distribution
     representing the variability of an intensity measure (or of its logarithm)
     at a site given an earthquake rupture.
 
     This class is not intended to be subclassed directly, instead
-    the actual GSIMs should subclass :class:`GMPE`
-
+    the actual GSIMs should subclass :class:`GMPE`.
 
     Subclasses of both must implement :meth:`get_mean_and_stddevs`
     and all the class attributes with names starting from ``DEFINED_FOR``

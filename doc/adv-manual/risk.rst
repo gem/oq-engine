@@ -54,6 +54,48 @@ reduce the size of your computation when there are a large number of
 small magnitude ruptures or low intensity GMFs being generated, which may have
 a negligible impact on the damage or losses, and thus could be safely discarded.
 
+region_grid_spacing
+---------------------
+
+In our experience, the most common error made by out users is to
+compute the hazard at the sites of the exposure. The issue is that it
+very possible to have exposures with millions of assets on millions of
+distinct hazard sites. Computing the GMFs for millions of sites is
+hard or even impossible (there is a limit of 4 billion rows on the
+size of the GMF table in the datastore).  Even in the cases when
+computing the hazard is possible, then computing the risk starting
+from an extremely large amount of GMFs will likely be impossible, due
+to memory/runtime constraints.
+
+The second most common error is to use an extremely fine grid for the
+site model. Remember that if you have a resolution of 250 meters, a
+square of 250 km x 250 km will contain one million sites, which is
+definitely too much. The engine when designed when the site models
+had resolutions around 5-10 km, i.e. of the same order of the hazard
+grid, while nowadays the vs30 fields have a much larger resolution.
+
+Both problems can be solved in a simple way by specifying the
+``region_grid_spacing`` parameter. Make it large enough that the
+resulting number of sites becomes reasonable and you are done.
+You will loose some precision, but that is preferable to not
+being able to run the calculation. You will need to run a sensitivity
+analysis with different values of ``region_grid_spacing`` parameter
+to make sure that you get consistent results, but that's it.
+
+Once a ``region_grid_spacing`` is specified, the engine computes the
+convex hull of the exposure sites and builds a grid of hazard sites,
+associating the site parameters from the closest site in the site model
+and discarding sites in region where there are no assets (i.e. more
+distant than ``region_grid_spacing * sqrt(2)``). The precise logic
+is encoded in the function
+``openquake.commonlib.readinput.get_sitecol_assetcol``, if you want
+to know the nitty-gritty details.
+
+Our recommendation is to use the command ``oq prepare_site_model`` to
+apply such logic before starting a calculation and thus producing a
+custom site model file tailored to your exposure (see the section
+:ref:`prepare_site_model`).
+
 
 Collapsing of branches
 ----------------------
@@ -116,33 +158,46 @@ obtained from a full-enumeration of these branches is nearly the same
 as the distribution of the hazard or loss results obtained from a
 full-enumeration of the entire logic-tree.
 
-Disabling the propagation of vulnerability uncertainty to losses
+Disabling the computation of the epsilon matrix
 ----------------------------------------------------------------
 
-The vulnerability functions using continuous distributions
-(such as the lognormal distribution or beta distribution) to 
-characterize the uncertainty in the loss ratio conditional on the
-shaking intensity level, specify the mean loss ratios and the corresponding
-coefficients of variation for a set of intensity levels.
-They are used to build the so called epsilon matrix within the engine,
-which is how loss ratios are sampled from the distribution for each asset.
+The vulnerability functions using continuous distributions (lognormal/beta)
+to characterize the uncertainty in the loss ratio, specify the mean loss
+ratios and the corresponding coefficients of variation for a set of intensity
+levels. They are used to build the so called epsilon matrix within the engine,
+governing how loss ratios are sampled from the distribution for each asset.
 
-There is clearly a performance penalty associated with the propagation
+There is clearly a performance/memory penalty associated with the propagation
 of uncertainty in the vulnerability to losses. The epsilon matrix has 
-to be computed and stored, and then the worker processes have to read it, 
-which involves large quantities of data transfer and memory usage.
-
-Setting
+to be computed and its size is huge (for instance with 1 million events
+and 1 million assets the epsilon matrix require 8 TB of RAM) so in large
+calculation it is impossible to generate it. In the past the only solution
+was setting
 
 ``ignore_covs = true``
 
-in your `job.ini` file will result in the engine using just the mean loss
-ratio conditioned on the shaking intensity and ignoring the uncertainty.
-This tradeoff of not propagating the vulnerabilty uncertainty to the loss
-estimates can lead to a significant boost in performance and tractability.
+in the `job.ini` file. Then the engine would compute just the mean loss
+ratios by ignoring the uncertainty.
+Since engine 3.12 there is a better solution: setting
+
+``ignore_master_seed = true``
+
+in the `job.ini` file. Then the engine will compute the mean loss
+ratios but also store information about the uncertainty of the results
+in the asset loss table, in the column "variance", by using the formulae
+
+.. math::
+
+    variance &= \Sigma_i \sigma_i^2 \ for\ asset\_correl=0 \\
+    variance &= (\Sigma_i \sigma_i)^2 \ for\ asset\_correl=1
+
+in terms of the variance of each asset for the event and intensity level in
+consideration, extracted from the asset loss and the
+coefficients of variation. People interested in the details should look at
+the implementation in https://github.com/gem/oq-engine/blob/master/openquake/risklib/scientific.py.
 
 The asset loss table
--------------------------------------------
+====================
 
 When performing an event based risk calculation the engine
 keeps in memory a table with the losses for each asset and each event,

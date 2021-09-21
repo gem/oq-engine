@@ -213,13 +213,25 @@ class ProbabilityMap(dict):
         """The ordered keys of the map as a numpy.uint32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
-    def array(self, N):
+    def array(self, start, stop, g):
         """
-        An array of shape (N, L, I)
+        An array of shape (stop-start, L)
         """
-        arr = numpy.zeros((N, self.shape_y, self.shape_z))
-        for sid in self:
-            arr[sid] = self[sid].array
+        arr = numpy.zeros((stop-start, self.shape_y))
+        for i, sid in enumerate(range(start, stop)):
+            try:
+                arr[i] = self[sid].array[:, g]
+            except KeyError:
+                pass
+        # Physically, an extremely small intensity measure level can have an
+        # extremely large probability of exceedence, however that probability
+        # cannot be exactly 1 unless the level is exactly 0. Numerically, the
+        # PoE can be 1 and this give issues when calculating the damage (there
+        # is a log(0) in
+        # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
+        # Here we solve the issue by replacing the unphysical probabilities 1
+        # with .9999999999999999 (the float64 closest to 1).
+        arr[arr == 1.] = .9999999999999999
         return arr
 
     @property

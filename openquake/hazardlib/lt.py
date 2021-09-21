@@ -20,12 +20,11 @@ import copy
 import collections
 import numpy
 
-import openquake.hazardlib.scalerel as msr
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, source as ohs
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
-from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib import valid
 
 
 class LogicTreeError(Exception):
@@ -364,19 +363,21 @@ def random(size, seed, sampling_method='early_weights'):
     You can compare montecarlo sampling with latin square sampling with
     the following code:
 
-    import matplotlib.pyplot as plt
-    samples, seed = 10, 42
-    x, y = random((samples, 2), seed, 'early_latin').T
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.scatter(x, y, color='green')  # points on a latin square
-    x, y = random((samples, 2), seed, 'early_weights').T
-    plt.scatter(x, y, color='red')  # points NOT on a latin square
-    for x in numpy.arange(0, 1, 1/samples):
-        for y in numpy.arange(0, 1, 1/samples):
-            plt.axvline(x)
-            plt.axhline(y)
-    plt.show()
+    .. code-block:
+
+       import matplotlib.pyplot as plt
+       samples, seed = 10, 42
+       x, y = random((samples, 2), seed, 'early_latin').T
+       plt.xlim([0, 1])
+       plt.ylim([0, 1])
+       plt.scatter(x, y, color='green')  # points on a latin square
+       x, y = random((samples, 2), seed, 'early_weights').T
+       plt.scatter(x, y, color='red')  # points NOT on a latin square
+       for x in numpy.arange(0, 1, 1/samples):
+           for y in numpy.arange(0, 1, 1/samples):
+               plt.axvline(x)
+               plt.axhline(y)
+       plt.show()
     """
     numpy.random.seed(seed)
     xs = numpy.random.uniform(size=size)
@@ -685,6 +686,9 @@ class BranchSet(object):
             if bset is None:
                 break
         return pairs
+
+    def __len__(self):
+        return len(self.branches)
 
     def __str__(self):
         return repr(self.branches)

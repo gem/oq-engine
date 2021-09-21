@@ -35,7 +35,7 @@ F32 = numpy.float32
 U32 = numpy.uint32
 U16 = numpy.uint16
 U8 = numpy.uint8
-KNOWN_CONSEQUENCES = 'losses collapsed injured fatalities homeless'
+KNOWN_CONSEQUENCES = 'losses collapsed injured fatalities homeless'.split()
 
 
 def pairwise(iterable):
@@ -906,8 +906,8 @@ def classical_damage(
         imls = numpy.array(fragility_functions._interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         assert min_val > 0, hazard_imls  # sanity check
-        numpy.putmask(imls, imls < min_val, min_val)
-        numpy.putmask(imls, imls > max_val, max_val)
+        imls[imls < min_val] = min_val
+        imls[imls > max_val] = max_val
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
         imls = hazard_imls
@@ -951,8 +951,8 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
-    numpy.putmask(imls, imls < min_val, min_val)
-    numpy.putmask(imls, imls > max_val, max_val)
+    imls[imls < min_val] = min_val
+    imls[imls > max_val] = max_val
 
     # interpolate the hazard curve
     poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
@@ -1406,13 +1406,33 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     elif consequence == 'losses':
         return dmgdist @ coeffs * asset['value-' + loss_type]
     elif consequence == 'collapsed':
-        return dmgdist @ coeffs * asset['number']
+        return dmgdist @ coeffs * asset['value-number']
     elif consequence == 'injured':
         return dmgdist @ coeffs * asset['occupants_night']
     elif consequence == 'fatalities':
         return dmgdist @ coeffs * asset['occupants_night']
     elif consequence == 'homeless':
         return dmgdist @ coeffs * asset['occupants_night']
+
+
+def get_agg_value(consequence, agg_values, agg_id, loss_type):
+    """
+    :returns:
+        sum of the values corresponding to agg_id for the given consequence
+    """
+    aval = agg_values[agg_id]
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
+    elif consequence == 'losses':
+        return aval[loss_type]
+    elif consequence == 'collapsed':
+        return aval['number']
+    elif consequence == 'injured':
+        return aval['occupants_night']
+    elif consequence == 'fatalities':
+        return aval['occupants_night']
+    elif consequence == 'homeless':
+        return aval['occupants_night']
 
 
 if __name__ == '__main__':

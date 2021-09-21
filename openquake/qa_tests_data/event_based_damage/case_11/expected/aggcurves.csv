@@ -1,20 +1,20 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-gitba3406a80c', start_date='2021-06-04T05:58:41', checksum=1445836419, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
-return_period,losses,county,taxonomy,loss_type
-50,8.78371E+02,Solano,tax1,structural
-100,1.16672E+03,Solano,tax1,structural
-200,3.77741E+03,Solano,tax1,structural
-50,1.77647E+03,Solano,tax2,structural
-100,1.77647E+03,Solano,tax2,structural
-200,9.63500E+03,Solano,tax2,structural
-50,9.41111E+02,Marin,tax1,structural
-100,9.41111E+02,Marin,tax1,structural
-200,9.41111E+02,Marin,tax1,structural
-50,9.41111E+02,Contra Costa,tax1,structural
-100,9.41111E+02,Contra Costa,tax1,structural
-200,9.41111E+02,Contra Costa,tax1,structural
-50,6.07736E+02,Contra Costa,tax3,structural
-100,6.07736E+02,Contra Costa,tax3,structural
-200,1.50870E+04,Contra Costa,tax3,structural
-50,5.14480E+03,*total*,*total*,structural
-100,1.59024E+04,*total*,*total*,structural
-200,1.99124E+04,*total*,*total*,structural
+#,,,,,,"generated_by='OpenQuake engine 3.13.0-git092c970e12', start_date='2021-09-13T07:18:10', checksum=1445836419, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
+return_period,conseq_value,conseq_type,conseq_ratio,county,taxonomy,loss_type
+50,8.78371E+02,losses,6.27408E-03,Solano,tax1,structural
+100,1.16672E+03,losses,8.33375E-03,Solano,tax1,structural
+200,3.77741E+03,losses,2.69815E-02,Solano,tax1,structural
+50,1.77647E+03,losses,7.40194E-03,Solano,tax2,structural
+100,1.77647E+03,losses,7.40194E-03,Solano,tax2,structural
+200,9.63500E+03,losses,4.01458E-02,Solano,tax2,structural
+50,9.41111E+02,losses,6.27408E-03,Marin,tax1,structural
+100,9.41111E+02,losses,6.27408E-03,Marin,tax1,structural
+200,9.41111E+02,losses,6.27408E-03,Marin,tax1,structural
+50,9.41111E+02,losses,6.27408E-03,Contra Costa,tax1,structural
+100,9.41111E+02,losses,6.27408E-03,Contra Costa,tax1,structural
+200,9.41111E+02,losses,6.27408E-03,Contra Costa,tax1,structural
+50,6.07736E+02,losses,3.79835E-03,Contra Costa,tax3,structural
+100,6.07736E+02,losses,3.79835E-03,Contra Costa,tax3,structural
+200,1.50870E+04,losses,9.42939E-02,Contra Costa,tax3,structural
+50,5.14480E+03,losses,6.12476E-03,*total*,*total*,structural
+100,1.59024E+04,losses,1.89314E-02,*total*,*total*,structural
+200,1.99124E+04,losses,2.37053E-02,*total*,*total*,structural

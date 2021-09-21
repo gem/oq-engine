@@ -207,7 +207,7 @@ except ImportError:
 
 from openquake.baselib import config, hdf5, workerpool, version
 from openquake.baselib.python3compat import decode
-from openquake.baselib.zeromq import zmq, Socket
+from openquake.baselib.zeromq import zmq, Socket, TimeoutError
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
@@ -614,15 +614,6 @@ class IterResult(object):
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
-    # prctl is still useful (on Linux) to terminate all spawned processes
-    # when master is killed via SIGKILL
-    try:
-        import prctl
-    except ImportError:
-        pass
-    else:
-        # if the parent dies, the children die
-        prctl.set_pdeathsig(signal.SIGKILL)
 
 
 def getargnames(task_func):

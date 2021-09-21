@@ -3,8 +3,8 @@
 # We also provide pre-compiled macosx_10_9_x86_64 wheels for
 # h5py, Shapely, psutil
 https://wheelhouse.openquake.org/v2/linux/py/setuptools-56.0.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v2/macos/py36/h5py-2.10.0-cp36-cp36m-macosx_10_6_intel.whl
 https://wheelhouse.openquake.org/v3/macos/py/pytz-2019.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py36/h5py-3.1.0-cp36-cp36m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v2/macos/py36/numpy-1.18.2-cp36-cp36m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v2/macos/py36/scipy-1.4.1-cp36-cp36m-macosx_10_6_intel.whl
 https://wheelhouse.openquake.org/v2/macos/py36/pandas-1.1.5-cp36-cp36m-macosx_10_9_x86_64.whl
@@ -24,6 +24,7 @@ https://wheelhouse.openquake.org/v2/macos/py/requests-2.22.0-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v2/macos/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/toml-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/Django-3.2.6-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/linux/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/django_pam-2.0.1-py2.py3-none-any.whl
 
 

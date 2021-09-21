@@ -1,7 +1,7 @@
-#,,"generated_by='OpenQuake engine 3.12.0-gitba3406a80c', start_date='2021-06-04T05:58:52', checksum=3590982611, risk_investigation_time=50.0, num_events=42, effective_time=1000.0, limit_states='LS1 LS2'"
-return_period,losses,loss_type
-50,2.35340E+02,structural
-100,2.43929E+04,structural
-200,6.38974E+04,structural
-500,7.24520E+04,structural
-1000,7.24520E+04,structural
+#,,,,"generated_by='OpenQuake engine 3.13.0-git092c970e12', start_date='2021-09-13T07:18:14', checksum=3590982611, risk_investigation_time=50.0, num_events=42, effective_time=1000.0, limit_states='LS1 LS2'"
+return_period,conseq_value,conseq_type,conseq_ratio,loss_type
+50,2.35340E+02,losses,4.60547E-04,structural
+100,2.43929E+04,losses,4.77356E-02,structural
+200,6.38974E+04,losses,1.25044E-01,structural
+500,7.24520E+04,losses,1.41785E-01,structural
+1000,7.24520E+04,losses,1.41785E-01,structural

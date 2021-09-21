@@ -15,9 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
-Module exports :class:`AmeriEtAl2017Rjb`,
+Module exports :class:`Ameri2014Rjb`,
+               :class:`AmeriEtAl2017Rjb`,
                :class:`AmeriEtAl2017Repi`,
                :class:`AmeriEtAl2017RjbStressDrop`,
                :class:`AmeriEtAl2017RepiStressDrop`

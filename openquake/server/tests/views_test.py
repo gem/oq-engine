@@ -177,7 +177,8 @@ class EngineServerTestCase(unittest.TestCase):
         got = loadnpz(resp.streaming_content)['json']
         dic = json.loads(bytes(got))
         self.assertEqual(sorted(dic['tagnames']), ['taxonomy'])
-        self.assertEqual(sorted(dic['names']), ['number', 'value-structural'])
+        self.assertEqual(sorted(dic['names']),
+                         ['value-number', 'value-structural'])
 
         # check assets
         resp = self.c.get(

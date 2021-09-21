@@ -141,7 +141,7 @@ class GmfComputer(object):
 
     def compute_all(self, sig_eps=None):
         """
-        :returns: (dict with fields eid, sid, gmv_...), dt
+        :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
