@@ -646,13 +646,10 @@ class ContextMaker(object):
             # 4: second site
             # 5: third site
             # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
-            if N > 1:
-                idxs = numpy.arange(n, N * C, N)  # C indices
-            else:  # fast lane
-                idxs = slice(None)
+            slc = slice(n, N * C, N)  # C indices
             for g, (mu_, sig_) in enumerate(mean_stds):
-                mu = mu_[:, idxs]  # shape (M, C)
-                sig = sig_[:, idxs]  # shape (M, C)
+                mu = mu_[:, slc]  # shape (M, C)
+                sig = sig_[:, slc]  # shape (M, C)
                 c = out[self.start + g]['_c']
                 s = out[self.start + g]['_s']
                 for p in range(P):
