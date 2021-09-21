@@ -147,6 +147,21 @@ def use_recarray(gsims):
                for gsim in gsims)
 
 
+def csdict(M, N, P, start, stop):
+    """
+    :param M: number of IMTs
+    :param N: number of sites
+    :param P: number of IMLs
+    :param start: index
+    :param stop: index > start
+    """
+    ddic = {}
+    for _g in range(start, stop):
+        ddic[_g] = AccumDict({'_c': numpy.zeros((M, N, 2, P)),
+                              '_s': numpy.zeros((N, P))})
+    return ddic
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -598,8 +613,8 @@ class ContextMaker(object):
         :param imls:
             P intensity measure levels for the IMT specified by the index
         :returns:
-            a dictionary key -> gidx -> array where key is the string
-            '_c' or '_s', gidx is an index and the arrays have shape
+            a dictionary g_ -> key -> array where g_ is an index,
+            key is the string '_c' or '_s',  and the arrays have shape
             (M, N, 2, P) or (N, P) respectively.
 
         Compute the contributions to the conditional spectra, in a form
@@ -609,10 +624,10 @@ class ContextMaker(object):
         N = len(ctxs[0].sids)
         assert all(len(ctx) == N for ctx in ctxs[1:])
         C = len(ctxs)
+        G = len(self.gsims)
         M = len(self.imtls)
         P = len(imls)
-        _c = AccumDict(accum=numpy.zeros((M, N, 2, P)))
-        _s = AccumDict(accum=numpy.zeros((N, P)))
+        out = csdict(M, N, P, self.start, self.start + G)
         mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)  # (G, 2, M, N*C)
         imt_ref = self.imts[imti]
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
@@ -626,8 +641,8 @@ class ContextMaker(object):
             for g, (mu_, sig_) in enumerate(mean_stds):
                 mu = mu_[:, slc]  # shape (M, C)
                 sig = sig_[:, slc]  # shape (M, C)
-                c = _c[self.start + g]
-                s = _s[self.start + g]
+                c = out[self.start + g]['_c']
+                s = out[self.start + g]['_s']
                 for p in range(P):
                     eps = (imls[p] - mu[imti]) / sig[imti]  # shape C
                     poes = _truncnorm_sf(self.trunclevel, eps)  # shape C
@@ -637,7 +652,7 @@ class ContextMaker(object):
                     for m in m_range:
                         c[m, n, 0, p] = ws @ (mu[m] + rho[m] * eps * sig[m])
                         c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
-        return dict(_c=_c, _s=_s)
+        return out
 
     def gen_poes(self, ctxs):
         """

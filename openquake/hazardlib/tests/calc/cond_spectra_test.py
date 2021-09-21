@@ -21,7 +21,7 @@ import numpy as np
 from numpy.testing import assert_allclose as aac
 import pandas
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib import read_input, valid
+from openquake.hazardlib import read_input, valid, contexts
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import MagDepDistance
 
@@ -58,36 +58,36 @@ imls = [np.log(1.001392E-01)]
 
 
 # useful while debugging
-def plot(spectra, imts):
+def plot(df, imts):
     import matplotlib.pyplot as plt
     periods = [im.period for im in imts]
     fig, axs = plt.subplots(1, 2)
-    for spectrum in spectra:
-        axs[0].plot(periods, np.exp(spectrum[0]), 'x-')
-        axs[1].plot(periods, np.sqrt(spectrum[1]), 'x-')
+    axs[0].plot(periods, df.cs_exp, 'x-')
+    axs[1].plot(periods, df.cs_std, 'x-')
     axs[0].grid(which='both')
     axs[1].grid(which='both')
     axs[0].set_xscale('log')
     axs[1].set_xscale('log')
     axs[0].set_yscale('log')
     axs[0].set_ylim([1e-3, 10])
-    axs[0].set_xlabel('Mean spectra, Period[s]')
-    axs[1].set_xlabel('Std spectra, Period[s]')
+    axs[0].set_xlabel('Mean spectrum, Period[s]')
+    axs[1].set_xlabel('Std spectrum, Period[s]')
     plt.show()
 
 
 # used to create the expected file the first time
 def csdic_to_dframe(csdic, imts, n, p):
     """
-    :param csdic: a double dictionary key->gidx->array
+    :param csdic: a double dictionary g_ -> key -> array
     :param imts: M intensity measure types
     :param rlzs: R realization indices
     :param n: an index in the range 0..N-1 where N is the number of sites
     :param p: an index in the range 0..P-1 where P is the number of IMLs
     """
     dic = dict(rlz_id=[], period=[], cs_exp=[], cs_std=[])
-    for r, c in csdic['_c'].items():
-        s = csdic['_s'][r]
+    for r, cs in csdic.items():
+        c = cs['_c']
+        s = cs['_s']
         for m, imt in enumerate(imts):
             dic['rlz_id'].append(r)
             dic['period'].append(imt.period)
@@ -112,11 +112,11 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # check that the total spectra is a weighted mean of the two
         # rupture spectra; the weight is the same for all IMTs
-        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, imls).values()
-        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, imls).values()
-        comp_spectra = (c1[0] + c2[0]) / (s1[0] + s2[0])
-        c, s = cmaker.get_cs_contrib(ctxs, imti, imls).values()
-        aac(comp_spectra, c[0] / s[0])
+        c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, imls)[0].values()
+        c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, imls)[0].values()
+        comp_spectra = (c1 + c2) / (s1 + s2)
+        c, s = cmaker.get_cs_contrib(ctxs, imti, imls)[0].values()
+        aac(comp_spectra, c / s)
 
     def test_1_rlz(self):
         # test with one GMPE, 1 TRT, checking additivity
@@ -129,11 +129,11 @@ class CondSpectraTestCase(unittest.TestCase):
         ctxs1 = ctxs[:50]
         ctxs2 = ctxs[50:]
 
-        dic1 = cmaker.get_cs_contrib(ctxs1, imti, imls)
-        dic2 = cmaker.get_cs_contrib(ctxs2, imti, imls)
-        dic = cmaker.get_cs_contrib(ctxs, imti, imls)
-        aac((dic1['_c'][0] + dic2['_c'][0]) / (dic1['_s'][0] + dic2['_s'][0]),
-            dic['_c'][0] / dic['_s'][0])
+        dic1 = cmaker.get_cs_contrib(ctxs1, imti, imls)[0]
+        dic2 = cmaker.get_cs_contrib(ctxs2, imti, imls)[0]
+        dic = cmaker.get_cs_contrib(ctxs, imti, imls)[0]
+        aac((dic1['_c'] + dic2['_c']) / (dic1['_s'] + dic2['_s']),
+            dic['_c'] / dic['_s'])
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
@@ -162,7 +162,7 @@ class CondSpectraTestCase(unittest.TestCase):
         R = inp.gsim_lt.get_num_paths()
 
         # compute the contributions by trt
-        tot = AccumDict()
+        tot = AccumDict()  # g_ -> key -> array
         for src_group in inp.groups:
             cmaker = inp.cmakerdict[src_group.trt]
             ctxs = cmaker.from_srcs(src_group, inp.sitecol)
@@ -170,12 +170,10 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # compose the contributions by rlz, 0+2, 0+3, 0+4, 1+2, 1+3, 1+4
         rlzs_by_g = inp.gsim_lt.get_rlzs_by_g()
-        csdic = {}
-        for key, val in tot.items():
-            csdic[key] = cs = {r: 0 for r in range(R)}
-            for g, rlz_ids in enumerate(rlzs_by_g):
-                for r in rlz_ids:
-                    cs[r] += val[g]
+        csdic = contexts.csdict(len(cmaker.imts), 1, 1, 0, R)
+        for g_, rlz_ids in enumerate(rlzs_by_g):
+            for r in rlz_ids:
+                csdic[r] += tot[g_]
         df = csdic_to_dframe(csdic, cmaker.imts, 0, 0)
 
         # check the results
