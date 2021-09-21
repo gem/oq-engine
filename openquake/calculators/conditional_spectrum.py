@@ -63,18 +63,12 @@ def conditional_spectrum(dstore, slc, cmaker, imti, imls, monitor):
     :param monitor:
         monitor of the currently running job
     :returns:
-        dictionary key -> conditional spectrum contribution
+        dictionary key -> gidx -> conditional spectrum contribution
     """
-    res = {}
-    G = len(cmaker.gsims)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs = cmaker.read_ctxs(dstore, slc)
-        c, s = cmaker.get_cs_contrib(ctxs, imti, imls)
-        for g in range(G):
-            res['_c', cmaker.start + g] = c[:, g]
-            res['_s', cmaker.start + g] = s[:, g]
-    return res
+    return cmaker.get_cs_contrib(ctxs, imti, imls)
 
 
 @base.calculators.add('conditional_spectrum')
