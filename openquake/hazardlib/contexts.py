@@ -637,10 +637,10 @@ class ContextMaker(object):
         probs = self.tom.get_probability_one_or_more_occurrences(
             numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape C
         for n in range(N):
-            slc = slice(n*C, n*C + C)
+            idxs = numpy.arange(n, N * C, N)  # C indices
             for g, (mu_, sig_) in enumerate(mean_stds):
-                mu = mu_[:, slc]  # shape (M, C)
-                sig = sig_[:, slc]  # shape (M, C)
+                mu = mu_[:, idxs]  # shape (M, C)
+                sig = sig_[:, idxs]  # shape (M, C)
                 c = out[self.start + g]['_c']
                 s = out[self.start + g]['_s']
                 for p in range(P):
@@ -648,10 +648,11 @@ class ContextMaker(object):
                     poes = _truncnorm_sf(self.trunclevel, eps)  # shape C
                     ws = -numpy.log(
                         (1. - probs) ** poes) / self.investigation_time
-                    s[n, p] = ws.sum()  # weights not summing up to 1
+                    s[n, p] = w = ws.sum()  # weights not summing up to 1
                     for m in m_range:
                         c[m, n, 0, p] = ws @ (mu[m] + rho[m] * eps * sig[m])
                         c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
+                    val = c[:, n, 0, p].mean()
         return out
 
     def gen_poes(self, ctxs):

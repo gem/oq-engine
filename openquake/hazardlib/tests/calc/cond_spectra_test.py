@@ -99,10 +99,11 @@ def csdic_to_dframe(csdic, imts, n, p):
 class CondSpectraTestCase(unittest.TestCase):
 
     def test_point(self):
-        # point source with 3 ruptures, checking additivity
+        # point source with 3 ruptures and 2 sites, checking additivity
         inp = read_input(
             PARAM, source_model_file=os.path.join(CWD, 'data', 'point.xml'),
-            gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'))
+            gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'),
+            sites=[(0, -0.8), (0, -0.4)])
         [cmaker] = inp.cmakerdict.values()
         [src_group] = inp.groups
         ctxs = cmaker.from_srcs(src_group, inp.sitecol)
@@ -114,9 +115,10 @@ class CondSpectraTestCase(unittest.TestCase):
         # rupture spectra; the weight is the same for all IMTs
         c1, s1 = cmaker.get_cs_contrib(ctxs1, imti, imls)[0].values()
         c2, s2 = cmaker.get_cs_contrib(ctxs2, imti, imls)[0].values()
-        comp_spectra = (c1 + c2) / (s1 + s2)
         c, s = cmaker.get_cs_contrib(ctxs, imti, imls)[0].values()
-        aac(comp_spectra, c / s)
+        for n in [0, 1]:  # two sites
+            comp_spectra = (c1[:, n] + c2[:, n]) / (s1[n, 0] + s2[n, 0])
+            aac(comp_spectra, c[:, n] / s[n, 0])
 
     def test_1_rlz(self):
         # test with one GMPE, 1 TRT, checking additivity
