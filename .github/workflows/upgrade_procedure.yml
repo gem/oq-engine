@@ -51,7 +51,11 @@ jobs:
         source /opt/openquake/bin/activate
         oq --version
         deactivate
+        sudo -H python install.py server --remove
+        sleep 5
         sudo -H python install.py server --version=3.12
         source /opt/openquake/bin/activate
+        systemctl status openquake-dbserver
         oq --version
+        oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
       shell: bash
