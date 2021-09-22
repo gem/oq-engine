@@ -699,6 +699,7 @@ class SourceModelLogicTree(object):
                     br.branch_id, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
+        self.branchsets = bsets
         # bsets [<b11>, <b21 b22>, <b31 b32>]
         self.root_branchset = bsets[0]
         for i, childset in enumerate(bsets[1:]):
