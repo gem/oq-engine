@@ -208,7 +208,7 @@ def preclassical(srcs, srcfilter, params, monitor):
             if not src.nsites:  # filtered out
                 src.nsites = EPS
             is_ps = isinstance(src, PointSource)
-            if is_ps:
+            if is_ps and srcfilter.sitecol:
                 # NB: using cKDTree would not help, performance-wise
                 cdist = srcfilter.sitecol.get_cdist(src.location)
                 src.nsites = (cdist <= md + pd).sum() or EPS
