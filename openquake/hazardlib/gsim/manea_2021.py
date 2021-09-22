@@ -20,13 +20,11 @@
 Created on Mon August 24, 2021
 Authors: elena.manea@infp.ro, laurentiu.danciu@sed.ethz.ch
 
-
 Module exports: `ManeaEtAl2021`
-
 """
 
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from scipy.constants import g
@@ -53,20 +51,17 @@ def _compute_distance_term(C, rhypo, backarc):
 def _compute_arc_regional_term(C, backarc):
     """
     Compute regional term - location with respect to the arc:
+    fore-arc sites (2 used in the paper / 0 in OQ),
     back-arc sites (0 used in the paper/ 1 in OQ),
-    fore-arc sites (2 used in the paper paper / 0 in OQ),
     along-arc sites (1 used in the paper / 2 in OQ)
     """
     term = np.zeros(len(backarc))
-    #fore-arc sites
-    idx = (backarc == 0)
-    term[idx] = C['phi7']
-    #along-arc sites
-    idx = (backarc == 2)
-    term[idx] = C['phi5']
+    # fore-arc sites
+    term[backarc == 0] = C['phi7']
     # back-arc sites
-    idx = (backarc == 1)
-    term[idx] = C['phi6']
+    term[backarc == 1] = C['phi6']
+    # along-arc sites
+    term[backarc == 2] = C['phi5']
     return term
 
 
