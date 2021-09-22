@@ -694,4 +694,4 @@ class BranchSet(object):
         return repr(self.branches)
 
     def __repr__(self):
-        return '<%s>' % ' '.join(br.branch_id for br in self.branches)
+        return '<%s(%d)>' % (self.uncertainty_type, len(self))
