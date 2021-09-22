@@ -18,7 +18,8 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [windows-latest]
+          #os: [macos-latest, windows-latest, ubuntu-latest]
         python-version: [3.8]
     #
     steps:
