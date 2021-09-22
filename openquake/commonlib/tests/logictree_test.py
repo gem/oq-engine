@@ -28,7 +28,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt, gsim_lt
+from openquake.hazardlib import geo, lt, gsim_lt, nrml
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
@@ -207,9 +207,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                   </logicTreeBranch>
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl1">
+              <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
+                                    branchSetID="bs2">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>sm2</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -293,7 +293,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
-                                    branchSetID="bs1"
+                                    branchSetID="bs2"
                                     applyToBranches="mssng">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>123</uncertaintyModel>
@@ -321,7 +321,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                   </logicTreeBranch>
                 </logicTreeBranchSet>
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
-                                    branchSetID="bs1"
+                                    branchSetID="bs2"
                                     applyToBranches="b1">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>123</uncertaintyModel>
@@ -329,7 +329,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                   </logicTreeBranch>
                 </logicTreeBranchSet>
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
-                                    branchSetID="bs1"
+                                    branchSetID="bs3"
                                     applyToBranches="b1">
                   <logicTreeBranch branchID="b3">
                     <uncertaintyModel>123</uncertaintyModel>
@@ -361,7 +361,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
                                     applyToSources="src01"
-                                    branchSetID="bs1">
+                                    branchSetID="bs2">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>123.45</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -394,7 +394,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
-                                    branchSetID="bs1">
+                                    branchSetID="bs2">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>123.45z</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -698,8 +698,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
-                                    branchSetID="bs1"
+                <logicTreeBranchSet
+                 uncertaintyType="characteristicFaultGeometryAbsolute"
+                                    branchSetID="bs2"
                                     applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
@@ -755,7 +756,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                   </logicTreeBranch>
                 </logicTreeBranchSet>
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-                                    branchSetID="bs1" applyToSources="src01"
+                                    branchSetID="bs2" applyToSources="src01"
                                     applyToBranches="b1">
                   <logicTreeBranch branchID="b3">
                     <uncertaintyModel>1 2</uncertaintyModel>
@@ -763,7 +764,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                   </logicTreeBranch>
                 </logicTreeBranchSet>
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-                                    branchSetID="bs1" applyToSources="src01"
+                                    branchSetID="bs3" applyToSources="src01"
                                     applyToBranches="b2">
                   <logicTreeBranch branchID="b4">
                     <uncertaintyModel>1 2</uncertaintyModel>
@@ -792,7 +793,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="gmpeModel"
-                                    branchSetID="bs1">
+                                    branchSetID="bs2">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>CL_2002_AttenRel</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -850,7 +851,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
-                                    branchSetID="bs1"
+                                    branchSetID="bs2"
                                     applyToSources="bzzz">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>123</uncertaintyModel>
@@ -1019,7 +1020,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               <uncertaintyWeight>1.0</uncertaintyWeight>
             </logicTreeBranch>
           </logicTreeBranchSet>
-          <logicTreeBranchSet branchSetID="bs1" uncertaintyType="bGRRelative">
+          <logicTreeBranchSet branchSetID="bs2" uncertaintyType="bGRRelative">
             <logicTreeBranch branchID="b71">
                  <uncertaintyModel> 7.7 </uncertaintyModel>
                  <uncertaintyWeight>0.333</uncertaintyWeight>
@@ -1194,7 +1195,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                     </logicTreeBranch>
                 </logicTreeBranchSet>
                 <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-                                    branchSetID="bs2"
+                                    branchSetID="bs3"
                                     applyToSources="src01"
                                     applyToBranches="sb2">
                     <logicTreeBranch branchID="b3">
@@ -1920,7 +1921,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, gsim_lt.InvalidLogicTree,
+            xml, nrml.DuplicatedID,
             "Duplicated branchSetID bs1")
 
     def test_branch_id_not_unique(self):
