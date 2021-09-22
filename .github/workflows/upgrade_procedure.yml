@@ -40,7 +40,10 @@ jobs:
       run: |
          if [ "$RUNNER_OS" == "Windows" ]; then
             echo "$RUNNER_OS"
-            C:\Users\runneradmin\openquake\Scripts\activate.ps1 
+            dir
+            pwd
+            #C:\Users\runneradmin\openquake\Scripts\activate.ps1 
+            source ~/openquake/bin/activate
             oq --version
             oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
          else
