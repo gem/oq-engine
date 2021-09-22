@@ -1071,10 +1071,11 @@ def view_branch_ids(token, dstore):
     full_lt = dstore['full_lt']
     tbl = []
     for k, v in full_lt.source_model_lt.shortener.items():
-        tbl.append(('source_model_lt', v, k))
-    for k, v in full_lt.gsim_lt.shortener.items():
-        tbl.append(('gsim_lt', v, k))
-    return numpy.array(tbl, dt('logic_tree abbrev branch_id'))
+        tbl.append((k, v, 'NA'))
+    gsims = sum(full_lt.gsim_lt.values.values(), [])
+    for g, (k, v) in enumerate(full_lt.gsim_lt.shortener.items()):
+        tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
+    return numpy.array(tbl, dt('branch_id abbrev gsim'))
 
 
 @view.add('rupture')
