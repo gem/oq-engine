@@ -745,9 +745,10 @@ def _check_csm(csm, oqparam, h5):
     try:
         sitecol = get_site_collection(oqparam, h5)
     except Exception:  # missing sites.csv in test_case_1_ruptures
-        csm.sitecol = None
+        sitecol = None
+    csm.sitecol = sitecol
+    if sitecol is None:
         return
-
     srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
     logging.info('Checking the sources bounding box')
     lons = []
@@ -774,7 +775,6 @@ def _check_csm(csm, oqparam, h5):
     sids = sitecol.within_bbox(bbox)
     if len(sids) == 0:
         raise RuntimeError('All sources were discarded!?')
-    csm.sitecol = sitecol
 
 
 def get_composite_source_model(oqparam, h5=None):
