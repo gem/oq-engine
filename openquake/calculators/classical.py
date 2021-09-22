@@ -190,9 +190,12 @@ def preclassical(srcs, srcfilter, params, monitor):
         # this can be slow
         for src in srcs:
             t0 = time.time()
-            src.nsites = len(srcfilter.close_sids(src))
+            if srcfilter.sitecol:
+                src.nsites = len(srcfilter.close_sids(src))
+            else:
+                src.nsites = 1  # don't discard
             # NB: it is crucial to split only the close sources, for
-            # performance reasons (think of Ecuador in SAM)
+            # performance reasons (think of Ecuador in SAM)q
             splits = split_source(src) if (
                 params['split_sources'] and src.nsites) else [src]
             sources.extend(splits)
