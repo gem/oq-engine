@@ -658,6 +658,23 @@ class SourceModelLogicTree(object):
         """
         return self.root_branchset.get_bset_values(sm_rlz.lt_path)[1:]
 
+    # used in the sslt page of the advanced manual
+    def decompose(self):
+        """
+        If the logic tree is source specific, returns a dictionary
+        source_id -> branchsets
+        """
+        assert self.is_source_specific
+        # then there is a single source model
+        [src_ids] = self.source_ids.values()
+        bysrc = AccumDict(accum=[])  # src_id->branchsets
+        bsets = self.branchsets[1:]
+        for src_id in src_ids:
+            for bset in bsets:
+                if bset.filters['applyToSources'] == [src_id]:
+                    bysrc[src_id].append(bset)
+        return bysrc
+
     # SourceModelLogicTree
     def __toh5__(self):
         tbl = []

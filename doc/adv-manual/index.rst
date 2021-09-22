@@ -19,6 +19,7 @@ Contents:
    hazard
    risk
    effective-realizations
+   sslt
    sampling
    rupture-sampling
    event-based-with-large-logic-tree
