@@ -55,7 +55,8 @@ jobs:
         sleep 5
         sudo -H python install.py server --version=3.12
         source /opt/openquake/bin/activate
-        systemctl status openquake-dbserver
+        journalctl -xe -u openquake-dbserver
+        sleep 5
         oq --version
         oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
       shell: bash
