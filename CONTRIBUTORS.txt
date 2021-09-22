@@ -64,6 +64,7 @@ Claudia Mascandola      December 2020
 Nicolas Schmid          March 2021
 Stanley Sayson          July 2021
 Nico Kuehn              July 2021
+Elena Manea             August 2021
 
 Project management
 ------------------
