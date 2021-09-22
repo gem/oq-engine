@@ -18,7 +18,7 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
           #os: [macos-latest, windows-latest, ubuntu-latest]
         python-version: [3.8]
     #
@@ -34,25 +34,20 @@ jobs:
       # Use script to install engine and not the pip install .
     - name: Install engine with install script
       run: |
-        #
         pwd
         python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
-        python install.py devel
+        python install.py server --version=3.11.4
       shell: bash
     - name: Run demos to test installation
       run: |
-         if [ "$RUNNER_OS" == "Windows" ]; then
-            echo "$RUNNER_OS"
-            pwd
-            #C:\Users\runneradmin\openquake\Scripts\activate.ps1 
-            c:\
-            cd C:\
-            dir
-            C:\Users\runneradmin\openquake\Scripts\oq engine --run C:\Users\runneradmin\openquake\demos\hazard\AreaSourceClassicalPSHA\job.ini
-         else
-            echo "$RUNNER_OS"
-            source ~/openquake/bin/activate
-            oq --version
-            oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
-         fi
+        echo "$RUNNER_OS"
+        source ~/openquake/bin/activate
+        oq --version
+        oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+      shell: bash
+    - name: Upgrade engine with install script
+      run: |
+        pwd
+        python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
+        python install.py server --version=3.12
       shell: bash
