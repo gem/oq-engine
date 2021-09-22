@@ -28,7 +28,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt, gsim_lt, nrml
+from openquake.hazardlib import geo, lt, gsim_lt
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
@@ -207,7 +207,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                   </logicTreeBranch>
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
                                     branchSetID="bs2">
                   <logicTreeBranch branchID="b2">
@@ -424,7 +424,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="incrementalMFDAbsolute"
-                                    branchSetID="bs1">
+                                    branchSetID="bs2">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <incrementalMFD binWidth="0.1" minMag="8.0">
@@ -698,8 +698,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet
-                 uncertaintyType="characteristicFaultGeometryAbsolute"
+                <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
                                     branchSetID="bs2"
                                     applyToSources="src01">
                   <logicTreeBranch branchID="b2">
@@ -851,7 +850,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
-                                    branchSetID="bs2"
+                                    branchSetID="bs1"
                                     applyToSources="bzzz">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>123</uncertaintyModel>
@@ -1921,7 +1920,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, nrml.DuplicatedID,
+            xml, gsim_lt.InvalidLogicTree,
             "Duplicated branchSetID bs1")
 
     def test_branch_id_not_unique(self):
