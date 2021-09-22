@@ -44,7 +44,9 @@ jobs:
             dir
             pwd
             #C:\Users\runneradmin\openquake\Scripts\activate.ps1 
-            source ~/openquake/bin/activate
+            cd openquake
+            ls
+            source ./openquake/bin/activate
             oq --version
             oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
          else
