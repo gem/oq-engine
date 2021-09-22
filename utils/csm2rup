@@ -76,8 +76,8 @@ def main(job_ini):
         # change some parameter to improve the performance of point sources
         oq.calculation_mode = 'preclassical'
         oq.pointsource_distance = MagDepDistance.new('0')
-        oq.ps_grid_spacing = 75.
-        del oq.inputs['sites']
+        for k in ('sites', 'site_model'):
+            oq.inputs.pop(k, None)
         calc = base.calculators(oq, log.calc_id)
         calc.run()  # build the CompositeSourceModel
         csm2rup(calc.csm, calc.datastore)

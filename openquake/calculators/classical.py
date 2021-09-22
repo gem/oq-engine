@@ -80,7 +80,7 @@ def run_preclassical(csm, oqparam, h5):
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
-        src.nsites = len(csm.sitecol)
+        src.nsites = len(csm.sitecol) if csm.sitecol else 1
 
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
