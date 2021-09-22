@@ -49,3 +49,4 @@ jobs:
             oq --version
             oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
          fi
+      shell: bash
