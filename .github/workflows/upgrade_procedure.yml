@@ -18,8 +18,7 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
-          #os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
         python-version: [3.8]
     #
     steps:
@@ -39,6 +38,15 @@ jobs:
         python3 install.py devel
     - name: Run demos to test installation
       run: |
-        source ~/openquake/bin/activate
-        oq --version
-        oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+         if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "$RUNNER_OS"
+            C:\Users\runneradmin\openquake\Scripts\activate.ps1 
+            oq --version
+            oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+         else
+            echo "$RUNNER_OS"
+            source ~/openquake/bin/activate
+            oq --version
+            oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+         fi
+        if 
