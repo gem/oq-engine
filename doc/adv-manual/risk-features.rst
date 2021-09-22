@@ -305,17 +305,18 @@ grid is on the sea or on high mountains, so actually there are
 around ~500 effective sites. Computing a correlation matrix of size
 500 x 500 is feasible, so the risk computation can be performed.
 
-Clearly in situations in which the number of hazard sites is too large,
-approximations will have to be made such as using a larger `region_grid_spacing`.
-Disabling spatial AND cross correlation makes it possible run much larger 
-calculations. The performance can be further increased by not using a 
-``truncation_level``.
+Clearly in situations in which the number of hazard sites is too
+large, approximations will have to be made such as using a larger
+`region_grid_spacing`.  Disabling spatial AND cross correlation makes
+it possible run much larger calculations. The performance can be
+further increased by not using a ``truncation_level``.
 
-When applying correlation, a soft cap on the size of the calculations is 
-defined. This is done and modifiable through the parameter ``cholesky_limit`` which
-refers to the number of sites multiplied by the number of intensity measure types 
-used in the vulnerability model. Raising that limit is at your own peril, as you 
-might run out of memory during calculation or may encounter instabilities in the 
+When applying correlation, a soft cap on the size of the calculations
+is defined. This is done and modifiable through the parameter
+``cholesky_limit`` which refers to the number of sites multiplied by
+the number of intensity measure types used in the vulnerability
+model. Raising that limit is at your own peril, as you might run out
+of memory during calculation or may encounter instabilities in the
 calculations as described above.
 
 If the ground motion values or the standard deviations are particularly

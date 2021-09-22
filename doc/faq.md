@@ -241,7 +241,7 @@ urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certifica
 Please have a look at `/Applications/Python 3.6/ReadMe.rtf` for possible solutions. If unsure run from a terminal the following command:
 
 ```bash
-sudo /Applications/Python\ 3.6/install_certificates.command
+sudo /Applications/Python\ 3.6/install_certificates.command  # NB: use the appropriate Python version!
 ```
 
 ******

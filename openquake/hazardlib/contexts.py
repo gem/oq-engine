@@ -147,6 +147,21 @@ def use_recarray(gsims):
                for gsim in gsims)
 
 
+def csdict(M, N, P, start, stop):
+    """
+    :param M: number of IMTs
+    :param N: number of sites
+    :param P: number of IMLs
+    :param start: index
+    :param stop: index > start
+    """
+    ddic = {}
+    for _g in range(start, stop):
+        ddic[_g] = AccumDict({'_c': numpy.zeros((M, N, 2, P)),
+                              '_s': numpy.zeros((N, P))})
+    return ddic
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -592,42 +607,61 @@ class ContextMaker(object):
     def get_cs_contrib(self, ctxs, imti, imls):
         """
         :param ctxs:
-           list of single-site contexts
+           list of contexts defined on N sites
         :param imti:
             IMT index in the range 0..M-1
         :param imls:
             P intensity measure levels for the IMT specified by the index
         :returns:
-            two arrays num, denum of shape (P, G, 2, M) and (P, G) respectively
+            a dictionary g_ -> key -> array where g_ is an index,
+            key is the string '_c' or '_s',  and the arrays have shape
+            (M, N, 2, P) or (N, P) respectively.
 
         Compute the contributions to the conditional spectra, in a form
         suitable for later composition.
         """
         assert self.tom
-        assert all(len(ctx.sids) == 1 for ctx in ctxs)
+        N = len(ctxs[0].sids)
+        assert all(len(ctx) == N for ctx in ctxs[1:])
+        C = len(ctxs)
         G = len(self.gsims)
         M = len(self.imtls)
         P = len(imls)
-        num = numpy.zeros((P, G, 2, M))
-        mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)
+        out = csdict(M, N, P, self.start, self.start + G)
+        mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)  # (G, 2, M, N*C)
         imt_ref = self.imts[imti]
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
-        ms = range(len(self.imts))
+        m_range = range(len(self.imts))
         # probs = 1 - exp(-occurrence_rates*time_span)
         probs = self.tom.get_probability_one_or_more_occurrences(
-            numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape N
-        denum = numpy.zeros((P, G))
-        for p in range(P):
-            for g, (mu, sig) in enumerate(mean_stds):
-                eps = (imls[p] - mu[imti]) / sig[imti]  # shape N
-                poes = _truncnorm_sf(self.trunclevel, eps)  # shape N
-                ws = -numpy.log((1. - probs) ** poes) / self.investigation_time
-                denum[p, g] = ws.sum()  # weights not summing up to 1
-                for m in ms:
-                    num[p, g, 0, m] = ws @ (mu[m] + rho[m] * eps * sig[m])
-                    num[p, g, 1, m] = ws @ (sig[m]**2 * (1. - rho[m]**2))
-        return num, denum
+            numpy.array([ctx.occurrence_rate for ctx in ctxs]))  # shape C
+        for n in range(N):
+            # NB: to understand the code below, consider the case with
+            # N=3 sites and C=2 contexts; then the indices N*C are
+            # 0: first site
+            # 1: second site
+            # 2: third site
+            # 3: first site
+            # 4: second site
+            # 5: third site
+            # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
+            slc = slice(n, N * C, N)  # C indices
+            for g, (mu_, sig_) in enumerate(mean_stds):
+                mu = mu_[:, slc]  # shape (M, C)
+                sig = sig_[:, slc]  # shape (M, C)
+                c = out[self.start + g]['_c']
+                s = out[self.start + g]['_s']
+                for p in range(P):
+                    eps = (imls[p] - mu[imti]) / sig[imti]  # shape C
+                    poes = _truncnorm_sf(self.trunclevel, eps)  # shape C
+                    ws = -numpy.log(
+                        (1. - probs) ** poes) / self.investigation_time
+                    s[n, p] = ws.sum()  # weights not summing up to 1
+                    for m in m_range:
+                        c[m, n, 0, p] = ws @ (mu[m] + rho[m] * eps * sig[m])
+                        c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
+        return out
 
     def gen_poes(self, ctxs):
         """

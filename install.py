@@ -32,6 +32,7 @@ The calculations will NOT be removed since they live in
 You have to remove the data directories manually, if you so wish.
 """
 import os
+import re
 import sys
 import json
 import glob
@@ -140,10 +141,9 @@ class devel(user):
 
 
 PACKAGES = '''It looks like you have an installation from packages.
-Please remove it with `sudo apt remove python3-oq-engine`
-on Debian derivatives or with `sudo yum remove python3-oq-engine`
-on Red Hat derivatives. If it does not work, just remove everything with
-sudo rm -rf /opt/openquake /etc/openquake/openquake.cfg /usr/bin/oq
+Please remove it with `sudo apt remove oq-python38` on Debian derivatives
+or with `sudo yum remove python3-oq-engine` on Red Hat derivatives.
+Then give the command `sudo rm -rf /opt/openquake /etc/openquake/openquake.cfg`
 '''
 SERVICE = '''\
 [Unit]
@@ -235,9 +235,8 @@ def before_checks(inst, port, remove, usage):
             inst.exit()
 
     # check if there is an installation from packages
-    if (inst is server and os.path.exists('/etc/openquake/openquake.cfg')
-        or (inst is devel_server and
-            os.path.exists('/etc/openquake/openquake.cfg'))):
+    if inst in (server, devel_server) and os.path.exists(
+            '/etc/openquake/openquake.cfg'):
         sys.exit(PACKAGES)
     if ((inst is server and os.path.exists(inst.OQ) and
             os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV) or
@@ -252,7 +251,7 @@ def latest_commit(branch):
     url = 'https://api.github.com/repos/GEM/oq-engine/commits/' + branch
     with urlopen(url) as f:
         js = json.loads(f.read())
-    return js['commit']['url'].rsplit('/')[-1]
+    return js['sha']
 
 
 def fix_version(commit, venv):
@@ -333,14 +332,14 @@ def install(inst, version):
     elif version is None:  # install the stable version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine'])
-    elif '.' in version:  # install an official version
+    elif re.match(r'\d+(\.\d+)+', version):  # install an official version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)
         print('Installing commit', commit)
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
-                               '--upgrade', GITBRANCH % version])
+                               '--upgrade', GITBRANCH % commit])
         fix_version(commit, inst.VENV)
 
     install_standalone(inst.VENV)
@@ -381,8 +380,8 @@ def install(inst, version):
                   '/bin/activate')
 
     # create systemd services
-    if ((inst is server and os.path.exists('/usr/lib/systemd/system')) or
-       (inst is devel_server and os.path.exists('/usr/lib/systemd/system'))):
+    if ((inst is server and os.path.exists('/run/systemd/system')) or
+       (inst is devel_server and os.path.exists('/run/systemd/system'))):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/' + service_name

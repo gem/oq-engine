@@ -352,7 +352,7 @@ class TagCollection(object):
         self.tagnames = [decode(name) for name in attrs['tagnames']]
         sizes = []
         for tagname in dic:
-            setattr(self, tagname, dic[tagname][()])
+            setattr(self, tagname, decode(dic[tagname][()]))
             sizes.append(len(dic[tagname]))
         # sanity check to protect against /home/michele/oqdata/calc_10826.hdf5
         numpy.testing.assert_equal(sorted(sizes), sorted(attrs['tagsizes']))

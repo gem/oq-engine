@@ -359,20 +359,28 @@ def export_hmaps_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('cond-spectra', 'csv'))
+@export.add(('cs-stats', 'csv'))
 def export_cond_spectra(ekey, dstore):
-    dset = dstore[ekey[0]]  # shape (P, 2, M)
+    sitecol = dstore['sitecol']
+    dset = dstore[ekey[0]]  # shape (1, M, N, 2, P)
     periods = dset.attrs['periods']
     imls = dset.attrs['imls']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fnames = []
-    for p, iml in enumerate(imls):
-        fname = dstore.export_path('conditional-spectrum-%d.csv' % p)
-        df = pandas.DataFrame(dict(sa_period=periods,
-                                   spectrum_val=dset[p, 0],
-                                   spectrum_std=dset[p, 1]))
+    for n in sitecol.sids:
+        spe = dset[0, :, n, 0]  # shape M, P
+        std = dset[0, :, n, 1]  # shape M, P
+        fname = dstore.export_path('conditional-spectrum-%d.csv' % n)
+        dic = dict(sa_period=periods)
+        for p in range(len(imls)):
+            dic['val%d' % p] = spe[:, p]
+            dic['std%d' % p] = std[:, p]
+        df = pandas.DataFrame(dic)
         comment = dstore.metadata.copy()
-        comment['iml'] = iml
+        comment['imls'] = list(imls)
+        comment['site_id'] = n
+        comment['lon'] = sitecol.lons[n]
+        comment['lat'] = sitecol.lats[n]
         writer.save(df, fname, comment=comment)
         fnames.append(fname)
     return fnames
@@ -488,18 +496,18 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'),
-            ('disagg', 'xml'))
-def export_disagg_csv_xml(ekey, dstore):
+@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'))
+def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     hmap4 = dstore['hmap4']
     rlzs = dstore['full_lt'].get_realizations()
+    best_rlzs = dstore['best_rlzs'][:]
     N, M, P, Z = hmap4.shape
     imts = list(oq.imtls)
     fnames = []
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
-    ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
+    ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d'
     if ekey[0] == 'disagg_traditional':
         ex += '&traditional=1'
         trad = '-traditional'
@@ -507,8 +515,16 @@ def export_disagg_csv_xml(ekey, dstore):
         trad = ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     metadata = dstore.metadata
+    poes_disagg = ['nan'] * P
+    for p in range(P):
+        try:
+            poes_disagg[p] = str(oq.poes_disagg[p])
+        except IndexError:
+            pass
     for s in range(N):
         lon, lat = sitecol.lons[s], sitecol.lats[s]
+        weights = numpy.array([rlzs[r].weight['weight'] for r in best_rlzs[s]])
+        weights /= weights.sum()  # normalize to 1
         metadata.update(investigation_time=oq.investigation_time,
                         mag_bin_edges=bins['Mag'].tolist(),
                         dist_bin_edges=bins['Dist'].tolist(),
@@ -516,23 +532,26 @@ def export_disagg_csv_xml(ekey, dstore):
                         lat_bin_edges=bins['Lat'][s].tolist(),
                         eps_bin_edges=bins['Eps'].tolist(),
                         tectonic_region_types=decode(bins['TRT'].tolist()),
+                        rlz_ids=best_rlzs[s].tolist(),
+                        weights=weights.tolist(),
                         lon=lon, lat=lat)
         for k in oq.disagg_outputs:
-            header = ['imt', 'iml', 'rlz'] + k.lower().split('_') + ['poe']
+            splits = k.lower().split('_')
+            header = (['imt', 'poe'] + splits +
+                      ['poe%d' % z for z in range(Z)])
             values = []
             nonzeros = []
-            for m, p, z in iproduct(M, P, Z):
+            for m, p in iproduct(M, P):
                 imt = imts[m]
-                r = hmap4.rlzs[s, z]
-                rlz = rlzs[r].ordinal
-                iml = hmap4[s, m, p, z]
-                aw = extract(dstore, ex % (k, imt, s, p, z))
+                aw = extract(dstore, ex % (k, imt, s, p))
+                # for instance for Mag_Dist [(mag, dist, poe0, poe1), ...]
+                poes = aw[:, len(splits):]
                 if 'trt' in header:
                     nonzeros.append(True)
                 else:
-                    nonzeros.append(aw[:, -1].any())  # nonzero poes
+                    nonzeros.append(poes.any())  # nonzero poes
                 for row in aw:
-                    values.append((imt, iml, rlz) + tuple(row))
+                    values.append([imt, poes_disagg[p]] + list(row))
             if any(nonzeros):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}
