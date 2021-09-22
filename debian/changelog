@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check against duplicated branchset IDs
   * Improved error checking when reading the taxonomy mapping file
   * Renamed conversion -> risk_id in the header of the taxonomy mapping file
 
