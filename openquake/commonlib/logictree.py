@@ -658,6 +658,7 @@ class SourceModelLogicTree(object):
         """
         return self.root_branchset.get_bset_values(sm_rlz.lt_path)[1:]
 
+    # used in the sslt page of the advanced manual
     def decompose(self):
         """
         If the logic tree is source specific, returns a dictionary
