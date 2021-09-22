@@ -452,6 +452,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
+        if self.oqparam.calculation_mode == 'preclassical':
+            return
         poes_shape = G, N, L = len(rlzs_by_g), self.N, self.oqparam.imtls.size
         self.check_memory(G, N, L, [len(rbs) for rbs in rlzs_by_gsim_list])
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1

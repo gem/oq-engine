@@ -742,36 +742,38 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
     # build a smart SourceFilter
-    sitecol = get_site_collection(oqparam, h5)
+    try:
+        sitecol = get_site_collection(oqparam, h5)
+    except Exception:  # missing sites.csv in test_case_1_ruptures
+        csm.sitecol = None
+        return
+
     srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
-
-    if sitecol:  # missing in test_case_1_ruptures
-        logging.info('Checking the sources bounding box')
-        lons = []
-        lats = []
-        for src in srcs:
-            try:
-                box = srcfilter.get_enlarged_box(src)
-            except BBoxError as exc:
-                logging.error(exc)
-                continue
-            lons.append(box[0])
-            lats.append(box[1])
-            lons.append(box[2])
-            lats.append(box[3])
-        if cross_idl(*(list(sitecol.lons) + lons)):
-            lons = numpy.array(lons) % 360
-        else:
-            lons = numpy.array(lons)
-        bbox = (lons.min(), min(lats), lons.max(), max(lats))
-        if bbox[2] - bbox[0] > 180:
-            raise BBoxError(
-                'The bounding box of the sources is larger than half '
-                'the globe: %d degrees' % (bbox[2] - bbox[0]))
-        sids = sitecol.within_bbox(bbox)
-        if len(sids) == 0:
-            raise RuntimeError('All sources were discarded!?')
-
+    logging.info('Checking the sources bounding box')
+    lons = []
+    lats = []
+    for src in srcs:
+        try:
+            box = srcfilter.get_enlarged_box(src)
+        except BBoxError as exc:
+            logging.error(exc)
+            continue
+        lons.append(box[0])
+        lats.append(box[1])
+        lons.append(box[2])
+        lats.append(box[3])
+    if cross_idl(*(list(sitecol.lons) + lons)):
+        lons = numpy.array(lons) % 360
+    else:
+        lons = numpy.array(lons)
+    bbox = (lons.min(), min(lats), lons.max(), max(lats))
+    if bbox[2] - bbox[0] > 180:
+        raise BBoxError(
+            'The bounding box of the sources is larger than half '
+            'the globe: %d degrees' % (bbox[2] - bbox[0]))
+    sids = sitecol.within_bbox(bbox)
+    if len(sids) == 0:
+        raise RuntimeError('All sources were discarded!?')
     csm.sitecol = sitecol
 
 
