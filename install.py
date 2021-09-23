@@ -83,8 +83,8 @@ class server:
 previous installation. 
 On linux please stop the server with the command
 `sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`
-On Windows please use Task Manager to quit the process
-On macOS please use Activity Monitor to quit the process'''
+On Windows please use Task Manager to stop the process
+On macOS please use Activity Monitor to stop the process'''
 
 
 class devel_server:
