@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2021 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import csv
+import codecs
+from openquake.baselib import sap, node, performance, general
+from openquake.hazardlib import nrml
+from openquake.commonlib import readinput
+
+
+def cons2csv(job_ini):
+    """
+    Convert a consequence model in XML format into CSV format
+    """
+    assert job_ini.endswith('.ini'), job_ini
+    oq = readinput.get_oqparam(job_ini)
+    crmodel = readinput.get_crmodel(oq)
+    rows = []
+    for risk in crmodel.risklist:
+        if risk.kind == 'consequence':
+            rows.append([risk.id, 'losses', risk.loss_type] + list(risk))
+    header = (['taxonomy', 'consequence', 'loss_type'] +
+              crmodel.damage_states[1:])
+    csvname = os.path.join(os.path.dirname(job_ini), 'consequences.csv')
+    print('Saving %s' % csvname)
+    with codecs.open(csvname, 'wb', encoding='utf8') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for row in rows:
+            writer.writerow(row)
+
+cons2csv.job_ini = 'path to the job.ini file'
+
+
+if __name__ == '__main__':
+    sap.run(cons2csv)

@@ -1666,8 +1666,11 @@ class OqParam(valid.ParamSet):
         and number_of_logic_tree_samples must be greater than 1.
         """
         if self.calculation_mode == 'event_based_damage':
+            ini = self.inputs['job_ini']
+            if self.number_of_logic_tree_samples == 0:
+                raise InvalidFile('%s: event_based_damage does not support '
+                                  'full enumeration, use sampling' % ini)
             if not self.investigation_time:
-                ini = self.inputs['job_ini']
                 raise InvalidFile('Missing investigation_time in %s' % ini)
             self.collect_rlzs = True
             return True

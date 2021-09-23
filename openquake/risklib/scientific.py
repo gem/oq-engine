@@ -791,6 +791,7 @@ class MultiEventRNG(object):
         div = numpy.sqrt(1 + covs ** 2)
         return means * numpy.exp(eps * sigma) / div
 
+    # NB: asset correlation is ignored
     def beta(self, eids, means, covs):
         """
         :param eids: event IDs

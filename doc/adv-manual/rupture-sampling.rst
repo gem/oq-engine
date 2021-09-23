@@ -218,5 +218,5 @@ but the rate will tend to 9 when the effective time will tend to infinity).
 
 NB: just to be clear, normally realizations are not in one-to-one
 correspondence with GMPEs. In this example, it is true because there is
-a single tectonic region type. However, often there are multiple tectonic
+a single tectonic region type. However, usually there are multiple tectonic
 region types, and a realization is associated to a tuple of GMPEs.

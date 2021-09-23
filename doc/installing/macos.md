@@ -33,7 +33,7 @@ curl https://raw.githubusercontent.com/gem/oq-engine/master/install.py -O
 From the Terminal app (or using iTerm) run:
 
 ```zsh
-python3 install.py user
+python3 install.py user --version=3.11  # or another version
 ```
 
 The code is installed in ~/openquake while the calculation data will be stored in ~/oqdata.
