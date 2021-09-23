@@ -137,9 +137,7 @@ the ``agg_id`` field with the following command::
  7       Unreinforced-Brick-Masonry  Mid-Western
  8                         *total*      *total*
 
-Armed with that knowledge it is pretty easy to understand the ``risk_by_event`` table:
-
-.. python:
+Armed with that knowledge it is pretty easy to understand the ``risk_by_event`` table::
 
  >> from openquake.commonlib.datastore import read
  >> dstore = read(-1)  # the latest calculation
