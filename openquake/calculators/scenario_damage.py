@@ -119,12 +119,12 @@ def scenario_damage(riskinputs, param, monitor):
                         aid = asset['ordinal']
                         if float_dmg_dist:
                             damages = fractions * asset['value-number']
-                            if sec_sims:
-                                run_sec_sims(
-                                    damages, gmf_df, sec_sims, seed + aid)
                         else:
                             damages = bin_ddd(
                                 fractions, asset['value-number'], seed + aid)
+                        if sec_sims:
+                            run_sec_sims(
+                                damages, gmf_df, sec_sims, seed + aid)
                         # damages has shape E', D with E' == len(eids)
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for e, ddd in enumerate(damages):
