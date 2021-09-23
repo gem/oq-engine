@@ -1,0 +1,62 @@
+name: Upgrade procedure for engine from 3.11 to 3.12
+
+on:
+  schedule:
+    - cron: "30 12 * * *"
+  push:
+    branches: [ ci ]
+
+jobs:
+
+  install_and_upgrade:
+    runs-on: ${{ matrix.os }}
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+          #os: [macos-latest, windows-latest, ubuntu-latest]
+        python-version: [3.8]
+    #
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python  ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+       # You can test your matrix by printing the current Python version
+    - name: Display Python version
+      run: python -c "import sys; print(sys.version)"
+      # Use script to install engine and not the pip install .
+    - name: Install engine with install script
+      run: |
+        pwd
+        python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
+        sudo -H python install.py server --version=3.11.4
+      shell: bash
+    - name: Run demos to test installation
+      run: |
+        echo "$RUNNER_OS"
+        source /opt/openquake/bin/activate
+        oq --version
+        oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+      shell: bash
+    - name: Upgrade engine with install script
+      run: |
+        pwd
+        source /opt/openquake/bin/activate
+        oq --version
+        deactivate
+        sudo -H python install.py server --remove
+        sleep 5
+        sudo -H python install.py server --version=3.12
+        source /opt/openquake/bin/activate
+        journalctl -xe -u openquake-dbserver
+        sleep 5
+        oq --version
+        oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+      shell: bash

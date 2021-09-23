@@ -80,8 +80,11 @@ class server:
     @classmethod
     def exit(cls):
         return f'''There is a DbServer running on port {cls.DBPORT} from a
-previous installation. Please stop the server with the commandx
-`sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`'''
+previous installation. 
+On linux please stop the server with the command
+`sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`
+On Windows please use Task Manager to stop the process
+On macOS please use Activity Monitor to stop the process'''
 
 
 class devel_server:
@@ -387,7 +390,7 @@ def install(inst, version):
             service_path = '/etc/systemd/system/' + service_name
             afterservice = 'network.target'
             if 'webui' in service:
-                afterservice = 'network.target dbserver.service'
+                afterservice = 'network.target openquake-dbserver'
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
