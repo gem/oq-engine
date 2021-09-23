@@ -80,7 +80,7 @@ def run_preclassical(csm, oqparam, h5):
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
-        src.nsites = len(csm.sitecol)
+        src.nsites = len(csm.sitecol) if csm.sitecol else 1
 
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
@@ -190,9 +190,12 @@ def preclassical(srcs, srcfilter, params, monitor):
         # this can be slow
         for src in srcs:
             t0 = time.time()
-            src.nsites = len(srcfilter.close_sids(src))
+            if srcfilter.sitecol:
+                src.nsites = len(srcfilter.close_sids(src))
+            else:
+                src.nsites = 1  # don't discard
             # NB: it is crucial to split only the close sources, for
-            # performance reasons (think of Ecuador in SAM)
+            # performance reasons (think of Ecuador in SAM)q
             splits = split_source(src) if (
                 params['split_sources'] and src.nsites) else [src]
             sources.extend(splits)
@@ -208,7 +211,7 @@ def preclassical(srcs, srcfilter, params, monitor):
             if not src.nsites:  # filtered out
                 src.nsites = EPS
             is_ps = isinstance(src, PointSource)
-            if is_ps:
+            if is_ps and srcfilter.sitecol:
                 # NB: using cKDTree would not help, performance-wise
                 cdist = srcfilter.sitecol.get_cdist(src.location)
                 src.nsites = (cdist <= md + pd).sum() or EPS
@@ -452,6 +455,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
+        if self.oqparam.calculation_mode == 'preclassical':
+            return
         poes_shape = G, N, L = len(rlzs_by_g), self.N, self.oqparam.imtls.size
         self.check_memory(G, N, L, [len(rbs) for rbs in rlzs_by_gsim_list])
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1

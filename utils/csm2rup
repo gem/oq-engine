@@ -8,7 +8,9 @@ import operator
 import numpy
 import pandas
 from openquake.baselib import sap, parallel, general, hdf5
+from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.commonlib import readinput, datastore, logs
+from openquake.calculators import base
 
 MAX_RUPS_PER_SOURCE = 1_000_000_000
 rupfields = dict(
@@ -71,8 +73,14 @@ def main(job_ini):
     """
     with logs.init("job", job_ini) as log:
         oq = log.get_oqparam()
-        csm = readinput.get_composite_source_model(oq)
-        csm2rup(csm, datastore.new(log.calc_id, oq))
+        # change some parameter to improve the performance of point sources
+        oq.calculation_mode = 'preclassical'
+        oq.pointsource_distance = MagDepDistance.new('0')
+        for k in ('sites', 'site_model'):
+            oq.inputs.pop(k, None)
+        calc = base.calculators(oq, log.calc_id)
+        calc.run()  # build the CompositeSourceModel
+        csm2rup(calc.csm, calc.datastore)
 
 
 if __name__ == '__main__':

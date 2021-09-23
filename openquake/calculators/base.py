@@ -368,6 +368,8 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    af = None
+    amplifier = None
 
     def src_filter(self):
         """
@@ -396,7 +398,9 @@ class HazardCalculator(BaseCalculator):
         :returns: the total number of sites
         """
         if hasattr(self, 'sitecol'):
-            return len(self.sitecol.complete) if self.sitecol else None
+            return len(self.sitecol.complete) if self.sitecol else 0
+        if 'sitecol' not in self.datastore:
+            return 0
         return len(self.datastore['sitecol'])
 
     @property
@@ -697,11 +701,14 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if (not oq.imtls and 'shakemap' not in oq.inputs
+        if (oq.calculation_mode == 'preclassical' and
+                'exposure' not in oq.inputs):
+            return
+        elif (not oq.imtls and 'shakemap' not in oq.inputs
                 and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
-        if oq.hazard_calculation_id:
+        elif oq.hazard_calculation_id:
             with datastore.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
                 if ('amplification' in oq.inputs and
@@ -800,7 +807,6 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['sitecol'] = self.sitecol
 
         # store amplification functions if any
-        self.af = None
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
             df = AmplFunction.read_df(oq.inputs['amplification'])
@@ -810,11 +816,8 @@ class HazardCalculator(BaseCalculator):
                 # methodology since the kernel method is currently tested only
                 # for classical PSHA
                 self.af = AmplFunction.from_dframe(df)
-                self.amplifier = None
             else:
                 self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
-        else:
-            self.amplifier = None
 
         # manage secondary perils
         sec_perils = oq.get_sec_perils()

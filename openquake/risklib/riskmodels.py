@@ -129,6 +129,10 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 loss_type = mo.group(1)  # the cost_type in the key
                 # can be occupants, structural, nonstructural, ...
                 rmodel = nrml.to_python(oqparam.inputs[key])
+                if kind == 'consequence':
+                    logging.warning('Consequence models in XML format are '
+                                    'deprecated, please replace %s',
+                                    oqparam.inputs[key])
                 if len(rmodel) == 0:
                     raise InvalidFile('%s is empty!' % oqparam.inputs[key])
                 rmodels[loss_type, kind] = rmodel
