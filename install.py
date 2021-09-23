@@ -80,8 +80,11 @@ class server:
     @classmethod
     def exit(cls):
         return f'''There is a DbServer running on port {cls.DBPORT} from a
-previous installation. Please stop the server with the commandx
-`sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`'''
+previous installation. 
+On linux please stop the server with the command
+`sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`
+On Windows please use Task Manager to quit the process
+On macOS please use Activity Monitor to quit the process'''
 
 
 class devel_server:
