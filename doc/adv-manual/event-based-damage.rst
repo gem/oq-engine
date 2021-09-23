@@ -161,5 +161,5 @@ It should be noted that while there is a CSV exporter for the ``risk_by_event``
 table, it is designed to export only the total aggregation component (i.e.
 ``agg_id=9`` in this example) for reasons of backward compatibility with the
 past, the time when the only aggregation the engine could perform was the
-total aggregation. Since the ``risk_by_event`` table is rather large, it is
+total aggregation. Since the ``risk_by_event`` table can be rather large, it is
 recommmended to interact with it with pandas and not to export in CSV.
