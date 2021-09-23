@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Deprecated XML models in XML format
+  * Event based damage calculations now explicitly require to specify
+    `number_of_logic_tree_samples` (before it assumed a default of 1)
 
   [Elena Manea, Laurentiu Danciu]
   * Added the GMPE Manea (2021)
