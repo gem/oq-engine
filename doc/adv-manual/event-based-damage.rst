@@ -65,7 +65,7 @@ to the fragility model, i.e. ``structural`` will mean that the
 coefficients apply to damage distributions obtained from the fragility
 functions defined in the file ``structural_fragility_model.xml``.
 
-The Event Based Damage demo
+The EventBasedDamage demo
 ----------------------------------------------------------------
 
 Given a source model, a logic tree, an exposure, a set of fragility functions
@@ -163,3 +163,23 @@ table, it is designed to export only the total aggregation component (i.e.
 past, the time when the only aggregation the engine could perform was the
 total aggregation. Since the ``risk_by_event`` table can be rather large, it is
 recommmended to interact with it with pandas and not to export in CSV.
+
+The ScenarioDamage demo
+----------------------------------------------------------------
+
+The demo in ``demos/risk/ScenarioDamage`` is similar to the
+EventBasedDemo (it still refers to Nepal) but it uses a much large
+exposure with 9063 assets and it is split in two parts: you should
+first run ``job_hazard.ini`` and then ``job_risk.ini``.  The first
+calculation will produce 2 sets of 100 ground motion fields each
+(since ``job_hazard.ini`` contains ``number_of_ground_motion_fields =
+100`` and the gsim logic tree file contains two GMPEs). The second
+calculation will use such GMFs to compute aggregated damage
+distributions. Contrarily to event based damage calculations, scenario
+damage calculations normally use full enumeration, since there are
+very few realizations (only two in this example), thus the scenario
+damage calculator is able to distinguish the results by realization.
+
+The main output of a ``scenario_damage`` calculation is still the
+``risk_by_event`` table which has exactly the same form as for
+``event_based_damage`` calculations.
