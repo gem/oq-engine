@@ -1130,3 +1130,17 @@ def view_sum(token, dstore):
             for c, col in enumerate(cols):
                 z[r * L + li][col] = a[c-1] if c > 0 else (r, li)
     return z
+
+
+@view.add('agg_id')
+def view_agg_id(token, dstore):
+    """
+    Show the available aggregations
+    """
+    dfa = dstore.read_df('agg_keys')
+    keys = [col for col in dfa.columns if not col.endswith('_')]
+    df = dfa[keys]
+    totdf = pandas.DataFrame({key: ['*total*'] for key in keys})
+    concat = pandas.concat([df, totdf], ignore_index=True)
+    concat.index.name = 'agg_id'
+    return concat

@@ -34,6 +34,7 @@ Contents:
    special-features
    point-source-gridding
    asset-site-association
+   event-based-damage
    risk-features
    developing
    architecture
