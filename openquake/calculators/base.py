@@ -701,7 +701,8 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if oq.calculation_mode == 'preclassical':
+        if (oq.calculation_mode == 'preclassical' and
+                'exposure' not in oq.inputs):
             return
         elif (not oq.imtls and 'shakemap' not in oq.inputs
                 and oq.ground_motion_fields):
