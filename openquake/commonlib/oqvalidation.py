@@ -1670,7 +1670,7 @@ class OqParam(valid.ParamSet):
             if self.number_of_logic_tree_samples == 0:
                 raise InvalidFile('%s: event_based_damage does not support '
                                   'full enumeration, use sampling' % ini)
-            elif not self.investigation_time:
+            if not self.investigation_time:
                 raise InvalidFile('Missing investigation_time in %s' % ini)
             self.collect_rlzs = True
             return True
