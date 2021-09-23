@@ -157,7 +157,7 @@ Armed with that knowledge it is pretty easy to understand the ``risk_by_event`` 
  30690          8        0   1.660057   0.914153   0.190682   0.039258    5709.204102
  [8066 rows x 7 columns]
 
-It should be noticed that while there is a CSV exporter for the ``risk_by_event``
+It should be noted that while there is a CSV exporter for the ``risk_by_event``
 table, it is designed to export only the total aggregation component (i.e.
 ``agg_id=9`` in this example) for reasons of backward compatibility with the
 past, the time when the only aggregation the engine could perform was the
