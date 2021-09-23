@@ -131,7 +131,7 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 rmodel = nrml.to_python(oqparam.inputs[key])
                 if kind == 'consequence':
                     logging.warning('Consequence models in XML format are '
-                                    'deprecated, please replace %s',
+                                    'deprecated, please replace %s with a CSV',
                                     oqparam.inputs[key])
                 if len(rmodel) == 0:
                     raise InvalidFile('%s is empty!' % oqparam.inputs[key])
