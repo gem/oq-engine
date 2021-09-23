@@ -1,0 +1,6 @@
+taxonomy,consequence,loss_type,slight,moderate,extreme,complete
+Adobe,losses,structural,0.04,0.31,0.6,1.0
+Concrete,losses,structural,0.04,0.31,0.6,1.0
+Stone-Masonry,losses,structural,0.04,0.31,0.6,1.0
+Unreinforced-Brick-Masonry,losses,structural,0.04,0.31,0.6,1.0
+Wood,losses,structural,0.04,0.31,0.6,1.0
