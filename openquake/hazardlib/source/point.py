@@ -226,14 +226,6 @@ class PointSource(ParametricSeismicSource):
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
 
-    def iter_ruptures_fast(self):
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            occurrence_rate = mag_occ_rate
-            yield ParametricProbabilisticRupture(
-                mag, 0, self.tectonic_region_type,
-                None, None, occurrence_rate,
-                self.temporal_occurrence_model)
-
     def avg_ruptures(self):
         """
         Generate one rupture for each magnitude
