@@ -142,13 +142,6 @@ conditional_loss_poes:
   Example: *conditional_loss_poes = 0.01 0.02*.
   Default: empty list
 
-float_dmg_dist:
-  Flag used in scenario_damage calculations to specify that the damage
-  distributions should be stored as floating point numbers (float32)
-  and not as integers (uint32).
-  Example: *float_dmg_dist = true*.
-  Default: False
-
 cholesky_limit:
   When generating the GMFs from a ShakeMap the engine needs to perform a
   Cholesky decomposition of a matrix of size (M x N)^2, being M the number
@@ -201,6 +194,12 @@ discard_trts:
   Used to discard tectonic region types that do not contribute to the hazard.
   Example: *discard_trts = Volcanic*.
   Default: empty list
+
+discrete_damage_distribution
+  Make sure the damage distribution contain only integers (require the "number"
+  field in the exposure to be integer).
+  Example: *discrete_damage_distribution = true*
+  Default: None
 
 distance_bin_width:
   In km, used in disaggregation calculations to specify the distance bins.
@@ -760,8 +759,8 @@ class OqParam(valid.ParamSet):
                                  list(calc.disagg.pmf_map))
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
+    discrete_damage_distribution = valid.Param(valid.boolean, None)
     distance_bin_width = valid.Param(valid.positivefloat)
-    float_dmg_dist = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
     ignore_encoding_errors = valid.Param(valid.boolean, False)
     ignore_master_seed = valid.Param(valid.boolean, False)
