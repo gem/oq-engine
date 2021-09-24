@@ -195,7 +195,7 @@ discard_trts:
   Example: *discard_trts = Volcanic*.
   Default: empty list
 
-discrete_damage_distribution
+discrete_damage_distribution:
   Make sure the damage distribution contain only integers (require the "number"
   field in the exposure to be integer).
   Example: *discrete_damage_distribution = true*
