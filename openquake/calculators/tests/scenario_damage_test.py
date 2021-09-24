@@ -53,8 +53,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         # test with a single event and a missing tag
-        self.assert_ok(case_1, 'job_risk.ini',
-                       calculation_mode='scenario_damage_')
+        self.assert_ok(case_1, 'job_risk.ini')
         view('num_units', self.calc.datastore)
 
         # test agg_damages, 1 realization x 3 damage states
@@ -107,7 +106,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assert_ok(case_4, 'job_haz.ini,job_risk.ini')
 
     def test_case_4b(self):
-        self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
+        self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini',
+                      calculation_mode='scenario_damage_')
 
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
