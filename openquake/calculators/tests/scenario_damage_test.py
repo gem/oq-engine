@@ -35,9 +35,11 @@ aac = numpy.testing.assert_allclose
 
 class ScenarioDamageTestCase(CalculatorTestCase):
 
-    def assert_ok(self, pkg, job_ini, exports='csv', kind='damages'):
+    def assert_ok(self, pkg, job_ini, exports='csv', kind='damages',
+                  calculation_mode='scenario_damage'):
         test_dir = os.path.dirname(pkg.__file__)
-        out = self.run_calc(test_dir, job_ini, exports=exports)
+        out = self.run_calc(test_dir, job_ini, exports=exports,
+                            calculation_mode=calculation_mode)
         try:
             got = out['%s-rlzs' % kind, exports]
         except KeyError:
@@ -51,7 +53,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         # test with a single event and a missing tag
-        self.assert_ok(case_1, 'job_risk.ini')
+        self.assert_ok(case_1, 'job_risk.ini',
+                       calculation_mode='scenario_damage_')
         view('num_units', self.calc.datastore)
 
         # test agg_damages, 1 realization x 3 damage states
