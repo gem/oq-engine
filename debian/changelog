@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added parameter `discrete_damage_distribution` in scenario damage
+    calculations and changed the default behavior
   * Deprecated consequence models in XML format
   * Event based damage calculations now explicitly require to specify
     `number_of_logic_tree_samples` (before it assumed a default of 1)
