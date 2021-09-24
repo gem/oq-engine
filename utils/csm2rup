@@ -31,7 +31,7 @@ def build_rupdict(srcs):
     """
     dic = {f: [] for f in rupfields}
     for src in srcs:
-        if hasattr(src, 'iter_ruptures_fast'):
+        if hasattr(src, 'nodal_plane_distribution'):
             continue
         else:
             irups = src.iter_ruptures()
