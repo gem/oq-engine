@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-An utility to convert source models into ruptures (no sampling)
+An utility to convert source models into ruptures
 """
 import os
 import logging
