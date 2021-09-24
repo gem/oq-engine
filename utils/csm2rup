@@ -41,6 +41,8 @@ def iter_ruptures_fast(src):
             src.temporal_occurrence_model)
 
 
+# NB: this is called after a preclassical calculation, so area sources and
+# multipoint sources are already split
 def build_rupdict(srcs):
     """
     :param srcs: a list of sources of the same source group
