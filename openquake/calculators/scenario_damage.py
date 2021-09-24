@@ -117,9 +117,9 @@ def scenario_damage(riskinputs, param, monitor):
                 for lti, loss_type in enumerate(crmodel.loss_types):
                     for asset, fractions in zip(assets, out[loss_type]):
                         aid = asset['ordinal']
-                        if float_dmg_dist:
+                        if float_dmg_dist:  # fast lane
                             damages = fractions * asset['value-number']
-                        else:
+                        else:  # slow lane
                             damages = bin_ddd(
                                 fractions, asset['value-number'], seed + aid)
                         if sec_sims:
@@ -160,19 +160,22 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         oq = self.oqparam
         super().pre_execute()
         num_floats = floats_in(self.assetcol['value-number'])
-        if num_floats:
-            logging.warning(
+        if oq.discrete_damage_distribution and num_floats:
+            raise ValueError(
                 'The exposure contains %d non-integer asset numbers: '
-                'using floating point damage distributions', num_floats)
+                'you cannot use dicrete_damage_distribution=true', num_floats)
+        elif oq.discrete_damage_distribution is None:
+            self.param['float_dmg_dist'] = bool(num_floats)
+        else:  # explicitly set
+            self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
         bad = self.assetcol['value-number'] > 2**32 - 1
         for ass in self.assetcol[bad]:
             aref = self.assetcol.tagcol.id[ass['id']]
             logging.error("The asset %s has number=%s > 2^32-1!",
                           aref, ass['value-number'])
         self.param['secondary_simulations'] = oq.secondary_simulations
-        self.param['float_dmg_dist'] = oq.float_dmg_dist or num_floats
         self.param['asset_damage_dt'] = self.crmodel.asset_damage_dt(
-            oq.float_dmg_dist or num_floats)
+            self.param['float_dmg_dist'])
         self.param['master_seed'] = oq.master_seed
         self.param['num_events'] = ne = numpy.bincount(  # events by rlz
             self.datastore['events']['rlz_id'], minlength=self.R)
