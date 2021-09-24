@@ -199,7 +199,7 @@ discrete_damage_distribution:
   Make sure the damage distribution contain only integers (require the "number"
   field in the exposure to be integer).
   Example: *discrete_damage_distribution = true*
-  Default: None
+  Default: False
 
 distance_bin_width:
   In km, used in disaggregation calculations to specify the distance bins.
@@ -759,7 +759,7 @@ class OqParam(valid.ParamSet):
                                  list(calc.disagg.pmf_map))
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
-    discrete_damage_distribution = valid.Param(valid.boolean, None)
+    discrete_damage_distribution = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
     ignore_encoding_errors = valid.Param(valid.boolean, False)

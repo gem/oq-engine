@@ -164,10 +164,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             raise ValueError(
                 'The exposure contains %d non-integer asset numbers: '
                 'you cannot use dicrete_damage_distribution=true', num_floats)
-        elif oq.discrete_damage_distribution is None:
-            self.param['float_dmg_dist'] = bool(num_floats)
-        else:  # explicitly set
-            self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
+        self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
         bad = self.assetcol['value-number'] > 2**32 - 1
         for ass in self.assetcol[bad]:
             aref = self.assetcol.tagcol.id[ass['id']]
