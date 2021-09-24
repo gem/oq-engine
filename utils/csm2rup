@@ -31,7 +31,11 @@ def build_rupdict(srcs):
     """
     dic = {f: [] for f in rupfields}
     for src in srcs:
-        for rupno, rup in enumerate(src.iter_ruptures()):
+        if hasattr(src, 'iter_ruptures_fast'):
+            continue
+        else:
+            irups = src.iter_ruptures()
+        for rupno, rup in enumerate(irups):
             assert rupno < MAX_RUPS_PER_SOURCE
             dic['mag'].append(rup.mag)
             dic['occurrence_rate'].append(rup.occurrence_rate)
