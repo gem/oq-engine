@@ -155,7 +155,7 @@ def worst_dmgdist(df, agg_id, loss_id, dic):
         dic[col].append(df[col].to_numpy()[event_id])
 
 
-@base.calculators.add('event_based_damage')
+@base.calculators.add('event_based_damage', 'scenario_damage_')
 class DamageCalculator(EventBasedRiskCalculator):
     """
     Damage calculator
@@ -175,7 +175,8 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         Compute risk from GMFs or ruptures depending on what is stored
         """
-        self.builder = get_loss_builder(self.datastore)  # check
+        if self.oqparam.investigation_time:  # event based
+            self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         self.dmgcsq = zero_dmgcsq(self.assetcol, self.crmodel)
@@ -240,6 +241,8 @@ class DamageCalculator(EventBasedRiskCalculator):
                        rlz=[0],
                        loss_type=oq.loss_names,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
+        if oq.investigation_time is None:  # scenario
+            return
         size = self.datastore.getsize('risk_by_event')
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))

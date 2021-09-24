@@ -377,7 +377,7 @@ class RiskModel(object):
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
 
-    event_based_damage = scenario_damage
+    event_based_damage = scenario_damage_ = scenario_damage
 
 
 # NB: the approach used here relies on the convention of having the
