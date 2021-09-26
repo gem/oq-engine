@@ -110,42 +110,45 @@ def export_agg_curve_rlzs(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by ebrisk
-@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
-def export_agg_losses(ekey, dstore):
+@export.add(('aggrisk', 'csv'))
+def export_aggrisk(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    dskey = ekey[0]
     oq = dstore['oqparam']
-    aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
-    name, value, rlzs_or_stats = _get_data(dstore, dskey, oq.hazard_stats())
-    # value has shape (K, R, L)
+    aggregate_by = oq.aggregate_by
+    tagnames = tuple(aggregate_by)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     tagcol = dstore['assetcol/tagcol']
     aggtags = list(tagcol.get_aggkey(aggregate_by).values())
     aggtags.append(('*total*',) * len(aggregate_by))
     expvalue = dstore['agg_values'][()]  # shape K+1
-    tagnames = tuple(aggregate_by)
     header = ('loss_type',) + tagnames + (
         'loss_value', 'exposed_value', 'loss_ratio')
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time or
                    oq.investigation_time))
-    lnames = oq.loss_names
-    for r, ros in enumerate(rlzs_or_stats):
-        ros = ros if isinstance(ros, str) else 'rlz-%03d' % ros
-        rows = []
-        for (k, l), loss in numpy.ndenumerate(value[:, r]):
-            if loss:  # many tag combinations are missing
-                evalue = expvalue[k][lnames[l]]
-                row = aggtags[k] + (loss, evalue, loss / evalue)
-                rows.append((oq.loss_names[l],) + row)
-        dest = dstore.build_fname(name, ros, 'csv')
-        writer.save(rows, dest, header, comment=md)
-    return writer.getsaved()
+
+    aggrisk = dstore.read_df('aggrisk')
+    dest = dstore.build_fname('aggrisk', '', 'csv')
+    out = general.AccumDict(accum=[])
+    manyrlzs = hasattr(aggrisk, 'rlz_id') and len(aggrisk.rlz_id.unique()) > 1
+    for (agg_id, loss_id), df in aggrisk.groupby(['agg_id', 'loss_id']):
+        n = len(df)
+        loss_type = oq.loss_names[loss_id]
+        out['loss_type'].extend([loss_type] * n)
+        for tagname, tag in zip(tagnames, aggtags[agg_id]):
+            out[tagname].extend([tag] * n)
+        if manyrlzs:
+            out['rlz_id'].extend(df.rlz_id)
+        expval = expvalue[agg_id][loss_type]
+        out['loss_value'].extend(df['loss'])
+        out['exposed_value'].extend([expval] * n)
+        out['loss_ratio'].extend(df['loss'] / expval)
+    writer.save(pandas.DataFrame(out), dest, header, comment=md)
+    return [dest]
 
 
 def _get_data(dstore, dskey, stats):

@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.11.0-git20a22fa1d5', start_date='2020-12-23T11:29:25', checksum=3851096432, investigation_time=None, risk_investigation_time=None"
+#,,,,"generated_by='OpenQuake engine 3.13.0-gitc2b0ad5685', start_date='2021-09-26T09:10:00', checksum=3851096432, investigation_time=None, risk_investigation_time=None"
 loss_type,taxonomy,loss_value,exposed_value,loss_ratio
 structural,LWAL_H1,7.16236E+03,3.19200E+06,2.24385E-03
 structural,W+WLI_H1,1.65240E+04,3.30480E+07,5.00000E-04

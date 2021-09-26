@@ -204,7 +204,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         avg = (losses0 + losses1).sum() / 2
 
         # agg_losses
-        [fname] = export(('agg_losses-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
 
@@ -226,7 +226,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         aac(avg, tot, rtol=1E-6)
 
         # agg_losses
-        [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
 
@@ -545,7 +545,7 @@ agg_id
         # test recomputing aggregate loss curves with post_risk
         # this is starting from a ruptures.csv file
         out = self.run_calc(recompute.__file__, 'job.ini', exports='csv')
-        [fname] = out['agg_losses-rlzs', 'csv']
+        [fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
@@ -559,7 +559,7 @@ agg_id
         oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), log:
             prc.run()
-        [fname] = export(('agg_losses-rlzs', 'csv'), prc.datastore)
+        [fname] = export(('aggrisk', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
 
