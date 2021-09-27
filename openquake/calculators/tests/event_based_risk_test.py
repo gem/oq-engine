@@ -101,27 +101,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
 
-        # extract tot_curves
-        aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
-                     'loss_type=structural&absolute=1')
-        tmp = gettemp(text_table(aw.to_dframe()))
-        self.assertEqualFiles('expected/agg_curves1.csv', tmp)
-
-        aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
-                     'loss_type=structural&absolute=1')
-        tmp = gettemp(text_table(aw.to_dframe()))
-        self.assertEqualFiles('expected/agg_curves2.csv', tmp)
-
-        aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
-                     'loss_type=structural&absolute=0')
-        tmp = gettemp(text_table(aw.to_dframe()))
-        self.assertEqualFiles('expected/agg_curves3.csv', tmp)
-
-        aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
-                     'loss_type=structural&absolute=0')
-        tmp = gettemp(text_table(aw.to_dframe()))
-        self.assertEqualFiles('expected/agg_curves4.csv', tmp)
-
         # extract agg_curves with tags
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
