@@ -45,6 +45,33 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
+def save_curve_stats(dstore):
+    """
+    Save agg_curves-stats
+    """
+    oq = dstore['oqparam']
+    try:
+        K1 = len(dstore['agg_keys']) + 1
+    except KeyError:
+        K1 = 1
+    stats = oq.hazard_stats().values()
+    S = len(stats)
+    L = len(oq.lti)
+    weights = dstore['weights'][:]
+    aggcurves_df = dstore.read_df('aggcurves')
+    periods = aggcurves_df.return_period.unique()
+    P = len(periods)
+    out = numpy.zeros((K1, S, L, P))
+    for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
+        for s, stat in enumerate(stats):
+            for p in range(P):
+                dfp = df[df.return_period == periods[p]]
+                rlzs = dfp.rlz_id.to_numpy()
+                out[agg_id, s, loss_id, p] = stat(
+                    dfp.loss.to_numpy(), weights[rlzs])
+    dstore['agg_curves-stats'] = out
+
+
 def aggregate_losses(alt, K, kids, correl):
     """
     Aggregate losses and variances for each event by using the formulae
@@ -426,6 +453,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 prc.exported = self.exported
             with prc.datastore:
                 prc.run(exports='')
+
+        # save agg_curves-stats
+        R = 1 if oq.collect_rlzs else self.R
+        if R > 1 and 'aggcurves' in self.datastore:
+            save_curve_stats(self.datastore)
 
         if (oq.investigation_time or not oq.avg_losses or
                 'aggrisk' not in self.datastore):

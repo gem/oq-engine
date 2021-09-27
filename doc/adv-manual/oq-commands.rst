@@ -109,7 +109,6 @@ command; the number of exporters defined changes at each version::
   ? "loss_curves" ['csv']
   ? "losses_by_asset" ['npz']
   Aggregate Asset Losses "agglosses" ['csv']
-  Aggregate Loss Curves "agg_curves-rlzs" ['csv']
   Aggregate Loss Curves Statistics "agg_curves-stats" ['csv']
   Aggregate Losses "aggrisk" ['csv']
   Aggregate Risk Curves "aggcurves" ['csv']
@@ -139,7 +138,7 @@ command; the number of exporters defined changes at each version::
   Source Loss Table "src_loss_table" ['csv']
   Total Risk "agg_risk" ['csv']
   Uniform Hazard Spectra "uhs" ['csv', 'xml', 'npz']
-  There are 45 exporters defined.
+  There are 44 exporters defined.
 
 At the present the supported export types are `xml`, `csv`, `rst`, `npz` and 
 `hdf5`. `xml` has been deprecated for some outputs and is not the recommended 
