@@ -654,8 +654,7 @@ def extract_agg_curves(dstore, what):
     """
     Aggregate loss curves from the ebrisk calculator:
 
-    /extract/agg_curves?
-    kind=stats&absolute=1&loss_type=occupants&occupancy=RES
+    /extract/agg_curves?kind=mean,absolute=1&loss_type=occupants&occupancy=RES
 
     Returns an array of shape (P, S, 1...) or (P, R, 1...)
     """
@@ -678,12 +677,8 @@ def extract_agg_curves(dstore, what):
             if decode([v for v in tags]) == tagvalues:
                 idx = i
                 break
-    if qdic['rlzs']:
-        kinds = ['rlz-%d' % r for r in k]
-        name = 'agg_curves-rlzs'
-    else:
-        kinds = list(info['stats'])
-        name = 'agg_curves-stats'
+    kinds = list(info['stats'])
+    name = 'agg_curves-stats'
     units = dstore.get_attr(name, 'units')
     shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
