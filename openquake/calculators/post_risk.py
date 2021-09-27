@@ -19,6 +19,7 @@
 import logging
 import itertools
 import numpy
+import pandas
 
 from openquake.baselib import general, parallel, python3compat
 from openquake.hazardlib.stats import set_rlzs_stats
@@ -202,25 +203,28 @@ class PostRiskCalculator(base.RiskCalculator):
         blocksize = int(numpy.ceil(
             (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
         krl_losses = []
-        agg_losses = numpy.zeros((K + 1, self.R, self.L), F32)
+        aggrisk = general.AccumDict(accum=[])
         agg_curves = numpy.zeros((K + 1, self.R, self.L, P), F32)
         gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id, alt_df.loss_id])
         # NB: in the future we may use multiprocessing.shared_memory
         for (k, r, lni), df in gb:
-            agg_losses[k, r, lni] = df.loss.sum()
+            aggrisk['agg_id'].append(k)
+            aggrisk['rlz_id'].append(r)
+            aggrisk['loss_id'].append(lni)
+            aggrisk['loss'].append(df.loss.sum())
             krl_losses.append((k, r, lni, df.loss.to_numpy()))
             if len(krl_losses) >= blocksize:
                 smap.submit((builder, krl_losses))
                 krl_losses[:] = []
+        aggrisk = pandas.DataFrame(aggrisk)
         if krl_losses:
             smap.submit((builder, krl_losses))
         for krl, curve in smap.reduce().items():
             agg_curves[krl] = curve
         R = len(self.datastore['weights'])
         time_ratio = oq.time_ratio / R if oq.collect_rlzs else oq.time_ratio
-        self.datastore['agg_losses-rlzs'] = agg_losses * time_ratio
-        set_rlzs_stats(self.datastore, 'agg_losses',
-                       agg_id=K + 1, loss_type=oq.loss_names, units=units)
+        aggrisk['loss'] *= time_ratio
+        self.datastore.create_df('aggrisk', aggrisk)
         self.datastore['agg_curves-rlzs'] = agg_curves
         set_rlzs_stats(self.datastore, 'agg_curves',
                        agg_id=K + 1, lti=self.L,

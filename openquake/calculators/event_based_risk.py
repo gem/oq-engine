@@ -405,19 +405,19 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                  asset_id=self.assetcol['id'],
                                  loss_type=oq.loss_names)
 
-        # save agg_losses
-        units = self.datastore['cost_calculator'].get_units(oq.loss_names)
+        # save aggrisk
         if oq.calculation_mode == 'scenario_risk':  # compute agg_losses
             alt = alt.set_index('event_id')
             alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
-            agglosses = numpy.zeros((K + 1, self.R, self.L), F32)
+            aggrisk = general.AccumDict(accum=[])
             for (agg_id, rlz_id, loss_id), df in alt.groupby(
                     ['agg_id', 'rlz_id', 'loss_id']):
-                agglosses[agg_id, rlz_id, loss_id] = (
-                    df.loss.sum() * self.avg_ratio[rlz_id])
-            self.datastore['agg_losses-rlzs'] = agglosses
-            stats.set_rlzs_stats(self.datastore, 'agg_losses', agg_id=K,
-                                 loss_types=oq.loss_names, units=units)
+                aggrisk['agg_id'].append(agg_id)
+                aggrisk['rlz_id'].append(rlz_id)
+                aggrisk['loss_id'].append(loss_id)
+                aggrisk['loss'].append(df.loss.sum() * self.avg_ratio[rlz_id])
+            aggrisk = pandas.DataFrame(aggrisk)
+            self.datastore.create_df('aggrisk', aggrisk)
             logging.info('Total portfolio loss\n' +
                          views.view('portfolio_loss', self.datastore))
         else:  # event_based_risk, run post_risk
@@ -428,18 +428,21 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 prc.run(exports='')
 
         if (oq.investigation_time or not oq.avg_losses or
-                'agg_losses-rlzs' not in self.datastore):
+                'aggrisk' not in self.datastore):
             return
 
         # sanity check on the agg_losses and sum_losses
-        sumlosses = self.avg_losses.sum(axis=0)
-        if not numpy.allclose(agglosses[K], sumlosses, rtol=1E-6):
+        sumlosses = self.avg_losses.sum(axis=(0, 1))  # shape L
+        agglosses = numpy.array([
+            aggrisk[(aggrisk.agg_id == K) & (aggrisk.loss_id == li)].loss.sum()
+            for li in range(self.L)])  # shape L
+        if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
             logging.warning(
                 'Due to rounding errors inherent in floating-point arithmetic,'
                 ' agg_losses != sum(avg_losses): %s != %s\nsee %s',
-                agglosses[K].mean(), sumlosses.mean(), url)
+                agglosses, sumlosses, url)
 
     def gen_args(self, eids):
         """
