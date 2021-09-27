@@ -202,11 +202,9 @@ class PlanarSurface(BaseSurface):
 
         # compute corner points at the surface
         top_right = point_at(mid_top[0], mid_top[1], strike, length / 2)
-        top_left = point_at(mid_top[0], mid_top[1],
-            strike + 180, length / 2)
+        top_left = point_at(mid_top[0], mid_top[1], strike + 180, length / 2)
         bot_right = point_at(mid_bot[0], mid_bot[1], strike, length/2)
-        bot_left = point_at(mid_bot[0], mid_bot[1],
-            strike + 180, length / 2)
+        bot_left = point_at(mid_bot[0], mid_bot[1], strike + 180, length / 2)
 
         # compute corner points in 3D
         pbl = Point(bot_left[0], bot_left[1], depth + height / 2)
