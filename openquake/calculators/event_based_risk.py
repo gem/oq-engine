@@ -54,7 +54,11 @@ def aggregate_losses(alt, K, kids, correl):
     """
     lbe = general.AccumDict(accum=numpy.zeros(2, F32))
     x = numpy.sqrt(alt.variance) if correl else alt.variance
-    ldf = pandas.DataFrame(dict(eid=alt.eid, loss=alt.loss, x=x))
+    dic = dict(eid=alt.eid, x=x)
+    for col in alt.columns:
+        if col not in {'eid', 'aid', 'variance'}:
+            dic[col] = alt[col]
+    ldf = pandas.DataFrame(dic)
     if len(kids):
         ldf['kid'] = kids[alt.aid.to_numpy()]
         tot = ldf.groupby(['eid', 'kid']).sum()
