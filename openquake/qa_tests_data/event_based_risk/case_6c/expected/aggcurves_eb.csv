@@ -1,20 +1,20 @@
-#,,,,,"generated_by='OpenQuake engine 3.13.0-giteade834f91', start_date='2021-09-27T08:12:49', checksum=1896526101, risk_investigation_time=1.0, num_events=69, effective_time=2000.0, limit_states=''"
-return_period,NAME_1,loss_type,agg_id,loss_value,loss_ratio
-50,Region A,structural,0,9.85470E+02,4.92735E-02
-100,Region A,structural,0,1.98939E+03,9.94693E-02
-200,Region A,structural,0,4.47062E+03,2.23531E-01
-500,Region A,structural,0,8.32783E+03,4.16391E-01
-1000,Region A,structural,0,9.99794E+03,4.99897E-01
-2000,Region A,structural,0,1.22291E+04,6.11457E-01
-50,RegionB,structural,1,1.09901E+03,2.19803E-02
-100,RegionB,structural,1,1.78009E+03,3.56018E-02
-200,RegionB,structural,1,3.31871E+03,6.63742E-02
-500,RegionB,structural,1,6.66019E+03,1.33204E-01
-1000,RegionB,structural,1,1.02913E+04,2.05825E-01
-2000,RegionB,structural,1,1.07268E+04,2.14537E-01
-50,*total*,structural,2,2.16022E+03,3.08603E-02
-100,*total*,structural,2,3.92696E+03,5.60994E-02
-200,*total*,structural,2,6.71546E+03,9.59351E-02
-500,*total*,structural,2,1.49036E+04,2.12909E-01
-1000,*total*,structural,2,1.99684E+04,2.85263E-01
-2000,*total*,structural,2,2.07248E+04,2.96068E-01
+#,,,,,,"generated_by='OpenQuake engine 3.13.0-gitd8d704f6d9', start_date='2021-09-27T09:23:30', checksum=1896526101, risk_investigation_time=1.0, num_events=69, effective_time=2000.0, limit_states=''"
+return_period,NAME_1,loss_type,agg_id,rlz_id,loss_value,loss_ratio
+50,Region A,structural,0,0,9.85396E+02,4.92698E-02
+100,Region A,structural,0,0,1.98922E+03,9.94612E-02
+200,Region A,structural,0,0,4.47062E+03,2.23531E-01
+500,Region A,structural,0,0,8.32783E+03,4.16391E-01
+1000,Region A,structural,0,0,9.99794E+03,4.99897E-01
+2000,Region A,structural,0,0,1.22291E+04,6.11457E-01
+50,RegionB,structural,1,0,1.09901E+03,2.19803E-02
+100,RegionB,structural,1,0,1.78009E+03,3.56018E-02
+200,RegionB,structural,1,0,3.31871E+03,6.63742E-02
+500,RegionB,structural,1,0,6.65965E+03,1.33193E-01
+1000,RegionB,structural,1,0,1.02913E+04,2.05825E-01
+2000,RegionB,structural,1,0,1.07268E+04,2.14537E-01
+50,*total*,structural,2,0,2.16022E+03,3.08603E-02
+100,*total*,structural,2,0,3.92696E+03,5.60994E-02
+200,*total*,structural,2,0,6.71546E+03,9.59351E-02
+500,*total*,structural,2,0,1.49022E+04,2.12889E-01
+1000,*total*,structural,2,0,1.99684E+04,2.85263E-01
+2000,*total*,structural,2,0,2.07248E+04,2.96068E-01

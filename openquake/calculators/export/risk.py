@@ -584,12 +584,10 @@ def export_aggcurves_csv(ekey, dstore):
     # aggcurves
     agg_values = dstore['agg_values'][:]
     cols = [col for col in df.columns if col not in consequences
-            and col not in ('agg_id', 'loss_id')]
+            and col not in ('agg_id', 'rlz_id', 'loss_id')]
     edic = general.AccumDict(accum=[])
     manyrlzs = 'rlz_id' in df.columns
     manyagg = len(df.agg_id.unique()) > 1
-    if not manyrlzs:
-        df['rlz_id'] = 0
     for (agg_id, rlz_id, loss_id), d in df.groupby(
             ['agg_id', 'rlz_id', 'loss_id']):
         for col in cols:

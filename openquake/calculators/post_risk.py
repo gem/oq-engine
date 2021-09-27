@@ -220,6 +220,7 @@ class PostRiskCalculator(base.RiskCalculator):
         for (agg_id, rlz_id, loss_id), curve in smap.reduce().items():
             for p, period in enumerate(builder.return_periods):
                 dic['agg_id'].append(agg_id)
+                dic['rlz_id'].append(rlz_id)
                 dic['loss_id'].append(loss_id)
                 dic['return_period'].append(period)
                 dic['loss'].append(curve[p])
