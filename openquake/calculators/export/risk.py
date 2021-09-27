@@ -589,15 +589,13 @@ def export_aggcurves_csv(ekey, dstore):
     agg_values = dstore['agg_values'][:]
     edic = general.AccumDict(accum=[])
     [loss_type] = df.loss_type.unique()
+    cols = [col for col in df.columns if col not in consequences]
+    for col in cols:
+        edic[col].extend(df[col])
     for cons in consequences:
-        for col in df.columns:
-            if col not in scientific.KNOWN_CONSEQUENCES:
-                edic[col].extend(df[col])
-            elif col == cons:
-                edic['conseq_value'].extend(df[col])
-                edic['conseq_type'].extend([col] * len(df))
-                aval = scientific.get_agg_value(
-                    cons, agg_values, agg_id, loss_type)
-                edic['conseq_ratio'].extend(df[col] / aval)
+        edic[cons + '_value'].extend(df[cons])
+        aval = scientific.get_agg_value(
+            cons, agg_values, agg_id, loss_type)
+        edic[cons + '_ratio'].extend(df[cons] / aval)
     writer.save(pandas.DataFrame(edic), dest, comment=md)
     return [dest]
