@@ -571,8 +571,6 @@ def export_aggcurves_csv(ekey, dstore):
                     if col in scientific.KNOWN_CONSEQUENCES]
     for tagname, tags in aggtags.items():
         df[tagname] = tags[df.agg_id]
-    df['loss_type'] = lossnames[df.loss_id.to_numpy()]
-    del df['loss_id']
     dest = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
@@ -584,18 +582,27 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
 
     # aggcurves
-    agg_id = df.pop('agg_id')
-
     agg_values = dstore['agg_values'][:]
+    cols = [col for col in df.columns if col not in consequences
+            and col not in ('agg_id', 'loss_id')]
     edic = general.AccumDict(accum=[])
-    [loss_type] = df.loss_type.unique()
-    cols = [col for col in df.columns if col not in consequences]
-    for col in cols:
-        edic[col].extend(df[col])
-    for cons in consequences:
-        edic[cons + '_value'].extend(df[cons])
-        aval = scientific.get_agg_value(
-            cons, agg_values, agg_id, loss_type)
-        edic[cons + '_ratio'].extend(df[cons] / aval)
+    manyrlzs = 'rlz_id' in df.columns
+    manyagg = len(df.agg_id.unique()) > 1
+    if not manyrlzs:
+        df['rlz_id'] = 0
+    for (agg_id, rlz_id, loss_id), d in df.groupby(
+            ['agg_id', 'rlz_id', 'loss_id']):
+        for col in cols:
+            edic[col].extend(d[col])
+        edic['loss_type'].extend([lossnames[loss_id]] * len(d))
+        if manyagg:
+            edic['agg_id'].extend([agg_id] * len(d))
+        if manyrlzs:
+            edic['rlz_id'].extend([rlz_id] * len(d))
+        for cons in consequences:
+            edic[cons + '_value'].extend(d[cons])
+            aval = scientific.get_agg_value(
+                cons, agg_values, agg_id, lossnames[loss_id])
+            edic[cons + '_ratio'].extend(d[cons] / aval)
     writer.save(pandas.DataFrame(edic), dest, comment=md)
     return [dest]
