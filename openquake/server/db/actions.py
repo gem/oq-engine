@@ -284,7 +284,6 @@ DISPLAY_NAME = {
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
     'aggrisk': 'Aggregate Losses',
-    'aggrisk': 'Aggregate Losses Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
     'aggcurves': 'Aggregate Risk Curves',
