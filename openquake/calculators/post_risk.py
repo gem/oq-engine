@@ -183,7 +183,6 @@ class PostRiskCalculator(base.RiskCalculator):
                                                loss_type=oq.loss_names)
         builder = get_loss_builder(self.datastore)
         K = len(self.aggkey) if oq.aggregate_by else 0
-        P = len(builder.return_periods)
         # do everything in process since it is really fast
         rlz_id = self.datastore['events']['rlz_id']
         if oq.collect_rlzs:
@@ -197,14 +196,12 @@ class PostRiskCalculator(base.RiskCalculator):
             alt_df = alt_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
-        units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5)
         # producing concurrent_tasks/2 = num_cores tasks
         blocksize = int(numpy.ceil(
             (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
         krl_losses = []
         aggrisk = general.AccumDict(accum=[])
-        agg_curves = numpy.zeros((K + 1, self.R, self.L, P), F32)
         gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id, alt_df.loss_id])
         # NB: in the future we may use multiprocessing.shared_memory
         for (k, r, lni), df in gb:
@@ -219,17 +216,20 @@ class PostRiskCalculator(base.RiskCalculator):
         aggrisk = pandas.DataFrame(aggrisk)
         if krl_losses:
             smap.submit((builder, krl_losses))
-        for krl, curve in smap.reduce().items():
-            agg_curves[krl] = curve
+        dic = general.AccumDict(accum=[])
+        for (agg_id, rlz_id, loss_id), curve in smap.reduce().items():
+            for p, period in enumerate(builder.return_periods):
+                dic['agg_id'].append(agg_id)
+                dic['loss_id'].append(loss_id)
+                dic['return_period'].append(period)
+                dic['loss'].append(curve[p])
         R = len(self.datastore['weights'])
         time_ratio = oq.time_ratio / R if oq.collect_rlzs else oq.time_ratio
         aggrisk['loss'] *= time_ratio
         self.datastore.create_df('aggrisk', aggrisk)
-        self.datastore['agg_curves-rlzs'] = agg_curves
-        set_rlzs_stats(self.datastore, 'agg_curves',
-                       agg_id=K + 1, lti=self.L,
-                       return_period=builder.return_periods,
-                       units=units)
+        self.datastore.create_df(
+            'aggcurves', pandas.DataFrame(dic),
+            limit_states=' '.join(self.oqparam.limit_states))
         return 1
 
     def post_execute(self, dummy):
