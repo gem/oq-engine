@@ -335,10 +335,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         self.check_multi_tag(self.calc.datastore)
 
-        # check aggcurves are readable
-        df1 = self.calc.datastore.read_df('aggcurves', 'assets')
-        aae(df1.columns, ['agg_id', 'rlz', 'lti', 'return_period', 'value'])
-
+        # check aggcurves with aggregate_by=id
         fname = export(('aggcurves', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
 
@@ -434,7 +431,7 @@ agg_id
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-4)
         rup_ids = set(read_csv(fname, {None: '<S50'})['rup_id'])
 
-        [fname] = export(('agg_curves', 'csv'), self.calc.datastore)
+        [fname] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
 
         # check that the IDs in risk_by_event.csv exist in ruptures.csv
