@@ -117,21 +117,22 @@ def export_aggrisk(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    aggregate_by = oq.aggregate_by
-    tagnames = tuple(aggregate_by)
+    tagnames = oq.aggregate_by
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     tagcol = dstore['assetcol/tagcol']
-    aggtags = list(tagcol.get_aggkey(aggregate_by).values())
-    aggtags.append(('*total*',) * len(aggregate_by))
-    expvalue = dstore['agg_values'][()]  # shape K+1
-    header = ('loss_type',) + tagnames + (
-        'loss_value', 'exposed_value', 'loss_ratio')
+    aggtags = list(tagcol.get_aggkey(tagnames).values())
+    aggtags.append(('*total*',) * len(tagnames))
+    agg_values = dstore['agg_values'][()]  # shape K+1
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time or
                    oq.investigation_time))
 
     aggrisk = dstore.read_df('aggrisk')
+    csqs = [col for col in aggrisk.columns
+            if col not in {'agg_id', 'rlz_id', 'loss_id'}]
+    header = ['loss_type'] + tagnames + ['exposed_value'] + [
+        '%s_ratio' % csq for csq in csqs]
     dest = dstore.build_fname('aggrisk', '', 'csv')
     out = general.AccumDict(accum=[])
     manyrlzs = hasattr(aggrisk, 'rlz_id') and len(aggrisk.rlz_id.unique()) > 1
@@ -143,10 +144,11 @@ def export_aggrisk(ekey, dstore):
             out[tagname].extend([tag] * n)
         if manyrlzs:
             out['rlz_id'].extend(df.rlz_id)
-        expval = expvalue[agg_id][loss_type]
-        out['loss_value'].extend(df['loss'])
-        out['exposed_value'].extend([expval] * n)
-        out['loss_ratio'].extend(df['loss'] / expval)
+        for csq in csqs:
+            aval = scientific.get_agg_value(
+                csq, agg_values, agg_id, loss_type)
+            out[csq + '_value'].extend(df[csq])
+            out[csq + '_ratio'].extend(df[csq] / aval)
     writer.save(pandas.DataFrame(out), dest, header, comment=md)
     return [dest]
 
