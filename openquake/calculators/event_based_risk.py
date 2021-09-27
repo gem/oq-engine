@@ -456,7 +456,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         # save agg_curves-stats
         R = 1 if oq.collect_rlzs else self.R
-        if R > 1:
+        if R > 1 and 'aggcurves' in self.datastore:
             save_curve_stats(self.datastore)
 
         if (oq.investigation_time or not oq.avg_losses or
