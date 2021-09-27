@@ -547,15 +547,12 @@ def export_aggcurves_csv(ekey, dstore):
     cols = [col for col in df.columns if col not in consequences
             and col not in ('agg_id', 'rlz_id', 'loss_id')]
     edic = general.AccumDict(accum=[])
-    manyrlzs = 'rlz_id' in df.columns
-    manyagg = len(df.agg_id.unique()) > 1
+    manyrlzs = not oq.collect_rlzs and R > 1
     for (agg_id, rlz_id, loss_id), d in df.groupby(
             ['agg_id', 'rlz_id', 'loss_id']):
         for col in cols:
             edic[col].extend(d[col])
         edic['loss_type'].extend([lossnames[loss_id]] * len(d))
-        if manyagg:
-            edic['agg_id'].extend([agg_id] * len(d))
         if manyrlzs:
             edic['rlz_id'].extend([rlz_id] * len(d))
         for cons in consequences:
