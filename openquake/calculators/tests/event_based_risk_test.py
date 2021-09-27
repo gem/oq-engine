@@ -225,9 +225,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         tot = self.calc.datastore['avg_losses-rlzs'][:, 0, 0].sum()  # A1L
         aac(avg, tot, rtol=1E-6)
 
-        # agg_losses
+        # aggrisk
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+        self.assertEqualFiles('expected/aggrisk_sampling.csv', fname,
                               delta=1E-5)
 
         # agg_curves-rlzs has shape (K=1, R=1, L=1, P=4)
