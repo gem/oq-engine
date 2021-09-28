@@ -39,7 +39,7 @@ from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
-from openquake.risklib import riskinput, riskmodels
+from openquake.risklib import scientific, riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, datastore
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -1306,8 +1306,11 @@ def create_risk_by_event(calc):
     aggkey = getattr(calc, 'aggkey', {})  # empty if not aggregate_by
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
+        fields = [('loss', F32)]
+        if calc.policy_dict:
+            fields.append(('ins_loss', F32))
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
-                 ('loss', F32), ('variance', F32)]
+                 ('variance', F32)] + fields
         dstore.create_df('risk_by_event', descr, K=len(aggkey),
                          L=len(oq.loss_names))
     else:  # damage + consequences
