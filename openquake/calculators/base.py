@@ -664,6 +664,7 @@ class HazardCalculator(BaseCalculator):
                     'expecting %s' % (fname, policy_name, self.policy_name))
             else:
                 self.policy_name = policy_name
+        self.datastore['policy_dict'] = self.policy_dict
 
     def load_crmodel(self):
         # to be called before read_exposure
