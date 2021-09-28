@@ -184,10 +184,11 @@ class PostRiskCalculator(base.RiskCalculator):
             alt_df['agg_id'] = idxs[alt_df['agg_id'].to_numpy()]
             alt_df = alt_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
+        loss_kinds = [col for col in alt_df.columns if col not in {
+            'event_id', 'agg_id', 'loss_id', 'variance'}]
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
         dic = general.AccumDict(accum=[])
         aggrisk = general.AccumDict(accum=[])
-        loss_kinds = ['loss']
         gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id, alt_df.loss_id])
         # NB: in the future we may use multiprocessing.shared_memory
         for (k, r, lni), df in gb:

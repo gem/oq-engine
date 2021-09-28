@@ -34,7 +34,7 @@ F32 = numpy.float32
 U32 = numpy.uint32
 U16 = numpy.uint16
 U8 = numpy.uint8
-KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
+KNOWN_CONSEQUENCES = ['loss', 'ins_loss', 'losses', 'collapsed', 'injured',
                       'fatalities', 'homeless']
 
 
@@ -1418,7 +1418,7 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
     aval = agg_values[agg_id]
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    elif consequence in ('loss', 'losses'):
+    elif consequence in ('loss', 'ins_loss', 'losses'):
         return aval[loss_type]
     elif consequence == 'collapsed':
         return aval['number']
