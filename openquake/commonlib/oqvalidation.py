@@ -1311,8 +1311,6 @@ class OqParam(valid.ParamSet):
         names = []
         for lt in self.all_cost_types:
             names.append(lt)
-        for name in self.inputs.get('insurance', []):
-            names.append(lt + '_ins')
         return names
 
     def loss_dt(self, dtype=F64):

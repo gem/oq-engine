@@ -409,10 +409,6 @@ def export_agglosses(ekey, dstore):
     return [dest]
 
 
-AggCurve = collections.namedtuple(
-    'AggCurve', ['losses', 'poes', 'average_loss', 'stddev_loss'])
-
-
 def get_paths(rlz):
     """
     :param rlz:
