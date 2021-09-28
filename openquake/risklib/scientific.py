@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 This module includes the scientific API of the oq-risklib
 """
@@ -35,7 +34,8 @@ F32 = numpy.float32
 U32 = numpy.uint32
 U16 = numpy.uint16
 U8 = numpy.uint8
-KNOWN_CONSEQUENCES = 'loss losses collapsed injured fatalities homeless'.split()
+KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
+                      'fatalities', 'homeless']
 
 
 def pairwise(iterable):
@@ -1343,7 +1343,7 @@ class InsuredLosses(object):
     def __init__(self, policy_name, policy_dict):
         self.policy_name = policy_name
         self.policy_dict = policy_dict
-        self.outputs = [lt + '_ins' for lt in policy_dict]
+        self.sec_names = ['ins_loss']
 
     def update(self, lt, out, asset_df):
         """
