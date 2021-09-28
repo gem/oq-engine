@@ -55,7 +55,7 @@ def save_curve_stats(dstore):
         K1 = len(dstore['agg_keys']) + 1
     except KeyError:
         K1 = 1
-    stats = oq.hazard_stats().values()
+    stats = oq.hazard_stats()
     S = len(stats)
     L = len(oq.lti)
     weights = dstore['weights'][:]
@@ -64,15 +64,16 @@ def save_curve_stats(dstore):
     P = len(periods)
     out = numpy.zeros((K1, S, L, P))
     for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
-        for s, stat in enumerate(stats):
+        for s, stat in enumerate(stats.values()):
             for p in range(P):
                 dfp = df[df.return_period == periods[p]]
                 ws = weights[dfp.rlz_id.to_numpy()]
                 ws /= ws.sum()
                 out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
     dstore['agg_curves-stats'] = out
-    dstore.set_attrs('agg_curves-stats', agg_id=K1, lti=L,
-                     return_period=periods, units=units)
+    dstore.set_shape_descr('agg_curves-stats', agg_id=K1, stat=list(stats),
+                           lti=L, return_period=periods)
+    dstore.set_attrs('agg_curves-stats', units=units)
 
 
 def aggregate_losses(alt, K, kids, correl):
