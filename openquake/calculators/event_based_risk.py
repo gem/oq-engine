@@ -131,6 +131,7 @@ def aggreg(outputs, crmodel, AR, kids, rlz_id, param, monitor):
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
     loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
                    for ln in crmodel.oqparam.loss_names}
+    collect_rlzs = param['collect_rlzs']
     for out in outputs:
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
             if ln not in out or len(out[ln]) == 0:
@@ -142,8 +143,7 @@ def aggreg(outputs, crmodel, AR, kids, rlz_id, param, monitor):
                     alt, param['K'], kids, param['asset_correlation'])
             if param['avg_losses']:
                 with mon_avg:
-                    coo = average_losses(ln, alt, rlz_id, AR,
-                                         param['collect_rlzs'])
+                    coo = average_losses(ln, alt, rlz_id, AR, collect_rlzs)
                     loss_by_AR[ln].append(coo)
     return dict(avg=loss_by_AR, alt=_build_risk_by_event(loss_by_EK1))
 
@@ -303,7 +303,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
-        sec_losses = []
+        sec_losses = []  # one insured loss for each loss type with a policy
         if self.policy_dict:
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
