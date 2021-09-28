@@ -71,45 +71,6 @@ def _loss_type(ln):
     return ln
 
 
-# this is used by event_based_risk and ebrisk
-@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
-def export_agg_curve_rlzs(ekey, dstore):
-    oq = dstore['oqparam']
-    lnames = numpy.array(oq.loss_names)
-    agg_tags = get_agg_tags(dstore, oq.aggregate_by)
-    aggvalue = dstore['agg_values'][()]  # shape K+1
-    md = dstore.metadata
-    md['risk_investigation_time'] = (
-        oq.risk_investigation_time or oq.investigation_time)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    descr = hdf5.get_shape_descr(dstore[ekey[0]].attrs['json'])
-    name, suffix = ekey[0].split('-')
-    rlzs_or_stats = descr[suffix[:-1]]
-    aw = hdf5.ArrayWrapper(dstore[ekey[0]], descr, ('loss_value',))
-    dataf = aw.to_dframe().set_index(suffix[:-1])
-    for r, ros in enumerate(rlzs_or_stats):
-        md['kind'] = f'{name}-' + (
-            ros if isinstance(ros, str) else 'rlz-%03d' % ros)
-        try:
-            df = dataf[dataf.index == ros]
-        except KeyError:
-            logging.warning('No data for %s', md['kind'])
-            continue
-        dic = {col: df[col].to_numpy() for col in dataf.columns}
-        dic['loss_type'] = lnames[dic.pop('lti')]
-        avalue = aggvalue[dic['agg_id']]
-        for tagname in oq.aggregate_by:
-            dic[tagname] = agg_tags[tagname][dic['agg_id']]
-        tot = numpy.array([avalue[i][_loss_type(ln)]
-                           for i, ln in enumerate(dic['loss_type'])])
-        dic['loss_ratio'] = dic['loss_value'] / tot
-        dic['annual_frequency_of_exceedence'] = 1 / dic['return_period']
-        del dic['agg_id']
-        dest = dstore.build_fname(md['kind'], '', 'csv')
-        writer.save(pandas.DataFrame(dic), dest, comment=md)
-    return writer.getsaved()
-
-
 @export.add(('aggrisk', 'csv'))
 def export_aggrisk(ekey, dstore):
     """
@@ -584,19 +545,14 @@ def export_aggcurves_csv(ekey, dstore):
     # aggcurves
     agg_values = dstore['agg_values'][:]
     cols = [col for col in df.columns if col not in consequences
-            and col not in ('agg_id', 'loss_id')]
+            and col not in ('agg_id', 'rlz_id', 'loss_id')]
     edic = general.AccumDict(accum=[])
-    manyrlzs = 'rlz_id' in df.columns
-    manyagg = len(df.agg_id.unique()) > 1
-    if not manyrlzs:
-        df['rlz_id'] = 0
+    manyrlzs = not oq.collect_rlzs and R > 1
     for (agg_id, rlz_id, loss_id), d in df.groupby(
             ['agg_id', 'rlz_id', 'loss_id']):
         for col in cols:
             edic[col].extend(d[col])
         edic['loss_type'].extend([lossnames[loss_id]] * len(d))
-        if manyagg:
-            edic['agg_id'].extend([agg_id] * len(d))
         if manyrlzs:
             edic['rlz_id'].extend([rlz_id] * len(d))
         for cons in consequences:

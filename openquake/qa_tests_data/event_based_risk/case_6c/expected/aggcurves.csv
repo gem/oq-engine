@@ -1,4 +1,4 @@
-#,,,"generated_by='OpenQuake engine 3.13.0-giteade834f91', start_date='2021-09-27T08:13:31', checksum=3590982611, risk_investigation_time=1.0, num_events=28, effective_time=1000.0, limit_states=''"
+#,,,"generated_by='OpenQuake engine 3.13.0-gitc7648930bb', start_date='2021-09-27T17:03:29', checksum=3590982611, risk_investigation_time=1.0, num_events=28, effective_time=1000.0, limit_states=''"
 return_period,loss_type,loss_value,loss_ratio
 50,structural,1.47712E+03,2.11018E-02
 100,structural,2.79679E+03,3.99542E-02

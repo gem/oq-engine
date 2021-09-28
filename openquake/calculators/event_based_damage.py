@@ -265,6 +265,7 @@ class DamageCalculator(EventBasedRiskCalculator):
                       for csq in csqs]
             for p, period in enumerate(periods):
                 dic['agg_id'].append(agg_id)
+                dic['rlz_id'].append(0)
                 dic['loss_id'].append(loss_id)
                 dic['return_period'].append(period)
                 for col, curve in zip(csqs, curves):
@@ -275,5 +276,6 @@ class DamageCalculator(EventBasedRiskCalculator):
         self.datastore.create_df('worst_dmgdist', wdd.items(), limit_states=ls)
         if csqs:
             self.datastore.create_df('aggrisk', pandas.DataFrame(aggrisk))
-            self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
+            self.datastore.create_df('aggcurves', pandas.DataFrame(dic),
+                                     limit_states=ls)
             self.sanity_check()

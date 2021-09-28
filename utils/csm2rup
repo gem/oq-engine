@@ -9,6 +9,9 @@ import numpy
 import pandas
 from openquake.baselib import sap, parallel, general, hdf5
 from openquake.hazardlib.calc.filters import MagDepDistance
+from openquake.hazardlib.source.point import calc_average
+from openquake.hazardlib.source.rupture import PointRupture
+from openquake.hazardlib.geo import Point
 from openquake.commonlib import readinput, datastore, logs
 from openquake.calculators import base
 
@@ -25,13 +28,32 @@ rupfields = dict(
 )
 
 
+def iter_ruptures_fast(src):
+    # for pointlike sources
+    avg = calc_average([src])
+    hc = Point(avg['lon'], avg['lat'], avg['dep'])
+    strike, dip, rake = 0, 0, avg['rake']
+    for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+        occurrence_rate = mag_occ_rate
+        yield PointRupture(
+            mag, src.tectonic_region_type, hc,
+            strike, dip, rake, occurrence_rate,
+            src.temporal_occurrence_model)
+
+
+# NB: this is called after a preclassical calculation, so area sources and
+# multipoint sources are already split
 def build_rupdict(srcs):
     """
     :param srcs: a list of sources of the same source group
     """
     dic = {f: [] for f in rupfields}
     for src in srcs:
-        for rupno, rup in enumerate(src.iter_ruptures()):
+        if hasattr(src, 'nodal_plane_distribution'):
+            irups = iter_ruptures_fast(src)
+        else:
+            irups = src.iter_ruptures()
+        for rupno, rup in enumerate(irups):
             assert rupno < MAX_RUPS_PER_SOURCE
             dic['mag'].append(rup.mag)
             dic['occurrence_rate'].append(rup.occurrence_rate)

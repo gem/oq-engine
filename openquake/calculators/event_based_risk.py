@@ -45,6 +45,36 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
+def save_curve_stats(dstore):
+    """
+    Save agg_curves-stats
+    """
+    oq = dstore['oqparam']
+    units = dstore['cost_calculator'].get_units(oq.loss_names)
+    try:
+        K1 = len(dstore['agg_keys']) + 1
+    except KeyError:
+        K1 = 1
+    stats = oq.hazard_stats().values()
+    S = len(stats)
+    L = len(oq.lti)
+    weights = dstore['weights'][:]
+    aggcurves_df = dstore.read_df('aggcurves')
+    periods = aggcurves_df.return_period.unique()
+    P = len(periods)
+    out = numpy.zeros((K1, S, L, P))
+    for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
+        for s, stat in enumerate(stats):
+            for p in range(P):
+                dfp = df[df.return_period == periods[p]]
+                ws = weights[dfp.rlz_id.to_numpy()]
+                ws /= ws.sum()
+                out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
+    dstore['agg_curves-stats'] = out
+    dstore.set_attrs('agg_curves-stats', agg_id=K1, lti=L,
+                     return_period=periods, units=units)
+
+
 def aggregate_losses(alt, K, kids, correl):
     """
     Aggregate losses and variances for each event by using the formulae
@@ -430,6 +460,16 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 prc.exported = self.exported
             with prc.datastore:
                 prc.run(exports='')
+
+        # store units, used by the QGIS plugin
+        if 'aggcurves' in self.datastore:  # missing in scenario_from_ruptures
+            units = self.datastore['cost_calculator'].get_units(oq.loss_names)
+            self.datastore.set_attrs('aggcurves', units=units)
+
+        # save agg_curves-stats
+        R = 1 if oq.collect_rlzs else self.R
+        if R > 1 and 'aggcurves' in self.datastore:
+            save_curve_stats(self.datastore)
 
         if (oq.investigation_time or not oq.avg_losses or
                 'aggrisk' not in self.datastore):
