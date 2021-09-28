@@ -50,6 +50,7 @@ def save_curve_stats(dstore):
     Save agg_curves-stats
     """
     oq = dstore['oqparam']
+    units = dstore['cost_calculator'].get_units(oq.loss_names)
     try:
         K1 = len(dstore['agg_keys']) + 1
     except KeyError:
@@ -66,10 +67,12 @@ def save_curve_stats(dstore):
         for s, stat in enumerate(stats):
             for p in range(P):
                 dfp = df[df.return_period == periods[p]]
-                rlzs = dfp.rlz_id.to_numpy()
-                out[agg_id, s, loss_id, p] = stat(
-                    dfp.loss.to_numpy(), weights[rlzs])
+                ws = weights[dfp.rlz_id.to_numpy()]
+                ws /= ws.sum()
+                out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
     dstore['agg_curves-stats'] = out
+    dstore.set_attrs('agg_curves-stats', agg_id=K1, lti=L,
+                     return_period=periods, units=units)
 
 
 def aggregate_losses(alt, K, kids, correl):
