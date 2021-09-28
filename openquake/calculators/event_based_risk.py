@@ -100,9 +100,10 @@ def aggregate_losses(alt, K, kids, correl, loss_id):
     tot1 = alt.groupby(['eid', 'kid']).sum()
     tot1['loss_id'] = loss_id
     tot1 = tot1.reset_index().set_index(['eid', 'kid', 'loss_id'])
+    tot = tot1.add(tot2, fill_value=0.)
     if correl:  # restore the variances
-        tot1['variance'] = tot1.variance ** 2
-    return tot1.add(tot2, fill_value=0.)
+        tot['variance'] = tot.variance ** 2
+    return tot
 
 
 def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
