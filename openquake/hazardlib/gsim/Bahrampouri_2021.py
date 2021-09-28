@@ -157,7 +157,7 @@ class BahrampouriEtAl2021Asc(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Implements mean model (equation 12)
-            mean[m] = (_get_arias_intensity_term (ctx, C) + _get_arias_intensity_additional_term (ctx, C))
+            mean[m] = np.exp((_get_arias_intensity_term (ctx, C) + _get_arias_intensity_additional_term (ctx, C)))
 
             sig[m], tau[m], phi[m] = _get_stddevs(ctx, np.exp(mean[m]))
 
@@ -218,7 +218,7 @@ class BahrampouriEtAl2021SInter(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Implements mean model (equation 12)
-            mean[m] = (_get_arias_intensity_term (ctx, C) + _get_arias_intensity_additional_term (ctx, C))
+            mean[m] = np.exp((_get_arias_intensity_term (ctx, C) + _get_arias_intensity_additional_term (ctx, C)))
 
             sig[m], tau[m], phi[m] = _get_stddevs(ctx, np.exp(mean[m]))
 
@@ -280,7 +280,7 @@ class BahrampouriEtAl2021SSlab(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Implements mean model (equation 12)
-            mean[m] = (_get_arias_intensity_term (ctx, C) + _get_arias_intensity_additional_term (ctx, C))
+            mean[m] = np.exp((_get_arias_intensity_term (ctx, C) + _get_arias_intensity_additional_term (ctx, C)))
 
             sig[m], tau[m], phi[m] = _get_stddevs(ctx, np.exp(mean[m]))
 
