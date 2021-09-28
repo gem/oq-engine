@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added `aggrisk` output to event based damage calculation
   * Added parameter `discrete_damage_distribution` in scenario damage
     calculations and changed the default behavior
   * Deprecated consequence models in XML format
