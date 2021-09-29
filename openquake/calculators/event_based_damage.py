@@ -126,7 +126,7 @@ def event_based_damage(df, param, monitor):
                             ddd[a] *= number[a]
                     else:
                         # this is a performance distaster; for instance
-                        # the Messina test in oq-risk-tests becomes 10x
+                        # the Messina test in oq-risk-tests becomes 12x
                         # slower even if it has only 25_736 assets
                         ddd[:, :, :D] = rndgen.discrete_dmg_dist(
                             eids, fractions, number)
@@ -193,7 +193,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         if oq.discrete_damage_distribution and num_floats:
             raise ValueError(
                 'The exposure contains %d non-integer asset numbers: '
-                'you cannot use dicrete_damage_distribution=true', num_floats)
+                'you cannot use dicrete_damage_distribution=true' % num_floats)
         self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
         self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
