@@ -1662,6 +1662,8 @@ class OqParam(valid.ParamSet):
         sampling_method must be early_weights, only the mean is available,
         and number_of_logic_tree_samples must be greater than 1.
         """
+        if self.job_type == 'hazard':
+            return True
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
         if self.calculation_mode == 'event_based_damage':
