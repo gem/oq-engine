@@ -258,11 +258,14 @@ class DamageCalculator(EventBasedRiskCalculator):
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
         number = self.assetcol['value-number']
+        num_events = numpy.bincount(  # events by rlz
+            self.datastore['events']['rlz_id'], minlength=self.R)
         for r in range(self.R):
+            ne = num_events[r]
             for li in range(L):
                 self.dmgcsq[:, r, li, 0] = (  # no damage
-                    number * self.E - self.dmgcsq[:, r, li, 1:D].sum(axis=1))
-        self.dmgcsq /= self.E
+                    number * ne - self.dmgcsq[:, r, li, 1:D].sum(axis=1))
+            self.dmgcsq[:, r] /= ne
         self.datastore['damages-rlzs'] = self.dmgcsq
         set_rlzs_stats(self.datastore,
                        'damages',
