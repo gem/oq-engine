@@ -273,19 +273,25 @@ class DamageCalculator(EventBasedRiskCalculator):
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))
         alt_df = self.datastore.read_df('risk_by_event')
+        if self.R > 1:
+            rlz_id = self.datastore['events']['rlz_id']
+            alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
+        else:
+            alt_df['rlz_id'] = 0
         del alt_df['event_id']
         dic = general.AccumDict(accum=[])
         columns = [col for col in alt_df.columns
-                   if col not in {'agg_id', 'loss_id', 'variance'}]
+                   if col not in {'agg_id', 'rlz_id', 'loss_id', 'variance'}]
         csqs = [col for col in columns if not col.startswith('dmg_')]
         periods = list(self.builder.return_periods)
         wdd = {'agg_id': [], 'loss_id': [], 'event_id': []}
         for col in columns[:D-1]:
             wdd[col] = []
         aggrisk = general.AccumDict(accum=[])
-        for (agg_id, loss_id), df in alt_df.groupby(
-                [alt_df.agg_id, alt_df.loss_id]):
+        for (agg_id, rlz_id, loss_id), df in alt_df.groupby(
+                ['agg_id', 'rlz_id', 'loss_id']):
             aggrisk['agg_id'].append(agg_id)
+            aggrisk['rlz_id'].append(rlz_id)
             aggrisk['loss_id'].append(loss_id)
             for csq in csqs:
                 aggrisk[csq].append(df[csq].sum() * oq.time_ratio)
@@ -294,7 +300,7 @@ class DamageCalculator(EventBasedRiskCalculator):
                       for csq in csqs]
             for p, period in enumerate(periods):
                 dic['agg_id'].append(agg_id)
-                dic['rlz_id'].append(0)
+                dic['rlz_id'].append(rlz_id)
                 dic['loss_id'].append(loss_id)
                 dic['return_period'].append(period)
                 for col, curve in zip(csqs, curves):

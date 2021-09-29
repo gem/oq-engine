@@ -452,7 +452,7 @@ number_of_logic_tree_samples:
   Used to specify the number of realizations to generate when using logic tree
   sampling. If zero, full enumeration is performed.
   Example: *number_of_logic_tree_samples = 0*.
-  Default: no default
+  Default: 0
 
 poes:
   Probabilities of Exceedance used to specify the hazard maps or hazard spectra
@@ -807,7 +807,7 @@ class OqParam(valid.ParamSet):
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
-    number_of_logic_tree_samples = valid.Param(valid.positiveint)
+    number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
@@ -1663,7 +1663,7 @@ class OqParam(valid.ParamSet):
         and number_of_logic_tree_samples must be greater than 1.
         """
         if self.collect_rlzs is None:
-            self.collect_rlzs = bool(self.number_of_logic_tree_samples)
+            self.collect_rlzs = self.number_of_logic_tree_samples > 1
         if self.calculation_mode == 'event_based_damage':
             ini = self.inputs['job_ini']
             if not self.investigation_time:
