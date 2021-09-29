@@ -48,6 +48,21 @@ def fix_dic(dic, columns):
     fix_dtype(dic, F32, columns)
 
 
+def bin_ddd(fractions, n, seed):
+    """
+    Converting fractions into discrete damage distributions using bincount
+    and numpy.random.choice
+    """
+    n = int(n)
+    D = fractions.shape[1]  # shape (E, D)
+    ddd = numpy.zeros(fractions.shape, U32)
+    numpy.random.seed(seed)
+    for e, frac in enumerate(fractions):
+        ddd[e] = numpy.bincount(
+            numpy.random.choice(D, n, p=frac/frac.sum()), minlength=D)
+    return ddd
+
+
 def agg_damages(dstore, slc, monitor):
     """
     :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
@@ -94,6 +109,7 @@ def event_based_damage(df, param, monitor):
     A, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
     loss_names = crmodel.oqparam.loss_names
+    float_dmg_dist = param['float_dmg_dist']  # True by default
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assets_df.groupby('site_id'):
@@ -111,14 +127,15 @@ def event_based_damage(df, param, monitor):
                     ddd = numpy.zeros((Asid, E, Dc), F32)
                     ddd[:, :, :D] = fractions
                     for a, asset in enumerate(adf.to_records()):
-                        # NB: uncomment the lines below to see the performance
-                        # disaster of scenario_damage.bin_ddd; for instance
-                        # the Messina test in oq-risk-tests becomes 10x
-                        # slower even if it has only 25_736 assets:
-                        # scenario_damage.bin_ddd(
-                        #     fractions[a], asset['value-number'],
-                        #     param['master_seed'] + a)
-                        ddd[a] *= asset['value-number']
+                        if float_dmg_dist:
+                            ddd[a] *= asset['value-number']
+                        else:
+                            # this is a performance distaster; for instance
+                            # the Messina test in oq-risk-tests becomes 10x
+                            # slower even if it has only 25_736 assets
+                            ddd[a] = bin_ddd(
+                                 fractions[a], asset['value-number'],
+                                 param['master_seed'] + a)
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
                             ddd[a, :, ci[name]] = values
@@ -175,6 +192,15 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         Compute risk from GMFs or ruptures depending on what is stored
         """
+        oq = self.oqparam
+        number = self.assetcol['value-number']
+        num_floats = (U32(number) != number).sum()
+        if oq.discrete_damage_distribution and num_floats:
+            raise ValueError(
+                'The exposure contains %d non-integer asset numbers: '
+                'you cannot use dicrete_damage_distribution=true', num_floats)
+        self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
+  
         self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
