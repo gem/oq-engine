@@ -22,6 +22,7 @@ import pandas
 
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.risklib import scientific
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -94,6 +95,7 @@ def event_based_damage(df, param, monitor):
     A, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
     loss_names = crmodel.oqparam.loss_names
+    float_dmg_dist = param['float_dmg_dist']  # True by default
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assets_df.groupby('site_id'):
@@ -102,23 +104,33 @@ def event_based_damage(df, param, monitor):
             if len(gmf_df) == 0:
                 continue
             eids = gmf_df.eid.to_numpy()
+            if not float_dmg_dist:
+                rndgen = scientific.MultiEventRNG(
+                    param['master_seed'], numpy.unique(eids))
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 aids = adf.index.to_numpy()
+                assets = adf.to_records()
+                if float_dmg_dist:
+                    number = assets['value-number']
+                else:
+                    number = U32(assets['value-number'])
                 for lti, lt in enumerate(loss_names):
                     fractions = out[lt]
                     Asid, E, D = fractions.shape
+                    assert len(eids) == E
                     ddd = numpy.zeros((Asid, E, Dc), F32)
-                    ddd[:, :, :D] = fractions
-                    for a, asset in enumerate(adf.to_records()):
-                        # NB: uncomment the lines below to see the performance
-                        # disaster of scenario_damage.bin_ddd; for instance
-                        # the Messina test in oq-risk-tests becomes 10x
-                        # slower even if it has only 25_736 assets:
-                        # scenario_damage.bin_ddd(
-                        #     fractions[a], asset['value-number'],
-                        #     param['master_seed'] + a)
-                        ddd[a] *= asset['value-number']
+                    if float_dmg_dist:
+                        ddd[:, :, :D] = fractions
+                        for a in range(Asid):
+                            ddd[a] *= number[a]
+                    else:
+                        # this is a performance distaster; for instance
+                        # the Messina test in oq-risk-tests becomes 12x
+                        # slower even if it has only 25_736 assets
+                        ddd[:, :, :D] = rndgen.discrete_dmg_dist(
+                            eids, fractions, number)
+                    for a, asset in enumerate(assets):
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
                             ddd[a, :, ci[name]] = values
@@ -155,7 +167,7 @@ def worst_dmgdist(df, agg_id, loss_id, dic):
         dic[col].append(df[col].to_numpy()[event_id])
 
 
-@base.calculators.add('event_based_damage', 'scenario_damage_')
+@base.calculators.add('event_based_damage', 'scenario_damage')
 class DamageCalculator(EventBasedRiskCalculator):
     """
     Damage calculator
@@ -175,7 +187,15 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         Compute risk from GMFs or ruptures depending on what is stored
         """
-        if self.oqparam.investigation_time:  # event based
+        oq = self.oqparam
+        number = self.assetcol['value-number']
+        num_floats = (U32(number) != number).sum()
+        if oq.discrete_damage_distribution and num_floats:
+            raise ValueError(
+                'The exposure contains %d non-integer asset numbers: '
+                'you cannot use dicrete_damage_distribution=true' % num_floats)
+        self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
+        if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
@@ -234,13 +254,19 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.dmgcsq[:, li, 0] = (
                 number * self.E - self.dmgcsq[:, li, 1:D].sum(axis=1))
         self.dmgcsq /= self.E
-        self.datastore['damages-rlzs'] = self.dmgcsq.reshape((A, 1, L, Dc))
+        self.datastore['damages-rlzs'] = self.dmgcsq.reshape(
+            (A, self.R, L, Dc))
         set_rlzs_stats(self.datastore,
                        'damages',
                        asset_id=self.assetcol['id'],
                        rlz=[0],
                        loss_type=oq.loss_names,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
+        # sanity check
+        if self.dmgcsq[:, :, 1:].sum() == 0:
+            self.nodamage = True
+            logging.warning(
+                'There is no damage, perhaps the hazard is too small?')
         if oq.investigation_time is None:  # scenario
             return
         size = self.datastore.getsize('risk_by_event')

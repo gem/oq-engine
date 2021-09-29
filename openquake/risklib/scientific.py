@@ -817,7 +817,7 @@ class MultiEventRNG(object):
     def discrete_dmg_dist(self, eids, fractions, numbers):
         """
         Converting fractions into discrete damage distributions using bincount
-        and rng.choice.
+        and random.choice.
 
         :param eids: E event IDs
         :param fractions: array of shape (A, E, D)
