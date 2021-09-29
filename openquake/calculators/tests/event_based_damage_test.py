@@ -110,11 +110,11 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
 
     def test_case_15(self):
-        # test with sampling and both fatalities and losses
+        # test full enumeration with both fatalities and losses
         self.run_calc(case_15.__file__, 'job.ini')
 
-        # check damages-rlzs
-        [f] = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        # check damages-stats
+        [f] = export(('damages-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
 
         # check aggcurves, agglosses
@@ -123,4 +123,6 @@ class EventBasedDamageTestCase(CalculatorTestCase):
 
         # check extract
         dic = vars(extract(self.calc.datastore, 'damages-rlzs'))
-        self.assertEqual(list(dic), ['rlz-000', '_extra'])
+        self.assertEqual(
+            list(dic),
+            ['rlz-000', 'rlz-001', 'rlz-002', 'rlz-003', 'rlz-004', '_extra'])
