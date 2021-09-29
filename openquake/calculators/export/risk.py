@@ -71,81 +71,47 @@ def _loss_type(ln):
     return ln
 
 
-# this is used by event_based_risk and ebrisk
-@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
-def export_agg_curve_rlzs(ekey, dstore):
-    oq = dstore['oqparam']
-    lnames = numpy.array(oq.loss_names)
-    agg_tags = get_agg_tags(dstore, oq.aggregate_by)
-    aggvalue = dstore['agg_values'][()]  # shape K+1
-    md = dstore.metadata
-    md['risk_investigation_time'] = (
-        oq.risk_investigation_time or oq.investigation_time)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    descr = hdf5.get_shape_descr(dstore[ekey[0]].attrs['json'])
-    name, suffix = ekey[0].split('-')
-    rlzs_or_stats = descr[suffix[:-1]]
-    aw = hdf5.ArrayWrapper(dstore[ekey[0]], descr, ('loss_value',))
-    dataf = aw.to_dframe().set_index(suffix[:-1])
-    for r, ros in enumerate(rlzs_or_stats):
-        md['kind'] = f'{name}-' + (
-            ros if isinstance(ros, str) else 'rlz-%03d' % ros)
-        try:
-            df = dataf[dataf.index == ros]
-        except KeyError:
-            logging.warning('No data for %s', md['kind'])
-            continue
-        dic = {col: df[col].to_numpy() for col in dataf.columns}
-        dic['loss_type'] = lnames[dic.pop('lti')]
-        avalue = aggvalue[dic['agg_id']]
-        for tagname in oq.aggregate_by:
-            dic[tagname] = agg_tags[tagname][dic['agg_id']]
-        tot = numpy.array([avalue[i][_loss_type(ln)]
-                           for i, ln in enumerate(dic['loss_type'])])
-        dic['loss_ratio'] = dic['loss_value'] / tot
-        dic['annual_frequency_of_exceedence'] = 1 / dic['return_period']
-        del dic['agg_id']
-        dest = dstore.build_fname(md['kind'], '', 'csv')
-        writer.save(pandas.DataFrame(dic), dest, comment=md)
-    return writer.getsaved()
-
-
-# this is used by ebrisk
-@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
-def export_agg_losses(ekey, dstore):
+@export.add(('aggrisk', 'csv'))
+def export_aggrisk(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    dskey = ekey[0]
     oq = dstore['oqparam']
-    aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
-    name, value, rlzs_or_stats = _get_data(dstore, dskey, oq.hazard_stats())
-    # value has shape (K, R, L)
+    tagnames = oq.aggregate_by
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     tagcol = dstore['assetcol/tagcol']
-    aggtags = list(tagcol.get_aggkey(aggregate_by).values())
-    aggtags.append(('*total*',) * len(aggregate_by))
-    expvalue = dstore['agg_values'][()]  # shape K+1
-    tagnames = tuple(aggregate_by)
-    header = ('loss_type',) + tagnames + (
-        'loss_value', 'exposed_value', 'loss_ratio')
+    aggtags = list(tagcol.get_aggkey(tagnames).values())
+    aggtags.append(('*total*',) * len(tagnames))
+    agg_values = dstore['agg_values'][()]  # shape K+1
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time or
                    oq.investigation_time))
-    lnames = oq.loss_names
-    for r, ros in enumerate(rlzs_or_stats):
-        ros = ros if isinstance(ros, str) else 'rlz-%03d' % ros
-        rows = []
-        for (k, l), loss in numpy.ndenumerate(value[:, r]):
-            if loss:  # many tag combinations are missing
-                evalue = expvalue[k][lnames[l]]
-                row = aggtags[k] + (loss, evalue, loss / evalue)
-                rows.append((oq.loss_names[l],) + row)
-        dest = dstore.build_fname(name, ros, 'csv')
-        writer.save(rows, dest, header, comment=md)
-    return writer.getsaved()
+
+    aggrisk = dstore.read_df('aggrisk')
+    csqs = [col for col in aggrisk.columns
+            if col not in {'agg_id', 'rlz_id', 'loss_id'}]
+    header = ['loss_type'] + tagnames + ['exposed_value'] + [
+        '%s_ratio' % csq for csq in csqs]
+    dest = dstore.build_fname('aggrisk', '', 'csv')
+    out = general.AccumDict(accum=[])
+    manyrlzs = hasattr(aggrisk, 'rlz_id') and len(aggrisk.rlz_id.unique()) > 1
+    for (agg_id, loss_id), df in aggrisk.groupby(['agg_id', 'loss_id']):
+        n = len(df)
+        loss_type = oq.loss_names[loss_id]
+        out['loss_type'].extend([loss_type] * n)
+        for tagname, tag in zip(tagnames, aggtags[agg_id]):
+            out[tagname].extend([tag] * n)
+        if manyrlzs:
+            out['rlz_id'].extend(df.rlz_id)
+        for csq in csqs:
+            aval = scientific.get_agg_value(
+                csq, agg_values, agg_id, loss_type)
+            out[csq + '_value'].extend(df[csq])
+            out[csq + '_ratio'].extend(df[csq] / aval)
+    writer.save(pandas.DataFrame(out), dest, header, comment=md)
+    return [dest]
 
 
 def _get_data(dstore, dskey, stats):
@@ -443,10 +409,6 @@ def export_agglosses(ekey, dstore):
     return [dest]
 
 
-AggCurve = collections.namedtuple(
-    'AggCurve', ['losses', 'poes', 'average_loss', 'stddev_loss'])
-
-
 def get_paths(rlz):
     """
     :param rlz:
@@ -566,8 +528,6 @@ def export_aggcurves_csv(ekey, dstore):
                     if col in scientific.KNOWN_CONSEQUENCES]
     for tagname, tags in aggtags.items():
         df[tagname] = tags[df.agg_id]
-    df['loss_type'] = lossnames[df.loss_id.to_numpy()]
-    del df['loss_id']
     dest = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
@@ -579,20 +539,22 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
 
     # aggcurves
-    agg_id = df.pop('agg_id')
-
     agg_values = dstore['agg_values'][:]
+    cols = [col for col in df.columns if col not in consequences
+            and col not in ('agg_id', 'rlz_id', 'loss_id')]
     edic = general.AccumDict(accum=[])
-    [loss_type] = df.loss_type.unique()
-    for cons in consequences:
-        for col in df.columns:
-            if col not in scientific.KNOWN_CONSEQUENCES:
-                edic[col].extend(df[col])
-            elif col == cons:
-                edic['conseq_value'].extend(df[col])
-                edic['conseq_type'].extend([col] * len(df))
-                aval = scientific.get_agg_value(
-                    cons, agg_values, agg_id, loss_type)
-                edic['conseq_ratio'].extend(df[col] / aval)
+    manyrlzs = not oq.collect_rlzs and R > 1
+    for (agg_id, rlz_id, loss_id), d in df.groupby(
+            ['agg_id', 'rlz_id', 'loss_id']):
+        for col in cols:
+            edic[col].extend(d[col])
+        edic['loss_type'].extend([lossnames[loss_id]] * len(d))
+        if manyrlzs:
+            edic['rlz_id'].extend([rlz_id] * len(d))
+        for cons in consequences:
+            edic[cons + '_value'].extend(d[cons])
+            aval = scientific.get_agg_value(
+                cons, agg_values, agg_id, lossnames[loss_id])
+            edic[cons + '_ratio'].extend(d[cons] / aval)
     writer.save(pandas.DataFrame(edic), dest, comment=md)
     return [dest]

@@ -695,7 +695,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         primary = self.primary_imtls
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
         event = hasattr(haz, 'eid')
-        eids = haz.eid.to_numpy() if event else [None]
         dic = {}
         for lt in self.loss_types:
             outs = []

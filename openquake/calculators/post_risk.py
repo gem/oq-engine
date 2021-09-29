@@ -16,13 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import logging
 import itertools
 import numpy
+import pandas
 
 from openquake.baselib import general, parallel, python3compat
-from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.commonlib import datastore
 from openquake.risklib import scientific
 from openquake.calculators import base, views
@@ -127,16 +126,6 @@ def get_src_loss_table(dstore, L):
     return zip(*sorted(acc.items()))
 
 
-def post_risk(builder, krl_losses, monitor):
-    """
-    :returns: dictionary krl -> loss curve
-    """
-    res = {}
-    for k, r, l, losses in krl_losses:
-        res[k, r, l] = builder.build_curve(losses, r)
-    return res
-
-
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
@@ -183,7 +172,6 @@ class PostRiskCalculator(base.RiskCalculator):
                                                loss_type=oq.loss_names)
         builder = get_loss_builder(self.datastore)
         K = len(self.aggkey) if oq.aggregate_by else 0
-        P = len(builder.return_periods)
         # do everything in process since it is really fast
         rlz_id = self.datastore['events']['rlz_id']
         if oq.collect_rlzs:
@@ -196,37 +184,36 @@ class PostRiskCalculator(base.RiskCalculator):
             alt_df['agg_id'] = idxs[alt_df['agg_id'].to_numpy()]
             alt_df = alt_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
+        loss_kinds = [col for col in alt_df.columns if col not in {
+            'event_id', 'agg_id', 'loss_id', 'variance'}]
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
-        units = self.datastore['cost_calculator'].get_units(oq.loss_names)
-        smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5)
-        # producing concurrent_tasks/2 = num_cores tasks
-        blocksize = int(numpy.ceil(
-            (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
-        krl_losses = []
-        agg_losses = numpy.zeros((K + 1, self.R, self.L), F32)
-        agg_curves = numpy.zeros((K + 1, self.R, self.L, P), F32)
+        dic = general.AccumDict(accum=[])
+        aggrisk = general.AccumDict(accum=[])
         gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id, alt_df.loss_id])
         # NB: in the future we may use multiprocessing.shared_memory
         for (k, r, lni), df in gb:
-            agg_losses[k, r, lni] = df.loss.sum()
-            krl_losses.append((k, r, lni, df.loss.to_numpy()))
-            if len(krl_losses) >= blocksize:
-                smap.submit((builder, krl_losses))
-                krl_losses[:] = []
-        if krl_losses:
-            smap.submit((builder, krl_losses))
-        for krl, curve in smap.reduce().items():
-            agg_curves[krl] = curve
+            aggrisk['agg_id'].append(k)
+            aggrisk['rlz_id'].append(r)
+            aggrisk['loss_id'].append(lni)
+            curve = {}
+            for kind in loss_kinds:
+                aggrisk[kind].append(df[kind].sum())
+                curve[kind] = builder.build_curve(df[kind].to_numpy(), r)
+            for p, period in enumerate(builder.return_periods):
+                dic['agg_id'].append(k)
+                dic['rlz_id'].append(r)
+                dic['loss_id'].append(lni)
+                dic['return_period'].append(period)
+                for kind in loss_kinds:
+                    dic[kind].append(curve[kind][p])
+        aggrisk = pandas.DataFrame(aggrisk)
         R = len(self.datastore['weights'])
         time_ratio = oq.time_ratio / R if oq.collect_rlzs else oq.time_ratio
-        self.datastore['agg_losses-rlzs'] = agg_losses * time_ratio
-        set_rlzs_stats(self.datastore, 'agg_losses',
-                       agg_id=K + 1, loss_type=oq.loss_names, units=units)
-        self.datastore['agg_curves-rlzs'] = agg_curves
-        set_rlzs_stats(self.datastore, 'agg_curves',
-                       agg_id=K + 1, lti=self.L,
-                       return_period=builder.return_periods,
-                       units=units)
+        aggrisk['loss'] *= time_ratio
+        self.datastore.create_df('aggrisk', aggrisk)
+        self.datastore.create_df(
+            'aggcurves', pandas.DataFrame(dic),
+            limit_states=' '.join(self.oqparam.limit_states))
         return 1
 
     def post_execute(self, dummy):
