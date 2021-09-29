@@ -115,10 +115,10 @@ collapse_level:
   INTERNAL
 
 collect_rlzs:
-  Collect all realizations into a single effective realizations. Used in
-  event_based_risk calculations with sampling.
+  Collect all realizations into a single effective realization. If not given
+  it is true for sampling and false for full enumeration.
   Example: *collect_rlzs=true*.
-  Default: False
+  Default: None
 
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
@@ -452,7 +452,7 @@ number_of_logic_tree_samples:
   Used to specify the number of realizations to generate when using logic tree
   sampling. If zero, full enumeration is performed.
   Example: *number_of_logic_tree_samples = 0*.
-  Default: no default
+  Default: 0
 
 poes:
   Probabilities of Exceedance used to specify the hazard maps or hazard spectra
@@ -743,7 +743,7 @@ class OqParam(valid.ParamSet):
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), '0')
-    collect_rlzs = valid.Param(valid.boolean, False)
+    collect_rlzs = valid.Param(valid.boolean, None)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -1662,11 +1662,14 @@ class OqParam(valid.ParamSet):
         sampling_method must be early_weights, only the mean is available,
         and number_of_logic_tree_samples must be greater than 1.
         """
+        if self.job_type == 'hazard':
+            return True
+        if self.collect_rlzs is None:
+            self.collect_rlzs = self.number_of_logic_tree_samples > 1
         if self.calculation_mode == 'event_based_damage':
             ini = self.inputs['job_ini']
             if not self.investigation_time:
                 raise InvalidFile('Missing investigation_time in %s' % ini)
-            self.collect_rlzs = True
             return True
         elif self.collect_rlzs is False:
             return True
