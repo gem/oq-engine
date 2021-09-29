@@ -153,7 +153,8 @@ def aggreg(outputs, crmodel, AR, kids, rlz_id, param, monitor):
                 else:
                     df = df.add(df_, fill_value=0.)
     if df is not None:
-        df = df.reset_index().rename(columns=dict(eid='event_id', kid='agg_id'))
+        df = df.reset_index().rename(
+            columns=dict(eid='event_id', kid='agg_id'))
     return dict(avg=loss_by_AR, alt=df)
 
 

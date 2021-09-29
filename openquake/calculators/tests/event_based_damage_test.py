@@ -55,7 +55,8 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
 
     def test_case_12a(self):
-        # test event_based_damage, no aggregate_by
+        # test event_based_damage, no aggregate_by,
+        # discrete_damage_distribution = true
         self.run_calc(case_12.__file__, 'job_a.ini')
         self.check_damages('a_damage_table.txt', 'a_damages.txt')
 
