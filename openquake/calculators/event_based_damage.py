@@ -49,21 +49,6 @@ def fix_dic(dic, columns):
     fix_dtype(dic, F32, columns)
 
 
-def bin_ddd(fractions, n, seed):
-    """
-    Converting fractions into discrete damage distributions using bincount
-    and numpy.random.choice
-    """
-    n = int(n)
-    D = fractions.shape[1]  # shape (E, D)
-    ddd = numpy.zeros(fractions.shape, U32)
-    numpy.random.seed(seed)
-    for e, frac in enumerate(fractions):
-        ddd[e] = numpy.bincount(
-            numpy.random.choice(D, n, p=frac/frac.sum()), minlength=D)
-    return ddd
-
-
 def agg_damages(dstore, slc, monitor):
     """
     :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
