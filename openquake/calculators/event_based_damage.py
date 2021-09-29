@@ -22,6 +22,7 @@ import pandas
 
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.risklib import scientific
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -118,24 +119,33 @@ def event_based_damage(df, param, monitor):
             if len(gmf_df) == 0:
                 continue
             eids = gmf_df.eid.to_numpy()
+            if not float_dmg_dist:
+                rndgen = scientific.MultiEventRNG(
+                    param['master_seed'], numpy.unique(eids))
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 aids = adf.index.to_numpy()
+                assets = adf.to_records()
+                if float_dmg_dist:
+                    number = assets['value-number']
+                else:
+                    number = U32(assets['value-number'])
                 for lti, lt in enumerate(loss_names):
                     fractions = out[lt]
                     Asid, E, D = fractions.shape
+                    assert len(eids) == E
                     ddd = numpy.zeros((Asid, E, Dc), F32)
-                    ddd[:, :, :D] = fractions
-                    for a, asset in enumerate(adf.to_records()):
-                        if float_dmg_dist:
-                            ddd[a] *= asset['value-number']
-                        else:
-                            # this is a performance distaster; for instance
-                            # the Messina test in oq-risk-tests becomes 10x
-                            # slower even if it has only 25_736 assets
-                            ddd[a] = bin_ddd(
-                                 fractions[a], asset['value-number'],
-                                 param['master_seed'] + a)
+                    if float_dmg_dist:
+                        ddd[:, :, :D] = fractions
+                        for a in range(Asid):
+                            ddd[a] *= number[a]
+                    else:
+                        # this is a performance distaster; for instance
+                        # the Messina test in oq-risk-tests becomes 10x
+                        # slower even if it has only 25_736 assets
+                        ddd[:, :, :D] = rndgen.discrete_dmg_dist(
+                            eids, fractions, number)
+                    for a, asset in enumerate(assets):
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
                             ddd[a, :, ci[name]] = values
@@ -200,7 +210,6 @@ class DamageCalculator(EventBasedRiskCalculator):
                 'The exposure contains %d non-integer asset numbers: '
                 'you cannot use dicrete_damage_distribution=true', num_floats)
         self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
-  
         self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
