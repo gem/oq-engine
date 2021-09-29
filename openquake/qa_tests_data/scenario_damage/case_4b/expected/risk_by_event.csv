@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.13.0-git797650a0ab', start_date='2021-09-29T06:14:24', checksum=3590982611"
+#,,,,,,"generated_by='OpenQuake engine 3.13.0-git3802ef03d2', start_date='2021-09-29T11:10:34', checksum=3590982611"
 event_id,ds1,ds2,ds3,ds4,losses,loss_type
 0,1.18312E+00,8.34666E-01,4.91017E-01,1.59059E-01,4.03237E+03,contents
 0,1.77465E+00,7.61445E-01,1.06597E-01,8.53234E-02,5.94577E+03,nonstructural
