@@ -1,3 +1,3 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.13.0-giteb33ccfa15', start_date='2021-09-24T11:12:50', checksum=3590982611"
+#,,,,,,,,"generated_by='OpenQuake engine 3.13.0-git7288b9bb0f', start_date='2021-09-29T11:06:24', checksum=3590982611"
 asset_id,taxonomy,lon,lat,structural~no_damage,structural~slight,structural~moderate,structural~extreme,structural~complete
-a1,Wood,-122.00000,38.11300,3.788089E-01,2.983243E-01,1.417279E-01,7.224337E-02,1.088956E-01
+a1,Wood,-122.00000,38.11300,6.894044E-01,1.491621E-01,7.086394E-02,3.612169E-02,5.444780E-02
