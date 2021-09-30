@@ -183,9 +183,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('damages-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damages.csv', fname)
 
-        #[fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        #self.assertEqualFiles('expected/losses_asset.csv', fname)
-
         # check risk_by_event
         K = self.calc.datastore.get_attr('risk_by_event', 'K')
         df = self.calc.datastore.read_df('risk_by_event', 'event_id',
@@ -195,6 +192,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqual(dmg.dmg_2.sum(), 64)
         self.assertEqual(dmg.dmg_3.sum(), 41)
         self.assertEqual(dmg.dmg_4.sum(), 20)
+
+        # TODO: add aggrisk output and check it
 
     def test_case_10(self):
         self.run_calc(case_10.__file__, 'job.ini')
