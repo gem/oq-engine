@@ -140,7 +140,9 @@ class Comparator(object):
             return []
         arr = arrays.transpose(1, 0, 2)  # shape (N, C, L)
         for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
+            # each array has shape (C, L)
             for ex, cols in zip(self.extractors, array):
+                # cols has shape L
                 if files:
                     rows[ex.calc_id].append([sid] + list(cols))
                 else:
