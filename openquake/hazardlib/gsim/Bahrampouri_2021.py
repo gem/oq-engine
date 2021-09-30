@@ -225,7 +225,7 @@ class BahrampouriEtAl2021SInter(GMPE):
     #: For Ia, coefficients are taken from table 3
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      a1 a2 a3 a4 a7 b1 b3b b3f b4m b4k b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 c1 c2 c3 c4 phi_ss tau phi_s2s sigma_total
-    ia    –0.6169 2.5269 1.531 6.5 –3.2923 7.5 0.5462 0.6249 –2.7534 –0.2816 –0.0044 –0.003 –1.2608 –0.2992 0.7497 0.43 5.744 7.744 0.7497 0.43 –0.0488 –0.08312 1.4147 0.235 –1.3763 –0.1003 –0.0069 0.356 0.73761 0.92179 1.12747 1.632469
+    ia    -0.6169 2.5269 1.531 6.5 -3.2923 7.5 0.5462 0.6249 -2.7534 -0.2816 -0.0044 -0.003 -1.2608 -0.2992 0.7497 0.43 5.744 7.744 0.7497 0.43 -0.0488 -0.08312 1.4147 0.235 -1.3763 -0.1003 -0.0069 0.356 0.73761 0.92179 1.12747 1.632469
     """)
     
 class BahrampouriEtAl2021SSlab(GMPE):
@@ -237,7 +237,7 @@ class BahrampouriEtAl2021SSlab(GMPE):
     titled 'Ground motion prediction equations for Arias Intensity using the Kik-net database'.
     """
     #: Supported tectonic region type is SUBDUCTION INTERFACE, see title!
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERSLAB
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground velocity and peak ground acceleration, see tables 4
@@ -287,7 +287,7 @@ class BahrampouriEtAl2021SSlab(GMPE):
     #: For Ia, coefficients are taken from table 3
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      a1 a2 a3 a4 a7 b1 b3b b3f b4m b4k b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 c1 c2 c3 c4 phi_ss tau phi_s2s sigma_total
-    ia    –0.6169 2.5269 1.531 6.5 –3.2923 7.5 0.5462 0.6249 –2.7534 –0.2816 –0.0044 –0.003 –1.2608 –0.2992 0.7497 0.43 5.744 7.744 0.7497 0.43 –0.0488 –0.08312 1.4147 0.235 –1.3763 –0.1003 –0.0069 0.356 0.73761 0.92179 1.12747 1.632469
+    ia    -0.6169 2.5269 1.531 6.5 -3.2923 7.5 0.5462 0.6249 -2.7534 -0.2816 -0.0044 -0.003 -1.2608 -0.2992 0.7497 0.43 5.744 7.744 0.7497 0.43 -0.0488 -0.08312 1.4147 0.235 -1.3763 -0.1003 -0.0069 0.356 0.73761 0.92179 1.12747 1.632469
     """)
 
 
