@@ -240,7 +240,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
 def losses(aid, alt):
     E = len(alt.event_id.unique())
-    losses = numpy.zeros(E, numpy.uint32)
+    losses = numpy.zeros(E, int)
     df = alt.loc[aid]
-    losses[df.event_id.to_numpy()] = df.structural.to_numpy()
+    losses[df.event_id.to_numpy()] = df.loss.to_numpy()
     return losses

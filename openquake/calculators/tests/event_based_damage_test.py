@@ -115,9 +115,9 @@ class EventBasedDamageTestCase(CalculatorTestCase):
 
         # check damages-stats
         [f] = export(('damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+        self.assertEqualFiles('expected/avg_risk-mean.csv', f, delta=1E-5)
 
-        # check aggcurves, agglosses
+        # check aggcurves
         [f] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
 
