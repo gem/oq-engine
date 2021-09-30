@@ -276,6 +276,9 @@ class DamageCalculator(EventBasedRiskCalculator):
                              period, tot, number)
 
     def post_execute(self, dummy):
+        """
+        Store damages-rlzs/stats, aggrisk and aggcurves
+        """
         oq = self.oqparam
         A, R, L, Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
