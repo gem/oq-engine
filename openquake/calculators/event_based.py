@@ -376,10 +376,12 @@ class EventBasedCalculator(base.HazardCalculator):
         Compute and save avg_gmf, unless there are too many GMFs
         """
         size = self.datastore.getsize('gmf_data')
+        maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
-        if size > 100 * 1024**2:
+        if size > maxsize:
             logging.warning(
-                'There are more than 100 MB of GMFs, not computing avg_gmf')
+                f'There are more than {humansize(maxsize)} of GMFs,'
+                ' not computing avg_gmf')
             return numpy.unique(self.datastore['gmf_data/eid'][:])
 
         rlzs = self.datastore['events']['rlz_id']

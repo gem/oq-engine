@@ -34,7 +34,7 @@ F32 = numpy.float32
 U32 = numpy.uint32
 U16 = numpy.uint16
 U8 = numpy.uint8
-KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
+KNOWN_CONSEQUENCES = ['loss', 'ins_loss', 'losses', 'collapsed', 'injured',
                       'fatalities', 'homeless']
 
 
@@ -817,7 +817,7 @@ class MultiEventRNG(object):
     def discrete_dmg_dist(self, eids, fractions, numbers):
         """
         Converting fractions into discrete damage distributions using bincount
-        and rng.choice.
+        and random.choice.
 
         :param eids: E event IDs
         :param fractions: array of shape (A, E, D)
@@ -1352,22 +1352,16 @@ class InsuredLosses(object):
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
         o = out[lt]
+        o['ins_loss'] = numpy.zeros(len(o))
         if lt in self.policy_dict and len(o):
             policy = self.policy_dict[lt]
-            eid_aids, ilosses = [], []
-            for aid, df in o.groupby('aid'):
+            for (eid, aid), df in o.iterrows():
                 asset = asset_df.loc[aid]
                 avalue = asset['value-' + lt]
                 policy_idx = asset[self.policy_name]
                 ded, lim = policy[policy_idx]
-                ins = insured_losses(
-                    df.loss.to_numpy(), ded * avalue, lim * avalue)
-                eid_aids.extend(df.index)
-                ilosses.extend(ins)
-            eids, aids = zip(*eid_aids)
-            out[lt + '_ins'] = pandas.DataFrame(
-                dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
-                     variance=numpy.zeros_like(ilosses)))
+                ins = insured_losses(df.loss, ded * avalue, lim * avalue)
+                o.loc[eid, aid]['ins_loss'] = ins
 
 
 # not used anymore
@@ -1424,7 +1418,7 @@ def get_agg_value(consequence, agg_values, agg_id, loss_type):
     aval = agg_values[agg_id]
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    elif consequence in ('loss', 'losses'):
+    elif consequence in ('loss', 'ins_loss', 'losses'):
         return aval[loss_type]
     elif consequence == 'collapsed':
         return aval['number']

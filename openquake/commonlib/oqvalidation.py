@@ -91,6 +91,11 @@ asset_life_expectancy:
 assets_per_site_limit:
   INTERNAL
 
+gmf_max_gb:
+  If the size (in GB) of the GMFs is below this value, then compute avg_gmf
+  Example: *gmf_max_gb = 1.*
+  Default: 0.1
+
 avg_losses:
   Used in risk calculations to compute average losses.
   Example: *avg_losses=false*.
@@ -115,10 +120,10 @@ collapse_level:
   INTERNAL
 
 collect_rlzs:
-  Collect all realizations into a single effective realizations. Used in
-  event_based_risk calculations with sampling.
+  Collect all realizations into a single effective realization. If not given
+  it is true for sampling and false for full enumeration.
   Example: *collect_rlzs=true*.
-  Default: False
+  Default: None
 
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
@@ -452,7 +457,7 @@ number_of_logic_tree_samples:
   Used to specify the number of realizations to generate when using logic tree
   sampling. If zero, full enumeration is performed.
   Example: *number_of_logic_tree_samples = 0*.
-  Default: no default
+  Default: 0
 
 poes:
   Probabilities of Exceedance used to specify the hazard maps or hazard spectra
@@ -743,7 +748,7 @@ class OqParam(valid.ParamSet):
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), '0')
-    collect_rlzs = valid.Param(valid.boolean, False)
+    collect_rlzs = valid.Param(valid.boolean, None)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -766,6 +771,7 @@ class OqParam(valid.ParamSet):
     ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
+    gmf_max_gb = valid.Param(valid.positivefloat, .1)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary, {})
@@ -1311,8 +1317,6 @@ class OqParam(valid.ParamSet):
         names = []
         for lt in self.all_cost_types:
             names.append(lt)
-        for name in self.inputs.get('insurance', []):
-            names.append(lt + '_ins')
         return names
 
     def loss_dt(self, dtype=F64):
@@ -1664,14 +1668,14 @@ class OqParam(valid.ParamSet):
         sampling_method must be early_weights, only the mean is available,
         and number_of_logic_tree_samples must be greater than 1.
         """
+        if self.job_type == 'hazard':
+            return True
+        if self.collect_rlzs is None:
+            self.collect_rlzs = self.number_of_logic_tree_samples > 1
         if self.calculation_mode == 'event_based_damage':
             ini = self.inputs['job_ini']
-            if self.number_of_logic_tree_samples == 0:
-                raise InvalidFile('%s: event_based_damage does not support '
-                                  'full enumeration, use sampling' % ini)
             if not self.investigation_time:
                 raise InvalidFile('Missing investigation_time in %s' % ini)
-            self.collect_rlzs = True
             return True
         elif self.collect_rlzs is False:
             return True

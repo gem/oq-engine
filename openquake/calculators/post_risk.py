@@ -126,16 +126,6 @@ def get_src_loss_table(dstore, L):
     return zip(*sorted(acc.items()))
 
 
-def post_risk(builder, krl_losses, monitor):
-    """
-    :returns: dictionary krl -> loss curve
-    """
-    res = {}
-    for k, r, l, losses in krl_losses:
-        res[k, r, l] = builder.build_curve(losses, r)
-    return res
-
-
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
@@ -194,12 +184,10 @@ class PostRiskCalculator(base.RiskCalculator):
             alt_df['agg_id'] = idxs[alt_df['agg_id'].to_numpy()]
             alt_df = alt_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
+        loss_kinds = [col for col in alt_df.columns if col not in {
+            'event_id', 'agg_id', 'loss_id', 'variance'}]
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
-        smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5)
-        # producing concurrent_tasks/2 = num_cores tasks
-        blocksize = int(numpy.ceil(
-            (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
-        krl_losses = []
+        dic = general.AccumDict(accum=[])
         aggrisk = general.AccumDict(accum=[])
         gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id, alt_df.loss_id])
         # NB: in the future we may use multiprocessing.shared_memory
@@ -207,22 +195,18 @@ class PostRiskCalculator(base.RiskCalculator):
             aggrisk['agg_id'].append(k)
             aggrisk['rlz_id'].append(r)
             aggrisk['loss_id'].append(lni)
-            aggrisk['loss'].append(df.loss.sum())
-            krl_losses.append((k, r, lni, df.loss.to_numpy()))
-            if len(krl_losses) >= blocksize:
-                smap.submit((builder, krl_losses))
-                krl_losses[:] = []
-        aggrisk = pandas.DataFrame(aggrisk)
-        if krl_losses:
-            smap.submit((builder, krl_losses))
-        dic = general.AccumDict(accum=[])
-        for (agg_id, rlz_id, loss_id), curve in smap.reduce().items():
+            curve = {}
+            for kind in loss_kinds:
+                aggrisk[kind].append(df[kind].sum())
+                curve[kind] = builder.build_curve(df[kind].to_numpy(), r)
             for p, period in enumerate(builder.return_periods):
-                dic['agg_id'].append(agg_id)
-                dic['rlz_id'].append(rlz_id)
-                dic['loss_id'].append(loss_id)
+                dic['agg_id'].append(k)
+                dic['rlz_id'].append(r)
+                dic['loss_id'].append(lni)
                 dic['return_period'].append(period)
-                dic['loss'].append(curve[p])
+                for kind in loss_kinds:
+                    dic[kind].append(curve[kind][p])
+        aggrisk = pandas.DataFrame(aggrisk)
         R = len(self.datastore['weights'])
         time_ratio = oq.time_ratio / R if oq.collect_rlzs else oq.time_ratio
         aggrisk['loss'] *= time_ratio

@@ -55,7 +55,8 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
 
     def test_case_12a(self):
-        # test event_based_damage, no aggregate_by
+        # test event_based_damage, no aggregate_by,
+        # discrete_damage_distribution = true
         self.run_calc(case_12.__file__, 'job_a.ini')
         self.check_damages('a_damage_table.txt', 'a_damages.txt')
 
@@ -109,17 +110,19 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
 
     def test_case_15(self):
-        # test with sampling and both fatalities and losses
+        # test full enumeration with both fatalities and losses
         self.run_calc(case_15.__file__, 'job.ini')
 
-        # check damages-rlzs
-        [f] = export(('damages-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+        # check damages-stats
+        [f] = export(('damages-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_risk-mean.csv', f, delta=1E-5)
 
-        # check aggcurves, agglosses
+        # check aggcurves
         [f] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
 
         # check extract
         dic = vars(extract(self.calc.datastore, 'damages-rlzs'))
-        self.assertEqual(list(dic), ['rlz-000', '_extra'])
+        self.assertEqual(
+            list(dic),
+            ['rlz-000', 'rlz-001', 'rlz-002', 'rlz-003', 'rlz-004', '_extra'])

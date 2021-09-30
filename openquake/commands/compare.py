@@ -112,10 +112,10 @@ class Comparator(object):
         what += '?imt=' + imt
         aw = extractor.get(what)
         arrays = numpy.zeros((len(self.extractors), len(sids), 1))
-        arrays[0] = getattr(aw, imt)[sids]
+        arrays[0, :, 0] = getattr(aw, imt)[sids]
         extractor.close()
         for e, extractor in enumerate(self.extractors[1:], 1):
-            arrays[e] = getattr(extractor.get(what), imt)[sids]
+            arrays[e, :, 0] = getattr(extractor.get(what), imt)[sids]
             extractor.close()
         return arrays  # shape (C, N, 1)
 
@@ -140,7 +140,9 @@ class Comparator(object):
             return []
         arr = arrays.transpose(1, 0, 2)  # shape (N, C, L)
         for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
+            # each array has shape (C, L)
             for ex, cols in zip(self.extractors, array):
+                # cols has shape L
                 if files:
                     rows[ex.calc_id].append([sid] + list(cols))
                 else:
@@ -210,7 +212,11 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
     Compare the average GMF of two or more calculations.
     """
     c = Comparator(calc_ids)
-    c.compare('avg_gmf', imt, files, samplesites, atol, rtol)
+    arrays = c.compare('avg_gmf', imt, files, samplesites, atol, rtol)
+    if len(calc_ids) == 2:  # print rms-diff
+        gmf1, gmf2 = arrays
+        sigma = numpy.sqrt(numpy.average((gmf1 - gmf2)**2))
+        print('rms-diff =', sigma)
 
 
 main = dict(rups=compare_rups,
