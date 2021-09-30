@@ -212,7 +212,11 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
     Compare the average GMF of two or more calculations.
     """
     c = Comparator(calc_ids)
-    c.compare('avg_gmf', imt, files, samplesites, atol, rtol)
+    arrays = c.compare('avg_gmf', imt, files, samplesites, atol, rtol)
+    if len(calc_ids) == 2:  # print rms-diff
+        gmf1, gmf2 = arrays
+        sigma = numpy.sqrt(numpy.average((gmf1 - gmf2)**2))
+        print('rms-diff =', sigma)
 
 
 main = dict(rups=compare_rups,
