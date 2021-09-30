@@ -95,7 +95,7 @@ def make_figure_uhs_cluster(extractors, what):
 
 def make_figure_avg_gmf(extractors, what):
     """
-    $ oq plot "avg_gmf?imt=gmv_0"
+    $ oq plot "avg_gmf?imt=PGA"
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
