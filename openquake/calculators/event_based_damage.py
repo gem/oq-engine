@@ -174,7 +174,7 @@ def worst_dmgdist(df, agg_id, loss_id, dic):
         dic[col].append(df[col].to_numpy()[event_id])
 
 
-@base.calculators.add('event_based_damage')
+@base.calculators.add('event_based_damage', 'scenario_damage')
 class DamageCalculator(EventBasedRiskCalculator):
     """
     Damage calculator
@@ -203,7 +203,8 @@ class DamageCalculator(EventBasedRiskCalculator):
                 'you cannot use dicrete_damage_distribution=true' % num_floats)
         self.param['R'] = self.R  # 1 if collect_rlzs
         self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
-        self.builder = get_loss_builder(self.datastore)  # check
+        if oq.investigation_time:  # event based
+            self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
@@ -257,11 +258,14 @@ class DamageCalculator(EventBasedRiskCalculator):
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
         number = self.assetcol['value-number']
+        num_events = numpy.bincount(  # events by rlz
+            self.datastore['events']['rlz_id'], minlength=self.R)
         for r in range(self.R):
+            ne = num_events[r]
             for li in range(L):
                 self.dmgcsq[:, r, li, 0] = (  # no damage
-                    number * self.E - self.dmgcsq[:, r, li, 1:D].sum(axis=1))
-        self.dmgcsq /= self.E
+                    number * ne - self.dmgcsq[:, r, li, 1:D].sum(axis=1))
+            self.dmgcsq[:, r] /= ne
         self.datastore['damages-rlzs'] = self.dmgcsq
         set_rlzs_stats(self.datastore,
                        'damages',
@@ -269,6 +273,13 @@ class DamageCalculator(EventBasedRiskCalculator):
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_names,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
+        # sanity check
+        if self.dmgcsq[:, :, :, 1:].sum() == 0:
+            self.nodamage = True
+            logging.warning(
+                'There is no damage, perhaps the hazard is too small?')
+        if oq.investigation_time is None:  # scenario
+            return
         size = self.datastore.getsize('risk_by_event')
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))
