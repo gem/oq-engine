@@ -71,6 +71,24 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
+def run_sec_sims(damages, haz, sec_sims, seed):
+    """
+    :param damages: array of shape (E, D) for a given asset
+    :param haz: dataframe of size E with a probability field
+    :param sec_sims: pair (probability field, number of simulations)
+    :param seed: random seed to use
+
+    Run secondary simulations and update the array damages
+    """
+    [(prob_field, num_sims)] = sec_sims
+    numpy.random.seed(seed)
+    probs = haz[prob_field].to_numpy()   # LiqProb
+    affected = numpy.random.random((num_sims, 1)) < probs  # (N, E)
+    for d, buildings in enumerate(damages.T[1:], 1):
+        # doing the mean on the secondary simulations for each event
+        damages[:, d] = numpy.mean(affected * buildings, axis=0)  # shape E
+
+
 def event_based_damage(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
@@ -88,6 +106,8 @@ def event_based_damage(df, param, monitor):
         kids = (dstore['assetcol/kids'][:] if K
                 else numpy.zeros(len(assets_df), U16))
         crmodel = monitor.read('crmodel')
+    seed = crmodel.oqparam.master_seed
+    sec_sims = crmodel.oqparam.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
     dmgcsq = zero_dmgcsq(len(assets_df), param['R'], crmodel)
@@ -108,8 +128,7 @@ def event_based_damage(df, param, monitor):
             if R > 1:
                 rlzs = allrlzs[eids]
             if not float_dmg_dist:
-                rndgen = scientific.MultiEventRNG(
-                    param['master_seed'], numpy.unique(eids))
+                rndgen = scientific.MultiEventRNG(seed, numpy.unique(eids))
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 aids = adf.index.to_numpy()
@@ -133,7 +152,11 @@ def event_based_damage(df, param, monitor):
                         # slower even if it has only 25_736 assets
                         ddd[:, :, :D] = rndgen.discrete_dmg_dist(
                             eids, fractions, number)
+
+                    # secondary perils and consequences
                     for a, asset in enumerate(assets):
+                        if sec_sims:
+                            run_sec_sims(ddd[a], gmf_df, sec_sims, seed + a)
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
                             ddd[a, :, ci[name]] = values
