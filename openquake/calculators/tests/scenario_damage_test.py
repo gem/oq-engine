@@ -193,7 +193,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqual(dmg.dmg_3.sum(), 41)
         self.assertEqual(dmg.dmg_4.sum(), 20)
 
-        # TODO: add aggrisk output and check it
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
 
     def test_case_10(self):
         self.run_calc(case_10.__file__, 'job.ini')
