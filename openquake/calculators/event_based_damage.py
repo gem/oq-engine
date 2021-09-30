@@ -106,7 +106,7 @@ def event_based_damage(df, param, monitor):
         kids = (dstore['assetcol/kids'][:] if K
                 else numpy.zeros(len(assets_df), U16))
         crmodel = monitor.read('crmodel')
-    seed = crmodel.oqparam.master_seed
+    master_seed = crmodel.oqparam.master_seed
     sec_sims = crmodel.oqparam.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
@@ -128,7 +128,7 @@ def event_based_damage(df, param, monitor):
             if R > 1:
                 rlzs = allrlzs[eids]
             if not float_dmg_dist:
-                rndgen = scientific.MultiEventRNG(seed, numpy.unique(eids))
+                rndgen = scientific.MultiEventRNG(master_seed, numpy.unique(eids))
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 aids = adf.index.to_numpy()
@@ -156,7 +156,8 @@ def event_based_damage(df, param, monitor):
                     # secondary perils and consequences
                     for a, asset in enumerate(assets):
                         if sec_sims:
-                            run_sec_sims(ddd[a], gmf_df, sec_sims, seed + a)
+                            seed = master_seed + int(asset.ordinal)
+                            run_sec_sims(ddd[a], gmf_df, sec_sims, seed)
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
                             ddd[a, :, ci[name]] = values
