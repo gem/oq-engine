@@ -21,7 +21,7 @@ import itertools
 import numpy
 import pandas
 
-from openquake.baselib import general, python3compat
+from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore
 from openquake.risklib import scientific
 from openquake.calculators import base, views
@@ -152,6 +152,20 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
+def build_aggcurves(builder, agg_id, rlz_id, loss_id, data):
+    dic = general.AccumDict(accum=[])
+    curve = {kind: builder.build_curve(data[kind], rlz_id)
+             for kind in data}
+    for p, period in enumerate(builder.return_periods):
+        dic['agg_id'].append(agg_id)
+        dic['rlz_id'].append(rlz_id)
+        dic['loss_id'].append(loss_id)
+        dic['return_period'].append(period)
+        for kind in data:
+            dic[kind].append(curve[kind][p])
+    return dic
+
+
 def store_agg(dstore, rbe_df, num_events):
     """
     Build the aggrisk and aggcurves tables from the risk_by_event table
@@ -192,20 +206,11 @@ def store_agg(dstore, rbe_df, num_events):
     if oq.investigation_time and loss_kinds:  # build aggcurves
         logging.info('Building aggcurves')
         builder = get_loss_builder(dstore, num_events=num_events)
-        dic = general.AccumDict(accum=[])
+        smap = parallel.Starmap(build_aggcurves, h5=dstore.hdf5)
         for (agg_id, rlz_id, loss_id), df in gb:
-            curve = {}
-            # NB: in the future we may use multiprocessing.shared_memory
-            for kind in loss_kinds:
-                curve[kind] = builder.build_curve(
-                    df[kind].to_numpy(), rlz_id)
-            for p, period in enumerate(builder.return_periods):
-                dic['agg_id'].append(agg_id)
-                dic['rlz_id'].append(rlz_id)
-                dic['loss_id'].append(loss_id)
-                dic['return_period'].append(period)
-                for kind in loss_kinds:
-                    dic[kind].append(curve[kind][p])
+            data = {kind: df[kind].to_numpy() for kind in loss_kinds}
+            smap.submit((builder, agg_id, rlz_id, loss_id, data))
+        dic = smap.reduce()
         fix_dtypes(dic)
         dstore.create_df('aggcurves', pandas.DataFrame(dic),
                          limit_states=' '.join(oq.limit_states))
