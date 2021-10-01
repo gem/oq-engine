@@ -1,22 +1,21 @@
 Extended consequences
 =====================
 
-Scenario damage calculations produce damage distributions, i.e. arrays with the
-probability of being in each damage state listed in the fragility
-functions. There is a damage distribution per each asset, event and
-loss type, so you can easily produce *billions* of damage
-distributions. This is why the engine provide facilities to
+Scenario damage calculations produce damage distributions, i.e. arrays
+containing the probability of being in each damage state defined in
+the fragility functions. There is a damage distribution per each
+asset, event and loss type, so you can easily produce *billions* of
+damage distributions. This is why the engine provide facilities to
 compute results based on aggregating the damage distributions,
-possibly multiplied by suitable coefficients, i.e. *consequences*. In
-general, from the damage distributions it is possible to compute
-generic consequences by multiplying for known coefficients specified
-in what is called the *consequence model*. For instance, from the
-probability of being in the collapsed damage state, one might estimate
-the number of fatalities, given the right multiplicative coefficient.
-Another commonly computed consequence is the economic loss; in order
-to estimated it, one need a different multiplicative coefficient for
-each damage state and for each taxonomy. The consequence model can be
-represented as a CSV file like the following:
+possibly multiplied by suitable coefficients, i.e. *consequences*.
+
+For instance, from the probability of being in the collapsed damage
+state, one may estimate the number of fatalities, given the right
+multiplicative coefficient.  Another commonly computed consequence is
+the economic loss; in order to estimated it, one need a different
+multiplicative coefficient for each damage state and for each
+taxonomy. The table of coefficients, a.k.a. the *consequence model*,
+can be represented as a CSV file like the following:
 
 ===================	============	============	========	==========	===========	==========	
  taxonomy          	 consequence  	 loss_type  	 slight 	 moderate 	 extensive 	 complete 	
@@ -89,12 +88,7 @@ hazard and risk calculations. The effective investigation time is
 ``eff_time = 1 (year) x 1000 (ses) x 50 (rlzs) = 50,000 years``
 
 and the calculation is using sampling of the logic tree. 
-Notice that *it is an error to use full enumeration with the
-event_based_damage calculator*.
-
-The restriction is by design, since the event based damage calculator is
-not able to track the results produced by different realizations.
-When using sampling all the realizations have the same weight, so on
+Since all the realizations have the same weight, on
 the risk side we can effectively consider all of them together. This is
 why there will be a single output (for the effective risk realization)
 and not 50 outputs (one for each hazard realization) as it would happen
@@ -105,24 +99,27 @@ asset (unless you specify ``aggregate_by=id`` in the ``job.ini`` file).
 
 By default it stores the aggregate damage distributions by summing on
 all the assets in the exposure. If you are interested only in partial
-sums, i.e. in aggregating only the distributions associated to a certain
-tag combination, you can produce the partial sums by specifying the tags.
-For instance ``aggregate_by = taxonomy`` will aggregate by taxonomy,
-``aggregate_by = taxonomy, region`` will aggregate by taxonomy and region,
-etc. The aggregated damage distributions (and aggregated consequences, if
-any) will be stored in a table called ``risk_by_event`` which can be
-accessed with pandas. The corresponding DataFrame will have fields
-``event_id``, ``agg_id`` (integer referring to which kind of aggregation you
-are considering), ``loss_id`` (integer referring to the loss type in consideration),
-a column named ``dmg_X`` for each damage state and a column for each consequence.
-In the EventBasedDamage demo the exposure has a field
-called ``NAME_1`` and representing a geographic region in Nepal (i.e.
-"East" or "Mid-Western") and there is an ``aggregate_by = NAME_1, taxonomy`` in the ``job.ini``.
+sums, i.e. in aggregating only the distributions associated to a
+certain tag combination, you can produce the partial sums by
+specifying the tags.  For instance ``aggregate_by = taxonomy`` will
+aggregate by taxonomy, ``aggregate_by = taxonomy, region`` will
+aggregate by taxonomy and region, etc. The aggregated damage
+distributions (and aggregated consequences, if any) will be stored in
+a table called ``risk_by_event`` which can be accessed with
+pandas. The corresponding DataFrame will have fields ``event_id``,
+``agg_id`` (integer referring to which kind of aggregation you are
+considering), ``loss_id`` (integer referring to the loss type in
+consideration), a column named ``dmg_X`` for each damage state and a
+column for each consequence.  In the EventBasedDamage demo the
+exposure has a field called ``NAME_1`` and representing a geographic
+region in Nepal (i.e.  "East" or "Mid-Western") and there is an
+``aggregate_by = NAME_1, taxonomy`` in the ``job.ini``.
 
-Since the demo has 4 taxonomies ("Wood", "Adobe", "Stone-Masonry", "Unreinforced-Brick-Masonry")
-there 4 x 2 = 8 possible aggregations; actually, there is also a 9th possibility corresponding to
-aggregating on all assets by disregarding the tags. You can see the possible values of the
-the ``agg_id`` field with the following command::
+Since the demo has 4 taxonomies ("Wood", "Adobe", "Stone-Masonry",
+"Unreinforced-Brick-Masonry") there 4 x 2 = 8 possible aggregations;
+actually, there is also a 9th possibility corresponding to aggregating
+on all assets by disregarding the tags. You can see the possible
+values of the the ``agg_id`` field with the following command::
 
  $ oq show agg_id
                            taxonomy       NAME_1
@@ -137,7 +134,8 @@ the ``agg_id`` field with the following command::
  7       Unreinforced-Brick-Masonry  Mid-Western
  8                         *total*      *total*
 
-Armed with that knowledge it is pretty easy to understand the ``risk_by_event`` table::
+Armed with that knowledge it is pretty easy to understand the
+``risk_by_event`` table::
 
  >> from openquake.commonlib.datastore import read
  >> dstore = read(-1)  # the latest calculation
