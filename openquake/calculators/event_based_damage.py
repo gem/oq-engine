@@ -223,24 +223,6 @@ class DamageCalculator(EventBasedRiskCalculator):
                 hdf5.extend(dset, df[name].to_numpy())
         return 1
 
-    def sanity_check(self):
-        """
-        Compare agglosses with aggregate avglosses and check that
-        damaged buildings < total buildings
-        """
-        ac_df = self.datastore.read_df(
-            'aggcurves', sel=dict(agg_id=self.param['K']))
-        number = self.assetcol['value-number'].sum()
-        for (loss_id, period), df in ac_df.groupby(
-                ['loss_id', 'return_period']):
-            tot = sum(df[col].sum() for col in df.columns
-                      if col.startswith('dmg_'))
-            if tot > number:
-                logging.info('For loss type %s, return_period=%d the '
-                             'damaged buildings are %d > %d, but it is okay',
-                             self.oqparam.loss_names[loss_id],
-                             period, tot, number)
-
     def post_execute(self, dummy):
         """
         Store damages-rlzs/stats, aggrisk and aggcurves
@@ -276,6 +258,3 @@ class DamageCalculator(EventBasedRiskCalculator):
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_names,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
-
-        if oq.investigation_time:
-            self.sanity_check()

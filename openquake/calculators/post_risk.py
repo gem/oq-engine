@@ -182,7 +182,7 @@ def store_agg(dstore, rbe_df, num_events):
                      limit_states=' '.join(oq.limit_states))
 
     loss_kinds = [col for col in columns if not col.startswith('dmg_')]
-    if oq.investigation_time:  # build aggcurves
+    if oq.investigation_time and loss_kinds:  # build aggcurves
         logging.info('Building aggcurves')
         builder = get_loss_builder(dstore, num_events=num_events)
         dic = general.AccumDict(accum=[])
