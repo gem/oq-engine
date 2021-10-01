@@ -99,16 +99,22 @@ def make_figure_avg_gmf(extractors, what):
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
-    [ex] = extractors
-    avg_gmf = ex.get(what)
     imt = what.split('=')[1]
     ax = fig.add_subplot(1, 1, 1)
     ax.grid(True)
     ax.set_title('Avg GMF for %s' % imt)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
-    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'],
-                      c=avg_gmf[imt], cmap='jet')
+    if len(extractors) == 2:  # compare two avg_gmf
+        ex1, ex2 = extractors
+        avg_gmf = ex1.get(what)
+        avg_gmf2 = ex2.get(what)
+        gmf = avg_gmf[imt] - avg_gmf2[imt]
+    else:  # plot a single avg_gmf
+        [ex] = extractors
+        avg_gmf = ex.get(what)
+        gmf = avg_gmf[imt]
+    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet')
     plt.colorbar(coll)
     return plt
 

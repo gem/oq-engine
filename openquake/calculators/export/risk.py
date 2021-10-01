@@ -90,8 +90,9 @@ def export_aggrisk(ekey, dstore):
                    oq.investigation_time))
 
     aggrisk = dstore.read_df('aggrisk')
-    csqs = [col for col in aggrisk.columns
+    cols = [col for col in aggrisk.columns
             if col not in {'agg_id', 'rlz_id', 'loss_id'}]
+    csqs = [col for col in cols if not col.startswith('dmg_')]
     header = ['loss_type'] + tagnames + ['exposed_value'] + [
         '%s_ratio' % csq for csq in csqs]
     dest = dstore.build_fname('aggrisk', '', 'csv')
@@ -105,11 +106,14 @@ def export_aggrisk(ekey, dstore):
             out[tagname].extend([tag] * n)
         if manyrlzs:
             out['rlz_id'].extend(df.rlz_id)
-        for csq in csqs:
-            aval = scientific.get_agg_value(
-                csq, agg_values, agg_id, loss_type)
-            out[csq + '_value'].extend(df[csq])
-            out[csq + '_ratio'].extend(df[csq] / aval)
+        for col in cols:
+            if col in csqs:
+                aval = scientific.get_agg_value(
+                    col, agg_values, agg_id, loss_type)
+                out[col + '_value'].extend(df[col])
+                out[col + '_ratio'].extend(df[col] / aval)
+            else:
+                out[col].extend(df[col])
     writer.save(pandas.DataFrame(out), dest, header, comment=md)
     return [dest]
 
