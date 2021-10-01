@@ -152,17 +152,18 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
-def build_aggcurves(builder, agg_id, rlz_id, loss_id, data):
+def build_aggcurves(items, builder):
     dic = general.AccumDict(accum=[])
-    curve = {kind: builder.build_curve(data[kind], rlz_id)
-             for kind in data}
-    for p, period in enumerate(builder.return_periods):
-        dic['agg_id'].append(agg_id)
-        dic['rlz_id'].append(rlz_id)
-        dic['loss_id'].append(loss_id)
-        dic['return_period'].append(period)
-        for kind in data:
-            dic[kind].append(curve[kind][p])
+    for (agg_id, rlz_id, loss_id), data in items:
+        curve = {kind: builder.build_curve(data[kind], rlz_id)
+                 for kind in data}
+        for p, period in enumerate(builder.return_periods):
+            dic['agg_id'].append(agg_id)
+            dic['rlz_id'].append(rlz_id)
+            dic['loss_id'].append(loss_id)
+            dic['return_period'].append(period)
+            for kind in data:
+                dic[kind].append(curve[kind][p])
     return dic
 
 
@@ -206,11 +207,14 @@ def store_agg(dstore, rbe_df, num_events):
     if oq.investigation_time and loss_kinds:  # build aggcurves
         logging.info('Building aggcurves')
         builder = get_loss_builder(dstore, num_events=num_events)
-        smap = parallel.Starmap(build_aggcurves, h5=dstore.hdf5)
+        items = []
         for (agg_id, rlz_id, loss_id), df in gb:
             data = {kind: df[kind].to_numpy() for kind in loss_kinds}
-            smap.submit((builder, agg_id, rlz_id, loss_id, data))
-        dic = smap.reduce()
+            items.append([(agg_id, rlz_id, loss_id), data])
+        dic = parallel.Starmap.apply(
+            build_aggcurves, (items, builder),
+            concurrent_tasks=oq.concurrent_tasks,
+            h5=dstore.hdf5).reduce()
         fix_dtypes(dic)
         dstore.create_df('aggcurves', pandas.DataFrame(dic),
                          limit_states=' '.join(oq.limit_states))
