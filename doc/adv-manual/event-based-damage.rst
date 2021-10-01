@@ -231,8 +231,8 @@ The ScenarioDamage demo
 The demo in ``demos/risk/ScenarioDamage`` is similar to the
 EventBasedDemo (it still refers to Nepal) but it uses a much large
 exposure with 9063 assets and 5,365,761 building. Moreover the
-configuration file is split in two: you should
-first run ``job_hazard.ini`` and then ``job_risk.ini``.
+configuration file is split in two: first you should run
+``job_hazard.ini`` and then run ``job_risk.ini`` with the ``--hc`` option.
 
 The first calculation will produce 2 sets of 100 ground motion fields
 each (since ``job_hazard.ini`` contains
@@ -255,3 +255,13 @@ we will produce a damage distribution for each realization::
  0       0       0        0  4173405.75  ...  452433.40625  7.779261e+09
  1       0       1        0  3596234.00  ...  633638.37500  1.123458e+10
 
+The sum over the damage states will still produce the total number of
+buildings, which will be independent from the realization::
+
+ rlz_id dmg_0 + dmg_1 + dmg_2 + dmg_3 + dmg_4
+ 0      5365761.0
+ 1      5365761.0
+
+In this demo there is no ``aggregate_by`` specified, so the only aggregation
+which is performed is the total aggregation. You are invited to specify
+``aggregate_by`` and study how ``aggrisk`` changes.
