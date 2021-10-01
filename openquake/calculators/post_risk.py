@@ -169,12 +169,19 @@ def store_agg(dstore, rbe_df, num_events):
     aggrisk = general.AccumDict(accum=[])
     columns = [col for col in rbe_df.columns if col not in {
         'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
+    dmgs = [col for col in columns if col.startswith('dmg_')]
+    if dmgs:
+        aggnumber = dstore['agg_values']['number']
     gb = rbe_df.groupby(['agg_id', 'rlz_id', 'loss_id'])
     for (agg_id, rlz_id, loss_id), df in gb:
         ne = num_events[rlz_id]
         aggrisk['agg_id'].append(agg_id)
         aggrisk['rlz_id'].append(rlz_id)
         aggrisk['loss_id'].append(loss_id)
+        if dmgs:
+            # infer the number of buildings in nodamage state
+            ndamaged = sum(df[col].sum() for col in dmgs)
+            aggrisk['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
         for col in columns:
             aggrisk[col].append(df[col].sum() / ne)
     fix_dtypes(aggrisk)
