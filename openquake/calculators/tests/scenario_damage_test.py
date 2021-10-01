@@ -149,7 +149,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # this is a case with 5 assets on the same point
         self.assert_ok(case_6, 'job_h.ini,job_r.ini')
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
-        tmpname = write_csv(None, dmg)  # shape (T, R, D) == (5, 1, 5)
+        tmpname = write_csv(None, dmg, fmt='%.5E')  # (T, R, D) == (5, 1, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
 
     def test_case_7(self):

@@ -135,7 +135,9 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     """
     haz_id = None if oqparam is None else oqparam.hazard_calculation_id
     dstore = _read(calc_id, datadir, mode, haz_id)
-    dstore['oqparam'] = oqparam
+    if isinstance(oqparam.risk_imtls, dict):
+        # always except in case_shakemap
+        dstore['oqparam'] = oqparam
     return dstore
 
 

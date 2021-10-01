@@ -114,7 +114,11 @@ def export_aggrisk(ekey, dstore):
                 out[col + '_ratio'].extend(df[col] / aval)
             else:
                 out[col].extend(df[col])
-    writer.save(pandas.DataFrame(out), dest, header, comment=md)
+    dsdic = {'dmg_0': 'no_damage'}
+    for s, ls in enumerate(oq.limit_states, 1):
+        dsdic['dmg_%d' % s] = ls
+    df = pandas.DataFrame(out).rename(columns=dsdic)
+    writer.save(df, dest, header, comment=md)
     return [dest]
 
 
