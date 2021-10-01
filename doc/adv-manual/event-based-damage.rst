@@ -2,7 +2,7 @@ Extended consequences
 =====================
 
 Scenario damage calculations produce damage distributions, i.e. arrays
-containing the probability of being in each damage state defined in
+containing the number of buildings in each damage state defined in
 the fragility functions. There is a damage distribution per each
 asset, event and loss type, so you can easily produce *billions* of
 damage distributions. This is why the engine provide facilities to
@@ -63,6 +63,39 @@ bring a structure in "moderate damage" back to its undamaged state is
 to the fragility model, i.e. ``structural`` will mean that the
 coefficients apply to damage distributions obtained from the fragility
 functions defined in the file ``structural_fragility_model.xml``.
+
+discrete_damage_distribution
+----------------------------
+
+Damage distributions are called discrete when
+the number of buildings in each damage is an integer, and continuous
+when the number of buildings in each damage state is a floating point number.
+Continuous distributions are a lot more efficient to compute and therefore
+that is the default behavior of the engine, at least starting from version 3.13.
+You can ask the engine to use discrete damage distribution by setting the
+flag in the job.ini file
+
+``discrete_damage_distribution = true``
+
+However, it should be noticed that setting
+``discrete_damage_distribution = true`` will raise an error if the
+exposure contains a floating point number of buildings for some asset.
+Having a floating point number of buildings in the exposure is quite
+common since the "number" field is often estimated as an average.
+
+Even if the exposure contains only integers and you have set
+``discrete_damage_distribution = true`` in the job.ini, the
+aggregate damage distributions will normally contains floating
+point numbers, since they are obtained by summing integer distributions
+for all seismic events of a given hazard realization
+and dividing by the number of events of that realization.
+
+By summing the number of buildings in each damage state one will
+get the total number of buildings for the given aggregation level;
+if the exposure contains integer numbers than the sum of the numbers
+will be an integer, apart from minor differences due to numeric errors,
+since the engine stores even discrete distributions as floating point numbers.
+
 
 The EventBasedDamage demo
 ----------------------------------------------------------------
@@ -140,20 +173,24 @@ Armed with that knowledge it is pretty easy to understand the
  >> from openquake.commonlib.datastore import read
  >> dstore = read(-1)  # the latest calculation
  >> df = dstore.read_df('risk_by_event', 'event_id')
-           agg_id  loss_id      dmg_1      dmg_2      dmg_3      dmg_4         losses
- event_id                                                                            
- 248            0        0   1.435510   0.790500   0.164890   0.033948    4936.949707
- 248            8        0   1.435510   0.790500   0.164890   0.033948    4936.949707
- 251            6        0  56.975407  56.554920  28.172340  20.393412  647603.125000
- 251            8        0  56.975407  56.554920  28.172340  20.393412  647603.125000
- 254            0        0   1.786917   0.984012   0.205254   0.042258    6145.497559
- ...          ...      ...        ...        ...        ...        ...            ...
- 30687          8        0  57.137714  55.869644  27.525604  19.811300  634266.187500
- 30688          0        0   4.220542   2.324150   0.484792   0.099810   14515.125000
- 30688          8        0   4.220542   2.324150   0.484792   0.099810   14515.125000
- 30690          0        0   1.660057   0.914153   0.190682   0.039258    5709.204102
- 30690          8        0   1.660057   0.914153   0.190682   0.039258    5709.204102
+           agg_id  loss_id  dmg_1  dmg_2  dmg_3  dmg_4         losses
+ event_id                                                            
+ 472            0        0    0.0    1.0    0.0    0.0    5260.828125
+ 472            8        0    0.0    1.0    0.0    0.0    5260.828125
+ 477            0        0    2.0    0.0    1.0    0.0    6368.788574
+ 477            8        0    2.0    0.0    1.0    0.0    6368.788574
+ 478            0        0    3.0    1.0    1.0    0.0    5453.355469
+ ...          ...      ...    ...    ...    ...    ...            ...
+ 30687          8        0   56.0   53.0   26.0   16.0  634266.187500
+ 30688          0        0    3.0    6.0    1.0    0.0   14515.125000
+ 30688          8        0    3.0    6.0    1.0    0.0   14515.125000
+ 30690          0        0    2.0    0.0    1.0    0.0    5709.204102
+ 30690          8        0    2.0    0.0    1.0    0.0    5709.204102
  [8066 rows x 7 columns]
+
+The number of buildings in each damage state is integer (even if stored as
+a float) because the exposure contains only integers and the `job.ini`
+is setting explicitly ``discrete_damage_distribution = true``.
 
 It should be noted that while there is a CSV exporter for the ``risk_by_event``
 table, it is designed to export only the total aggregation component (i.e.
@@ -162,22 +199,59 @@ past, the time when the only aggregation the engine could perform was the
 total aggregation. Since the ``risk_by_event`` table can be rather large, it is
 recommmended to interact with it with pandas and not to export in CSV.
 
+There is instead a CSV exporter for the aggregated damage
+distributions (together with the aggregated consequences) that you may
+call with the command ``oq export aggrisk``; you can also see the
+distributions directly::
+
+ $ oq show aggrisk
+    agg_id  rlz_id  loss_id        dmg_0     dmg_1     dmg_2     dmg_3     dmg_4        losses
+ 0       0       0        0    18.841061  0.077873  0.052915  0.018116  0.010036    459.162567
+ 1       3       0        0   172.107361  0.329445  0.591998  0.422925  0.548271  11213.121094
+ 2       5       0        0     1.981786  0.003877  0.005539  0.004203  0.004594    104.431755
+ 3       6       0        0   797.826111  1.593724  1.680134  0.926167  0.973836  23901.496094
+ 4       7       0        0    48.648529  0.120687  0.122120  0.060278  0.048386   1420.059448
+ 5       8       0        0  1039.404907  2.125607  2.452706  1.431690  1.585123  37098.269531
+ 
+By summing on the damage states one gets the total number of buildings for each
+aggregation level::
+
+  agg_id dmg_0 + dmg_1 + dmg_2 + dmg_3 + dmg_4 aggkeys
+  0        19.000039 ~ 19                      Wood,East
+  3       173.999639 ~ 174                     Wood,Mid-Western
+  5         2.000004 ~ 2                       Stone-Masonry,Mid-Western
+  6       802.999853 ~ 803                     Unreinforced-Brick-Masonry,East
+  7        48.999971 ~ 49                      Unreinforced-Brick-Masonry,Mid-Western
+  8      1046.995130 ~ 1047                    Total
+
+
 The ScenarioDamage demo
 ----------------------------------------------------------------
 
 The demo in ``demos/risk/ScenarioDamage`` is similar to the
 EventBasedDemo (it still refers to Nepal) but it uses a much large
-exposure with 9063 assets and it is split in two parts: you should
-first run ``job_hazard.ini`` and then ``job_risk.ini``.  The first
-calculation will produce 2 sets of 100 ground motion fields each
-(since ``job_hazard.ini`` contains ``number_of_ground_motion_fields =
-100`` and the gsim logic tree file contains two GMPEs). The second
-calculation will use such GMFs to compute aggregated damage
-distributions. Contrarily to event based damage calculations, scenario
-damage calculations normally use full enumeration, since there are
-very few realizations (only two in this example), thus the scenario
-damage calculator is able to distinguish the results by realization.
+exposure with 9063 assets and 5,365,761 building. Moreover the
+configuration file is split in two: you should
+first run ``job_hazard.ini`` and then ``job_risk.ini``.
+
+The first calculation will produce 2 sets of 100 ground motion fields
+each (since ``job_hazard.ini`` contains
+``number_of_ground_motion_fields = 100`` and the gsim logic tree file
+contains two GMPEs). The second calculation will use such GMFs to
+compute aggregated damage distributions. Contrarily to event based
+damage calculations, scenario damage calculations normally use full
+enumeration, since there are very few realizations (only two in this
+example), thus the scenario damage calculator is able to distinguish
+the results by realization.
 
 The main output of a ``scenario_damage`` calculation is still the
-``risk_by_event`` table which has exactly the same form as for
-``event_based_damage`` calculations.
+``risk_by_event`` table which has exactly the same form as for the
+EventBasedDamage demo. However there is a difference when
+considering the ``aggrisk`` output: since we are using full enumeration
+we will produce a damage distribution for each realization::
+
+ $ oq show aggrisk
+    agg_id  rlz_id  loss_id       dmg_0  ...  dmg_4        losses
+ 0       0       0        0  4173405.75  ...  452433.40625  7.779261e+09
+ 1       0       1        0  3596234.00  ...  633638.37500  1.123458e+10
+
