@@ -21,11 +21,12 @@ import itertools
 import numpy
 import pandas
 
-from openquake.baselib import general, parallel, python3compat
+from openquake.baselib import general, python3compat
 from openquake.commonlib import datastore
 from openquake.risklib import scientific
 from openquake.calculators import base, views
 
+U8 = numpy.uint8
 F32 = numpy.float32
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -76,7 +77,8 @@ def reagg_idxs(num_tags, tagnames):
     return arr.flatten()
 
 
-def get_loss_builder(dstore, return_periods=None, loss_dt=None):
+def get_loss_builder(dstore, return_periods=None, loss_dt=None,
+                     num_events=None):
     """
     :param dstore: datastore for an event based risk calculation
     :returns: a LossCurvesMapsBuilder instance
@@ -96,8 +98,9 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
                              (haz_time, eff_time))
         num_events = numpy.array([len(dstore['events'])])
         weights = numpy.ones(1)
-    else:
-        num_events = numpy.bincount(dstore['events']['rlz_id'])
+    elif num_events is None:
+        num_events = numpy.bincount(
+            dstore['events']['rlz_id'], minlength=len(weights))
     periods = return_periods or oq.return_periods or scientific.return_periods(
         eff_time, num_events.max())
     return scientific.LossCurvesMapsBuilder(
@@ -126,6 +129,77 @@ def get_src_loss_table(dstore, L):
     return zip(*sorted(acc.items()))
 
 
+def fix_dtype(dic, dtype, names):
+    for name in names:
+        dic[name] = dtype(dic[name])
+
+
+def fix_dtypes(dic, columns):
+    """
+    Fix the dtypes of the given columns inside a dictionary (to be
+    called before conversion to a DataFrame)
+    """
+    fix_dtype(dic, U32, ['agg_id'])
+    fix_dtype(dic, U8, ['loss_id'])
+    if 'event_id' in dic:
+        fix_dtype(dic, U32, ['event_id'])
+    if 'return_period' in dic:
+        fix_dtype(dic, U32, ['return_period'])
+    fix_dtype(dic, F32, columns)
+
+
+def store_agg(dstore, rbe_df, num_events):
+    """
+    Build the aggrisk and aggcurves tables from the risk_by_event table
+    """
+    oq = dstore['oqparam']
+    size = dstore.getsize('risk_by_event')
+    logging.info('Building aggrisk from %s of risk_by_event',
+                 general.humansize(size))
+    rlz_id = dstore['events']['rlz_id']
+    if len(num_events) > 1:
+        rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
+    else:
+        rbe_df['rlz_id'] = 0
+    del rbe_df['event_id']
+    aggrisk = general.AccumDict(accum=[])
+    columns = [col for col in rbe_df.columns if col not in {
+        'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
+    gb = rbe_df.groupby(['agg_id', 'rlz_id', 'loss_id'])
+    for (agg_id, rlz_id, loss_id), df in gb:
+        ne = num_events[rlz_id]
+        aggrisk['agg_id'].append(agg_id)
+        aggrisk['rlz_id'].append(rlz_id)
+        aggrisk['loss_id'].append(loss_id)
+        for col in columns:
+            aggrisk[col].append(df[col].sum() / ne)
+    fix_dtypes(aggrisk, columns)
+    dstore.create_df('aggrisk', pandas.DataFrame(aggrisk),
+                     limit_states=' '.join(oq.limit_states))
+
+    loss_kinds = [col for col in columns if not col.startswith('dmg_')]
+    if oq.investigation_time:  # build aggcurves
+        logging.info('Building aggcurves')
+        builder = get_loss_builder(dstore, num_events=num_events)
+        dic = general.AccumDict(accum=[])
+        for (agg_id, rlz_id, loss_id), df in gb:
+            curve = {}
+            # NB: in the future we may use multiprocessing.shared_memory
+            for kind in loss_kinds:
+                curve[kind] = builder.build_curve(
+                    df[kind].to_numpy(), rlz_id)
+            for p, period in enumerate(builder.return_periods):
+                dic['agg_id'].append(agg_id)
+                dic['rlz_id'].append(rlz_id)
+                dic['loss_id'].append(loss_id)
+                dic['return_period'].append(period)
+                for kind in loss_kinds:
+                    dic[kind].append(curve[kind][p])
+        fix_dtypes(dic, dic)
+        dstore.create_df('aggcurves', pandas.DataFrame(dic),
+                         limit_states=' '.join(oq.limit_states))
+
+
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
@@ -149,12 +223,12 @@ class PostRiskCalculator(base.RiskCalculator):
             assetcol = ds['assetcol']
             self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.L = len(oq.loss_names)
-        size = general.humansize(ds.getsize('risk_by_event'))
-        logging.info('Stored %s in the risk_by_event', size)
+        self.num_events = numpy.bincount(
+            ds['events']['rlz_id'], minlength=self.R)  # events by rlz
 
     def execute(self):
         oq = self.oqparam
-        if oq.return_periods != [0]:
+        if oq.investigation_time and oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
             if eff_time < 2:
@@ -170,65 +244,32 @@ class PostRiskCalculator(base.RiskCalculator):
                 self.datastore.set_shape_descr('src_loss_table',
                                                source=source_ids,
                                                loss_type=oq.loss_names)
-        builder = get_loss_builder(self.datastore)
         K = len(self.aggkey) if oq.aggregate_by else 0
-        # do everything in process since it is really fast
-        rlz_id = self.datastore['events']['rlz_id']
-        if oq.collect_rlzs:
-            rlz_id = numpy.zeros_like(rlz_id)
-        alt_df = self.datastore.read_df('risk_by_event')
+        rbe_df = self.datastore.read_df('risk_by_event')
         if self.reaggreate:
             idxs = numpy.concatenate([
                 reagg_idxs(self.num_tags, oq.aggregate_by),
                 numpy.array([K], int)])
-            alt_df['agg_id'] = idxs[alt_df['agg_id'].to_numpy()]
-            alt_df = alt_df.groupby(
+            rbe_df['agg_id'] = idxs[rbe_df['agg_id'].to_numpy()]
+            rbe_df = rbe_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
-        loss_kinds = [col for col in alt_df.columns if col not in {
-            'event_id', 'agg_id', 'loss_id', 'variance'}]
-        alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
-        dic = general.AccumDict(accum=[])
-        aggrisk = general.AccumDict(accum=[])
-        gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id, alt_df.loss_id])
-        # NB: in the future we may use multiprocessing.shared_memory
-        for (k, r, lni), df in gb:
-            aggrisk['agg_id'].append(k)
-            aggrisk['rlz_id'].append(r)
-            aggrisk['loss_id'].append(lni)
-            curve = {}
-            for kind in loss_kinds:
-                aggrisk[kind].append(df[kind].sum())
-                curve[kind] = builder.build_curve(df[kind].to_numpy(), r)
-            for p, period in enumerate(builder.return_periods):
-                dic['agg_id'].append(k)
-                dic['rlz_id'].append(r)
-                dic['loss_id'].append(lni)
-                dic['return_period'].append(period)
-                for kind in loss_kinds:
-                    dic[kind].append(curve[kind][p])
-        aggrisk = pandas.DataFrame(aggrisk)
-        R = len(self.datastore['weights'])
-        time_ratio = oq.time_ratio / R if oq.collect_rlzs else oq.time_ratio
-        aggrisk['loss'] *= time_ratio
-        self.datastore.create_df('aggrisk', aggrisk)
-        self.datastore.create_df(
-            'aggcurves', pandas.DataFrame(dic),
-            limit_states=' '.join(self.oqparam.limit_states))
+        store_agg(self.datastore, rbe_df, self.num_events)
         return 1
 
     def post_execute(self, dummy):
         """
         Sanity checks
         """
-        logging.info('Total portfolio loss\n' +
-                     views.view('portfolio_loss', self.datastore))
-        for li, ln in enumerate(self.oqparam.loss_names):
-            dloss = views.view('delta_loss:%d' % li, self.datastore)
-            if dloss['delta'].mean() > .1:  # more than 10% variation
-                logging.warning(
-                    'A big variation in the %s loss curve is expected: try\n'
-                    '$ oq show delta_loss:%d %d', ln, li,
-                    self.datastore.calc_id)
+        #logging.info('Total portfolio loss\n' +
+        #             views.view('portfolio_loss', self.datastore))
+        if self.oqparam.investigation_time:
+            for li, ln in enumerate(self.oqparam.loss_names):
+                dloss = views.view('delta_loss:%d' % li, self.datastore)
+                if dloss['delta'].mean() > .1:  # more than 10% variation
+                    logging.warning(
+                        'A big variation in the %s loss curve is expected: try'
+                        '\n$ oq show delta_loss:%d %d', ln, li,
+                        self.datastore.calc_id)
         if not self.aggkey:
             return
         logging.info('Sanity check on agg_losses')

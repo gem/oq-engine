@@ -29,7 +29,7 @@ from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import logs, datastore
-from openquake.calculators import base, event_based, getters, views
+from openquake.calculators import base, event_based, getters
 from openquake.calculators.post_risk import PostRiskCalculator
 
 U8 = numpy.uint8
@@ -426,27 +426,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                  asset_id=self.assetcol['id'],
                                  loss_type=oq.loss_names)
 
-        # save aggrisk
-        if oq.calculation_mode == 'scenario_risk':  # compute agg_losses
-            alt = alt.set_index('event_id')
-            alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
-            aggrisk = general.AccumDict(accum=[])
-            for (agg_id, rlz_id, loss_id), df in alt.groupby(
-                    ['agg_id', 'rlz_id', 'loss_id']):
-                aggrisk['agg_id'].append(agg_id)
-                aggrisk['rlz_id'].append(rlz_id)
-                aggrisk['loss_id'].append(loss_id)
-                aggrisk['loss'].append(df.loss.sum() * self.avg_ratio[rlz_id])
-            aggrisk = pandas.DataFrame(aggrisk)
-            self.datastore.create_df('aggrisk', aggrisk)
-            logging.info('Total portfolio loss\n' +
-                         views.view('portfolio_loss', self.datastore))
-        else:  # event_based_risk, run post_risk
-            prc = PostRiskCalculator(oq, self.datastore.calc_id)
-            if hasattr(self, 'exported'):
-                prc.exported = self.exported
-            with prc.datastore:
-                prc.run(exports='')
+        prc = PostRiskCalculator(oq, self.datastore.calc_id)
+        if hasattr(self, 'exported'):
+            prc.exported = self.exported
+        with prc.datastore:
+            prc.run(exports='')
 
         # store units, used by the QGIS plugin
         if 'aggcurves' in self.datastore:  # missing in scenario_from_ruptures
@@ -454,26 +438,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.datastore.set_attrs('aggcurves', units=units)
 
         # save agg_curves-stats
-        R = 1 if oq.collect_rlzs else self.R
-        if R > 1 and 'aggcurves' in self.datastore:
+        if self.R > 1 and 'aggcurves' in self.datastore:
             save_curve_stats(self.datastore)
-
-        if (oq.investigation_time or not oq.avg_losses or
-                'aggrisk' not in self.datastore):
-            return
-
-        # sanity check on the agg_losses and sum_losses
-        sumlosses = self.avg_losses.sum(axis=(0, 1))  # shape L
-        agglosses = numpy.array([
-            aggrisk[(aggrisk.agg_id == K) & (aggrisk.loss_id == li)].loss.sum()
-            for li in range(self.L)])  # shape L
-        if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
-            url = ('https://docs.openquake.org/oq-engine/advanced/'
-                   'addition-is-non-associative.html')
-            logging.warning(
-                'Due to rounding errors inherent in floating-point arithmetic,'
-                ' agg_losses != sum(avg_losses): %s != %s\nsee %s',
-                agglosses, sumlosses, url)
 
     def gen_args(self, eids):
         """

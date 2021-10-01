@@ -26,43 +26,13 @@ from openquake.risklib import scientific
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
-from openquake.calculators.post_risk import get_loss_builder
+from openquake.calculators.post_risk import (
+    get_loss_builder, fix_dtypes, PostRiskCalculator)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-
-
-def fix_dtype(dic, dtype, names):
-    for name in names:
-        dic[name] = dtype(dic[name])
-
-
-def fix_dtypes(dic, columns):
-    """
-    Fix the dtypes of the given columns inside a dictionary (to be
-    called before conversion to a DataFrame)
-    """
-    fix_dtype(dic, U32, ['agg_id'])
-    fix_dtype(dic, U8, ['loss_id'])
-    if 'event_id' in dic:
-        fix_dtype(dic, U32, ['event_id'])
-    if 'return_period' in dic:
-        fix_dtype(dic, U32, ['return_period'])
-    fix_dtype(dic, F32, columns)
-
-
-def agg_damages(dstore, slc, monitor):
-    """
-    :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
-    """
-    with dstore:
-        df = dstore.read_df('risk_by_event', ['agg_id', 'loss_id'], slc=slc)
-        del df['event_id']
-        agg = df.groupby(df.index).sum()
-        dic = dict(zip(agg.index, agg.to_numpy()))
-    return dic
 
 
 def zero_dmgcsq(A, R, crmodel):
@@ -132,7 +102,8 @@ def event_based_damage(df, param, monitor):
             if R > 1:
                 rlzs = allrlzs[eids]
             if not float_dmg_dist:
-                rndgen = scientific.MultiEventRNG(master_seed, numpy.unique(eids))
+                rndgen = scientific.MultiEventRNG(
+                    master_seed, numpy.unique(eids))
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 aids = adf.index.to_numpy()
@@ -190,16 +161,6 @@ def to_dframe(adic, ci, L):
                 dic[sname].append(dd[lti, si])
     fix_dtypes(dic, ci)
     return pandas.DataFrame(dic)
-
-
-def worst_dmgdist(df, agg_id, loss_id, dic):
-    cols = [col for col in df.columns if col.startswith('dmg_')]
-    event_id = df[cols[-1]].to_numpy().argmax()
-    dic['event_id'].append(event_id)
-    dic['loss_id'].append(loss_id)
-    dic['agg_id'].append(agg_id)
-    for col in cols:
-        dic[col].append(df[col].to_numpy()[event_id])
 
 
 @base.calculators.add('event_based_damage', 'scenario_damage')
@@ -285,14 +246,25 @@ class DamageCalculator(EventBasedRiskCalculator):
         Store damages-rlzs/stats, aggrisk and aggcurves
         """
         oq = self.oqparam
+        # no damage check
+        if self.dmgcsq[:, :, :, 1:].sum() == 0:
+            self.nodamage = True
+            logging.warning(
+                'There is no damage, perhaps the hazard is too small?')
+            return
+
+        prc = PostRiskCalculator(oq, self.datastore.calc_id)
+        if hasattr(self, 'exported'):
+            prc.exported = self.exported
+        with prc.datastore:
+            prc.run(exports='')
+
         A, R, L, Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
         number = self.assetcol['value-number']
-        num_events = numpy.bincount(  # events by rlz
-            self.datastore['events']['rlz_id'], minlength=self.R)
         for r in range(self.R):
-            ne = num_events[r]
+            ne = prc.num_events[r]
             for li in range(L):
                 self.dmgcsq[:, r, li, 0] = (  # no damage
                     number * ne - self.dmgcsq[:, r, li, 1:D].sum(axis=1))
@@ -304,69 +276,6 @@ class DamageCalculator(EventBasedRiskCalculator):
                        rlz=numpy.arange(self.R),
                        loss_type=oq.loss_names,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
-        # sanity check
-        if self.dmgcsq[:, :, :, 1:].sum() == 0:
-            self.nodamage = True
-            logging.warning(
-                'There is no damage, perhaps the hazard is too small?')
-            return
 
-        # store aggrisk
-        size = self.datastore.getsize('risk_by_event')
-        logging.info('Building aggrisk from %s of risk_by_event',
-                     general.humansize(size))
-        alt_df = self.datastore.read_df('risk_by_event')
-        if self.R > 1:
-            rlz_id = self.datastore['events']['rlz_id']
-            alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
-        else:
-            alt_df['rlz_id'] = 0
-        del alt_df['event_id']
-        wdd = {'agg_id': [], 'loss_id': [], 'event_id': []}
-        aggrisk = general.AccumDict(accum=[])
-        gb = alt_df.groupby(['agg_id', 'rlz_id', 'loss_id'])
-        columns = [col for col in alt_df.columns
-                   if col not in {'agg_id', 'rlz_id', 'loss_id', 'variance'}]
-        for col in columns[:D-1]:
-            wdd[col] = []
-        for (agg_id, rlz_id, loss_id), df in gb:
-            if oq.investigation_time is None:
-                ratio = 1. / num_events[rlz_id]
-            else:
-                ratio = oq.time_ratio
-            aggrisk['agg_id'].append(agg_id)
-            aggrisk['rlz_id'].append(rlz_id)
-            aggrisk['loss_id'].append(loss_id)
-            for col in columns:
-                aggrisk[col].append(df[col].sum() * ratio)
-            worst_dmgdist(df, agg_id, loss_id, wdd)
-
-        self.datastore.create_df('aggrisk', pandas.DataFrame(aggrisk))
-        fix_dtypes(wdd, columns[:D-1])
-        ls = ' '.join(self.crmodel.damage_states[1:])
-        self.datastore.create_df('worst_dmgdist', wdd.items(), limit_states=ls)
-        if oq.investigation_time is None:  # scenario
-            return
-
-        logging.info('Building agcurves from risk_by_event')
-        dic = general.AccumDict(accum=[])
-        csqs = [col for col in columns if not col.startswith('dmg_')]
-        periods = list(self.builder.return_periods)
-        wdd = {'agg_id': [], 'loss_id': [], 'event_id': []}
-        for col in columns[:D-1]:
-            wdd[col] = []
-        for (agg_id, rlz_id, loss_id), df in gb:
-            curves = [self.builder.build_curve(df[csq].to_numpy())
-                      for csq in csqs]
-            for p, period in enumerate(periods):
-                dic['agg_id'].append(agg_id)
-                dic['rlz_id'].append(rlz_id)
-                dic['loss_id'].append(loss_id)
-                dic['return_period'].append(period)
-                for col, curve in zip(csqs, curves):
-                    dic[col].append(curve[p])
-        fix_dtypes(dic, csqs)
-        if csqs:
-            self.datastore.create_df('aggcurves', pandas.DataFrame(dic),
-                                     limit_states=ls)
+        if oq.investigation_time:
             self.sanity_check()
