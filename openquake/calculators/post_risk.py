@@ -134,7 +134,7 @@ def fix_dtype(dic, dtype, names):
         dic[name] = dtype(dic[name])
 
 
-def fix_dtypes(dic, columns):
+def fix_dtypes(dic):
     """
     Fix the dtypes of the given columns inside a dictionary (to be
     called before conversion to a DataFrame)
@@ -143,9 +143,13 @@ def fix_dtypes(dic, columns):
     fix_dtype(dic, U8, ['loss_id'])
     if 'event_id' in dic:
         fix_dtype(dic, U32, ['event_id'])
+    if 'rlz_id' in dic:
+        fix_dtype(dic, U16, ['rlz_id'])
     if 'return_period' in dic:
         fix_dtype(dic, U32, ['return_period'])
-    fix_dtype(dic, F32, columns)
+    floatcolumns = [col for col in dic if col not in {
+        'agg_id', 'loss_id', 'event_id', 'rlz_id', 'return_period'}]
+    fix_dtype(dic, F32, floatcolumns)
 
 
 def store_agg(dstore, rbe_df, num_events):
@@ -173,7 +177,7 @@ def store_agg(dstore, rbe_df, num_events):
         aggrisk['loss_id'].append(loss_id)
         for col in columns:
             aggrisk[col].append(df[col].sum() / ne)
-    fix_dtypes(aggrisk, columns)
+    fix_dtypes(aggrisk)
     dstore.create_df('aggrisk', pandas.DataFrame(aggrisk),
                      limit_states=' '.join(oq.limit_states))
 
@@ -195,7 +199,7 @@ def store_agg(dstore, rbe_df, num_events):
                 dic['return_period'].append(period)
                 for kind in loss_kinds:
                     dic[kind].append(curve[kind][p])
-        fix_dtypes(dic, dic)
+        fix_dtypes(dic)
         dstore.create_df('aggcurves', pandas.DataFrame(dic),
                          limit_states=' '.join(oq.limit_states))
 
@@ -223,8 +227,11 @@ class PostRiskCalculator(base.RiskCalculator):
             assetcol = ds['assetcol']
             self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.L = len(oq.loss_names)
-        self.num_events = numpy.bincount(
-            ds['events']['rlz_id'], minlength=self.R)  # events by rlz
+        if self.R > 1:
+            self.num_events = numpy.bincount(
+                ds['events']['rlz_id'], minlength=self.R)  # events by rlz
+        else:
+            self.num_events = numpy.array([len(ds['events'])])
 
     def execute(self):
         oq = self.oqparam
@@ -236,7 +243,7 @@ class PostRiskCalculator(base.RiskCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
                 return
-        if 'source_info' in self.datastore:  # missing for gmf_ebrisk
+        if 'source_info' in self.datastore and 'risk' in oq.calculation_mode:
             logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
                 source_ids, losses = get_src_loss_table(self.datastore, self.L)
@@ -260,9 +267,10 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity checks
         """
-        #logging.info('Total portfolio loss\n' +
-        #             views.view('portfolio_loss', self.datastore))
-        if self.oqparam.investigation_time:
+        oq = self.oqparam
+        # logging.info('Total portfolio loss\n' +
+        #              views.view('portfolio_loss', self.datastore))
+        if oq.investigation_time and 'risk' in oq.calculation_mode:
             for li, ln in enumerate(self.oqparam.loss_names):
                 dloss = views.view('delta_loss:%d' % li, self.datastore)
                 if dloss['delta'].mean() > .1:  # more than 10% variation

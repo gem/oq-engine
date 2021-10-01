@@ -159,7 +159,7 @@ def to_dframe(adic, ci, L):
             dic['loss_id'].append(lti)
             for sname, si in ci.items():
                 dic[sname].append(dd[lti, si])
-    fix_dtypes(dic, ci)
+    fix_dtypes(dic)
     return pandas.DataFrame(dic)
 
 
