@@ -318,7 +318,7 @@ class TagCollection(object):
         ranges = [range(1, len(tags)) for tags in alltags]
         for i, idxs in enumerate(itertools.product(*ranges)):
             aggkey[idxs] = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
-        if self.tagnames != ['site_id'] and len(aggkey) >= TWO16:
+        if len(aggkey) >= TWO16 and 'site_id' not in self.tagnames:
             # forbid too many aggregations (they are usual an user mistake)
             # except for aggregate_by=site_id which is legitimate
             raise ValueError('Too many aggregation tags: %d >= %d' %
