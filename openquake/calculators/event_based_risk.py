@@ -431,11 +431,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         with prc.datastore:
             prc.run(exports='')
 
-        # store units, used by the QGIS plugin
-        if 'aggcurves' in self.datastore:  # missing in scenario_from_ruptures
-            units = self.datastore['cost_calculator'].get_units(oq.loss_names)
-            self.datastore.set_attrs('aggcurves', units=units)
-
         # save agg_curves-stats
         if self.R > 1 and 'aggcurves' in self.datastore:
             save_curve_stats(self.datastore)

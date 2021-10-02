@@ -217,7 +217,9 @@ def store_agg(dstore, rbe_df, num_events):
             h5=dstore.hdf5).reduce()
         fix_dtypes(dic)
         dstore.create_df('aggcurves', pandas.DataFrame(dic),
-                         limit_states=' '.join(oq.limit_states))
+                         limit_states=' '.join(oq.limit_states),
+                         units=dstore['cost_calculator'].get_units(
+                             oq.loss_names))
 
 
 @base.calculators.add('post_risk')
