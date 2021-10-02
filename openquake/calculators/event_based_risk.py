@@ -120,34 +120,35 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
     else:
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy(),
-                 rlz=rlz_id[U32(alt.eid)]))  # NB: with the U32 here
+                 rlz=rlz_id[U32(alt.eid)]))  # NB: without the U32 here
         # the SURA calculation would fail with alt.eid being F64 (?)
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, AR, kids, rlz_id, param, monitor):
+def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
-    collect_rlzs = param['collect_rlzs']
+    oq = crmodel.oqparam
     df = None
     for out in outputs:
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
-            if param['avg_losses']:
+            if oq.avg_losses:
                 with mon_avg:
-                    coo = average_losses(ln, alt, rlz_id, AR, collect_rlzs)
+                    coo = average_losses(
+                        ln, alt, rlz_id, ARK[:2], oq.collect_rlzs)
                     loss_by_AR[ln].append(coo)
             with mon_agg:
                 df_ = aggregate_losses(
-                    alt, param['K'], kids, param['asset_correlation'], lni)
+                    alt, ARK[2], kids, int(oq.asset_correlation), lni)
                 if df is None:
                     df = df_
                 else:
@@ -174,12 +175,13 @@ def event_based_risk(df, param, monitor):
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if param['collect_rlzs'] else dstore['weights'][()]
-    AR = len(assets_df), len(weights)
-    if crmodel.oqparam.ignore_master_seed or crmodel.oqparam.ignore_covs:
+    ARK = len(assets_df), len(weights), param['K']
+    oq = crmodel.oqparam
+    if oq.ignore_master_seed or oq.ignore_covs:
         rndgen = None
     else:
         rndgen = MultiEventRNG(
-            param['master_seed'], df.eid.unique(), param['asset_correlation'])
+            oq.master_seed, df.eid.unique(), int(oq.asset_correlation))
 
     def outputs():
         for taxo, asset_df in assets_df.groupby('taxonomy'):
@@ -193,7 +195,7 @@ def event_based_risk(df, param, monitor):
             else:
                 yield from crmodel.gen_outputs(taxo, asset_df, gmf_df, param)
 
-    return aggreg(outputs(), crmodel, AR, kids, rlz_id, param, monitor)
+    return aggreg(outputs(), crmodel, ARK, kids, rlz_id, monitor)
 
 
 def start_ebrisk(rgetter, param, monitor):
@@ -284,10 +286,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         parentdir = (os.path.dirname(self.datastore.ppath)
                      if self.datastore.ppath else None)
         self.set_param(hdf5path=self.datastore.filename,
-                       parentdir=parentdir,
-                       ignore_covs=oq.ignore_covs,
-                       master_seed=oq.master_seed,
-                       asset_correlation=int(oq.asset_correlation))
+                       parentdir=parentdir)
         logging.info(
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
@@ -299,7 +298,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.param['sec_losses'] = sec_losses
-        self.param['aggregate_by'] = oq.aggregate_by
         self.param['M'] = len(oq.all_imts())
         self.param['N'] = self.N
         self.param['K'] = len(self.aggkey)
