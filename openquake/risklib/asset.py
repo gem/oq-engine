@@ -104,7 +104,7 @@ class CostCalculator(object):
     def get_units(self, loss_types):
         """
         :param: a list of loss types
-        :returns: an array of units as byte strings, suitable for HDF5
+        :returns: a string of space-separated units
         """
         lst = []
         for lt in loss_types:
@@ -115,7 +115,7 @@ class CostCalculator(object):
             else:
                 unit = self.units[lt]
             lst.append(unit)
-        return lst
+        return ' '.join(lst)
 
     def __toh5__(self):
         loss_types = sorted(self.cost_types)
