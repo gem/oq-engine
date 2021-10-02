@@ -1190,7 +1190,6 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     lst = []
     aggkey = assetcol.tagcol.get_aggkey(aggby)
-    K = len(aggkey)
     if aggby:
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [

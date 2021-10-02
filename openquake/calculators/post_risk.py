@@ -231,14 +231,13 @@ class PostRiskCalculator(base.RiskCalculator):
         self.reaggreate = False
         if oq.hazard_calculation_id and not ds.parent:
             ds.parent = datastore.read(oq.hazard_calculation_id)
-            assetcol = ds['assetcol']
             self.aggkey = base.save_agg_values(
-                ds, assetcol, oq.loss_names, oq.aggregate_by)
+                ds, self.assetcol, oq.loss_names, oq.aggregate_by)
             aggby = ds.parent['oqparam'].aggregate_by
             self.reaggreate = aggby and oq.aggregate_by != aggby
             if self.reaggreate:
                 self.num_tags = dict(
-                    zip(aggby, assetcol.tagcol.agg_shape(aggby)))
+                    zip(aggby, self.assetcol.tagcol.agg_shape(aggby)))
         else:
             assetcol = ds['assetcol']
             self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)

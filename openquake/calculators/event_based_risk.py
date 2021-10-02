@@ -425,6 +425,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                  loss_type=oq.loss_names)
 
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
+        prc.assetcol = self.assetcol
         if hasattr(self, 'exported'):
             prc.exported = self.exported
         with prc.datastore:
