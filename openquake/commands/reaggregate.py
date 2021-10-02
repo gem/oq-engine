@@ -47,6 +47,7 @@ def main(calc_id: int, aggregate_by):
         oqp.hazard_calculation_id = parent.calc_id
         parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, log.calc_id)
+        prc.assetcol = parent['assetcol']
         prc.run(aggregate_by=aggby)
         engine.expose_outputs(prc.datastore)
 
