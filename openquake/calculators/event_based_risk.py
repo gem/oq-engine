@@ -129,6 +129,7 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
     correl = int(oq.asset_correlation)
     df = None
     for out in outputs:
+        dfs = []
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
             if ln not in out or len(out[ln]) == 0:
                 continue
@@ -141,7 +142,9 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
             with mon_agg:
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
-                df_ = aggregate_losses(alt, ARK[2], kids, lni)
+                dfs.append(aggregate_losses(alt, ARK[2], kids, lni))
+        with mon_agg:
+            for df_ in dfs:
                 if correl:  # restore the variances
                     df_['variance'] = df_.variance ** 2
                 if df is None:
