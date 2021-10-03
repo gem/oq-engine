@@ -365,7 +365,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 'Produced %s of GMFs', general.humansize(gmf_bytes.sum()))
         else:  # start from GMFs
             eids = self.datastore['gmf_data/eid'][:]
-            logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
+            self.log_info(eids)
             self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(
                 event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
@@ -374,6 +374,22 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)
         return 1
+
+    def log_info(self, eids):
+        """
+        Printing some information about the risk calculation
+        """
+        logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
+        ct = self.oqparam.concurrent_tasks or 1
+        E = len(eids) / ct
+        K = self.param['K']
+        names = {'loss', 'variance'}
+        for sec_loss in self.param['sec_losses']:
+            names.update(sec_loss.sec_names)
+        D = len(names)
+        size = E * K * self.L * D * 8
+        logging.info(f'Requiring {general.humansize(size)} per task '
+                     f'(E={E}, K={K}, L={self.L}, D={D})')
 
     def agg_dicts(self, dummy, dic):
         """
