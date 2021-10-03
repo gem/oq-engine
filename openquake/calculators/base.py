@@ -922,10 +922,8 @@ class RiskCalculator(HazardCalculator):
     pre_execute phase.
     """
 
-    def build_riskinputs(self, kind):
+    def build_riskinputs(self):
         """
-        :param kind:
-            kind of hazard getter, can be 'poe' or 'gmf'
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -944,46 +942,16 @@ class RiskCalculator(HazardCalculator):
                 dstore = self.datastore.parent
             else:
                 dstore = self.datastore
-            riskinputs = getattr(self, '_gen_riskinputs_' + kind)(dstore)
+            riskinputs = self._gen_riskinputs(dstore)
         assert riskinputs
         if all(isinstance(ri.hazard_getter, getters.ZeroGetter)
                for ri in riskinputs):
-            raise RuntimeError(f'the {kind}s are all zeros on the assets')
+            raise RuntimeError('The poes are all zeros on the assets')
         logging.info('Built %d risk inputs', len(riskinputs))
         self.acc = None
         return riskinputs
 
-    def _gen_riskinputs_gmf(self, dstore):
-        out = []
-        if 'gmf_data' not in dstore:  # needed for case_shakemap
-            dstore.close()
-            dstore = self.datastore
-        if 'gmf_data' not in dstore:
-            raise InvalidFile('No gmf_data: did you forget gmfs_csv in %s?'
-                              % self.oqparam.inputs['job_ini'])
-        rlzs = dstore['events']['rlz_id']
-        gmf_df = dstore.read_df('gmf_data', 'sid')
-        logging.info('Events per site: ~%d', len(gmf_df) / self.N)
-        logging.info('Grouping the GMFs by site ID')
-        by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
-        asset_df = self.assetcol.to_dframe('site_id')
-        for sid, assets in asset_df.groupby(asset_df.index):
-            try:
-                df = by_sid[sid]
-            except KeyError:
-                getter = getters.ZeroGetter(
-                    sid, rlzs, self.R, gmf_df.columns[1:])  # strip eid
-            else:
-                df['rlz'] = rlzs[df.eid.to_numpy()]
-                getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
-            if len(dstore['gmf_data/eid']) == 0:
-                raise RuntimeError(
-                    'There are no GMFs available: perhaps you did set '
-                    'ground_motion_fields=False or a large minimum_intensity')
-            out.append(riskinput.RiskInput(getter, assets))
-        return out
-
-    def _gen_riskinputs_poe(self, dstore):
+    def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
         for sid, assets in asset_df.groupby(asset_df.index):
