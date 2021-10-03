@@ -81,14 +81,13 @@ def aggregate_losses(alt, K, kids):
     Aggregate losses and variances for each event and aggregation key
     """
     aids = alt.pop('aid').to_numpy()
-    tot2 = alt.groupby('eid').sum().reset_index()
-    tot2['kid'] = K
-    tot2 = tot2.set_index(['eid', 'kid'])
+    tot = alt.groupby('eid').sum().reset_index()
+    tot['kid'] = K
+    tot = tot.set_index(['eid', 'kid'])
     if len(kids):
         alt['kid'] = kids[aids]
-        tot1 = alt.groupby(['eid', 'kid']).sum()
-        return tot1.add(tot2, fill_value=0.)
-    return tot2
+        return tot.add(alt.groupby(['eid', 'kid']).sum(), fill_value=0.)
+    return tot
 
 
 def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
