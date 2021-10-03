@@ -76,21 +76,18 @@ def save_curve_stats(dstore):
     dstore.set_attrs('agg_curves-stats', units=units)
 
 
-def aggregate_losses(alt, K, kids, loss_id):
+def aggregate_losses(alt, K, kids):
     """
     Aggregate losses and variances for each event and aggregation key
     """
     tot2 = alt.groupby('eid').sum().reset_index()
     tot2['kid'] = K
-    tot2['loss_id'] = loss_id
     del tot2['aid']
-    tot2 = tot2.set_index(['eid', 'kid', 'loss_id'])
+    tot2 = tot2.set_index(['eid', 'kid'])
     if len(kids) == 0:
         return tot2
     alt['kid'] = kids[alt.pop('aid').to_numpy()]
     tot1 = alt.groupby(['eid', 'kid']).sum()
-    tot1['loss_id'] = loss_id
-    tot1 = tot1.reset_index().set_index(['eid', 'kid', 'loss_id'])
     tot = tot1.add(tot2, fill_value=0.)
     return tot
 
@@ -142,7 +139,10 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
             with mon_agg:
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
-                dfs.append(aggregate_losses(alt, ARK[2], kids, lni))
+                df_ = aggregate_losses(alt, ARK[2], kids)
+                df_['loss_id'] = lni
+                df_ = df_.reset_index().set_index(['eid', 'kid', 'loss_id'])
+                dfs.append(df_)
         with mon_agg:
             for df_ in dfs:
                 if correl:  # restore the variances
