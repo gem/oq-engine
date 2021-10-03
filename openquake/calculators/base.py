@@ -944,9 +944,6 @@ class RiskCalculator(HazardCalculator):
                 dstore = self.datastore
             riskinputs = self._gen_riskinputs(dstore)
         assert riskinputs
-        if all(isinstance(ri.hazard_getter, getters.ZeroGetter)
-               for ri in riskinputs):
-            raise RuntimeError('The poes are all zeros on the assets')
         logging.info('Built %d risk inputs', len(riskinputs))
         self.acc = None
         return riskinputs
