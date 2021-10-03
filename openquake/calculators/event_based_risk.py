@@ -80,8 +80,6 @@ def aggregate_losses(alt, K, kids, loss_id):
     """
     Aggregate losses and variances for each event and aggregation key
     """
-    if 'index' in alt.columns:
-        del alt['index']
     tot2 = alt.groupby('eid').sum().reset_index()
     tot2['kid'] = K
     tot2['loss_id'] = loss_id
@@ -134,6 +132,8 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
+            if 'index' in alt.columns:
+                del alt['index']  # needed in test_case_miriam
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
