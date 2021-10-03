@@ -76,33 +76,24 @@ def save_curve_stats(dstore):
     dstore.set_attrs('agg_curves-stats', units=units)
 
 
-def aggregate_losses(alt, K, kids, correl, loss_id):
+def aggregate_losses(alt, K, kids, loss_id):
     """
-    Aggregate losses and variances for each event by using the formulae
-
-    sigma^2 = sum(sigma_i)^2 for correl=1
-    sigma^2 = sum(sigma_i^2) for correl=0
+    Aggregate losses and variances for each event and aggregation key
     """
     if 'index' in alt.columns:
         del alt['index']
-    if correl:
-        alt['variance'] = numpy.sqrt(alt.variance)
     tot2 = alt.groupby('eid').sum().reset_index()
     tot2['kid'] = K
     tot2['loss_id'] = loss_id
     del tot2['aid']
     tot2 = tot2.set_index(['eid', 'kid', 'loss_id'])
     if len(kids) == 0:
-        if correl:  # restore the variances
-            tot2['variance'] = tot2.variance ** 2
         return tot2
     alt['kid'] = kids[alt.pop('aid').to_numpy()]
     tot1 = alt.groupby(['eid', 'kid']).sum()
     tot1['loss_id'] = loss_id
     tot1 = tot1.reset_index().set_index(['eid', 'kid', 'loss_id'])
     tot = tot1.add(tot2, fill_value=0.)
-    if correl:  # restore the variances
-        tot['variance'] = tot.variance ** 2
     return tot
 
 
@@ -135,6 +126,7 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
     oq = crmodel.oqparam
+    correl = int(oq.asset_correlation)
     df = None
     for out in outputs:
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
@@ -147,8 +139,11 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
                         ln, alt, rlz_id, ARK[:2], oq.collect_rlzs)
                     loss_by_AR[ln].append(coo)
             with mon_agg:
-                df_ = aggregate_losses(
-                    alt, ARK[2], kids, int(oq.asset_correlation), lni)
+                if correl:  # use sigma^2 = sum(sigma_i)^2
+                    alt['variance'] = numpy.sqrt(alt.variance)
+                df_ = aggregate_losses(alt, ARK[2], kids, lni)
+                if correl:  # restore the variances
+                    df_['variance'] = df_.variance ** 2
                 if df is None:
                     df = df_
                 else:
@@ -380,16 +375,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         Printing some information about the risk calculation
         """
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
-        ct = self.oqparam.concurrent_tasks or 1
-        E = int(len(numpy.unique(eids)) / ct)
+        E = len(numpy.unique(eids))
         K = self.param['K']
         names = {'loss', 'variance'}
         for sec_loss in self.param['sec_losses']:
             names.update(sec_loss.sec_names)
         D = len(names)
-        size = E * K * self.L * D * 8
-        logging.info(f'Requiring {general.humansize(size)} per task '
-                     f'(E={E}, K={K}, L={self.L}, D={D})')
+        logging.info('Risk parameters (E={:_d}, K={:_d}, L={}, D={})'.
+                     format(E, K, self.L, D))
 
     def agg_dicts(self, dummy, dic):
         """
