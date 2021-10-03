@@ -139,7 +139,7 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
                         ln, alt, rlz_id, ARK[:2], oq.collect_rlzs)
                     loss_by_AR[ln].append(coo)
             with mon_agg:
-                if correl:  # use sigma^2 = sum(sigma_i)^2
+                if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
                 df_ = aggregate_losses(alt, ARK[2], kids, lni)
                 if correl:  # restore the variances
