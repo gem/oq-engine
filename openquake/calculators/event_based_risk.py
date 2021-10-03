@@ -381,7 +381,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         ct = self.oqparam.concurrent_tasks or 1
-        E = len(eids) / ct
+        E = int(len(numpy.unique(eids)) / ct)
         K = self.param['K']
         names = {'loss', 'variance'}
         for sec_loss in self.param['sec_losses']:
