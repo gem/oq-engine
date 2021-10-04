@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed the calculation of average insured losses with a nontrivial taxonomy
+    mapping: now the insured losses are computed before the average procedure,
+    not after
   * Unified scenario_risk with event_based_risk, changing the numbers
     when producing discrete damage distributions
   * Added `aggrisk` output to event based damage calculation
