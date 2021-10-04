@@ -178,14 +178,17 @@ def event_based_risk(df, param, monitor):
             oq.master_seed, df.eid.unique(), int(oq.asset_correlation))
 
     def outputs():
+        mon_risk = monitor('computing risk', measuremem=False)
         for taxo, asset_df in assets_df.groupby('taxonomy'):
             gmf_df = df[numpy.isin(df.sid.to_numpy(),
                                    asset_df.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
             if rndgen:
-                yield crmodel.get_output(
-                    taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
+                with mon_risk:
+                    out = crmodel.get_output(
+                        taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
+                yield out
             else:
                 yield from crmodel.gen_outputs(taxo, asset_df, gmf_df, param)
 
@@ -380,7 +383,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         for sec_loss in self.param['sec_losses']:
             names.update(sec_loss.sec_names)
         D = len(names)
-        logging.info('Risk parameters (E={:_d}, K={:_d}, L={}, D={})'.
+        logging.info('Risk parameters (rel_E={:_d}, K={:_d}, L={}, D={})'.
                      format(E, K, self.L, D))
 
     def agg_dicts(self, dummy, dic):
