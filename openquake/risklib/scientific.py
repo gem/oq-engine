@@ -265,7 +265,7 @@ class VulnerabilityFunction(object):
         else:
             variances = (losses * df['cov'].to_numpy())**2
         return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
-                                     loss=losses[ok], variance=variances[ok]))
+                                     variance=variances[ok], loss=losses[ok]))
 
     def strictly_increasing(self):
         """

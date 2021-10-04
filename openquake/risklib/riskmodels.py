@@ -711,6 +711,8 @@ class CompositeRiskModel(collections.abc.Mapping):
 
             # average on the risk models (unsupported for classical)
             dic[lt] = outs[0]
+            for sec_loss in sec_losses:
+                sec_loss.update(lt, dic, assets)
             if hasattr(dic[lt], 'loss'):  # event_based_risk
                 if weights[0] != 1:
                     dic[lt].loss *= weights[0]
@@ -718,11 +720,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                     dic[lt].loss += alt.loss * w
             elif len(weights) > 1:  # scenario_damage
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
-        # compute secondary losses, if any
-        # FIXME: it should be moved up, before the computation of the mean
-        for sec_loss in sec_losses:
-            for lt in self.loss_types:
-                sec_loss.update(lt, dic, assets)
         return dic
 
     # called by event_based_risk fast
