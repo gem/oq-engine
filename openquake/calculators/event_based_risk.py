@@ -35,10 +35,11 @@ from openquake.calculators.post_risk import PostRiskCalculator, fix_dtypes
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
-TWO32 = 2 ** 32
+TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
@@ -131,12 +132,12 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
             with mon_agg:
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
-                eids = alt.eid.to_numpy() * TWO32
+                eids = alt.eid.to_numpy() * TWO32  # U64
                 values = numpy.array([alt[col] for col in value_cols]).T
-                fast_agg(eids + K, values, correl, lni, acc)
+                fast_agg(eids + U64(K), values, correl, lni, acc)
                 if len(kids):
                     aids = alt.aid.to_numpy()
-                    fast_agg(eids + kids[aids], values, correl, lni, acc)
+                    fast_agg(eids + U64(kids[aids]), values, correl, lni, acc)
     with mon_df:
         dic = general.AccumDict(accum=[])
         for ukey, arr in acc.items():
