@@ -137,21 +137,20 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
                 if len(kids):
                     aids = alt.aid.to_numpy()
                     fast_agg(eids + kids[aids], values, correl, lni, acc)
-    if acc:
-        with mon_df:
-            dic = general.AccumDict(accum=[])
-            for ukey, arr in acc.items():
-                eid, kid = divmod(ukey, TWO32)
-                for li in range(L):
+    with mon_df:
+        dic = general.AccumDict(accum=[])
+        for ukey, arr in acc.items():
+            eid, kid = divmod(ukey, TWO32)
+            for li in range(L):
+                if arr[li].any():
                     dic['event_id'].append(eid)
                     dic['agg_id'].append(kid)
                     dic['loss_id'].append(li)
                     for c, col in enumerate(value_cols):
                         dic[col].append(arr[li, c])
-            fix_dtypes(dic)
-            df = pandas.DataFrame(dic)
-            return dict(avg=loss_by_AR, alt=df)
-    return dict(avg=loss_by_AR, alt=pandas.DataFrame())
+        fix_dtypes(dic)
+        df = pandas.DataFrame(dic)
+    return dict(avg=loss_by_AR, alt=df)
 
 
 def event_based_risk(df, param, monitor):
