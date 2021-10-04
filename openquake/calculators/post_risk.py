@@ -153,6 +153,10 @@ def fix_dtypes(dic):
 
 
 def build_aggcurves(items, builder):
+    """
+    :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
+    :param builder: a :class:`LossCurvesMapsBuilder` instance
+    """
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
         curve = {kind: builder.build_curve(data[kind], rlz_id)
