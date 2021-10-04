@@ -30,15 +30,16 @@ from openquake.hazardlib import stats
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import logs, datastore
 from openquake.calculators import base, event_based, getters
-from openquake.calculators.post_risk import PostRiskCalculator
+from openquake.calculators.post_risk import PostRiskCalculator, fix_dtypes
 
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
-TWO32 = 2 ** 32
+TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
@@ -76,18 +77,12 @@ def save_curve_stats(dstore):
     dstore.set_attrs('agg_curves-stats', units=units)
 
 
-def aggregate_losses(alt, K, kids):
-    """
-    Aggregate losses and variances for each event and aggregation key
-    """
-    aids = alt.pop('aid').to_numpy()
-    tot = alt.groupby('eid').sum().reset_index()
-    tot['kid'] = K
-    tot = tot.set_index(['eid', 'kid'])
-    if len(kids):
-        alt['kid'] = kids[aids]
-        return tot.add(alt.groupby(['eid', 'kid']).sum(), fill_value=0.)
-    return tot
+def fast_agg(keys, values, correl, lni, acc):
+    ukeys, avalues = general.fast_agg2(keys, values)
+    if correl:  # restore the variances
+        avalues[:, 0] = avalues[:, 0] ** 2
+    for ukey, avalue in zip(ukeys, avalues):
+        acc[ukey][lni] += avalue
 
 
 def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
@@ -111,45 +106,51 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
+def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
-    loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_types}
+    mon_df = monitor('building dataframe', measuremem=True)
     oq = crmodel.oqparam
+    loss_by_AR = {ln: [] for ln in oq.loss_types}
     correl = int(oq.asset_correlation)
-    df = None
+    (A, R, K, D), L = ARKD, len(oq.loss_types)
+    acc = general.AccumDict(accum=numpy.zeros((L, D)))  # u8idx->array
     for out in outputs:
-        dfs = []
-        for lni, ln in enumerate(crmodel.oqparam.loss_types):
+        for lni, ln in enumerate(oq.loss_types):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
+            value_cols = alt.columns[2:]  # strip eid, aid
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
-                        ln, alt, rlz_id, ARK[:2], oq.collect_rlzs)
+                        ln, alt, rlz_id, (A, R), oq.collect_rlzs)
                     loss_by_AR[ln].append(coo)
             with mon_agg:
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
-                df_ = aggregate_losses(alt, ARK[2], kids)
-                df_['loss_id'] = lni
-                df_ = df_.reset_index().set_index(['eid', 'kid', 'loss_id'])
-                dfs.append(df_)
-        with mon_agg:
-            for df_ in dfs:
-                if correl:  # restore the variances
-                    df_['variance'] = df_.variance ** 2
-                if df is None:
-                    df = df_
-                else:
-                    df = df.add(df_, fill_value=0.)
-    if df is not None:
-        df = df.reset_index().rename(
-            columns=dict(eid='event_id', kid='agg_id'))
+                eids = alt.eid.to_numpy() * TWO32  # U64
+                values = numpy.array([alt[col] for col in value_cols]).T
+                fast_agg(eids + U64(K), values, correl, lni, acc)
+                if len(kids):
+                    aids = alt.aid.to_numpy()
+                    fast_agg(eids + U64(kids[aids]), values, correl, lni, acc)
+    with mon_df:
+        dic = general.AccumDict(accum=[])
+        for ukey, arr in acc.items():
+            eid, kid = divmod(ukey, TWO32)
+            for li in range(L):
+                if arr[li].any():
+                    dic['event_id'].append(eid)
+                    dic['agg_id'].append(kid)
+                    dic['loss_id'].append(li)
+                    for c, col in enumerate(value_cols):
+                        dic[col].append(arr[li, c])
+        fix_dtypes(dic)
+        df = pandas.DataFrame(dic)
     return dict(avg=loss_by_AR, alt=df)
 
 
@@ -169,7 +170,7 @@ def event_based_risk(df, param, monitor):
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if param['collect_rlzs'] else dstore['weights'][()]
-    ARK = len(assets_df), len(weights), param['K']
+    ARKD = len(assets_df), len(weights), param['K'], param['D']
     oq = crmodel.oqparam
     if oq.ignore_master_seed or oq.ignore_covs:
         rndgen = None
@@ -192,7 +193,7 @@ def event_based_risk(df, param, monitor):
             else:
                 yield from crmodel.gen_outputs(taxo, asset_df, gmf_df, param)
 
-    return aggreg(outputs(), crmodel, ARK, kids, rlz_id, monitor)
+    return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
 
 
 def start_ebrisk(rgetter, param, monitor):
@@ -289,9 +290,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
+        self.param['D'] = 2
         if self.policy_dict:
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
+            self.param['D'] = 3
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.param['sec_losses'] = sec_losses
