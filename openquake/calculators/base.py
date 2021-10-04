@@ -161,7 +161,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 kw['hazard_calculation_id'] is None):
             del kw['hazard_calculation_id']
         vars(self.oqparam).update(**kw)
-        self.datastore['oqparam'] = self.oqparam
+        if isinstance(self.oqparam.risk_imtls, dict):
+            # always except in case_shakemap
+            self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
@@ -783,7 +785,7 @@ class HazardCalculator(BaseCalculator):
             tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
             self.crmodel.tmap = tmap
             taxonomies = set()
-            for ln in oq.loss_names:
+            for ln in oq.loss_types:
                 for items in self.crmodel.tmap[ln]:
                     for taxo, weight in items:
                         if taxo != '?':
@@ -826,7 +828,7 @@ class HazardCalculator(BaseCalculator):
             sp.prepare(self.sitecol)  # add columns as needed
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
-               for lt in oq.loss_names}
+               for lt in oq.loss_types}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
         self.param = dict(individual_rlzs=oq.individual_rlzs,
@@ -842,7 +844,7 @@ class HazardCalculator(BaseCalculator):
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
-                self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
+                self.datastore, self.assetcol, oq.loss_types, oq.aggregate_by)
 
     def store_rlz_info(self, rel_ruptures):
         """
@@ -920,10 +922,8 @@ class RiskCalculator(HazardCalculator):
     pre_execute phase.
     """
 
-    def build_riskinputs(self, kind):
+    def build_riskinputs(self):
         """
-        :param kind:
-            kind of hazard getter, can be 'poe' or 'gmf'
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -942,46 +942,13 @@ class RiskCalculator(HazardCalculator):
                 dstore = self.datastore.parent
             else:
                 dstore = self.datastore
-            riskinputs = getattr(self, '_gen_riskinputs_' + kind)(dstore)
+            riskinputs = self._gen_riskinputs(dstore)
         assert riskinputs
-        if all(isinstance(ri.hazard_getter, getters.ZeroGetter)
-               for ri in riskinputs):
-            raise RuntimeError(f'the {kind}s are all zeros on the assets')
         logging.info('Built %d risk inputs', len(riskinputs))
         self.acc = None
         return riskinputs
 
-    def _gen_riskinputs_gmf(self, dstore):
-        out = []
-        if 'gmf_data' not in dstore:  # needed for case_shakemap
-            dstore.close()
-            dstore = self.datastore
-        if 'gmf_data' not in dstore:
-            raise InvalidFile('No gmf_data: did you forget gmfs_csv in %s?'
-                              % self.oqparam.inputs['job_ini'])
-        rlzs = dstore['events']['rlz_id']
-        gmf_df = dstore.read_df('gmf_data', 'sid')
-        logging.info('Events per site: ~%d', len(gmf_df) / self.N)
-        logging.info('Grouping the GMFs by site ID')
-        by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
-        asset_df = self.assetcol.to_dframe('site_id')
-        for sid, assets in asset_df.groupby(asset_df.index):
-            try:
-                df = by_sid[sid]
-            except KeyError:
-                getter = getters.ZeroGetter(
-                    sid, rlzs, self.R, gmf_df.columns[1:])  # strip eid
-            else:
-                df['rlz'] = rlzs[df.eid.to_numpy()]
-                getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
-            if len(dstore['gmf_data/eid']) == 0:
-                raise RuntimeError(
-                    'There are no GMFs available: perhaps you did set '
-                    'ground_motion_fields=False or a large minimum_intensity')
-            out.append(riskinput.RiskInput(getter, assets))
-        return out
-
-    def _gen_riskinputs_poe(self, dstore):
+    def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
         for sid, assets in asset_df.groupby(asset_df.index):
@@ -1188,7 +1155,6 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     lst = []
     aggkey = assetcol.tagcol.get_aggkey(aggby)
-    K = len(aggkey)
     if aggby:
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [
@@ -1206,10 +1172,9 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         else:
             key2i = {key: i for i, key in enumerate(aggkey)}
             kids = [key2i[tuple(t)] for t in assetcol[aggby]]
-        if 'assetcol' in set(dstore):
-            grp = dstore.getitem('assetcol')
-        else:
-            grp = dstore.hdf5.create_group('assetcol')
+        if 'assetcol' not in set(dstore):
+            dstore['assetcol'] = assetcol
+        grp = dstore.getitem('assetcol')
         if 'kids' not in grp:
             grp['kids'] = U16(kids)
     lst.append('*total*')
@@ -1313,10 +1278,10 @@ def create_risk_by_event(calc):
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields
         dstore.create_df('risk_by_event', descr, K=len(aggkey),
-                         L=len(oq.loss_names))
+                         L=len(oq.loss_types))
     else:  # damage + consequences
         dmgs = ' '.join(crmodel.damage_states[1:])
         descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
         dstore.create_df('risk_by_event', descr, K=len(aggkey),
-                         L=len(oq.loss_names), limit_states=dmgs)
+                         L=len(oq.loss_types), limit_states=dmgs)

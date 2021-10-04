@@ -104,7 +104,7 @@ class CostCalculator(object):
     def get_units(self, loss_types):
         """
         :param: a list of loss types
-        :returns: an array of units as byte strings, suitable for HDF5
+        :returns: a string of space-separated units
         """
         lst = []
         for lt in loss_types:
@@ -115,7 +115,7 @@ class CostCalculator(object):
             else:
                 unit = self.units[lt]
             lst.append(unit)
-        return lst
+        return ' '.join(lst)
 
     def __toh5__(self):
         loss_types = sorted(self.cost_types)
@@ -318,7 +318,7 @@ class TagCollection(object):
         ranges = [range(1, len(tags)) for tags in alltags]
         for i, idxs in enumerate(itertools.product(*ranges)):
             aggkey[idxs] = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
-        if self.tagnames != ['site_id'] and len(aggkey) >= TWO16:
+        if len(aggkey) >= TWO16 and 'site_id' not in self.tagnames:
             # forbid too many aggregations (they are usual an user mistake)
             # except for aggregate_by=site_id which is legitimate
             raise ValueError('Too many aggregation tags: %d >= %d' %

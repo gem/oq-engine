@@ -100,7 +100,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         weights = [rlz.weight for rlz in self.realizations]
         stats = list(oq.hazard_stats().items())
         self.param = dict(stats=stats, weights=weights)
-        self.riskinputs = self.build_riskinputs('poe')
+        self.riskinputs = self.build_riskinputs()
         self.A = len(self.assetcol)
         self.L = len(self.crmodel.loss_types)
         self.S = len(oq.hazard_stats())
@@ -131,7 +131,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.datastore['avg_losses-stats'] = avg_losses
         self.datastore.set_shape_descr(
             'avg_losses-stats', asset_id=self.assetcol['id'],
-            stat=stats, loss_type=self.oqparam.loss_names)
+            stat=stats, loss_type=self.oqparam.loss_types)
         self.datastore['loss_curves-stats'] = stat_curves
         self.datastore.set_attrs('loss_curves-stats', stat=stats)
 
@@ -146,5 +146,5 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.datastore['avg_losses-rlzs'] = avg_losses
             self.datastore.set_shape_descr(
                 'avg_losses-rlzs', asset_id=self.assetcol['id'],
-                rlz=numpy.arange(self.R), loss_type=self.oqparam.loss_names)
+                rlz=numpy.arange(self.R), loss_type=self.oqparam.loss_types)
             self.datastore['loss_curves-rlzs'] = loss_curves

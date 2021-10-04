@@ -195,48 +195,6 @@ class PmapGetter(object):
         return pmap
 
 
-class GmfDataGetter(object):
-    """
-    An object with an .init() and .get_hazard() method
-    """
-    def __init__(self, sid, df, num_events, num_rlzs):
-        self.sids = [sid]
-        self.df = df
-        self.num_rlzs = num_rlzs  # used in event_based_risk
-        # now some attributes set for API compatibility with the GmfGetter
-        # number of ground motion fields
-        # dictionary rlzi -> array(imts, events, nbytes)
-        self.E = num_events
-
-    def init(self):
-        pass
-
-    def get_hazard(self, gsim=None):
-        """
-        :param gsim: ignored
-        :returns: the underlying DataFrame
-        """
-        # the order in which the gmfs are stored is random since it depends
-        # on which hazard task ends first; here we reorder
-        # the gmfs by event ID for reproducibility
-        return self.df.sort_values('eid')
-
-
-# used in scenario_damage
-class ZeroGetter(GmfDataGetter):
-    """
-    An object with an .init() and .get_hazard() method
-    """
-    def __init__(self, sid, rlzs, R, gmvcolumns):
-        nr = len(rlzs)
-        self.sids = [sid]
-        self.df = pandas.DataFrame({
-            'sid': [sid] * nr, 'rlz': rlzs, 'eid': numpy.arange(nr)})
-        for col in gmvcolumns:
-            self.df[col] = numpy.zeros(nr, dtype=F32)
-        self.num_rlzs = R
-
-
 time_dt = numpy.dtype(
     [('rup_id', U32), ('nsites', U16), ('time', F32), ('task_no', U16)])
 

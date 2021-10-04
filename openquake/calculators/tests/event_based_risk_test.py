@@ -502,6 +502,7 @@ agg_id
         oq.__dict__['aggregate_by'] = ['NAME_1']
         log = logs.init('calc', {'calculation_mode': 'post_risk'})
         prc = PostRiskCalculator(oq, log.calc_id)
+        prc.assetcol = self.calc.assetcol
         oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), log:
             prc.run()
