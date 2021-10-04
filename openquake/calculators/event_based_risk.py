@@ -111,7 +111,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
+def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -130,12 +130,12 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
-                        ln, alt, rlz_id, ARK[:2], oq.collect_rlzs)
+                        ln, alt, rlz_id, ARKD[:2], oq.collect_rlzs)
                     loss_by_AR[ln].append(coo)
             with mon_agg:
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
-                df_ = aggregate_losses(alt, ARK[2], kids)
+                df_ = aggregate_losses(alt, ARKD[2], kids)
                 df_['loss_id'] = lni
                 df_ = df_.reset_index().set_index(['eid', 'kid', 'loss_id'])
                 dfs.append(df_)
@@ -169,7 +169,7 @@ def event_based_risk(df, param, monitor):
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if param['collect_rlzs'] else dstore['weights'][()]
-    ARK = len(assets_df), len(weights), param['K']
+    ARKD = len(assets_df), len(weights), param['K'], param['D']
     oq = crmodel.oqparam
     if oq.ignore_master_seed or oq.ignore_covs:
         rndgen = None
@@ -192,7 +192,7 @@ def event_based_risk(df, param, monitor):
             else:
                 yield from crmodel.gen_outputs(taxo, asset_df, gmf_df, param)
 
-    return aggreg(outputs(), crmodel, ARK, kids, rlz_id, monitor)
+    return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
 
 
 def start_ebrisk(rgetter, param, monitor):
@@ -289,9 +289,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
+        self.param['D'] = 2
         if self.policy_dict:
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
+            self.param['D'] = 3
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.param['sec_losses'] = sec_losses
