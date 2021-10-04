@@ -50,7 +50,7 @@ def save_curve_stats(dstore):
     Save agg_curves-stats
     """
     oq = dstore['oqparam']
-    units = dstore['cost_calculator'].get_units(oq.loss_names)
+    units = dstore['cost_calculator'].get_units(oq.loss_types)
     try:
         K1 = len(dstore['agg_keys']) + 1
     except KeyError:
@@ -117,13 +117,13 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
     """
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
-    loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
+    loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_types}
     oq = crmodel.oqparam
     correl = int(oq.asset_correlation)
     df = None
     for out in outputs:
         dfs = []
-        for lni, ln in enumerate(crmodel.oqparam.loss_names):
+        for lni, ln in enumerate(crmodel.oqparam.loss_types):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
@@ -299,7 +299,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.param['collect_rlzs'] = oq.collect_rlzs
         self.A = A = len(self.assetcol)
-        self.L = L = len(oq.loss_names)
+        self.L = L = len(oq.loss_types)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
@@ -333,7 +333,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dset('avg_losses-rlzs', F32, (self.A, R, self.L))
         self.datastore.set_shape_descr(
             'avg_losses-rlzs', asset_id=self.assetcol['id'], rlz=R,
-            loss_type=oq.loss_names)
+            loss_type=oq.loss_types)
 
     def execute(self):
         """
@@ -430,7 +430,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.datastore['avg_losses-rlzs'] = self.avg_losses
             stats.set_rlzs_stats(self.datastore, 'avg_losses',
                                  asset_id=self.assetcol['id'],
-                                 loss_type=oq.loss_names)
+                                 loss_type=oq.loss_types)
 
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.assetcol = self.assetcol

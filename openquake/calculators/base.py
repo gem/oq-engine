@@ -785,7 +785,7 @@ class HazardCalculator(BaseCalculator):
             tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
             self.crmodel.tmap = tmap
             taxonomies = set()
-            for ln in oq.loss_names:
+            for ln in oq.loss_types:
                 for items in self.crmodel.tmap[ln]:
                     for taxo, weight in items:
                         if taxo != '?':
@@ -828,7 +828,7 @@ class HazardCalculator(BaseCalculator):
             sp.prepare(self.sitecol)  # add columns as needed
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
-               for lt in oq.loss_names}
+               for lt in oq.loss_types}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
         self.param = dict(individual_rlzs=oq.individual_rlzs,
@@ -844,7 +844,7 @@ class HazardCalculator(BaseCalculator):
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
-                self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
+                self.datastore, self.assetcol, oq.loss_types, oq.aggregate_by)
 
     def store_rlz_info(self, rel_ruptures):
         """
@@ -1313,10 +1313,10 @@ def create_risk_by_event(calc):
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields
         dstore.create_df('risk_by_event', descr, K=len(aggkey),
-                         L=len(oq.loss_names))
+                         L=len(oq.loss_types))
     else:  # damage + consequences
         dmgs = ' '.join(crmodel.damage_states[1:])
         descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
         dstore.create_df('risk_by_event', descr, K=len(aggkey),
-                         L=len(oq.loss_names), limit_states=dmgs)
+                         L=len(oq.loss_types), limit_states=dmgs)

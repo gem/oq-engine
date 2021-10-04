@@ -991,12 +991,12 @@ def taxonomy_mapping(oqparam, taxonomies):
     """
     if 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         lst = [[(taxo, 1)] for taxo in taxonomies]
-        return {lt: lst for lt in oqparam.loss_names}
+        return {lt: lst for lt in oqparam.loss_types}
     dic = oqparam.inputs['taxonomy_mapping']
     if isinstance(dic, str):  # same file for all loss_types
-        dic = {lt: dic for lt in oqparam.loss_names}
+        dic = {lt: dic for lt in oqparam.loss_types}
     return {lt: _taxonomy_mapping(dic[lt], taxonomies)
-            for lt in oqparam.loss_names}
+            for lt in oqparam.loss_types}
 
 
 def _taxonomy_mapping(filename, taxonomies):
