@@ -100,7 +100,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         weights = [rlz.weight for rlz in self.realizations]
         stats = list(oq.hazard_stats().items())
         self.param = dict(stats=stats, weights=weights)
-        self.riskinputs = self.build_riskinputs('poe')
+        self.riskinputs = self.build_riskinputs()
         self.A = len(self.assetcol)
         self.L = len(self.crmodel.loss_types)
         self.S = len(oq.hazard_stats())
