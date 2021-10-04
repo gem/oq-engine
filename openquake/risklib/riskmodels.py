@@ -722,7 +722,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
         return dic
 
-    # called by event_based_risk fast
+    # called by event_based_risk fast, in case_miriam
     def gen_outputs(self, taxo, asset_df, gmf_df, param):
         """
         :param taxo: a taxonomy index
@@ -738,7 +738,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             dic = {}
             for ln, ratio_df in ratios.items():
                 min_loss = minimum_asset_loss[ln]
-                d = dict(eid=[], aid=[], loss=[], variance=[])
+                d = dict(eid=[], aid=[], variance=[], loss=[])
                 n_oks = 0
                 for sid, adf in assets_by_sid:
                     r = ratio_df[ratio_df.index == sid]
@@ -754,14 +754,14 @@ class CompositeRiskModel(collections.abc.Mapping):
                         if n_ok:
                             d['eid'].append(eids[ok])
                             d['aid'].append(numpy.ones(n_ok, U32) * aid)
-                            d['loss'].append(losses[ok])
                             d['variance'].append((losses[ok] * covs[ok])**2)
+                            d['loss'].append(losses[ok])
                             n_oks += n_ok
                 if n_oks == 0:
                     continue
                 for key, vals in d.items():
                     d[key] = numpy.concatenate(vals)
-                dic[ln] = pandas.DataFrame(d)
+                dic[ln] = pandas.DataFrame(d).set_index(['eid', 'aid'])
             yield dic
 
     def get_interp_ratios(self, taxo, gmf_df):

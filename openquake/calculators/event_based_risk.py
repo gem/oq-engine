@@ -127,8 +127,6 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
-            if 'index' in alt.columns:
-                del alt['index']  # needed in test_case_miriam
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
