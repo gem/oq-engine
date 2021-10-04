@@ -1178,9 +1178,7 @@ class OqParam(valid.ParamSet):
     @property
     def time_ratio(self):
         """
-        The ratio
-
-        risk_investigation_time / investigation_time / ses_per_logic_tree_path
+        The ratio risk_investigation_time / eff_investigation_time per rlz
         """
         if self.investigation_time is None:
             raise ValueError('Missing investigation_time in the .ini file')
