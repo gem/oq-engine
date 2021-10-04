@@ -219,7 +219,7 @@ def store_agg(dstore, rbe_df, num_events):
         dstore.create_df('aggcurves', pandas.DataFrame(dic),
                          limit_states=' '.join(oq.limit_states),
                          units=dstore['cost_calculator'].get_units(
-                             oq.loss_names))
+                             oq.loss_types))
 
 
 @base.calculators.add('post_risk')
@@ -234,7 +234,7 @@ class PostRiskCalculator(base.RiskCalculator):
         if oq.hazard_calculation_id and not ds.parent:
             ds.parent = datastore.read(oq.hazard_calculation_id)
             self.aggkey = base.save_agg_values(
-                ds, self.assetcol, oq.loss_names, oq.aggregate_by)
+                ds, self.assetcol, oq.loss_types, oq.aggregate_by)
             aggby = ds.parent['oqparam'].aggregate_by
             self.reaggreate = aggby and oq.aggregate_by != aggby
             if self.reaggreate:
@@ -243,7 +243,7 @@ class PostRiskCalculator(base.RiskCalculator):
         else:
             assetcol = ds['assetcol']
             self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
-        self.L = len(oq.loss_names)
+        self.L = len(oq.loss_types)
         if self.R > 1:
             self.num_events = numpy.bincount(
                 ds['events']['rlz_id'], minlength=self.R)  # events by rlz
@@ -267,7 +267,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 self.datastore['src_loss_table'] = losses
                 self.datastore.set_shape_descr('src_loss_table',
                                                source=source_ids,
-                                               loss_type=oq.loss_names)
+                                               loss_type=oq.loss_types)
         K = len(self.aggkey) if oq.aggregate_by else 0
         rbe_df = self.datastore.read_df('risk_by_event')
         if self.reaggreate:
@@ -288,7 +288,7 @@ class PostRiskCalculator(base.RiskCalculator):
         # logging.info('Total portfolio loss\n' +
         #              views.view('portfolio_loss', self.datastore))
         if oq.investigation_time and 'risk' in oq.calculation_mode:
-            for li, ln in enumerate(self.oqparam.loss_names):
+            for li, ln in enumerate(self.oqparam.loss_types):
                 dloss = views.view('delta_loss:%d' % li, self.datastore)
                 if dloss['delta'].mean() > .1:  # more than 10% variation
                     logging.warning(
@@ -308,7 +308,7 @@ class PostRiskCalculator(base.RiskCalculator):
             else:
                 kinds = self.oqparam.hazard_stats()
             for li in range(self.L):
-                ln = self.oqparam.loss_names[li]
+                ln = self.oqparam.loss_types[li]
                 for r, k in enumerate(kinds):
                     tot_losses = self.datastore[agg][-1, r, li]
                     agg_losses = self.datastore[agg][:-1, r, li].sum()

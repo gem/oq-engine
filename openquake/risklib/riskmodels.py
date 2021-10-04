@@ -711,6 +711,8 @@ class CompositeRiskModel(collections.abc.Mapping):
 
             # average on the risk models (unsupported for classical)
             dic[lt] = outs[0]
+            for sec_loss in sec_losses:
+                sec_loss.update(lt, dic, assets)
             if hasattr(dic[lt], 'loss'):  # event_based_risk
                 if weights[0] != 1:
                     dic[lt].loss *= weights[0]
@@ -718,14 +720,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                     dic[lt].loss += alt.loss * w
             elif len(weights) > 1:  # scenario_damage
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
-        # compute secondary losses, if any
-        # FIXME: it should be moved up, before the computation of the mean
-        for sec_loss in sec_losses:
-            for lt in self.loss_types:
-                sec_loss.update(lt, dic, assets)
         return dic
 
-    # called by event_based_risk fast
+    # called by event_based_risk fast, in case_miriam
     def gen_outputs(self, taxo, asset_df, gmf_df, param):
         """
         :param taxo: a taxonomy index
@@ -741,7 +738,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             dic = {}
             for ln, ratio_df in ratios.items():
                 min_loss = minimum_asset_loss[ln]
-                d = dict(eid=[], aid=[], loss=[], variance=[])
+                d = dict(eid=[], aid=[], variance=[], loss=[])
                 n_oks = 0
                 for sid, adf in assets_by_sid:
                     r = ratio_df[ratio_df.index == sid]
@@ -757,14 +754,14 @@ class CompositeRiskModel(collections.abc.Mapping):
                         if n_ok:
                             d['eid'].append(eids[ok])
                             d['aid'].append(numpy.ones(n_ok, U32) * aid)
-                            d['loss'].append(losses[ok])
                             d['variance'].append((losses[ok] * covs[ok])**2)
+                            d['loss'].append(losses[ok])
                             n_oks += n_ok
                 if n_oks == 0:
                     continue
                 for key, vals in d.items():
                     d[key] = numpy.concatenate(vals)
-                dic[ln] = pandas.DataFrame(d)
+                dic[ln] = pandas.DataFrame(d).set_index(['eid', 'aid'])
             yield dic
 
     def get_interp_ratios(self, taxo, gmf_df):

@@ -89,7 +89,7 @@ def event_based_damage(df, param, monitor):
     D = len(crmodel.damage_states)
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
-    loss_names = crmodel.oqparam.loss_names
+    loss_types = crmodel.oqparam.loss_types
     float_dmg_dist = param['float_dmg_dist']  # True by default
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
@@ -112,7 +112,7 @@ def event_based_damage(df, param, monitor):
                     number = assets['value-number']
                 else:
                     number = U32(assets['value-number'])
-                for lti, lt in enumerate(loss_names):
+                for lti, lt in enumerate(loss_types):
                     fractions = out[lt]
                     Asid, E, D = fractions.shape
                     assert len(eids) == E
@@ -257,5 +257,5 @@ class DamageCalculator(EventBasedRiskCalculator):
                        'damages',
                        asset_id=self.assetcol['id'],
                        rlz=numpy.arange(self.R),
-                       loss_type=oq.loss_names,
+                       loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())

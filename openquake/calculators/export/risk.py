@@ -100,7 +100,7 @@ def export_aggrisk(ekey, dstore):
     manyrlzs = hasattr(aggrisk, 'rlz_id') and len(aggrisk.rlz_id.unique()) > 1
     for (agg_id, loss_id), df in aggrisk.groupby(['agg_id', 'loss_id']):
         n = len(df)
-        loss_type = oq.loss_names[loss_id]
+        loss_type = oq.loss_types[loss_id]
         out['loss_type'].extend([loss_type] * n)
         for tagname, tag in zip(tagnames, aggtags[agg_id]):
             out[tagname].extend([tag] * n)
@@ -150,7 +150,7 @@ def export_avg_losses(ekey, dstore):
     """
     dskey = ekey[0]
     oq = dstore['oqparam']
-    dt = [(ln, F32) for ln in oq.loss_names]
+    dt = [(ln, F32) for ln in oq.loss_types]
     name, value, rlzs_or_stats = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assets = get_assets(dstore)
@@ -161,7 +161,7 @@ def export_avg_losses(ekey, dstore):
     for ros, values in zip(rlzs_or_stats, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, ros, 'csv')
         array = numpy.zeros(len(values), dt)
-        for li, ln in enumerate(oq.loss_names):
+        for li, ln in enumerate(oq.loss_types):
             array[ln] = values[:, li]
         writer.save(compose_arrays(assets, array), dest, comment=md,
                     renamedict=dict(id='asset_id'))
@@ -208,7 +208,7 @@ def export_event_loss_table(ekey, dstore):
         lstates = dstore.get_attr('risk_by_event', 'limit_states').split()
     except KeyError:  # ebrisk, no limit states
         lstates = []
-    lnames = numpy.array(oq.loss_names)
+    lnames = numpy.array(oq.loss_types)
     df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     df['loss_type'] = lnames[df.loss_id.to_numpy()]
     del df['loss_id']
@@ -529,7 +529,7 @@ def export_aggcurves_csv(ekey, dstore):
     oq = dstore['oqparam']
     E = len(dstore['events'])
     R = len(dstore['weights'])
-    lossnames = numpy.array(oq.loss_names)
+    lossnames = numpy.array(oq.loss_types)
     aggtags = get_agg_tags(dstore, oq.aggregate_by)
     df = dstore.read_df('aggcurves')
     consequences = [col for col in df.columns

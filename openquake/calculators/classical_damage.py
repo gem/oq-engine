@@ -79,7 +79,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         self.datastore['damages-rlzs'] = damages
         stats.set_rlzs_stats(self.datastore, 'damages',
                              assets=self.assetcol['id'],
-                             loss_type=self.oqparam.loss_names,
+                             loss_type=self.oqparam.loss_types,
                              dmg_state=self.crmodel.damage_states)
         dmg = views.view('portfolio_damage', self.datastore)
         logging.info('\n' + views.text_table(dmg, ext='org'))

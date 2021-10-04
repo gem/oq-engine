@@ -336,18 +336,18 @@ def view_totlosses(token, dstore):
     return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
-def alt_to_many_columns(alt, loss_names):
+def alt_to_many_columns(alt, loss_types):
     # convert an risk_by_event in the format
     # (event_id, agg_id, loss_id, loss) =>
     # (event_id, agg_id, structural, nonstructural, ...)
     dic = dict(event_id=[])
-    for ln in loss_names:
+    for ln in loss_types:
         dic[ln] = []
     for (eid, kid), df in alt.groupby(['event_id', 'agg_id']):
         dic['event_id'].append(eid)
-        arr = numpy.zeros(len(loss_names))
+        arr = numpy.zeros(len(loss_types))
         arr[df.loss_id.to_numpy()] = df.loss.to_numpy()
-        for li, ln in enumerate(loss_names):
+        for li, ln in enumerate(loss_types):
             dic[ln].append(arr[li])
     return pandas.DataFrame(dic)
 
@@ -357,7 +357,7 @@ def _portfolio_loss(dstore):
     R = dstore['full_lt'].get_num_rlzs()
     K = dstore['risk_by_event'].attrs.get('K', 0)
     alt = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
-    df = alt_to_many_columns(alt, oq.loss_names)
+    df = alt_to_many_columns(alt, oq.loss_types)
     eids = df.pop('event_id').to_numpy()
     loss = df.to_numpy()
     rlzs = dstore['events']['rlz_id'][eids]
@@ -398,11 +398,11 @@ def view_portfolio_loss(token, dstore):
     E = len(rlzs)
     ws = weights[rlzs]
     avgs = []
-    for li, ln in enumerate(oq.loss_names):
+    for li, ln in enumerate(oq.loss_types):
         df = alt_df[alt_df.loss_id == li]
         eids = df.pop('event_id').to_numpy()
         avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
-    return text_table([['avg'] + avgs], ['loss'] + oq.loss_names)
+    return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
 @view.add('portfolio_dmgdist')
@@ -415,7 +415,7 @@ def portfolio_dmgdist(token, dstore):
     D = len(dstates)
     arr = dstore['damages-rlzs'][:, 0, :, :D].sum(axis=0)  # shape (L, D)
     tbl = numpy.zeros(len(arr), dt(['loss_type', 'total'] + dstates))
-    tbl['loss_type'] = oq.loss_names
+    tbl['loss_type'] = oq.loss_types
     tbl['total'] = arr.sum(axis=1)
     for dsi, ds in enumerate(dstates):
         tbl[ds] = arr[:, dsi]
@@ -431,7 +431,7 @@ def view_portfolio_damage(token, dstore):
     if 'aggcurves' in dstore:  # event_based_damage
         K = dstore.get_attr('risk_by_event', 'K')
         df = dstore.read_df('aggcurves', sel=dict(agg_id=K, return_period=0))
-        lnames = numpy.array(dstore['oqparam'].loss_names)
+        lnames = numpy.array(dstore['oqparam'].loss_types)
         df['loss_type'] = lnames[df.loss_id.to_numpy()]
         del df['loss_id']
         del df['agg_id']
@@ -948,7 +948,7 @@ def view_zero_losses(token, dstore):
     values_df = asset_df.groupby(asset_df.index).sum()
     avglosses = dstore['avg_losses-rlzs'][:].sum(axis=1) / R  # shape (A, L)
     dic = dict(site_id=dstore['assetcol']['site_id'])
-    for lti, lname in enumerate(oq.loss_names):
+    for lti, lname in enumerate(oq.loss_types):
         dic[lname] = avglosses[:, lti]
     losses_df = pandas.DataFrame(dic).groupby('site_id').sum()
     sids = losses_df.index.to_numpy()

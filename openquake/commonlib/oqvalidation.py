@@ -1102,7 +1102,7 @@ class OqParam(valid.ParamSet):
 
     def validate(self):
         """
-        Set self.loss_names
+        Set self.loss_types
         """
         from openquake.commonlib import datastore  # avoid circular import
         if self.hazard_calculation_id:
@@ -1124,7 +1124,7 @@ class OqParam(valid.ParamSet):
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
             ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
-            for ln in self.loss_names}
+            for ln in self.loss_types}
 
         super().validate()
         self.check_source_model()
@@ -1308,9 +1308,9 @@ class OqParam(valid.ParamSet):
         return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
 
     @property
-    def loss_names(self):
+    def loss_types(self):
         """
-        Loss types plus insured types, if any
+        :returns: list of loss types (empty for hazard)
         """
         if not hasattr(self, "all_cost_types"):  # for hazard
             return []
@@ -1329,7 +1329,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: a data type list [(loss_name, dtype), ...]
         """
-        dts = [(str(lt), dtype) for lt in self.loss_names]
+        dts = [(str(lt), dtype) for lt in self.loss_types]
         return dts
 
     def loss_maps_dt(self, dtype=F32):

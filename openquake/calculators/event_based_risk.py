@@ -50,7 +50,7 @@ def save_curve_stats(dstore):
     Save agg_curves-stats
     """
     oq = dstore['oqparam']
-    units = dstore['cost_calculator'].get_units(oq.loss_names)
+    units = dstore['cost_calculator'].get_units(oq.loss_types)
     try:
         K1 = len(dstore['agg_keys']) + 1
     except KeyError:
@@ -76,24 +76,17 @@ def save_curve_stats(dstore):
     dstore.set_attrs('agg_curves-stats', units=units)
 
 
-def aggregate_losses(alt, K, kids, loss_id):
+def aggregate_losses(alt, K, kids):
     """
     Aggregate losses and variances for each event and aggregation key
     """
-    if 'index' in alt.columns:
-        del alt['index']
-    tot2 = alt.groupby('eid').sum().reset_index()
-    tot2['kid'] = K
-    tot2['loss_id'] = loss_id
-    del tot2['aid']
-    tot2 = tot2.set_index(['eid', 'kid', 'loss_id'])
-    if len(kids) == 0:
-        return tot2
-    alt['kid'] = kids[alt.pop('aid').to_numpy()]
-    tot1 = alt.groupby(['eid', 'kid']).sum()
-    tot1['loss_id'] = loss_id
-    tot1 = tot1.reset_index().set_index(['eid', 'kid', 'loss_id'])
-    tot = tot1.add(tot2, fill_value=0.)
+    aids = alt.pop('aid').to_numpy()
+    tot = alt.groupby('eid').sum().reset_index()
+    tot['kid'] = K
+    tot = tot.set_index(['eid', 'kid'])
+    if len(kids):
+        alt['kid'] = kids[aids]
+        return tot.add(alt.groupby(['eid', 'kid']).sum(), fill_value=0.)
     return tot
 
 
@@ -124,12 +117,13 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
     """
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
-    loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
+    loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_types}
     oq = crmodel.oqparam
     correl = int(oq.asset_correlation)
     df = None
     for out in outputs:
-        for lni, ln in enumerate(crmodel.oqparam.loss_names):
+        dfs = []
+        for lni, ln in enumerate(crmodel.oqparam.loss_types):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
@@ -141,7 +135,12 @@ def aggreg(outputs, crmodel, ARK, kids, rlz_id, monitor):
             with mon_agg:
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
-                df_ = aggregate_losses(alt, ARK[2], kids, lni)
+                df_ = aggregate_losses(alt, ARK[2], kids)
+                df_['loss_id'] = lni
+                df_ = df_.reset_index().set_index(['eid', 'kid', 'loss_id'])
+                dfs.append(df_)
+        with mon_agg:
+            for df_ in dfs:
                 if correl:  # restore the variances
                     df_['variance'] = df_.variance ** 2
                 if df is None:
@@ -179,14 +178,17 @@ def event_based_risk(df, param, monitor):
             oq.master_seed, df.eid.unique(), int(oq.asset_correlation))
 
     def outputs():
+        mon_risk = monitor('computing risk', measuremem=False)
         for taxo, asset_df in assets_df.groupby('taxonomy'):
             gmf_df = df[numpy.isin(df.sid.to_numpy(),
                                    asset_df.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
             if rndgen:
-                yield crmodel.get_output(
-                    taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
+                with mon_risk:
+                    out = crmodel.get_output(
+                        taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
+                yield out
             else:
                 yield from crmodel.gen_outputs(taxo, asset_df, gmf_df, param)
 
@@ -300,7 +302,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.param['collect_rlzs'] = oq.collect_rlzs
         self.A = A = len(self.assetcol)
-        self.L = L = len(oq.loss_names)
+        self.L = L = len(oq.loss_types)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
@@ -334,7 +336,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dset('avg_losses-rlzs', F32, (self.A, R, self.L))
         self.datastore.set_shape_descr(
             'avg_losses-rlzs', asset_id=self.assetcol['id'], rlz=R,
-            loss_type=oq.loss_names)
+            loss_type=oq.loss_types)
 
     def execute(self):
         """
@@ -381,7 +383,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         for sec_loss in self.param['sec_losses']:
             names.update(sec_loss.sec_names)
         D = len(names)
-        logging.info('Risk parameters (E={:_d}, K={:_d}, L={}, D={})'.
+        logging.info('Risk parameters (rel_E={:_d}, K={:_d}, L={}, D={})'.
                      format(E, K, self.L, D))
 
     def agg_dicts(self, dummy, dic):
@@ -431,7 +433,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.datastore['avg_losses-rlzs'] = self.avg_losses
             stats.set_rlzs_stats(self.datastore, 'avg_losses',
                                  asset_id=self.assetcol['id'],
-                                 loss_type=oq.loss_names)
+                                 loss_type=oq.loss_types)
 
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.assetcol = self.assetcol
