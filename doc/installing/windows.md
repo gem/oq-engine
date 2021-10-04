@@ -1,6 +1,7 @@
 # Installing the OpenQuake Engine on Windows
 
-The OpenQuake Engine is available for Windows in the form of **self-installable binary distribution**.
+The OpenQuake Engine can be installed on Windows with the universal installer.
+For LTS releases we also offer a **self-installable binary distribution**.
 
 - this distribution includes its own distribution of the dependencies needed by the OpenQuake Engine
     - Python 3.6

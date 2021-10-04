@@ -68,28 +68,12 @@ Current stable version is the **OpenQuake Engine 3.12**. The documentation is av
 
 * [Technology stack and requirements](doc/requirements.md)
 * [Which installation method should I use?](doc/installing/README.md)
-
-#### Linux
-
-* [Installing on Ubuntu](doc/installing/ubuntu.md)
-* [Installing on RedHat and derivatives](doc/installing/rhel.md)
-* [Installing on other flavors (without sudo)](doc/installing/linux-generic.md)
+* [Installing with the universal installer](doc/installing/universal.md)
+* [Installing from Debian packages](doc/installing/ubuntu.md)
+* [Installing from RPM packages](doc/installing/rhel.md)
 * [Installing from sources](doc/installing/development.md)
 * [Installing on a cluster](doc/installing/cluster.md)
-
-#### macOS
-
-* [Installing on macOS](doc/installing/macos.md)
-* [Installing from sources](doc/installing/development.md#macos)
-
-#### Windows
-
 * [Installing on Windows](doc/installing/windows.md)
-* [Installing from sources](doc/installing/development-windows.md)
-* [Starting the software](doc/running/windows.md)
-
-#### Cloud
-
 * [Deploy a Docker container](doc/installing/docker.md)
 
 #### Mirrors
