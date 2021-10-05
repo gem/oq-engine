@@ -1185,6 +1185,18 @@ class OqParam(valid.ParamSet):
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
+    def risk_event_rates(self, num_events):
+        """
+        :param num_events: the number of events per risk realization
+
+        If risk_investigation_time is 1, returns the annual event rates for
+        each realization as a list, possibly of 1 element.
+        """
+        if self.investigation_time is None:
+            return [1] * len(num_events)
+        else:
+            return list(self.time_ratio * num_events)
+
     @property
     def imtls(self):
         """

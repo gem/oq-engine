@@ -162,7 +162,8 @@ class Socket(object):
             ok = self.zsocket.poll(10000)  # 10 seconds
             if not ok:
                 raise TimeoutError(
-                    'While sending %s; probably the DbServer is off' % obj)
+                    'While sending %s; probably the DbServer is off' %
+                    repr(obj))
             return self.zsocket.recv_pyobj()
 
     def __repr__(self):

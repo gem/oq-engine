@@ -303,6 +303,7 @@ class PostRiskCalculator(base.RiskCalculator):
                         self.datastore.calc_id)
         logging.info('Sanity check on avg_losses and aggrisk')
         if 'avg_losses-rlzs' in self.datastore:
+            event_rates = oq.risk_event_rates(self.num_events)
             K = len(self.aggkey) if oq.aggregate_by else 0
             aggrisk = self.aggrisk[self.aggrisk.agg_id == K]
             avg_losses = self.datastore['avg_losses-rlzs'][:].sum(axis=0)
@@ -311,10 +312,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 ri, li = int(row.rlz_id), int(row.loss_id)
                 # check on the sum of the average losses
                 avg = avg_losses[ri, li]
-                if oq.investigation_time:
-                    agg = row.loss * self.num_events[ri] * oq.time_ratio
-                else:
-                    agg = row.loss
+                agg = row.loss * event_rates[ri]
                 if not numpy.allclose(avg, agg, rtol=.001):
                     logging.warning(
                         'Inconsistent sum_losses for %s: '
