@@ -1193,7 +1193,8 @@ def read_shakemap(calc, haz_sitecol, assetcol):
     """
     oq = calc.oqparam
     E = oq.number_of_ground_motion_fields
-    oq.risk_imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
+    imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
+    oq.risk_imtls = {imt: list(imls) for imt, imls in imtls.items()}
     logging.info('Getting/reducing shakemap')
     with calc.monitor('getting/reducing shakemap'):
         # for instance for the test case_shakemap the haz_sitecol
