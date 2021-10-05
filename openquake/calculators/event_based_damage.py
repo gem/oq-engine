@@ -73,7 +73,7 @@ def event_based_damage(df, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
     K = param['K']
-    with monitor('reading data'):
+    with monitor('reading gmf_data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
