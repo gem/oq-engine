@@ -28,7 +28,6 @@ import pickle
 import socket
 import random
 import atexit
-import pprint
 import zipfile
 import builtins
 import operator
@@ -37,6 +36,7 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import collections
 import multiprocessing
 from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
@@ -55,9 +55,10 @@ mp = multiprocessing.get_context('spawn')
 
 def duplicated(items):
     """
-    :returns: True if the items are duplicated, False otherwise
+    :returns: the list of duplicated keys, possibly empty
     """
-    return len(items) > len(set(items))
+    counter = collections.Counter(items)
+    return [key for key, counts in counter.items() if counts > 1]
 
 
 def cached_property(method):
