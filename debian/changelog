@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the universal installer when installing over a previous
+    installation from packages
   * Fixed an error in `oq zip job_haz.ini -r job_risk.ini`
   * Fixed the disaggregation Mag_Lon_Lat exporter header mixup
   * Fixed the ShakeMap calculator failing with a TypeError:

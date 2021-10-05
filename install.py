@@ -32,6 +32,7 @@ The calculations will NOT be removed since they live in
 You have to remove the data directories manually, if you so wish.
 """
 import os
+import re
 import sys
 import json
 import glob
@@ -72,10 +73,18 @@ class server:
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
-    multi_user = true
     file = %s
     shared_dir = /var/lib
     ''' % (DBPORT, DBPATH)
+
+    @classmethod
+    def exit(cls):
+        return f'''There is a DbServer running on port {cls.DBPORT} from a
+previous installation. 
+On linux please stop the server with the command
+`sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`
+On Windows please use Task Manager to stop the process
+On macOS please use Activity Monitor to stop the process'''
 
 
 class devel_server:
@@ -91,10 +100,10 @@ class devel_server:
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
-    multi_user = true
     file = %s
     shared_dir = /var/lib
     ''' % (DBPORT, DBPATH)
+    exit = server.exit
 
 
 class user:
@@ -120,24 +129,30 @@ class user:
     DBPORT = 1908
     CONFIG = ''
 
+    @classmethod
+    def exit(cls):
+        return f'''There is a DbServer running on port {cls.DBPORT} from a
+previous installation. Please stop the server with the command
+`oq dbserver stop` or set a different port with the --port option'''
+
 
 class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
+    exit = user.exit
 
 
 PACKAGES = '''It looks like you have an installation from packages.
-Please remove it with `sudo apt remove python3-oq-engine`
-on Debian derivatives or with `sudo yum remove python3-oq-engine`
-on Red Hat derivatives. If it does not work, just remove everything with
-sudo rm -rf /opt/openquake /etc/openquake/openquake.cfg /usr/bin/oq
+Please remove it with `sudo apt remove oq-python38` on Debian derivatives
+or with `sudo yum remove python3-oq-engine` on Red Hat derivatives.
+Then give the command `sudo rm -rf /opt/openquake /etc/openquake/openquake.cfg`
 '''
 SERVICE = '''\
 [Unit]
 Description=The OpenQuake Engine {service}
 Documentation=https://github.com/gem/oq-engine/
-After=network.target
+After= {afterservice}
 
 [Service]
 User=openquake
@@ -178,10 +193,13 @@ def install_standalone(venv):
             print('%s: could not install %s' % (exc, STANDALONE % app))
 
 
-def before_checks(inst, remove, usage):
+def before_checks(inst, port, remove, usage):
     """
     Checks to perform before the installation
     """
+    if port:
+        inst.DBPORT = int(port)
+
     # check python version
     if PYVER < (3, 6):
         sys.exit('Error: you need at least Python 3.6, but you have %s' %
@@ -211,24 +229,17 @@ def before_checks(inst, remove, usage):
 
     # check if there is a DbServer running
     if not remove:
-        cmd = ('sudo systemctl stop openquake-dbserver' if (
-            inst is server or inst is devel_server) else 'oq dbserver stop')
-        cmd = ('oq dbserver stop')
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             errcode = sock.connect_ex(('localhost', inst.DBPORT))
         finally:
             sock.close()
         if errcode == 0:  # no error, the DbServer is up
-            sys.exit('There is DbServer running on port %d from a previous '
-                     'installation. Please run `%s`. '
-                     'If it does not work, try `sudo fuser -k %d/tcp`' %
-                     (inst.DBPORT, cmd, inst.DBPORT))
+            inst.exit()
 
     # check if there is an installation from packages
-    if ((inst is server and os.path.exists('/etc/openquake/openquake.cfg'))
-        or (inst is devel_server and
-            os.path.exists('/etc/openquake/openquake.cfg'))):
+    if inst in (server, devel_server) and os.path.exists(
+            '/etc/openquake/openquake.cfg'):
         sys.exit(PACKAGES)
     if ((inst is server and os.path.exists(inst.OQ) and
             os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV) or
@@ -243,7 +254,7 @@ def latest_commit(branch):
     url = 'https://api.github.com/repos/GEM/oq-engine/commits/' + branch
     with urlopen(url) as f:
         js = json.loads(f.read())
-    return js['commit']['url'].rsplit('/')[-1]
+    return js['sha']
 
 
 def fix_version(commit, venv):
@@ -303,15 +314,15 @@ def install(inst, version):
     if sys.platform != 'win32':
         subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                          'pip', 'wheel'])
+                               'pip', 'wheel'])
     else:
         if os.path.exists('python\\python._pth.old'):
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                'pip', 'wheel'])
+                                   'pip', 'wheel'])
         else:
             subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                          'pip', 'wheel'])
+                                   'pip', 'wheel'])
 
     # install the requirements
     req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
@@ -324,14 +335,14 @@ def install(inst, version):
     elif version is None:  # install the stable version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine'])
-    elif '.' in version:  # install an official version
+    elif re.match(r'\d+(\.\d+)+', version):  # install an official version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)
         print('Installing commit', commit)
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
-                               '--upgrade', GITBRANCH % version])
+                               '--upgrade', GITBRANCH % commit])
         fix_version(commit, inst.VENV)
 
     install_standalone(inst.VENV)
@@ -372,14 +383,18 @@ def install(inst, version):
                   '/bin/activate')
 
     # create systemd services
-    if ((inst is server and os.path.exists('/usr/lib/systemd/system')) or
-       (inst is devel_server and os.path.exists('/usr/lib/systemd/system'))):
+    if ((inst is server and os.path.exists('/run/systemd/system')) or
+       (inst is devel_server and os.path.exists('/run/systemd/system'))):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/' + service_name
+            afterservice = 'network.target'
+            if 'webui' in service:
+                afterservice = 'network.target openquake-dbserver'
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
-                    srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
+                    srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
+                                         afterservice=afterservice)
                     f.write(srv)
             subprocess.check_call(
                 ['systemctl', 'enable', '--now', service_name])
@@ -412,11 +427,12 @@ def remove(inst):
     if inst is server or inst is devel_server:
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
-            service_path = '/usr/lib/systemd/system/' + service_name
+            service_path = '/etc/systemd/system/' + service_name
             if os.path.exists(service_path):
                 subprocess.check_call(['systemctl', 'stop', service_name])
                 print('stopped ' + service_name)
                 os.remove(service_path)
+                print('removed ' + service_name)
         subprocess.check_call(['systemctl', 'daemon-reload'])
     shutil.rmtree(inst.VENV)
     print('%s has been removed' % inst.VENV)
@@ -430,19 +446,23 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("inst", choices=['server', 'user', 'devel',
-                                         'devel_server'],
-                        default='server', nargs='?',
-                        help='the kind of installation you want '
-                        '(default server)')
+    parser.add_argument("inst",
+                        choices=['server', 'user', 'devel', 'devel_server'],
+                        nargs='?',
+                        help='the kind of installation you want')
     parser.add_argument("--remove",  action="store_true",
                         help="disinstall the engine")
     parser.add_argument("--version",
                         help="version to install (default stable)")
+    parser.add_argument("--dbport",
+                        help="DbServer port (default 1907 or 1908)")
     args = parser.parse_args()
-    inst = globals()[args.inst]
-    before_checks(inst, args.remove, parser.format_usage())
-    if args.remove:
-        remove(inst)
+    if args.inst:
+        inst = globals()[args.inst]
+        before_checks(inst, args.dbport, args.remove, parser.format_usage())
+        if args.remove:
+            remove(inst)
+        else:
+            install(inst, args.version)
     else:
-        install(inst, args.version)
+        sys.exit("Please specify the kind of installation")
