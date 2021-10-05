@@ -762,6 +762,10 @@ class HazardCalculator(BaseCalculator):
                              len(self.assetcol), len(assetcol))
             else:
                 self.assetcol = assetcol
+                if ('site_id' in oq.aggregate_by and 'site_id' not
+                        in assetcol.tagcol.tagnames):
+                    assetcol.tagcol.add_tagname('site_id')
+                    assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
             self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
