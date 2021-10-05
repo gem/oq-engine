@@ -20,6 +20,7 @@ import io
 import os
 import json
 import string
+import logging
 import operator
 import itertools
 from collections import namedtuple, defaultdict
@@ -398,6 +399,7 @@ class GsimLogicTree(object):
         # do the parsing, called at instantiation time to populate .values
         trts = []
         branches = []
+        branchids = []
         branchsetids = set()
         basedir = os.path.dirname(self.filename)
         no = 0
@@ -454,10 +456,16 @@ class GsimLogicTree(object):
                 raise InvalidLogicTree(
                     'There where duplicated branchIDs in %s' %
                     self.filename)
+            branchids.extend(branch_ids)
+
         if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
                 '%s: Found duplicated applyToTectonicRegionType=%s' %
                 (self.filename, trts))
+        dupl = duplicated(branchids)
+        if dupl:
+            logging.warning(
+                'There are duplicated branchIDs %s in %s', dupl, self.filename)
         branches.sort(key=lambda b: (b.trt, b.id))
         # TODO: add an .idx to each GSIM ?
         return branches
