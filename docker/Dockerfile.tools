@@ -70,5 +70,4 @@ RUN mkdir oqdata
 #
 EXPOSE 8888:8888
 STOPSIGNAL SIGINT
-ENTRYPOINT ["/bin/bash", "-c"]
 CMD ["jupyter", "lab", "--ip='0.0.0.0'", "--port=8888", "--no-browser"]
