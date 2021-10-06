@@ -33,12 +33,12 @@ RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch
 #
 # Install OpenQuake Tools
 #
-RUN git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-standalone.git && \
-	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-ipt.git && \
-	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxtweb.git && \
-	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxonomy.git 
-ADD scripts/tools.sh .
-RUN bash -x tools.sh
+RUN git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-standalone.git && pip install -e oq-platform-standalone/ && \
+	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-ipt.git && pip install -e oq-platform-ipt/ && \
+	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxtweb.git && pip install -e oq-platform-taxtweb/ && \
+	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxonomy.git && pip install -e oq-platform-taxonomy/ && \ 
+	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxtweb.git && pip install -e oq-platform-taxtweb/ && \
+	export PYBUILD_NAME="oq-taxonomy" && pip install -e oq-platform-taxonomy/ && unset PYBUILD_NAME 
 #
 USER openquake
 ENV HOME /home/openquake
