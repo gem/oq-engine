@@ -36,8 +36,8 @@ RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch
 RUN git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-standalone.git && \
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-ipt.git && \
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxtweb.git && \
-	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxonomy.git && \
-	for app in oq-platform-*; do && \
+	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxonomy.git 
+RUN for app in oq-platform-*; do && \
 	 pip install -e . && \
    	 if [ "$app" = "oq-platform-taxtweb" ]; then && \
    	     export PYBUILD_NAME="oq-taxonomy" && \
