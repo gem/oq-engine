@@ -101,9 +101,13 @@ def event_based_damage(df, param, monitor):
             eids = gmf_df.eid.to_numpy()
             if R > 1:
                 rlzs = allrlzs[eids]
-            if not float_dmg_dist:
-                rndgen = scientific.MultiEventRNG(
+            if sec_sims or not float_dmg_dist:
+                rng = scientific.MultiEventRNG(
                     master_seed, numpy.unique(eids))
+            for prob_field, num_sims in sec_sims:
+                probs = gmf_df[prob_field].to_numpy()   # LiqProb
+                if not float_dmg_dist:
+                    booldist = rng.boolean_dist(probs, num_sims)  # (E, S)
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 aids = adf.index.to_numpy()
@@ -125,14 +129,20 @@ def event_based_damage(df, param, monitor):
                         # this is a performance distaster; for instance
                         # the Messina test in oq-risk-tests becomes 12x
                         # slower even if it has only 25_736 assets
-                        ddd[:, :, :D] = rndgen.discrete_dmg_dist(
+                        ddd[:, :, :D] = rng.discrete_dmg_dist(
                             eids, fractions, number)
 
                     # secondary perils and consequences
                     for a, asset in enumerate(assets):
                         if sec_sims:
-                            seed = master_seed + int(asset.ordinal)
-                            run_sec_sims(ddd[a], gmf_df, sec_sims, seed)
+                            for d in range(1, D):
+                                # doing the mean on the secondary simulations
+                                if float_dmg_dist:
+                                    ddd[a, :, d] *= probs
+                                else:
+                                    for e in range(E):
+                                        ddd[a, e, d] *= booldist[e]
+
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
                             ddd[a, :, ci[name]] = values
