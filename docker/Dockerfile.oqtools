@@ -15,8 +15,7 @@
 FROM python:3.8 AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update && \
+RUN apt-get update &&  \
     apt-get install -y --no-install-recommends build-essential gcc git libcap-dev time && \
     useradd -m -u 1000 -G sudo -s /bin/bash openquake 
 ARG oq_branch
