@@ -31,7 +31,30 @@ produce 300 events.
 The exposure contains 348,471 assets of 813 distinct taxonomies. The
 fragility functions contain a single damage state called "complete",
 associated to the complete distruction of the asset due to the liquefaction
-effect. All the rest is considered in "no damage" state.
+effect. All the rest is considered in "no damage" state. The .ini file
+contains two secondary perils::
+
+  secondary_perils = HazusLiquefaction, HazusDeformation
+
+On the hazard side such perils are managed as additional columns in
+the GMF table, named ``LiqProb`` and ``PGDMax`` respectively. The
+liquefaction fragility functions are associated to ``PGDMax``.
+
+On the risk side for each hazard simulation the engine runs 10 secondary
+simulations::
+
+ secondary_simulations = {'LiqProb': 10}
+
+For instance, if a site has liquefaction probability of 0.2 an you run 10
+simulations, in average the assets on that site will be destroyed 2 times
+while for 8 times they will be in the "no damage" state.
+
+The algorithm used in the engine (as of version 3.13) takes the L sites
+with nonzero ``LiqProb`` (normally L << N, the total number of sites)
+and for each hazard simulation (i.e. for each event) runs S secondary
+simulations using an event-specific seed generated from the ``master_seed``;
+then the mean number of destroyed buildings across the
+secondary simulations is stored.
 
 Understanding the hazard
 ------------------------
