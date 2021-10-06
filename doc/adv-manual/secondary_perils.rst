@@ -18,54 +18,62 @@ are stored in a CSV file::
 
 The rupture was obtained from a pre-existing event based hazard calculation.
 
-There is also a site model file containing 4,168 sites: these are the sites where the GMFs
-will be computed (actually only 4,152 sites will be considered since on some of them there
-are no assets within the ``asset_hazard_distance``, which has a default of 15 km).
+There is also a site model file containing 4,168 sites: these are the
+sites where the GMFs will be computed (actually only 4,152 sites will
+be considered since on some of them there are no assets within the
+``asset_hazard_distance``, which has a default of 15 km).
 
 Since the parameter `number_of_ground_motion_fields` is set to 100 and
-there are 3 GMPEs in the GMPE logic tree (AbrahamsonEtAl2015SInter, ZhaoEtAl2006SInterNSHMP2008,
-MontalvaEtAl2016SInter) the engine will produce 300 events.
+there are 3 GMPEs in the GMPE logic tree (AbrahamsonEtAl2015SInter,
+ZhaoEtAl2006SInterNSHMP2008, MontalvaEtAl2016SInter) the engine will
+produce 300 events.
 
-The exposure contains 348,471 assets of 813 distinct taxonomies. The fragility functions contain a single
-damage state called "complete", associated to the complete distruction of the asset. All the rest is
-considered in "no damage" state.
+The exposure contains 348,471 assets of 813 distinct taxonomies. The
+fragility functions contain a single damage state called "complete",
+associated to the complete distruction of the asset due to the liquefaction
+effect. All the rest is considered in "no damage" state.
 
 Understanding the hazard
 ------------------------
 
-The first thing to do in order to assess the reliability of the results is to assess the reliability
-of the hazard. Running the calculation with ``calculation_mode=scenario`` will generate and store
-a set of 100x3 GMFs, one for each simulated event. Unfortunately the engine will give the following
-scary warning::
+The first thing to do in order to assess the reliability of the
+results is to assess the reliability of the hazard. Running the
+calculation with ``calculation_mode=scenario`` will generate and store
+a set of 100x3 GMFs, one for each simulated event. Unfortunately the
+engine will give the following scary warning::
 
-  [WARNING] Your results are expected to have a large dependency from ses_seed (or the rupture seed in scenarios)
+  [WARNING] Your results are expected to have a large dependency from ses_seed (or the rupture seed in scenarios): 11%
 
-It means that the variability/seed-dependency in the GMFs will be large, i.e. that the
-parameter `number_of_ground_motion_fields=100` is set to a value too
-small for having statistical significance. *This does not mean that
-you should blindly increase it*: since the precision in a Montecarlo
-calculation goes with the inverse square root of the number of
-simulations, it is very difficult to improve the precision without
-making the calculation too large to be tractable, especially on the
-risk side. For instance in this example a call to ``oq show performance``
-gives::
+It means that the variability in the GMFs will be
+large, i.e. that the parameter `number_of_ground_motion_fields=100` is
+set to a value too small for having statistical significance. *This
+does not mean that you should blindly increase it*: since the
+precision in a Montecarlo calculation goes with the inverse square
+root of the number of simulations, it is very difficult to improve the
+precision without making the calculation too large to be tractable,
+especially on the risk side. For instance in this example a call to
+``oq show performance`` gives::
 
  | calc_3901, maxmem=1.5 GB | time_sec  | memory_mb | counts |
  |--------------------------+-----------+-----------+--------|
  | total compute_gmfs       | 25.2      | 89.5      | 1      |
 
-i.e. computing the GMFs took 25.2 seconds and 89.5 MB of RAM. In order to increase by
-10 times the precision we will have to use 100 times more time and 100 times more
-memory and then the risk will probably become intractable. Also the size of the GMFs
-table will increase 100 times (and it has already 1_245_600 rows) increasing the
-probability of running out of disk space.
+i.e. computing the GMFs took 25.2 seconds and 89.5 MB of RAM. In order
+to increase by 10 times the precision we will have to use 100 times
+more time and 100 times more memory and then the risk will probably
+become intractable. Also the size of the GMFs table will increase 100
+times (and it has already 1_245_600 rows) increasing the probability
+of running out of disk space.
 
-So, it is better to keep ``number_of_ground_motion_fields`` small and to go on. The number of
-simulations should be increased *only as last step*, when the calculation is understood,
-not before starting the analysis. The first step, knowing that there will be a large variability in the
-GMFs is to understand how big the variability will be. The engine provided such information in the
-output called ``avg_gmf`` which as actually computing mean and standard deviations with respect to the
-events for the GMFs in logspace. Exporting such output in CSV will give the following results::
+So, it is better to keep ``number_of_ground_motion_fields`` small and
+to go on. The number of simulations should be increased *only as last
+step*, when the calculation is understood, not before starting the
+analysis. The first step, knowing that there will be a large
+variability in the GMFs is to understand how big the variability will
+be. The engine provided such information in the output called
+``avg_gmf`` which as actually computing mean and standard deviations
+with respect to the events for the GMFs in logspace. Exporting such
+output in CSV will give the following results::
 
  site_id,lon,lat,gmv_PGA,gsd_PGA
  0,-7.65409E+01,3.35016E+00,2.02698E-01,2.10337E+00
@@ -97,8 +105,9 @@ and repeat the calculation will will get for ``avg_gmf`` the following results::
 
 The site 0 that had a value of 0.202698 g has now a value of 0.18517 g, a ~10% difference.
 
-If we increase the ``number_of_ground_motion_fields`` by 100 times (i.e. to 10,000) we would expect
-to increase the precision by 10 times. Actually by performing the calculation and by exporting the
+If we increase the ``number_of_ground_motion_fields`` by 100 times
+(i.e. to 10,000) we would expect to increase the precision by 10
+times. Actually by performing the calculation and by exporting the
 ``avg_gmf`` output we will see that is the case indeed::
 
  site_id,lon,lat,gmv_PGA,gsd_PGA
@@ -123,39 +132,44 @@ The seed-dependency is indeed ~10 times smaller, however notice how bad the perf
  |--------------------------+-----------+-----------+--------|
  | total compute_gmfs       | 2_391     | 3_815     | 1      |
 
-Moreover the memory occupation is much worse (the calculation requires ~30 GB of RAM)
-and that make impossible to run the calculation on most laptops/desktops.
+Moreover the memory occupation is much worse (the calculation requires
+~30 GB of RAM) and that make impossible to run the calculation on most
+laptops/desktops.
 
 Understanding the risk
 ------------------------
 
-Since this is a ``scenario_damage`` calculation, the best way to understand the reliabily of
-the results due to the Montecarlo errors is to look at the seed-dependency of the
-portfolio damage distributions (there will be three of them, one for each GMPE).
-They can be obtained by exporting the output "aggrisk"::
+Since this is a ``scenario_damage`` calculation, the best way to
+understand the reliabily of the results due to the Montecarlo errors
+is to look at the seed-dependency of the portfolio damage
+distributions (there will be three of them, one for each GMPE).  They
+can be obtained by exporting the output "aggrisk"::
 
  loss_type,rlz_id,no_damage,complete
  structural,0,3.46780E+05,1.91884E+03
  structural,1,3.46960E+05,1.73882E+03
  structural,2,3.45961E+05,2.73800E+03
 
-Then after changing the seed 2288985983 -> 2288985984 and re-running the same command we will get::
+Then after changing the seed 2288985983 -> 2288985984 and re-running
+the same command we will get::
 
  loss_type,rlz_id,no_damage,complete
  structural,0,3.46964E+05,1.73549E+03
  structural,1,3.47112E+05,1.58696E+03
  structural,2,3.46181E+05,2.51764E+03
 
-For instance for the first realization (i.e. the first GMPE) the estimated number of destroyed
-buildings changes from ~1919 to ~1735, which is a difference around ~10%.
+For instance for the first realization (i.e. the first GMPE) the
+estimated number of destroyed buildings changes from ~1919 to ~1735,
+which is a difference around ~10%.
 
-This is consistent with the hazard analysis and it is good news: a 10% Montecarlo error
-is quite acceptable. It could be reduced to a 5% buy increasing by 4 times the number
-of simulations; more than that is probably not worth the effort, since the calculation
-would become too expensive to run for a minor benefit.
+This is consistent with the hazard analysis and it is good news: a 10%
+Montecarlo error is quite acceptable. It could be reduced to a 5% buy
+increasing by 4 times the number of simulations; more than that is
+probably not worth the effort, since the calculation would become too
+expensive to run for a minor benefit.
 
-NB: in order to obtain the correspondence between the realization ID and the associated
-GMPE you can use the command
+NB: in order to obtain the correspondence between the realization ID
+and the associated GMPE you can use the command
 
 ::
    
