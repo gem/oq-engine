@@ -37,7 +37,7 @@ RUN git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-stan
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-ipt.git && pip install -e oq-platform-ipt/ && \
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxonomy.git && pip install -e oq-platform-taxonomy/ && \ 
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxtweb.git && pip install -e oq-platform-taxtweb/ && \
-	export PYBUILD_NAME="oq-taxonomy" && pip install -e oq-platform-taxonomy/ && unset PYBUILD_NAME 
+    export PYBUILD_NAME="oq-taxonomy" && pip install -e oq-platform-taxtweb/ && unset PYBUILD_NAME
 #
 USER openquake
 ENV HOME /home/openquake
