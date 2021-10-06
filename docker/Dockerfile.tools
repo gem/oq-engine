@@ -16,9 +16,21 @@ FROM python:3.8 AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 ENV DEBIAN_FRONTEND noninteractive
+#
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential gcc git libcap-dev time && \
-    useradd -m -u 1000 -G sudo -s /bin/bash openquake 
+    apt-get install -yq \
+    wget time zip unzip \
+    bzip2 \
+    ca-certificates \
+    locales \
+    fonts-liberation \
+    git gcc libcap-dev  \
+    gmt gmt-gshhg \
+    ghostscript \
+    build-essential && \ 
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    useradd -m -u 1000 -s /bin/bash openquake  
+#
 ARG oq_branch
 ENV LANG en_US.UTF-8
 WORKDIR /usr/src
@@ -27,19 +39,25 @@ WORKDIR /usr/src
 ENV VIRTUAL_ENV=/opt/openquake
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
+ENV GMT_SESSION_NAME=$$
+#
 # Install dependencies and engine
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \ 
     pip --disable-pip-version-check install -e . -r requirements-py38-linux64.txt --no-warn-script-location 
 #
 # Install OpenQuake Tools
 #
-RUN cd /usr/src && git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-standalone.git && pip install -e oq-platform-standalone/ && \
+RUN pip install pip wheel setuptools --upgrade && \
+	pip install notebook==6.3.0 jupyterlab==3.0.14 ipywidgets && \
+	cd /usr/src && git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-standalone.git && pip install -e oq-platform-standalone/ && \
 	cd /usr/src && git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-ipt.git && pip install -e oq-platform-ipt/ && \
 	cd /usr/src && git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxonomy.git && pip install -e oq-platform-taxonomy/ && \ 
 	cd /usr/src && git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxtweb.git && pip install -e oq-platform-taxtweb/ && \
-	export PYBUILD_NAME="oq-taxonomy" && pip install -e oq-platform-taxtweb/ && unset PYBUILD_NAME
-
+	export PYBUILD_NAME="oq-taxonomy" && pip install -e oq-platform-taxtweb/ && unset PYBUILD_NAME && \
+	cd /usr/src && git clone https://github.com/GEMScienceTools/oq-mbtk.git --depth=1 && cd oq-mbtk && \
+    pip install rtree && pip install -e . && \
+    cd /usr/src && git clone https://github.com/GEMScienceTools/gmpe-smtk.git --depth=1 && cd gmpe-smtk && \
+    python3 setup.py install && \
 #
 USER openquake
 ENV HOME /home/openquake
@@ -50,9 +68,7 @@ ENV HOME /home/openquake
 WORKDIR ${HOME}
 RUN mkdir oqdata 
 #
-ADD scripts/oq-db_start.sh ${HOME}
-ADD scripts/oq-start.sh ${HOME}
-EXPOSE 8800:8800
+EXPOSE 8888:8888
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-start.sh"]  
+CMD ["jupyter", "lab", "--ip='0.0.0.0'", "--port=8888", "--no-browser"]
