@@ -37,7 +37,7 @@ RUN git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-stan
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-ipt.git && \
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxtweb.git && \
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxonomy.git 
-ADD scripts/tools.sh 
+ADD scripts/tools.sh .
 RUN bash -x tools.sh
 #
 USER openquake
