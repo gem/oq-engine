@@ -57,7 +57,7 @@ RUN pip install pip wheel setuptools --upgrade && \
 	cd /usr/src && git clone https://github.com/GEMScienceTools/oq-mbtk.git --depth=1 && cd oq-mbtk && \
     pip install rtree && pip install -e . && \
     cd /usr/src && git clone https://github.com/GEMScienceTools/gmpe-smtk.git --depth=1 && cd gmpe-smtk && \
-    python3 setup.py install && \
+    python3 setup.py install 
 #
 USER openquake
 ENV HOME /home/openquake
