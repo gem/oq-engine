@@ -25,6 +25,7 @@ import operator
 import collections
 import numpy
 from decorator import FunctionMaker
+from openquake.baselib import config
 from openquake.baselib.general import groupby, gen_subclasses
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
@@ -155,6 +156,10 @@ def main(what, report=False):
             print(cls.__name__)
     elif what == 'venv':
         print(sys.prefix)
+    elif what == 'cfg':
+        print('Looking at the following paths (the last wins)')
+        for path in config.paths:
+            print(path)
     elif what == 'sources':
         for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)

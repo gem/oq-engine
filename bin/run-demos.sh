@@ -5,6 +5,9 @@ if [ ! -d "$1" ]; then
     exit 1
 fi
 
+oq info venv
+oq info cfg
+
 # run demos with job_hazard.ini and job_risk.ini
 for demo_dir in $(find "$1" -type d | sort); do
    if [ -f $demo_dir/job_hazard.ini ]; then

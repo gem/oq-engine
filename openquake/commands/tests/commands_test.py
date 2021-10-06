@@ -120,6 +120,12 @@ class InfoTestCase(unittest.TestCase):
         lines = str(p).split()
         self.assertGreaterEqual(len(lines), 5)
 
+    def test_cfg(self):
+        with Print.patch() as p:
+            sap.runline('openquake.commands info cfg')
+        lines = str(p).split('\n')
+        self.assertGreaterEqual(len(lines), 2)
+
     def test_sources(self):
         with Print.patch() as p:
             sap.runline('openquake.commands info sources')
