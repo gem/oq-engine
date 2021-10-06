@@ -61,6 +61,17 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('len', U16)])
 
 
+def check_imtls(this, parent):
+    """
+    Fix the hazard_imtls of two calculations if possible
+    """
+    for imt, imls in this.items():
+        if (imls != parent[imt]).any():
+            raise ValueError('The intensity measure levels %s are different '
+                             'from the parent levels %s for %s' % (
+                                 imls, parent[imt], imt))
+
+
 # this is used for the minimum_intensity dictionaries
 def consistent(dic1, dic2):
     """
@@ -533,7 +544,9 @@ class HazardCalculator(BaseCalculator):
             self.datastore.swmr_on()
         elif oq.hazard_calculation_id:
             parent = datastore.read(oq.hazard_calculation_id)
-            self.check_precalc(parent['oqparam'].calculation_mode)
+            oqparent = parent['oqparam']
+            check_imtls(self.oqparam.imtls, oqparent.imtls)
+            self.check_precalc(oqparent.calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
             if 'concurrent_tasks' not in vars(self.oqparam):
