@@ -37,14 +37,8 @@ RUN git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-stan
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-ipt.git && \
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxtweb.git && \
 	git clone -q --depth=1 -b $oq_branch https://github.com/gem/oq-platform-taxonomy.git 
-RUN for app in oq-platform-*; do
-	 pip install -e . 
-   	 if [ "$app" = "oq-platform-taxtweb" ]; then
-   	     export PYBUILD_NAME="oq-taxonomy"
-		 pip install -e .
-   	     unset PYBUILD_NAME
-   	 fi 
-	done 
+ADD scripts/tools.sh 
+RUN bash -x tools.sh
 #
 USER openquake
 ENV HOME /home/openquake
