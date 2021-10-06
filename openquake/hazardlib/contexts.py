@@ -200,6 +200,8 @@ class ContextMaker(object):
         psd = param.get('pointsource_distance')
         if hasattr(psd, 'ddic'):
             self.pointsource_distance = psd.ddic.get(trt, {})
+            if all(val == 0 for val in self.pointsource_distance.values()):
+                self.pointsource_distance = 0
         else:
             self.pointsource_distance = {}
         if 'imtls' in param:
