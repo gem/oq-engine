@@ -1165,7 +1165,7 @@ def view_mean_perils(token, dstore):
     else:
         rlz_weights = dstore['weights'][:]
         ev_weights = rlz_weights[dstore['events']['rlz_id']]
-        totw = ev_weights.sum()
+        totw = ev_weights.sum()  # num_gmfs
         for peril in perils:
             data = dstore['gmf_data/' + peril][:]
             weights = ev_weights[dstore['gmf_data/eid'][:]]

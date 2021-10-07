@@ -17,15 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest
 import numpy
-
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.writers import write_csv
 from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9, case_10, case_11)
+    case_6, case_7, case_8, case_9, case_10, case_11, case_12)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -225,23 +223,19 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('damages-rlzs', 'csv'), calc2)
         self.assertEqualFiles('expected/avg_damages2.csv', fname)
 
-    def test_case_11_risk(self):
-        raise unittest.SkipTest('Not implemented yet')
+    def test_case_12(self):
+        # secondary perils from rupture
+        self.run_calc(case_12.__file__, 'job.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        hc_id = str(self.calc.datastore.calc_id)
 
-        # losses due to liquefaction
-        self.run_calc(case_11.__file__, 'job_risk.ini')
-        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
-
-        aac(losses(0, alt), [0, 352, 905, 55, 199, 1999, 598, 798])
-        aac(losses(1, alt), [4581, 0, 288, 2669, 2287, 6068, 3036, 0])
-        aac(losses(2, alt), [4754, 0, 421, 7141, 3644, 0, 0, 0])
-
-        self.run_calc(case_11.__file__, 'job_risk.ini',
-                      secondary_simulations='{}')
-        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
-        aac(losses(0, alt), [4982, 3524, 3235, 1388, 4988, 4999, 4988, 4993])
-        aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
-        aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
+        # same with discrete damage distribution
+        self.run_calc(case_12.__file__, 'job.ini',
+                      discrete_damage_distribution='true',
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk2.csv', fname)
 
 
 def losses(aid, alt):

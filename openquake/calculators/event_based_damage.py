@@ -45,24 +45,6 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
-def run_sec_sims(damages, haz, sec_sims, seed):
-    """
-    :param damages: array of shape (E, D) for a given asset
-    :param haz: dataframe of size E with a probability field
-    :param sec_sims: pair (probability field, number of simulations)
-    :param seed: random seed to use
-
-    Run secondary simulations and update the array damages
-    """
-    [(prob_field, num_sims)] = sec_sims
-    numpy.random.seed(seed)
-    probs = haz[prob_field].to_numpy()   # LiqProb
-    affected = numpy.random.random((num_sims, 1)) < probs  # (N, E)
-    for d, buildings in enumerate(damages.T[1:], 1):
-        # doing the mean on the secondary simulations for each event
-        damages[:, d] = numpy.mean(affected * buildings, axis=0)  # shape E
-
-
 def event_based_damage(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
@@ -101,9 +83,13 @@ def event_based_damage(df, param, monitor):
             eids = gmf_df.eid.to_numpy()
             if R > 1:
                 rlzs = allrlzs[eids]
-            if not float_dmg_dist:
-                rndgen = scientific.MultiEventRNG(
+            if sec_sims or not float_dmg_dist:
+                rng = scientific.MultiEventRNG(
                     master_seed, numpy.unique(eids))
+            for prob_field, num_sims in sec_sims:
+                probs = gmf_df[prob_field].to_numpy()   # LiqProb
+                if not float_dmg_dist:
+                    dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 aids = adf.index.to_numpy()
@@ -116,37 +102,42 @@ def event_based_damage(df, param, monitor):
                     fractions = out[lt]
                     Asid, E, D = fractions.shape
                     assert len(eids) == E
-                    ddd = numpy.zeros((Asid, E, Dc), F32)
+                    d3 = numpy.zeros((Asid, E, Dc), F32)
                     if float_dmg_dist:
-                        ddd[:, :, :D] = fractions
+                        d3[:, :, :D] = fractions
                         for a in range(Asid):
-                            ddd[a] *= number[a]
+                            d3[a] *= number[a]
                     else:
                         # this is a performance distaster; for instance
                         # the Messina test in oq-risk-tests becomes 12x
                         # slower even if it has only 25_736 assets
-                        ddd[:, :, :D] = rndgen.discrete_dmg_dist(
+                        d3[:, :, :D] = rng.discrete_dmg_dist(
                             eids, fractions, number)
 
                     # secondary perils and consequences
                     for a, asset in enumerate(assets):
                         if sec_sims:
-                            seed = master_seed + int(asset.ordinal)
-                            run_sec_sims(ddd[a], gmf_df, sec_sims, seed)
+                            for d in range(1, D):
+                                # doing the mean on the secondary simulations
+                                if float_dmg_dist:
+                                    d3[a, :, d] *= probs
+                                else:
+                                    d3[a, :, d] *= dprobs
+
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
-                            ddd[a, :, ci[name]] = values
+                            d3[a, :, ci[name]] = values
                     if R == 1:
-                        dmgcsq[aids, 0, lti] += ddd.sum(axis=1)
+                        dmgcsq[aids, 0, lti] += d3.sum(axis=1)
                     else:
                         for e, rlz in enumerate(rlzs):
-                            dmgcsq[aids, rlz, lti] += ddd[:, e]
-                    tot = ddd.sum(axis=0)  # sum on the assets
+                            dmgcsq[aids, rlz, lti] += d3[:, e]
+                    tot = d3.sum(axis=0)  # sum on the assets
                     for e, eid in enumerate(eids):
                         dddict[eid, K][lti] += tot[e]
                         if K:
                             for a, aid in enumerate(aids):
-                                dddict[eid, kids[aid]][lti] += ddd[a, e]
+                                dddict[eid, kids[aid]][lti] += d3[a, e]
     return to_dframe(dddict, ci, L), dmgcsq
 
 
