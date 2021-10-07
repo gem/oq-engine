@@ -276,9 +276,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         parent = self.datastore.parent
         if parent:
             self.datastore['full_lt'] = parent['full_lt']
-            ne = len(parent['events'])
+            self.parent_events = ne = len(parent['events'])
             logging.info('There are %d ruptures and %d events',
                          len(parent['ruptures']), ne)
+        else:
+            self.parent_events = None
 
         if oq.investigation_time and oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves
@@ -380,6 +382,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)
+        if self.parent_events:
+            assert self.parent_events == len(self.datastore['events'])
         return 1
 
     def log_info(self, eids):
