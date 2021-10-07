@@ -228,6 +228,14 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_12.__file__, 'job.ini')
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname)
+        hc_id = str(self.calc.datastore.calc_id)
+
+        # same with discrete damage distribution
+        self.run_calc(case_12.__file__, 'job.ini',
+                      discrete_damage_distribution='true',
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk2.csv', fname)
 
 
 def losses(aid, alt):

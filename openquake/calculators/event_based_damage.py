@@ -123,7 +123,7 @@ def event_based_damage(df, param, monitor):
                                     ddd[a, :, d] *= probs
                                 else:
                                     for e in range(E):
-                                        ddd[a, e, d] *= booldist[e]
+                                        ddd[a, e, d] *= booldist[e].mean()
 
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
