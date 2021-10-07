@@ -89,7 +89,7 @@ def event_based_damage(df, param, monitor):
             for prob_field, num_sims in sec_sims:
                 probs = gmf_df[prob_field].to_numpy()   # LiqProb
                 if not float_dmg_dist:
-                    booldist = rng.boolean_dist(probs, num_sims)  # (E, S)
+                    dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 aids = adf.index.to_numpy()
@@ -122,8 +122,7 @@ def event_based_damage(df, param, monitor):
                                 if float_dmg_dist:
                                     ddd[a, :, d] *= probs
                                 else:
-                                    for e in range(E):
-                                        ddd[a, e, d] *= booldist[e].mean()
+                                    ddd[a, :, d] *= dprobs
 
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
