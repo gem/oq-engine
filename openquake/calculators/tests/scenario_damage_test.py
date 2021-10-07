@@ -225,24 +225,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('damages-rlzs', 'csv'), calc2)
         self.assertEqualFiles('expected/avg_damages2.csv', fname)
 
-    def test_case_11_risk(self):
-        raise unittest.SkipTest('Not implemented yet')
-
-        # losses due to liquefaction
-        self.run_calc(case_11.__file__, 'job_risk.ini')
-        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
-
-        aac(losses(0, alt), [0, 352, 905, 55, 199, 1999, 598, 798])
-        aac(losses(1, alt), [4581, 0, 288, 2669, 2287, 6068, 3036, 0])
-        aac(losses(2, alt), [4754, 0, 421, 7141, 3644, 0, 0, 0])
-
-        self.run_calc(case_11.__file__, 'job_risk.ini',
-                      secondary_simulations='{}')
-        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
-        aac(losses(0, alt), [4982, 3524, 3235, 1388, 4988, 4999, 4988, 4993])
-        aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
-        aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
-
+    def test_case_12(self):
+        # secondary perils from rupture
+        self.run_calc(case_11.__file__, 'job.ini')
 
 def losses(aid, alt):
     E = len(alt.event_id.unique())
