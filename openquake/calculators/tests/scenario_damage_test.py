@@ -22,13 +22,14 @@ import numpy
 
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.writers import write_csv
+from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8, case_9, case_10, case_11)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 
 aac = numpy.testing.assert_allclose
 
@@ -202,17 +203,21 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     def test_case_11(self):
         # secondary perils without secondary simulations
-        self.run_calc(case_11.__file__, 'job.ini')
+        self.run_calc(case_11.__file__, 'job.ini',
+                      secondary_simulations="{}")
         calc1 = self.calc.datastore
         [fname] = export(('risk_by_event', 'csv'), calc1)
         self.assertEqualFiles('expected/risk_by_event_1.csv', fname)
 
         # secondary perils with secondary simulations
-        self.run_calc(case_11.__file__, 'job.ini',
-                      secondary_simulations="{'LiqProb': 50}")
+        self.run_calc(case_11.__file__, 'job.ini')
         calc2 = self.calc.datastore
         [fname] = export(('risk_by_event', 'csv'), calc2)
         self.assertEqualFiles('expected/risk_by_event_2.csv', fname)
+
+        # check mean_perils
+        fname = gettemp(text_table(view('mean_perils', self.calc.datastore)))
+        self.assertEqualFiles('expected/mean_perils.rst', fname)
 
         # check damages-rlzs
         [fname] = export(('damages-rlzs', 'csv'), calc1)

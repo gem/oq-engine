@@ -1145,3 +1145,29 @@ def view_agg_id(token, dstore):
     concat = pandas.concat([df, totdf], ignore_index=True)
     concat.index.name = 'agg_id'
     return concat
+
+
+@view.add('mean_perils')
+def view_mean_perils(token, dstore):
+    """
+    For instance `oq show mean_perils`
+    """
+    oq = dstore['oqparam']
+    pdcols = dstore.get_attr('gmf_data', '__pdcolumns__').split()
+    perils = [col for col in pdcols[2:] if not col.startswith('gmv_')]
+    N = len(dstore['sitecol/sids'])
+    sid = dstore['gmf_data/sid'][:]
+    out = numpy.zeros(N, [(per, float) for per in perils])
+    if oq.number_of_logic_tree_samples:
+        E = len(dstore['events'])
+        for peril in perils:
+            out[peril] = fast_agg(sid, dstore['gmf_data/' + peril][:]) / E
+    else:
+        rlz_weights = dstore['weights'][:]
+        ev_weights = rlz_weights[dstore['events']['rlz_id']]
+        totw = ev_weights.sum()
+        for peril in perils:
+            data = dstore['gmf_data/' + peril][:]
+            weights = ev_weights[dstore['gmf_data/eid'][:]]
+            out[peril] = fast_agg(sid, data * weights) / totw
+    return out
