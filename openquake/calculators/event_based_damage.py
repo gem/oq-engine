@@ -102,16 +102,16 @@ def event_based_damage(df, param, monitor):
                     fractions = out[lt]
                     Asid, E, D = fractions.shape
                     assert len(eids) == E
-                    ddd = numpy.zeros((Asid, E, Dc), F32)
+                    d3 = numpy.zeros((Asid, E, Dc), F32)
                     if float_dmg_dist:
-                        ddd[:, :, :D] = fractions
+                        d3[:, :, :D] = fractions
                         for a in range(Asid):
-                            ddd[a] *= number[a]
+                            d3[a] *= number[a]
                     else:
                         # this is a performance distaster; for instance
                         # the Messina test in oq-risk-tests becomes 12x
                         # slower even if it has only 25_736 assets
-                        ddd[:, :, :D] = rng.discrete_dmg_dist(
+                        d3[:, :, :D] = rng.discrete_dmg_dist(
                             eids, fractions, number)
 
                     # secondary perils and consequences
@@ -120,24 +120,24 @@ def event_based_damage(df, param, monitor):
                             for d in range(1, D):
                                 # doing the mean on the secondary simulations
                                 if float_dmg_dist:
-                                    ddd[a, :, d] *= probs
+                                    d3[a, :, d] *= probs
                                 else:
-                                    ddd[a, :, d] *= dprobs
+                                    d3[a, :, d] *= dprobs
 
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
-                            ddd[a, :, ci[name]] = values
+                            d3[a, :, ci[name]] = values
                     if R == 1:
-                        dmgcsq[aids, 0, lti] += ddd.sum(axis=1)
+                        dmgcsq[aids, 0, lti] += d3.sum(axis=1)
                     else:
                         for e, rlz in enumerate(rlzs):
-                            dmgcsq[aids, rlz, lti] += ddd[:, e]
-                    tot = ddd.sum(axis=0)  # sum on the assets
+                            dmgcsq[aids, rlz, lti] += d3[:, e]
+                    tot = d3.sum(axis=0)  # sum on the assets
                     for e, eid in enumerate(eids):
                         dddict[eid, K][lti] += tot[e]
                         if K:
                             for a, aid in enumerate(aids):
-                                dddict[eid, kids[aid]][lti] += ddd[a, e]
+                                dddict[eid, kids[aid]][lti] += d3[a, e]
     return to_dframe(dddict, ci, L), dmgcsq
 
 
