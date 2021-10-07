@@ -77,12 +77,19 @@ def save_curve_stats(dstore):
     dstore.set_attrs('agg_curves-stats', units=units)
 
 
-def fast_agg(keys, values, correl, lni, acc):
+def fast_agg(keys, values, correl, li, acc):
+    """
+    :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
+    :param values: an array of (N, D) floats
+    :param correl: True if there is asset correlation
+    :param li: loss type index
+    :param acc: dictionary unique key -> array(L, D)
+    """
     ukeys, avalues = general.fast_agg2(keys, values)
     if correl:  # restore the variances
         avalues[:, 0] = avalues[:, 0] ** 2
     for ukey, avalue in zip(ukeys, avalues):
-        acc[ukey][lni] += avalue
+        acc[ukey][li] += avalue
 
 
 def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
@@ -119,7 +126,7 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
     (A, R, K, D), L = ARKD, len(oq.loss_types)
     acc = general.AccumDict(accum=numpy.zeros((L, D)))  # u8idx->array
     for out in outputs:
-        for lni, ln in enumerate(oq.loss_types):
+        for li, ln in enumerate(oq.loss_types):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
@@ -134,10 +141,10 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
                     alt['variance'] = numpy.sqrt(alt.variance)
                 eids = alt.eid.to_numpy() * TWO32  # U64
                 values = numpy.array([alt[col] for col in value_cols]).T
-                fast_agg(eids + U64(K), values, correl, lni, acc)
+                fast_agg(eids + U64(K), values, correl, li, acc)
                 if len(kids):
                     aids = alt.aid.to_numpy()
-                    fast_agg(eids + U64(kids[aids]), values, correl, lni, acc)
+                    fast_agg(eids + U64(kids[aids]), values, correl, li, acc)
     with mon_df:
         dic = general.AccumDict(accum=[])
         for ukey, arr in acc.items():
