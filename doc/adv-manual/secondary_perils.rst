@@ -2,9 +2,11 @@ Secondary perils: a case study
 ==============================
 
 Secondary perils (such as liquefaction and landslides) are a new
-feature of the engine. Here we will give an example of how to use it
-by considering a model for the city of Cali in Colombia. The exposure
-and all the relevant files are in the repository
+feature of the engine. In this section we will give an example of how
+to use the feature by considering a model for the city of Cali in
+Colombia.
+
+The exposure and all the relevant files are in the repository
 https://gitlab.openquake.org/risk/risk_projects/treq/treq-city-scenarios.git/
 in the branch fix_liquefaction, commit
 5479f19b6eee56ed59beed030c0cb31de6d7298b
@@ -28,33 +30,44 @@ there are 3 GMPEs in the GMPE logic tree (AbrahamsonEtAl2015SInter,
 ZhaoEtAl2006SInterNSHMP2008, MontalvaEtAl2016SInter) the engine will
 produce 300 events.
 
-The exposure contains 348,471 assets of 813 distinct taxonomies. The
-fragility functions contain a single damage state called "complete",
-associated to the complete distruction of the asset due to the liquefaction
-effect. All the rest is considered in "no damage" state. The .ini file
-contains two secondary perils::
+The exposure contains 348,471 assets of 813 distinct taxonomies.
+
+The .ini file contains two secondary perils::
 
   secondary_perils = HazusLiquefaction, HazusDeformation
 
 On the hazard side such perils are managed as additional columns in
 the GMF table, named ``LiqProb`` and ``PGDMax`` respectively. The
-liquefaction fragility functions are associated to ``PGDMax``.
+liquefaction fragility functions are associated to ``PGDMax`` and
+contain a single damage state called "complete", meaning complete
+distruction of the asset. All the rest is considered in "no damage"
+state.
 
-On the risk side for each hazard simulation the engine runs 10 secondary
-simulations::
+On the risk side the engine implements two different strategies,
+depending on the parameter ``discrete_damage_distribution``. If false
+(the default) we simply multiply the damage distributions computed
+from the fragility functions for the liquefaction probabilities,
+event by event.
 
- secondary_simulations = {'LiqProb': 10}
+If true, then for each site the engine performs a number of secondary
+simulations, specified in the job.ini as
 
-For instance, if a site has liquefaction probability of 0.2 an you run 10
-simulations, in average the assets on that site will be destroyed 2 times
-while for 8 times they will be in the "no damage" state.
+``secondary_simulations = {'LiqProb': 10}``
 
-The algorithm used in the engine (as of version 3.13) takes the L sites
-with nonzero ``LiqProb`` (normally L << N, the total number of sites)
-and for each hazard simulation (i.e. for each event) runs S secondary
-simulations using an event-specific seed generated from the ``master_seed``;
-then the mean number of destroyed buildings across the
-secondary simulations is stored.
+and builds an array of booleans of size (E, S) where E is the number
+of events (primary simulations) and S the number of secondary
+simulations (the array would have a size of 300x10 in our case).  The
+true values in the array will be determined by the master seed and the
+liquefaction probabilities; for instance, if a site has liquefaction
+probability of 0.2 an you run 10 simulations, you will produce around
+2 ones and 8 zeros for each event. The mean damage distributions
+across the secondary simulations are computed and stored for each
+event. At the present, for performance and storage considerations, the
+secondary simulations are not stored. In the future this may change as
+storing the secondary simulations is needed in order to compute
+consequence curves in event_based_damage calculations. In such an
+extension the ``risk_by_event`` table will have an additional column
+with a simulation ID on top of the event ID.
 
 Understanding the hazard
 ------------------------
@@ -131,7 +144,8 @@ The site 0 that had a value of 0.202698 g has now a value of 0.18517 g, a ~10% d
 If we increase the ``number_of_ground_motion_fields`` by 100 times
 (i.e. to 10,000) we would expect to increase the precision by 10
 times. Actually by performing the calculation and by exporting the
-``avg_gmf`` output we will see that is the case indeed::
+``avg_gmf`` output we will see that is the case indeed. Here are
+the results of two runs with seed 22889859843 and 2288985984 respectively::
 
  site_id,lon,lat,gmv_PGA,gsd_PGA
  0,-7.65409E+01,3.35016E+00,1.88047E-01,2.07915E+00
@@ -139,8 +153,6 @@ times. Actually by performing the calculation and by exporting the
  2,-7.65281E+01,3.34655E+00,1.86678E-01,2.10286E+00
  3,-7.65299E+01,3.35663E+00,1.86075E-01,2.12381E+00
  4,-7.65279E+01,3.35160E+00,1.85069E-01,2.09404E+00
-
-Then I change the seed to 2288985984 and get::
 
  site_id,lon,lat,gmv_PGA,gsd_PGA
  0,-7.65409E+01,3.35016E+00,1.87952E-01,2.10219E+00
