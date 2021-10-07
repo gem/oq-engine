@@ -45,24 +45,6 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
-def run_sec_sims(damages, haz, sec_sims, seed):
-    """
-    :param damages: array of shape (E, D) for a given asset
-    :param haz: dataframe of size E with a probability field
-    :param sec_sims: pair (probability field, number of simulations)
-    :param seed: random seed to use
-
-    Run secondary simulations and update the array damages
-    """
-    [(prob_field, num_sims)] = sec_sims
-    numpy.random.seed(seed)
-    probs = haz[prob_field].to_numpy()   # LiqProb
-    affected = numpy.random.random((num_sims, 1)) < probs  # (N, E)
-    for d, buildings in enumerate(damages.T[1:], 1):
-        # doing the mean on the secondary simulations for each event
-        damages[:, d] = numpy.mean(affected * buildings, axis=0)  # shape E
-
-
 def event_based_damage(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
