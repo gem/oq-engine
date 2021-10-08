@@ -243,7 +243,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             oq.max_sites_per_tile, oq.max_sites_disagg)
         self.set_psd()  # set the pointsource_distance, needed for ps_grid_spc
         res = run_preclassical(self.csm, oq, self.datastore)
-        self.store_source_info(res['calc_times'])
+        if res:
+            self.store_source_info(res['calc_times'])
         return self.csm
 
     def set_psd(self):
