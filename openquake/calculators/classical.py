@@ -351,7 +351,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
-        psd = self.set_psd()  # must go before to set the pointsource_distance
+        psd = preclassical.PreClassicalCalculator.set_psd(self)
         preclassical.run_preclassical(self.csm, oq, self.datastore)
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
@@ -422,42 +422,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('Average number of sites per context: %d',
                              numsites / self.numctxs)
         self.calc_times.clear()  # save a bit of memory
-
-    def set_psd(self):
-        """
-        Set the pointsource_distance
-        """
-        oq = self.oqparam
-        mags = self.datastore['source_mags']  # by TRT
-        if len(mags) == 0:  # everything was discarded
-            raise RuntimeError('All sources were discarded!?')
-        mags_by_trt = {}
-        for trt in mags:
-            mags_by_trt[trt] = mags[trt][()]
-        psd = oq.pointsource_distance
-        if psd is not None:
-            psd.interp(mags_by_trt)
-            for trt, dic in psd.ddic.items():
-                # the sum is zero for {'default': [(1, 0), (10, 0)]}
-                if sum(dic.values()):
-                    it = list(dic.items())
-                    dists = {i[1] for i in it}
-                    if len(set(dists)) > 1:
-                        md = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                        logging.info('ps_dist %s: %s', trt, md)
-        hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
-            self.N / oq.max_sites_per_tile)
-        self.params = dict(
-            truncation_level=oq.truncation_level,
-            investigation_time=oq.investigation_time,
-            imtls=oq.imtls, reqv=oq.get_reqv(),
-            pointsource_distance=oq.pointsource_distance,
-            shift_hypo=oq.shift_hypo,
-            min_weight=oq.min_weight,
-            collapse_level=int(oq.collapse_level), hint=hint,
-            max_sites_disagg=oq.max_sites_disagg,
-            split_sources=oq.split_sources, af=self.af)
-        return psd
 
     def get_args(self, grp_ids, cmakers):
         """
