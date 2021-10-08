@@ -20,6 +20,7 @@ import os.path
 import pickle
 import operator
 import logging
+import gzip
 import zlib
 import numpy
 
@@ -389,6 +390,16 @@ class CompositeSourceModel:
         for src in self.get_sources():
             n += src.count_ruptures()
         return n
+
+    def __toh5__(self):
+        data = gzip.compress(pickle.dumps(self))
+        logging.info(f'Storing {general.humansize(len(data))} '
+                     'of CompositeSourceModel')
+        return numpy.void(data), {}
+
+    def __fromh5__(self, blob, attrs):
+        other = pickle.loads(gzip.decompress(blob))
+        vars(self).update(vars(other))
 
     def __repr__(self):
         """

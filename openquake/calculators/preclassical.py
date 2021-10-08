@@ -19,7 +19,7 @@
 import time
 import logging
 import numpy
-from openquake.baselib import parallel
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, groupby, get_nbytes_msg)
@@ -120,6 +120,10 @@ def run_preclassical(csm, oqparam, h5):
                         lonlats.extend([src.location.x, src.location.y])
                     arrays.append(F32(lonlats))
             h5[key] = arrays
+
+    recs = [tuple(row) for row in csm.source_info.values()]
+    hdf5.extend(h5['source_info'], numpy.array(recs, readinput.source_info_dt))
+    h5['full_lt'] = csm.full_lt
 
 
 def preclassical(srcs, srcfilter, params, monitor):
@@ -237,16 +241,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        assert not oq.hazard_calculation_id
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
         self.set_psd()  # set the pointsource_distance, needed for ps_grid_spc
         run_preclassical(self.csm, oq, self.datastore)
-        recs = [tuple(row) for row in self.csm.source_info.values()]
-        self.datastore['source_info'] = numpy.array(
-            recs, readinput.source_info_dt)
-        self.datastore['full_lt'] = self.csm.full_lt
-        return
+        return self.csm
 
     def set_psd(self):
         """
@@ -284,5 +283,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def post_execute(self, dummy):
-        pass
+    def post_execute(self, csm):
+        """
+        Store the CompositeSourceModel in binary format
+        """
+        self.datastore['csm'] = csm

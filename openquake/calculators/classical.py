@@ -34,7 +34,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, datastore
+from openquake.commonlib import calc, readinput
 from openquake.calculators import getters
 from openquake.calculators import base, preclassical
 
@@ -177,7 +177,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
-    accept_precalc = ['classical']
+    accept_precalc = ['preclassical', 'classical']
 
     def agg_dicts(self, acc, dic):
         """
@@ -343,16 +343,19 @@ class ClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        if oq.hazard_calculation_id and not oq.compare_with_classical:
-            with datastore.read(self.oqparam.hazard_calculation_id) as parent:
-                self.full_lt = parent['full_lt']
-            self.store_stats()  # post-processing
-            return {}
-
-        assert oq.max_sites_per_tile > oq.max_sites_disagg, (
-            oq.max_sites_per_tile, oq.max_sites_disagg)
         psd = preclassical.PreClassicalCalculator.set_psd(self)
-        preclassical.run_preclassical(self.csm, oq, self.datastore)
+        if oq.hazard_calculation_id:
+            parent = self.datastore.parent
+            if '_poes' in parent:
+                self.post_classical()  # repeat post-processing
+                return {}
+            else:  # after preclassical
+                self.csm = parent['csm']
+                self.full_lt = parent['full_lt']
+                self.datastore.create_dset(
+                    'source_info', readinput.source_info_dt)
+        else:  # preclassical
+            preclassical.run_preclassical(self.csm, oq, self.datastore)
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -450,7 +453,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = max(tot_weight / self.ct, oq.min_weight)
-        self.params['max_weight'] = max_weight
+        self.param['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
         for grp_id in grp_ids:
@@ -512,9 +515,9 @@ class ClassicalCalculator(base.HazardCalculator):
         if (self.oqparam.hazard_calculation_id is None
                 and '_poes' in self.datastore):
             self.datastore.swmr_on()  # needed
-            self.store_stats()
+            self.post_classical()
 
-    def store_stats(self):
+    def post_classical(self):
         """
         Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
         """
