@@ -28,7 +28,6 @@ from openquake.hazardlib.source.point import (
 from openquake.hazardlib.source.base import EPS, get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
-from openquake.commonlib import readinput
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -81,6 +80,7 @@ def run_preclassical(csm, oqparam, h5):
         preclassical, allargs,  h5=h5,
         distribute=None if len(sources_by_grp) > 1 else 'no'
     ).reduce()
+    # res is empty in the test case_35
 
     if res and res['before'] != res['after']:
         logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
@@ -120,6 +120,9 @@ def run_preclassical(csm, oqparam, h5):
                         lonlats.extend([src.location.x, src.location.y])
                     arrays.append(F32(lonlats))
             h5[key] = arrays
+
+    h5['full_lt'] = csm.full_lt
+    return res
 
 
 def preclassical(srcs, srcfilter, params, monitor):
@@ -237,16 +240,13 @@ class PreClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        assert not oq.hazard_calculation_id
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
         self.set_psd()  # set the pointsource_distance, needed for ps_grid_spc
-        run_preclassical(self.csm, oq, self.datastore)
-        recs = [tuple(row) for row in self.csm.source_info.values()]
-        self.datastore['source_info'] = numpy.array(
-            recs, readinput.source_info_dt)
-        self.datastore['full_lt'] = self.csm.full_lt
-        return
+        res = run_preclassical(self.csm, oq, self.datastore)
+        if res:
+            self.store_source_info(res['calc_times'])
+        return self.csm
 
     def set_psd(self):
         """
@@ -284,5 +284,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def post_execute(self, dummy):
-        pass
+    def post_execute(self, csm):
+        """
+        Store the CompositeSourceModel in binary format
+        """
+        self.datastore['csm'] = csm

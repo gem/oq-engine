@@ -34,7 +34,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, datastore
+from openquake.commonlib import calc, readinput
 from openquake.calculators import getters
 from openquake.calculators import base, preclassical
 
@@ -177,7 +177,8 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
-    accept_precalc = ['classical']
+    precalc = 'preclassical'
+    accept_precalc = ['preclassical', 'classical']
 
     def agg_dicts(self, acc, dic):
         """
@@ -229,6 +230,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Store some empty datasets in the datastore
         """
+        self.init_poes()
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
                   'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -294,8 +296,7 @@ class ClassicalCalculator(base.HazardCalculator):
             raise RuntimeError(msg)
         return sources
 
-    def init(self):
-        super().init()
+    def init_poes(self):
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
             trt_smrs = self.datastore.parent['trt_smrs'][:]
@@ -308,8 +309,6 @@ class ClassicalCalculator(base.HazardCalculator):
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
-        self.datastore.hdf5.save_vlen(
-            'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
 
         poes_shape = G, N, L = len(rlzs_by_g), self.N, self.oqparam.imtls.size
         self.check_memory(G, N, L, [len(rbs) for rbs in rlzs_by_gsim_list])
@@ -343,16 +342,18 @@ class ClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        if oq.hazard_calculation_id and not oq.compare_with_classical:
-            with datastore.read(self.oqparam.hazard_calculation_id) as parent:
-                self.full_lt = parent['full_lt']
-            self.store_stats()  # post-processing
-            return {}
-
-        assert oq.max_sites_per_tile > oq.max_sites_disagg, (
-            oq.max_sites_per_tile, oq.max_sites_disagg)
         psd = preclassical.PreClassicalCalculator.set_psd(self)
-        preclassical.run_preclassical(self.csm, oq, self.datastore)
+        if oq.hazard_calculation_id:
+            parent = self.datastore.parent
+            if '_poes' in parent:
+                self.post_classical()  # repeat post-processing
+                return {}
+            else:  # after preclassical, like in case_36
+                self.csm = parent['csm']
+                self.full_lt = parent['full_lt']
+                num_srcs = len(self.csm.source_info)
+                self.datastore.hdf5.create_dataset(
+                    'source_info', (num_srcs,), readinput.source_info_dt)
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -449,8 +450,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     spc = oq.complex_fault_mesh_spacing
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        max_weight = max(tot_weight / self.ct, oq.min_weight)
-        self.params['max_weight'] = max_weight
+        ct = oq.concurrent_tasks or 1
+        max_weight = max(tot_weight / ct, oq.min_weight)
+        self.param['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
         for grp_id in grp_ids:
@@ -489,7 +491,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     for s in pmap:
                         if kind.startswith('hmaps'):
                             array[s, r] = pmap[s].array  # shape (M, P)
-                        else:
+                        else:  # hcurves
                             array[s, r] = pmap[s].array.reshape(-1, self.L1)
 
     def post_execute(self, dummy):
@@ -512,9 +514,9 @@ class ClassicalCalculator(base.HazardCalculator):
         if (self.oqparam.hazard_calculation_id is None
                 and '_poes' in self.datastore):
             self.datastore.swmr_on()  # needed
-            self.store_stats()
+            self.post_classical()
 
-    def store_stats(self):
+    def post_classical(self):
         """
         Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
         """
