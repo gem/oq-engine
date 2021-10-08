@@ -69,6 +69,9 @@ consequence curves in event_based_damage calculations. In such an
 extension the ``risk_by_event`` table will have an additional column
 with a simulation ID on top of the event ID.
 
+If you want to know more, the original specs for the calculator are here:
+https://github.com/gem/oq-engine/issues/6081
+
 Understanding the hazard
 ------------------------
 
