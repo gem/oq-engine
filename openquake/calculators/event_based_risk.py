@@ -180,9 +180,9 @@ def event_based_risk(df, param, monitor):
     ARKD = len(assets_df), len(weights), param['K'], param['D']
     oq = crmodel.oqparam
     if oq.ignore_master_seed or oq.ignore_covs:
-        rndgen = None
+        rng = None
     else:
-        rndgen = MultiEventRNG(
+        rng = MultiEventRNG(
             oq.master_seed, df.eid.unique(), int(oq.asset_correlation))
 
     def outputs():
@@ -192,12 +192,12 @@ def event_based_risk(df, param, monitor):
                                    asset_df.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
-            if rndgen:
+            if rng:
                 with mon_risk:
                     out = crmodel.get_output(
-                        taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
+                        taxo, asset_df, gmf_df, param['sec_losses'], rng)
                 yield out
-            else:
+            else:  # ignore master seed, fast lane
                 yield from crmodel.gen_outputs(taxo, asset_df, gmf_df, param)
 
     return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
