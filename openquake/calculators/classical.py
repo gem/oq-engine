@@ -354,8 +354,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.full_lt = parent['full_lt']
                 self.datastore.create_dset(
                     'source_info', readinput.source_info_dt)
-        else:  # preclassical
-            preclassical.run_preclassical(self.csm, oq, self.datastore)
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
