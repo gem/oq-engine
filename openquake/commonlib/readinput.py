@@ -35,7 +35,7 @@ import numpy
 import pandas
 import requests
 
-from openquake.baselib import hdf5, parallel, InvalidFile
+from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
 from openquake.baselib.python3compat import zip
@@ -175,6 +175,8 @@ def normalize(key, fnames, base_path):
             else:
                 raise KeyError('Unknown key %s' % key)
             val = unzip_rename(zpath, name)
+        elif val.startswith('${mosaic}/'):
+            val = val.format(**config.general)[1:]  # strip initial "$"
         else:
             val = os.path.normpath(os.path.join(base_path, val))
         if isinstance(val, str) and not os.path.exists(val):
