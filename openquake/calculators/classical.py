@@ -348,12 +348,12 @@ class ClassicalCalculator(base.HazardCalculator):
             if '_poes' in parent:
                 self.post_classical()  # repeat post-processing
                 return {}
-            else:  # after preclassical
+            else:  # after preclassical, like in case_36
                 self.csm = parent['csm']
                 self.full_lt = parent['full_lt']
                 num_srcs = len(self.csm.source_info)
-                self.datastore.create_dset(
-                    'source_info', readinput.source_info_dt, num_srcs)
+                self.datastore.hdf5.create_dataset(
+                    'source_info', (num_srcs,), readinput.source_info_dt)
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
