@@ -17,17 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import time
-import psutil
 import logging
 import numpy
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
-from openquake.baselib import parallel, config
+from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, block_splitter, groupby, humansize, get_nbytes_msg)
+    AccumDict, block_splitter, groupby, get_nbytes_msg)
 from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
 from openquake.hazardlib.source.base import EPS, get_code2cls

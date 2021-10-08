@@ -515,6 +515,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.store_stats()
 
     def store_stats(self):
+        """
+        Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
+        """
         oq = self.oqparam
         N = len(self.sitecol.complete)
         R = len(self.realizations)
