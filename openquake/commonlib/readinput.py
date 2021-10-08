@@ -176,6 +176,7 @@ def normalize(key, fnames, base_path):
                 raise KeyError('Unknown key %s' % key)
             val = unzip_rename(zpath, name)
         elif val.startswith('${mosaic}/'):
+            # support source_model_logic_tree_file=${mosaic}/XXX/in/ssmLT.xml
             val = val.format(**config.directory)[1:]  # strip initial "$"
         else:
             val = os.path.normpath(os.path.join(base_path, val))
