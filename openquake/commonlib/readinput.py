@@ -176,7 +176,7 @@ def normalize(key, fnames, base_path):
                 raise KeyError('Unknown key %s' % key)
             val = unzip_rename(zpath, name)
         elif val.startswith('${mosaic}/'):
-            val = val.format(**config.general)[1:]  # strip initial "$"
+            val = val.format(**config.directory)[1:]  # strip initial "$"
         else:
             val = os.path.normpath(os.path.join(base_path, val))
         if isinstance(val, str) and not os.path.exists(val):
