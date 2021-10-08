@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import time
 import psutil
 import logging
 import operator
@@ -32,17 +31,12 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg)
-from openquake.hazardlib.source.point import (
-    PointSource, grid_point_sources, msr_name)
-from openquake.hazardlib.source.base import EPS, get_code2cls
-from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
-from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, readinput, datastore
+from openquake.commonlib import calc, datastore
 from openquake.calculators import getters
-from openquake.calculators import base
+from openquake.calculators import base, preclassical
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -72,86 +66,6 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def run_preclassical(csm, oqparam, h5):
-    """
-    :param csm: a CompositeSourceModel with attribute .srcfilter
-    :param oqparam: the parameters in job.ini file
-    :param h5: a DataStore instance
-    """
-    # do nothing for atomic sources except counting the ruptures
-    for src in csm.get_sources(atomic=True):
-        src.num_ruptures = src.count_ruptures()
-        src.nsites = len(csm.sitecol) if csm.sitecol else 1
-
-    # run preclassical for non-atomic sources
-    sources_by_grp = groupby(
-        csm.get_sources(atomic=False),
-        lambda src: (src.grp_id, msr_name(src)))
-    param = dict(maximum_distance=oqparam.maximum_distance,
-                 pointsource_distance=oqparam.pointsource_distance,
-                 ps_grid_spacing=oqparam.ps_grid_spacing,
-                 split_sources=oqparam.split_sources)
-    srcfilter = SourceFilter(
-        csm.sitecol.reduce(10000) if csm.sitecol else None,
-        oqparam.maximum_distance)
-    if csm.sitecol:
-        logging.info('Sending %s', srcfilter.sitecol)
-    if oqparam.ps_grid_spacing:
-        # produce a preclassical task for each group
-        allargs = ((srcs, srcfilter, param)
-                   for srcs in sources_by_grp.values())
-    else:
-        # produce many preclassical task
-        maxw = sum(len(srcs) for srcs in sources_by_grp.values()) / (
-            oqparam.concurrent_tasks or 1)
-        allargs = ((blk, srcfilter, param)
-                   for srcs in sources_by_grp.values()
-                   for blk in block_splitter(srcs, maxw))
-    res = parallel.Starmap(
-        preclassical, allargs,  h5=h5,
-        distribute=None if len(sources_by_grp) > 1 else 'no'
-    ).reduce()
-
-    if res and res['before'] != res['after']:
-        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
-                     format(res['before'], res['after']))
-
-    if res and h5:
-        csm.update_source_info(res['calc_times'], nsites=True)
-
-    acc = AccumDict(accum=0)
-    code2cls = get_code2cls()
-    for grp_id, srcs in res.items():
-        # srcs can be empty if the minimum_magnitude filter is on
-        if srcs and not isinstance(grp_id, str):
-            newsg = SourceGroup(srcs[0].tectonic_region_type)
-            newsg.sources = srcs
-            csm.src_groups[grp_id] = newsg
-            for src in srcs:
-                acc[src.code] += int(src.num_ruptures)
-    for val, key in sorted((val, key) for key, val in acc.items()):
-        cls = code2cls[key].__name__
-        logging.info('{} ruptures: {:_d}'.format(cls, val))
-
-    # sanity check
-    for sg in csm.src_groups:
-        for src in sg:
-            assert src.num_ruptures
-            assert src.nsites
-
-    # store ps_grid data, if any
-    for key, sources in res.items():
-        if isinstance(key, str) and key.startswith('ps_grid/'):
-            arrays = []
-            for ps in sources:
-                if hasattr(ps, 'location'):
-                    lonlats = [ps.location.x, ps.location.y]
-                    for src in getattr(ps, 'pointsources', []):
-                        lonlats.extend([src.location.x, src.location.y])
-                    arrays.append(F32(lonlats))
-            h5[key] = arrays
-
-
 def store_ctxs(dstore, rupdata, grp_id):
     """
     Store contexts with the same magnitude in the datastore
@@ -171,66 +85,6 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 
 #  ########################### task functions ############################ #
-
-def preclassical(srcs, srcfilter, params, monitor):
-    """
-    Weight the sources. Also split them if split_sources is true. If
-    ps_grid_spacing is set, grid the point sources before weighting them.
-
-    NB: srcfilter can be on a reduced site collection for performance reasons
-    """
-    # src.id -> nrups, nsites, time, task_no
-    calc_times = AccumDict(accum=numpy.zeros(4, F32))
-    sources = []
-    grp_id = srcs[0].grp_id
-    trt = srcs[0].tectonic_region_type
-    md = params['maximum_distance'](trt)
-    pd = (params['pointsource_distance'](trt)
-          if params['pointsource_distance'] else 0)
-    with monitor('splitting sources'):
-        # this can be slow
-        for src in srcs:
-            t0 = time.time()
-            if srcfilter.sitecol:
-                src.nsites = len(srcfilter.close_sids(src))
-            else:
-                src.nsites = 1  # don't discard
-            # NB: it is crucial to split only the close sources, for
-            # performance reasons (think of Ecuador in SAM)q
-            splits = split_source(src) if (
-                params['split_sources'] and src.nsites) else [src]
-            sources.extend(splits)
-            nrups = src.count_ruptures() if src.nsites else 0
-            dt = time.time() - t0
-            calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
-        for arr in calc_times.values():
-            arr[3] = monitor.task_no
-    dic = grid_point_sources(sources, params['ps_grid_spacing'], monitor)
-    with monitor('weighting sources'):
-        # this is normally fast
-        for src in dic[grp_id]:
-            if not src.nsites:  # filtered out
-                src.nsites = EPS
-            is_ps = isinstance(src, PointSource)
-            if is_ps and srcfilter.sitecol:
-                # NB: using cKDTree would not help, performance-wise
-                cdist = srcfilter.sitecol.get_cdist(src.location)
-                src.nsites = (cdist <= md + pd).sum() or EPS
-            src.num_ruptures = src.count_ruptures()
-            if pd and is_ps:
-                nphc = src.count_nphc()
-                if nphc > 1:
-                    close = (cdist <= pd * BUFFER).sum()
-                    far = src.nsites - close
-                    factor = (close + (far + EPS) / nphc) / (close + far + EPS)
-                    src.num_ruptures *= factor
-    dic['calc_times'] = calc_times
-    dic['before'] = len(sources)
-    dic['after'] = len(dic[grp_id])
-    if params['ps_grid_spacing']:
-        dic['ps_grid/%02d' % monitor.task_no] = [
-            src for src in dic[grp_id] if src.nsites > EPS]
-    return dic
 
 
 def classical(srcs, cmaker, monitor):
@@ -456,8 +310,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
-        if self.oqparam.calculation_mode == 'preclassical':
-            return
+
         poes_shape = G, N, L = len(rlzs_by_g), self.N, self.oqparam.imtls.size
         self.check_memory(G, N, L, [len(rbs) for rbs in rlzs_by_gsim_list])
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
@@ -499,17 +352,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
         psd = self.set_psd()  # must go before to set the pointsource_distance
-        run_preclassical(self.csm, oq, self.datastore)
-
-        # exit early if we want to perform only a preclassical
-        if oq.calculation_mode == 'preclassical':
-            recs = [tuple(row) for row in self.csm.source_info.values()]
-            self.datastore['source_info'] = numpy.array(
-                recs, readinput.source_info_dt)
-            self.datastore['full_lt'] = self.csm.full_lt
-            self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
-            return
-
+        preclassical.run_preclassical(self.csm, oq, self.datastore)
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
