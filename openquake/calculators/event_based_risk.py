@@ -192,13 +192,10 @@ def event_based_risk(df, param, monitor):
                                    asset_df.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
-            if rng:
-                with mon_risk:
-                    out = crmodel.get_output(
-                        taxo, asset_df, gmf_df, param['sec_losses'], rng)
-                yield out
-            else:  # ignore master seed, fast lane
-                yield from crmodel.gen_outputs(taxo, asset_df, gmf_df, param)
+            with mon_risk:
+                out = crmodel.get_output(
+                    taxo, asset_df, gmf_df, param['sec_losses'], rng)
+            yield out
 
     return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
 
