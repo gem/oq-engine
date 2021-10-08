@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 import io
 import time
 import psutil
@@ -316,7 +317,7 @@ class Hazard:
                         self.get_hcurves(pmap, rlzs_by_gsim))
 
 
-@base.calculators.add('classical', 'preclassical', 'ucerf_classical')
+@base.calculators.add('classical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
