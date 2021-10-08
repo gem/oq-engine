@@ -490,7 +490,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     for s in pmap:
                         if kind.startswith('hmaps'):
                             array[s, r] = pmap[s].array  # shape (M, P)
-                        else:
+                        else:  # hcurves
                             array[s, r] = pmap[s].array.reshape(-1, self.L1)
 
     def post_execute(self, dummy):

@@ -582,8 +582,10 @@ class HazardCalculator(BaseCalculator):
             calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             calc.datastore.close()
-            for name in ('csm param sitecol assetcol crmodel realizations '
-                         'policy_name policy_dict full_lt exported').split():
+            for name in (
+                    'csm param sitecol assetcol crmodel realizations '
+                    'amplifier policy_name policy_dict full_lt exported'
+            ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:

@@ -19,7 +19,7 @@
 import time
 import logging
 import numpy
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, groupby, get_nbytes_msg)
@@ -28,7 +28,6 @@ from openquake.hazardlib.source.point import (
 from openquake.hazardlib.source.base import EPS, get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
-from openquake.commonlib import readinput
 from openquake.calculators import base
 
 U16 = numpy.uint16
