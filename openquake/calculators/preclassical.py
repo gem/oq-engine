@@ -121,8 +121,6 @@ def run_preclassical(csm, oqparam, h5):
                     arrays.append(F32(lonlats))
             h5[key] = arrays
 
-    recs = [tuple(row) for row in csm.source_info.values()]
-    hdf5.extend(h5['source_info'], numpy.array(recs, readinput.source_info_dt))
     h5['full_lt'] = csm.full_lt
 
 

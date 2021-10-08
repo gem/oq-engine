@@ -177,6 +177,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
+    precalc = 'preclassical'
     accept_precalc = ['preclassical', 'classical']
 
     def agg_dicts(self, acc, dic):
@@ -229,6 +230,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Store some empty datasets in the datastore
         """
+        self.init_poes()
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
                   'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -294,8 +296,7 @@ class ClassicalCalculator(base.HazardCalculator):
             raise RuntimeError(msg)
         return sources
 
-    def init(self):
-        super().init()
+    def init_poes(self):
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
             trt_smrs = self.datastore.parent['trt_smrs'][:]
@@ -308,8 +309,6 @@ class ClassicalCalculator(base.HazardCalculator):
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
-        self.datastore.hdf5.save_vlen(
-            'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
 
         poes_shape = G, N, L = len(rlzs_by_g), self.N, self.oqparam.imtls.size
         self.check_memory(G, N, L, [len(rbs) for rbs in rlzs_by_gsim_list])
@@ -450,7 +449,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     spc = oq.complex_fault_mesh_spacing
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        max_weight = max(tot_weight / self.ct, oq.min_weight)
+        ct = oq.concurrent_tasks or 1
+        max_weight = max(tot_weight / ct, oq.min_weight)
         self.param['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
