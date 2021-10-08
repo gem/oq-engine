@@ -80,6 +80,7 @@ def run_preclassical(csm, oqparam, h5):
         preclassical, allargs,  h5=h5,
         distribute=None if len(sources_by_grp) > 1 else 'no'
     ).reduce()
+    # res is empty in the test case_35
 
     if res and res['before'] != res['after']:
         logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
