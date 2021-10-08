@@ -927,8 +927,8 @@ class HazardCalculator(BaseCalculator):
         """
         self.csm.update_source_info(calc_times, nsites)
         recs = [tuple(row) for row in self.csm.source_info.values()]
-        hdf5.extend(self.datastore['source_info'],
-                    numpy.array(recs, readinput.source_info_dt))
+        self.datastore['source_info'][:] = numpy.array(
+            recs, readinput.source_info_dt)
         return [rec[0] for rec in recs]  # return source_ids
 
     def post_process(self):
