@@ -161,3 +161,17 @@ decomposed as follows::
 
 In other words, by storing only 186 components we can save enough information
 to build 24_959_374_950_829_916_160 realizations, with a gain of over 10^17!
+
+Extracting the contributions to the hazard curves
+-------------------------------------------------
+
+For instance for LogicTreeCase2ClassicalPSHA there are 18 sources
+1;0 .. 1;8, 2;0 .. 2;8.
+
+.. python::
+
+ from openquake.commonlib.datastore import read
+ from openquake.calculators.getters import HcurvesGetter
+
+ getter = HcurvesGetter(read(-1))
+ print(getter.get_hcurves('1;3', 'PGA'))

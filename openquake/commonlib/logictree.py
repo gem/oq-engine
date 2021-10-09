@@ -691,6 +691,7 @@ class SourceModelLogicTree(object):
         attrs['sampling_method'] = self.sampling_method
         attrs['filename'] = self.filename
         attrs['num_paths'] = self.num_paths
+        attrs['is_source_specific'] = self.is_source_specific
         return numpy.array(tbl, branch_dt), attrs
 
     # SourceModelLogicTree

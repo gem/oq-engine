@@ -21,6 +21,7 @@ import operator
 import numpy
 import pandas
 from openquake.baselib import hdf5, general, performance, parallel
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc import filters, gmf
@@ -72,6 +73,35 @@ def sig_eps_dt(imts):
     for imt in imts:
         lst.append(('eps_inter_' + imt, F32))
     return numpy.dtype(lst)
+
+
+class HcurvesGetter(object):
+    """
+    Read the contribution to the hazard curves coming from each source
+    in a calculation with a source specific logic tree
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+        self.imtls = dstore['oqparam'].imtls
+        self.full_lt = dstore['full_lt']
+        assert self.full_lt.source_model_lt.is_source_specific
+        self.source_info = dstore['source_info'][:]
+        self.disagg_by_grp = dstore['disagg_by_grp'][:]
+        gsims = self.full_lt.gsim_lt.values
+        self.bysrc = {}  # src_id -> slice
+        for row in self.source_info:
+            dis = self.disagg_by_grp[row['grp_id']]
+            self.bysrc[decode(row['source_id'])] = (
+                dis['grp_start'], gsims[decode(dis['grp_trt'])])
+
+    def get_hcurves(self, src_id, imt, site_id=0):
+        """
+        Returns a dictionary {gsim: PoEs} for the given src_id and imt
+        """
+        imt_slc = self.imtls(imt)
+        s, gsims = self.bysrc[src_id]
+        curves = self.dstore['_poes'][s:s + len(gsims), site_id, imt_slc]
+        return dict(zip(gsims, curves))
 
 
 class PmapGetter(object):
