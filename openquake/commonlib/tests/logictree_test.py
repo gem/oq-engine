@@ -2077,7 +2077,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 
     def test_sample_source_model(self):
         [rlz] = self.source_model_lt
-        self.assertEqual(rlz.value, 'example-source-model.xml')
+        self.assertEqual(rlz.value, ['example-source-model.xml', -0.2, 0.0])
         self.assertEqual(('b1', 'b5', 'b7'), rlz.lt_path)
 
     def test_sample_gmpe(self):

@@ -521,6 +521,8 @@ class ClassicalCalculator(base.HazardCalculator):
         Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
         """
         oq = self.oqparam
+        if not oq.hazard_curves:  # do nothing
+            return
         N = len(self.sitecol.complete)
         R = len(self.realizations)
         if oq.individual_rlzs is None:  # not specified in the job.ini

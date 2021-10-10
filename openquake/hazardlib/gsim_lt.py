@@ -479,6 +479,16 @@ class GsimLogicTree(object):
             [trt] = self.values
         return sorted(self.values[trt])
 
+    def get_weights(self, trt, imt='weight'):
+        """
+        Branch weights for the given TRT
+        """
+        weights = []
+        for br in self.branches:
+            if br.trt == trt:
+                weights.append(br.weight[imt])
+        return numpy.array(weights)
+
     def sample(self, n, seed, sampling_method='early_weights'):
         """
         :param n: number of samples

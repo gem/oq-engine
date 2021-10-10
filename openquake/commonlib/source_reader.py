@@ -171,7 +171,7 @@ def _build_groups(full_lt, smdict):
     def _groups_ids(value):
         # extract the source groups and ids from a sequence of source files
         groups = []
-        for name in value.split():
+        for name in value[0].split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             groups.extend(smdict[fname].src_groups)
         return groups, set(src.source_id for grp in groups for src in grp)
@@ -207,7 +207,7 @@ def _build_groups(full_lt, smdict):
                     "The source %s is not in the source model,"
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
-                                            rlz.value.split()))
+                                            rlz.value[0].split()))
     return groups
 
 

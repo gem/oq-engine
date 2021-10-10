@@ -26,6 +26,7 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 
 import os
 import re
+import copy
 import json
 import time
 import logging
@@ -470,7 +471,7 @@ class SourceModelLogicTree(object):
             ordinal = 0
             for branches in self.root_branchset.sample(
                     probs, self.sampling_method):
-                name = branches[0].value
+                value = [br.value for br in branches]
                 smlt_path_ids = [br.branch_id for br in branches]
                 if self.sampling_method.startswith('early_'):
                     weight = 1. / self.num_samples  # already accounted
@@ -478,14 +479,14 @@ class SourceModelLogicTree(object):
                     weight = numpy.prod([br.weight for br in branches])
                 else:
                     raise NotImplementedError(self.sampling_method)
-                yield Realization(name, weight, ordinal, tuple(smlt_path_ids))
+                yield Realization(value, weight, ordinal, tuple(smlt_path_ids))
                 ordinal += 1
         else:  # full enumeration
             ordinal = 0
             for weight, branches in self.root_branchset.enumerate_paths():
-                name = branches[0].value  # source model name
+                value = [br.value for br in branches]
                 branch_ids = [branch.branch_id for branch in branches]
-                yield Realization(name, weight, ordinal, tuple(branch_ids))
+                yield Realization(value, weight, ordinal, tuple(branch_ids))
                 ordinal += 1
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
@@ -665,13 +666,13 @@ class SourceModelLogicTree(object):
     # used in the sslt page of the advanced manual
     def decompose(self):
         """
-        If the logic tree is source specific, returns a list of
-        SourceLogicTree instance, one per each source
+        If the logic tree is source specific, returns a dictionary
+        source ID -> SourceLogicTree instance
         """
         assert self.is_source_specific
         # then there is a single source model
         [src_ids] = self.source_ids.values()
-        out = []  # SourceLogicTrees
+        out = {}  # src_id -> SourceLogicTree
         for src_id in src_ids:
             bsets = []
             bsetdict = {}
@@ -679,7 +680,7 @@ class SourceModelLogicTree(object):
                 if bset.filters['applyToSources'] == [src_id]:
                     bsets.append(bset)
                     bsetdict[bset.id] = self.bsetdict[bset.id]
-            out.append(SourceLogicTree(src_id, bsets, bsetdict))
+            out[src_id] = SourceLogicTree(src_id, bsets, bsetdict)
         return out
 
     # SourceModelLogicTree
@@ -1010,7 +1011,7 @@ class FullLogicTree(object):
     def __toh5__(self):
         sm_data = []
         for sm in self.sm_rlzs:
-            sm_data.append((sm.value, sm.weight, '~'.join(sm.lt_path),
+            sm_data.append((str(sm.value[0]), sm.weight, '~'.join(sm.lt_path),
                             sm.samples))
         return (dict(
             source_model_lt=self.source_model_lt,
@@ -1091,13 +1092,26 @@ class FullLogicTree(object):
 
 
 class SourceLogicTree(object):
+    """
+    Source specific logic tree (full enumeration)
+    """
     def __init__(self, source_id, branchsets, bsetdict):
         self.source_id = source_id
-        self.branchsets = branchsets
         self.bsetdict = bsetdict
+        branchsets = copy.deepcopy(branchsets)
         self.root_branchset = branchsets[0]
+        self.num_paths = 1
+        for child, parent in zip(branchsets[1:] + [None], branchsets):
+            for br in parent.branches:
+                br.bset = child
+            self.num_paths *= len(parent.branches)
+        self.branchsets = branchsets
+        self.num_samples = 0
 
     __iter__ = SourceModelLogicTree.__iter__
+
+    def get_num_paths(self):
+        return self.num_paths
 
     def __repr__(self):
         return '<SSLT:%s %s>' % (self.source_id, self.branchsets)

@@ -84,24 +84,43 @@ class HcurvesGetter(object):
         self.dstore = dstore
         self.imtls = dstore['oqparam'].imtls
         self.full_lt = dstore['full_lt']
-        assert self.full_lt.source_model_lt.is_source_specific
+        self.sslt = self.full_lt.source_model_lt.decompose()
         self.source_info = dstore['source_info'][:]
         self.disagg_by_grp = dstore['disagg_by_grp'][:]
-        gsims = self.full_lt.gsim_lt.values
+        gsim_lt = self.full_lt.gsim_lt
         self.bysrc = {}  # src_id -> slice
         for row in self.source_info:
             dis = self.disagg_by_grp[row['grp_id']]
+            trt = decode(dis['grp_trt'])
+            weights = gsim_lt.get_weights(trt)
             self.bysrc[decode(row['source_id'])] = (
-                dis['grp_start'], gsims[decode(dis['grp_trt'])])
+                dis['grp_start'], gsim_lt.values[trt], weights)
 
-    def get_hcurves(self, src_id, imt, site_id=0):
+    def get_hcurve(self, src_id, imt=None, site_id=0, gsim_idx=None):
         """
-        Returns a dictionary {gsim: PoEs} for the given src_id and imt
+        Return the curve associated to the given src_id, imt and gsim_idx
+        as an array of length L
         """
-        imt_slc = self.imtls(imt)
-        s, gsims = self.bysrc[src_id]
-        curves = self.dstore['_poes'][s:s + len(gsims), site_id, imt_slc]
-        return dict(zip(gsims, curves))
+        assert ';' in src_id, src_id  # must be a realization specific src_id
+        imt_slc = self.imtls(imt) if imt else slice(None)
+        start, gsims, weights = self.bysrc[src_id]
+        dset = self.dstore['_poes']
+        if gsim_idx is None:
+            curves = dset[start:start + len(gsims), site_id, imt_slc]
+            return weights @ curves
+        return dset[start + gsim_idx, site_id, imt_slc]
+
+    def get_hcurves(self, src, imt=None, site_id=0, gsim_idx=None):
+        """
+        Return the curves associated to the given src_id, imt and gsim_idx
+        as an array of shape (R, L)
+        """
+        assert ';' not in src, src  # not a rlz specific source ID
+        curves = []
+        for i in range(self.sslt[src].num_paths):
+            src_id = '%s;%d' % (src, i)
+            curves.append(self.get_hcurve(src_id, imt, site_id, gsim_idx))
+        return numpy.array(curves)
 
 
 class PmapGetter(object):
