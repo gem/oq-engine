@@ -373,6 +373,7 @@ class SourceModelLogicTree(object):
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
 
         branchset = BranchSet(uncertainty_type, len(self.bsetdict), filters)
+        branchset.attrs = attrs.copy()
         bsid = attrs.pop('branchSetID')
         if bsid in self.bsetdict:
             raise nrml.DuplicatedID('%s in %s' % (bsid, self.filename))
@@ -664,19 +665,22 @@ class SourceModelLogicTree(object):
     # used in the sslt page of the advanced manual
     def decompose(self):
         """
-        If the logic tree is source specific, returns a dictionary
-        source_id -> branchsets
+        If the logic tree is source specific, returns a list of
+        SourceLogicTree instance, one per each source
         """
         assert self.is_source_specific
         # then there is a single source model
         [src_ids] = self.source_ids.values()
-        bysrc = AccumDict(accum=[])  # src_id->branchsets
-        bsets = self.branchsets[1:]
+        out = []  # SourceLogicTrees
         for src_id in src_ids:
-            for bset in bsets:
+            bsets = []
+            bsetdict = {}
+            for bset in self.branchsets[1:]:
                 if bset.filters['applyToSources'] == [src_id]:
-                    bysrc[src_id].append(bset)
-        return bysrc
+                    bsets.append(bset)
+                    bsetdict[bset.id] = self.bsetdict[bset.id]
+            out.append(SourceLogicTree(src_id, bsets, bsetdict))
+        return out
 
     # SourceModelLogicTree
     def __toh5__(self):
@@ -692,6 +696,7 @@ class SourceModelLogicTree(object):
         attrs['filename'] = self.filename
         attrs['num_paths'] = self.num_paths
         attrs['is_source_specific'] = self.is_source_specific
+        attrs['source_ids'] = json.dumps(self.source_ids)
         return numpy.array(tbl, branch_dt), attrs
 
     # SourceModelLogicTree
@@ -700,6 +705,7 @@ class SourceModelLogicTree(object):
         # SerializeSmltTestCase which has a logic tree with 3 branchsets
         # with the form b11[b21[b31, b32], b22[b31, b32]] and 1 x 2 x 2 rlzs
         vars(self).update(attrs)
+        self.source_ids = json.loads(attrs['source_ids'])
         bsets = []
         self.branches = {}
         self.bsetdict = json.loads(attrs['bsetdict'])
@@ -711,7 +717,9 @@ class SourceModelLogicTree(object):
             acc[rec['branchset']].append(rec)
         for ordinal, (bsid, rows) in enumerate(acc.items()):
             utype = rows[0]['utype']
-            bset = BranchSet(utype, ordinal, filters=[])  # TODO: filters
+            ats = self.bsetdict[bsid].get('applyToSources')
+            filters = dict(applyToSources=ats.split()) if ats else None
+            bset = BranchSet(utype, ordinal, filters)
             bset.id = bsid
             for no, row in enumerate(rows):
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
@@ -1080,3 +1088,16 @@ class FullLogicTree(object):
         summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
+
+
+class SourceLogicTree(object):
+    def __init__(self, source_id, branchsets, bsetdict):
+        self.source_id = source_id
+        self.branchsets = branchsets
+        self.bsetdict = bsetdict
+        self.root_branchset = branchsets[0]
+
+    __iter__ = SourceModelLogicTree.__iter__
+
+    def __repr__(self):
+        return '<SSLT:%s %s>' % (self.source_id, self.branchsets)
