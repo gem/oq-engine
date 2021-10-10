@@ -374,8 +374,8 @@ class SourceModelLogicTree(object):
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
 
         branchset = BranchSet(uncertainty_type, len(self.bsetdict), filters)
-        branchset.attrs = attrs.copy()
-        bsid = attrs.pop('branchSetID')
+        # branchset.attrs = attrs.copy()
+        branchset.id = bsid = attrs.pop('branchSetID')
         if bsid in self.bsetdict:
             raise nrml.DuplicatedID('%s in %s' % (bsid, self.filename))
         self.bsetdict[bsid] = attrs

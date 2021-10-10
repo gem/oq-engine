@@ -122,6 +122,15 @@ class HcurvesGetter(object):
             curves.append(self.get_hcurve(src_id, imt, site_id, gsim_idx))
         return numpy.array(curves)
 
+    def get_mean_hcurve(self, src, imt=None, site_id=0, gsim_idx=None):
+        """
+        Return the mean curve associated to the given src_id, imt and gsim_idx
+        as an array of shape L
+        """
+        weights = [rlz.weight for rlz in self.sslt[src]]
+        curves = self.get_hcurves(src, imt, site_id, gsim_idx)
+        return weights @ curves
+
 
 class PmapGetter(object):
     """
