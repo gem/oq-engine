@@ -886,16 +886,6 @@ class HazardCalculator(BaseCalculator):
 
         self.datastore['weights'] = arr = build_weights(self.realizations)
         self.datastore.set_attrs('weights', nbytes=arr.nbytes)
-
-        if ('event_based' in oq.calculation_mode and R >= TWO16
-                or R >= TWO32):
-            raise ValueError(
-                'The logic tree has too many realizations (%d), use sampling '
-                'instead' % R)
-        elif R > 10000:
-            logging.warning(
-                'The logic tree has %d realizations(!), please consider '
-                'sampling it', R)
         if rel_ruptures:
             self.check_discardable(rel_ruptures)
 
