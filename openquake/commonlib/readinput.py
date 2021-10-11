@@ -689,8 +689,8 @@ def get_full_lt(oqparam):
         elif (oqparam.is_event_based() and
               (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
                 and p > oqparam.max_potential_paths / 100):
-            raise logging.warning(
-                'There are many potential logic tree paths (%d):'
+            logging.warning(
+                'There are many potential logic tree paths (%d): '
                 'try to use sampling or reduce the source model' % p)
         logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.is_source_specific:
