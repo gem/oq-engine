@@ -145,7 +145,7 @@ def RSD():
     Relative significant duration, 5-95% of :class:`Arias intensity<IA>`,
     in seconds.
     """
-    return IMT('RDS')
+    return IMT('RSD')
 
 
 def RSD595(IMT):
