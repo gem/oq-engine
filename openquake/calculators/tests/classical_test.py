@@ -217,6 +217,11 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'],
             case_12.__file__)
 
+        # test disagg_by_grp
+        df = self.calc.datastore.read_df('disagg_by_grp')
+        fname = general.gettemp(text_table(df))
+        self.assertEqualFiles('expected/disagg_by_grp.rst', fname)
+
     def test_case_13(self):
         self.assert_curves_ok(
             ['hazard_curve-mean_PGA.csv', 'hazard_curve-mean_SA(0.2).csv',

@@ -48,8 +48,9 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-grp_extreme_dt = numpy.dtype([('grp_start', U16), ('grp_trt', hdf5.vstr),
-                              ('extreme_poe', F32), ('smrs', hdf5.vuint16)])
+grp_extreme_dt = numpy.dtype([
+    ('grp_start', U16), ('grp_trt', hdf5.vstr), ('grp_value', F32),
+    ('extreme_poe', F32), ('smrs', hdf5.vuint16)])
 
 
 def get_source_id(src):  # used in submit_tasks
@@ -129,7 +130,7 @@ class Hazard:
         for grp_id, indices in enumerate(dstore['trt_smrs']):
             trti, smrs = numpy.divmod(indices, n)
             trt = full_lt.trts[trti[0]]
-            extreme.append((0, trt, 0, smrs))
+            extreme.append((0, trt, 0, 0, smrs))
         self.extreme = numpy.array(extreme, grp_extreme_dt)
 
     def init(self, pmaps, grp_id):
@@ -148,14 +149,18 @@ class Hazard:
             dset = self.datastore['_poes']
             if slc.start is None:
                 slc = slice(0, self.N)
+            arrays = []
             for g in range(pmap.shape_z):
                 arr = pmap.array(slc.start, slc.stop, g)  # shape N'L
                 dset[cmaker.start + g, slc] = arr
+                arrays.append(arr)
+            value = numpy.array(arrays).mean(axis=(0, 1)) @ self.imtls.array
             extreme = max(
                 get_extreme_poe(pmap[sid].array, self.imtls)
                 for sid in pmap)
             self.extreme[grp_id]['grp_start'] = cmaker.start
             self.extreme[grp_id]['extreme_poe'] = extreme
+            self.extreme[grp_id]['grp_value'] = value
 
     def store_disagg(self, pmaps=None):
         """
@@ -382,14 +387,12 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Sending %d tasks', len(args))
         smap.reduce(self.agg_dicts, acc)
         logging.debug("busy time: %s", smap.busytime)
-        self.haz.store_disagg(acc)
-        if not oq.hazard_calculation_id:
-            self.haz.store_disagg()
         self.store_info(psd)
         logging.info('Saving _poes')
         for grp_id in list(acc):
             if isinstance(grp_id, int):
                 self.haz.store_poes(grp_id, acc.pop(grp_id))
+        self.haz.store_disagg(acc)
         return True
 
     def store_info(self, psd):
