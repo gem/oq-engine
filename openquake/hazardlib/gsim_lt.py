@@ -470,15 +470,6 @@ class GsimLogicTree(object):
         # TODO: add an .idx to each GSIM ?
         return branches
 
-    def get_gsims(self, trt):
-        """
-        :param trt: tectonic region type
-        :returns: sorted list of available GSIMs for that trt
-        """
-        if trt == '*' or trt == b'*':  # fake logictree
-            [trt] = self.values
-        return sorted(self.values[trt])
-
     def get_weights(self, trt, imt='weight'):
         """
         Branch weights for the given TRT
