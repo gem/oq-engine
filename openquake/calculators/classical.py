@@ -149,18 +149,17 @@ class Hazard:
             dset = self.datastore['_poes']
             if slc.start is None:
                 slc = slice(0, self.N)
-            arrays = []
+            values = []
             for g in range(pmap.shape_z):
                 arr = pmap.array(slc.start, slc.stop, g)  # shape N'L
                 dset[cmaker.start + g, slc] = arr
-                arrays.append(arr)
-            value = numpy.array(arrays).mean(axis=(0, 1)) @ self.imtls.array
+                values.append(arr.mean(axis=0) @ self.imtls.array)
             extreme = max(
                 get_extreme_poe(pmap[sid].array, self.imtls)
                 for sid in pmap)
             self.extreme[grp_id]['grp_start'] = cmaker.start
             self.extreme[grp_id]['extreme_poe'] = extreme
-            self.extreme[grp_id]['grp_value'] = value
+            self.extreme[grp_id]['grp_value'] = numpy.mean(values)
 
     def store_disagg(self, pmaps=None):
         """
