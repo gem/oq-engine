@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Supported the syntax
+    `source_model_logic_tree_file = ${mosaic}/XXX/in/ssmLT.xml`
   * Fixed a performance bug with ignore_master_seed=true
   * Added a command `oq info cfg` to show the configuration file paths
   * Added a check on the intensity measure levels with `--hc` is used
