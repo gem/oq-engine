@@ -567,7 +567,7 @@ def view_required_params_per_trt(token, dstore):
     full_lt = dstore['full_lt']
     tbl = []
     for trt in full_lt.trts:
-        gsims = full_lt.gsim_lt.get_gsims(trt)
+        gsims = full_lt.gsim_lt.values[trt]
         maker = ContextMaker(trt, gsims, {'imtls': {}})
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
