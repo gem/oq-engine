@@ -85,7 +85,7 @@ def get_csm(oq, full_lt, h5=None):
         for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
             sg = copy.copy(grp)
             src_groups.append(sg)
-            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
+            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
             src.checksum = src.grp_id = src.id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
@@ -171,7 +171,7 @@ def _build_groups(full_lt, smdict):
     def _groups_ids(value):
         # extract the source groups and ids from a sequence of source files
         groups = []
-        for name in value.split():
+        for name in value[0].split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             groups.extend(smdict[fname].src_groups)
         return groups, set(src.source_id for grp in groups for src in grp)
@@ -182,7 +182,7 @@ def _build_groups(full_lt, smdict):
         bset_values = full_lt.source_model_lt.bset_values(rlz)
         if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
             (bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids(value)
+            extra, extra_ids = _groups_ids([value])
             common = source_ids & extra_ids
             if common:
                 raise InvalidFile(
@@ -207,7 +207,7 @@ def _build_groups(full_lt, smdict):
                     "The source %s is not in the source model,"
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
-                                            rlz.value.split()))
+                                            rlz.value[0].split()))
     return groups
 
 

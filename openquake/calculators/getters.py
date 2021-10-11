@@ -21,6 +21,7 @@ import operator
 import numpy
 import pandas
 from openquake.baselib import hdf5, general, performance, parallel
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc import filters, gmf
@@ -72,6 +73,63 @@ def sig_eps_dt(imts):
     for imt in imts:
         lst.append(('eps_inter_' + imt, F32))
     return numpy.dtype(lst)
+
+
+class HcurvesGetter(object):
+    """
+    Read the contribution to the hazard curves coming from each source
+    in a calculation with a source specific logic tree
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+        self.imtls = dstore['oqparam'].imtls
+        self.full_lt = dstore['full_lt']
+        self.sslt = self.full_lt.source_model_lt.decompose()
+        self.source_info = dstore['source_info'][:]
+        self.disagg_by_grp = dstore['disagg_by_grp'][:]
+        gsim_lt = self.full_lt.gsim_lt
+        self.bysrc = {}  # src_id -> slice
+        for row in self.source_info:
+            dis = self.disagg_by_grp[row['grp_id']]
+            trt = decode(dis['grp_trt'])
+            weights = gsim_lt.get_weights(trt)
+            self.bysrc[decode(row['source_id'])] = (
+                dis['grp_start'], gsim_lt.values[trt], weights)
+
+    def get_hcurve(self, src_id, imt=None, site_id=0, gsim_idx=None):
+        """
+        Return the curve associated to the given src_id, imt and gsim_idx
+        as an array of length L
+        """
+        assert ';' in src_id, src_id  # must be a realization specific src_id
+        imt_slc = self.imtls(imt) if imt else slice(None)
+        start, gsims, weights = self.bysrc[src_id]
+        dset = self.dstore['_poes']
+        if gsim_idx is None:
+            curves = dset[start:start + len(gsims), site_id, imt_slc]
+            return weights @ curves
+        return dset[start + gsim_idx, site_id, imt_slc]
+
+    def get_hcurves(self, src, imt=None, site_id=0, gsim_idx=None):
+        """
+        Return the curves associated to the given src_id, imt and gsim_idx
+        as an array of shape (R, L)
+        """
+        assert ';' not in src, src  # not a rlz specific source ID
+        curves = []
+        for i in range(self.sslt[src].num_paths):
+            src_id = '%s;%d' % (src, i)
+            curves.append(self.get_hcurve(src_id, imt, site_id, gsim_idx))
+        return numpy.array(curves)
+
+    def get_mean_hcurve(self, src, imt=None, site_id=0, gsim_idx=None):
+        """
+        Return the mean curve associated to the given src_id, imt and gsim_idx
+        as an array of shape L
+        """
+        weights = [rlz.weight for rlz in self.sslt[src]]
+        curves = self.get_hcurves(src, imt, site_id, gsim_idx)
+        return weights @ curves
 
 
 class PmapGetter(object):

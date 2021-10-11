@@ -217,6 +217,11 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'],
             case_12.__file__)
 
+        # test disagg_by_grp
+        df = self.calc.datastore.read_df('disagg_by_grp')
+        fname = general.gettemp(text_table(df))
+        self.assertEqualFiles('expected/disagg_by_grp.rst', fname)
+
     def test_case_13(self):
         self.assert_curves_ok(
             ['hazard_curve-mean_PGA.csv', 'hazard_curve-mean_SA(0.2).csv',
@@ -289,7 +294,7 @@ hazard_uhs-std.csv
         # check deserialization of source_model_lt
         smlt = self.calc.datastore['full_lt/source_model_lt']
         exp = str(list(smlt))
-        self.assertEqual('''[<Realization #0 source_model_1.xml, path=SM1, weight=0.5>, <Realization #1 source_model_2.xml, path=SM2~a3pt2b0pt8, weight=0.25>, <Realization #2 source_model_2.xml, path=SM2~a3b1, weight=0.25>]''', exp)
+        self.assertEqual('''[<Realization #0 ['source_model_1.xml'], path=SM1, weight=0.5>, <Realization #1 ['source_model_2.xml', '(3.2, 0.8)'], path=SM2~a3pt2b0pt8, weight=0.25>, <Realization #2 ['source_model_2.xml', '(3.0, 1.0)'], path=SM2~a3b1, weight=0.25>]''', exp)
 
     def test_case_16(self):   # sampling
         with unittest.mock.patch.dict(config.memory, limit=240):
