@@ -1017,7 +1017,7 @@ class FullLogicTree(object):
     def __toh5__(self):
         sm_data = []
         for sm in self.sm_rlzs:
-            sm_data.append((' '.join(map(str, sm.value)), sm.weight,
+            sm_data.append((str(sm.value), sm.weight,
                             '~'.join(sm.lt_path), sm.samples))
         return (dict(
             source_model_lt=self.source_model_lt,
@@ -1089,13 +1089,9 @@ class FullLogicTree(object):
     def __repr__(self):
         info_by_model = {}
         for sm in self.sm_rlzs:
-            if isinstance(sm.value, list):
-                value = ' '.join(sm.value)
-            else:
-                value = sm.value
             info_by_model[sm.lt_path] = (
                 '~'.join(map(decode, sm.lt_path)),
-                decode(value), sm.weight, self.get_num_rlzs(sm))
+                decode(sm.value), sm.weight, self.get_num_rlzs(sm))
         summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
