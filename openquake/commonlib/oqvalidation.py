@@ -1698,10 +1698,7 @@ class OqParam(valid.ParamSet):
             return True
         elif self.hazard_calculation_id:
             n = self._parent.number_of_logic_tree_samples
-            if n == 0:
-                raise ValueError('collect_rlzs=true can only be specified if '
-                                 'the parent hazard calculation used sampling')
-            elif n != self.number_of_logic_tree_samples:
+            if n and n != self.number_of_logic_tree_samples:
                 raise ValueError('Please specify number_of_logic_tree_samples'
                                  '=%d' % n)
         hstats = list(self.hazard_stats())
