@@ -93,9 +93,7 @@ class ReportWriter(object):
             self.add(name)
         if 'full_lt' in ds:
             self.add('full_lt')
-            if ds['full_lt'].sm_rlzs[0].name != 'scenario':
-                # required_params_per_trt makes no sense for GMFs from file
-                self.add('required_params_per_trt')
+            self.add('required_params_per_trt')
         if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
