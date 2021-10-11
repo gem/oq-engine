@@ -220,7 +220,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id.split(':')[0]] = pmap
         if pmap:
-            if self.counts[grp_id] == 1:
+            if self.counts[grp_id] == 1:  # shortcut to save memory
                 self.haz.store_poes(grp_id, pmap, slc)
             else:
                 acc[grp_id] |= pmap
