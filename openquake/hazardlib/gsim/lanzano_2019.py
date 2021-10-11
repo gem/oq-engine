@@ -27,70 +27,62 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _get_stddevs(C, stddev_types, num_sites):
+def _get_stddevs(C):
     """
     Return standard deviations as defined in table 1.
     """
-    stddevs = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 +
-                                   C['phi_0'] ** 2) + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(C['tau'] + np.zeros(num_sites))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2) +
-                           np.zeros(num_sites))
-    return stddevs
+    return [np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 + C['phi_0'] ** 2),
+            C['tau'], np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2)]
 
 
-def _compute_distance(rup, dists, C):
+def _compute_distance(ctx, dist_type, C):
     """
     Compute the third term of the equation 1:
     FD(Mw,R) = [c1(Mw-Mref) + c2] * log10(R) + c3(R) (eq 4)
     Mref, h, Mh are in matrix C
     """
-    R = np.sqrt(dists**2 + C['h']**2)
-    return ((C['c1'] * (rup.mag - C['Mref']) + C['c2']) * np.log10(R) +
+    dist = getattr(ctx, dist_type)
+    R = np.sqrt(dist ** 2 + C['h'] ** 2)
+    return ((C['c1'] * (ctx.mag - C['Mref']) + C['c2']) * np.log10(R) +
             C['c3']*R)
 
 
-def _compute_magnitude(rup, C):
+def _compute_magnitude(ctx, C):
     """
     Compute the second term of the equation 1:
     b1 * (Mw-Mh) for M<=Mh
     b2 * (Mw-Mh) otherwise
     """
-    dmag = rup.mag - C["Mh"]
-    if rup.mag <= C["Mh"]:
+    dmag = ctx.mag - C["Mh"]
+    if ctx.mag <= C["Mh"]:
         mag_term = C['a'] + C['b1'] * dmag
     else:
         mag_term = C['a'] + C['b2'] * dmag
     return mag_term
 
 
-def _site_amplification(sites, C):
+def _site_amplification(ctx, C):
     """
     Compute the fourth term of the equation 1 :
     The functional form Fs in Eq. (1) represents the site amplification and
     it is given by FS = klog10(V0/800) , where V0 = Vs30 when Vs30 <= 1500
     and V0=1500 otherwise
     """
-    v0 = np.ones_like(sites.vs30) * 1500.
-    v0[sites.vs30 < 1500] = sites.vs30
+    v0 = np.ones_like(ctx.vs30) * 1500.
+    v0[ctx.vs30 < 1500] = ctx.vs30
     return C['k'] * np.log10(v0/800)
 
 
-def _get_mechanism(rup, C):
+def _get_mechanism(ctx, C):
     """
     Compute the part of the second term of the equation 1 (FM(SoF)):
     Get fault type dummy variables
     """
-    SS, TF, NF = _get_fault_type_dummy_variables(rup)
+    SS, TF, NF = _get_fault_type_dummy_variables(ctx)
     return C['f1'] * SS + C['f2'] * TF
 
 
-def _get_fault_type_dummy_variables(rup):
+def _get_fault_type_dummy_variables(ctx):
     """
     Fault type (Strike-slip, Normal, Thrust/reverse) is
     derived from rake angle.
@@ -99,10 +91,10 @@ def _get_fault_type_dummy_variables(rup):
     -30 to -150 are normal.
     """
     SS, TF, NF = 0, 0, 0
-    if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+    if np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
         # strike-slip
         SS = 1
-    elif rup.rake > 30.0 and rup.rake < 150.0:
+    elif ctx.rake > 30.0 and ctx.rake < 150.0:
         # reverse
         TF = 1
     else:
@@ -151,39 +143,32 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
     #: Required distance measure is R Joyner-Boore distance (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
+        [dist_type] = self.REQUIRES_DISTANCES
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(ctx, dist_type, C) +
+                     _site_amplification(ctx, C) +
+                     _get_mechanism(ctx, C))
 
-        C = self.COEFFS[imt]
-        if self.REQUIRES_DISTANCES == {'rjb'}:
-            d = dists.rjb
-        else:
-            d = dists.rrup
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_distance(rup, d, C) +
-                 _site_amplification(sites, C) +
-                 _get_mechanism(rup, C))
+            istddevs = _get_stddevs(C)
 
-        istddevs = _get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+            # Convert units to g, but only for PGA and SA (not PGV):
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV:
+                mean[m] = np.log(10.0 ** imean)
 
-        # Convert units to g, but only for PGA and SA (not PGV):
-        if imt.string.startswith(("SA", "PGA")):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
-
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
-
-        return mean, stddevs
+            # Return stddevs in terms of natural log scaling
+            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+            # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
     #: Coefficients from SA PGA and PGV from esupp Table S2
 
@@ -311,4 +296,44 @@ class LanzanoEtAl2019_RUP_OMO(LanzanoEtAl2019_RJB_OMO):
 	8.000	1.6472982850	0.5073993280	0.2006409390	0.3494261080	-1.4463813400	0.0000000000	-0.4956266160	0.0136222610	0.0172305930	0.1529394340	0.1736945870	0.1803254150	6.3000000000	4.8103931580	4.3526246000
 	9.000	1.5105710010	0.4450324910	0.1830610430	0.3751346350	-1.4367324130	0.0000000000	-0.4912014160	0.0208945970	0.0217267490	0.1529569490	0.1662440990	0.1804191720	6.3000000000	4.9295888090	4.5509858920
 	10.000	1.3966806560	0.3900867860	0.1589602600	0.3968394420	-1.4232531770	0.0000000000	-0.4765713040	0.0296164880	0.0222468600	0.1525077910	0.1614679730	0.1808181160	6.3000000000	5.0403227000	4.5998115120
+  """)
+
+
+class LanzanoEtAl2019_RJB_OMO_scaled(LanzanoEtAl2019_RJB_OMO):
+    """
+    Implements GMPE developed by G.Lanzano, L.Luzi, F.Pacor, L.Luzi,
+    C.Felicetta, R.Puglia, S. Sgobba, M. D'Amico and published as "A Revised
+    Ground-Motion Prediction Model for Shallow Crustal Earthquakes in Italy",
+    Bull Seismol. Soc. Am., DOI 10.1785/0120180210
+    SA are given up to 10 s.
+    The prediction is valid for RotD50, which is the median of the
+    distribution of the intensity measures, obtained from the combination
+    of the two horizontal components across all nonredundant azimuths
+    (Boore, 2010).
+    
+    
+    Application of a scaling factor that converts the prediction of 
+    LanzanoEtAl2019_RJB_OMO, valid for RotD50, to the corresponding 
+    prediction for the Maximum value.
+    """
+    
+    #: Coefficient table constructed from the electronic suplements of the
+    #: original paper.
+
+    COEFFS = CoeffsTable(sa_damping=5, table="""
+	IMT		a			b1			b2			c1			c2			c3			k			f1			f2			tau			phi_S2S		phi_0		Mh			Mref		h
+	pga		3.4597007	0.1939541	-0.0219828	0.2871493	-1.4056355	-0.0029113	-0.3945760	0.0859837	0.0105002	0.1559878	0.2205816	0.2000991	5.5000000	5.3239727	6.9237429
+	pgv		2.1195033	0.3486332	0.1359129	0.2840910	-1.4565165	-0.0005727	-0.5927641	0.0410782	-0.0123124	0.1388530	0.1641479	0.1938530	5.7000000	5.0155452	5.9310214
+	0.05	3.7703201	0.0938111	-0.0847276	0.3184744	-1.4684793	-0.0029102	-0.3201327	0.0900141	0.0129486	0.1679197	0.2388540	0.2068944	5.5000000	5.5554374	7.1218138
+	0.10	3.8445966	0.1360110	-0.0692203	0.2908602	-1.4016628	-0.0043006	-0.2686744	0.1147825	0.0248269	0.1787479	0.2637458	0.2113962	5.5000000	5.3797045	7.2742556
+	0.15	3.6932915	0.2565051	0.0271401	0.2339551	-1.3111751	-0.0047018	-0.3207561	0.1109475	0.0198659	0.1666767	0.2596149	0.2113113	5.5000000	5.0965763	6.6927744
+	0.20	3.5896393	0.3561478	0.0934923	0.1983576	-1.2809086	-0.0045122	-0.3768140	0.0942130	0.0116640	0.1611613	0.2493594	0.2085199	5.5000000	4.8016422	6.1273996
+	0.30	3.4885390	0.4717747	0.1926037	0.1614915	-1.2949801	-0.0032193	-0.4770515	0.0776676	0.0061078	0.1465825	0.2248859	0.2059317	5.5000000	4.7167542	5.9795026
+	0.40	3.3047378	0.5331242	0.2421620	0.1502822	-1.2806103	-0.0027429	-0.5562808	0.0661761	0.0011871	0.1352000	0.2142019	0.2045661	5.5000000	4.4598958	5.8073331
+	0.50	3.4107980	0.5595159	0.2002091	0.1445890	-1.3577632	-0.0018214	-0.6175021	0.0643337	0.0049345	0.1292553	0.2101486	0.2021378	5.8000000	4.3061718	6.0827633
+	0.75	3.2462015	0.6615385	0.2753805	0.1279582	-1.3816588	-0.0006333	-0.6770003	0.0325604	-0.0106144	0.1493281	0.2061475	0.1985444	5.8000000	4.2193032	5.9399226
+	1.00	2.9835849	0.7162569	0.2992086	0.1330222	-1.3581003	-0.0003481	-0.7010381	0.0187836	-0.0026838	0.1498800	0.2099741	0.1952706	5.8000000	4.0068765	5.4265348
+	2.00	2.4561293	0.7777348	0.3199509	0.1684793	-1.3282655	0.0000000	-0.7472001	-0.0111370	-0.0375300	0.1533446	0.2112262	0.1855430	5.8000000	4.2174770	5.3910988
+	3.00	2.1181011	0.7855378	0.3585875	0.1917373	-1.3622292	-0.0000725	-0.6907295	-0.0523142	-0.0534722	0.1730562	0.2046940	0.1856376	5.8000000	4.0000000	5.0089808
+	4.00	1.8623784	0.7742294	0.3863289	0.2209747	-1.3605497	-0.0004515	-0.6361326	-0.0850829	-0.0481923	0.1729191	0.1933427	0.1876985	5.8000000	4.0000000	5.1428287
   """)
