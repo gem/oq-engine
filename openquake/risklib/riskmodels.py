@@ -410,21 +410,6 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
-def split_df(df, cond=True, maxsize=1000):
-    """
-    :param df: a large dataframe
-    :param cond: boolean condition for splitting
-    :param maxsize: split dataframes larger than maxsize
-    :yields: dataframes smaller than maxsize
-    """
-    n = len(df)
-    if n <= maxsize or not cond:
-        yield df
-    else:
-        for slc in gen_slices(0, len(df), maxsize):
-            yield df[slc]
-
-
 # ######################## CompositeRiskModel #########################
 
 class ValidationError(Exception):
