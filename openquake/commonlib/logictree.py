@@ -324,6 +324,7 @@ class SourceModelLogicTree(object):
         if not dicts:
             self.is_source_specific = False
             return
+        src_ids = set()
         for dic in dicts:
             ats = dic.get('applyToSources')
             if not ats:
@@ -332,7 +333,11 @@ class SourceModelLogicTree(object):
             elif len(ats.split()) != 1:
                 self.is_source_specific = False
                 return
-        self.is_source_specific = True
+            src_ids.add(ats)
+        all_srcs = set()
+        for vals in self.source_ids.values():
+            all_srcs.update(vals)
+        self.is_source_specific = src_ids == all_srcs
 
     def parse_tree(self, tree_node):
         """
