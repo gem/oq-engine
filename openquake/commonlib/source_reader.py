@@ -85,7 +85,7 @@ def get_csm(oq, full_lt, h5=None):
         for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
             sg = copy.copy(grp)
             src_groups.append(sg)
-            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
+            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
             src.checksum = src.grp_id = src.id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
