@@ -722,48 +722,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
         return dic
 
-    # called by event_based_risk fast, in case_miriam
-    def gen_outputs(self, taxo, asset_df, gmf_df, param):
-        """
-        :param taxo: a taxonomy index
-        :param asset_df: a DataFrame of assets of the given taxonomy
-        :param gmf_df: a DataFrame of GMVs on the sites
-        :param param: a dictionary of extra parameters
-        :yields: dictionaries keyed by the loss type
-        """
-        ratios = self.get_interp_ratios(taxo, gmf_df)  # fast
-        minimum_asset_loss = self.oqparam.minimum_asset_loss
-        for adf in split_df(asset_df):
-            assets_by_sid = adf.groupby('site_id')
-            dic = {}
-            for ln, ratio_df in ratios.items():
-                min_loss = minimum_asset_loss[ln]
-                d = dict(eid=[], aid=[], variance=[], loss=[])
-                n_oks = 0
-                for sid, adf in assets_by_sid:
-                    r = ratio_df[ratio_df.index == sid]
-                    if len(r) == 0:
-                        continue
-                    means = r['mean'].to_numpy()
-                    covs = r['cov'].to_numpy()
-                    eids = r['eid'].to_numpy()
-                    for aid, val in zip(adf.index, adf['value-' + ln]):
-                        losses = val * means
-                        ok = losses > min_loss
-                        n_ok = ok.sum()
-                        if n_ok:
-                            d['eid'].append(eids[ok])
-                            d['aid'].append(numpy.ones(n_ok, U32) * aid)
-                            d['variance'].append((losses[ok] * covs[ok])**2)
-                            d['loss'].append(losses[ok])
-                            n_oks += n_ok
-                if n_oks == 0:
-                    continue
-                for key, vals in d.items():
-                    d[key] = numpy.concatenate(vals)
-                dic[ln] = pandas.DataFrame(d).set_index(['eid', 'aid'])
-            yield dic
-
     def get_interp_ratios(self, taxo, gmf_df):
         """
         :returns: a dictionary loss_type -> loss ratios DataFrame

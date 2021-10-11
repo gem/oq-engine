@@ -715,9 +715,11 @@ def save_source_info(csm, h5):
                  numpy.mean(lens))
     csm.source_info = data  # src_id -> row
     if h5:
-        attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
+        num_srcs = len(csm.source_info)
         # avoid hdf5 damned bug by creating source_info in advance
-        hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
+        h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
+        h5['source_info'].attrs['atomic'] = any(
+            grp.atomic for grp in csm.src_groups)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         h5['trt_smrs'] = csm.get_trt_smrs()
         h5['toms'] = numpy.array(
