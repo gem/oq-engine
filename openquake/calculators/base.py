@@ -545,6 +545,12 @@ class HazardCalculator(BaseCalculator):
         elif oq.hazard_calculation_id:
             parent = datastore.read(oq.hazard_calculation_id)
             oqparent = parent['oqparam']
+            if 'weights' in parent:
+                weights = numpy.unique(parent['weights'][:])
+                if oq.collect_rlzs and len(weights) > 1:
+                    raise ValueError(
+                        'collect_rlzs=true can be specified only if '
+                        'the realizations have identical weights')
             check_imtls(self.oqparam.imtls, oqparent.imtls)
             self.check_precalc(oqparent.calculation_mode)
             self.datastore.parent = parent
@@ -886,16 +892,6 @@ class HazardCalculator(BaseCalculator):
 
         self.datastore['weights'] = arr = build_weights(self.realizations)
         self.datastore.set_attrs('weights', nbytes=arr.nbytes)
-
-        if ('event_based' in oq.calculation_mode and R >= TWO16
-                or R >= TWO32):
-            raise ValueError(
-                'The logic tree has too many realizations (%d), use sampling '
-                'instead' % R)
-        elif R > 10000:
-            logging.warning(
-                'The logic tree has %d realizations(!), please consider '
-                'sampling it', R)
         if rel_ruptures:
             self.check_discardable(rel_ruptures)
 

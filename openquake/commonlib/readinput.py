@@ -681,14 +681,17 @@ def get_full_lt(oqparam):
         logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
             oqparam.number_of_logic_tree_samples, p))
     else:  # full enumeration
-        if (oqparam.is_event_based() and
-            (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
-                and p > oqparam.max_potential_paths):
+        if p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
                 'raise `max_potential_paths`, use sampling instead of '
-                'full enumeration or reduce the '
-                'source model with oq reduce_sm' % p)
+                'full enumeration, or set hazard_curves=false ' % p)
+        elif (oqparam.is_event_based() and
+              (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
+                and p > oqparam.max_potential_paths / 100):
+            logging.warning(
+                'There are many potential logic tree paths (%d): '
+                'try to use sampling or reduce the source model' % p)
         logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.is_source_specific:
         logging.info('There is a logic tree on each source')
