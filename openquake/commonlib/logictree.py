@@ -304,7 +304,7 @@ class SourceModelLogicTree(object):
         self.num_samples = num_samples
         self.sampling_method = sampling_method
         self.test_mode = test_mode
-        self.branchID = branchID  # use to read only one sourceModel branch
+        self.branchID = branchID  # used to read only one sourceModel branch
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
         self.previous_branches = []
