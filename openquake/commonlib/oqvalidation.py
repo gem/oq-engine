@@ -1090,6 +1090,10 @@ class OqParam(valid.ParamSet):
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
 
+        # check for classical_risk
+        if not self.investigation_time:
+            raise InvalidFile('%s: missing investigation_time' % job_ini)
+
         # check grid + sites
         if self.region_grid_spacing and ('sites' in self.inputs or self.sites):
             raise ValueError('You are specifying grid and sites at the same '
