@@ -295,7 +295,8 @@ class SourceModelLogicTree(object):
         return self
 
     def __init__(self, filename, seed=0, num_samples=0,
-                 sampling_method='early_weights', test_mode=False):
+                 sampling_method='early_weights', test_mode=False,
+                 branchID=None):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         # NB: converting the random_seed into an integer is needed on Windows
@@ -303,6 +304,7 @@ class SourceModelLogicTree(object):
         self.num_samples = num_samples
         self.sampling_method = sampling_method
         self.test_mode = test_mode
+        self.branchID = branchID  # use to read only one sourceModel branch
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
         self.previous_branches = []
@@ -433,6 +435,8 @@ class SourceModelLogicTree(object):
             if value_node.text is not None:
                 values.append(value_node.text.strip())
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
+                if self.branchID and branchnode['branchID'] != self.branchID:
+                    continue
                 try:
                     for fname in value_node.text.strip().split():
                         if (fname.endswith(('.xml', '.nrml'))  # except UCERF
