@@ -88,7 +88,7 @@ class HcurvesGetter(object):
         self.source_info = dstore['source_info'][:]
         self.disagg_by_grp = dstore['disagg_by_grp'][:]
         gsim_lt = self.full_lt.gsim_lt
-        self.bysrc = {}  # src_id -> slice
+        self.bysrc = {}  # src_id -> (start, gsims, weights)
         for row in self.source_info:
             dis = self.disagg_by_grp[row['grp_id']]
             trt = decode(dis['grp_trt'])
@@ -112,7 +112,7 @@ class HcurvesGetter(object):
 
     def get_hcurves(self, src, imt=None, site_id=0, gsim_idx=None):
         """
-        Return the curves associated to the given src_id, imt and gsim_idx
+        Return the curves associated to the given src, imt and gsim_idx
         as an array of shape (R, L)
         """
         assert ';' not in src, src  # not a rlz specific source ID
@@ -122,11 +122,14 @@ class HcurvesGetter(object):
             curves.append(self.get_hcurve(src_id, imt, site_id, gsim_idx))
         return numpy.array(curves)
 
-    def get_mean_hcurve(self, src, imt=None, site_id=0, gsim_idx=None):
+    def get_mean_hcurve(self, src=None, imt=None, site_id=0, gsim_idx=None):
         """
-        Return the mean curve associated to the given src_id, imt and gsim_idx
+        Return the mean curve associated to the given src, imt and gsim_idx
         as an array of shape L
         """
+        if src is None:
+            hcurves = [self.get_mean_hcurve(src) for src in self.sslt]
+            return general.agg_probs(*hcurves)
         weights = [rlz.weight for rlz in self.sslt[src]]
         curves = self.get_hcurves(src, imt, site_id, gsim_idx)
         return weights @ curves
