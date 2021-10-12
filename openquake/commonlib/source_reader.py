@@ -311,7 +311,11 @@ class CompositeSourceModel:
 
     def get_sources(self, atomic=None):
         """
-        :returns: list of sources in the composite source model
+        There are 3 options:
+
+        atomic == None => return all the sources (default)
+        atomic == True => return all the sources in atomic groups
+        atomic == True => return all the sources not in atomic groups
         """
         srcs = []
         for src_group in self.src_groups:
