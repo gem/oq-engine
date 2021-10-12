@@ -5,10 +5,10 @@
 
 
 """
-Module exports :class:`BahrampouriEtAl2021_dm`,
-               :class:`BahrampouriEtAl2021_dm_ASC`
-               :class:`BahrampouriEtAl2021_dm_SSlab` 
-               :class:`BahrampouriEtAl2021_dm_SInter`
+Module exports :class:`BahrampouriEtAl2021dm`,
+               :class:`BahrampouriEtAl2021dmAsc`
+               :class:`BahrampouriEtAl2021dmSSlab` 
+               :class:`BahrampouriEtAl2021dmSInter`
 """
 import numpy as np
 
@@ -103,7 +103,7 @@ def _get_stddevs(C):
 # In[11]:
 
 
-class BahrampouriEtAl2021Asc(GMPE):
+class BahrampouriEtAl2021dmAsc(GMPE):
     """
     Implements GMPE by Mahdi Bahrampouri, Adrian Rodriguez-Marek and Russell A Green 
     developed from the Kiban-Kyoshin network (KiK)-net database. This GMPE is specifically derived
@@ -159,7 +159,7 @@ class BahrampouriEtAl2021Asc(GMPE):
 # In[12]:
 
 
-class BahrampouriEtAl2021SSlab(GMPE):
+class BahrampouriEtAl2021dmSSlab(GMPE):
     """
     Implements GMPE by Mahdi Bahrampouri, Adrian Rodriguez-Marek and Russell A Green 
     developed from the Kiban-Kyoshin network (KiK)-net database. This GMPE is specifically derived
@@ -215,7 +215,7 @@ class BahrampouriEtAl2021SSlab(GMPE):
 # In[12]:
 
 
-class BahrampouriEtAl2021SInter(GMPE):
+class BahrampouriEtAl2021dmSInter(GMPE):
     """
     Implements GMPE by Mahdi Bahrampouri, Adrian Rodriguez-Marek and Russell A Green 
     developed from the Kiban-Kyoshin network (KiK)-net database. This GMPE is specifically derived
