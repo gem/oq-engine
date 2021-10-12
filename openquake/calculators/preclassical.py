@@ -288,4 +288,4 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Store the CompositeSourceModel in binary format
         """
-        self.datastore['csm'] = csm
+        self.datastore['_csm'] = csm

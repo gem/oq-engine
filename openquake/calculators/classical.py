@@ -353,7 +353,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.post_classical()  # repeat post-processing
                 return {}
             else:  # after preclassical, like in case_36
-                self.csm = parent['csm']
+                self.csm = parent['_csm']
                 self.full_lt = parent['full_lt']
                 num_srcs = len(self.csm.source_info)
                 self.datastore.hdf5.create_dataset(

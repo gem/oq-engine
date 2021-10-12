@@ -205,9 +205,18 @@ def view_contents(token, dstore):
     return numpy.array(rows, dt('dataset size'))
 
 
+def short_repr(lst):
+    if len(lst) <= 10:
+        return ' '.join(map(str, lst))
+    return '[%d rlzs]' % len(lst)
+
+
 @view.add('full_lt')
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
+    num_paths = full_lt.get_num_potential_paths()
+    if not full_lt.num_samples and num_paths > 15000:
+        return '<%d realizations>' % num_paths
     try:
         rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
     except KeyError:  # for scenario trt_smrs is missing
@@ -216,7 +225,7 @@ def view_full_lt(token, dstore):
     rows = []
     for grp_id, rbg in enumerate(rlzs_by_gsim_list):
         for gsim, rlzs in rbg.items():
-            rows.append((grp_id, repr(str(gsim)), str(list(rlzs))))
+            rows.append((grp_id, repr(str(gsim)), short_repr(rlzs)))
     return numpy.array(rows, dt(header))
 
 
