@@ -1067,10 +1067,9 @@ def view_composite_source_model(token, dstore):
     n = len(dstore['full_lt'].sm_rlzs)
     trt_smrs = dstore['trt_smrs'][:]
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
-        srcs = ' '.join(df['source_id'])
         trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
-        lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), srcs))
-    return numpy.array(lst, dt('grp_id trt smrs sources'))
+        lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), len(df)))
+    return numpy.array(lst, dt('grp_id trt smrs num_sources'))
 
 
 @view.add('branch_ids')
