@@ -632,7 +632,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam):
+def get_source_model_lt(oqparam, branchID=None):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -642,7 +642,7 @@ def get_source_model_lt(oqparam):
     """
     fname = oqparam.inputs['source_model_logic_tree']
     args = (fname, oqparam.random_seed, oqparam.number_of_logic_tree_samples,
-            oqparam.sampling_method)
+            oqparam.sampling_method, False, branchID)
     smlt = logictree.SourceModelLogicTree(*args)
     if oqparam.discard_trts:
         trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
@@ -653,15 +653,17 @@ def get_source_model_lt(oqparam):
     return smlt
 
 
-def get_full_lt(oqparam):
+def get_full_lt(oqparam, branchID=None):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param branchID:
+        used to read a single sourceModel branch (if given)
     :returns:
         a :class:`openquake.commonlib.logictree.FullLogicTree`
         instance
     """
-    source_model_lt = get_source_model_lt(oqparam)
+    source_model_lt = get_source_model_lt(oqparam, branchID)
     trts = source_model_lt.tectonic_region_types
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
@@ -783,7 +785,7 @@ def _check_csm(csm, oqparam, h5):
         raise RuntimeError('All sources were discarded!?')
 
 
-def get_composite_source_model(oqparam, h5=None):
+def get_composite_source_model(oqparam, h5=None, branchID=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -793,7 +795,7 @@ def get_composite_source_model(oqparam, h5=None):
          an open hdf5.File where to store the source info
     """
     # first read the logic tree
-    full_lt = get_full_lt(oqparam)
+    full_lt = get_full_lt(oqparam, branchID)
 
     # then read the composite source model from the cache if possible
     if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
