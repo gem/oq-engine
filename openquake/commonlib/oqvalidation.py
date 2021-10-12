@@ -1090,8 +1090,9 @@ class OqParam(valid.ParamSet):
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
 
-        # check for classical_risk
-        if not self.investigation_time:
+        # check for classical_damage
+        if (self.calculation_mode == 'classical_damage' and not
+                self.investigation_time):
             raise InvalidFile('%s: missing investigation_time' % job_ini)
 
         # check grid + sites
