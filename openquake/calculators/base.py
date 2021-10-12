@@ -252,7 +252,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
-                readinput.smlt_cache.clear()
                 readinput.gsim_lt_cache.clear()
 
                 # remove temporary hdf5 file, if any
