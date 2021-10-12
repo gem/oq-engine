@@ -16,7 +16,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import IA
 
 
-# In[3]:
+import pandas
 
 
 def _compute_magnitude(ctx, C):
@@ -200,15 +200,6 @@ class BahrampouriEtAl2021Asc(GMPE):
     #: page 1031).
     REQUIRES_DISTANCES = {'rrup',}
     
-    ## Applicable range of the model
-    APPLICABLE_RANGE = {'mag': np.arange(4.0,9.1, 0.1)}
-    if mag < 5.0:
-        APPLICABLE_RANGE['dist'] = np.arange(0,100,1)
-    elif mag > 7.0:
-        APPLICABLE_RANGE['dist'] = np.arange(0,1001,1)
-    else: 
-        APPLICABLE_RANGE['dist'] = np.arange(100,1001,1)
-    
     
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """
@@ -331,16 +322,6 @@ class BahrampouriEtAl2021SSlab(GMPE):
     #: Required distance measures are Rrup (see Table 2,
     #: page 1031).
     REQUIRES_DISTANCES = {'rrup',}
-    
-    ## Applicable range of the model
-    APPLICABLE_RANGE = {'mag': np.arange(4.0,9.1, 0.1)}
-    if mag < 5.0:
-        APPLICABLE_RANGE['dist'] = np.arange(0,100,1)
-    elif mag > 7.0:
-        APPLICABLE_RANGE['dist'] = np.arange(0,1001,1)
-    else: 
-        APPLICABLE_RANGE['dist'] = np.arange(100,1001,1)
-    
     
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """

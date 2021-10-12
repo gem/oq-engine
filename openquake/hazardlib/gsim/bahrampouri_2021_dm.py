@@ -148,14 +148,7 @@ class BahrampouriEtAl2021Asc(GMPE):
             mean[m] = np.exp((np.log(_get_source_term(C, ctx) +_get_path_term(C, ctx))) +_get_site_term(C, ctx))
             sig[m], tau[m],phi[m] = _get_stddevs(C)
             
-        ## Applicable range of the model
-        APPLICABLE_RANGE = {'mag': np.arange(4.0,9.1, 0.1)}
-        if ctx.mag < 5.0:
-            APPLICABLE_RANGE['dist'] = np.arange(0,100,1)
-        elif ctx.mag > 7.0:
-            APPLICABLE_RANGE['dist'] = np.arange(0,1001,1)
-        else: 
-            APPLICABLE_RANGE['dist'] = np.arange(100,1001,1)
+        
     COEFFS = CoeffsTable(table="""
     imt        m1     m2    m3_RS   m3_SS   m3_NS   M1    M2     r1      r2   R1       s1       s2      s3      sig    tau    phi_s2s  phi_ss
     rsd595  0.6899  6.511   4.584   4.252   5.522   4.    6.5  0.21960    0.  60.  -0.3008  0.00119   -0.1107  0.462   0.204   0.185    0.370
@@ -211,15 +204,6 @@ class BahrampouriEtAl2021SSlab(GMPE):
             mean[m] = np.exp((np.log(_get_source_term(C, ctx) +_get_path_term(C, ctx))) +_get_site_term(C, ctx))
             sig[m], tau[m],phi[m] = _get_stddevs(C)
             
-            
-        ## Applicable range of the model
-        APPLICABLE_RANGE = {'mag': np.arange(4.0,9.1, 0.1)}
-        if ctx.mag < 5.0:
-            APPLICABLE_RANGE['dist'] = np.arange(0,100,1)
-        elif ctx.mag > 7.0:
-            APPLICABLE_RANGE['dist'] = np.arange(0,1001,1)
-        else: 
-            APPLICABLE_RANGE['dist'] = np.arange(100,1001,1)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt       m1     m2    m3_RS  m3_SS  m3_NS   M1  M2    r1      r2      R1     s1      s2        s3      sig    tau    phi_s2s  phi_ss
@@ -263,15 +247,7 @@ class BahrampouriEtAl2021SInter(GMPE):
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
     
-    ## Applicable range of the model
-    APPLICABLE_RANGE = {'mag': np.arange(4.0,9.1, 0.1)}
-    if mag < 5.0:
-        APPLICABLE_RANGE['dist'] = np.arange(0,100,1)
-    elif mag > 7.0:
-        APPLICABLE_RANGE['dist'] = np.arange(0,1001,1)
-    else: 
-        APPLICABLE_RANGE['dist'] = np.arange(100,1001,1)
-
+    
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -283,14 +259,7 @@ class BahrampouriEtAl2021SInter(GMPE):
             mean[m] = np.exp((np.log(_get_source_term(C, ctx) +_get_path_term(C, ctx))) +_get_site_term(C, ctx))
             sig[m], tau[m],phi[m] = _get_stddevs(C)
             
-        ## Applicable range of the model
-        APPLICABLE_RANGE = {'mag': np.arange(4.0,9.1, 0.1)}
-        if ctx.mag < 5.0:
-            APPLICABLE_RANGE['dist'] = np.arange(0,100,1)
-        elif ctx.mag > 7.0:
-            APPLICABLE_RANGE['dist'] = np.arange(0,1001,1)
-        else: 
-            APPLICABLE_RANGE['dist'] = np.arange(100,1001,1)
+
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt       m1     m2    m3_RS   m3_SS   m3_NS    M1    M2    r1      r2       R1     s1      s2        s3      sig    tau    phi_s2s  phi_ss
