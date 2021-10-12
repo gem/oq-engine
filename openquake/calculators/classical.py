@@ -481,6 +481,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
         with self.monitor('collecting hazard'):
+            if pmap_by_kind is None:  # instead of a dict
+                raise MemoryError('You ran out of memory!')
             for kind in pmap_by_kind:  # hmaps-XXX, hcurves-XXX
                 pmaps = pmap_by_kind[kind]
                 if kind in self.hazard:
