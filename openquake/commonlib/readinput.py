@@ -681,7 +681,7 @@ def get_full_lt(oqparam):
         logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
             oqparam.number_of_logic_tree_samples, p))
     else:  # full enumeration
-        if p > oqparam.max_potential_paths:
+        if oqparam.hazard_curves and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
                 'raise `max_potential_paths`, use sampling instead of '
