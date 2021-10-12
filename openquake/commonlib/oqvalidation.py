@@ -1067,6 +1067,8 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: conditional_loss_poes are not defined '
                     'for classical_damage calculations' % job_ini)
+            if not self.investigation_time and not self.hazard_calculation_id:
+                raise InvalidFile('%s: missing investigation_time' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
