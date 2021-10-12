@@ -1067,6 +1067,8 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: conditional_loss_poes are not defined '
                     'for classical_damage calculations' % job_ini)
+            if not self.investigation_time and not self.hazard_calculation_id:
+                raise InvalidFile('%s: missing investigation_time' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
@@ -1089,11 +1091,6 @@ class OqParam(valid.ParamSet):
             if self.number_of_logic_tree_samples >= TWO16:
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
-
-        # check for classical_damage
-        if (self.calculation_mode == 'classical_damage' and not
-                self.investigation_time):
-            raise InvalidFile('%s: missing investigation_time' % job_ini)
 
         # check grid + sites
         if self.region_grid_spacing and ('sites' in self.inputs or self.sites):
