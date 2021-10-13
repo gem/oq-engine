@@ -116,7 +116,7 @@ def get_effective_rlzs(rlzs):
 Info = collections.namedtuple('Info', 'smpaths, applytosources')
 
 
-def collect_info(smlt):
+def collect_info(smlt, branchID=None):
     """
     Given a path to a source model logic tree, collect all of the
     path names to the source models it contains and build:
@@ -125,6 +125,7 @@ def collect_info(smlt):
     2. a dictionary source model branch ID -> source IDs in applyToSources
 
     :param smlt: source model logic tree file
+    :param branchID: if given, consider only that branch
     :returns: an Info namedtupled containing the two dictionaries
     """
     n = nrml.read(smlt)
@@ -142,6 +143,8 @@ def collect_info(smlt):
                         bset['applyToSources'].split())
             if bset['uncertaintyType'] in 'sourceModel extendModel':
                 for br in bset:
+                    if branchID and branchID != br['branchID']:
+                        continue
                     with context(smlt, br):
                         fnames = unique(br.uncertaintyModel.text.split())
                         paths.update(_abs_paths(smlt, fnames))
@@ -347,7 +350,7 @@ class SourceModelLogicTree(object):
         Parse the whole tree and point ``root_branchset`` attribute
         to the tree's root.
         """
-        self.info = collect_info(self.filename)
+        self.info = collect_info(self.filename, self.branchID)
         self.source_ids = collections.defaultdict(list)
         t0 = time.time()
         for depth, blnode in enumerate(tree_node.nodes):
