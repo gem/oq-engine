@@ -1018,6 +1018,11 @@ class OqParam(valid.ParamSet):
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
 
+        # check for multi_risk
+        if self.calculation_mode == 'multi_risk':
+            # store input files, mandatory for the QGIS plugin
+            self.save_disk_space = False
+
         # check for tiling
         if self.max_sites_disagg > self.max_sites_per_tile:
             raise ValueError(
