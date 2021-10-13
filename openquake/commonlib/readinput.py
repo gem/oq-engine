@@ -30,7 +30,6 @@ import tempfile
 import functools
 import configparser
 import collections
-from unittest.mock import Mock
 
 import numpy
 import pandas
@@ -1249,8 +1248,6 @@ def _checksum(fnames, checksum=0):
     :returns: the 32 bit checksum of a list of files
     """
     for fname in fnames:
-        if isinstance(fname, Mock):
-            pass
         elif not os.path.exists(fname):
             zpath = os.path.splitext(fname)[0] + '.zip'
             if not os.path.exists(zpath):
