@@ -758,7 +758,7 @@ def calc_datastore(request, job_id):
         of the requested artifact, if present, else throws a 404
     """
     job = logs.dbcmd('get_job', int(job_id))
-    if job is None:
+    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()

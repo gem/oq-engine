@@ -80,6 +80,7 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT},
                    random_seed=42, number_of_logic_tree_samples=0,
                    sampling_method='early_weights')
+    oq._input_files = readinput.get_input_files(oq)
     checksum = readinput.get_checksum32(oq)
     checkfile = os.path.join(os.path.dirname(ssmLT), 'CHECKSUM.txt')
     with open(checkfile, 'w') as f:
