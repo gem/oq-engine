@@ -30,6 +30,7 @@ import tempfile
 import functools
 import configparser
 import collections
+from unittest.mock import Mock
 
 import numpy
 import pandas
@@ -318,6 +319,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
                 {imt: imtls[imt]})
         job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
+    oqparam._input_files = get_input_files(oqparam)
     if validate:  # always true except from oqzip
         oqparam.validate()
     return oqparam
@@ -1176,7 +1178,7 @@ def get_shapefiles(dirname):
     return out
 
 
-def get_input_files(oqparam, hazard=False):
+def get_input_files(oqparam):
     """
     :param oqparam: an OqParam instance
     :param hazard: if True, consider only the hazard files
@@ -1199,11 +1201,8 @@ def get_input_files(oqparam, hazard=False):
 
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
-        if hazard and key not in ('source_model_logic_tree',
-                                  'gsim_logic_tree', 'source'):
-            continue
         # collect .hdf5 tables for the GSIMs, if any
-        elif key == 'gsim_logic_tree':
+        if key == 'gsim_logic_tree':
             gsim_lt = get_gsim_lt(oqparam)
             for gsims in gsim_lt.values.values():
                 for gsim in gsims:
@@ -1250,7 +1249,9 @@ def _checksum(fnames, checksum=0):
     :returns: the 32 bit checksum of a list of files
     """
     for fname in fnames:
-        if not os.path.exists(fname):
+        if isinstance(fname, Mock):
+            pass
+        elif not os.path.exists(fname):
             zpath = os.path.splitext(fname)[0] + '.zip'
             if not os.path.exists(zpath):
                 raise OSError('No such file: %s or %s' % (fname, zpath))
@@ -1269,7 +1270,7 @@ def get_checksum32(oqparam, h5=None):
 
     :param oqparam: an OqParam instance
     """
-    checksum = _checksum(get_input_files(oqparam, hazard=True))
+    checksum = _checksum(oqparam._input_files)
     hazard_params = []
     for key, val in sorted(vars(oqparam).items()):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',

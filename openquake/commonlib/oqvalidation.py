@@ -719,6 +719,7 @@ def check_same_levels(imtls):
 
 
 class OqParam(valid.ParamSet):
+    _input_files = ()  # set in get_oqparam
     KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
                     'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
                     'source_model_logic_tree', 'hazard_curves', 'insurance',
