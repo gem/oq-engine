@@ -179,6 +179,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
+            attrs['input_size'] = self.oqparam.get_input_size()
             attrs['checksum32'] = readinput.get_checksum32(
                 self.oqparam, self.datastore.hdf5)
             logging.info('Checksum of the input files: %(checksum32)s', attrs)

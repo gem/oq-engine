@@ -897,6 +897,16 @@ class OqParam(valid.ParamSet):
         """
         return os.path.abspath(os.path.dirname(self.inputs['job_ini']))
 
+    def get_input_size(self):
+        """
+        :returns: the total size in bytes of the input files
+
+        NB: this will fail if the files are not available, so it
+        should be called only before starting the calculation.
+        The same information is stored in the datastore.
+        """
+        return sum(os.path.getsize(f) for f in self._input_files)
+
     def get_reqv(self):
         """
         :returns: an instance of class:`RjbEquivalent` if reqv_hdf5 is set

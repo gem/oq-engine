@@ -440,8 +440,9 @@ hazard_uhs-std.csv
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
                               case_23.__file__, delta=1e-5)
-        checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 141487350)
+        attrs = dict(self.calc.datastore['/'].attrs)
+        self.assertEqual(attrs['checksum32'], 3098153713)
+        self.assertEqual(attrs['input_size'], 6631)
 
     def test_case_24(self):  # UHS
         # this is a case with rjb and an hypocenter distribution
