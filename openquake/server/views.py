@@ -563,6 +563,8 @@ def submit_job(job_ini, username, hc_id):
     """
     jobs = engine.create_jobs(
         [job_ini], config.distribution.log_level, None, username, hc_id)
+    # NB: create_jobs does not validate the parameters; the validation
+    # happens in the child process
     proc = Process(target=engine.run_jobs, args=(jobs,))
     proc.start()
     return jobs[0].calc_id
