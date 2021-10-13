@@ -1,3 +1,6 @@
+  [Claudia Mascandola]
+  * Added a new class to the lanzano_2019 gmm.
+  
   [Michele Simionato]
   * Supported the syntax
     `source_model_logic_tree_file = ${mosaic}/XXX/in/ssmLT.xml`
