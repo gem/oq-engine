@@ -95,7 +95,7 @@ def collect_files(dirpath, cond=lambda fullname: True):
         else:  # collect files
             if cond(fullname):
                 files.append(fullname)
-    return files
+    return sorted(files)  # job_haz before job_risk
 
 
 def extract_from_zip(path, ext='.ini'):
