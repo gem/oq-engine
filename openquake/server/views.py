@@ -130,7 +130,7 @@ def _prepare_job(request, ini):
         # move each file to a new temp dir, using the upload file names,
         # not the temporary ones
         inifiles = []
-        for each_file in request.FILES.values():
+        for each_file in sorted(request.FILES.values()):
             new_path = os.path.join(temp_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
             if each_file.name.endswith(ini):
