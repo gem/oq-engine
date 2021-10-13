@@ -335,7 +335,7 @@ def apply_uncertainties(bset_values, src_group):
                             'for %s' % src)
                     for br in bset.branches:
                         newsrc = copy.deepcopy(src)
-                        newsrc.scaling_rate = br.weight
+                        newsrc.scaling_rate = br.weight  # used in lt_test.py
                         apply_uncertainty(
                             bset.uncertainty_type, newsrc, br.value)
                         srcs.append(newsrc)
