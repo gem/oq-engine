@@ -11,7 +11,7 @@ calculation_mode = disaggregation
 random_seed = 23
 
 [geometry]
-sites = 0.5 -0.5
+sites = 0.5 -0.5, 0.5 -0.6
 
 [logic_tree]
 number_of_logic_tree_samples = 0
@@ -46,10 +46,35 @@ num_epsilon_bins = 3
 export_dir = ...
 \end{Verbatim}
 
-Disaggregation matrices are computed for a single site (located between the
+Disaggregation outputs are computed for two sites (located between the
 two sources) for a ground motion value corresponding to a probability value
 equal to 0.1 (\texttt{poes\_\-disagg = 0.1}). Magnitude values are classified
 in one magnitude unit bins (\texttt{mag\_\-bin\_\-width = 1.0}), distances in
 bins of 10 km (\texttt{distance\_\-bin\_\-width = 10.0}), coordinates in bins
 of 0.2 degrees (\texttt{coordinate\_\-bin\_\-width = 0.2}). 3 epsilons bins
 are considered (\texttt{num\_\-epsilon\_\-bins = 3}).
+
+Exporting the outputs will produce multiple CSV files. Starting from
+engine 3.13 there will be one file for each
+kind of disaggregation (Dist, Lon\_Lat, Lon\_Lat\_TRT, Mag, Mag\_Dist,
+Mag\_Dist\_Eps, Mag\_Lon\_Lat, TRT) and site ID (0, 1).
+
+\begin{Verbatim}
+$ oq engine --eo 1 .
+./Dist-0_13.csv
+./Dist-1_13.csv
+./Lon_Lat-0_13.csv
+./Lon_Lat-1_13.csv
+./Lon_Lat_TRT-0_13.csv
+./Lon_Lat_TRT-1_13.csv
+./Mag-0_13.csv
+./Mag-1_13.csv
+./Mag_Dist-0_13.csv
+./Mag_Dist-1_13.csv
+./Mag_Dist_Eps-0_13.csv
+./Mag_Dist_Eps-1_13.csv
+./Mag_Lon_Lat-0_13.csv
+./Mag_Lon_Lat-1_13.csv
+./TRT-0_13.csv
+./TRT-1_13.csv
+\end{Verbatim}
