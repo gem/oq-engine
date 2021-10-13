@@ -289,9 +289,9 @@ class EngineServerTestCase(unittest.TestCase):
         job_id = self.postzip('archive_err_1.zip')
         self.wait()
 
-        # download the datastore, even if incomplete
+        # there is no datastore since the calculation did not start
         resp = self.c.get('/v1/calc/%s/datastore' % job_id)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 404)
 
         tb = self.get('%s/traceback' % job_id)
         if not tb:
