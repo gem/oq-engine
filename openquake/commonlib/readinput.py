@@ -707,9 +707,10 @@ def save_source_info(csm, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
+            trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             lens.append(len(src.trt_smrs))
             row = [src.source_id, src.grp_id, src.code,
-                   0, 0, 0, csm.full_lt.trti[src.tectonic_region_type], 0]
+                   0, 0, 0, trti, 0]
             wkts.append(src._wkt)
             data[src.id] = row
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',

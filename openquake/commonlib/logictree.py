@@ -891,8 +891,9 @@ class FullLogicTree(object):
         """
         :returns: trt_smr
         """
-        gid = self.trti[trt] * len(self.sm_rlzs) + int(smr)
-        return gid
+        if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
+            return int(smr)
+        return self.trti[trt] * len(self.sm_rlzs) + int(smr)
 
     def get_trt_smrs(self, smr):
         """
