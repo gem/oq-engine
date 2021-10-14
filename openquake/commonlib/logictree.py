@@ -42,7 +42,7 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
-    GsimLogicTree, Realization, bsnodes, fix_bytes, keyno)
+    GsimLogicTree, Realization, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, LogicTreeError, parse_uncertainty, random)
 
@@ -113,31 +113,29 @@ def get_effective_rlzs(rlzs):
     return effective
 
 
-Info = collections.namedtuple('Info', 'smpaths, applytosources')
+Info = collections.namedtuple('Info', 'smpaths h5paths applytosources')
 
 
-def collect_info(smlt, branchID=None):
+def collect_info(smltpath, branchID=None):
     """
     Given a path to a source model logic tree, collect all of the
-    path names to the source models it contains and build:
+    path names to the source models it contains.
 
-    1. a dictionary source model branch ID -> paths
-    2. a dictionary source model branch ID -> source IDs in applyToSources
-
-    :param smlt: source model logic tree file
+    :param smltpath: source model logic tree file
     :param branchID: if given, consider only that branch
-    :returns: an Info namedtupled containing the two dictionaries
+    :returns: an Info namedtuple (smpaths, h5paths, applytosources)
     """
-    n = nrml.read(smlt)
+    n = nrml.read(smltpath)
     try:
         blevels = n.logicTree
     except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
-                          % smlt)
+                          % smltpath)
     paths = set()
+    h5paths = set()
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
-        for bset in bsnodes(smlt, blevel):
+        for bset in bsnodes(smltpath, blevel):
             if 'applyToSources' in bset.attrib:
                 applytosources[bset.get('applyToBranches')].extend(
                         bset['applyToSources'].split())
@@ -145,23 +143,15 @@ def collect_info(smlt, branchID=None):
                 for br in bset:
                     if branchID and branchID != br['branchID']:
                         continue
-                    with context(smlt, br):
+                    with context(smltpath, br):
                         fnames = unique(br.uncertaintyModel.text.split())
-                        paths.update(_abs_paths(smlt, fnames))
-    return Info(sorted(paths), applytosources)
+                        paths.update(abs_paths(smltpath, fnames))
+                        for fname in fnames:
+                            hdf5file = os.path.splitext(fname)[0] + '.hdf5'
+                            if os.path.exists(hdf5file):
+                                h5paths.add(hdf5file)
+    return Info(sorted(paths), sorted(h5paths), applytosources)
 
-
-def _abs_paths(smlt, fnames):
-    # relative -> absolute paths
-    base_path = os.path.dirname(smlt)
-    paths = []
-    for fname in fnames:
-        if os.path.isabs(fname):
-            raise InvalidFile('%s: %s must be a relative path' % (smlt, fname))
-        fname = os.path.abspath(os.path.join(base_path, fname))
-        if os.path.exists(fname):  # consider only real paths
-            paths.append(fname)
-    return paths
 
 
 def read_source_groups(fname):
@@ -313,7 +303,6 @@ class SourceModelLogicTree(object):
         self.previous_branches = []
         self.tectonic_region_types = set()
         self.source_types = set()
-        self.hdf5_files = set()
         self.root_branchset = None
         root = nrml.read(filename)
         try:
@@ -653,9 +642,6 @@ class SourceModelLogicTree(object):
         # using regular expressions is a lot faster than parsing
         with self._get_source_model(source_model) as sm:
             xml = sm.read()
-        hdf5_file = os.path.splitext(source_model)[0] + '.hdf5'
-        if os.path.exists(hdf5_file):
-            self.hdf5_files.add(hdf5_file)
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
