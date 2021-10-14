@@ -42,7 +42,7 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
-    GsimLogicTree, Realization, bsnodes, fix_bytes, keyno)
+    GsimLogicTree, Realization, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, LogicTreeError, parse_uncertainty, random)
 
@@ -145,25 +145,13 @@ def collect_info(smltpath, branchID=None):
                         continue
                     with context(smltpath, br):
                         fnames = unique(br.uncertaintyModel.text.split())
-                        paths.update(_abs_paths(smltpath, fnames))
+                        paths.update(abs_paths(smltpath, fnames))
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
                                 h5paths.add(hdf5file)
     return Info(sorted(paths), sorted(h5paths), applytosources)
 
-
-def _abs_paths(smlt, fnames):
-    # relative -> absolute paths
-    base_path = os.path.dirname(smlt)
-    paths = []
-    for fname in fnames:
-        if os.path.isabs(fname):
-            raise InvalidFile('%s: %s must be a relative path' % (smlt, fname))
-        fname = os.path.abspath(os.path.join(base_path, fname))
-        if os.path.exists(fname):  # consider only real paths
-            paths.append(fname)
-    return paths
 
 
 def read_source_groups(fname):

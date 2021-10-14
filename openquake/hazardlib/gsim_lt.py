@@ -18,6 +18,7 @@
 
 import io
 import os
+import ast
 import json
 import string
 import logging
@@ -30,7 +31,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import duplicated
-from openquake.hazardlib import valid, nrml, pmf, lt
+from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
@@ -566,3 +567,52 @@ class GsimLogicTree(object):
                  (b.trt, b.id, b.gsim, b.weight['weight'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
+
+
+def rel_paths(toml):
+    # the paths inside the toml describing the gsim
+    paths = []
+    for line in toml.splitlines():
+        try:
+            name, path = line.split('=')
+        except ValueError:
+            pass
+        else:
+            if name.rstrip().endswith(('_file', '_table')):
+                paths.append(ast.literal_eval(path.strip()))
+    return paths
+
+
+def abs_paths(smlt, fnames):
+    # relative -> absolute paths
+    base_path = os.path.dirname(smlt)
+    paths = []
+    for fname in fnames:
+        if os.path.isabs(fname):
+            raise InvalidFile('%s: %s must be a relative path' % (smlt, fname))
+        fname = os.path.abspath(os.path.join(base_path, fname))
+        if os.path.exists(fname):  # consider only real paths
+            paths.append(fname)
+    return paths
+
+
+def collect_files(gsim_lt_path):
+    """
+    Given a path to a gsim logic tree, collect all of the
+    path names it contains (relevent for tabular/file-dependent GSIMs).
+    """
+    n = nrml.read(gsim_lt_path)
+    try:
+        blevels = n.logicTree
+    except Exception:
+        raise InvalidFile('%s is not a valid source_model_logic_tree_file'
+                          % gsim_lt_path)
+    paths = set()
+    for blevel in blevels:
+        for bset in bsnodes(gsim_lt_path, blevel):
+            assert bset['uncertaintyType'] == 'gmpeModel', bset
+            for br in bset:
+                with context(gsim_lt_path, br):
+                    relpaths = rel_paths(br.uncertaintyModel.text)
+                    paths.update(abs_paths(gsim_lt_path, relpaths))
+    return sorted(paths)

@@ -44,7 +44,7 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    source, geo, site, imt, valid, sourceconverter, nrml, pmf)
+    source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific
@@ -91,7 +91,7 @@ def collect_files(dirpath, cond=lambda fullname: True):
     for fname in os.listdir(dirpath):
         fullname = os.path.join(dirpath, fname)
         if os.path.isdir(fullname):  # navigate inside
-            files.extend(collect_files(fullname))
+            files.update(collect_files(fullname))
         else:  # collect files
             if cond(fullname):
                 files.append(fullname)
@@ -1203,12 +1203,7 @@ def get_input_files(oqparam):
         fname = oqparam.inputs[key]
         # collect .hdf5 tables for the GSIMs, if any
         if key == 'gsim_logic_tree':
-            gsim_lt = get_gsim_lt(oqparam)
-            for gsims in gsim_lt.values.values():
-                for gsim in gsims:
-                    for k, v in gsim.kwargs.items():
-                        if k.endswith(('_file', '_table')):
-                            fnames.add(v)
+            fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
         elif key == 'source_model':  # UCERF
             f = oqparam.inputs['source_model']
