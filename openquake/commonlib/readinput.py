@@ -1232,12 +1232,9 @@ def get_input_files(oqparam):
                                       (oqparam.inputs['job_ini'], key))
             fnames.update(fname)
         elif key == 'source_model_logic_tree':
-            args = (fname, oqparam.random_seed,
-                    oqparam.number_of_logic_tree_samples,
-                    oqparam.sampling_method)
-            smlt = logictree.SourceModelLogicTree(*args)
-            fnames.update(smlt.hdf5_files)
-            fnames.update(smlt.info.smpaths)
+            info = logictree.collect_info(fname)
+            fnames.update(info.smpaths)
+            fnames.update(info.hdf5files)
             fnames.add(fname)
         else:
             fnames.add(fname)

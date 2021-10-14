@@ -75,8 +75,8 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     archive_zip = archive_zip or os.path.join(basedir, 'ssmLT.zip')
     if os.path.exists(archive_zip):
         sys.exit('%s exists already' % archive_zip)
-    smlt = logictree.SourceModelLogicTree(ssmLT)
-    files = list(smlt.hdf5_files) + smlt.info.smpaths
+    info = logictree.collect_info(ssmLT)
+    files = info.hdf5files + info.smpaths
     oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT},
                    random_seed=42, number_of_logic_tree_samples=0,
                    sampling_method='early_weights')

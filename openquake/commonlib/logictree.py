@@ -113,7 +113,7 @@ def get_effective_rlzs(rlzs):
     return effective
 
 
-Info = collections.namedtuple('Info', 'smpaths, applytosources')
+Info = collections.namedtuple('Info', 'smpaths hdf5files applytosources')
 
 
 def collect_info(smlt, branchID=None):
@@ -135,6 +135,7 @@ def collect_info(smlt, branchID=None):
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
     paths = set()
+    hdf5files = set()
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
         for bset in bsnodes(smlt, blevel):
@@ -148,7 +149,11 @@ def collect_info(smlt, branchID=None):
                     with context(smlt, br):
                         fnames = unique(br.uncertaintyModel.text.split())
                         paths.update(_abs_paths(smlt, fnames))
-    return Info(sorted(paths), applytosources)
+                        for fname in fnames:
+                            hdf5file = os.path.splitext(fname)[0] + '.hdf5'
+                            if os.path.exists(hdf5file):
+                                hdf5files.add(hdf5file)
+    return Info(sorted(paths), sorted(hdf5files), applytosources)
 
 
 def _abs_paths(smlt, fnames):
@@ -313,7 +318,6 @@ class SourceModelLogicTree(object):
         self.previous_branches = []
         self.tectonic_region_types = set()
         self.source_types = set()
-        self.hdf5_files = set()
         self.root_branchset = None
         root = nrml.read(filename)
         try:
@@ -653,9 +657,6 @@ class SourceModelLogicTree(object):
         # using regular expressions is a lot faster than parsing
         with self._get_source_model(source_model) as sm:
             xml = sm.read()
-        hdf5_file = os.path.splitext(source_model)[0] + '.hdf5'
-        if os.path.exists(hdf5_file):
-            self.hdf5_files.add(hdf5_file)
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
