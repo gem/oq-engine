@@ -80,6 +80,7 @@ class DuplicatedPoint(Exception):
     """
 
 
+# used in extract_from_zip
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -87,14 +88,14 @@ def collect_files(dirpath, cond=lambda fullname: True):
     :param dirpath: path to a readable directory
     :param cond: condition on the path to collect the file
     """
-    files = []
+    files = set()
     for fname in os.listdir(dirpath):
         fullname = os.path.join(dirpath, fname)
         if os.path.isdir(fullname):  # navigate inside
-            files.append(collect_files(fullname))
+            files.update(collect_files(fullname))
         else:  # collect files
             if cond(fullname):
-                files.append(fullname)
+                files.add(fullname)
     return sorted(files)  # job_haz before job_risk
 
 
