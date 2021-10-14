@@ -1234,7 +1234,7 @@ def get_input_files(oqparam):
         elif key == 'source_model_logic_tree':
             info = logictree.collect_info(fname)
             fnames.update(info.smpaths)
-            fnames.update(info.hdf5files)
+            fnames.update(info.h5paths)
             fnames.add(fname)
         else:
             fnames.add(fname)

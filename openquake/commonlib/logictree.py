@@ -113,29 +113,26 @@ def get_effective_rlzs(rlzs):
     return effective
 
 
-Info = collections.namedtuple('Info', 'smpaths hdf5files applytosources')
+Info = collections.namedtuple('Info', 'smpaths h5paths applytosources')
 
 
-def collect_info(smlt, branchID=None):
+def collect_info(smltpath, branchID=None):
     """
     Given a path to a source model logic tree, collect all of the
-    path names to the source models it contains and build:
+    path names to the source models it contains.
 
-    1. a dictionary source model branch ID -> paths
-    2. a dictionary source model branch ID -> source IDs in applyToSources
-
-    :param smlt: source model logic tree file
+    :param smltpath: source model logic tree file
     :param branchID: if given, consider only that branch
-    :returns: an Info namedtupled containing the two dictionaries
+    :returns: an Info namedtuple (smpaths, h5paths, applytosources)
     """
-    n = nrml.read(smlt)
+    n = nrml.read(smltpath)
     try:
         blevels = n.logicTree
     except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
-                          % smlt)
+                          % smltpath)
     paths = set()
-    hdf5files = set()
+    h5paths = set()
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
         for bset in bsnodes(smlt, blevel):
@@ -152,8 +149,8 @@ def collect_info(smlt, branchID=None):
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
-                                hdf5files.add(hdf5file)
-    return Info(sorted(paths), sorted(hdf5files), applytosources)
+                                h5paths.add(hdf5file)
+    return Info(sorted(paths), sorted(h5paths), applytosources)
 
 
 def _abs_paths(smlt, fnames):
