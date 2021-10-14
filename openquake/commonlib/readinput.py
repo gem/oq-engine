@@ -91,7 +91,7 @@ def collect_files(dirpath, cond=lambda fullname: True):
     for fname in os.listdir(dirpath):
         fullname = os.path.join(dirpath, fname)
         if os.path.isdir(fullname):  # navigate inside
-            files.update(collect_files(fullname))
+            files.append(collect_files(fullname))
         else:  # collect files
             if cond(fullname):
                 files.append(fullname)
