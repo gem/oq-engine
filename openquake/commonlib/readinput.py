@@ -176,8 +176,11 @@ def normalize(key, fnames, base_path):
                 raise KeyError('Unknown key %s' % key)
             val = unzip_rename(zpath, name)
         elif val.startswith('${mosaic}/'):
-            # support source_model_logic_tree_file=${mosaic}/XXX/in/ssmLT.xml
-            val = val.format(**config.directory)[1:]  # strip initial "$"
+            if 'mosaic' in config.directory:
+                # support ${mosaic}/XXX/in/ssmLT.xml
+                val = val.format(**config.directory)[1:]  # strip initial "$"
+            else:
+                continue
         else:
             val = os.path.normpath(os.path.join(base_path, val))
         if isinstance(val, str) and not os.path.exists(val):
@@ -199,8 +202,10 @@ def _update(params, items, base_path):
                 params['inputs'][input_type] = dict(zip(dic, fnames))
                 params[input_type] = ' '.join(dic)
             elif value:
-                input_type, [fname] = normalize(key, [value], base_path)
-                params['inputs'][input_type] = fname
+                input_type, fnames = normalize(key, [value], base_path)
+                assert len(fnames) in (0, 1)
+                for fname in fnames:
+                    params['inputs'][input_type] = fname
         elif isinstance(value, str) and value.endswith('.hdf5'):
             logging.warning('The [reqv] syntax has been deprecated, see '
                             'https://github.com/gem/oq-engine/blob/master/doc/'
