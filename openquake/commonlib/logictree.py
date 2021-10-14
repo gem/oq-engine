@@ -135,7 +135,7 @@ def collect_info(smltpath, branchID=None):
     h5paths = set()
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
-        for bset in bsnodes(smlt, blevel):
+        for bset in bsnodes(smltpath, blevel):
             if 'applyToSources' in bset.attrib:
                 applytosources[bset.get('applyToBranches')].extend(
                         bset['applyToSources'].split())
@@ -143,9 +143,9 @@ def collect_info(smltpath, branchID=None):
                 for br in bset:
                     if branchID and branchID != br['branchID']:
                         continue
-                    with context(smlt, br):
+                    with context(smltpath, br):
                         fnames = unique(br.uncertaintyModel.text.split())
-                        paths.update(_abs_paths(smlt, fnames))
+                        paths.update(_abs_paths(smltpath, fnames))
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
