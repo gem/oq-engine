@@ -411,7 +411,17 @@ class CompositeSourceModel:
         """
         contents = []
         for sg in self.src_groups:
-            arr = numpy.array([src.source_id for src in sg])
+            arr = numpy.array(_strip_colons(sg))
             line = f'grp_id={sg.sources[0].grp_id} {arr}'
             contents.append(line)
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(contents))
+
+
+def _strip_colons(sources):
+    ids = set()
+    for src in sources:
+        if ':' in src.source_id:
+            ids.add(src.source_id.split(':')[0])
+        else:
+            ids.add(src.source_id)
+    return sorted(ids)
