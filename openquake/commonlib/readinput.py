@@ -470,9 +470,18 @@ def get_site_model(oqparam):
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
-            z = numpy.zeros(len(sm), sorted(sm.dtype.descr))
-            for name in z.dtype.names:  # reorder the fields
-                z[name] = sm[name]
+            params = sorted(set(sm.dtype.names) | req_site_params)
+            z = numpy.zeros(
+                len(sm), [(p, site.site_param_dt[p]) for p in params])
+            for name in z.dtype.names:
+                try:
+                    z[name] = sm[name]
+                except ValueError:  # missing, use the global parameter
+                    # exercised in the test classical/case_28
+                    value = getattr(oqparam, site.param[name])
+                    if name == 'vs30measured':  # special case
+                        value = value == 'measured'
+                    z[name] = value
             arrays.append(z)
             continue
         nodes = nrml.read(fname).siteModel
