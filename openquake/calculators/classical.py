@@ -582,7 +582,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
         self.hazard = {}  # kind -> array
         parallel.Starmap(
-            build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
+            postclassical, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)
@@ -631,8 +631,8 @@ def make_hmap_png(hmap, lons, lats):
     return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
 
 
-def build_hazard(pgetter, N, hstats, individual_rlzs,
-                 max_sites_disagg, amplifier, monitor):
+def postclassical(pgetter, N, hstats, individual_rlzs,
+                  max_sites_disagg, amplifier, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param N: the total number of sites

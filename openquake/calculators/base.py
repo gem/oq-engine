@@ -182,8 +182,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             attrs['input_size'] = size = self.oqparam.get_input_size()
             attrs['checksum32'] = check = readinput.get_checksum32(
                 self.oqparam, self.datastore.hdf5)
-            logging.info('Checksum of the input files '
-                         f'({general.humansize(size)}): {check}')
+            logging.info(f'Checksum of the inputs: {check} '
+                         f'(total size {general.humansize(size)})')
         self.datastore.flush()
 
     def check_precalc(self, precalc_mode):

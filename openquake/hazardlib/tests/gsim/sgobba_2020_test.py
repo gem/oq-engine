@@ -42,7 +42,7 @@ def get_ctx(subset_df):
         rjb.append(row.dist_jb)
     sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
     rup = Dummy.get_rupture(
-        mag=row.rup_mag, ev_lat=row.lat_epi, ev_lon=row.lon_epi)
+        mag=row.rup_mag, hypo_lat=row.lat_epi, hypo_lon=row.lon_epi)
     rup.rjb = np.array(rjb)
     return contexts.full_context(sites, rup)
 
