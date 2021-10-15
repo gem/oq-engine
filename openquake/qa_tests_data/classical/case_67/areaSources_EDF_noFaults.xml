@@ -70,7 +70,7 @@
         </hypoDepthDist>
       </areaSource>
       <areaSource id="11" name="Jura_Int_Ext_Bas_Molass_" tectonicRegion="Stable Shallow Crust">
-        <areaGeometry>
+        <areaGeometry discretization="30">
           <gml:Polygon>
             <gml:exterior>
               <gml:LinearRing>
