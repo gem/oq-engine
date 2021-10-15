@@ -517,8 +517,8 @@ reference_depth_to_2pt5km_per_sec:
 reference_vs30_type:
   Used when there is no site model to specify a global vs30 type.
   The choices are "inferred" or "measured"
-  Example: *reference_vs30_type = inferred"*.
-  Default: "measured"
+  Example: *reference_vs30_type = measured"*.
+  Default: "inferred"
 
 reference_vs30_value:
   Used when there is no site model to specify a global vs30 value.
@@ -835,7 +835,7 @@ class OqParam(valid.ParamSet):
     reference_depth_to_2pt5km_per_sec = valid.Param(
         valid.positivefloat, numpy.nan)
     reference_vs30_type = valid.Param(
-        valid.Choice('measured', 'inferred'), 'measured')
+        valid.Choice('measured', 'inferred'), 'inferred')
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
     reference_backarc = valid.Param(valid.boolean, False)
