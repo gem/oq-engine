@@ -1320,12 +1320,12 @@ class OqParam(valid.ParamSet):
 
     def imt_periods(self):
         """
-        :returns: the IMTs with a period, as objects
+        :returns: the IMTs with a period, to be used in an UHS calculation
         """
         imts = []
         for im in self.imtls:
             imt = from_string(im)
-            if hasattr(imt, 'period'):
+            if imt.period or imt.string == 'PGA':
                 imts.append(imt)
         return imts
 
