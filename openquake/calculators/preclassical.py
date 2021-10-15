@@ -145,11 +145,11 @@ def preclassical(srcs, srcfilter, params, monitor):
         for src in srcs:
             t0 = time.time()
             if srcfilter.sitecol:
-                src.nsites = len(srcfilter.close_sids(src))
+                src.nsites = len(srcfilter.close_sids(src))  # can be 0
             else:
                 src.nsites = 1  # don't discard
             # NB: it is crucial to split only the close sources, for
-            # performance reasons (think of Ecuador in SAM)q
+            # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (
                 params['split_sources'] and src.nsites) else [src]
             sources.extend(splits)

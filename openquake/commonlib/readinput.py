@@ -708,7 +708,11 @@ def get_full_lt(oqparam, branchID=None):
                 'try to use sampling or reduce the source model' % p)
         logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.is_source_specific:
-        logging.info('There is a logic tree on each source')
+        components = source_model_lt.decompose().values()
+        logging.info('Source specific logic tree with '
+                     f'{len(components)} components')
+        for sslt in components:
+            logging.info(sslt)
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     return full_lt
 
@@ -768,7 +772,7 @@ def _check_csm(csm, oqparam, h5):
 
     # build a smart SourceFilter
     try:
-        sitecol = get_site_collection(oqparam, h5)
+        sitecol = get_site_collection(oqparam, h5)  # already stored
     except Exception:  # missing sites.csv in test_case_1_ruptures
         sitecol = None
     csm.sitecol = sitecol
