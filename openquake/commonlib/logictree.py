@@ -153,7 +153,6 @@ def collect_info(smltpath, branchID=None):
     return Info(sorted(paths), sorted(h5paths), applytosources)
 
 
-
 def read_source_groups(fname):
     """
     :param fname: a path to a source model XML file
@@ -676,7 +675,9 @@ class SourceModelLogicTree(object):
                 [src_id] = bset.filters['applyToSources']
                 bsets[src_id].append(bset)
                 bsetdict[src_id][bset.id] = self.bsetdict[bset.id]
-        out = {}  # src_id -> SourceLogicTree
+        root = self.branchsets[0]
+        out = {None: SourceLogicTree(None, [root], self.bsetdict[root.id])}
+        # src_id -> SourceLogicTree
         for src_id in bsets:
             out[src_id] = SourceLogicTree(
                 src_id, bsets[src_id], bsetdict[src_id])
