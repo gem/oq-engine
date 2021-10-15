@@ -61,7 +61,7 @@ def _get_cluster_correction(dat, C, ctx, imt):
         The code uses the correction for the given cluster
     """
     cluster = dat.cluster
-    shape = ctx.vs30.shape
+    shape = ctx.sids.shape
     correction = np.zeros_like(shape)
     # st.dev.
     tau_L2L = np.zeros(shape)
@@ -75,7 +75,7 @@ def _get_cluster_correction(dat, C, ctx, imt):
         return correction, tau_L2L, Bp_model, phi_P2P
     # the code finds the most appropriate correction
     if cluster is None:
-        mesh = Mesh(np.array([ctx.ev_lon]), np.array([ctx.ev_lat]))
+        mesh = Mesh(np.array([ctx.hypo_lon]), np.array([ctx.hypo_lat]))
         # midp = ctx.surface.get_middle_point()
         # mesh = Mesh(np.array([midp.longitude]),np.array([midp.latitude]))
 
@@ -213,8 +213,8 @@ class SgobbaEtAl2020(GMPE):
     #: Required site parameters are lon and lat
     REQUIRES_SITES_PARAMETERS = {'lon', 'lat'}
 
-    #: Required rupture parameters is magnitude, ev_lat, ev_lon
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ev_lat', 'ev_lon'}
+    #: Required rupture parameters is magnitude, hypo_lat, hypo_lon
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_lon', 'hypo_lat'}
 
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
@@ -275,10 +275,10 @@ class SgobbaEtAl2020(GMPE):
                        self.betaS2S, idxs)
             sc = 0
             phi_S2Sref = C['phi_S2S_ref']
-            Bs_model = np.zeros(ctx.vs30.shape)
+            Bs_model = np.zeros(ctx.sids.shape)
             if self.site and self.bedrock is False:
                 sc, Bs_model, phi_S2Sref = _get_site_correction(
-                    dat, ctx.vs30.shape, imt)
+                    dat, ctx.sids.shape, imt)
 
             cc, tau_L2L, Bp_model, phi_P2P = _get_cluster_correction(
                 dat, C, ctx, imt)
