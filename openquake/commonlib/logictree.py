@@ -329,10 +329,9 @@ class SourceModelLogicTree(object):
                 self.is_source_specific = False
                 return
             src_ids.add(ats)
-        all_srcs = set()
-        for vals in self.source_ids.values():
-            all_srcs.update(vals)
-        self.is_source_specific = src_ids == all_srcs
+        # to be source-specific applyToBranches must be trivial
+        self.is_source_specific = all(
+            bset.applied is None for bset in self.branchsets)
 
     def parse_tree(self, tree_node):
         """
@@ -384,11 +383,13 @@ class SourceModelLogicTree(object):
             self.num_paths = 1
             self.root_branchset = branchset
         else:
-            apply_to_branches = branchset_node.attrib.get('applyToBranches')
-            if apply_to_branches:
+            app2brs = branchset_node.attrib.get('applyToBranches')
+            if app2brs and set(app2brs.split()) != set(
+                    pb.branch_id for pb in self.previous_branches):
+                branchset.applied = app2brs
                 self.apply_branchset(
-                    apply_to_branches, branchset_node.lineno, branchset)
-            else:
+                    app2brs, branchset_node.lineno, branchset)
+            else:  # apply to all previous branches
                 for branch in self.previous_branches:
                     branch.bset = branchset
         self.previous_branches = branchset.branches
@@ -668,17 +669,17 @@ class SourceModelLogicTree(object):
         source ID -> SourceLogicTree instance
         """
         assert self.is_source_specific
-        # then there is a single source model
-        [src_ids] = self.source_ids.values()
+        bsets = collections.defaultdict(list)
+        bsetdict = collections.defaultdict(dict)
+        for bset in self.branchsets[1:]:
+            if bset.filters['applyToSources']:
+                [src_id] = bset.filters['applyToSources']
+                bsets[src_id].append(bset)
+                bsetdict[src_id][bset.id] = self.bsetdict[bset.id]
         out = {}  # src_id -> SourceLogicTree
-        for src_id in src_ids:
-            bsets = []
-            bsetdict = {}
-            for bset in self.branchsets[1:]:
-                if bset.filters['applyToSources'] == [src_id]:
-                    bsets.append(bset)
-                    bsetdict[bset.id] = self.bsetdict[bset.id]
-            out[src_id] = SourceLogicTree(src_id, bsets, bsetdict)
+        for src_id in bsets:
+            out[src_id] = SourceLogicTree(
+                src_id, bsets[src_id], bsetdict[src_id])
         return out
 
     # SourceModelLogicTree
@@ -1097,13 +1098,15 @@ class SourceLogicTree(object):
     def __init__(self, source_id, branchsets, bsetdict):
         self.source_id = source_id
         self.bsetdict = bsetdict
-        branchsets = copy.deepcopy(branchsets)
+        branchsets = [copy.copy(bset) for bset in branchsets]
         self.root_branchset = branchsets[0]
         self.num_paths = 1
         for child, parent in zip(branchsets[1:] + [None], branchsets):
-            for br in parent.branches:
+            branches = [copy.copy(br) for br in parent.branches]
+            for br in branches:
                 br.bset = child
-            self.num_paths *= len(parent.branches)
+            parent.branches = branches
+            self.num_paths *= len(branches)
         self.branchsets = branchsets
         self.num_samples = 0
 
