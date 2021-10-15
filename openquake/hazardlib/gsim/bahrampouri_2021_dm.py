@@ -6,7 +6,7 @@
 
 """
 Module exports :class:`BahrampouriEtAl2021dm`,
-               :class:`BahrampouriEtAl2021dmAsc`
+               :class:`BahrampouriEtAl2021dmASC`
                :class:`BahrampouriEtAl2021dmSSlab` 
                :class:`BahrampouriEtAl2021dmSInter`
 """
@@ -21,7 +21,7 @@ from openquake.hazardlib.imt import RSD595, RSD575
 # In[3]:
 
 
-def _get_source_term(ctx, C):
+def _get_source_term(C, ctx):
     """
     Compute the source term described in Eq. 8:
     `` 10.^(m1*(M-m2))+m3``
@@ -48,11 +48,11 @@ def _get_source_term(ctx, C):
 # In[4]:
 
 
-def _get_path_term(ctx, C):
+def _get_path_term(C, ctx):
     """
     Implementing Eqs. 9, 10 and 11
     """
-    slope = C['r1'] + C['r2']*(ctx.mag-4)
+    slope = C['r1'] + C['r2']*(ctx.mag-4.0)
     
     if ctx.mag > C['M2']:
         mse = 1
@@ -72,7 +72,7 @@ def _get_path_term(ctx, C):
 # In[5]:
 
 
-def _get_site_term(ctx, C):
+def _get_site_term(C, ctx):
     """
     Implementing Eqs. 5, 6 and 12
     """
@@ -80,7 +80,7 @@ def _get_site_term(ctx, C):
                                            / (1360 ** 2. + 412.39 ** 2.)))-0.9)
     delta_z1pt0 = ctx.z1pt0 - mean_z1pt0
     
-    fsite = C['s1']*np.log(min(ctx.vs30, 600)/600) + C['s2']*min(delta_z1pt0, 250) + C['s3']
+    fsite = C['s1']*np.log(min(ctx.vs30, 600.)/600.) + C['s2']*min(delta_z1pt0, 250.0) + C['s3']
     
     return fsite
 
@@ -207,8 +207,8 @@ class BahrampouriEtAl2021dmSSlab(GMPE):
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt       m1     m2    m3_RS  m3_SS  m3_NS   M1  M2    r1      r2      R1     s1      s2        s3      sig    tau    phi_s2s  phi_ss
-    rsd595  0.385  4.1604  5.828  4.231  5.496  5.5  8  0.09936  0.02495  200  -0.244  0.001409  -0.04109  0.458   0.194   0.245   0.335
-    rsd575  0.4232  5.16  0.975  0.3965  0.8712  5  8  0.057576  0.01316  200  -0.1431  0.001248  0.04534  0.593   0.261   0.288   0.449
+    rsd595  0.385  4.1604  5.828  4.231  5.496  5.5  8.0  0.09936  0.02495  200.0  -0.244  0.001409  -0.04109  0.458   0.194   0.245   0.335
+    rsd575  0.4232  5.16  0.975  0.3965  0.8712  5.0  8.0  0.057576  0.01316  200.0  -0.1431  0.001248  0.04534  0.593   0.261   0.288   0.449
     """)
 
 
@@ -262,8 +262,8 @@ class BahrampouriEtAl2021dmSInter(GMPE):
 
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
-    imt       m1     m2    m3_RS   m3_SS   m3_NS    M1    M2    r1      r2       R1     s1      s2        s3      sig    tau    phi_s2s  phi_ss
-    rsd595  0.2384  4.16  8.4117  8.4117  8.4117   5.5     8  0.08862  0.04194   200  -0.2875 0.001234  -0.03137  0.403  0.191   0.233    0.275
-    rsd575  0.4733  6.16  0.515   0.515   0.515     5      8  0.07505  0.0156    200  -0.1464 0.00075     0.357   0.490  0.218   0.238    0.369
+    imt       m1     m2    m3_RS  M1    M2    r1      r2       R1           s1      s2        s3      sig    tau    phi_s2s  phi_ss
+    rsd595  0.2384  4.16  8.4117  5.5    8.0  0.08862  0.04194   200.0  -0.2875 0.001234  -0.03137  0.403  0.191   0.233    0.275
+    rsd575  0.4733  6.16  0.515   5.0    8.0  0.07505  0.0156    200.0  -0.1464 0.00075     0.357   0.490  0.218   0.238    0.369
     """)
 
