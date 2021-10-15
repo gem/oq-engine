@@ -100,7 +100,8 @@ def classical(group, sitecol, cmaker):
             src.temporal_occurrence_model = FatedTOM(time_span=1)
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
-    assert trt == cmaker.trt, (trt, cmaker.trt)
+    if cmaker.trt != '*':
+        assert trt == cmaker.trt, (trt, cmaker.trt)
     cmaker.maximum_distance = src_filter.integration_distance
     try:
         cmaker.tom = group.temporal_occurrence_model
