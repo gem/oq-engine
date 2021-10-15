@@ -28,6 +28,7 @@ import zlib
 import urllib.parse as urlparse
 import re
 import psutil
+from datetime import datetime
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -130,7 +131,7 @@ def _prepare_job(request, ini):
         # move each file to a new temp dir, using the upload file names,
         # not the temporary ones
         inifiles = []
-        for each_file in request.FILES.values():
+        for each_file in sorted(request.FILES.values()):
             new_path = os.path.join(temp_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
             if each_file.name.endswith(ini):
@@ -561,13 +562,21 @@ def submit_job(job_ini, username, hc_id):
 
     :returns: a job ID
     """
-    jobs = engine.create_jobs(
+    # jobs are LogContext objects; job_ini has been unzipped already
+    [job] = engine.create_jobs(
         [job_ini], config.distribution.log_level, None, username, hc_id)
-    # NB: create_jobs does not validate the parameters; the validation
-    # happens in the child process
-    proc = Process(target=engine.run_jobs, args=(jobs,))
+    # perform some validation
+    try:
+        job.get_oqparam()
+    except Exception:
+        tb = traceback.format_exc()
+        logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
+                   'before starting', tb)
+        logs.dbcmd('finish', job.calc_id, 'failed')
+        raise
+    proc = Process(target=engine.run_jobs, args=([job],))
     proc.start()
-    return jobs[0].calc_id
+    return job.calc_id
 
 
 @require_http_methods(['GET'])
@@ -758,7 +767,7 @@ def calc_datastore(request, job_id):
         of the requested artifact, if present, else throws a 404
     """
     job = logs.dbcmd('get_job', int(job_id))
-    if job is None:
+    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()

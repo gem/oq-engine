@@ -26,7 +26,7 @@ import collections
 import numpy
 from decorator import FunctionMaker
 from openquake.baselib import config
-from openquake.baselib.general import groupby, gen_subclasses
+from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
 from openquake.hazardlib.mfd.base import BaseMFD
@@ -195,7 +195,11 @@ def main(what, report=False):
             if report:
                 print('Generated', reportwriter.build_report(what))
             else:
-                print(readinput.get_oqparam(what).json())
+                oq = readinput.get_oqparam(what)
+                size = humansize(oq.get_input_size())
+                print('calculation_mode: %s' % oq.calculation_mode)
+                print('description: %s' % oq.description)
+                print('input size: %s' % size)
         if mon.duration > 1:
             print(mon)
     elif what:

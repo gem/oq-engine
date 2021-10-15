@@ -119,6 +119,7 @@ class CalculatorTestCase(unittest.TestCase):
         oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
             base.calculators)
         oq = oqvalidation.OqParam(**params)
+        oq._input_files = readinput.get_input_files(oq)
         oq.validate()
         # change this when debugging the test
         log = logs.init('calc', params)

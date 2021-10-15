@@ -42,7 +42,7 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
-    GsimLogicTree, Realization, bsnodes, fix_bytes, keyno)
+    GsimLogicTree, Realization, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, LogicTreeError, parse_uncertainty, random)
 
@@ -113,31 +113,29 @@ def get_effective_rlzs(rlzs):
     return effective
 
 
-Info = collections.namedtuple('Info', 'smpaths, applytosources')
+Info = collections.namedtuple('Info', 'smpaths h5paths applytosources')
 
 
-def collect_info(smlt, branchID=None):
+def collect_info(smltpath, branchID=None):
     """
     Given a path to a source model logic tree, collect all of the
-    path names to the source models it contains and build:
+    path names to the source models it contains.
 
-    1. a dictionary source model branch ID -> paths
-    2. a dictionary source model branch ID -> source IDs in applyToSources
-
-    :param smlt: source model logic tree file
+    :param smltpath: source model logic tree file
     :param branchID: if given, consider only that branch
-    :returns: an Info namedtupled containing the two dictionaries
+    :returns: an Info namedtuple (smpaths, h5paths, applytosources)
     """
-    n = nrml.read(smlt)
+    n = nrml.read(smltpath)
     try:
         blevels = n.logicTree
     except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
-                          % smlt)
+                          % smltpath)
     paths = set()
+    h5paths = set()
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
-        for bset in bsnodes(smlt, blevel):
+        for bset in bsnodes(smltpath, blevel):
             if 'applyToSources' in bset.attrib:
                 applytosources[bset.get('applyToBranches')].extend(
                         bset['applyToSources'].split())
@@ -145,23 +143,15 @@ def collect_info(smlt, branchID=None):
                 for br in bset:
                     if branchID and branchID != br['branchID']:
                         continue
-                    with context(smlt, br):
+                    with context(smltpath, br):
                         fnames = unique(br.uncertaintyModel.text.split())
-                        paths.update(_abs_paths(smlt, fnames))
-    return Info(sorted(paths), applytosources)
+                        paths.update(abs_paths(smltpath, fnames))
+                        for fname in fnames:
+                            hdf5file = os.path.splitext(fname)[0] + '.hdf5'
+                            if os.path.exists(hdf5file):
+                                h5paths.add(hdf5file)
+    return Info(sorted(paths), sorted(h5paths), applytosources)
 
-
-def _abs_paths(smlt, fnames):
-    # relative -> absolute paths
-    base_path = os.path.dirname(smlt)
-    paths = []
-    for fname in fnames:
-        if os.path.isabs(fname):
-            raise InvalidFile('%s: %s must be a relative path' % (smlt, fname))
-        fname = os.path.abspath(os.path.join(base_path, fname))
-        if os.path.exists(fname):  # consider only real paths
-            paths.append(fname)
-    return paths
 
 
 def read_source_groups(fname):
@@ -313,7 +303,6 @@ class SourceModelLogicTree(object):
         self.previous_branches = []
         self.tectonic_region_types = set()
         self.source_types = set()
-        self.hdf5_files = set()
         self.root_branchset = None
         root = nrml.read(filename)
         try:
@@ -340,10 +329,9 @@ class SourceModelLogicTree(object):
                 self.is_source_specific = False
                 return
             src_ids.add(ats)
-        all_srcs = set()
-        for vals in self.source_ids.values():
-            all_srcs.update(vals)
-        self.is_source_specific = src_ids == all_srcs
+        # to be source-specific applyToBranches must be trivial
+        self.is_source_specific = all(
+            bset.applied is None for bset in self.branchsets)
 
     def parse_tree(self, tree_node):
         """
@@ -395,11 +383,13 @@ class SourceModelLogicTree(object):
             self.num_paths = 1
             self.root_branchset = branchset
         else:
-            apply_to_branches = branchset_node.attrib.get('applyToBranches')
-            if apply_to_branches:
+            app2brs = branchset_node.attrib.get('applyToBranches')
+            if app2brs and set(app2brs.split()) != set(
+                    pb.branch_id for pb in self.previous_branches):
+                branchset.applied = app2brs
                 self.apply_branchset(
-                    apply_to_branches, branchset_node.lineno, branchset)
-            else:
+                    app2brs, branchset_node.lineno, branchset)
+            else:  # apply to all previous branches
                 for branch in self.previous_branches:
                     branch.bset = branchset
         self.previous_branches = branchset.branches
@@ -653,9 +643,6 @@ class SourceModelLogicTree(object):
         # using regular expressions is a lot faster than parsing
         with self._get_source_model(source_model) as sm:
             xml = sm.read()
-        hdf5_file = os.path.splitext(source_model)[0] + '.hdf5'
-        if os.path.exists(hdf5_file):
-            self.hdf5_files.add(hdf5_file)
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
@@ -682,17 +669,17 @@ class SourceModelLogicTree(object):
         source ID -> SourceLogicTree instance
         """
         assert self.is_source_specific
-        # then there is a single source model
-        [src_ids] = self.source_ids.values()
+        bsets = collections.defaultdict(list)
+        bsetdict = collections.defaultdict(dict)
+        for bset in self.branchsets[1:]:
+            if bset.filters['applyToSources']:
+                [src_id] = bset.filters['applyToSources']
+                bsets[src_id].append(bset)
+                bsetdict[src_id][bset.id] = self.bsetdict[bset.id]
         out = {}  # src_id -> SourceLogicTree
-        for src_id in src_ids:
-            bsets = []
-            bsetdict = {}
-            for bset in self.branchsets[1:]:
-                if bset.filters['applyToSources'] == [src_id]:
-                    bsets.append(bset)
-                    bsetdict[bset.id] = self.bsetdict[bset.id]
-            out[src_id] = SourceLogicTree(src_id, bsets, bsetdict)
+        for src_id in bsets:
+            out[src_id] = SourceLogicTree(
+                src_id, bsets[src_id], bsetdict[src_id])
         return out
 
     # SourceModelLogicTree
@@ -891,8 +878,9 @@ class FullLogicTree(object):
         """
         :returns: trt_smr
         """
-        gid = self.trti[trt] * len(self.sm_rlzs) + int(smr)
-        return gid
+        if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
+            return int(smr)
+        return self.trti[trt] * len(self.sm_rlzs) + int(smr)
 
     def get_trt_smrs(self, smr):
         """
@@ -1110,13 +1098,15 @@ class SourceLogicTree(object):
     def __init__(self, source_id, branchsets, bsetdict):
         self.source_id = source_id
         self.bsetdict = bsetdict
-        branchsets = copy.deepcopy(branchsets)
+        branchsets = [copy.copy(bset) for bset in branchsets]
         self.root_branchset = branchsets[0]
         self.num_paths = 1
         for child, parent in zip(branchsets[1:] + [None], branchsets):
-            for br in parent.branches:
+            branches = [copy.copy(br) for br in parent.branches]
+            for br in branches:
                 br.bset = child
-            self.num_paths *= len(parent.branches)
+            parent.branches = branches
+            self.num_paths *= len(branches)
         self.branchsets = branchsets
         self.num_samples = 0
 

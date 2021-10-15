@@ -22,7 +22,7 @@ import unittest
 import numpy
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import lt, contexts
+from openquake.hazardlib import InvalidFile, contexts
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.commonlib import readinput
@@ -115,7 +115,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(str(ctx.exception), 'All sources were discarded!?')
 
     def test_wrong_smlt(self):
-        with self.assertRaises(lt.LogicTreeError):
+        with self.assertRaises(InvalidFile):
             self.run_calc(case_1.__file__, 'job_wrong.ini')
 
     def test_sa_period_too_big(self):
@@ -440,8 +440,9 @@ hazard_uhs-std.csv
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
                               case_23.__file__, delta=1e-5)
-        checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 141487350)
+        attrs = dict(self.calc.datastore['/'].attrs)
+        self.assertEqual(attrs['checksum32'], 3098153713)
+        self.assertEqual(attrs['input_size'], 6631)
 
     def test_case_24(self):  # UHS
         # this is a case with rjb and an hypocenter distribution

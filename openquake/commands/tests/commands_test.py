@@ -74,7 +74,7 @@ class InfoTestCase(unittest.TestCase):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
             sap.runline(f'openquake.commands info {path}')
-        self.assertIn('hazard_imtls', str(p))
+        self.assertIn('input size', str(p))
 
     # poor man tests: checking that the flags produce a few characters
     # (more than 10) and do not break; I am not checking the precise output

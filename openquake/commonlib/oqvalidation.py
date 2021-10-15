@@ -517,8 +517,8 @@ reference_depth_to_2pt5km_per_sec:
 reference_vs30_type:
   Used when there is no site model to specify a global vs30 type.
   The choices are "inferred" or "measured"
-  Example: *reference_vs30_type = inferred"*.
-  Default: "measured"
+  Example: *reference_vs30_type = measured"*.
+  Default: "inferred"
 
 reference_vs30_value:
   Used when there is no site model to specify a global vs30 value.
@@ -719,6 +719,7 @@ def check_same_levels(imtls):
 
 
 class OqParam(valid.ParamSet):
+    _input_files = ()  # set in get_oqparam
     KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
                     'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
                     'source_model_logic_tree', 'hazard_curves', 'insurance',
@@ -834,7 +835,7 @@ class OqParam(valid.ParamSet):
     reference_depth_to_2pt5km_per_sec = valid.Param(
         valid.positivefloat, numpy.nan)
     reference_vs30_type = valid.Param(
-        valid.Choice('measured', 'inferred'), 'measured')
+        valid.Choice('measured', 'inferred'), 'inferred')
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
     reference_backarc = valid.Param(valid.boolean, False)
@@ -895,6 +896,16 @@ class OqParam(valid.ParamSet):
         :returns: absolute path to where the job.ini is
         """
         return os.path.abspath(os.path.dirname(self.inputs['job_ini']))
+
+    def get_input_size(self):
+        """
+        :returns: the total size in bytes of the input files
+
+        NB: this will fail if the files are not available, so it
+        should be called only before starting the calculation.
+        The same information is stored in the datastore.
+        """
+        return sum(os.path.getsize(f) for f in self._input_files)
 
     def get_reqv(self):
         """
@@ -1309,12 +1320,12 @@ class OqParam(valid.ParamSet):
 
     def imt_periods(self):
         """
-        :returns: the IMTs with a period, as objects
+        :returns: the IMTs with a period, to be used in an UHS calculation
         """
         imts = []
         for im in self.imtls:
             imt = from_string(im)
-            if hasattr(imt, 'period'):
+            if imt.period or imt.string == 'PGA':
                 imts.append(imt)
         return imts
 
