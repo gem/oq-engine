@@ -390,7 +390,6 @@ class SourceModelLogicTree(object):
                 self.apply_branchset(
                     app2brs, branchset_node.lineno, branchset)
             else:  # apply to all previous branches
-                branchset.applied = None
                 for branch in self.previous_branches:
                     branch.bset = branchset
         self.previous_branches = branchset.branches
