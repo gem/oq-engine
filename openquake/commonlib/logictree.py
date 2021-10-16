@@ -338,7 +338,7 @@ class SourceModelLogicTree(object):
         to the tree's root.
         """
         self.info = collect_info(self.filename, self.branchID)
-        self.source_ids = collections.defaultdict(list)
+        self.source_ids = collections.defaultdict(list)  # src_id->branchIDs
         t0 = time.time()
         for depth, blnode in enumerate(tree_node.nodes):
             [bsnode] = bsnodes(self.filename, blnode)
@@ -561,13 +561,19 @@ class SourceModelLogicTree(object):
 
         if 'applyToSources' in filters:
             for source_id in filters['applyToSources'].split():
-                cnt = sum(source_id in source_ids
-                          for source_ids in self.source_ids.values())
-                if cnt == 0:
+                branchIDs = self.source_ids[source_id]
+                if not branchIDs:
                     raise LogicTreeError(
                         branchset_node, self.filename,
                         "source with id '%s' is not defined in source "
                         "models" % source_id)
+                elif (len(branchIDs) > 1 and 'applyToBranches' not in
+                      branchset_node.attrib):
+                    raise LogicTreeError(
+                        branchset_node, self.filename,
+                        f"{source_id} belongs to multiple branches {branchIDs}"
+                        ": applyToBranches"" must be specified together with"
+                        " applyToSources")
 
     def validate_branchset(self, branchset_node, depth, branchset):
         """
@@ -638,7 +644,8 @@ class SourceModelLogicTree(object):
         with self._get_source_model(source_model) as sm:
             xml = sm.read()
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
-        self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
+        for src_id in ID_REGEX.findall(xml):
+            self.source_ids[src_id].append(branch_id)
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
     def collapse(self, branchset_ids):
