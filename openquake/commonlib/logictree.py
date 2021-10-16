@@ -702,7 +702,6 @@ class SourceModelLogicTree(object):
         attrs['filename'] = self.filename
         attrs['num_paths'] = self.num_paths
         attrs['is_source_specific'] = self.is_source_specific
-        attrs['source_ids'] = json.dumps(self.source_ids)
         return numpy.array(tbl, branch_dt), attrs
 
     # SourceModelLogicTree
@@ -711,7 +710,6 @@ class SourceModelLogicTree(object):
         # SerializeSmltTestCase which has a logic tree with 3 branchsets
         # with the form b11[b21[b31, b32], b22[b31, b32]] and 1 x 2 x 2 rlzs
         vars(self).update(attrs)
-        self.source_ids = json.loads(attrs['source_ids'])
         bsets = []
         self.branches = {}
         self.bsetdict = json.loads(attrs['bsetdict'])
