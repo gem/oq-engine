@@ -713,6 +713,12 @@ def get_full_lt(oqparam, branchID=None):
                      f'{len(components)} components')
         for sslt in components:
             logging.info(sslt)
+    dupl = []
+    for src_id, branchIDs in source_model_lt.source_ids.items():
+        if len(branchIDs) > 1:
+            dupl.append(src_id)
+    if dupl:
+        logging.info('There are non-unique source IDs: %s', dupl)
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     return full_lt
 
