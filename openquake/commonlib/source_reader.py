@@ -179,7 +179,7 @@ def _build_groups(full_lt, smdict):
     groups = []
     for rlz in full_lt.sm_rlzs:
         src_groups, source_ids = _groups_ids(rlz.value)
-        bset_values = full_lt.source_model_lt.bset_values(rlz)
+        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
         if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
             (bset, value), *bset_values = bset_values
             extra, extra_ids = _groups_ids([value])

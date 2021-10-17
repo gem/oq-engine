@@ -656,12 +656,12 @@ class SourceModelLogicTree(object):
             if bsid in branchset_ids:
                 bset.collapsed = True
 
-    def bset_values(self, sm_rlz):
+    def bset_values(self, lt_path):
         """
         :param sm_rlz: an effective realization
         :returns: a list of B - 1 pairs (branchset, value)
         """
-        return self.root_branchset.get_bset_values(sm_rlz.lt_path)[1:]
+        return self.root_branchset.get_bset_values(lt_path)[1:]
 
     # used in the sslt page of the advanced manual
     def decompose(self):
