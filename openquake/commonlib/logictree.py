@@ -677,11 +677,7 @@ class SourceModelLogicTree(object):
                 [src_id] = bset.filters['applyToSources']
                 bsets[src_id].append(bset)
                 bsetdict[src_id][bset.id] = self.bsetdict[bset.id]
-        root = self.branchsets[0]
-        if len(root) > 1:
-            out = {None: SourceLogicTree(None, [root], self.bsetdict[root.id])}
-        else:
-            out = {}
+        out = {}
         # src_id -> SourceLogicTree
         for src_id in bsets:
             out[src_id] = SourceLogicTree(

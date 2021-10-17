@@ -101,7 +101,6 @@ class HcurvesGetter(object):
         Return the curve associated to the given src_id, imt and gsim_idx
         as an array of length L
         """
-        assert ';' in src_id, src_id  # must be a realization specific src_id
         imt_slc = self.imtls(imt) if imt else slice(None)
         start, gsims, weights = self.bysrc[src_id]
         dset = self.dstore['_poes']
@@ -110,29 +109,31 @@ class HcurvesGetter(object):
             return weights @ curves
         return dset[start + gsim_idx, site_id, imt_slc]
 
-    def get_hcurves(self, src, imt=None, site_id=0, gsim_idx=None):
+    def get_mean_hcurve(self, src, imt=None, site_id=0, gsim_idx=None):
         """
         Return the curves associated to the given src, imt and gsim_idx
         as an array of shape (R, L)
         """
         assert ';' not in src, src  # not a rlz specific source ID
         curves = []
-        for i in range(self.sslt[src].num_paths):
-            src_id = '%s;%d' % (src, i)
+        weights = []
+        for rlz in self.sslt[src]:
+            src_id = '%s;%d' % (src, rlz.ordinal)
             curves.append(self.get_hcurve(src_id, imt, site_id, gsim_idx))
-        return numpy.array(curves)
+            weights.append(rlz.weight)
+        return weights @ numpy.array(curves)
 
-    def get_mean_hcurve(self, src=None, imt=None, site_id=0, gsim_idx=None):
+    def get_mean(self, imt=None, site_id=0):
         """
-        Return the mean curve associated to the given src, imt and gsim_idx
+        Return the mean curve associated to the given imt and site_id
         as an array of shape L
         """
-        if src is None:
-            hcurves = [self.get_mean_hcurve(src) for src in self.sslt]
-            return general.agg_probs(*hcurves)
-        weights = [rlz.weight for rlz in self.sslt[src]]
-        curves = self.get_hcurves(src, imt, site_id, gsim_idx)
-        return weights @ curves
+        curves = []
+        for src in self.bysrc:
+            if ';' not in src:
+                curves.append(self.get_hcurve(src, imt, site_id))
+        curves.extend(self.get_mean_hcurve(src) for src in self.sslt)
+        return general.agg_probs(*curves)
 
 
 class PmapGetter(object):

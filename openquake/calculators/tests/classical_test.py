@@ -29,6 +29,7 @@ from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.getters import HcurvesGetter
 from openquake.calculators.tests import (
     CalculatorTestCase, NOT_DARWIN, strip_calc_id)
 from openquake.qa_tests_data.classical import (
@@ -940,6 +941,9 @@ hazard_uhs-std.csv
         self.run_calc(case_67.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+        mean = self.calc.datastore['hcurves-stats'][:].squeeze()
+        hcurve = HcurvesGetter(self.calc.datastore).get_mean()
 
     def test_case_70(self):
         # test bug https://github.com/gem/oq-engine/pull/7158
