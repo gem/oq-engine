@@ -168,17 +168,17 @@ def _build_groups(full_lt, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
 
-    def _groups_ids(value):
+    def _groups_ids(fnames):
         # extract the source groups and ids from a sequence of source files
         groups = []
-        for name in value[0].split():
-            fname = os.path.abspath(os.path.join(smlt_dir, name))
-            groups.extend(smdict[fname].src_groups)
+        for fname in fnames:
+            fullname = os.path.abspath(os.path.join(smlt_dir, fname))
+            groups.extend(smdict[fullname].src_groups)
         return groups, set(src.source_id for grp in groups for src in grp)
 
     groups = []
     for rlz in full_lt.sm_rlzs:
-        src_groups, source_ids = _groups_ids(rlz.value)
+        src_groups, source_ids = _groups_ids(rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
         if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
             (bset, value), *bset_values = bset_values
