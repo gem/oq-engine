@@ -698,15 +698,6 @@ class BranchSet(object):
         return '<%s(%d)>' % (self.uncertainty_type, len(self))
 
 
-def dead_branchset():
-    """
-    Returns a dead branchset, i.e. a branchset with a single branch
-    """
-    bset = BranchSet('dead_type')
-    bset.branches = [Branch('dead_branch', '.', 1, None)]
-    return bset
-
-
 class Realization(object):
     """
     Generic Realization object with attributes value, weight, ordinal, lt_path,
@@ -730,27 +721,10 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
-def compose(bset0, bsets):
-    previous_branches = bset0.branches
-    for bset in bsets:
-        for branch in previous_branches:
-            branch.bset = bset
-        previous_branches = bset.branches
-    return [bset0] + bsets
-
-
 class CompositeLogicTree(object):
     """
-    Assume the branch IDs are chars in base64
+    Assume the branch IDs are chars in BASE64
     """
-    @classmethod
-    def from_(cls, source_model_lt, gsim_lt):
-        bsets = compose(source_model_lt.branchsets[-1], gsim_lt.branchsets)
-        for bset in bsets:
-            for i, br in enumerate(bset):
-                br.branch_id = BASE64[i]
-        return cls(bsets)
-
     def __init__(self, branchsets):
         self.branchsets = branchsets
         paths = []
@@ -758,6 +732,7 @@ class CompositeLogicTree(object):
         for i, bset in enumerate(self.branchsets):
             for br in bset.branches:
                 path = ['*'] * nb
+                assert br.branch_id in BASE64, br
                 path[i] = br.branch_id
                 paths.append(''.join(path))
         self.basepaths = paths
@@ -773,3 +748,6 @@ class CompositeLogicTree(object):
 
     def get_all_paths(self):
         return [rlz.lt_path for rlz in self]
+
+    def __repr__(self):
+        return '<%s>' % self.branchsets

@@ -38,13 +38,14 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context
-from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.general import groupby, AccumDict, BASE64
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, Realization, LogicTreeError, parse_uncertainty, random)
+    Branch, BranchSet, Realization, CompositeLogicTree,
+    LogicTreeError, parse_uncertainty, random)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
@@ -1121,3 +1122,28 @@ class SourceLogicTree(object):
 
     def __repr__(self):
         return '<SSLT:%s %s>' % (self.source_id, self.branchsets)
+
+
+def apply_bsets(bsets):
+    previous_branches = bsets[0].branches
+    for bset in bsets[1:]:
+        for branch in previous_branches:
+            branch.bset = bset
+        previous_branches = bset.branches
+    return bsets
+
+
+def compose(gsim_lt, source_model_lt):
+    bsets = []
+    dic = groupby(gsim_lt.branches, operator.attrgetter('trt'))
+    for trt, btuples in dic.items():
+        bset = BranchSet(trt, gsim_lt.bsetdict[trt])
+        bset.branches = [Branch(trt, '*', bt.weight['weight'], bt.gsim)
+                         for bt in btuples]  # branch ID fixed later
+        bsets.append(bset)
+    apply_bsets(bsets + [source_model_lt.branchsets[-1]])
+    all_bsets = bsets + source_model_lt.branchsets
+    for bset in all_bsets:
+        for i, br in enumerate(bset.branches):
+            br.branch_id = BASE64[i]
+    return CompositeLogicTree(all_bsets)
