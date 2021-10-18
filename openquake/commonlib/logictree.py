@@ -42,9 +42,9 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
-    GsimLogicTree, Realization, bsnodes, fix_bytes, keyno, abs_paths)
+    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, LogicTreeError, parse_uncertainty, random)
+    Branch, BranchSet, Realization, LogicTreeError, parse_uncertainty, random)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')

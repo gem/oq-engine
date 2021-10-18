@@ -20,7 +20,7 @@ import copy
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, BASE64
 from openquake.hazardlib import geo, source as ohs
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -635,7 +635,6 @@ class BranchSet(object):
         raise KeyError(branch_id)
 
     def filter_source(self, source):
-        # pylint: disable=R0911,R0912
         """
         Apply filters to ``source`` and return ``True`` if uncertainty should
         be applied to it.
@@ -697,3 +696,80 @@ class BranchSet(object):
 
     def __repr__(self):
         return '<%s(%d)>' % (self.uncertainty_type, len(self))
+
+
+def dead_branchset():
+    """
+    Returns a dead branchset, i.e. a branchset with a single branch
+    """
+    bset = BranchSet('dead_type')
+    bset.branches = [Branch('dead_branch', '.', 1, None)]
+    return bset
+
+
+class Realization(object):
+    """
+    Generic Realization object with attributes value, weight, ordinal, lt_path,
+    samples.
+    """
+    def __init__(self, value, weight, ordinal, lt_path, samples=1):
+        self.value = value
+        self.weight = weight
+        self.ordinal = ordinal
+        self.lt_path = lt_path
+        self.samples = samples
+
+    @property
+    def pid(self):
+        return '~'.join(self.lt_path)  # path ID
+
+    def __repr__(self):
+        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
+        return '<%s #%d %s, path=%s, weight=%s%s>' % (
+            self.__class__.__name__, self.ordinal, self.value,
+            '~'.join(self.lt_path), self.weight, samples)
+
+
+def compose(bset0, bsets):
+    previous_branches = bset0.branches
+    for bset in bsets:
+        for branch in previous_branches:
+            branch.bset = bset
+        previous_branches = bset.branches
+    return [bset0] + bsets
+
+
+class CompositeLogicTree(object):
+    """
+    Assume the branch IDs are chars in base64
+    """
+    @classmethod
+    def from_(cls, source_model_lt, gsim_lt):
+        bsets = compose(source_model_lt.branchsets[-1], gsim_lt.branchsets)
+        for bset in bsets:
+            for i, br in enumerate(bset):
+                br.branch_id = BASE64[i]
+        return cls(bsets)
+
+    def __init__(self, branchsets):
+        self.branchsets = branchsets
+        paths = []
+        nb = len(self.branchsets)
+        for i, bset in enumerate(self.branchsets):
+            for br in bset.branches:
+                path = ['*'] * nb
+                path[i] = br.branch_id
+                paths.append(''.join(path))
+        self.basepaths = paths
+
+    def __iter__(self):
+        nb = len(self.branchsets)
+        ordinal = 0
+        for weight, branches in self.branchsets[0].enumerate_paths():
+            value = [br.value for br in branches]
+            lt_path = ''.join(branch.branch_id for branch in branches)
+            yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
+            ordinal += 1
+
+    def get_all_paths(self):
+        return [rlz.lt_path for rlz in self]

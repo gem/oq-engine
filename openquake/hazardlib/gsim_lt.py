@@ -148,42 +148,6 @@ def keyno(branch_id, no, fname='',
         return branch_id
 
 
-class Realization(object):
-    """
-    Generic Realization object with attributes value, weight, ordinal, lt_path,
-    samples.
-    """
-    def __init__(self, value, weight, ordinal, lt_path, samples=1):
-        self.value = value
-        self.weight = weight
-        self.ordinal = ordinal
-        self.lt_path = lt_path
-        self.samples = samples
-
-    @property
-    def pid(self):
-        return '~'.join(self.lt_path)  # path ID
-
-    @property
-    def name(self):
-        """
-        Compact representation for the names
-        """
-        names = self.value.split()
-        if len(names) == 1:
-            return names[0]
-        elif len(names) == 2:
-            return ' '.join(names)
-        else:
-            return ' '.join([names[0], '...', names[-1]])
-
-    def __repr__(self):
-        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
-        return '<%s #%d %s, path=%s, weight=%s%s>' % (
-            self.__class__.__name__, self.ordinal, self.value,
-            '~'.join(self.lt_path), self.weight, samples)
-
-
 class GsimLogicTree(object):
     """
     A GsimLogicTree instance is an iterable yielding `Realization`
@@ -505,7 +469,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            rlz = Realization(tuple(value), weight, i, tuple(lt_uid))
+            rlz = lt.Realization(tuple(value), weight, i, tuple(lt_uid))
             rlzs.append(rlz)
         return rlzs
 
@@ -560,7 +524,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            yield Realization(tuple(value), weight, i, tuple(lt_uid))
+            yield lt.Realization(tuple(value), weight, i, tuple(lt_uid))
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %
