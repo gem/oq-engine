@@ -39,6 +39,20 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
+class CompositeLtTestCase(unittest.TestCase):
+    def test(self):
+        # logic tree for Canada 2015
+        ssmLT = os.path.join(DATADIR, 'ssmLT.xml')
+        gmmLT = os.path.join(DATADIR, 'gmmLT.xml')
+        smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
+        gslt = logictree.GsimLogicTree(gmmLT)
+        clt = logictree.compose(gslt, smlt)
+        sizes = [len(bset) for bset in clt.branchsets]
+        self.assertEqual(sizes, [3, 3, 3, 3, 3, 3, 3, 6])
+        num_paths = numpy.prod(sizes)  # 13122
+        self.assertEqual(len(clt.get_all_paths()), num_paths)
+
+
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
     def __init__(self, filename, files):
         # files is a dictionary name -> text containing also filename
