@@ -1124,7 +1124,8 @@ class SourceLogicTree(object):
         return '<SSLT:%s %s>' % (self.source_id, self.branchsets)
 
 
-def apply_bsets(bsets):
+def _apply_bsets(bsets):
+    # build a simple composite logic tree
     previous_branches = bsets[0].branches
     for bset in bsets[1:]:
         for branch in previous_branches:
@@ -1134,6 +1135,9 @@ def apply_bsets(bsets):
 
 
 def compose(gsim_lt, source_model_lt):
+    """
+    :returns: a CompositeLogicTree instance
+    """
     bsets = []
     dic = groupby(gsim_lt.branches, operator.attrgetter('trt'))
     for trt, btuples in dic.items():
@@ -1141,9 +1145,11 @@ def compose(gsim_lt, source_model_lt):
         bset.branches = [Branch(trt, '*', bt.weight['weight'], bt.gsim)
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)
-    apply_bsets(bsets + [source_model_lt.branchsets[-1]])
+    _apply_bsets(bsets + [source_model_lt.branchsets[-1]])
     all_bsets = bsets + source_model_lt.branchsets
     for bset in all_bsets:
         for i, br in enumerate(bset.branches):
             br.branch_id = BASE64[i]
-    return CompositeLogicTree(all_bsets)
+    clt = CompositeLogicTree(all_bsets)
+    clt.sm_index = len(dic)
+    return clt
