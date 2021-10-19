@@ -718,7 +718,7 @@ def get_full_lt(oqparam, branchID=None):
         if len(branchIDs) > 1:
             dupl.append(src_id)
     if dupl:
-        logging.info('There are non-unique source IDs: %s', dupl)
+        logging.info('There are %d non-unique source IDs', len(dupl))
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     return full_lt
 
