@@ -177,7 +177,7 @@ def shorten(path, shortener):
     :shortener: dictionary longstring -> shortstring
     :returns: shortened version of the path
     """
-    return ''.join(shortener.get(key, key) for key in path)
+    return ''.join(shortener[key][0] for key in path)
 
 
 # useful to print reduced logic trees
@@ -421,7 +421,8 @@ class SourceModelLogicTree(object):
         weight_sum = 0
         branches = branchset_node.nodes
         values = []
-        for no, branchnode in enumerate(branches):
+        bsno = len(self.branchsets)
+        for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             weight_sum += weight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -448,7 +449,8 @@ class SourceModelLogicTree(object):
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
-            self.shortener[branch_id] = keyno(branch_id, no, self.filename)
+            self.shortener[branch_id] = keyno(
+                branch_id, bsno, brno, self.filename)
             branchset.branches.append(branch)
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(
@@ -730,7 +732,7 @@ class SourceModelLogicTree(object):
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
                 self.branches[br.branch_id] = br
                 self.shortener[br.branch_id] = keyno(
-                    br.branch_id, no, attrs['filename'])
+                    br.branch_id, ordinal, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
         self.branchsets = bsets
