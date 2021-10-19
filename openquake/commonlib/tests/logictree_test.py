@@ -2307,6 +2307,7 @@ class SerializeSmltTestCase(unittest.TestCase):
 
 class ReduceLtTestCase(unittest.TestCase):
     def test(self):
+        raise unittest.SkipTest('Not used')
         ssmLT = os.path.join(DATADIR, 'ssmLT.xml')
         gmmLT = os.path.join(DATADIR, 'gmmLT.xml')
         smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)

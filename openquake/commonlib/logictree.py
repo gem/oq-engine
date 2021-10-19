@@ -206,6 +206,11 @@ def collect_paths(paths, b1=ord('['), b2=ord(']'), til=ord('~')):
     return bytes(ints)
 
 
+def chars2keys(chars):
+    for i, c in enumerate(chars):
+        yield c + str(i)
+
+
 def reducible(lt, cluster_paths):
     """
     :param lt: a logic tree with B branches
@@ -213,22 +218,22 @@ def reducible(lt, cluster_paths):
     :returns: a list [filename, (branchSetID, branchIDs), ...]
     """
     longener = {short: long for long, short in lt.shortener.items()}
-    bsets = [set() for _ in lt.bsetdict]
+    tuplesets = [set() for _ in lt.bsetdict]
     for path in cluster_paths:
         for b, chars in enumerate(path.strip('][').split('][')):
-            bsets[b].add(chars)
+            tuplesets[b].add(tuple(c + str(i) for i, c in enumerate(chars)))
     res = [lt.filename]
-    for bs, bset in zip(sorted(lt.bsetdict), bsets):
-        # a branch is reducible if there the same combinations for all paths
+    for bs, tupleset in zip(sorted(lt.bsetdict), tuplesets):
+        # a branch is reducible if there is the same combinations for all paths
         try:
-            [br_ids] = bset
+            [br_ids] = tupleset
         except ValueError:
             continue
-        res.append((bs, [longener[c] for c in br_ids]))
+        res.append((bs, [longener[brid] for brid in br_ids]))
     return res
 
 
-# this is used in oq reduce_lt
+# this is not used right now, but tested
 def reduce_full(full_lt, rlz_clusters):
     """
     :param full_lt: a FullLogicTree instance
