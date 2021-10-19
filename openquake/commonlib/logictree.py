@@ -171,13 +171,16 @@ def read_source_groups(fname):
     return src_groups
 
 
-def shorten(path, shortener):
+def shorten(path_tuple, shortener):
     """
     :path:  sequence of strings
     :shortener: dictionary longstring -> shortstring
     :returns: shortened version of the path
     """
-    return ''.join(shortener[key][0] for key in path)
+    if len(shortener) == 1:
+        [key] = shortener
+        return shortener[key][0]
+    return ''.join(shortener[key][0] for key in path_tuple)
 
 
 # useful to print reduced logic trees
