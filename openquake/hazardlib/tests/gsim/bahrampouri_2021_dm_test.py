@@ -33,12 +33,12 @@ from openquake.hazardlib.gsim.bahrampouri_2021_dm import BahrampouriEtAl2021dmAs
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
-MEAN_DISCREP = 100.0
+MEAN_DISCREP = 100
 
 class BahrampouriEtAl2021RSDTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021dmAsc
     # File containing the results for the Mean
-    MEAN_FILE = "BMG20/BMG20_D_ASC_mean.csv"
+    MEAN_FILE = "BMG20/BMG20_D_ASC_mean copy.csv"
 
     def test_all(self):
         self.check(self.MEAN_FILE,
@@ -73,7 +73,7 @@ class BahrampouriEtAl2021RSDTestCase(BaseGSIMTestCase):
 # from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # # Discrepency percentages to be applied to all tests
-# MEAN_DISCREP = 3000.0
+# MEAN_DISCREP = 100
 
 
 # class BahrampouriEtAl2021RSDTestCase(BaseGSIMTestCase):

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
-
 
 """
 Module exports :class:`BahrampouriEtAl2021dm`,
@@ -27,12 +25,12 @@ def _get_source_term(C, ctx):
     `` 10.^(m1*(M-m2))+m3``
     m3 = varies as per focal mechanism for ASC and Slab TRTs        
     """
-    
-    if ctx.rake <= -45.0 and ctx.rake >= -135.0:
+    # import pdb; pdb.set_trace()
+    if (ctx.rake <= -45.0) & (ctx.rake >= -135.0):
         # Normal faulting
         m3 = C["m3_NS"]
         return m3
-    elif ctx.rake > 45.0 and ctx.rake < 135.0:
+    elif (ctx.rake > 45.0) & (ctx.rake < 135.0):
         # Reverse faulting
         m3 = C["m3_RS"]
         return m3
@@ -60,7 +58,7 @@ def _get_path_term(C, ctx):
         mse = 0
     else:
         mse = ((ctx.mag - C['M1'])/(C['M2'] - C['M1']))
-    
+
     if ctx.rrup > C['R1']:
         fpath = slope * (C['R1']+(mse*(ctx.rrup - C['R1'])))
     else:
@@ -120,7 +118,7 @@ class BahrampouriEtAl2021dmAsc(GMPE):
 
     #: Supported intensity measure component is the geometric mean horizontal
     #: component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total, see table 7, page 35
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -145,7 +143,7 @@ class BahrampouriEtAl2021dmAsc(GMPE):
         """
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            mean[m] = np.exp((np.log(_get_source_term(C, ctx) +_get_path_term(C, ctx))) +_get_site_term(C, ctx))
+            mean[m] = np.log(_get_source_term(C, ctx) +_get_path_term(C, ctx)) +_get_site_term(C, ctx)
             sig[m], tau[m],phi[m] = _get_stddevs(C)
             
         
@@ -201,7 +199,7 @@ class BahrampouriEtAl2021dmSSlab(GMPE):
         """
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            mean[m] = np.exp((np.log(_get_source_term(C, ctx) +_get_path_term(C, ctx))) +_get_site_term(C, ctx))
+            mean[m] = np.log(_get_source_term(C, ctx) +_get_path_term(C, ctx) +_get_site_term(C, ctx))
             sig[m], tau[m],phi[m] = _get_stddevs(C)
             
 
@@ -256,7 +254,7 @@ class BahrampouriEtAl2021dmSInter(GMPE):
         """
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            mean[m] = np.exp((np.log(_get_source_term(C, ctx) +_get_path_term(C, ctx))) +_get_site_term(C, ctx))
+            mean[m] = mean[m] = np.log(_get_source_term(C, ctx) +_get_path_term(C, ctx) +_get_site_term(C, ctx))
             sig[m], tau[m],phi[m] = _get_stddevs(C)
             
 
