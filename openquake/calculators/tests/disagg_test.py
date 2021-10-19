@@ -33,7 +33,7 @@ from openquake.qa_tests_data.disagg import (
 
 aae = numpy.testing.assert_almost_equal
 
-POECOL = re.compile(r'poe\d+')
+RLZCOL = re.compile(r'rlz\d+')
 
 
 def compute_mean(fname, *keys):
@@ -41,10 +41,10 @@ def compute_mean(fname, *keys):
     aw = hdf5.read_csv(fname, {'imt': str, 'poe': str, None: float})
     dframe = aw.to_dframe()
     out = []
-    poecols = [col for col in dframe.columns if POECOL.match(col)]
+    rlzcols = [col for col in dframe.columns if RLZCOL.match(col)]
     for key, df in dframe.groupby(keys):
-        poes = [df[col].to_numpy() for col in poecols]
-        [avg] = numpy.average(poes, weights=aw.weights, axis=0)
+        rlzs = [df[col].to_numpy() for col in rlzcols]
+        [avg] = numpy.average(rlzs, weights=aw.weights, axis=0)
         out.append((key, avg))
     return out
 
