@@ -200,6 +200,7 @@ def main(what, report=False):
                 print('Generated', reportwriter.build_report(what))
             else:
                 oq = readinput.get_oqparam(what)
+                readinput.get_logic_tree(oq)  # logs information
                 size = humansize(oq.get_input_size())
                 print('calculation_mode: %s' % oq.calculation_mode)
                 print('description: %s' % oq.description)

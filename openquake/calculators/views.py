@@ -34,7 +34,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util
+from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
@@ -1087,6 +1087,17 @@ def view_branch_ids(token, dstore):
     for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
     return numpy.array(tbl, dt('branch_id abbrev uvalue'))
+
+
+@view.add('branchsets')
+def view_branchsets(token, dstore):
+    """
+    Show the branchsets
+    """
+    flt = dstore['full_lt']
+    clt = logictree.compose(flt.gsim_lt, flt.source_model_lt)
+    return text_table(enumerate(map(repr, clt.branchsets)),
+                      header=['bsno', 'bset'], ext='org')
 
 
 @view.add('rupture')

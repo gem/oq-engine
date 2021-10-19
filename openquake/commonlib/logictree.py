@@ -171,13 +171,16 @@ def read_source_groups(fname):
     return src_groups
 
 
-def shorten(path, shortener):
+def shorten(path_tuple, shortener):
     """
     :path:  sequence of strings
     :shortener: dictionary longstring -> shortstring
     :returns: shortened version of the path
     """
-    return ''.join(shortener.get(key, key) for key in path)
+    if len(shortener) == 1:
+        [key] = shortener
+        return shortener[key][0]
+    return ''.join(shortener[key][0] for key in path_tuple)
 
 
 # useful to print reduced logic trees
@@ -213,22 +216,22 @@ def reducible(lt, cluster_paths):
     :returns: a list [filename, (branchSetID, branchIDs), ...]
     """
     longener = {short: long for long, short in lt.shortener.items()}
-    bsets = [set() for _ in lt.bsetdict]
+    tuplesets = [set() for _ in lt.bsetdict]
     for path in cluster_paths:
         for b, chars in enumerate(path.strip('][').split('][')):
-            bsets[b].add(chars)
+            tuplesets[b].add(tuple(c + str(i) for i, c in enumerate(chars)))
     res = [lt.filename]
-    for bs, bset in zip(sorted(lt.bsetdict), bsets):
-        # a branch is reducible if there the same combinations for all paths
+    for bs, tupleset in zip(sorted(lt.bsetdict), tuplesets):
+        # a branch is reducible if there is the same combinations for all paths
         try:
-            [br_ids] = bset
+            [br_ids] = tupleset
         except ValueError:
             continue
-        res.append((bs, [longener[c] for c in br_ids]))
+        res.append((bs, [longener[brid] for brid in br_ids]))
     return res
 
 
-# this is used in oq reduce_lt
+# this is not used right now, but tested
 def reduce_full(full_lt, rlz_clusters):
     """
     :param full_lt: a FullLogicTree instance
@@ -421,7 +424,8 @@ class SourceModelLogicTree(object):
         weight_sum = 0
         branches = branchset_node.nodes
         values = []
-        for no, branchnode in enumerate(branches):
+        bsno = len(self.branchsets)
+        for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             weight_sum += weight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -448,7 +452,8 @@ class SourceModelLogicTree(object):
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
-            self.shortener[branch_id] = keyno(branch_id, no, self.filename)
+            self.shortener[branch_id] = keyno(
+                branch_id, bsno, brno, self.filename)
             branchset.branches.append(branch)
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(
@@ -730,7 +735,7 @@ class SourceModelLogicTree(object):
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
                 self.branches[br.branch_id] = br
                 self.shortener[br.branch_id] = keyno(
-                    br.branch_id, no, attrs['filename'])
+                    br.branch_id, ordinal, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
         self.branchsets = bsets
@@ -1141,8 +1146,9 @@ def compose(gsim_lt, source_model_lt):
     bsets = []
     dic = groupby(gsim_lt.branches, operator.attrgetter('trt'))
     for trt, btuples in dic.items():
-        bset = BranchSet(trt, gsim_lt.bsetdict[trt])
-        bset.branches = [Branch(trt, '*', bt.weight['weight'], bt.gsim)
+        bsid = gsim_lt.bsetdict[trt]
+        bset = BranchSet('gmpeModel', bsid)
+        bset.branches = [Branch(bsid, '*', bt.weight['weight'], bt.gsim)
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)
     _apply_bsets(bsets + [source_model_lt.branchsets[-1]])
