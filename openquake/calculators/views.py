@@ -1078,13 +1078,15 @@ def view_branch_ids(token, dstore):
     Show the branch IDs
     """
     full_lt = dstore['full_lt']
+    smlt = full_lt.source_model_lt
+    gslt = full_lt.gsim_lt
     tbl = []
     for k, v in full_lt.source_model_lt.shortener.items():
-        tbl.append((k, v, 'NA'))
-    gsims = sum(full_lt.gsim_lt.values.values(), [])
-    for g, (k, v) in enumerate(full_lt.gsim_lt.shortener.items()):
+        tbl.append((k, v, smlt.branches[k].value))
+    gsims = sum(gslt.values.values(), [])
+    for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
-    return numpy.array(tbl, dt('branch_id abbrev gsim'))
+    return numpy.array(tbl, dt('branch_id abbrev uvalue'))
 
 
 @view.add('rupture')
