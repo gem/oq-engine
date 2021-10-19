@@ -261,8 +261,7 @@ class GsimLogicTree(object):
         self.branches = []
         self.shortener = {}
         self.values = defaultdict(list)
-        bsno = 0
-        for branches in group_array(array, 'trt').values():
+        for bsno, branches in enumerate(group_array(array, 'trt').values()):
             for brno, branch in enumerate(branches):
                 branch = fix_bytes(branch)
                 br_id = branch['branch']
