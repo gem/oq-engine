@@ -1148,8 +1148,9 @@ def compose(gsim_lt, source_model_lt):
     bsets = []
     dic = groupby(gsim_lt.branches, operator.attrgetter('trt'))
     for trt, btuples in dic.items():
-        bset = BranchSet(trt, gsim_lt.bsetdict[trt])
-        bset.branches = [Branch(trt, '*', bt.weight['weight'], bt.gsim)
+        bsid = gsim_lt.bsetdict[trt]
+        bset = BranchSet('gmpeModel', bsid)
+        bset.branches = [Branch(bsid, '*', bt.weight['weight'], bt.gsim)
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)
     _apply_bsets(bsets + [source_model_lt.branchsets[-1]])
