@@ -214,7 +214,7 @@ def make_figure_uhs(extractors, what):
         ax = fig.add_subplot(n_poes, 1, j + 1)
         ax.set_xlabel('UHS on site %s, poe=%s, inv_time=%dy' %
                       (site, poe, oq.investigation_time))
-        ax.set_ylabel('SA')
+        ax.set_ylabel('g')
         for ck, arr in got.items():
             curve = list(arr[site][str(poe)])
             ax.plot(periods, curve, '-', label='%s_%s' % ck)
