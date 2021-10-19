@@ -723,6 +723,14 @@ def get_full_lt(oqparam, branchID=None):
     return full_lt
 
 
+def get_logic_tree(oqparam):
+    """
+    :returns: a CompositeLogicTree instance
+    """
+    flt = get_full_lt(oqparam)
+    return logictree.compose(flt.gsim_lt, flt.source_model_lt)
+
+
 def save_source_info(csm, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms

@@ -209,11 +209,6 @@ def collect_paths(paths, b1=ord('['), b2=ord(']'), til=ord('~')):
     return bytes(ints)
 
 
-def chars2keys(chars):
-    for i, c in enumerate(chars):
-        yield c + str(i)
-
-
 def reducible(lt, cluster_paths):
     """
     :param lt: a logic tree with B branches
