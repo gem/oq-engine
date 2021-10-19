@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added command `oq info disagg`
   * Accepted site models with missing parameters by using the global site
     parameters instead
   * Supported the syntax

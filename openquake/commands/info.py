@@ -31,6 +31,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.calc.disagg import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.risklib import scientific
@@ -87,7 +88,7 @@ def do_build_reports(directory):
                     logging.error(str(e))
 
 
-choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
+choices = ['calculators', 'gsims', 'imts', 'views', 'exports', 'disagg',
            'extracts', 'parameters', 'sources', 'mfds', 'venv']
 
 
@@ -163,6 +164,9 @@ def main(what, report=False):
     elif what == 'sources':
         for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)
+    elif what == 'disagg':
+        for out in pmf_map:
+            print(out)
     elif what == 'consequences':
         known = scientific.KNOWN_CONSEQUENCES
         print('The following %d consequences are implemented:' % len(known))
