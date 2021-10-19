@@ -2312,18 +2312,18 @@ class ReduceLtTestCase(unittest.TestCase):
         smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
         gslt = logictree.GsimLogicTree(gmmLT)
         paths = '''\
-[012345]~[01][345][678][9AB][C][FGH][IJ]
-[012345]~[2][345][678][9AB][E][FGH][K]
-[012345]~[1][345][678][9AB][E][FGH][IJ]
-[012345]~[01][345][678][9AB][D][FGH][IJ]
-[012345]~[2][345][678][9AB][C][FGH][K]
-[012345]~[2][345][678][9AB][C][FGH][IJ]
-[012345]~[01][345][678][9AB][E][FGH][K]
-[012345]~[012][345][678][9AB][D][FGH][K]
-[012345]~[01][345][678][9AB][C][FGH][K]
-[012345]~[0][345][678][9AB][E][FGH][IJ]
-[012345]~[2][345][678][9AB][E][FGH][IJ]
-[012345]~[2][345][678][9AB][D][FGH][IJ]'''.split()
+[ABCDEF]~[AB][DEF][GHI][JKL][M][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][O][PQR][U]
+[ABCDEF]~[B][DEF][GHI][JKL][O][PQR][ST]
+[ABCDEF]~[AB][DEF][GHI][JKL][N][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][M][PQR][U]
+[ABCDEF]~[C][DEF][GHI][JKL][M][PQR][ST]
+[ABCDEF]~[AB][DEF][GHI][JKL][O][PQR][U]
+[ABCDEF]~[ABC][DEF][GHI][JKL][N][PQR][U]
+[ABCDEF]~[AB][DEF][GHI][JKL][M][PQR][U]
+[ABCDEF]~[A][DEF][GHI][JKL][O][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][O][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][N][PQR][ST]'''.split()
         full_lt = unittest.mock.Mock(source_model_lt=smlt, gsim_lt=gslt)
         dic = logictree.reduce_full(full_lt, paths)
         pprint.pprint(dic)

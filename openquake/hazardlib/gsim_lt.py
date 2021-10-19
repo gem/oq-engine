@@ -20,7 +20,6 @@ import io
 import os
 import ast
 import json
-import string
 import logging
 import operator
 import itertools
@@ -30,7 +29,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node as N, context
-from openquake.baselib.general import duplicated
+from openquake.baselib.general import duplicated, BASE64
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -131,8 +130,7 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def keyno(branch_id, no, fname='',
-          chars=string.digits + string.ascii_uppercase):
+def keyno(branch_id, no, fname='', chars=BASE64):
     """
     :param branch_id: a branch ID string
     :param no: number of the branch in the branchset (starting from 0)
@@ -142,10 +140,7 @@ def keyno(branch_id, no, fname='',
         valid.branch_id(branch_id)
     except ValueError as ex:
         raise ValueError('%s %s' % (ex, fname))
-    try:
-        return chars[no]
-    except IndexError:
-        return branch_id
+    return chars[no]
 
 
 class GsimLogicTree(object):
