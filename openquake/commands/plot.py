@@ -205,10 +205,11 @@ def make_figure_uhs(extractors, what):
     for i, ex in enumerate(extractors):
         uhs = ex.get(what)
         for kind in uhs.kind:
-            got[ex.calc_id, kind] = uhs[kind]
+            got[ex.calc_id, kind] = uhs[kind][0]  # 1 site
     oq = ex.oqparam
     n_poes = len(oq.poes)
     periods = [imt.period for imt in oq.imt_periods()]
+    imts = [imt.string for imt in oq.imt_periods()]
     [site] = uhs.site_id
     for j, poe in enumerate(oq.poes):
         ax = fig.add_subplot(n_poes, 1, j + 1)
@@ -216,7 +217,7 @@ def make_figure_uhs(extractors, what):
                       (site, poe, oq.investigation_time))
         ax.set_ylabel('g')
         for ck, arr in got.items():
-            curve = list(arr[site][str(poe)])
+            curve = list(arr[str(poe)][imts])
             ax.plot(periods, curve, '-', label='%s_%s' % ck)
             ax.plot(periods, curve, '.')
         ax.grid(True)
