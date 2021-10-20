@@ -241,14 +241,14 @@ def stacked_bar(ax, x, ys, width):
 
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot "disagg?kind=Mag&imt=PGA"
+    $ oq plot "disagg?kind=Mag&imt=PGA&poe_id=0"
     """
     import matplotlib.pyplot as plt
     from matplotlib import cm
     fig = plt.figure()
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
-    kind = disagg.kind
+    kind = disagg.kind  # ex. ('Mag', 'Dist')
     ndims = len(kind)
     [sid] = disagg.site_id
     [imt] = disagg.imt
@@ -286,7 +286,7 @@ def make_figure_disagg(extractors, what):
         arr = y[:, :, z]
         ax = fig.add_subplot(Z, 1, z + 1)
         axes.append(ax)
-        ax.set_xlabel('%s, %s=%s' % (kind[0], kind[2], zbins[z]))
+        ax.set_xlabel('%s' % kind[0])
         ax.set_ylabel(kind[1])
         vbins = getattr(disagg, kind[1])  # vertical bins
         cmap = cm.get_cmap('jet', 100)
