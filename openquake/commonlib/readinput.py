@@ -109,7 +109,7 @@ def extract_from_zip(path, ext='.ini'):
     :param path: pathname of the archive
     :param ext: file extension to search for
     """
-    temp_dir = tempfile.mkdtemp()
+    temp_dir = config.directory.custom_tmp or tempfile.mkdtemp()
     with zipfile.ZipFile(path) as archive:
         archive.extractall(temp_dir)
     return [f for f in collect_files(temp_dir)
