@@ -1063,7 +1063,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(branch.weight, float(weight_str))
         self.assertEqual(branch.value, value)
         if bset_args is None:
-            self.assertEqual(branch.bset, None)
+            self.assertFalse(branch.bset)
         else:
             self.assert_branchset_equal(branch.bset,
                                         *bset_args)
@@ -2126,7 +2126,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     """
     value = {'b1_b21': 1, 'b1_b22': 1, 'b1_b23': 1,
              'b1_b24': 1, 'b1_b25': 1, 'b1_b26': 1,
-             'b2': 1.2, 'b3': 1.3}
+             'b2_.1': 1.2, 'b3_.1': 1.3}
 
     def mean(self, rlzs):
         R = len(rlzs)
@@ -2151,7 +2151,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
 
         rlzs = full_lt.get_realizations()  # 6+2 = 8 realizations
         paths = ['b1_b21', 'b1_b22', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b2', 'b3']
+                 'b2_.1', 'b3_.1']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.064988,  # b1_b21
                    0.14077,   # b1_b22
@@ -2159,8 +2159,8 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.163723,  # b1_b24
                    0.100569,  # b1_b25
                    0.044072,  # b1_b26
-                   0.2,       # b2
-                   0.1]       # b3
+                   0.2,       # b2_.1
+                   0.1]       # b3_.1
         # b1_b21 has weight 0.7 * 0.09284 = 0.064988
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
@@ -2176,7 +2176,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b1_b26', 'b2', 'b2', 'b2']
+                 'b1_b26', 'b2_.1', 'b2_.1', 'b2_.1']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
 
         # the weights are all equal
@@ -2194,7 +2194,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b25', 'b1_b26',
-                 'b2', 'b2', 'b2', 'b3', 'b3', 'b3']
+                 'b2_.1', 'b2_.1', 'b2_.1', 'b3_.1', 'b3_.1', 'b3_.1']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.04438889044, 0.05861275966, 0.031712341,
                    0.01389718817, 0.18919751558, 0.189197515,

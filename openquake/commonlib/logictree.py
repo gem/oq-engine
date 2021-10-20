@@ -44,7 +44,7 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, Realization, CompositeLogicTree,
+    Branch, BranchSet, Realization, CompositeLogicTree, dummy_branchset,
     LogicTreeError, parse_uncertainty, random)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
@@ -178,9 +178,14 @@ def shorten(path_tuple, shortener):
     :returns: shortened version of the path
     """
     if len(shortener) == 1:
-        [key] = shortener
-        return shortener[key][0]
-    return ''.join(shortener[key][0] for key in path_tuple)
+        return 'A'
+    chars = []
+    for key in path_tuple:
+        if key[0] == '.':  # dummy branch
+            chars.append('.')
+        else:
+            chars.append(shortener[key][0])
+    return ''.join(chars)
 
 
 # useful to print reduced logic trees
@@ -374,14 +379,16 @@ class SourceModelLogicTree(object):
                        if filtername in branchset_node.attrib)
         self.validate_filters(branchset_node, uncertainty_type, filters)
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
+        ordinal = len(self.bsetdict)
 
-        branchset = BranchSet(uncertainty_type, len(self.bsetdict), filters)
+        branchset = BranchSet(uncertainty_type, ordinal, filters)
         branchset.id = bsid = attrs.pop('branchSetID')
         if bsid in self.bsetdict:
             raise nrml.DuplicatedID('%s in %s' % (bsid, self.filename))
         self.bsetdict[bsid] = attrs
         self.validate_branchset(branchset_node, depth, branchset)
         self.parse_branches(branchset_node, branchset)
+        dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
             self.num_paths = 1
             self.root_branchset = branchset
@@ -392,10 +399,17 @@ class SourceModelLogicTree(object):
                 branchset.applied = app2brs
                 self.apply_branchset(
                     app2brs, branchset_node.lineno, branchset)
+                for brid in set(prev_ids.split()) - set(app2brs.split()):
+                    self.branches[brid].bset = dummy = dummy_branchset(ordinal)
+                    [dummybranch] = dummy.branches
+                    self.bsetdict[dummybranch.bs_id] = {
+                        'uncertaintyType': 'dummy'}
+                    self.branches[dummybranch.branch_id] = dummybranch
+                    dummies.append(dummybranch)
             else:  # apply to all previous branches
                 for branch in self.previous_branches:
                     branch.bset = branchset
-        self.previous_branches = branchset.branches
+        self.previous_branches = branchset.branches + dummies
         self.num_paths *= len(branchset)
         self.branchsets.append(branchset)
 
@@ -628,7 +642,7 @@ class SourceModelLogicTree(object):
                     lineno, self.filename,
                     "branch '%s' is not yet defined" % branch_id)
             branch = self.branches[branch_id]
-            if branch.bset is not None:
+            if branch.bset:
                 raise LogicTreeError(
                     lineno, self.filename,
                     "branch '%s' already has child branchset" % branch_id)

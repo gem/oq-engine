@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import itertools
 import collections
 import numpy
 
@@ -308,6 +309,11 @@ def _setLSD(utype, source, value):
     source.modify('set_lower_seismogenic_depth', dict(lsd=float(value)))
 
 
+@apply_uncertainty.add('dummy')  # do nothing
+def _dummy(utype, source, value):
+    pass
+
+
 # ######################### apply_uncertainties ########################### #
 
 def apply_uncertainties(bset_values, src_group):
@@ -396,7 +402,7 @@ def _cdf(weighted_objects):
     weights = []
     for obj in weighted_objects:
         w = obj.weight
-        if isinstance(obj.weight, float):
+        if isinstance(obj.weight, (float, int)):
             weights.append(w)
         else:
             weights.append(w['weight'])
@@ -688,6 +694,9 @@ class BranchSet(object):
                 break
         return pairs
 
+    def __bool__(self):
+        return self.uncertainty_type != 'dummy'
+
     def __len__(self):
         return len(self.branches)
 
@@ -696,6 +705,19 @@ class BranchSet(object):
 
     def __repr__(self):
         return '<%s(%d)>' % (self.uncertainty_type, len(self))
+
+
+dummy_counter = itertools.count(1)
+
+
+def dummy_branchset(ordinal):
+    """
+    :returns: a dummy BranchSet with a single branch
+    """
+    bset = BranchSet('dummy', ordinal)
+    bset.branches = [Branch(
+        'dummy%d' % next(dummy_counter), '.%d' % ordinal, 1, None)]
+    return bset
 
 
 class Realization(object):
