@@ -1192,3 +1192,24 @@ def view_mean_perils(token, dstore):
             weights = ev_weights[dstore['gmf_data/eid'][:]]
             out[peril] = fast_agg(sid, data * weights) / totw
     return out
+
+
+@view.add('src_groups')
+def view_src_groups(token, dstore):
+    """
+    Show the hazard contribution of each source group
+    """
+    disagg = dstore['disagg_by_grp'][:]
+    contrib = disagg['avg_poe'] / disagg['avg_poe'].sum()
+    source_info = dstore['source_info'][:]
+    tbl = []
+    for grp_id, rows in group_array(source_info, 'grp_id').items():
+        srcs = decode(rows['source_id'])
+        if len(srcs) > 2:
+            text = ' '.join(srcs[:2]) + ' ...'
+        else:
+            text = ' '.join(srcs)
+        tbl.append((grp_id, contrib[grp_id], text))
+    tbl.sort(key=operator.itemgetter(1), reverse=True)
+    return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
+                      ext='org')
