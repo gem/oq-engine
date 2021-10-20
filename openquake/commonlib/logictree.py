@@ -386,9 +386,9 @@ class SourceModelLogicTree(object):
             self.num_paths = 1
             self.root_branchset = branchset
         else:
-            app2brs = branchset_node.attrib.get('applyToBranches')
-            if app2brs and set(app2brs.split()) != set(
-                    pb.branch_id for pb in self.previous_branches):
+            prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
+            app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
+            if app2brs != prev_ids:
                 branchset.applied = app2brs
                 self.apply_branchset(
                     app2brs, branchset_node.lineno, branchset)
@@ -396,7 +396,6 @@ class SourceModelLogicTree(object):
                 for branch in self.previous_branches:
                     branch.bset = branchset
         self.previous_branches = branchset.branches
-        print(self.previous_branches)
         self.num_paths *= len(branchset)
         self.branchsets.append(branchset)
 
