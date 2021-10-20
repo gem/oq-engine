@@ -696,11 +696,7 @@ def get_full_lt(oqparam, branchID=None):
                 'try to use sampling or reduce the source model' % p)
         logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.is_source_specific:
-        components = source_model_lt.decompose().values()
-        logging.info('Source specific logic tree with '
-                     f'{len(components)} components')
-        for sslt in components:
-            logging.info(sslt)
+        logging.info('There is a source specific logic tree')
     dupl = []
     for src_id, branchIDs in source_model_lt.source_ids.items():
         if len(branchIDs) > 1:

@@ -200,11 +200,13 @@ def main(what, report=False):
                 print('Generated', reportwriter.build_report(what))
             else:
                 oq = readinput.get_oqparam(what)
-                readinput.get_logic_tree(oq)  # logs information
+                lt = readinput.get_logic_tree(oq)
                 size = humansize(oq.get_input_size())
                 print('calculation_mode: %s' % oq.calculation_mode)
                 print('description: %s' % oq.description)
                 print('input size: %s' % size)
+                for i, bset in enumerate(lt.branchsets):
+                    print('branchset%d: %r' % (i, bset))
         if mon.duration > 1:
             print(mon)
     elif what:

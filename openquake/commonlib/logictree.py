@@ -396,6 +396,7 @@ class SourceModelLogicTree(object):
                 for branch in self.previous_branches:
                     branch.bset = branchset
         self.previous_branches = branchset.branches
+        print(self.previous_branches)
         self.num_paths *= len(branchset)
         self.branchsets.append(branchset)
 
