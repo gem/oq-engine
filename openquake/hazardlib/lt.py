@@ -748,17 +748,25 @@ class Realization(object):
 
 class CompositeLogicTree(object):
     """
-    Assume the branch IDs are chars in BASE64
+    Build a logic tree from a set of branches by automatically
+    setting the branch IDs.
     """
     def __init__(self, branchsets):
+        # build a simple composite logic tree
+        previous_branches = branchsets[0].branches
+        for bset in branchsets[1:]:
+            for branch in previous_branches:
+                if branch.is_leaf():
+                    branch.bset = bset
+            previous_branches = bset.branches
         self.branchsets = branchsets
         paths = []
         nb = len(self.branchsets)
-        for i, bset in enumerate(self.branchsets):
-            for br in bset.branches:
+        for bsno, bset in enumerate(self.branchsets):
+            for brno, br in enumerate(bset.branches):
                 path = ['*'] * nb
-                assert br.branch_id in BASE64, br
-                path[i] = br.branch_id
+                br.branch_id = BASE64[brno]
+                path[bsno] = br.branch_id
                 paths.append(''.join(path))
         self.basepaths = paths
 
