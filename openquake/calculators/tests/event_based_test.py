@@ -504,6 +504,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # common2.xml contains "1" "2"
         # extra1.xml contains "3"
         # extra2.xml contains "4"
+        # extra3.xml contains "7"
         self.run_calc(case_25.__file__, 'job.ini')
         mean, *others = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)

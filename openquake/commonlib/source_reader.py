@@ -183,7 +183,7 @@ def _build_groups(full_lt, smdict):
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
         if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
             (bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids(smlt_dir, smdict, [value])
+            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
             common = source_ids & extra_ids
             if common:
                 raise InvalidFile(

@@ -20,7 +20,7 @@
         <uncertaintyWeight>0.6</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b12">
-        <uncertaintyModel>extra2.xml</uncertaintyModel>
+        <uncertaintyModel>extra2.xml extra3.xml</uncertaintyModel>
         <uncertaintyWeight>0.4</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
