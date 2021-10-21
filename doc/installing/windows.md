@@ -7,7 +7,6 @@ For LTS releases we also offer a **self-installable binary distribution**.
     - Python 3.6
     - Python dependencies (pip, numpy, scipy, h5py, django, shapely, and few more)
 - multiple versions can be installed alongside
-- currently does not support Celery (and will never do)
 
 ## Requirements
 
