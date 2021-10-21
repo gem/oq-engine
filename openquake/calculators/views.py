@@ -1072,10 +1072,10 @@ def view_composite_source_model(token, dstore):
     return numpy.array(lst, dt('grp_id trt smrs num_sources'))
 
 
-@view.add('branch_ids')
-def view_branch_ids(token, dstore):
+@view.add('branches')
+def view_branches(token, dstore):
     """
-    Show the branch IDs
+    Show info about the branches in the logic tree
     """
     full_lt = dstore['full_lt']
     smlt = full_lt.source_model_lt
@@ -1092,7 +1092,7 @@ def view_branch_ids(token, dstore):
 @view.add('branchsets')
 def view_branchsets(token, dstore):
     """
-    Show the branchsets
+    Show the branchsets in the logic tree
     """
     flt = dstore['full_lt']
     clt = logictree.compose(flt.gsim_lt, flt.source_model_lt)
