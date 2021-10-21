@@ -3,8 +3,8 @@
       xmlns:gml="http://www.opengis.net/gml">
   <sourceModel name="Source model with sources 1 and 2">
     <pointSource
-        id="3"
-        name="point source 3"
+        id="7"
+        name="point source 7"
         tectonicRegion='active shallow crust'>
       <pointGeometry>
         <gml:Point><gml:pos>0 0.77</gml:pos></gml:Point>
