@@ -34,7 +34,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util
+from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
@@ -1072,19 +1072,32 @@ def view_composite_source_model(token, dstore):
     return numpy.array(lst, dt('grp_id trt smrs num_sources'))
 
 
-@view.add('branch_ids')
-def view_branch_ids(token, dstore):
+@view.add('branches')
+def view_branches(token, dstore):
     """
-    Show the branch IDs
+    Show info about the branches in the logic tree
     """
     full_lt = dstore['full_lt']
+    smlt = full_lt.source_model_lt
+    gslt = full_lt.gsim_lt
     tbl = []
     for k, v in full_lt.source_model_lt.shortener.items():
-        tbl.append((k, v, 'NA'))
-    gsims = sum(full_lt.gsim_lt.values.values(), [])
-    for g, (k, v) in enumerate(full_lt.gsim_lt.shortener.items()):
+        tbl.append((k, v, smlt.branches[k].value))
+    gsims = sum(gslt.values.values(), [])
+    for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
-    return numpy.array(tbl, dt('branch_id abbrev gsim'))
+    return numpy.array(tbl, dt('branch_id abbrev uvalue'))
+
+
+@view.add('branchsets')
+def view_branchsets(token, dstore):
+    """
+    Show the branchsets in the logic tree
+    """
+    flt = dstore['full_lt']
+    clt = logictree.compose(flt.gsim_lt, flt.source_model_lt)
+    return text_table(enumerate(map(repr, clt.branchsets)),
+                      header=['bsno', 'bset'], ext='org')
 
 
 @view.add('rupture')
@@ -1179,3 +1192,24 @@ def view_mean_perils(token, dstore):
             weights = ev_weights[dstore['gmf_data/eid'][:]]
             out[peril] = fast_agg(sid, data * weights) / totw
     return out
+
+
+@view.add('src_groups')
+def view_src_groups(token, dstore):
+    """
+    Show the hazard contribution of each source group
+    """
+    disagg = dstore['disagg_by_grp'][:]
+    contrib = disagg['avg_poe'] / disagg['avg_poe'].sum()
+    source_info = dstore['source_info'][:]
+    tbl = []
+    for grp_id, rows in group_array(source_info, 'grp_id').items():
+        srcs = decode(rows['source_id'])
+        if len(srcs) > 2:
+            text = ' '.join(srcs[:2]) + ' ...'
+        else:
+            text = ' '.join(srcs)
+        tbl.append((grp_id, contrib[grp_id], text))
+    tbl.sort(key=operator.itemgetter(1), reverse=True)
+    return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
+                      ext='org')

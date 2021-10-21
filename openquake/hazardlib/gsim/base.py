@@ -83,10 +83,10 @@ class AdaptedWarning(UserWarning):
 
 
 # this is the critical function for the performance of the classical calculator
-# dominated by the CPU cache
+# the performance is dominated by the CPU cache, i.e. large arrays are slow
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then _get_delta will be called less times
+# collapse the ruptures, then _compute_delta will be called less times
 if numba:
 
     @compile("void(float64[:, :], float64[:], float64[:, :])")

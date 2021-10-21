@@ -257,7 +257,8 @@ class EngineServerTestCase(unittest.TestCase):
         results = self.get('%s/results' % job_id)
         resnames = [res['name'] for res in results]
         self.assertGreaterEqual(resnames, ['Full Report', 'Hazard Curves',
-                                           'Hazard Maps', 'Realizations'])
+                                           'Hazard Maps',  'Input Files',
+                                           'Realizations'])
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']

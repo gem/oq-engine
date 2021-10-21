@@ -330,12 +330,12 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
-        self.assertEqual({b'0~0': 308,  # w = .6 * .5 = .30
-                          b'0~1': 173,  # w = .6 * .3 = .18
-                          b'0~2': 119,  # w = .6 * .2 = .12
-                          b'1~0': 192,  # w = .4 * .5 = .20
-                          b'1~1': 127,  # w = .4 * .3 = .12
-                          b'1~2': 81},  # w = .4 * .2 = .08
+        self.assertEqual({b'A~A': 308,  # w = .6 * .5 = .30
+                          b'A~B': 173,  # w = .6 * .3 = .18
+                          b'A~C': 119,  # w = .6 * .2 = .12
+                          b'B~A': 192,  # w = .4 * .5 = .20
+                          b'B~B': 127,  # w = .4 * .3 = .12
+                          b'B~C': 81},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']
@@ -504,6 +504,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # common2.xml contains "1" "2"
         # extra1.xml contains "3"
         # extra2.xml contains "4"
+        # extra3.xml contains "7"
         self.run_calc(case_25.__file__, 'job.ini')
         mean, *others = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)

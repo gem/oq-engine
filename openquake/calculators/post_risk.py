@@ -305,7 +305,8 @@ class PostRiskCalculator(base.RiskCalculator):
         if 'avg_losses-rlzs' in self.datastore:
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
-            event_rates = oq.risk_event_rates(self.num_events)
+            num_haz_rlzs = len(self.datastore['weights'])
+            event_rates = oq.risk_event_rates(self.num_events, num_haz_rlzs)
             K = len(self.aggkey) if oq.aggregate_by else 0
             aggrisk = self.aggrisk[self.aggrisk.agg_id == K]
             avg_losses = self.datastore['avg_losses-rlzs'][:].sum(axis=0)
@@ -318,5 +319,5 @@ class PostRiskCalculator(base.RiskCalculator):
                 if not numpy.allclose(avg, agg, rtol=.001):
                     logging.warning(
                         'Due to rounding errors inherent in floating-point '
-                        'arithmetic, agg_losses != sum(avg_losses) for li=%d: '
-                        '%s != %s\nsee %s', li, agg, avg, url)
+                        'arithmetic, agg_losses != sum(avg_losses) [%s]: '
+                        '%s != %s\nsee %s', oq.loss_types[li], agg, avg, url)

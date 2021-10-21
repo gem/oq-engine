@@ -20,7 +20,6 @@ import io
 import os
 import ast
 import json
-import string
 import logging
 import operator
 import itertools
@@ -30,7 +29,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node as N, context
-from openquake.baselib.general import duplicated
+from openquake.baselib.general import duplicated, BASE64, group_array
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -131,57 +130,18 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def keyno(branch_id, no, fname='',
-          chars=string.digits + string.ascii_uppercase):
+def keyno(branch_id, bsno, brno, fname='', chars=BASE64):
     """
     :param branch_id: a branch ID string
-    :param no: number of the branch in the branchset (starting from 0)
-    :returns: a 1-char string for the branch_id based on the branch number
+    :param bsno: number of the branchset (starting from 0)
+    :param brno: number of the branch in the branchset (starting from 0)
+    :returns: a short unique alias for the branch_id
     """
     try:
         valid.branch_id(branch_id)
     except ValueError as ex:
         raise ValueError('%s %s' % (ex, fname))
-    try:
-        return chars[no]
-    except IndexError:
-        return branch_id
-
-
-class Realization(object):
-    """
-    Generic Realization object with attributes value, weight, ordinal, lt_path,
-    samples.
-    """
-    def __init__(self, value, weight, ordinal, lt_path, samples=1):
-        self.value = value
-        self.weight = weight
-        self.ordinal = ordinal
-        self.lt_path = lt_path
-        self.samples = samples
-
-    @property
-    def pid(self):
-        return '~'.join(self.lt_path)  # path ID
-
-    @property
-    def name(self):
-        """
-        Compact representation for the names
-        """
-        names = self.value.split()
-        if len(names) == 1:
-            return names[0]
-        elif len(names) == 2:
-            return ' '.join(names)
-        else:
-            return ' '.join([names[0], '...', names[-1]])
-
-    def __repr__(self):
-        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
-        return '<%s #%d %s, path=%s, weight=%s%s>' % (
-            self.__class__.__name__, self.ordinal, self.value,
-            '~'.join(self.lt_path), self.weight, samples)
+    return chars[brno] + str(bsno)
 
 
 class GsimLogicTree(object):
@@ -301,24 +261,25 @@ class GsimLogicTree(object):
         self.branches = []
         self.shortener = {}
         self.values = defaultdict(list)
-        for no, branch in enumerate(array):
-            branch = fix_bytes(branch)
-            br_id = branch['branch']
-            gsim = valid.gsim(branch['uncertainty'])
-            for k, v in gsim.kwargs.items():
-                if k.endswith(('_file', '_table')):
-                    arr = numpy.asarray(dic[os.path.basename(v)][()])
-                    gsim.kwargs[k] = io.BytesIO(bytes(arr))
-            gsim.__init__(**gsim.kwargs)
-            self.values[branch['trt']].append(gsim)
-            weight = object.__new__(ImtWeight)
-            # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
-            weight.dic = {w: branch[w] for w in array.dtype.names[3:]}
-            if len(weight.dic) > 1:
-                gsim.weight = weight
-            bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
-            self.branches.append(bt)
-            self.shortener[br_id] = keyno(br_id, no)
+        for bsno, branches in enumerate(group_array(array, 'trt').values()):
+            for brno, branch in enumerate(branches):
+                branch = fix_bytes(branch)
+                br_id = branch['branch']
+                gsim = valid.gsim(branch['uncertainty'])
+                for k, v in gsim.kwargs.items():
+                    if k.endswith(('_file', '_table')):
+                        arr = numpy.asarray(dic[os.path.basename(v)][()])
+                        gsim.kwargs[k] = io.BytesIO(bytes(arr))
+                gsim.__init__(**gsim.kwargs)
+                self.values[branch['trt']].append(gsim)
+                weight = object.__new__(ImtWeight)
+                # branch dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
+                weight.dic = {w: branch[w] for w in array.dtype.names[3:]}
+                if len(weight.dic) > 1:
+                    gsim.weight = weight
+                bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
+                self.branches.append(bt)
+                self.shortener[br_id] = keyno(br_id, bsno, brno)
 
     def reduce(self, trts):
         """
@@ -403,8 +364,7 @@ class GsimLogicTree(object):
         branchids = []
         branchsetids = set()
         basedir = os.path.dirname(self.filename)
-        no = 0
-        for blnode in self._ltnode:
+        for bsno, blnode in enumerate(self._ltnode):
             [branchset] = bsnodes(self.filename, blnode)
             if branchset['uncertaintyType'] != 'gmpeModel':
                 raise InvalidLogicTree(
@@ -427,7 +387,7 @@ class GsimLogicTree(object):
                          trt in tectonic_region_types)
             weights = []
             branch_ids = []
-            for branch in branchset:
+            for brno, branch in enumerate(branchset):
                 weight = ImtWeight(branch, self.filename)
                 weights.append(weight)
                 branch_id = branch['branchID']
@@ -449,8 +409,7 @@ class GsimLogicTree(object):
                 if effective:
                     branches.append(bt)
                     self.shortener[branch_id] = keyno(
-                        branch_id, no, self.filename)
-                    no += 1
+                        branch_id, bsno, brno, self.filename)
             tot = sum(weights)
             assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
             if duplicated(branch_ids):
@@ -505,7 +464,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            rlz = Realization(tuple(value), weight, i, tuple(lt_uid))
+            rlz = lt.Realization(tuple(value), weight, i, tuple(lt_uid))
             rlzs.append(rlz)
         return rlzs
 
@@ -560,7 +519,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            yield Realization(tuple(value), weight, i, tuple(lt_uid))
+            yield lt.Realization(tuple(value), weight, i, tuple(lt_uid))
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %

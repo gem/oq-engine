@@ -2,6 +2,9 @@
   * Added a new class to the lanzano_2019 gmm.
   
   [Michele Simionato]
+  * Changed the string representation of logic tree paths and enforced a
+    maximum of 64 branches per branchset
+  * Added command `oq info disagg`
   * Accepted site models with missing parameters by using the global site
     parameters instead
   * Supported the syntax

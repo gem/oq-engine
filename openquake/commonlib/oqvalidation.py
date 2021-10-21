@@ -852,7 +852,7 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
-    save_disk_space = valid.Param(valid.boolean, True)
+    save_disk_space = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
@@ -1210,17 +1210,23 @@ class OqParam(valid.ParamSet):
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
-    def risk_event_rates(self, num_events):
+    def risk_event_rates(self, num_events, num_haz_rlzs):
         """
         :param num_events: the number of events per risk realization
+        :param num_haz_rlzs the number of hazard realizations
 
         If risk_investigation_time is 1, returns the annual event rates for
         each realization as a list, possibly of 1 element.
         """
         if self.investigation_time is None:
+            # for scenarios there is no effective_time
             return [1] * len(num_events)
         else:
-            return list(self.time_ratio * num_events)
+            # for event based compute the time_ratio
+            time_ratio = self.time_ratio
+            if self.collect_rlzs:
+                time_ratio /= num_haz_rlzs
+            return list(time_ratio * num_events)
 
     @property
     def imtls(self):

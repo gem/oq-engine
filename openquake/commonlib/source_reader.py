@@ -163,26 +163,27 @@ def fix_geometry_sections(smdict):
                     src.set_sections(sections)
 
 
+def _groups_ids(smlt_dir, smdict, fnames):
+    # extract the source groups and ids from a sequence of source files
+    groups = []
+    for fname in fnames:
+        fullname = os.path.abspath(os.path.join(smlt_dir, fname))
+        groups.extend(smdict[fullname].src_groups)
+    return groups, set(src.source_id for grp in groups for src in grp)
+
+
 def _build_groups(full_lt, smdict):
     # build all the possible source groups from the full logic tree
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
-
-    def _groups_ids(value):
-        # extract the source groups and ids from a sequence of source files
-        groups = []
-        for name in value[0].split():
-            fname = os.path.abspath(os.path.join(smlt_dir, name))
-            groups.extend(smdict[fname].src_groups)
-        return groups, set(src.source_id for grp in groups for src in grp)
-
     groups = []
     for rlz in full_lt.sm_rlzs:
-        src_groups, source_ids = _groups_ids(rlz.value)
-        bset_values = full_lt.source_model_lt.bset_values(rlz)
+        src_groups, source_ids = _groups_ids(
+            smlt_dir, smdict, rlz.value[0].split())
+        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
         if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
             (bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids([value])
+            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
             common = source_ids & extra_ids
             if common:
                 raise InvalidFile(
@@ -411,7 +412,17 @@ class CompositeSourceModel:
         """
         contents = []
         for sg in self.src_groups:
-            arr = numpy.array([src.source_id for src in sg])
+            arr = numpy.array(_strip_colons(sg))
             line = f'grp_id={sg.sources[0].grp_id} {arr}'
             contents.append(line)
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(contents))
+
+
+def _strip_colons(sources):
+    ids = set()
+    for src in sources:
+        if ':' in src.source_id:
+            ids.add(src.source_id.split(':')[0])
+        else:
+            ids.add(src.source_id)
+    return sorted(ids)

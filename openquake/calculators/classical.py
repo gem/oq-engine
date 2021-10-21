@@ -49,7 +49,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([
-    ('grp_start', U16), ('grp_trt', hdf5.vstr), ('grp_value', F32),
+    ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
     ('extreme_poe', F32), ('smrs', hdf5.vuint16)])
 
 
@@ -120,7 +120,8 @@ class Hazard:
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
         self.get_hcurves = pgetter.get_hcurves
-        self.imtls = pgetter.imtls
+        self.imtls = imtls = pgetter.imtls
+        self.level_weights = imtls.array / imtls.array.sum()
         self.sids = pgetter.sids
         self.srcidx = srcidx
         self.mon = mon
@@ -153,13 +154,13 @@ class Hazard:
             for g in range(pmap.shape_z):
                 arr = pmap.array(slc.start, slc.stop, g)  # shape N'L
                 dset[cmaker.start + g, slc] = arr
-                values.append(arr.mean(axis=0) @ self.imtls.array)
+                values.append(arr.mean(axis=0) @ self.level_weights)
             extreme = max(
                 get_extreme_poe(pmap[sid].array, self.imtls)
                 for sid in pmap)
             self.extreme[grp_id]['grp_start'] = cmaker.start
             self.extreme[grp_id]['extreme_poe'] = extreme
-            self.extreme[grp_id]['grp_value'] = numpy.mean(values)
+            self.extreme[grp_id]['avg_poe'] = numpy.mean(values)
 
     def store_disagg(self, pmaps=None):
         """

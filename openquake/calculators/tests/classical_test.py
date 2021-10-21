@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
-    case_70, case_71, case_72, case_73)
+    case_67, case_70, case_71, case_72, case_73)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -292,9 +292,15 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
         # check deserialization of source_model_lt
-        smlt = self.calc.datastore['full_lt/source_model_lt']
-        exp = str(list(smlt))
-        self.assertEqual('''[<Realization #0 ['source_model_1.xml'], path=SM1, weight=0.5>, <Realization #1 ['source_model_2.xml', '(3.2, 0.8)'], path=SM2~a3pt2b0pt8, weight=0.25>, <Realization #2 ['source_model_2.xml', '(3.0, 1.0)'], path=SM2~a3b1, weight=0.25>]''', exp)
+        r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
+        self.assertEqual(repr(r0),
+                         "<Realization #0 ['source_model_1.xml', None], "
+                         "path=SM1~.1, weight=0.5>")
+        self.assertEqual(repr(r1), "<Realization #1 ['source_model_2.xml', "
+                         "(3.2, 0.8)], path=SM2~a3pt2b0pt8, "
+                         "weight=0.25>")
+        self.assertEqual(repr(r2), "<Realization #2 ['source_model_2.xml', "
+                         "(3.0, 1.0)], path=SM2~a3b1, weight=0.25>")
 
     def test_case_16(self):   # sampling
         with unittest.mock.patch.dict(config.memory, limit=240):
@@ -916,6 +922,30 @@ hazard_uhs-std.csv
 
         files = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
+
+    def test_case_67(self):
+        # source specific logic tree with the following structure:
+        # <CompositeSourceModel
+        # grp_id=0 ['10;0']
+        # grp_id=1 ['16']
+        # grp_id=2 ['11;0']
+        # grp_id=3 ['11;1']
+        # grp_id=4 ['11;2']
+        # grp_id=5 ['10;1']
+        # grp_id=6 ['ACC;0']
+        # grp_id=7 ['ALS;0']
+        # grp_id=8 ['BMS;0']
+        # grp_id=9 ['BMS;1']
+        # grp_id=10 ['BMS;2']
+        # grp_id=11 ['BMS;3']
+        # grp_id=12 ['ALS;1']
+        # grp_id=13 ['ALS;2']
+        # grp_id=14 ['ACC;1']>
+        # there are 2x2x3x2x3x4=288 realizations and 2+2+3+2+3+4=16 groups
+        # 1 group has no sources so the engine sees 15 groups
+        self.run_calc(case_67.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
     def test_case_70(self):
         # test bug https://github.com/gem/oq-engine/pull/7158

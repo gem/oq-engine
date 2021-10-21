@@ -109,7 +109,7 @@ def extract_from_zip(path, ext='.ini'):
     :param path: pathname of the archive
     :param ext: file extension to search for
     """
-    temp_dir = tempfile.mkdtemp()
+    temp_dir = tempfile.mkdtemp(dir=config.directory.custom_tmp or None)
     with zipfile.ZipFile(path) as archive:
         archive.extractall(temp_dir)
     return [f for f in collect_files(temp_dir)
@@ -519,17 +519,8 @@ def get_site_model(oqparam):
     return numpy.concatenate(arrays)
 
 
-def count_old_style(gsim_lt):
-    # count the number of old style GMPEs
-    old = 0
-    for gsims in gsim_lt.values.values():
-        for gsim in gsims:
-            old += 'get_mean_and_stddevs' in gsim.__class__.__dict__
-    return old
-
-
 def count_no_vect(gsim_lt):
-    # count the number of not vectorize GMPEs
+    # count the number of nonvectorized GMPEs
     no = 0
     for gsims in gsim_lt.values.values():
         for gsim in gsims:
@@ -622,10 +613,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     gsim_lt_cache[key] = gsim_lt
     if trts != ('*',):  # not in get_input_files
-        old_style = count_old_style(gsim_lt)
         no_vect = count_no_vect(gsim_lt)
-        if old_style:
-            logging.info('There are %d old style GMPEs', old_style)
         if no_vect:
             logging.info('There are %d not vectorized GMPEs', no_vect)
     return gsim_lt
@@ -708,13 +696,23 @@ def get_full_lt(oqparam, branchID=None):
                 'try to use sampling or reduce the source model' % p)
         logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.is_source_specific:
-        components = source_model_lt.decompose().values()
-        logging.info('Source specific logic tree with '
-                     f'{len(components)} components')
-        for sslt in components:
-            logging.info(sslt)
+        logging.info('There is a source specific logic tree')
+    dupl = []
+    for src_id, branchIDs in source_model_lt.source_ids.items():
+        if len(branchIDs) > 1:
+            dupl.append(src_id)
+    if dupl:
+        logging.info('There are %d non-unique source IDs', len(dupl))
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     return full_lt
+
+
+def get_logic_tree(oqparam):
+    """
+    :returns: a CompositeLogicTree instance
+    """
+    flt = get_full_lt(oqparam)
+    return logictree.compose(flt.gsim_lt, flt.source_model_lt)
 
 
 def save_source_info(csm, h5):

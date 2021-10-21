@@ -39,6 +39,20 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
+class CompositeLtTestCase(unittest.TestCase):
+    def test(self):
+        # logic tree for Canada 2015
+        ssmLT = os.path.join(DATADIR, 'ssmLT.xml')
+        gmmLT = os.path.join(DATADIR, 'gmmLT.xml')
+        smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
+        gslt = logictree.GsimLogicTree(gmmLT)
+        clt = logictree.compose(gslt, smlt)
+        sizes = [len(bset) for bset in clt.branchsets]
+        self.assertEqual(sizes, [3, 3, 3, 3, 3, 3, 3, 6])
+        num_paths = numpy.prod(sizes)  # 13122
+        self.assertEqual(len(clt.get_all_paths()), num_paths)
+
+
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
     def __init__(self, filename, files):
         # files is a dictionary name -> text containing also filename
@@ -1048,11 +1062,10 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(branch.branch_id, branch_id)
         self.assertEqual(branch.weight, float(weight_str))
         self.assertEqual(branch.value, value)
-        if bset_args is None:
-            self.assertEqual(branch.bset, None)
+        if bset_args:
+            self.assert_branchset_equal(branch.bset, *bset_args)
         else:
-            self.assert_branchset_equal(branch.bset,
-                                        *bset_args)
+            self.assertTrue(branch.is_leaf())
 
     def assert_branchset_equal(self, branchset, uncertainty_type, filters,
                                branches_args):
@@ -2112,7 +2125,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     """
     value = {'b1_b21': 1, 'b1_b22': 1, 'b1_b23': 1,
              'b1_b24': 1, 'b1_b25': 1, 'b1_b26': 1,
-             'b2': 1.2, 'b3': 1.3}
+             'b2_.1': 1.2, 'b3_.1': 1.3}
 
     def mean(self, rlzs):
         R = len(rlzs)
@@ -2137,7 +2150,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
 
         rlzs = full_lt.get_realizations()  # 6+2 = 8 realizations
         paths = ['b1_b21', 'b1_b22', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b2', 'b3']
+                 'b2_.1', 'b3_.1']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.064988,  # b1_b21
                    0.14077,   # b1_b22
@@ -2145,8 +2158,8 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.163723,  # b1_b24
                    0.100569,  # b1_b25
                    0.044072,  # b1_b26
-                   0.2,       # b2
-                   0.1]       # b3
+                   0.2,       # b2_.1
+                   0.1]       # b3_.1
         # b1_b21 has weight 0.7 * 0.09284 = 0.064988
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
@@ -2162,7 +2175,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b1_b26', 'b2', 'b2', 'b2']
+                 'b1_b26', 'b2_.1', 'b2_.1', 'b2_.1']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
 
         # the weights are all equal
@@ -2180,7 +2193,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b25', 'b1_b26',
-                 'b2', 'b2', 'b2', 'b3', 'b3', 'b3']
+                 'b2_.1', 'b2_.1', 'b2_.1', 'b3_.1', 'b3_.1', 'b3_.1']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.04438889044, 0.05861275966, 0.031712341,
                    0.01389718817, 0.18919751558, 0.189197515,
@@ -2293,23 +2306,24 @@ class SerializeSmltTestCase(unittest.TestCase):
 
 class ReduceLtTestCase(unittest.TestCase):
     def test(self):
+        raise unittest.SkipTest('Not used')
         ssmLT = os.path.join(DATADIR, 'ssmLT.xml')
         gmmLT = os.path.join(DATADIR, 'gmmLT.xml')
         smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
         gslt = logictree.GsimLogicTree(gmmLT)
         paths = '''\
-[012345]~[01][345][678][9AB][C][FGH][IJ]
-[012345]~[2][345][678][9AB][E][FGH][K]
-[012345]~[1][345][678][9AB][E][FGH][IJ]
-[012345]~[01][345][678][9AB][D][FGH][IJ]
-[012345]~[2][345][678][9AB][C][FGH][K]
-[012345]~[2][345][678][9AB][C][FGH][IJ]
-[012345]~[01][345][678][9AB][E][FGH][K]
-[012345]~[012][345][678][9AB][D][FGH][K]
-[012345]~[01][345][678][9AB][C][FGH][K]
-[012345]~[0][345][678][9AB][E][FGH][IJ]
-[012345]~[2][345][678][9AB][E][FGH][IJ]
-[012345]~[2][345][678][9AB][D][FGH][IJ]'''.split()
+[ABCDEF]~[AB][DEF][GHI][JKL][M][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][O][PQR][U]
+[ABCDEF]~[B][DEF][GHI][JKL][O][PQR][ST]
+[ABCDEF]~[AB][DEF][GHI][JKL][N][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][M][PQR][U]
+[ABCDEF]~[C][DEF][GHI][JKL][M][PQR][ST]
+[ABCDEF]~[AB][DEF][GHI][JKL][O][PQR][U]
+[ABCDEF]~[ABC][DEF][GHI][JKL][N][PQR][U]
+[ABCDEF]~[AB][DEF][GHI][JKL][M][PQR][U]
+[ABCDEF]~[A][DEF][GHI][JKL][O][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][O][PQR][ST]
+[ABCDEF]~[C][DEF][GHI][JKL][N][PQR][ST]'''.split()
         full_lt = unittest.mock.Mock(source_model_lt=smlt, gsim_lt=gslt)
         dic = logictree.reduce_full(full_lt, paths)
         pprint.pprint(dic)

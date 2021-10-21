@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='utf8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns:nrml="http://openquake.org/xmlns/nrml/0.5" xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="STA-rocher, 10000 ans, RP4_1300, version 2019 - Logic-tree sources">
+    <logicTreeBranchSet branchSetID="s11" uncertaintyType="sourceModel">
+      <logicTreeBranch branchID="EDF_areas">
+        <uncertaintyModel>areaSources_EDF_noFaults.xml</uncertaintyModel>
+        <uncertaintyWeight>0.50000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="GTR_areas">
+        <uncertaintyModel>areaSources_GTR_noFaults.xml</uncertaintyModel>
+        <uncertaintyWeight>0.50000</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="Mmax:10" uncertaintyType="maxMagGRAbsolute" applyToSources="10">
+      <logicTreeBranch branchID="Mmax:10-br#0">
+        <uncertaintyModel>6.7</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="Mmax:10-br#1">
+        <uncertaintyModel>6.86</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="Mmax:11" uncertaintyType="maxMagGRAbsolute" applyToSources="11">
+      <logicTreeBranch branchID="Mmax:11-br#0">
+        <uncertaintyModel>6.7</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="Mmax:11-br#1">
+        <uncertaintyModel>6.86</uncertaintyModel>
+        <uncertaintyWeight>0.25</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="Mmax:11-br#2">
+        <uncertaintyModel>7.0200000000000005</uncertaintyModel>
+        <uncertaintyWeight>0.25</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="Mmax:ACC" uncertaintyType="maxMagGRAbsolute" applyToSources="ACC">
+      <logicTreeBranch branchID="Mmax:ACC-br#0">
+        <uncertaintyModel>6.1</uncertaintyModel>
+        <uncertaintyWeight>0.36</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="Mmax:ACC-br#1">
+        <uncertaintyModel>6.3</uncertaintyModel>
+        <uncertaintyWeight>0.64</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="Mmax:ALS" uncertaintyType="maxMagGRAbsolute" applyToSources="ALS">
+      <logicTreeBranch branchID="Mmax:ALS-br#0">
+        <uncertaintyModel>6.7</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="Mmax:ALS-br#1">
+        <uncertaintyModel>6.86</uncertaintyModel>
+        <uncertaintyWeight>0.25</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="Mmax:ALS-br#2">
+        <uncertaintyModel>7.02</uncertaintyModel>
+        <uncertaintyWeight>0.25</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="Mmax:BMS" uncertaintyType="maxMagGRAbsolute" applyToSources="BMS">
+      <logicTreeBranch branchID="Mmax:BMS-br#0">
+        <uncertaintyModel>6.7</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="Mmax:BMS-br#1">
+        <uncertaintyModel>6.86</uncertaintyModel>
+        <uncertaintyWeight>0.25</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="Mmax:BMS-br#2">
+        <uncertaintyModel>7.02</uncertaintyModel>
+        <uncertaintyWeight>0.13</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="Mmax:BMS-br#3">
+        <uncertaintyModel>7.18</uncertaintyModel>
+        <uncertaintyWeight>0.12</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>
