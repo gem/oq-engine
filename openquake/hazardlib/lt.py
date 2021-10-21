@@ -487,6 +487,12 @@ class Branch(object):
         self.value = value
         self.bset = None
 
+    def is_leaf(self):
+        """
+        :returns: True if the branch has no branchset or has a dummy branchset
+        """
+        return self.bset is None or self.bset.uncertainty_type == 'dummy'
+
     def __repr__(self):
         if self.bset:
             return '%s%s' % (self.branch_id, self.bset)
@@ -693,9 +699,6 @@ class BranchSet(object):
             if bset is None:
                 break
         return pairs
-
-    def __bool__(self):
-        return self.uncertainty_type != 'dummy'
 
     def __len__(self):
         return len(self.branches)

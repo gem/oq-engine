@@ -643,7 +643,7 @@ class SourceModelLogicTree(object):
                     lineno, self.filename,
                     "branch '%s' is not yet defined" % branch_id)
             branch = self.branches[branch_id]
-            if branch.bset:
+            if not branch.is_leaf():
                 raise LogicTreeError(
                     lineno, self.filename,
                     "branch '%s' already has child branchset" % branch_id)

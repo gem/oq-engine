@@ -1062,11 +1062,10 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(branch.branch_id, branch_id)
         self.assertEqual(branch.weight, float(weight_str))
         self.assertEqual(branch.value, value)
-        if bset_args is None:
-            self.assertFalse(branch.bset)
+        if bset_args:
+            self.assert_branchset_equal(branch.bset, *bset_args)
         else:
-            self.assert_branchset_equal(branch.bset,
-                                        *bset_args)
+            self.assertTrue(branch.is_leaf())
 
     def assert_branchset_equal(self, branchset, uncertainty_type, filters,
                                branches_args):
