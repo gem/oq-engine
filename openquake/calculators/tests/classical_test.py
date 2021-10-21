@@ -292,9 +292,15 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
         # check deserialization of source_model_lt
-        smlt = self.calc.datastore['full_lt/source_model_lt']
-        exp = str(list(smlt))
-        self.assertEqual('''[<Realization #0 ['source_model_1.xml'], path=SM1, weight=0.5>, <Realization #1 ['source_model_2.xml', '(3.2, 0.8)'], path=SM2~a3pt2b0pt8, weight=0.25>, <Realization #2 ['source_model_2.xml', '(3.0, 1.0)'], path=SM2~a3b1, weight=0.25>]''', exp)
+        r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
+        self.assertEqual(repr(r0),
+                         "<Realization #0 ['source_model_1.xml', None], "
+                         "path=SM1~.1, weight=0.5>")
+        self.assertEqual(repr(r1), "<Realization #1 ['source_model_2.xml', "
+                         "(3.2, 0.8)], path=SM2~a3pt2b0pt8, "
+                         "weight=0.25>")
+        self.assertEqual(repr(r2), "<Realization #2 ['source_model_2.xml', "
+                         "(3.0, 1.0)], path=SM2~a3b1, weight=0.25>")
 
     def test_case_16(self):   # sampling
         with unittest.mock.patch.dict(config.memory, limit=240):

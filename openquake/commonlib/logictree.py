@@ -26,6 +26,7 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 
 import os
 import re
+import ast
 import copy
 import json
 import time
@@ -402,8 +403,8 @@ class SourceModelLogicTree(object):
                 for brid in set(prev_ids.split()) - set(app2brs.split()):
                     self.branches[brid].bset = dummy = dummy_branchset(ordinal)
                     [dummybranch] = dummy.branches
-                    self.bsetdict[dummybranch.bs_id] = {
-                        'uncertaintyType': 'dummy'}
+                    #self.bsetdict[dummybranch.bs_id] = {
+                    #    'uncertaintyType': 'dummy'}
                     self.branches[dummybranch.branch_id] = dummybranch
                     dummies.append(dummybranch)
             else:  # apply to all previous branches
@@ -712,9 +713,11 @@ class SourceModelLogicTree(object):
     def __toh5__(self):
         tbl = []
         for brid, br in self.branches.items():
+            if br.bs_id.startswith('dummy'):
+                continue  # don't store dummy branches
             dic = self.bsetdict[br.bs_id].copy()
             utype = dic['uncertaintyType']
-            tbl.append((br.bs_id, brid, utype, str(br.value), br.weight))
+            tbl.append((br.bs_id, brid, utype, repr(br.value), br.weight))
         attrs = dict(bsetdict=json.dumps(self.bsetdict))
         attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples
@@ -746,7 +749,11 @@ class SourceModelLogicTree(object):
             bset = BranchSet(utype, ordinal, filters)
             bset.id = bsid
             for no, row in enumerate(rows):
-                br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
+                try:
+                    uvalue = ast.literal_eval(row['uvalue'])
+                except (SyntaxError, ValueError):
+                    uvalue = row['uvalue']  # not really deserializable :-(
+                br = Branch(bsid, row['branch'], row['weight'], uvalue)
                 self.branches[br.branch_id] = br
                 self.shortener[br.branch_id] = keyno(
                     br.branch_id, ordinal, no, attrs['filename'])
@@ -757,10 +764,13 @@ class SourceModelLogicTree(object):
         self.root_branchset = bsets[0]
         for i, childset in enumerate(bsets[1:]):
             dic = self.bsetdict[childset.id]
-            atb = dic.get('applyToBranches')
+            prev_ids = ' '.join(pb.branch_id for pb in bsets[i].branches)
+            atb = dic.get('applyToBranches') or prev_ids
             for branch in bsets[i].branches:  # parent branches
-                if not atb or branch.branch_id in atb:
+                if branch.branch_id in atb:
                     branch.bset = childset
+                else:
+                    branch.bset = dummy_branchset(i + 1)
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
