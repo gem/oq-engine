@@ -575,33 +575,21 @@ class ContextMaker(object):
                 stypes = (stdtype,)
             S = len(stypes)
             arr = numpy.zeros((1 + S, M, N))
-            compute = gsim.__class__.__dict__.get('compute')
-            if compute:  # new api
-                outs = numpy.zeros((4, M, N))
-                start = 0
-                for ctx in ctxs:
-                    slc = slice(start, start + len(ctx))
-                    compute(gsim, ctx, self.imts, *outs[:, :, slc])
-                    start = slc.stop
-                arr[0] = outs[0]
-                for s, stype in enumerate(stypes, 1):
-                    if stype == StdDev.TOTAL:
-                        arr[s] = outs[1]
-                    elif stype == StdDev.INTER_EVENT:
-                        arr[s] = outs[2]
-                    elif stype == StdDev.INTRA_EVENT:
-                        arr[s] = outs[3]
-            else:  # legacy api
-                start = 0
-                for ctx in ctxs:
-                    stop = start + len(ctx.sids)
-                    for m, imt in enumerate(self.imts):
-                        mean, stds = gsim.get_mean_and_stddevs(
-                            ctx, ctx, ctx, imt, stypes)
-                        arr[0, m, start:stop] = mean
-                        for s in range(S):
-                            arr[1 + s, m, start:stop] = stds[s]
-                    start = stop
+            compute = gsim.__class__.compute
+            outs = numpy.zeros((4, M, N))
+            start = 0
+            for ctx in ctxs:
+                slc = slice(start, start + len(ctx))
+                compute(gsim, ctx, self.imts, *outs[:, :, slc])
+                start = slc.stop
+            arr[0] = outs[0]
+            for s, stype in enumerate(stypes, 1):
+                if stype == StdDev.TOTAL:
+                    arr[s] = outs[1]
+                elif stype == StdDev.INTER_EVENT:
+                    arr[s] = outs[2]
+                elif stype == StdDev.INTRA_EVENT:
+                    arr[s] = outs[3]
             out.append(arr)
         return out
 
