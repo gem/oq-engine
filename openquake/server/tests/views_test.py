@@ -311,7 +311,7 @@ class EngineServerTestCase(unittest.TestCase):
     def test_err_3(self):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
         tb_str = self.postzip('archive_err_3.zip')
-        self.assertIn('Could not find any file of the form', tb_str)
+        self.assertIn('There are no .ini files in the archive', tb_str)
 
     def test_available_gsims(self):
         resp = self.c.get('/v1/available_gsims')
