@@ -184,7 +184,7 @@ class LogContext:
         """
         :returns: a validated OqParam instance
         """
-        if self.oqparam:
+        if self.oqparam:  # set by submit_job
             return self.oqparam
         return readinput.get_oqparam(self.params)
 
