@@ -563,17 +563,23 @@ def submit_job(request_files, ini, username, hc_id):
     # store the request files and perform some validation
     try:
         job_ini = store(request_files, ini, job.calc_id)
-        job.oqparam = readinput.get_oqparam(job_ini)
+        job.oqparam = oq = readinput.get_oqparam(job_ini)
+        if oq.sensitivity_analysis:
+            logs.dbcmd('set_status', job.calc_id, 'deleted')
+            jobs = engine.create_jobs([job_ini], config.distribution.log_level,
+                                      None, username, hc_id)
+        else:
+            dic = dict(calculation_mode=oq.calculation_mode,
+                       description=oq.description)
+            logs.dbcmd('update_job', job.calc_id, dic)
+            jobs = [job]
     except Exception:
         tb = traceback.format_exc()
         logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         raise
-    dic = dict(calculation_mode=job.oqparam.calculation_mode,
-               description=job.oqparam.description)
-    logs.dbcmd('update_job', job.calc_id, dic)
-    proc = Process(target=engine.run_jobs, args=([job],))
+    proc = Process(target=engine.run_jobs, args=(jobs,))
     proc.start()
     return job.calc_id
 
