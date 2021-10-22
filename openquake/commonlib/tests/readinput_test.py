@@ -25,8 +25,8 @@ from io import BytesIO
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.risklib import asset
-from openquake.commonlib import readinput, logictree, datastore
-from openquake.qa_tests_data.classical import case_2, case_21
+from openquake.commonlib import readinput, datastore
+from openquake.qa_tests_data.classical import case_2, case_15, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
     case_2 as ebr2, case_caracas)
@@ -527,3 +527,15 @@ class SitecolAssetcolTestCase(unittest.TestCase):
                 oq.inputs['amplification'])
             site_amplification.Amplifier(oq.imtls, df)
         self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
+
+
+class LogicTreeTestCase(unittest.TestCase):
+    def test(self):
+        job_ini = os.path.join(os.path.dirname(case_15.__file__), 'job.ini')
+        oq = readinput.get_oqparam(job_ini)
+        lt = readinput.get_logic_tree(oq)
+        # (2+1) x 4 = 12 realizations
+        rlzs = list(lt)
+        self.assertEqual(len(rlzs), 12)
+        for rlz in lt:
+            print(rlz.lt_path)
