@@ -565,7 +565,7 @@ def submit_job(request_files, ini, username, hc_id):
         job_ini = store(request_files, ini, job.calc_id)
         job.oqparam = oq = readinput.get_oqparam(job_ini)
         if oq.sensitivity_analysis:
-            logs.dbcmd('set_status', job.calc_id, 'deleted')
+            logs.dbcmd('set_status', job.calc_id, 'deleted')  # hide it
             jobs = engine.create_jobs([job_ini], config.distribution.log_level,
                                       None, username, hc_id)
         else:
