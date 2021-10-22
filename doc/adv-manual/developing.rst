@@ -317,3 +317,46 @@ This is exactly the result provided by
 
 If you want to know exactly how ``get_pmap`` works you are invited to
 look at the source code in ``openquake.hazardlib.contexts``.
+
+
+Working with verification tables
+---------------------------------------------------
+
+Hazard scientists implementing a new GMPE must provide verification
+tables, i.e. CSV files containing inputs and expected outputs.
+
+For instance, for the Atkinson2015 GMPE (chosen simply because is
+the first GMPE in lexicographic order in hazardlib) the verification
+table has a structure like this::
+
+ rup_mag,dist_rhypo,result_type,pgv,pga,0.03,0.05,0.1,0.2,0.3,0.5
+ 2.0,1.0,MEAN,5.50277734e-02,3.47335058e-03,4.59601700e-03,7.71361460e-03,9.34624779e-03,4.33207607e-03,1.75322233e-03,3.44695521e-04
+ 2.0,5.0,MEAN,6.43850933e-03,3.61047741e-04,4.57949482e-04,7.24558049e-04,9.44495571e-04,5.11252304e-04,2.21076069e-04,4.73435138e-05
+ ...
+
+The columns starting with ``rup_`` contains rupture parameters (the magnitude in this example) while the
+columns starting with ``dist_`` contains distance parameters. The column ``result_type`` is a string in
+the set {"MEAN", "INTER_EVENT_STDDEV", "INTRA_EVENT_STDDEV", "TOTAL_STDDEV"}. The remaining columns
+are the expected results for each intensity measure type; in the the example the IMTs are
+PGV, PGA, SA(0.03), SA(0.05), SA(0.1), SA(0.2), SA(0.3), SA(0.5).
+
+It is possible to instantiate a ContextMaker and the associated contexts from a GMPE and its verification table
+as follows (starting from engine version 3.12):
+
+>>> from openquake.hazardlib import valid
+>>> from openquake.hazardlib.tests.gsim.utils import read_cmaker_df, gen_ctxs
+>>> gsim = valid.gsim("Atkinson2015")
+>> cmaker, df = read_cmaker_df(gsim, ["verification_table.csv"])
+
+Then you can immediately compute mean and standard deviations and
+compare with the values in the verification table:
+
+>> [out] = cmaker.get_mean_stds(gen_ctxs(df))  # out has shape (4, M, N)
+
+out[0] is the mean, out[1] is the total standard deviation (*sig*),
+out[2] the inter standard deviation (*tau*), out[3] the intra standard
+deviation (*phi*). M is the number of intensity measure types and N
+the number of ruptures.
+
+This is actually how the tests in hazardlib are implemented. Interested users should look at the
+code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/gsim/utils.py.
