@@ -123,7 +123,7 @@ class SInterCan15Mid(GMPE):
         for spec of input and result values.
         """
         mean_zh06, mean_am09, mean_ab15, mean_ga14 = contexts.get_mean_stds(
-            self.gsims, ctx, imts, None)
+            self.gsims, ctx, imts)
 
         # Computing adjusted means
         for m, imt in enumerate(imts):

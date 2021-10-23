@@ -131,11 +131,11 @@ class BozorgniaCampbell2016VH(GMPE):
         for spec of input and result values.
         """
         V, H = contexts.get_mean_stds(
-            [self.VGMPE, self.HGMPE], ctx, imts, const.StdDev.EVENT)
+            [self.VGMPE, self.HGMPE], ctx, imts)
         for m, imt in enumerate(imts):
             # V/H model, Equation 1 and 12 (in natural log units)
-            mean_v, tau_v, phi_v = V[:, m]
-            mean_h, tau_h, phi_h = H[:, m]
+            mean_v, sig_v, tau_v, phi_v = V[:, m]
+            mean_h, sig_h, tau_h, phi_h = H[:, m]
             mean[m] = mean_v - mean_h
 
             # Get standard deviations

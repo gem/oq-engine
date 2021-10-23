@@ -1009,19 +1009,20 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsims, ctx, imts, stdtype=StdDev.ALL):
+def get_mean_stds(gsims, ctx, imts):
     """
-    :param gsims: a list of G GSIMs
+    :param gsims: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N
     :param imts: a list of M IMTs
-    :param stdtype: a standard deviation type (TOTAL, EVENT, etc)
     :returns:
-        an array of shape (G, O, M, N) obtained by applying the
-        given GSIMs, ctx amd imts
+        an array of shape (4, M, N) obtained by applying the
+        given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)
     """
     imtls = {imt.string: [0] for imt in imts}
-    cmaker = ContextMaker('*', gsims, {'imtls': imtls})
-    return numpy.array(cmaker.get_mean_stds([ctx], stdtype))
+    single = hasattr(gsims, 'compute')
+    cmaker = ContextMaker('*', [gsims] if single else gsims, {'imtls': imtls})
+    out = cmaker.get_mean_stds([ctx])
+    return out[0] if single else out
 
 
 # mock of a rupture used in the tests and in the SMTK

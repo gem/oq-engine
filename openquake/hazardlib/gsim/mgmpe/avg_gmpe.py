@@ -103,7 +103,7 @@ class AvgGMPE(GMPE):
         """
         Call the underlying GMPEs and return the weighted mean and stddev
         """
-        outs = contexts.get_mean_stds(self.gsims, ctx, imts, const.StdDev.ALL)
+        outs = contexts.get_mean_stds(self.gsims, ctx, imts)
         # shape (G, O, M, N)
         G = len(outs)
         M, N = outs[0].shape[1:]

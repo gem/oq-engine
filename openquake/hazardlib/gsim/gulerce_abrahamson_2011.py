@@ -245,8 +245,8 @@ class GulerceAbrahamson2011(GMPE):
         """
         ctx_rock = copy.copy(ctx)
         ctx_rock.vs30 = np.full_like(ctx_rock.vs30, 1100.)
-        [mea] = contexts.get_mean_stds([self.gmpe], ctx_rock, [PGA()], None)
-        pga1100 = np.exp(mea[0, 0])  # from shape (G, O, M, N) -> N
+        mea = contexts.get_mean_stds(self.gmpe, ctx_rock, [PGA()])[0]
+        pga1100 = np.exp(mea[0])  # from shape (M, N) -> N
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = (_compute_base_term(C, ctx) +
