@@ -123,14 +123,14 @@ class SInterCan15Mid(GMPE):
         for spec of input and result values.
         """
         mean_zh06, mean_am09, mean_ab15, mean_ga14 = contexts.get_mean_stds(
-            self.gsims, ctx, imts, None)
+            self.gsims, ctx, imts)[0]
 
         # Computing adjusted means
         for m, imt in enumerate(imts):
             cff = self.COEFFS_SITE[imt]
-            mean[m] = (np.log(np.exp(mean_zh06[0, m]) * cff['mf']) * 0.1 +
-                       mean_am09[0, m] * 0.5 + mean_ab15[0, m] * 0.2 +
-                       np.log(np.exp(mean_ga14[0, m]) * cff['mf']) * 0.2)
+            mean[m] = (np.log(np.exp(mean_zh06[m]) * cff['mf']) * 0.1 +
+                       mean_am09[m] * 0.5 + mean_ab15[m] * 0.2 +
+                       np.log(np.exp(mean_ga14[m]) * cff['mf']) * 0.2)
             if self.sgn:
                 delta = np.minimum((0.15-0.0007 * ctx.rrup), 0.35)
                 mean[m] += self.sgn * delta

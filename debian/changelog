@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the API of `ContextMaker.get_mean_stds`
   * Extended the WebUI to run sensitivity analysis calculations
   * Changed the string representation of logic tree paths and enforced a
     maximum of 64 branches per branchset

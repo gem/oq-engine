@@ -101,8 +101,7 @@ class GenericGmpeAvgSA(GMPE):
         :param imts: must be a single IMT of kind AvgSA
         """
         sas = [SA(period) for period in self.avg_periods]
-        [out] = contexts.get_mean_stds(
-            [self.gmpe], ctx, sas, const.StdDev.TOTAL)
+        out = contexts.get_mean_stds(self.gmpe, ctx, sas)
 
         stddvs_avgsa = 0.
         for i1 in range(self.tnum):
