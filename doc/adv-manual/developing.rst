@@ -353,12 +353,10 @@ from engine version 3.13):
 Then you can immediately compute mean and standard deviations and
 compare with the values in the verification table:
 
->> out = cmaker.get_mean_stds(gen_ctxs(df))  # out has shape (4, 1, M, N)
+>> mean, sig, tau, phi = cmaker.get_mean_stds(gen_ctxs(df))
 
-out[0] is the mean, out[1] is the total standard deviation (*sig*),
-out[2] the inter standard deviation (*tau*), out[3] the intra standard
-deviation (*phi*). M is the number of intensity measure types and N
-the number of ruptures.
-
-This is actually how the tests in hazardlib are implemented. Interested users should look at the
-code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/gsim/utils.py.
+*sig* refers to the "TOTAL_STDDEV", *tau* to the "INTER_EVENT_STDDEV"
+and *phi* to the "INTRA_EVENT_STDDEV". This is how the tests
+in hazardlib are implemented. Interested users should look at the
+code in
+*https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/gsim/utils.py.
