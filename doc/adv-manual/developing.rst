@@ -346,6 +346,7 @@ as follows (starting from engine version 3.12):
 >>> from openquake.hazardlib import valid
 >>> from openquake.hazardlib.tests.gsim.utils import read_cmaker_df, gen_ctxs
 >>> gsim = valid.gsim("Atkinson2015")
+
 >> cmaker, df = read_cmaker_df(gsim, ["verification_table.csv"])
 
 Then you can immediately compute mean and standard deviations and
