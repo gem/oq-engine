@@ -997,7 +997,7 @@ def get_mean_stds(gsims, ctx, imts):
     single = hasattr(gsims, 'compute')
     cmaker = ContextMaker('*', [gsims] if single else gsims, {'imtls': imtls})
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
-    return out[:, 0] if single else out.transpose(1, 0, 2, 3)
+    return out[:, 0] if single else out
 
 
 # mock of a rupture used in the tests and in the SMTK

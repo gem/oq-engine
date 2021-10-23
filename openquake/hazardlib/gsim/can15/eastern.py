@@ -116,7 +116,7 @@ class EasternCan15Mid(GMPE):
         See documentation for method `GroundShakingIntensityModel` in
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
-        mean_stds = []  # 5 arrays of shape (2, M, N)
+        mean_stds = []  # 5 arrays of shape (4, M, N)
         for gsim in self.gsims:
             # add equivalent distances
             if isinstance(gsim, AtkinsonBoore2006Modified2011):

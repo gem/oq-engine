@@ -103,16 +103,8 @@ class AvgGMPE(GMPE):
         """
         Call the underlying GMPEs and return the weighted mean and stddev
         """
-        outs = contexts.get_mean_stds(self.gsims, ctx, imts)
-        # shape (G, O, M, N)
-        G = len(outs)
-        M, N = outs[0].shape[1:]
-        data = np.zeros((G, 4, M, N))
-        for i, out in enumerate(outs):
-            data[i, 0] = out[0]
-            for s in range(len(out) - 1):
-                data[i, 1 + s] = out[1 + s] ** 2
-        mean[:] = np.average(data[:, 0], 0, self.weights)
-        sig[:] = np.sqrt(np.average(data[:, 1], 0, self.weights))
-        tau[:] = np.sqrt(np.average(data[:, 2], 0, self.weights))
-        phi[:] = np.sqrt(np.average(data[:, 3], 0, self.weights))
+        mean_, sig_, tau_, phi_ = contexts.get_mean_stds(self.gsims, ctx, imts)
+        mean[:] = np.average(mean_, 0, self.weights)
+        sig[:] = np.sqrt(np.average(sig_**2, 0, self.weights))
+        tau[:] = np.sqrt(np.average(tau_**2, 0, self.weights))
+        phi[:] = np.sqrt(np.average(phi_**2, 0, self.weights))
