@@ -203,7 +203,7 @@ class BaseGSIMTestCase(unittest.TestCase):
 
         cmaker, df = read_cmaker_df(gsim, fnames)
         for ctx in gen_ctxs(df):
-            [out] = cmaker.get_mean_stds([ctx])
+            out = cmaker.get_mean_stds([ctx])[:, 0]
             for o, out_type in enumerate(out_types):
                 if not hasattr(ctx, out_type):
                     # for instance MEAN is missing in zhao_2016_test
