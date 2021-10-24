@@ -772,15 +772,16 @@ class CompositeLogicTree(object):
     setting the branch IDs.
     """
     def __init__(self, branchsets):
-        attach_to_branches(branchsets)
         self.branchsets = branchsets
+        self.shortener = {}
+        attach_to_branches(branchsets)
         nb = len(branchsets)
         paths = []
         for bsno, bset in enumerate(branchsets):
             for brno, br in enumerate(bset.branches):
+                self.shortener[br.branch_id] = char = BASE64[brno]
                 path = ['*'] * nb
-                br.branch_id = BASE64[brno]
-                path[bsno] = br.branch_id
+                path[bsno] = char
                 paths.append(''.join(path))
         self.basepaths = paths
 
