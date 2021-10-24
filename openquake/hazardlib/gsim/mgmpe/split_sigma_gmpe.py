@@ -104,8 +104,7 @@ class SplitSigmaGMPE(GMPE):
         for spec of input and result values.
         """
         # compute mean and standard deviation
-        [out] = contexts.get_mean_stds(
-            [self.gmpe], ctx, imts, const.StdDev.ALL)
+        out = contexts.get_mean_stds(self.gmpe, ctx, imts)
         for m, imt in enumerate(imts):
             mean[m] = out[0, m]
             sig[m], tau[m], phi[m] = _get_stddvs(

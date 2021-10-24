@@ -99,9 +99,5 @@ class MultiGMPE(GMPE):
         Call the get mean and stddevs of the GMPE for the respective IMT
         """
         gsims = [self.kwargs[imt.string] for imt in imts]
-        outs = contexts.get_mean_stds(gsims, ctx, imts, const.StdDev.ALL)
-        for m, out in enumerate(outs):
-            mean[m] = out[0]
-            sig[m] = out[1]
-            tau[m] = out[2]
-            phi[m] = out[3]
+        mean[:], sig[:], tau[:], phi[:] = contexts.get_mean_stds(
+            gsims, ctx, imts)

@@ -511,8 +511,7 @@ class ContextMaker(object):
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             try:
-                maxmean = max(ms[0].max() for ms in self.get_mean_stds(
-                    [ctx], StdDev.TOTAL))
+                maxmean = self.get_mean_stds([ctx])[0].max()
                 # shape NM
             except ValueError:  # magnitude outside of supported range
                 continue
@@ -546,63 +545,27 @@ class ContextMaker(object):
             return ~pmap if rup_indep else pmap
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs, stdtype=StdDev.ALL):
+    def get_mean_stds(self, ctxs):
         """
         :param ctxs: a list of contexts
-        :param stdtype: a standard deviation type
-        :returns: a list of G arrays of shape (O, M, N) with mean and stddevs
+        :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         if not hasattr(self, 'imts'):
             self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imtls)
-        out = []
+        G = len(self.gsims)
+        out = numpy.zeros((4, G, M, N))
         if self.use_recarray:
             ctxs = [self.recarray(ctxs)]
         for g, gsim in enumerate(self.gsims):
-            if stdtype is None or self.trunclevel == 0:
-                stypes = ()
-            elif stdtype == StdDev.EVENT:
-                if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
-                    stypes = (StdDev.TOTAL,)
-                else:
-                    stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-            elif stdtype == StdDev.ALL:
-                stypes = tuple(sdt for sdt in STD_TYPES if sdt in
-                               gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            else:
-                stypes = (stdtype,)
-            S = len(stypes)
-            arr = numpy.zeros((1 + S, M, N))
-            compute = gsim.__class__.__dict__.get('compute')
-            if compute:  # new api
-                outs = numpy.zeros((4, M, N))
-                start = 0
-                for ctx in ctxs:
-                    slc = slice(start, start + len(ctx))
-                    compute(gsim, ctx, self.imts, *outs[:, :, slc])
-                    start = slc.stop
-                arr[0] = outs[0]
-                for s, stype in enumerate(stypes, 1):
-                    if stype == StdDev.TOTAL:
-                        arr[s] = outs[1]
-                    elif stype == StdDev.INTER_EVENT:
-                        arr[s] = outs[2]
-                    elif stype == StdDev.INTRA_EVENT:
-                        arr[s] = outs[3]
-            else:  # legacy api
-                start = 0
-                for ctx in ctxs:
-                    stop = start + len(ctx.sids)
-                    for m, imt in enumerate(self.imts):
-                        mean, stds = gsim.get_mean_and_stddevs(
-                            ctx, ctx, ctx, imt, stypes)
-                        arr[0, m, start:stop] = mean
-                        for s in range(S):
-                            arr[1 + s, m, start:stop] = stds[s]
-                    start = stop
-            out.append(arr)
+            compute = gsim.__class__.compute
+            start = 0
+            for ctx in ctxs:
+                slc = slice(start, start + len(ctx))
+                compute(gsim, ctx, self.imts, *out[:, g, :, slc])
+                start = slc.stop
         return out
 
     # see http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
@@ -630,7 +593,7 @@ class ContextMaker(object):
         M = len(self.imtls)
         P = len(imls)
         out = csdict(M, N, P, self.start, self.start + G)
-        mean_stds = self.get_mean_stds(ctxs, StdDev.TOTAL)  # (G, 2, M, N*C)
+        mean_stds = self.get_mean_stds(ctxs)  # (4, G, M, N*C)
         imt_ref = self.imts[imti]
         rho = numpy.array([self.cross_correl.get_correlation(imt_ref, imt)
                            for imt in self.imts])
@@ -649,9 +612,9 @@ class ContextMaker(object):
             # 5: third site
             # i.e. idxs = [0, 3], [1, 4], [2, 5] for sites 0, 1, 2
             slc = slice(n, N * C, N)  # C indices
-            for g, (mu_, sig_) in enumerate(mean_stds):
-                mu = mu_[:, slc]  # shape (M, C)
-                sig = sig_[:, slc]  # shape (M, C)
+            for g in range(G):
+                mu = mean_stds[0, g, :, slc]  # shape (M, C)
+                sig = mean_stds[1, g, :, slc]  # shape (M, C)
                 c = out[self.start + g]['_c']
                 s = out[self.start + g]['_s']
                 for p in range(P):
@@ -672,14 +635,14 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         with self.gmf_mon:
-            mean_stdt = self.get_mean_stds(ctxs, StdDev.TOTAL)
+            mean_stdt = self.get_mean_stds(ctxs)
         s = 0
         for ctx in ctxs:
             with self.poe_mon:
                 n = len(ctx)
                 poes = numpy.zeros((n, self.loglevels.size, len(self.gsims)))
                 for g, gsim in enumerate(self.gsims):
-                    ms = mean_stdt[g][:, :, s:s+n]
+                    ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
@@ -1021,19 +984,20 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsims, ctx, imts, stdtype=StdDev.ALL):
+def get_mean_stds(gsims, ctx, imts):
     """
-    :param gsims: a list of G GSIMs
+    :param gsims: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N
     :param imts: a list of M IMTs
-    :param stdtype: a standard deviation type (TOTAL, EVENT, etc)
     :returns:
-        an array of shape (G, O, M, N) obtained by applying the
-        given GSIMs, ctx amd imts
+        an array of shape (4, M, N) obtained by applying the
+        given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)
     """
     imtls = {imt.string: [0] for imt in imts}
-    cmaker = ContextMaker('*', gsims, {'imtls': imtls})
-    return numpy.array(cmaker.get_mean_stds([ctx], stdtype))
+    single = hasattr(gsims, 'compute')
+    cmaker = ContextMaker('*', [gsims] if single else gsims, {'imtls': imtls})
+    out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
+    return out[:, 0] if single else out
 
 
 # mock of a rupture used in the tests and in the SMTK

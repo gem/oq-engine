@@ -99,20 +99,20 @@ def collect_files(dirpath, cond=lambda fullname: True):
     return sorted(files)  # job_haz before job_risk
 
 
-def extract_from_zip(path, ext='.ini'):
+def extract_from_zip(path, ext='.ini', targetdir=None):
     """
-    Given a zip archive and a function to detect the presence of a given
-    filename, unzip the archive into a temporary directory and return the
-    full path of the file. Raise an IOError if the file cannot be found
-    within the archive.
+    Given a zip archive and an extension (by default .ini), unzip the archive
+    into the target directory and the files with the given extension.
 
     :param path: pathname of the archive
     :param ext: file extension to search for
+    :returns: filenames
     """
-    temp_dir = tempfile.mkdtemp(dir=config.directory.custom_tmp or None)
+    targetdir = targetdir or tempfile.mkdtemp(
+        dir=config.directory.custom_tmp or None)
     with zipfile.ZipFile(path) as archive:
-        archive.extractall(temp_dir)
-    return [f for f in collect_files(temp_dir)
+        archive.extractall(targetdir)
+    return [f for f in collect_files(targetdir)
             if os.path.basename(f).endswith(ext)]
 
 
