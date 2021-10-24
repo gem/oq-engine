@@ -678,6 +678,8 @@ class BranchSet(object):
             elif key == 'applyToSources':
                 if source and source.source_id not in value:
                     return False
+            elif key == 'applyToBranches':
+                pass
             else:
                 raise AssertionError("unknown filter '%s'" % key)
         # All filters pass, return True.
@@ -718,8 +720,7 @@ def dummy_branchset(ordinal):
     :returns: a dummy BranchSet with a single branch
     """
     bset = BranchSet('dummy', ordinal)
-    bset.branches = [Branch(
-        'dummy%d' % next(dummy_counter), '.%d' % ordinal, 1, None)]
+    bset.branches = [Branch('dummy%d' % next(dummy_counter), '.', 1, None)]
     return bset
 
 
@@ -746,23 +747,36 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
+def attach(branchsets):
+    """
+    Attach branchsets to branches depending on the applyToBranches
+    attribute. Also attaches dummy branchsets to dummy branches.
+    """
+    previous_branches = branchsets[0].branches
+    for i, bset in enumerate(branchsets[1:]):
+        prev_ids = ' '.join(pb.branch_id for pb in previous_branches)
+        atb = bset.filters.get('applyToBranches') or prev_ids
+        dummies = []
+        for branch in previous_branches:
+            if branch.branch_id in atb:
+                branch.bset = bset
+            else:
+                branch.bset = dummy = dummy_branchset(i + 1)
+                dummies.append(dummy.branches[0])
+        previous_branches = bset.branches + dummies
+
+
 class CompositeLogicTree(object):
     """
     Build a logic tree from a set of branches by automatically
     setting the branch IDs.
     """
     def __init__(self, branchsets):
-        # build a simple composite logic tree
-        previous_branches = branchsets[0].branches
-        for bset in branchsets[1:]:
-            for branch in previous_branches:
-                if branch.is_leaf():
-                    branch.bset = bset
-            previous_branches = bset.branches
+        attach(branchsets)
         self.branchsets = branchsets
+        nb = len(branchsets)
         paths = []
-        nb = len(self.branchsets)
-        for bsno, bset in enumerate(self.branchsets):
+        for bsno, bset in enumerate(branchsets):
             for brno, br in enumerate(bset.branches):
                 path = ['*'] * nb
                 br.branch_id = BASE64[brno]

@@ -39,14 +39,14 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context
-from openquake.baselib.general import groupby, AccumDict, BASE64
+from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, Realization, CompositeLogicTree, dummy_branchset,
-    LogicTreeError, parse_uncertainty, random)
+    LogicTreeError, parse_uncertainty, random, attach)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
@@ -272,6 +272,7 @@ class SourceModelLogicTree(object):
 
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
+               'applyToBranches',
                'applyToSourceType')
 
     ABSOLUTE_UNCERTAINTIES = ('abGRAbsolute', 'bGRAbsolute',
@@ -378,7 +379,7 @@ class SourceModelLogicTree(object):
         filters = dict((filtername, branchset_node.attrib.get(filtername))
                        for filtername in self.FILTERS
                        if filtername in branchset_node.attrib)
-        self.validate_filters(branchset_node, uncertainty_type, filters)
+        #self.validate_filters(branchset_node, uncertainty_type, filters)
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
         ordinal = len(self.bsetdict)
 
@@ -403,8 +404,6 @@ class SourceModelLogicTree(object):
                 for brid in set(prev_ids.split()) - set(app2brs.split()):
                     self.branches[brid].bset = dummy = dummy_branchset(ordinal)
                     [dummybranch] = dummy.branches
-                    #self.bsetdict[dummybranch.bs_id] = {
-                    #    'uncertaintyType': 'dummy'}
                     self.branches[dummybranch.branch_id] = dummybranch
                     dummies.append(dummybranch)
             else:  # apply to all previous branches
@@ -513,12 +512,13 @@ class SourceModelLogicTree(object):
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
-        See superclass' method for description and signature specification.
-
-        Converts "applyToSources" filter value by just splitting it to a list.
+        Converts "applyToSources" and "applyToBranches" filters by
+        splitting into lists.
         """
         if 'applyToSources' in filters:
             filters['applyToSources'] = filters['applyToSources'].split()
+        if 'applyToBranches' in filters:
+            filters['applyToBranches'] = filters['applyToBranches'].split()
         return filters
 
     def validate_filters(self, branchset_node, uncertainty_type, filters):
@@ -744,8 +744,13 @@ class SourceModelLogicTree(object):
             acc[rec['branchset']].append(rec)
         for ordinal, (bsid, rows) in enumerate(acc.items()):
             utype = rows[0]['utype']
+            filters = {}
             ats = self.bsetdict[bsid].get('applyToSources')
-            filters = dict(applyToSources=ats.split()) if ats else None
+            atb = self.bsetdict[bsid].get('applyToBranches')
+            if ats:
+                filters['applyToSources'] = ats.split()
+            if atb:
+                filters['applyToBranches'] = atb.split()
             bset = BranchSet(utype, ordinal, filters)
             bset.id = bsid
             for no, row in enumerate(rows):
@@ -759,18 +764,10 @@ class SourceModelLogicTree(object):
                     br.branch_id, ordinal, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
+        attach(bsets)
         self.branchsets = bsets
         # bsets [<b11>, <b21 b22>, <b31 b32>]
         self.root_branchset = bsets[0]
-        for i, childset in enumerate(bsets[1:]):
-            dic = self.bsetdict[childset.id]
-            prev_ids = ' '.join(pb.branch_id for pb in bsets[i].branches)
-            atb = dic.get('applyToBranches') or prev_ids
-            for branch in bsets[i].branches:  # parent branches
-                if branch.branch_id in atb:
-                    branch.bset = childset
-                else:
-                    branch.bset = dummy_branchset(i + 1)
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
@@ -1159,16 +1156,13 @@ def compose(source_model_lt, gsim_lt):
     """
     bsets = []
     dic = groupby(gsim_lt.branches, operator.attrgetter('trt'))
-    for bsno, (trt, btuples) in enumerate(dic.items()):
+    bsno = len(source_model_lt.branchsets)
+    for trt, btuples in dic.items():
         bsid = gsim_lt.bsetdict[trt]
         bset = BranchSet('gmpeModel', bsno)
         bset.branches = [Branch(bsid, '*', bt.weight['weight'], bt.gsim)
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)
-    all_bsets = bsets + [source_model_lt.branchsets[-1]]
-    for bset in all_bsets:
-        for i, br in enumerate(bset.branches):
-            br.branch_id = BASE64[i]
-    clt = CompositeLogicTree(all_bsets)
-    clt.sm_index = len(dic)
+        bsno += 1
+    clt = CompositeLogicTree(source_model_lt.branchsets + bsets)
     return clt
