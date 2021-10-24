@@ -376,13 +376,13 @@ class SourceModelLogicTree(object):
         """
         attrs = branchset_node.attrib.copy()
         uncertainty_type = branchset_node.attrib.get('uncertaintyType')
-        filters = dict((filtername, branchset_node.attrib.get(filtername))
-                       for filtername in self.FILTERS
-                       if filtername in branchset_node.attrib)
-        #self.validate_filters(branchset_node, uncertainty_type, filters)
-        filters = self.parse_filters(branchset_node, uncertainty_type, filters)
-        ordinal = len(self.bsetdict)
+        dic = dict((filtername, branchset_node.attrib.get(filtername))
+                   for filtername in self.FILTERS
+                   if filtername in branchset_node.attrib)
+        self.validate_filters(branchset_node, uncertainty_type, dic)
+        filters = self.parse_filters(branchset_node, uncertainty_type, dic)
 
+        ordinal = len(self.bsetdict)
         branchset = BranchSet(uncertainty_type, ordinal, filters)
         branchset.id = bsid = attrs.pop('branchSetID')
         if bsid in self.bsetdict:
@@ -402,7 +402,7 @@ class SourceModelLogicTree(object):
                 self.apply_branchset(
                     app2brs, branchset_node.lineno, branchset)
                 for brid in set(prev_ids.split()) - set(app2brs.split()):
-                    self.branches[brid].bset = dummy = dummy_branchset(ordinal)
+                    self.branches[brid].bset = dummy = dummy_branchset()
                     [dummybranch] = dummy.branches
                     self.branches[dummybranch.branch_id] = dummybranch
                     dummies.append(dummybranch)
@@ -538,50 +538,55 @@ class SourceModelLogicTree(object):
         * Filter "applyToSourceType" must mention only source types
           that exist in source models.
         """
-        if uncertainty_type == 'sourceModel' and filters:
+        f = filters.copy()
+
+        if 'applyToBranches' in f:
+            del f['applyToBranches']
+
+        if uncertainty_type == 'sourceModel' and f:
             raise LogicTreeError(
                 branchset_node, self.filename,
                 'filters are not allowed on source model uncertainty')
 
-        if len(filters) > 1:
+        if len(f) > 1:
             raise LogicTreeError(
                 branchset_node, self.filename,
                 "only one filter is allowed per branchset")
 
-        if 'applyToTectonicRegionType' in filters:
-            if not filters['applyToTectonicRegionType'] \
+        if 'applyToTectonicRegionType' in f:
+            if not f['applyToTectonicRegionType'] \
                     in self.tectonic_region_types:
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     "source models don't define sources of tectonic region "
-                    "type '%s'" % filters['applyToTectonicRegionType'])
+                    "type '%s'" % f['applyToTectonicRegionType'])
 
         if uncertainty_type in self.ABSOLUTE_UNCERTAINTIES:
-            if not filters or not list(filters) == ['applyToSources'] \
-                    or not len(filters['applyToSources'].split()) == 1:
+            if not f or not list(f) == ['applyToSources'] \
+                    or not len(f['applyToSources'].split()) == 1:
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     "uncertainty of type '%s' must define 'applyToSources' "
                     "with only one source id" % uncertainty_type)
         if uncertainty_type in ('simpleFaultDipRelative',
                                 'simpleFaultDipAbsolute'):
-            if not filters or (not ('applyToSources' in filters) and not
-                               ('applyToSourceType' in filters)):
+            if not f or (not ('applyToSources' in f) and
+                         'applyToSourceType' not in f):
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     "uncertainty of type '%s' must define either"
                     "'applyToSources' or 'applyToSourceType'"
                     % uncertainty_type)
 
-        if 'applyToSourceType' in filters:
-            if not filters['applyToSourceType'] in self.source_types:
+        if 'applyToSourceType' in f:
+            if not f['applyToSourceType'] in self.source_types:
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     "source models don't define sources of type '%s'" %
-                    filters['applyToSourceType'])
+                    f['applyToSourceType'])
 
-        if 'applyToSources' in filters:
-            for source_id in filters['applyToSources'].split():
+        if 'applyToSources' in f:
+            for source_id in f['applyToSources'].split():
                 branchIDs = self.source_ids[source_id]
                 if not branchIDs:
                     raise LogicTreeError(

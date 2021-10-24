@@ -715,11 +715,11 @@ class BranchSet(object):
 dummy_counter = itertools.count(1)
 
 
-def dummy_branchset(ordinal):
+def dummy_branchset():
     """
     :returns: a dummy BranchSet with a single branch
     """
-    bset = BranchSet('dummy', ordinal)
+    bset = BranchSet('dummy')
     bset.branches = [Branch('dummy%d' % next(dummy_counter), '.', 1, None)]
     return bset
 
@@ -761,7 +761,7 @@ def attach(branchsets):
             if branch.branch_id in atb:
                 branch.bset = bset
             else:
-                branch.bset = dummy = dummy_branchset(i + 1)
+                branch.bset = dummy = dummy_branchset()
                 dummies.append(dummy.branches[0])
         previous_branches = bset.branches + dummies
 
