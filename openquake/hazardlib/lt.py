@@ -779,7 +779,7 @@ class CompositeLogicTree(object):
         paths = []
         for bsno, bset in enumerate(branchsets):
             for brno, br in enumerate(bset.branches):
-                self.shortener[br.branch_id] = char = BASE64[brno]
+                self.shortener[bsno, br.branch_id] = char = BASE64[brno]
                 path = ['*'] * nb
                 path[bsno] = char
                 paths.append(''.join(path))
