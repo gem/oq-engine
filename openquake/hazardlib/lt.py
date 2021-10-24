@@ -773,15 +773,13 @@ class CompositeLogicTree(object):
     """
     def __init__(self, branchsets):
         self.branchsets = branchsets
-        self.shortener = {}
         attach_to_branches(branchsets)
         nb = len(branchsets)
         paths = []
         for bsno, bset in enumerate(branchsets):
             for brno, br in enumerate(bset.branches):
-                self.shortener[bsno, br.branch_id] = char = BASE64[brno]
                 path = ['*'] * nb
-                path[bsno] = char
+                path[bsno] = br.short_id = BASE64[brno]
                 paths.append(''.join(path))
         self.basepaths = paths
 
@@ -790,7 +788,7 @@ class CompositeLogicTree(object):
         ordinal = 0
         for weight, branches in self.branchsets[0].enumerate_paths():
             value = [br.value for br in branches]
-            lt_path = ''.join(branch.branch_id for branch in branches)
+            lt_path = ''.join(branch.short_id for branch in branches)
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
 
