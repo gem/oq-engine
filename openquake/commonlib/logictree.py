@@ -46,7 +46,7 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, Realization, CompositeLogicTree, dummy_branchset,
-    LogicTreeError, parse_uncertainty, random, attach)
+    LogicTreeError, parse_uncertainty, random, attach_to_branches)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
@@ -769,7 +769,7 @@ class SourceModelLogicTree(object):
                     br.branch_id, ordinal, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
-        attach(bsets)
+        attach_to_branches(bsets)
         self.branchsets = bsets
         # bsets [<b11>, <b21 b22>, <b31 b32>]
         self.root_branchset = bsets[0]

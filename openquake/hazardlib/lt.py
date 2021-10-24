@@ -747,7 +747,7 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
-def attach(branchsets):
+def attach_to_branches(branchsets):
     """
     Attach branchsets to branches depending on the applyToBranches
     attribute. Also attaches dummy branchsets to dummy branches.
@@ -772,7 +772,7 @@ class CompositeLogicTree(object):
     setting the branch IDs.
     """
     def __init__(self, branchsets):
-        attach(branchsets)
+        attach_to_branches(branchsets)
         self.branchsets = branchsets
         nb = len(branchsets)
         paths = []
