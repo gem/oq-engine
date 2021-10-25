@@ -678,6 +678,8 @@ class BranchSet(object):
             elif key == 'applyToSources':
                 if source and source.source_id not in value:
                     return False
+            elif key == 'applyToBranches':
+                pass
             else:
                 raise AssertionError("unknown filter '%s'" % key)
         # All filters pass, return True.
@@ -713,13 +715,13 @@ class BranchSet(object):
 dummy_counter = itertools.count(1)
 
 
-def dummy_branchset(ordinal):
+def dummy_branchset():
     """
     :returns: a dummy BranchSet with a single branch
     """
-    bset = BranchSet('dummy', ordinal)
-    bset.branches = [Branch(
-        'dummy%d' % next(dummy_counter), '.%d' % ordinal, 1, None)]
+    bset = BranchSet('dummy')
+    bset.branches = [Branch('dummy%d' % next(dummy_counter), '.', 1, None)]
+    bset.branches[0].short_id = '.'
     return bset
 
 
@@ -746,19 +748,39 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
+def attach_to_branches(branchsets):
+    """
+    Attach branchsets to branches depending on the applyToBranches
+    attribute. Also attaches dummy branchsets to dummy branches.
+    """
+    previous_branches = branchsets[0].branches
+    for i, bset in enumerate(branchsets[1:]):
+        prev_ids = ' '.join(pb.branch_id for pb in previous_branches)
+        atb = bset.filters.get('applyToBranches') or prev_ids
+        dummies = []
+        for branch in previous_branches:
+            if branch.branch_id in atb:
+                branch.bset = bset
+            else:
+                branch.bset = dummy = dummy_branchset()
+                dummies.append(dummy.branches[0])
+        previous_branches = bset.branches + dummies
+
+
 class CompositeLogicTree(object):
     """
-    Assume the branch IDs are chars in BASE64
+    Build a logic tree from a set of branches by automatically
+    setting the branch IDs.
     """
     def __init__(self, branchsets):
         self.branchsets = branchsets
+        attach_to_branches(branchsets)
+        nb = len(branchsets)
         paths = []
-        nb = len(self.branchsets)
-        for i, bset in enumerate(self.branchsets):
-            for br in bset.branches:
+        for bsno, bset in enumerate(branchsets):
+            for brno, br in enumerate(bset.branches):
                 path = ['*'] * nb
-                assert br.branch_id in BASE64, br
-                path[i] = br.branch_id
+                path[bsno] = br.short_id = BASE64[brno]
                 paths.append(''.join(path))
         self.basepaths = paths
 
@@ -767,7 +789,7 @@ class CompositeLogicTree(object):
         ordinal = 0
         for weight, branches in self.branchsets[0].enumerate_paths():
             value = [br.value for br in branches]
-            lt_path = ''.join(branch.branch_id for branch in branches)
+            lt_path = ''.join(branch.short_id for branch in branches)
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
 

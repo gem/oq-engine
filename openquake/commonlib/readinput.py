@@ -712,7 +712,7 @@ def get_logic_tree(oqparam):
     :returns: a CompositeLogicTree instance
     """
     flt = get_full_lt(oqparam)
-    return logictree.compose(flt.gsim_lt, flt.source_model_lt)
+    return logictree.compose(flt.source_model_lt, flt.gsim_lt)
 
 
 def save_source_info(csm, h5):
