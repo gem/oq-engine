@@ -27,7 +27,7 @@ import scipy.stats
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
 U32 = numpy.uint32
@@ -123,13 +123,12 @@ class GmfComputer(object):
         else:  # in the hazardlib tests
             self.source_id = '?'
         self.seed = rupture.rup_id
-        self.ctx, sites, dctx = cmaker.make_contexts(sitecol, rupture)
-        vars(self.ctx).update(vars(dctx))
-        for par in sites.array.dtype.names:
-            setattr(self.ctx, par, sites[par])
-        self.sids = sites.sids
+        ctxs = cmaker.get_ctxs([rupture], sitecol, self.source_id)
+        if not ctxs:
+            raise FarAwayRupture
+        self.ctx = ctxs[0]
         if correlation_model:  # store the filtered sitecol
-            self.sites = sitecol.complete.filtered(self.sids)
+            self.sites = sitecol.complete.filtered(self.ctx.sids)
         if cmaker.trunclevel is None:
             self.distribution = scipy.stats.norm()
         elif cmaker.trunclevel == 0:
@@ -146,7 +145,7 @@ class GmfComputer(object):
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         t0 = time.time()
-        sids = self.sids
+        sids = self.ctx.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
@@ -204,7 +203,8 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
+        result = numpy.zeros(
+            (len(self.imts), len(self.ctx.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
         numpy.random.seed(self.seed)
@@ -232,7 +232,7 @@ class GmfComputer(object):
         :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
                    epsilons(num_events))
         """
-        num_sids = len(self.sids)
+        num_sids = len(self.ctx.sids)
         if self.distribution is None:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
