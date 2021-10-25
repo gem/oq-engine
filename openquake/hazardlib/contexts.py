@@ -422,11 +422,8 @@ class ContextMaker(object):
                     if 'rrup' in self.REQUIRES_DISTANCES:
                         dctx.rrup = numpy.sqrt(
                             reqv**2 + rup.hypocenter.depth**2)
-                for par in self.REQUIRES_SITES_PARAMETERS:
-                    setattr(ctx, par, r_sites[par])
-                if 'ampcode' in sitecol.array.dtype.names:
-                    ctx.ampcode = r_sites.ampcode
-                ctx.sids = r_sites.sids
+                for name in r_sites.array.dtype.names:
+                    setattr(ctx, name, r_sites[name])
                 ctx.src_id = src_id
                 for par in self.REQUIRES_DISTANCES | {'rrup'}:
                     setattr(ctx, par, getattr(dctx, par))
