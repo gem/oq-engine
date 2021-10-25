@@ -27,7 +27,7 @@ import scipy.stats
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
 U32 = numpy.uint32
@@ -123,7 +123,10 @@ class GmfComputer(object):
         else:  # in the hazardlib tests
             self.source_id = '?'
         self.seed = rupture.rup_id
-        [self.ctx] = cmaker.get_ctxs([rupture], sitecol, self.source_id)
+        ctxs = cmaker.get_ctxs([rupture], sitecol, self.source_id)
+        if not ctxs:
+            raise FarAwayRupture
+        self.ctx = ctxs[0]
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         if cmaker.trunclevel is None:
