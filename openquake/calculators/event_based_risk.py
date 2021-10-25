@@ -240,8 +240,8 @@ def ebrisk(rupgetter, param, monitor):
                 for key, val in data.items():
                     alldata[key].extend(data[key])
                 nbytes = len(data['sid']) * len(data) * 4
-                gmf_info.append((c.ebrupture.id, mon_haz.task_no, len(c.sids),
-                                 nbytes, mon_haz.dt))
+                gmf_info.append((c.ebrupture.id, mon_haz.task_no,
+                                 len(c.ctx.sids), nbytes, mon_haz.dt))
     if not alldata:
         return {}
     for key, val in sorted(alldata.items()):
