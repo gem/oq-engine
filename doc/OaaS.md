@@ -52,19 +52,19 @@ results!
 Since the file `openquake.cfg` lives in `/opt/openquake` then the
 workers will automatically get the address of the database and the
 authkey:
-
+```
 [dbserver]
 host = [name/IP of the server]
 authkey = changeme
-
+```
 I will also be necessary to configure three directories in the
 `openquake.cfg` file:
-
+```
 [directory]
 shared_dir = /var/lib/openquake
 mosaic_dir = /var/lib/openquake/mosaic
 custom_tmp = /var/lib/openquake/tmp
-
+```
 The `mosaic_dir` and `custom_tmp` directories must subdirectories of
 `shared_dir`; in this way the workers will be able to read the models
 and the other input files.
@@ -73,9 +73,9 @@ The `custom_tmp` directory is used to zip and unzip files: zip the
 outputs at download time and unzip the inputs at start time. Actually
 the WebUI is designed so that the received archives are unzipped in
 directories of kind
-
+```
 /var/lib/openquake/tmp/calc_XXX
-
+```
 where `XXX` is the number of the calculation being executed.
 
 The `custom_tmp` *must be cleaned up periodically* to avoid running
@@ -84,8 +84,8 @@ can be safely removed since they are copied in the datastore
 and a calculation can always be repeated.
 
 On top of these directories, there is a fourth essential directory:
-
+```
 /var/lib/openquake/oqdata
-
+```
 That also must be a subdirectory of the `shared_dir`; its purpose is to
 store the database and the .hdf5 calculation files.
