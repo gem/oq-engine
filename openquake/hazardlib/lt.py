@@ -721,6 +721,7 @@ def dummy_branchset():
     """
     bset = BranchSet('dummy')
     bset.branches = [Branch('dummy%d' % next(dummy_counter), '.', 1, None)]
+    bset.branches[0].short_id = '.'
     return bset
 
 

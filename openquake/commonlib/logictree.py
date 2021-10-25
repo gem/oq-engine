@@ -1165,7 +1165,7 @@ def compose(source_model_lt, gsim_lt):
     for trt, btuples in dic.items():
         bsid = gsim_lt.bsetdict[trt]
         bset = BranchSet('gmpeModel', bsno)
-        bset.branches = [Branch(bsid, '*', bt.weight['weight'], bt.gsim)
+        bset.branches = [Branch(bsid, bt.id, bt.weight['weight'], bt.gsim)
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)
         bsno += 1
