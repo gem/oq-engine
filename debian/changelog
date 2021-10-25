@@ -1,3 +1,6 @@
+  [Yen-Shin Chen]
+  * Added the Thingbaijam et al. (2017) Magnitude Scaling Law for Strike-slip
+
   [Michele Simionato]
   * Changed the API of `ContextMaker.get_mean_stds`
   * Extended the WebUI to run sensitivity analysis calculations
