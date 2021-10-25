@@ -39,10 +39,10 @@ Configuration of server and workers
 The server machine will have a `devel_server` installation with a single
 user (openquake). Moreover it will share the following directories to
 the workers:
-
+```
 /opt/openquake: shared read-only
 /var/lib/openquake: shared read-write
-
+```
 The workers *will not have the engine installed*; they just need to have
 python and to *mount /opt/openquake*. That guarantees that the engine
 versions will always be the same between server and workers.  If the
