@@ -14,6 +14,14 @@ The script allows the user to select between three different kinds of installati
 3. `server` installation (only available for Linux)
 4. `devel_server` installation (only available for Linux)
 
+A few notes about macOS:
+
+- macOS 11 (Big Sur) is not officially supported but many people have
+managed to install the engine on it using the system Python (version
+3.8).
+- new Macs with the M1 CPU are unsupported
+- make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS).
+
 ## `devel` installation
 
 Users who intend to modify the engine codebase or add new features for the engine should use the `devel` installation:
