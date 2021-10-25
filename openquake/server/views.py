@@ -141,8 +141,6 @@ def store(request_files, ini, calc_id):
         inifiles = readinput.extract_from_zip(arch, ini, calc_dir)
     if not inifiles:
         raise NotFound('There are no %s files in the archive' % ini)
-    elif len(inifiles) > 1:
-        raise ValueError('Found too many files: %s' % inifiles)
     return inifiles[0]
 
 
