@@ -18,6 +18,7 @@
 
 import shutil
 import json
+import string
 import logging
 import os
 import tempfile
