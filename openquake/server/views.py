@@ -526,7 +526,7 @@ def calc_run(request):
     """
     job_ini = request.POST.get('job_ini')
     hazard_job_id = request.POST.get('hazard_job_id')
-    if hazard_job_id:  # "continue" button
+    if hazard_job_id:  # "continue" button, tested in the QGIS plugin
         ini = job_ini if job_ini else "risk.ini"
     else:
         ini = job_ini if job_ini else ".ini"
@@ -561,14 +561,15 @@ def submit_job(request_files, ini, username, hc_id):
     # store the request files and perform some validation
     try:
         job_ini = store(request_files, ini, job.calc_id)
-        job.oqparam = oq = readinput.get_oqparam(job_ini)
+        job.oqparam = oq = readinput.get_oqparam(
+            job_ini, kw={'hazard_calculation_id': hc_id})
         if oq.sensitivity_analysis:
             logs.dbcmd('set_status', job.calc_id, 'deleted')  # hide it
             jobs = engine.create_jobs([job_ini], config.distribution.log_level,
                                       None, username, hc_id)
         else:
             dic = dict(calculation_mode=oq.calculation_mode,
-                       description=oq.description)
+                       description=oq.description, hazard_calculation_id=hc_id)
             logs.dbcmd('update_job', job.calc_id, dic)
             jobs = [job]
     except Exception:
