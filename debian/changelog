@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the error raised in presence of a mag-dep distance for a tectonic
+    region type and a scalar distance for another one
+
   [Yen-Shin Chen]
   * Added the Thingbaijam et al. (2017) Magnitude Scaling Law for Strike-slip
 

@@ -97,9 +97,14 @@ def floatdict(value):
     value = ast.literal_eval(value)
     if isinstance(value, (int, float, list)):
         return {'default': value}
-    dic = {'default': max(value.values())}
-    dic.update(value)
-    return dic
+    if 'default' not in value:
+        maxval = 0
+        for val in value.values():
+            if isinstance(val, list):
+                val = val[-1][1]
+            maxval = max(val, maxval)
+        value['default'] = maxval
+    return value
 
 
 class MagDepDistance(dict):
