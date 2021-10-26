@@ -580,9 +580,9 @@ def submit_job(request_files, ini, username, hc_id):
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         raise
-    if (config.distribute.ext_cmd == "kubectl apply -f -" and
-            oq.get_input_size() > int(config.distribute.min_input_size)):
-        with open(os.path.join(CWD, 'job.yaml') as f:
+    if (config.distribute.ext_cmd.split() == ["kubectl", "apply", "-f", "-"]
+            and oq.get_input_size() > int(config.distribute.min_input_size)):
+        with open(os.path.join(CWD, 'job.yaml')) as f:
             yaml = string.Template(f.read()).substitute(JOB_INI=job_ini)
         cmd = config.distribute.ext_cmd.split()
         subprocess.run(cmd, input=yaml.encode('ascii'))
