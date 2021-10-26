@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import tempfile
+import subprocess
 import multiprocessing
 import traceback
 import signal
@@ -61,7 +62,7 @@ if settings.LOCKDOWN:
 
 Process = multiprocessing.get_context('spawn').Process
 
-
+CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 
@@ -578,8 +579,14 @@ def submit_job(request_files, ini, username, hc_id):
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         raise
-    proc = Process(target=engine.run_jobs, args=(jobs,))
-    proc.start()
+    if (config.distribute.ext_cmd == "kubectl apply -f -" and
+            oq.get_input_size() > int(config.distribute.min_input_size)):
+        with open(os.path.join(CWD, 'job.yaml') as f:
+            yaml = string.Template(f.read()).substitute(JOB_INI=job_ini)
+        cmd = config.distribute.ext_cmd.split()
+        subprocess.run(cmd, input=yaml.encode('ascii'))
+    else:
+        Process(target=engine.run_jobs, args=(jobs,)).start()
     return job.calc_id
 
 
