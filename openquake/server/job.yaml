@@ -25,7 +25,7 @@ spec:
              memory: "24Gi" 
              cpu: "6" 
          env: 
-         - name: OQ_JOB 
+         - name: JOB_INI
            value: /opt/openquake/job/mosaic.zip 
          - name: OQ_CONFIG_FILE 
            value: /opt/openquake/engine/openquake.cfg 
