@@ -87,7 +87,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # check the custom_site_id
         aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
-        self.assertEqual(list(aw), [100, 200])
+        self.assertEqual(list(aw), [b'A', b'B'])
 
         # check the site_model backarc and vs30measured fields
         sitecol = self.calc.datastore['sitecol']
