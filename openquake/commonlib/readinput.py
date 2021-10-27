@@ -558,8 +558,11 @@ def get_site_collection(oqparam, h5=None):
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if ss:
+        if 'custom_site_id' not in sitecol.array.dtype.names:
+            raise RuntimeError('sites_slice requires a custom_site_id!')
         mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
         sitecol = sitecol.filter(mask)
+        sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:

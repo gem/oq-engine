@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
-    case_67, case_70, case_71, case_72, case_73)
+    case_66, case_67, case_70, case_71, case_72, case_73)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -922,6 +922,15 @@ hazard_uhs-std.csv
 
         files = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
+
+    def test_case_66(self):
+        # sites_slice
+        self.run_calc(case_66.__file__, 'job.ini')  # sites_slice=50:100
+        [fname1] = export(('hmaps', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hmap1.csv', fname1, delta=1E-4)
+        self.run_calc(case_66.__file__, 'job.ini', sites_slice='0:50')
+        [fname2] = export(('hmaps', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hmap2.csv', fname2, delta=1E-4)
 
     def test_case_67(self):
         # source specific logic tree with the following structure:
