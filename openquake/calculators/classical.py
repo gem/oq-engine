@@ -368,6 +368,7 @@ class ClassicalCalculator(base.HazardCalculator):
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.counts.values()))
+        # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)
                   if self.counts[grp] > 1]
         if num_gs:
