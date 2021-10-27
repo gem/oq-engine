@@ -207,12 +207,6 @@ def start_ebrisk(rgetter, param, monitor):
     srcfilter = monitor.read('srcfilter')
     rgetters = list(rgetter.split(srcfilter, param['maxweight']))
     for rg in rgetters[:-1]:
-        msg = 'produced subtask'
-        try:
-            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                       'ebrisk#%d' % monitor.task_no, msg)
-        except Exception:  # for `oq run`
-            print(msg)
         yield ebrisk, rg, param
     if rgetters:
         yield from ebrisk(rgetters[-1], param, monitor)
@@ -240,8 +234,8 @@ def ebrisk(rupgetter, param, monitor):
                 for key, val in data.items():
                     alldata[key].extend(data[key])
                 nbytes = len(data['sid']) * len(data) * 4
-                gmf_info.append((c.ebrupture.id, mon_haz.task_no, len(c.sids),
-                                 nbytes, mon_haz.dt))
+                gmf_info.append((c.ebrupture.id, mon_haz.task_no,
+                                 len(c.ctx.sids), nbytes, mon_haz.dt))
     if not alldata:
         return {}
     for key, val in sorted(alldata.items()):

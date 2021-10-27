@@ -27,7 +27,7 @@ import scipy.stats
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
 U32 = numpy.uint32
@@ -123,13 +123,12 @@ class GmfComputer(object):
         else:  # in the hazardlib tests
             self.source_id = '?'
         self.seed = rupture.rup_id
-        self.ctx, sites, dctx = cmaker.make_contexts(sitecol, rupture)
-        vars(self.ctx).update(vars(dctx))
-        for par in sites.array.dtype.names:
-            setattr(self.ctx, par, sites[par])
-        self.sids = sites.sids
+        ctxs = cmaker.get_ctxs([rupture], sitecol, self.source_id)
+        if not ctxs:
+            raise FarAwayRupture
+        self.ctx = ctxs[0]
         if correlation_model:  # store the filtered sitecol
-            self.sites = sitecol.complete.filtered(self.sids)
+            self.sites = sitecol.complete.filtered(self.ctx.sids)
         if cmaker.trunclevel is None:
             self.distribution = scipy.stats.norm()
         elif cmaker.trunclevel == 0:
@@ -146,12 +145,11 @@ class GmfComputer(object):
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         t0 = time.time()
-        sids = self.sids
+        sids = self.ctx.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
-        mean_stds = self.cmaker.get_mean_stds([self.ctx], StdDev.EVENT)
-        # G arrays of shape (O, N, M)
+        mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
             num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
             if num_events == 0:  # it may happen
@@ -159,7 +157,7 @@ class GmfComputer(object):
             # NB: the trick for performance is to keep the call to
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
-            array, sig, eps = self.compute(gs, num_events, mean_stds[g])
+            array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
             M, N, E = array.shape
             for n in range(N):
                 for e in range(E):
@@ -205,7 +203,8 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
+        result = numpy.zeros(
+            (len(self.imts), len(self.ctx.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
         numpy.random.seed(self.seed)
@@ -226,16 +225,15 @@ class GmfComputer(object):
 
     def _compute(self, mean_stds, num_events, imt, gsim):
         """
-        :param mean_stds: array of shape (O, N)
+        :param mean_stds: array of shape (4, N)
         :param num_events: the number of seismic events
         :param imt: an IMT instance
         :param gsim: a GSIM instance
         :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
                    epsilons(num_events))
         """
-        num_sids = len(self.sids)
-        num_stds = len(mean_stds)
-        if num_stds == 1:
+        num_sids = len(self.ctx.sids)
+        if self.distribution is None:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
@@ -247,7 +245,7 @@ class GmfComputer(object):
             return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
-        elif num_stds == 2:
+        elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
             # of interest.
@@ -256,7 +254,7 @@ class GmfComputer(object):
                 raise CorrelationButNoInterIntraStdDevs(
                     self.correlation_model, gsim)
 
-            mean, stddev_total = mean_stds
+            mean, stddev_total = mean_stds[:2]
             stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
 
@@ -266,8 +264,8 @@ class GmfComputer(object):
             stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
-        elif num_stds == 3:
-            mean, stddev_inter, stddev_intra = mean_stds
+        else:
+            mean, stddev_total, stddev_inter, stddev_intra = mean_stds
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
@@ -287,9 +285,6 @@ class GmfComputer(object):
             gmf = to_imt_unit_values(
                 mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
-        else:
-            # this cannot happen, unless you pass a wrong mean_stds array
-            raise ValueError('There are %d>3 stddevs!?' % num_stds)
         return gmf, stdi, epsilons
 
 
@@ -344,6 +339,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                                imtls={str(imt): [1] for imt in imts}))
     rupture.rup_id = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
-    [mean_stds] = cmaker.get_mean_stds([gc.ctx], StdDev.EVENT)
+    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
     res, _sig, _eps = gc.compute(gsim, realizations, mean_stds)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

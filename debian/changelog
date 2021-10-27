@@ -2,6 +2,16 @@
   * Added a new class to the lanzano_2019 gmm.
   
   [Michele Simionato]
+  * Changed `custom_site_id` to an ASCII string up to 6 characters
+  * Fixed the error raised in presence of a mag-dep distance for a tectonic
+    region type and a scalar distance for another one
+
+  [Yen-Shin Chen]
+  * Added the Thingbaijam et al. (2017) Magnitude Scaling Law for Strike-slip
+
+  [Michele Simionato]
+  * Changed the API of `ContextMaker.get_mean_stds`
+  * Extended the WebUI to run sensitivity analysis calculations
   * Changed the string representation of logic tree paths and enforced a
     maximum of 64 branches per branchset
   * Added command `oq info disagg`

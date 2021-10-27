@@ -31,7 +31,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import duplicated, BASE64, group_array
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
-from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
+from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
 
@@ -323,8 +323,8 @@ class GsimLogicTree(object):
                     kw = gsim.kwargs.copy()
                     kw['weight'] = weight.dic['weight']
                     kwargs[brid] = {gsim.__class__.__name__: kw}
-                _toml = toml.dumps({'AvgGMPE': kwargs})
-                gsim = AvgGMPE(**kwargs)
+                _toml = toml.dumps({'AvgPoeGMPE': kwargs})
+                gsim = AvgPoeGMPE(**kwargs)
                 gsim._toml = _toml
                 new.values[trt] = [gsim]
                 branch = BranchTuple(trt, bs_id, gsim, sum(weights), True)

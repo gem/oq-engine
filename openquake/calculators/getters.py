@@ -335,7 +335,8 @@ class GmfGetter(object):
         self.times = []  # rup_id, nsites, dt
         for computer in self.gen_computers(mon):
             data, dt = computer.compute_all(self.sig_eps)
-            self.times.append((computer.ebrupture.id, len(computer.sids), dt))
+            self.times.append(
+                (computer.ebrupture.id, len(computer.ctx.sids), dt))
             for key in data:
                 alldata[key].extend(data[key])
         for key, val in sorted(alldata.items()):

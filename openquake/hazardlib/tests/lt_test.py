@@ -144,28 +144,29 @@ class CollapseTestCase(unittest.TestCase):
 class CompositeLogicTreeTestCase(unittest.TestCase):
     def test(self):
         # simple logic tree with 5 realizations
-        #        __/ 000
-        #    bs1/  \ 001
-        #   /   \__/ 010
-        # bs0      \ 011
+        #        __/ AAA
+        #    bs1/  \ AAB
+        #   /   \__/ ABA
+        # bs0      \ ABB
         #   \_______
-        #            1..
+        #            B..
         bs0 = lt.BranchSet('abGRAbsolute')
-        bs0.branches = [lt.Branch('bs0', '0', .4, (4.6, 1.1)),
-                        lt.Branch('bs0', '1', .6, (4.4, 0.9))]
+        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
+                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
 
-        bs1 = lt.BranchSet('maxMagGRAbsolute')
-        bs1.branches = [lt.Branch('bs1', '0', .5, 7.0),
-                        lt.Branch('bs1', '1', .5, 7.6)]
-        bs0.branches[0].bset = bs1
+        bs1 = lt.BranchSet('maxMagGRAbsolute',
+                           filters={'applyToBranches': 'A'})
+        bs1.branches = [lt.Branch('bs1', 'A', .5, 7.0),
+                        lt.Branch('bs1', 'B', .5, 7.6)]
 
-        bs2 = lt.BranchSet('applyToTRT')
-        bs2.branches = [lt.Branch('bs2', '0', .3, 'A'),
-                        lt.Branch('bs2', '1', .7, 'B')]
+        bs2 = lt.BranchSet('applyToTRT',
+                           filters={'applyToBranches': 'A B'})
+        bs2.branches = [lt.Branch('bs2', 'A', .3, 'A'),
+                        lt.Branch('bs2', 'B', .7, 'B')]
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])
         self.assertEqual(clt.get_all_paths(),
-                         ['000', '001', '010', '011', '1..'])
+                         ['AAA', 'AAB', 'ABA', 'ABB', 'B..'])
         self.assertEqual(clt.basepaths,
-                         ['0**', '1**', '*0*', '*1*', '**0', '**1'])
+                         ['A**', 'B**', '*A*', '*B*', '**A', '**B'])

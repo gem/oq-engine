@@ -412,7 +412,7 @@ class HazardCalculator(BaseCalculator):
         :returns: the total number of sites
         """
         if hasattr(self, 'sitecol'):
-            return len(self.sitecol.complete) if self.sitecol else 0
+            return len(self.sitecol) if self.sitecol else 0
         if 'sitecol' not in self.datastore:
             return 0
         return len(self.datastore['sitecol'])
@@ -879,7 +879,6 @@ class HazardCalculator(BaseCalculator):
 
         :param rel_ruptures: dictionary TRT -> number of relevant ruptures
         """
-        oq = self.oqparam
         if hasattr(self, 'full_lt'):  # no scenario
             self.realizations = self.full_lt.get_realizations()
             if not self.realizations:

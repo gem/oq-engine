@@ -99,20 +99,20 @@ def collect_files(dirpath, cond=lambda fullname: True):
     return sorted(files)  # job_haz before job_risk
 
 
-def extract_from_zip(path, ext='.ini'):
+def extract_from_zip(path, ext='.ini', targetdir=None):
     """
-    Given a zip archive and a function to detect the presence of a given
-    filename, unzip the archive into a temporary directory and return the
-    full path of the file. Raise an IOError if the file cannot be found
-    within the archive.
+    Given a zip archive and an extension (by default .ini), unzip the archive
+    into the target directory and the files with the given extension.
 
     :param path: pathname of the archive
     :param ext: file extension to search for
+    :returns: filenames
     """
-    temp_dir = tempfile.mkdtemp(dir=config.directory.custom_tmp or None)
+    targetdir = targetdir or tempfile.mkdtemp(
+        dir=config.directory.custom_tmp or None)
     with zipfile.ZipFile(path) as archive:
-        archive.extractall(temp_dir)
-    return [f for f in collect_files(temp_dir)
+        archive.extractall(targetdir)
+    return [f for f in collect_files(targetdir)
             if os.path.basename(f).endswith(ext)]
 
 
@@ -383,9 +383,9 @@ def get_mesh(oqparam, h5=None):
             data = [line.replace(',', ' ')
                     for line in open(fname, encoding='utf-8-sig')]
         coords = valid.coordinates(','.join(data))
-        start, stop = oqparam.sites_slice
-        c = (coords[start:stop] if header[0] == 'site_id'
-             else sorted(coords[start:stop]))
+        # sorting the coordinates so that event_based results do not
+        # depend on the order in the sites.csv file
+        c = coords if header[0] == 'site_id' else sorted(coords)
         # NB: Notice the sort=False below
         # Calculations starting from predefined ground motion fields
         # require at least two input files related to the gmf data:
@@ -556,6 +556,11 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
+    ss = oqparam.sites_slice  # can be None or (start, stop)
+    if ss:
+        mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
+        sitecol = sitecol.filter(mask)
+
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
         # debugging tip to reduce the size of a calculation
@@ -712,7 +717,7 @@ def get_logic_tree(oqparam):
     :returns: a CompositeLogicTree instance
     """
     flt = get_full_lt(oqparam)
-    return logictree.compose(flt.gsim_lt, flt.source_model_lt)
+    return logictree.compose(flt.source_model_lt, flt.gsim_lt)
 
 
 def save_source_info(csm, h5):

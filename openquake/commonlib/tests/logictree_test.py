@@ -46,9 +46,9 @@ class CompositeLtTestCase(unittest.TestCase):
         gmmLT = os.path.join(DATADIR, 'gmmLT.xml')
         smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
         gslt = logictree.GsimLogicTree(gmmLT)
-        clt = logictree.compose(gslt, smlt)
+        clt = logictree.compose(smlt, gslt)
         sizes = [len(bset) for bset in clt.branchsets]
-        self.assertEqual(sizes, [3, 3, 3, 3, 3, 3, 3, 6])
+        self.assertEqual(sizes, [6, 3, 3, 3, 3, 3, 3, 3])
         num_paths = numpy.prod(sizes)  # 13122
         self.assertEqual(len(clt.get_all_paths()), num_paths)
 
@@ -1225,15 +1225,16 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             lt.root_branchset,
             'sourceModel', {},
             [('sb1', '0.6', 'sm1.xml',
-              ('bGRRelative', {},
+              ('bGRRelative', {'applyToBranches': ['sb1', 'sb3']},
                [('b2', '1.0', +1)]
                )),
              ('sb2', '0.3', 'sm2.xml',
-              ('maxMagGRAbsolute', {'applyToSources': ['src01']},
+              ('maxMagGRAbsolute', {'applyToSources': ['src01'],
+                                    'applyToBranches': ['sb2']},
                [('b3', '1.0', -3)]
                )),
              ('sb3', '0.1', 'sm3.xml',
-              ('bGRRelative', {},
+              ('bGRRelative', {'applyToBranches': ['sb1', 'sb3']},
                [('b2', '1.0', +1)]
                ))
              ]
@@ -2125,7 +2126,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     """
     value = {'b1_b21': 1, 'b1_b22': 1, 'b1_b23': 1,
              'b1_b24': 1, 'b1_b25': 1, 'b1_b26': 1,
-             'b2_.1': 1.2, 'b3_.1': 1.3}
+             'b2_.': 1.2, 'b3_.': 1.3}
 
     def mean(self, rlzs):
         R = len(rlzs)
@@ -2150,7 +2151,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
 
         rlzs = full_lt.get_realizations()  # 6+2 = 8 realizations
         paths = ['b1_b21', 'b1_b22', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b2_.1', 'b3_.1']
+                 'b2_.', 'b3_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.064988,  # b1_b21
                    0.14077,   # b1_b22
@@ -2175,7 +2176,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b1_b26', 'b2_.1', 'b2_.1', 'b2_.1']
+                 'b1_b26', 'b2_.', 'b2_.', 'b2_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
 
         # the weights are all equal
@@ -2193,7 +2194,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b25', 'b1_b26',
-                 'b2_.1', 'b2_.1', 'b2_.1', 'b3_.1', 'b3_.1', 'b3_.1']
+                 'b2_.', 'b2_.', 'b2_.', 'b3_.', 'b3_.', 'b3_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.04438889044, 0.05861275966, 0.031712341,
                    0.01389718817, 0.18919751558, 0.189197515,
