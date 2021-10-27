@@ -584,7 +584,7 @@ def submit_job(request_files, ini, username, hc_id):
             and oq.get_input_size() > int(config.distribute.min_input_size)):
         with open(os.path.join(CWD, 'job.yaml')) as f:
             yaml = string.Template(f.read()).substitute(
-                JOB_INI=job_ini, CALC_NAME='calc_%d' % job.calc_id)
+                JOB_INI=job_ini, CALC_NAME='calc-%d' % job.calc_id)
         cmd = config.distribute.ext_cmd.split()
         subprocess.run(cmd, input=yaml.encode('ascii'))
     else:
