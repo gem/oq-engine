@@ -48,23 +48,13 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-grp_extreme_dt = numpy.dtype([
+disagg_grp_dt = numpy.dtype([
     ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
-    ('extreme_poe', F32), ('smrs', hdf5.vuint16)])
+    ('smrs', hdf5.vuint16)])
 
 
 def get_source_id(src):  # used in submit_tasks
     return src.source_id.split(':')[0]
-
-
-def get_extreme_poe(array, imtls):
-    """
-    :param array: array of shape (L, G) with L=num_levels, G=num_gsims
-    :param imtls: DictArray imt -> levels
-    :returns:
-        the maximum PoE corresponding to the maximum level for IMTs and GSIMs
-    """
-    return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
 def store_ctxs(dstore, rupdata, grp_id):
@@ -126,13 +116,7 @@ class Hazard:
         self.srcidx = srcidx
         self.mon = mon
         self.N = len(dstore['sitecol/sids'])
-        extreme = []
-        n = len(full_lt.sm_rlzs)
-        for grp_id, indices in enumerate(dstore['trt_smrs']):
-            trti, smrs = numpy.divmod(indices, n)
-            trt = full_lt.trts[trti[0]]
-            extreme.append((0, trt, 0, 0, smrs))
-        self.extreme = numpy.array(extreme, grp_extreme_dt)
+        self.acc = AccumDict(accum={})
 
     def init(self, pmaps, grp_id):
         """
@@ -149,24 +133,35 @@ class Hazard:
             cmaker = self.cmakers[grp_id]
             dset = self.datastore['_poes']
             if slc.start is None:
-                slc = slice(0, self.N)
+                start, stop = 0, self.N
+            else:
+                start, stop = slc.start, slc.stop
             values = []
             for g in range(pmap.shape_z):
-                arr = pmap.array(slc.start, slc.stop, g)  # shape N'L
-                dset[cmaker.start + g, slc] = arr
+                arr = pmap.array(start, stop, g)  # shape N'L
+                dset[cmaker.start + g, start:stop] = arr
                 values.append(arr.mean(axis=0) @ self.level_weights)
-            extreme = max(
-                get_extreme_poe(pmap[sid].array, self.imtls)
-                for sid in pmap)
-            self.extreme[grp_id]['grp_start'] = cmaker.start
-            self.extreme[grp_id]['extreme_poe'] = extreme
-            self.extreme[grp_id]['avg_poe'] = numpy.mean(values)
+            dic = self.acc[grp_id]
+            dic['grp_start'] = cmaker.start
+            if 'avg_poe' not in dic:
+                dic['avg_poe'] = values
+            else:
+                dic['avg_poe'].extend(values)
 
     def store_disagg(self, pmaps=None):
         """
         Store data inside disagg_by_grp (optionally disagg_by_src)
         """
-        self.datastore['disagg_by_grp'] = self.extreme
+        n = len(self.full_lt.sm_rlzs)
+        lst = []
+        for grp_id, indices in enumerate(self.datastore['trt_smrs']):
+            dic = self.acc[grp_id]
+            trti, smrs = numpy.divmod(indices, n)
+            trt = self.full_lt.trts[trti[0]]
+            avg_poe = numpy.mean(dic['avg_poe'])
+            lst.append((dic['grp_start'], trt, avg_poe, smrs))
+        self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
+
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
                 if isinstance(key, str):
