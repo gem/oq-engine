@@ -18,12 +18,12 @@ spec:
          image: openquake/engine:latest 
          imagePullPolicy: Always 
          resources: 
-         # limits: 
-         #   memory: "8Gi" 
-         #   cpu: "8" 
-           requests: 
-             memory: "24Gi" 
-             cpu: "6" 
+          limits: 
+            memory: "8Gi" 
+            cpu: "8" 
+         #  requests: 
+         #    memory: "24Gi" 
+         #    cpu: "6" 
          env: 
          - name: JOB_INI
            value: /opt/openquake/job/mosaic.zip 
