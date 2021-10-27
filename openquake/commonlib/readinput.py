@@ -556,9 +556,9 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
-    slc = oqparam.sites_slice
-    if slc:
-        mask = (sitecol.sids >= slc.start) & (sitecol.sids < slc.stop)
+    ss = oqparam.sites_slice  # can be None or (start, stop)
+    if ss:
+        mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
         sitecol = sitecol.filter(mask)
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
