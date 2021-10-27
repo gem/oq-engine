@@ -854,13 +854,13 @@ Source = collections.namedtuple(
     'Source', 'source_id code num_ruptures checksum')
 
 
-@view.add('extreme_groups')
+@view.add('disagg_by_grp')
 def view_extreme_groups(token, dstore):
     """
     Show the source groups contributing the most to the highest IML
     """
     data = dstore['disagg_by_grp'][()]
-    data.sort(order='extreme_poe')
+    data.sort(order='avg_poe')
     return text_table(data[::-1])
 
 
