@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the behavior of `sites_slice`
   * Changed `custom_site_id` to an ASCII string up to 6 characters
   * Fixed the error raised in presence of a mag-dep distance for a tectonic
     region type and a scalar distance for another one
