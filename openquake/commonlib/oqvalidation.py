@@ -865,7 +865,7 @@ class OqParam(valid.ParamSet):
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
-    sites_slice = valid.Param(valid.simple_slice, (None, None))
+    sites_slice = valid.Param(valid.simple_slice, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')

@@ -529,7 +529,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         if not oq.hazard_curves:  # do nothing
             return
-        N = len(self.sitecol.complete)
+        N = len(self.sitecol)
         R = len(self.realizations)
         if oq.individual_rlzs is None:  # not specified in the job.ini
             individual_rlzs = (N == 1) * (R > 1)
