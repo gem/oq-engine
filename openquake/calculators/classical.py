@@ -156,10 +156,11 @@ class Hazard:
         lst = []
         for grp_id, indices in enumerate(self.datastore['trt_smrs']):
             dic = self.acc[grp_id]
-            trti, smrs = numpy.divmod(indices, n)
-            trt = self.full_lt.trts[trti[0]]
-            avg_poe = numpy.mean(dic['avg_poe'])
-            lst.append((dic['grp_start'], trt, avg_poe, smrs))
+            if dic:
+                trti, smrs = numpy.divmod(indices, n)
+                trt = self.full_lt.trts[trti[0]]
+                avg_poe = numpy.mean(dic['avg_poe'])
+                lst.append((dic['grp_start'], trt, avg_poe, smrs))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
 
         if pmaps:  # called inside a loop
@@ -310,8 +311,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
 
-        poes_shape = G, N, L = len(rlzs_by_g), self.N, self.oqparam.imtls.size
-        self.check_memory(G, N, L, [len(rbs) for rbs in rlzs_by_gsim_list])
+        poes_shape = len(rlzs_by_g), self.N, self.oqparam.imtls.size
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
         # NB: it is CRITICAL for performance to have shape GNL and not NLG
         # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
@@ -319,7 +319,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
 
-    def check_memory(self, G, N, L, num_gs):
+    def check_memory(self, N, L, num_gs):
+        G = sum(num_gs)
         N1 = min(N, self.oqparam.max_sites_per_tile)
         size = G * N * L * 8
         bytes_per_grp = size / len(self.grp_ids)
@@ -367,6 +368,10 @@ class ClassicalCalculator(base.HazardCalculator):
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.counts.values()))
+        num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)
+                  if self.counts[grp] > 1]
+        if num_gs:
+            self.check_memory(self.N, oq.imtls.size, num_gs)
         h5 = self.datastore.hdf5
         if self.N > oq.max_sites_per_tile:
             smap = parallel.Starmap(classical_tile, args, h5=h5)
