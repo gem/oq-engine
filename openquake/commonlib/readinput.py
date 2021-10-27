@@ -383,9 +383,9 @@ def get_mesh(oqparam, h5=None):
             data = [line.replace(',', ' ')
                     for line in open(fname, encoding='utf-8-sig')]
         coords = valid.coordinates(','.join(data))
-        start, stop = oqparam.sites_slice
-        c = (coords[start:stop] if header[0] == 'site_id'
-             else sorted(coords[start:stop]))
+        # sorting the coordinates so that event_based results do not
+        # depend on the order in the sites.csv file
+        c = coords if header[0] == 'site_id' else sorted(coords)
         # NB: Notice the sort=False below
         # Calculations starting from predefined ground motion fields
         # require at least two input files related to the gmf data:
@@ -556,6 +556,11 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
+    slc = oqparam.sites_slice
+    if slc:
+        mask = (sitecol.sids >= slc.start) & (sitecol.sids < slc.stop)
+        sitecol = sitecol.filter(mask)
+
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
         # debugging tip to reduce the size of a calculation

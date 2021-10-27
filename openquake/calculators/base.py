@@ -879,7 +879,6 @@ class HazardCalculator(BaseCalculator):
 
         :param rel_ruptures: dictionary TRT -> number of relevant ruptures
         """
-        oq = self.oqparam
         if hasattr(self, 'full_lt'):  # no scenario
             self.realizations = self.full_lt.get_realizations()
             if not self.realizations:
