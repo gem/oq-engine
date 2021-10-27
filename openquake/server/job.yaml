@@ -1,7 +1,7 @@
 apiVersion: batch/v1 
 kind: Job 
 metadata: 
- name: jobengine 
+ name: ${CALC_NAME}
 spec: 
  ttlSecondsAfterFinished: 60 
  #activeDeadlineSeconds: 60 
