@@ -164,7 +164,7 @@ site_param_dt = {
     'fpeak': numpy.float64,
 
     # other parameters
-    'custom_site_id': numpy.uint32,
+    'custom_site_id': (numpy.string_, 6),
     'region': numpy.uint32
 }
 
