@@ -536,8 +536,6 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        if self.use_recarray:
-            ctxs = [self.recarray(ctxs)]
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
@@ -614,6 +612,8 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
+        if self.use_recarray:
+            ctxs = [self.recarray(ctxs)]
         for ctx in ctxs:
             s = 0
             with self.gmf_mon:
