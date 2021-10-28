@@ -34,7 +34,7 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, RecordBuilder)
+    AccumDict, DictArray, groupby, RecordBuilder, gen_slices)
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import imt as imt_module
@@ -510,7 +510,7 @@ class ContextMaker(object):
             pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        for ctx, poes in zip(ctxs, self.gen_poes(ctxs)):
+        for ctx, poes in self.gen_poes(ctxs):
             # pnes and poes of shape (N, L, G)
             with self.pne_mon:
                 pnes = get_probability_no_exceedance(ctx, poes, tom)
@@ -610,25 +610,30 @@ class ContextMaker(object):
     def gen_poes(self, ctxs):
         """
         :param ctxs: a list of C context objects
-        :yields: poes of shape (N, L, G)
+        :yields: pairs (ctx, array(N, L, G))
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         with self.gmf_mon:
             mean_stdt = self.get_mean_stds(ctxs)
+        L, G = self.loglevels.size, len(self.gsims)
         s = 0
         for ctx in ctxs:
-            with self.poe_mon:
-                n = len(ctx)
-                poes = numpy.zeros((n, self.loglevels.size, len(self.gsims)))
-                for g, gsim in enumerate(self.gsims):
-                    ms = mean_stdt[:2, g, :, s:s+n]
-                    # builds poes of shape (n, L, G)
-                    if self.af:  # kernel amplification method
-                        poes[:, :, g] = get_poes_site(ms, self, ctx)
-                    else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctx)
-            yield poes
-            s += n
+            sids = ctx.sids
+            # splitting in chunks of at most 1000 sites
+            for slc in gen_slices(0, len(ctx), 1000):
+                n = slc.stop - slc.start
+                with self.poe_mon:
+                    poes = numpy.zeros((n, L, G))
+                    for g, gsim in enumerate(self.gsims):
+                        ms = mean_stdt[:2, g, :, s:s+n]
+                        # builds poes of shape (n, L, G)
+                        if self.af:  # kernel amplification method
+                            poes[:, :, g] = get_poes_site(ms, self, ctx)
+                        else:  # regular case
+                            poes[:, :, g] = gsim.get_poes(ms, self, ctx)
+                ctx.sids = sids[slc]
+                yield ctx, poes
+                s += n
 
 
 # see contexts_tests.py for examples of collapse
