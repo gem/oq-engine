@@ -111,6 +111,6 @@ class AvgPoeGMPE(GMPE):
         cm.gsims = self.gsims
         avgs = []
         for ctx, poes in cm.gen_poes([ctx]):
-            # poes has shape N, L, G
+            # poes has shape N', L, G
             avgs.append(poes @ self.weights)
-        return numpy.concatenate(avgs)
+        return numpy.concatenate(avgs)  # shape (N, L)
