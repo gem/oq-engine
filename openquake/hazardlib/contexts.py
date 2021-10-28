@@ -614,12 +614,14 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         with self.gmf_mon:
+            # a lot of memory can be consumed here, since mean_stdt has size
+            # 4 x G x M x N*C; however, you can increase concurrent_tasks
             mean_stdt = self.get_mean_stds(ctxs)
         L, G = self.loglevels.size, len(self.gsims)
         s = 0
         for ctx in ctxs:
             sids = ctx.sids
-            # splitting in chunks of at most 1000 sites
+            # splitting in chunks of at most 1000 sites to save memory
             for slc in gen_slices(0, len(ctx), 1000):
                 ctx.sids = sids[slc]
                 n = slc.stop - slc.start
