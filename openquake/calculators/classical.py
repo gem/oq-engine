@@ -110,28 +110,21 @@ class Hazard:
         L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
         pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
-    def store_poes(self, grp_id, pmap, slc=slice(None)):
+    def store_poes(self, grp_id, pmap):
         """
         Store the pmap of the given group inside the _poes dataset
         """
         with self.mon:
             cmaker = self.cmakers[grp_id]
             dset = self.datastore['_poes']
-            if slc.start is None:
-                start, stop = 0, self.N
-            else:
-                start, stop = slc.start, slc.stop
+            start, stop = 0, self.N
             values = []
             for g in range(pmap.shape_z):
                 arr = pmap.array(start, stop, g)  # shape N'L
                 dset[cmaker.start + g, start:stop] = arr
                 values.append(arr.mean(axis=0) @ self.level_weights)
-            dic = self.acc[grp_id]
-            dic['grp_start'] = cmaker.start
-            if 'avg_poe' not in dic:
-                dic['avg_poe'] = values
-            else:
-                dic['avg_poe'].extend(values)
+            self.acc[grp_id]['grp_start'] = cmaker.start
+            self.acc[grp_id]['avg_poe'] = numpy.mean(values)
 
     def store_disagg(self, pmaps=None):
         """
@@ -144,8 +137,7 @@ class Hazard:
             if dic:
                 trti, smrs = numpy.divmod(indices, n)
                 trt = self.full_lt.trts[trti[0]]
-                avg_poe = numpy.mean(dic['avg_poe'])
-                lst.append((dic['grp_start'], trt, avg_poe, smrs))
+                lst.append((dic['grp_start'], trt, dic['avg_poe'], smrs))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
 
         if pmaps:  # called inside a loop
@@ -198,7 +190,6 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
-        slc = dic.get('slc', slice(None))
         pmap = dic['pmap']
         pmap.grp_id = grp_id
         source_id = dic.pop('source_id', None)
@@ -207,7 +198,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id.split(':')[0]] = pmap
         if pmap:
             if self.counts[grp_id] == 1:  # shortcut to save memory
-                self.haz.store_poes(grp_id, pmap, slc)
+                self.haz.store_poes(grp_id, pmap)
             else:
                 acc[grp_id] |= pmap
         return acc
