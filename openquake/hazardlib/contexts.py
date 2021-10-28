@@ -532,6 +532,8 @@ class ContextMaker(object):
         if not hasattr(self, 'imts'):
             self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
+        if self.use_recarray:
+            ctxs = [self.recarray(ctxs)]
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
@@ -611,13 +613,11 @@ class ContextMaker(object):
         :yields: pairs (ctx, array(N, L, G))
         """
         from openquake.hazardlib.site_amplification import get_poes_site
+        with self.gmf_mon:
+            mean_stdt = self.get_mean_stds(ctxs)
         L, G = self.loglevels.size, len(self.gsims)
-        if self.use_recarray:
-            ctxs = [self.recarray(ctxs)]
+        s = 0
         for ctx in ctxs:
-            s = 0
-            with self.gmf_mon:
-                mean_stdt = self.get_mean_stds([ctx])
             sids = ctx.sids
             # splitting in chunks of at most 1000 sites
             for slc in gen_slices(0, len(ctx), 1000):
