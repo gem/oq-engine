@@ -580,7 +580,6 @@ class MultiSurface(BaseSurface):
         # Loop over the traces
         for j, edges in enumerate(self.cartesian_edges):
 
-            # import pdb; pdb.set_trace()
             ok = numpy.isfinite(edges)
             if not ok.all():
                 edges = edges[ok]

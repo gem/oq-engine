@@ -490,8 +490,6 @@ class OrthographicProjection(object):
                 numpy.sin((self.phi0 - phis) / 2.0) ** 2.0
                 + self.cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0
             )
-            if numpy.any(numpy.isnan(sin_dist)):
-                import pdb; pdb.set_trace()
             if (sin_dist > self.sin_pi_over_4).any():
                 raise ValueError('some points are too far from the projection '
                                  'center lon=%s lat=%s' %
