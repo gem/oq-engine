@@ -249,6 +249,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
+        dic['occurrence_rate'] = numpy.float64(0)
         dic['sids'] = numpy.uint32(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -531,13 +532,10 @@ class ContextMaker(object):
         """
         if not hasattr(self, 'imts'):
             self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
-        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        if self.use_recarray:
-            ctxs = [self.recarray(ctxs)]
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
@@ -613,14 +611,19 @@ class ContextMaker(object):
         :yields: pairs (ctx, array(N, L, G))
         """
         from openquake.hazardlib.site_amplification import get_poes_site
-        with self.gmf_mon:
-            # a lot of memory can be consumed here, since mean_stdt has size
-            # 4 x G x M x N*C; however, you can increase concurrent_tasks
-            mean_stdt = self.get_mean_stds(ctxs)
+        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
+        if self.use_recarray and not numpy.isnan(
+                [ctx.occurrence_rate for ctx in ctxs]).any():
+            # use recarrays only for poissonian sources
+            ctxs = [self.recarray(ctxs)]
         L, G = self.loglevels.size, len(self.gsims)
-        s = 0
         for ctx in ctxs:
+            with self.gmf_mon:
+                # a lot of memory can be consumed here, since mean_stdt size is
+                # 4 x G x M x N*C; however, you can increase concurrent_tasks
+                mean_stdt = self.get_mean_stds([ctx])
             sids = ctx.sids
+            s = 0
             # splitting in chunks of at most 1000 sites to save memory
             for slc in gen_slices(0, len(ctx), 1000):
                 ctx.sids = sids[slc]
@@ -1043,7 +1046,7 @@ class RuptureContext(BaseContext):
         return ctx
 
 
-def get_probability_no_exceedance(rup, poes, tom):
+def get_probability_no_exceedance(ctx, poes, tom):
     """
     Compute and return the probability that in the time span for which the
     rupture is defined, the rupture itself never generates a ground motion
@@ -1057,7 +1060,7 @@ def get_probability_no_exceedance(rup, poes, tom):
     The calculation can be performed for multiple intensity measure levels
     and multiple sites in a vectorized fashion.
 
-    :param rup:
+    :param ctx:
         an object with attributes .occurrence_rate and possibly .probs_occur
     :param poes:
         2D numpy array containing conditional probabilities the the a
@@ -1070,25 +1073,35 @@ def get_probability_no_exceedance(rup, poes, tom):
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
-    if numpy.isnan(rup.occurrence_rate):  # nonparametric rupture
-        # Uses the formula
-        #
-        #    ∑ p(k|T) * p(X<x|rup)^k
-        #
-        # where `p(k|T)` is the probability that the rupture occurs k times
-        # in the time span `T`, `p(X<x|rup)` is the probability that a
-        # rupture occurrence does not cause a ground motion exceedance, and
-        # thesummation `∑` is done over the number of occurrences `k`.
-        #
-        # `p(k|T)` is given by the attribute probs_occur and
-        # `p(X<x|rup)` is computed as ``1 - poes``.
-        prob_no_exceed = numpy.float64(
-            [v * (1 - poes) ** i for i, v in enumerate(rup.probs_occur)]
-        ).sum(axis=0)
-        return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
+    rate = ctx.occurrence_rate
+    try:
+        n = len(rate)
+    except TypeError:  # float' has no len()
+        if numpy.isnan(rate):  # nonparametric rupture
+            # Uses the formula
+            #
+            #    ∑ p(k|T) * p(X<x|rup)^k
+            #
+            # where `p(k|T)` is the probability that the rupture occurs k times
+            # in the time span `T`, `p(X<x|rup)` is the probability that a
+            # rupture occurrence does not cause a ground motion exceedance, and
+            # thesummation `∑` is done over the number of occurrences `k`.
+            #
+            # `p(k|T)` is given by the attribute probs_occur and
+            # `p(X<x|rup)` is computed as ``1 - poes``.
+            prob_no_exceed = numpy.float64(
+                [v * (1 - poes) ** i for i, v in enumerate(ctx.probs_occur)]
+            ).sum(axis=0)
+            return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
+        else:
+            return tom.get_probability_no_exceedance(rate, poes)
 
-    # parametric rupture
-    return tom.get_probability_no_exceedance(rup.occurrence_rate, poes)
+    # passed a recarray context, poes has shape (n, L, G)
+    assert len(poes) == n
+    res = numpy.zeros_like(poes)
+    for i in range(n):
+        res[i] = tom.get_probability_no_exceedance(rate[i], poes[i])
+    return res
 
 
 class Effect(object):
