@@ -118,6 +118,24 @@ def calc_average(pointsources):
     return dic
 
 
+def avg_ruptures(src, np, hc, psdist=None):
+    """
+    Generate one rupture for each magnitude, called only if nphc > 1.
+
+    :param src: a (Collapsed)PointSource instance
+    :param np: a NodalPlane object
+    :param hc: a Point (hypocenter)
+    :param psdist: if 0, returns a PointRupture
+    """
+    for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+        surface, nhc = src._get_rupture_surface(mag, np, hc)
+        yield ParametricProbabilisticRupture(
+            mag, np.rake, src.tectonic_region_type,
+            nhc, surface, mag_occ_rate,
+            src.temporal_occurrence_model)
+            
+
+
 class PointSource(ParametricSeismicSource):
     """
     Point source typology represents seismicity on a single geographical
@@ -228,17 +246,12 @@ class PointSource(ParametricSeismicSource):
 
     def avg_ruptures(self):
         """
-        Generate one rupture for each magnitude
+        Generate one rupture for each magnitude, called only if nphc > 1
         """
-        avg = calc_average([self])
+        avg = calc_average([self])  # over nodal planes and hypocenters
+        np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
-            surface, nhc = self._get_rupture_surface(mag, np, hc)
-            yield ParametricProbabilisticRupture(
-                mag, avg['rake'], self.tectonic_region_type,
-                nhc, surface, mag_occ_rate,
-                self.temporal_occurrence_model)
+        yield from avg_ruptures(self, np, hc)
 
     def count_nphc(self):
         """
@@ -427,15 +440,10 @@ class CollapsedPointSource(PointSource):
 
     def avg_ruptures(self):
         """
-        :yields: the underlying point ruptures
+        :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            np = Mock(strike=self.strike, dip=self.dip, rake=self.rake)
-            surface, nhc = self._get_rupture_surface(mag, np, self.location)
-            yield ParametricProbabilisticRupture(
-                mag, self.rake, self.tectonic_region_type,
-                nhc, surface, mag_occ_rate,
-                self.temporal_occurrence_model)
+        np = Mock(strike=self.strike, dip=self.dip, rake=self.rake)
+        yield from avg_ruptures(self, np, self.location)
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """
