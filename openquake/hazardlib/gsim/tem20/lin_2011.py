@@ -84,7 +84,6 @@ class Lin2011foot(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
         idx_rock = ctx.vs30 >= self.ROCK_VS30
         idx_soil = ctx.vs30 < self.ROCK_VS30
 
