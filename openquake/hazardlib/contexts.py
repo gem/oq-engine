@@ -532,12 +532,12 @@ class ContextMaker(object):
         if not hasattr(self, 'imts'):
             self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
-        if self.use_recarray:
-            ctxs = [self.recarray(ctxs)]
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
+        if self.use_recarray:
+            ctxs = [self.recarray(ctxs)]
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
