@@ -621,6 +621,7 @@ class ContextMaker(object):
             sids = ctx.sids
             # splitting in chunks of at most 1000 sites
             for slc in gen_slices(0, len(ctx), 1000):
+                ctx.sids = sids[slc]
                 n = slc.stop - slc.start
                 with self.poe_mon:
                     poes = numpy.zeros((n, L, G))
@@ -631,7 +632,6 @@ class ContextMaker(object):
                             poes[:, :, g] = get_poes_site(ms, self, ctx)
                         else:  # regular case
                             poes[:, :, g] = gsim.get_poes(ms, self, ctx)
-                ctx.sids = sids[slc]
                 yield ctx, poes
                 s += n
 
