@@ -622,10 +622,14 @@ class ContextMaker(object):
                 # a lot of memory can be consumed here, since mean_stdt size is
                 # 4 x G x M x N*C; however, you can increase concurrent_tasks
                 mean_stdt = self.get_mean_stds([ctx])
+            if isinstance(ctx, numpy.recarray):
+                slices = [slice(0, len(ctx))]
+            else:
+                # splitting in chunks of at most 1000 sites to save memory
+                slices = gen_slices(0, len(ctx), 1000)
             sids = ctx.sids
             s = 0
-            # splitting in chunks of at most 1000 sites to save memory
-            for slc in gen_slices(0, len(ctx), 1000):
+            for slc in slices:
                 ctx.sids = sids[slc]
                 n = slc.stop - slc.start
                 with self.poe_mon:
