@@ -477,6 +477,9 @@ class OrthographicProjection(object):
         self.sin_pi_over_4 = (2 ** 0.5) / 2
 
     def __call__(self, lons, lats, reverse=False):
+        if isinstance(lons, list):
+            lons = numpy.array(lons)
+            lats = numpy.array(lats)
         idx = numpy.isfinite(lons)
         lons = lons[idx]
         lats = lats[idx]
