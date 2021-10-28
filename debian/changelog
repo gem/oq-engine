@@ -1,3 +1,6 @@
+  [Claudia Mascandola]
+  * Added a new class to the lanzano_2019 gmm.
+  
   [Michele Simionato]
   * Reduced the memory consumption in `get_poes` in classical calculations
   * Changed the behavior of `sites_slice`
