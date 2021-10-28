@@ -33,6 +33,7 @@ class ModifiableGMPETest(unittest.TestCase):
         ctx.mag = 6.
         ctx.rake = 0.
         ctx.hypo_depth = 10.
+        ctx.occurrence_rate = .001
         sites = Dummy.get_site_collection(4, vs30=760.)
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
@@ -206,6 +207,7 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
         self.ctx = ctx = RuptureContext()
         ctx.mag = 6.0
         ctx.hypo_depth = 10.
+        ctx.occurrence_rate = .001
         sites = Dummy.get_site_collection(
             4, amplfactor=[-1.0, 1.5, 0.00, -1.99])
         for name in sites.array.dtype.names:
