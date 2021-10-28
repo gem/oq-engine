@@ -86,21 +86,6 @@ def classical(srcs, cmaker, monitor):
     return hazclassical(srcs, monitor.read('sitecol'), cmaker)
 
 
-# the best test is sslt/job.ini in oq-risk-tests
-def classical_tile(srcs, cmaker, monitor):
-    """
-    Read the sitecol, split it on tiles and call the classical calculator
-    in hazardlib yielding the results for each tile
-    """
-    cmaker.init_monitoring(monitor)
-    sitecol = monitor.read('sitecol')
-    for tile in sitecol.split_in_tiles(cmaker.ntiles):
-        res = hazclassical(srcs, tile, cmaker)
-        if res['pmap']:
-            res['slc'] = slice(tile.sids.min(), tile.sids.max() + 1)
-            yield res
-
-
 class Hazard:
     """
     Helper class for storing the PoEs
@@ -125,28 +110,21 @@ class Hazard:
         L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
         pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
-    def store_poes(self, grp_id, pmap, slc=slice(None)):
+    def store_poes(self, grp_id, pmap):
         """
         Store the pmap of the given group inside the _poes dataset
         """
         with self.mon:
             cmaker = self.cmakers[grp_id]
             dset = self.datastore['_poes']
-            if slc.start is None:
-                start, stop = 0, self.N
-            else:
-                start, stop = slc.start, slc.stop
+            start, stop = 0, self.N
             values = []
             for g in range(pmap.shape_z):
                 arr = pmap.array(start, stop, g)  # shape N'L
                 dset[cmaker.start + g, start:stop] = arr
                 values.append(arr.mean(axis=0) @ self.level_weights)
-            dic = self.acc[grp_id]
-            dic['grp_start'] = cmaker.start
-            if 'avg_poe' not in dic:
-                dic['avg_poe'] = values
-            else:
-                dic['avg_poe'].extend(values)
+            self.acc[grp_id]['grp_start'] = cmaker.start
+            self.acc[grp_id]['avg_poe'] = numpy.mean(values)
 
     def store_disagg(self, pmaps=None):
         """
@@ -159,8 +137,7 @@ class Hazard:
             if dic:
                 trti, smrs = numpy.divmod(indices, n)
                 trt = self.full_lt.trts[trti[0]]
-                avg_poe = numpy.mean(dic['avg_poe'])
-                lst.append((dic['grp_start'], trt, avg_poe, smrs))
+                lst.append((dic['grp_start'], trt, dic['avg_poe'], smrs))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
 
         if pmaps:  # called inside a loop
@@ -213,7 +190,6 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
-        slc = dic.get('slc', slice(None))
         pmap = dic['pmap']
         pmap.grp_id = grp_id
         source_id = dic.pop('source_id', None)
@@ -222,7 +198,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id.split(':')[0]] = pmap
         if pmap:
             if self.counts[grp_id] == 1:  # shortcut to save memory
-                self.haz.store_poes(grp_id, pmap, slc)
+                self.haz.store_poes(grp_id, pmap)
             else:
                 acc[grp_id] |= pmap
         return acc
@@ -321,15 +297,14 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def check_memory(self, N, L, num_gs):
         G = sum(num_gs)
-        N1 = min(N, self.oqparam.max_sites_per_tile)
         size = G * N * L * 8
         bytes_per_grp = size / len(self.grp_ids)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         logging.info('Requiring %s for full ProbabilityMap of shape %s',
                      humansize(size), (G, N, L))
-        maxsize = max(num_gs) * N1 * self.oqparam.imtls.size * 8
+        maxsize = max(num_gs) * N * self.oqparam.imtls.size * 8
         logging.info('Requiring %s for max ProbabilityMap of shape %s',
-                     humansize(maxsize), (max(num_gs), N1, L))
+                     humansize(maxsize), (max(num_gs), N, L))
         if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
@@ -374,10 +349,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if num_gs:
             self.check_memory(self.N, oq.imtls.size, num_gs)
         h5 = self.datastore.hdf5
-        if self.N > oq.max_sites_per_tile:
-            smap = parallel.Starmap(classical_tile, args, h5=h5)
-        else:
-            smap = parallel.Starmap(classical, args, h5=h5)
+        smap = parallel.Starmap(classical, args, h5=h5)
         smap.monitor.save('sitecol', self.sitecol)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -433,16 +405,11 @@ class ClassicalCalculator(base.HazardCalculator):
         :returns: a list of Starmap arguments
         """
         oq = self.oqparam
-        if self.N > oq.max_sites_per_tile:
-            ntiles = numpy.ceil(self.N / oq.max_sites_per_tile)
-        else:
-            ntiles = 1
         allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
             cmaker = cmakers[grp_id]
-            cmaker.ntiles = ntiles
             gsims = cmaker.gsims
             sg = src_groups[grp_id]
             for src in sg:

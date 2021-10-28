@@ -240,8 +240,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        assert oq.max_sites_per_tile > oq.max_sites_disagg, (
-            oq.max_sites_per_tile, oq.max_sites_disagg)
         self.set_psd()  # set the pointsource_distance, needed for ps_grid_spc
         res = run_preclassical(self.csm, oq, self.datastore)
         if res:
@@ -270,8 +268,6 @@ class PreClassicalCalculator(base.HazardCalculator):
                     if len(set(dists)) > 1:
                         md = '%s->%d ... %s->%d' % (it[0] + it[-1])
                         logging.info('ps_dist %s: %s', trt, md)
-        hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
-            self.N / oq.max_sites_per_tile)
         self.params = dict(
             truncation_level=oq.truncation_level,
             investigation_time=oq.investigation_time,
@@ -279,7 +275,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo,
             min_weight=oq.min_weight,
-            collapse_level=int(oq.collapse_level), hint=hint,
+            collapse_level=int(oq.collapse_level),
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
         return psd
