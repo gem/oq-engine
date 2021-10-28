@@ -26,7 +26,8 @@ from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import (
+    ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
@@ -118,22 +119,18 @@ def calc_average(pointsources):
     return dic
 
 
-def avg_ruptures(src, np, hc, psdist=None):
-    """
-    Generate one rupture for each magnitude, called only if nphc > 1.
-
-    :param src: a (Collapsed)PointSource instance
-    :param np: a NodalPlane object
-    :param hc: a Point (hypocenter)
-    :param psdist: if 0, returns a PointRupture
-    """
+def ruptures_by_mag(src, np, hc, point_rup):
+    # generate one rupture for each magnitude, called only if nphc > 1.
     for mag, mag_occ_rate in src.get_annual_occurrence_rates():
-        surface, nhc = src._get_rupture_surface(mag, np, hc)
-        yield ParametricProbabilisticRupture(
-            mag, np.rake, src.tectonic_region_type,
-            nhc, surface, mag_occ_rate,
-            src.temporal_occurrence_model)
-            
+        if point_rup:
+            yield PointRupture(
+                mag, src.tectonic_region_type, hc,
+                0, 0, np.rake, mag_occ_rate, src.temporal_occurrence_model)
+        else:
+            surface, nhc = src._get_rupture_surface(mag, np, hc)
+            yield ParametricProbabilisticRupture(
+                mag, np.rake, src.tectonic_region_type,
+                nhc, surface, mag_occ_rate, src.temporal_occurrence_model)
 
 
 class PointSource(ParametricSeismicSource):
@@ -244,14 +241,15 @@ class PointSource(ParametricSeismicSource):
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
 
-    def avg_ruptures(self):
+    # PointSource
+    def avg_ruptures(self, point_rup=False):
         """
         Generate one rupture for each magnitude, called only if nphc > 1
         """
         avg = calc_average([self])  # over nodal planes and hypocenters
         np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
-        yield from avg_ruptures(self, np, hc)
+        yield from ruptures_by_mag(self, np, hc, point_rup)
 
     def count_nphc(self):
         """
@@ -438,12 +436,13 @@ class CollapsedPointSource(PointSource):
         for src in self.pointsources:
             yield from src.iter_ruptures(**kwargs)
 
-    def avg_ruptures(self):
+    # CollapsedPointSource
+    def avg_ruptures(self, point_rup=False):
         """
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
         np = Mock(strike=self.strike, dip=self.dip, rake=self.rake)
-        yield from avg_ruptures(self, np, self.location)
+        yield from ruptures_by_mag(self, np, self.location, point_rup)
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """
