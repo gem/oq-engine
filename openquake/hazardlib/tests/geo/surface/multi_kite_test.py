@@ -55,7 +55,6 @@ class MultiSurfaceTestCase(unittest.TestCase):
         # Test Rx
         expected = np.array([-3.48946183, -13.37945338])
         computed = self.msrf.get_rx_distance(self.mesh)
-        print(computed)
         np.testing.assert_allclose(computed, expected)
 
 
@@ -102,7 +101,6 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         # Note that method is executed when the object is initialized
         ess = self.msrf.edge_set
         for es, expct in zip(ess, expected):
-            print(repr(es))
             np.testing.assert_array_almost_equal(es, expct)
 
     # TODO
@@ -122,7 +120,6 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
     # TODO
     def test_get_width(self):
         width = self.msrf.get_width()
-        print(width)
 
     # TODO
     def test_get_area(self):
