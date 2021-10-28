@@ -86,21 +86,6 @@ def classical(srcs, cmaker, monitor):
     return hazclassical(srcs, monitor.read('sitecol'), cmaker)
 
 
-# the best test is sslt/job.ini in oq-risk-tests
-def classical_tile(srcs, cmaker, monitor):
-    """
-    Read the sitecol, split it on tiles and call the classical calculator
-    in hazardlib yielding the results for each tile
-    """
-    cmaker.init_monitoring(monitor)
-    sitecol = monitor.read('sitecol')
-    for tile in sitecol.split_in_tiles(cmaker.ntiles):
-        res = hazclassical(srcs, tile, cmaker)
-        if res['pmap']:
-            res['slc'] = slice(tile.sids.min(), tile.sids.max() + 1)
-            yield res
-
-
 class Hazard:
     """
     Helper class for storing the PoEs
@@ -321,15 +306,14 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def check_memory(self, N, L, num_gs):
         G = sum(num_gs)
-        N1 = min(N, self.oqparam.max_sites_per_tile)
         size = G * N * L * 8
         bytes_per_grp = size / len(self.grp_ids)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         logging.info('Requiring %s for full ProbabilityMap of shape %s',
                      humansize(size), (G, N, L))
-        maxsize = max(num_gs) * N1 * self.oqparam.imtls.size * 8
+        maxsize = max(num_gs) * N * self.oqparam.imtls.size * 8
         logging.info('Requiring %s for max ProbabilityMap of shape %s',
-                     humansize(maxsize), (max(num_gs), N1, L))
+                     humansize(maxsize), (max(num_gs), N, L))
         if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
@@ -374,10 +358,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if num_gs:
             self.check_memory(self.N, oq.imtls.size, num_gs)
         h5 = self.datastore.hdf5
-        if self.N > oq.max_sites_per_tile:
-            smap = parallel.Starmap(classical_tile, args, h5=h5)
-        else:
-            smap = parallel.Starmap(classical, args, h5=h5)
+        smap = parallel.Starmap(classical, args, h5=h5)
         smap.monitor.save('sitecol', self.sitecol)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -433,16 +414,11 @@ class ClassicalCalculator(base.HazardCalculator):
         :returns: a list of Starmap arguments
         """
         oq = self.oqparam
-        if self.N > oq.max_sites_per_tile:
-            ntiles = numpy.ceil(self.N / oq.max_sites_per_tile)
-        else:
-            ntiles = 1
         allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
             cmaker = cmakers[grp_id]
-            cmaker.ntiles = ntiles
             gsims = cmaker.gsims
             sg = src_groups[grp_id]
             for src in sg:
