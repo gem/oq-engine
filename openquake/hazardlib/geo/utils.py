@@ -480,9 +480,10 @@ class OrthographicProjection(object):
         if isinstance(lons, list):
             lons = numpy.array(lons)
             lats = numpy.array(lats)
-        idx = numpy.isfinite(lons)
-        lons = lons[idx]
-        lats = lats[idx]
+        if hasattr(lons, "__len__"):
+            idx = numpy.isfinite(lons)
+            lons = lons[idx]
+            lats = lats[idx]
         if not reverse:
             lambdas, phis = numpy.radians(lons), numpy.radians(lats)
             cos_phis = numpy.cos(phis)
