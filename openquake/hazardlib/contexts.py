@@ -619,30 +619,20 @@ class ContextMaker(object):
         L, G = self.loglevels.size, len(self.gsims)
         for ctx in ctxs:
             with self.gmf_mon:
-                # a lot of memory can be consumed here, since mean_stdt size is
-                # 4 x G x M x N*C; however, you can increase concurrent_tasks
                 mean_stdt = self.get_mean_stds([ctx])
-            if isinstance(ctx, numpy.recarray):
-                slices = [slice(0, len(ctx))]
-            else:
-                # splitting in chunks of at most 1000 sites to save memory
-                slices = gen_slices(0, len(ctx), 1000)
-            sids = ctx.sids
             s = 0
-            for slc in slices:
-                ctx.sids = sids[slc]
-                n = slc.stop - slc.start
-                with self.poe_mon:
-                    poes = numpy.zeros((n, L, G))
-                    for g, gsim in enumerate(self.gsims):
-                        ms = mean_stdt[:2, g, :, s:s+n]
-                        # builds poes of shape (n, L, G)
-                        if self.af:  # kernel amplification method
-                            poes[:, :, g] = get_poes_site(ms, self, ctx)
-                        else:  # regular case
-                            poes[:, :, g] = gsim.get_poes(ms, self, ctx)
-                yield ctx, poes
-                s += n
+            n = len(ctx)
+            with self.poe_mon:
+                poes = numpy.zeros((n, L, G))
+                for g, gsim in enumerate(self.gsims):
+                    ms = mean_stdt[:2, g, :, s:s+n]
+                    # builds poes of shape (n, L, G)
+                    if self.af:  # kernel amplification method
+                        poes[:, :, g] = get_poes_site(ms, self, ctx)
+                    else:  # regular case
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctx)
+            yield ctx, poes
+            s += n
 
 
 # see contexts_tests.py for examples of collapse
