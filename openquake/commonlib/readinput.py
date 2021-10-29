@@ -959,7 +959,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :returns: (site collection, asset collection, discarded)
     """
     global exposure
-    asset_hazard_distance = oqparam.asset_hazard_distance['default']
+    asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if exposure is None:
         # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)
