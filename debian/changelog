@@ -1,4 +1,8 @@
   [Claudia Mascandola]
+  * Added the computation of tau and phi stdevs to the sgobba_2020 gmm.
+  * Added the corresponding tests and Verification Tables.
+  
+  [Claudia Mascandola]
   * Added a new class to the lanzano_2019 gmm.
   
   [Michele Simionato]
