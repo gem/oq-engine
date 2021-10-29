@@ -302,10 +302,6 @@ class ClassicalCalculator(base.HazardCalculator):
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         logging.info('Requiring %s for full ProbabilityMap of shape %s',
                      humansize(size), (G, N, L))
-        maxsize = max(num_gs) * N * self.oqparam.imtls.size * 8
-        logging.info('Requiring %s for max ProbabilityMap of shape %s',
-                     humansize(maxsize), (max(num_gs), N, L))
-        import pdb; pdb.set_trace()
         if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
@@ -340,13 +336,15 @@ class ClassicalCalculator(base.HazardCalculator):
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx,
                           self.monitor('storing _poes', measuremem=True))
-        for trt in self.full_lt.trts:
-            self.starmap(trt)
+        T = len(self.full_lt.trts)
+        for trti, trt in enumerate(self.full_lt.trts, 1):
+            spec = '[%d of %d]' % (trti, T)
+            self.starmap(trt, spec)
         self.store_info(psd)
         self.datastore.swmr_on()
         return True
 
-    def starmap(self, trt):
+    def starmap(self, trt, spec):
         oq = self.oqparam
         h5 = self.datastore.hdf5
         grp_ids = [cm.grp_id for cm in self.haz.cmakers if cm.trt == trt]
@@ -358,7 +356,7 @@ class ClassicalCalculator(base.HazardCalculator):
                   if cm.trt == trt and self.counts[grp] > 1]
         if num_gs:
             self.check_memory(self.N, oq.imtls.size, num_gs)
-        classical.__name__ = 'classical[%s]' % trt
+        classical.__name__ = 'classical' + spec
         smap = parallel.Starmap(classical, args, h5=h5)
         smap.monitor.save('sitecol', self.sitecol)
         smap.h5 = self.datastore.hdf5
@@ -366,7 +364,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for grp_id, num_tasks in self.counts.items():
             if grp_id in grp_ids and num_tasks > 1:
                 self.haz.init(acc, grp_id)
-        logging.info('Sending %d tasks', len(args))
+        logging.info('Sending %d tasks [%s]', len(args), trt)
         smap.reduce(self.agg_dicts, acc)
         logging.debug("busy time: %s", smap.busytime)
         logging.info('Saving _poes')
