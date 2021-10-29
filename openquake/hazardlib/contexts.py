@@ -34,7 +34,7 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, RecordBuilder, gen_slices)
+    AccumDict, DictArray, groupby, RecordBuilder, block_splitter)
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import imt as imt_module
@@ -511,16 +511,17 @@ class ContextMaker(object):
             pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        for ctx, poes in self.gen_poes(ctxs):
-            # pnes and poes of shape (N, L, G)
-            with self.pne_mon:
-                pnes = get_probability_no_exceedance(ctx, poes, tom)
-                for sid, pne in zip(ctx.sids, pnes):
-                    probs = pmap.setdefault(sid, self.rup_indep).array
-                    if rup_indep:
-                        probs *= pne
-                    else:  # rup_mutex
-                        probs += (1. - pne) * ctx.weight
+        for block in block_splitter(ctxs, 20_000, len):
+            for ctx, poes in self.gen_poes(block):
+                # pnes and poes of shape (N, L, G)
+                with self.pne_mon:
+                    pnes = get_probability_no_exceedance(ctx, poes, tom)
+                    for sid, pne in zip(ctx.sids, pnes):
+                        probs = pmap.setdefault(sid, self.rup_indep).array
+                        if rup_indep:
+                            probs *= pne
+                        else:  # rup_mutex
+                            probs += (1. - pne) * ctx.weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -536,6 +537,11 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
+        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
+        if self.use_recarray and not numpy.isnan(
+                [ctx.occurrence_rate for ctx in ctxs]).any():
+            # use recarrays only for poissonian sources
+            ctxs = [self.recarray(ctxs)]
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
@@ -611,16 +617,11 @@ class ContextMaker(object):
         :yields: pairs (ctx, array(N, L, G))
         """
         from openquake.hazardlib.site_amplification import get_poes_site
-        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
-        if self.use_recarray and not numpy.isnan(
-                [ctx.occurrence_rate for ctx in ctxs]).any():
-            # use recarrays only for poissonian sources
-            ctxs = [self.recarray(ctxs)]
         L, G = self.loglevels.size, len(self.gsims)
+        with self.gmf_mon:
+            mean_stdt = self.get_mean_stds(ctxs)
+        s = 0
         for ctx in ctxs:
-            with self.gmf_mon:
-                mean_stdt = self.get_mean_stds([ctx])
-            s = 0
             n = len(ctx)
             with self.poe_mon:
                 poes = numpy.zeros((n, L, G))
