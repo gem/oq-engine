@@ -404,7 +404,9 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
+    from openquake.server import dbserver
     # run a job object stored in a pickle file, called by job.yaml
     with open(sys.argv[1]) as f:
         job = pickle.load(f)
+    dbserver.ensure_on()
     run_jobs([job])
