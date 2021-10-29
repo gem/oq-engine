@@ -586,7 +586,8 @@ def submit_job(request_files, ini, username, hc_id):
         with open(os.path.join(CWD, 'job.yaml')) as f:
             templ = string.Template(f.read())
         for job in jobs:
-            path = os.path.join(CWD, 'calc%d.json' % job.calc_id)
+            path = os.path.join(
+                os.path.dirname(job_ini), 'calc%d.json' % job.calc_id)
             with open(path, 'w') as f:
                 json.dump(job.params, f)
             yaml = templ.substitute(

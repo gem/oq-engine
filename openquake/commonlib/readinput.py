@@ -558,8 +558,13 @@ def get_site_collection(oqparam, h5=None):
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if ss:
+        if 'custom_site_id' not in sitecol.array.dtype.names:
+            gh = sitecol.geohash(6)
+            assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
+            sitecol.add_col('custom_site_id', 'S6', gh)
         mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
         sitecol = sitecol.filter(mask)
+        sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
@@ -954,7 +959,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :returns: (site collection, asset collection, discarded)
     """
     global exposure
-    asset_hazard_distance = oqparam.asset_hazard_distance['default']
+    asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if exposure is None:
         # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)

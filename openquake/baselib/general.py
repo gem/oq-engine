@@ -898,12 +898,12 @@ def groupby_grid(xs, ys, deltax, deltay):
     xbins = get_bins(xs, nx, None, xmin, xmax)[0]
     ybins = get_bins(ys, ny, None, ymin, ymax)[0]
     acc = AccumDict(accum=[])
-    for p, ij in enumerate(zip(xbins, ybins)):
-        acc[ij].append(p)
+    for k, ij in enumerate(zip(xbins, ybins)):
+        acc[ij].append(k)
     dic = {}
-    for (i, j), ps in acc.items():
-        idxs = numpy.array(ps)
-        dic[xs[idxs].mean(), ys[idxs].mean()] = idxs
+    for ks in acc.values():
+        ks = numpy.array(ks)
+        dic[xs[ks].mean(), ys[ks].mean()] = ks
     return dic
 
 

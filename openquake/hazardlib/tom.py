@@ -183,4 +183,12 @@ class PoissonTOM(BaseTOM):
 
         The probability is computed as exp(-occurrence_rate * time_span * poes)
         """
-        return numpy.exp(- occurrence_rate * self.time_span * poes)
+        try:
+            n = len(occurrence_rate)
+        except TypeError:  # float' has no len()
+            eff_time = occurrence_rate * self.time_span * poes
+        else:
+            eff_time = numpy.zeros((n,) + poes.shape)
+            for i in range(n):
+                eff_time[i] = occurrence_rate[i] * self.time_span * poes[i]
+        return numpy.exp(- eff_time)

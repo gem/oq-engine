@@ -293,7 +293,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
         if isinstance(job_ini, dict):
             dic = job_ini
             calc = "job"
-        elif re.match(r'calc\d+\.json', job_ini):
+        elif re.match(r'calc\d+\.json', os.path.basename(job_ini)):
             # created by the WebUI in submit_cmd mode
             with open(job_ini) as f:
                 dic = json.load(f)
@@ -307,13 +307,13 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
         if 'sensitivity_analysis' in dic:
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
-                new = logs.init(calc, dic.copy(), log_level, None,
-                                user_name, hc_id)
+                jobdic = dic.copy()
                 pars = dict(zip(analysis, values))
                 for param, value in pars.items():
-                    new.params[param] = str(value)
-                new.params['description'] = '%s %s' % (
-                    dic['description'], pars)
+                    jobdic[param] = str(value)
+                jobdic['description'] = '%s %s' % (dic['description'], pars)
+                new = logs.init('job', jobdic, log_level, None,
+                                user_name, hc_id)
                 jobs.append(new)
         else:
             jobs.append(
