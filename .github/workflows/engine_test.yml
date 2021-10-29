@@ -29,7 +29,6 @@ jobs:
       run: |
         oq dbserver start
         pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/common-mistakes.rst doc/adv-manual/risk.rst doc/adv-manual/developing.rst doc/adv-manual/rupture-sampling.rst
-        oq dbserver stop
 
   hazardlib:
     runs-on: ${{ matrix.os }}
@@ -53,4 +52,3 @@ jobs:
       run: |
         oq dbserver start
         cd openquake && pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib commands engine hmtk risklib server commonlib baselib
-        oq dbserver stop
