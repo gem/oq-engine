@@ -568,7 +568,7 @@ def submit_job(request_files, ini, username, hc_id):
         if oq.sensitivity_analysis:
             logs.dbcmd('set_status', job.calc_id, 'deleted')  # hide it
             jobs = engine.create_jobs([job_ini], config.distribution.log_level,
-                                      None, username, hc_id)
+                                      None, username, hc_id, True)
         else:
             dic = dict(calculation_mode=oq.calculation_mode,
                        description=oq.description, hazard_calculation_id=hc_id)
@@ -580,13 +580,18 @@ def submit_job(request_files, ini, username, hc_id):
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         raise
-    if (config.distribute.ext_cmd.split() == ["kubectl", "apply", "-f", "-"]
-            and oq.get_input_size() > int(config.distribute.min_input_size)):
+    submit_cmd = config.distribution.submit_cmd.split()
+    if (submit_cmd == ["kubectl", "apply", "-f", "-"]
+            and oq.get_input_size() > int(config.distribution.min_input_size)):
         with open(os.path.join(CWD, 'job.yaml')) as f:
-            yaml = string.Template(f.read()).substitute(
-                JOB_INI=job_ini, CALC_NAME='calc-%d' % job.calc_id)
-        cmd = config.distribute.ext_cmd.split()
-        subprocess.run(cmd, input=yaml.encode('ascii'))
+            templ = string.Template(f.read())
+        for job in jobs:
+            path = os.path.join(CWD, 'calc%d.json' % job.calc_id)
+            with open(path, 'w') as f:
+                json.dump(job.params, f)
+            yaml = templ.substitute(
+                CALC_JSON=path, CALC_NAME='calc%d' % job.calc_id)
+        subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
         Process(target=engine.run_jobs, args=(jobs,)).start()
     return job.calc_id
