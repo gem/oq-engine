@@ -305,6 +305,7 @@ class ClassicalCalculator(base.HazardCalculator):
         maxsize = max(num_gs) * N * self.oqparam.imtls.size * 8
         logging.info('Requiring %s for max ProbabilityMap of shape %s',
                      humansize(maxsize), (max(num_gs), N, L))
+        import pdb; pdb.set_trace()
         if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
@@ -331,7 +332,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.hdf5.create_dataset(
                     'source_info', (num_srcs,), readinput.source_info_dt)
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
-        grp_ids = numpy.arange(len(self.csm.src_groups))
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         weights = [rlz.weight for rlz in self.realizations]
         pgetter = getters.PmapGetter(
@@ -340,40 +340,40 @@ class ClassicalCalculator(base.HazardCalculator):
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx,
                           self.monitor('storing _poes', measuremem=True))
-        args = self.get_args(grp_ids, self.haz.cmakers)
-        self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
-        logging.info('grp_id->ntasks: %s', list(self.counts.values()))
-        self.starmap(args)
+        for trt in self.full_lt.trts:
+            self.starmap(trt)
         self.store_info(psd)
+        self.datastore.swmr_on()
         return True
 
-    def starmap(self, allargs):
+    def starmap(self, trt):
         oq = self.oqparam
         h5 = self.datastore.hdf5
-        for trt, args in groupby(allargs, lambda arg: arg[1].trt).items():
-            grp_ids = set(arg[1].grp_id for arg in args)
-            # only groups generating more than 1 task preallocate memory
-            num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)
-                      if cm.trt == trt and self.counts[grp] > 1]
-            if num_gs:
-                self.check_memory(self.N, oq.imtls.size, num_gs)
-            classical.__name__ = 'classical[%s]' % trt
-            smap = parallel.Starmap(classical, args, h5=h5)
-            smap.monitor.save('sitecol', self.sitecol)
-            smap.h5 = self.datastore.hdf5
-            acc = {}
-            for grp_id, num_tasks in self.counts.items():
-                if grp_id in grp_ids and num_tasks > 1:
-                    self.haz.init(acc, grp_id)
-            logging.info('Sending %d tasks', len(args))
-            smap.reduce(self.agg_dicts, acc)
-            logging.debug("busy time: %s", smap.busytime)
-            logging.info('Saving _poes')
-            for grp_id in list(acc):
-                if isinstance(grp_id, int):
-                    self.haz.store_poes(grp_id, acc.pop(grp_id))
-            self.haz.store_disagg(acc)
-        self.datastore.swmr_on()
+        grp_ids = [cm.grp_id for cm in self.haz.cmakers if cm.trt == trt]
+        args = self.get_args(grp_ids, self.haz.cmakers)
+        self.counts = collections.Counter(arg[1].grp_id for arg in args)
+        logging.info('grp_id->ntasks: %s', list(self.counts.values()))
+        # only groups generating more than 1 task preallocate memory
+        num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)
+                  if cm.trt == trt and self.counts[grp] > 1]
+        if num_gs:
+            self.check_memory(self.N, oq.imtls.size, num_gs)
+        classical.__name__ = 'classical[%s]' % trt
+        smap = parallel.Starmap(classical, args, h5=h5)
+        smap.monitor.save('sitecol', self.sitecol)
+        smap.h5 = self.datastore.hdf5
+        acc = {}
+        for grp_id, num_tasks in self.counts.items():
+            if grp_id in grp_ids and num_tasks > 1:
+                self.haz.init(acc, grp_id)
+        logging.info('Sending %d tasks', len(args))
+        smap.reduce(self.agg_dicts, acc)
+        logging.debug("busy time: %s", smap.busytime)
+        logging.info('Saving _poes')
+        for grp_id in list(acc):
+            if isinstance(grp_id, int):
+                self.haz.store_poes(grp_id, acc.pop(grp_id))
+        self.haz.store_disagg(acc)
 
     def store_info(self, psd):
         """
