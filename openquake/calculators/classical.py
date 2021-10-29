@@ -338,7 +338,7 @@ class ClassicalCalculator(base.HazardCalculator):
                           self.monitor('storing _poes', measuremem=True))
         T = len(self.full_lt.trts)
         for trti, trt in enumerate(self.full_lt.trts, 1):
-            spec = '[%d of %d]' % (trti, T)
+            spec = '#%d/%d' % (trti, T)
             self.starmap(trt, spec)
         self.store_info(psd)
         self.datastore.swmr_on()
