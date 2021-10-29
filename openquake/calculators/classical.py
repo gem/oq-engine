@@ -343,30 +343,37 @@ class ClassicalCalculator(base.HazardCalculator):
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.counts.values()))
-        # only groups generating more than 1 task preallocate memory
-        num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)
-                  if self.counts[grp] > 1]
-        if num_gs:
-            self.check_memory(self.N, oq.imtls.size, num_gs)
-        h5 = self.datastore.hdf5
-        smap = parallel.Starmap(classical, args, h5=h5)
-        smap.monitor.save('sitecol', self.sitecol)
-        self.datastore.swmr_on()
-        smap.h5 = self.datastore.hdf5
-        acc = {}
-        for grp_id, num_tasks in self.counts.items():
-            if num_tasks > 1:
-                self.haz.init(acc, grp_id)
-        logging.info('Sending %d tasks', len(args))
-        smap.reduce(self.agg_dicts, acc)
-        logging.debug("busy time: %s", smap.busytime)
+        self.starmap(args)
         self.store_info(psd)
-        logging.info('Saving _poes')
-        for grp_id in list(acc):
-            if isinstance(grp_id, int):
-                self.haz.store_poes(grp_id, acc.pop(grp_id))
-        self.haz.store_disagg(acc)
         return True
+
+    def starmap(self, allargs):
+        oq = self.oqparam
+        h5 = self.datastore.hdf5
+        for trt, args in groupby(allargs, lambda arg: arg[1].trt).items():
+            grp_ids = set(arg[1].grp_id for arg in args)
+            # only groups generating more than 1 task preallocate memory
+            num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)
+                      if cm.trt == trt and self.counts[grp] > 1]
+            if num_gs:
+                self.check_memory(self.N, oq.imtls.size, num_gs)
+            classical.__name__ = 'classical[%s]' % trt
+            smap = parallel.Starmap(classical, args, h5=h5)
+            smap.monitor.save('sitecol', self.sitecol)
+            smap.h5 = self.datastore.hdf5
+            acc = {}
+            for grp_id, num_tasks in self.counts.items():
+                if grp_id in grp_ids and num_tasks > 1:
+                    self.haz.init(acc, grp_id)
+            logging.info('Sending %d tasks', len(args))
+            smap.reduce(self.agg_dicts, acc)
+            logging.debug("busy time: %s", smap.busytime)
+            logging.info('Saving _poes')
+            for grp_id in list(acc):
+                if isinstance(grp_id, int):
+                    self.haz.store_poes(grp_id, acc.pop(grp_id))
+            self.haz.store_disagg(acc)
+        self.datastore.swmr_on()
 
     def store_info(self, psd):
         """
@@ -402,7 +409,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def get_args(self, grp_ids, cmakers):
         """
-        :returns: a list of Starmap arguments
+        :returns: a list of Starmap arguments [(srcs, cmaker), ...]
         """
         oq = self.oqparam
         allargs = []
