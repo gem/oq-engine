@@ -19,6 +19,7 @@
 import shutil
 import json
 import string
+import pickle
 import logging
 import os
 import tempfile
@@ -587,12 +588,12 @@ def submit_job(request_files, ini, username, hc_id):
             templ = string.Template(f.read())
         for job in jobs:
             path = os.path.join(
-                os.path.dirname(job_ini), 'calc%d.json' % job.calc_id)
+                os.path.dirname(job_ini), 'calc%d.pik' % job.calc_id)
             with open(path, 'w') as f:
-                json.dump(job.params, f)
+                pickle.dump(job, f)
             yaml = templ.substitute(
-                CALC_JSON=path, CALC_NAME='calc%d' % job.calc_id)
-        subprocess.run(submit_cmd, input=yaml.encode('ascii'))
+                CALC_PIK=path, CALC_NAME='calc%d' % job.calc_id)
+            subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
         Process(target=engine.run_jobs, args=(jobs,)).start()
     return job.calc_id

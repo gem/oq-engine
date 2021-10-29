@@ -24,6 +24,7 @@ import re
 import sys
 import json
 import time
+import pickle
 import signal
 import getpass
 import logging
@@ -293,11 +294,6 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
         if isinstance(job_ini, dict):
             dic = job_ini
             calc = "job"
-        elif re.match(r'calc\d+\.json', os.path.basename(job_ini)):
-            # created by the WebUI in submit_cmd mode
-            with open(job_ini) as f:
-                dic = json.load(f)
-            calc = os.path.basename(job_ini)[:-5]  # strip .json
         else:
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
@@ -407,3 +403,10 @@ def check_obsolete_version(calculation_mode='WebUI'):
                 'still using version %s' % (tag_name, __version__))
     else:
         return ''
+
+
+if __name__ == '__main__':
+    # run a job object stored in a pickle file, called by job.yaml
+    with open(sys.argv[1]) as f:
+        job = pickle.load(f)
+    run_jobs([job])

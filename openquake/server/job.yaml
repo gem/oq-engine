@@ -42,7 +42,7 @@ spec:
          ports: # need for svc 
          - containerPort: 1909 
          command: ["/bin/sh"] 
-         args: ["-c", "oq engine --run ${CALC_JSON}"]
+         args: ["-c", "python -m openquake.engine.engine ${CALC_PIK}"]
          volumeMounts: 
          - mountPath: /opt/openquake 
            name: data 
