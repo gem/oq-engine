@@ -90,7 +90,7 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, pgetter, srcidx, mon):
+    def __init__(self, dstore, full_lt, pgetter, srcidx):
         self.datastore = dstore
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
@@ -99,7 +99,6 @@ class Hazard:
         self.level_weights = imtls.array / imtls.array.sum()
         self.sids = pgetter.sids
         self.srcidx = srcidx
-        self.mon = mon
         self.N = len(dstore['sitecol/sids'])
         self.acc = AccumDict(accum={})
 
@@ -107,16 +106,15 @@ class Hazard:
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        with self.mon:
-            cmaker = self.cmakers[grp_id]
-            dset = self.datastore['_poes']
-            values = []
-            for g in range(pmap.shape_z):
-                arr = pmap.array(0, self.N, g)  # shape NL
-                dset[cmaker.start + g] = arr
-                values.append(arr.mean(axis=0) @ self.level_weights)
-            self.acc[grp_id]['grp_start'] = cmaker.start
-            self.acc[grp_id]['avg_poe'] = numpy.mean(values)
+        cmaker = self.cmakers[grp_id]
+        dset = self.datastore['_poes']
+        values = []
+        for g in range(pmap.shape_z):
+            arr = pmap.array(0, self.N, g)  # shape NL
+            dset[cmaker.start + g] = arr
+            values.append(arr.mean(axis=0) @ self.level_weights)
+        self.acc[grp_id]['grp_start'] = cmaker.start
+        self.acc[grp_id]['avg_poe'] = numpy.mean(values)
 
     def store_disagg(self, pmaps=None):
         """
@@ -192,7 +190,8 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[grp_id] |= pmap
         self.counts[grp_id] -= 1
         if self.counts[grp_id] == 0:  # no other tasks for this grp_id
-            self.haz.store_poes(grp_id, acc.pop(grp_id))
+            with self.monitor('storing PoEs', measuremem=True):
+                self.haz.store_poes(grp_id, acc.pop(grp_id))
         return acc
 
     def create_dsets(self):
@@ -330,8 +329,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
-        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx,
-                          self.monitor('storing _poes', measuremem=True))
+        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.counts = collections.Counter(arg[1].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.counts.values()))
