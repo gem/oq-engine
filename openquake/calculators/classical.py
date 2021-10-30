@@ -330,14 +330,12 @@ class ClassicalCalculator(base.HazardCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx,
                           self.monitor('storing _poes', measuremem=True))
         args = self.get_args(grp_ids, self.haz.cmakers)
-        self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
+        self.counts = collections.Counter(arg[1].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.counts.values()))
         L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
-        num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)
-                  if self.counts[grp] > 1]
-        if num_gs:
-            self.check_memory(self.N, L, num_gs)
+        num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
+        self.check_memory(self.N, L, num_gs)
         h5 = self.datastore.hdf5
         smap = parallel.Starmap(classical, args, h5=h5)
         smap.monitor.save('sitecol', self.sitecol)
