@@ -1221,7 +1221,7 @@ def view_nonzero_poes(token, dstore):
     Count the number of zero poes in _poes
     """
     G_, N, L = dstore['_poes'].shape
-    out = []  # paris (g_, fraction)
+    out = []  # pairs (g_, fraction)
     for g_ in range(G_):
         data = dstore['_poes'][g_]
         sids, lvls = data.nonzero()
