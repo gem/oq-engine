@@ -190,6 +190,9 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id.split(':')[0]] = pmap
         if pmap:
             acc[grp_id] |= pmap
+        self.counts[grp_id] -= 1
+        if self.counts[grp_id] == 0:  # no other tasks for this grp_id
+            self.haz.store_poes(grp_id, acc.pop(grp_id))
         return acc
 
     def create_dsets(self):
@@ -347,10 +350,6 @@ class ClassicalCalculator(base.HazardCalculator):
         smap.reduce(self.agg_dicts, acc)
         logging.debug("busy time: %s", smap.busytime)
         self.store_info(psd)
-        logging.info('Saving _poes')
-        for grp_id in list(acc):
-            if isinstance(grp_id, int):
-                self.haz.store_poes(grp_id, acc.pop(grp_id))
         self.haz.store_disagg(acc)
         return True
 
