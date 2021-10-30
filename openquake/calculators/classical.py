@@ -108,7 +108,7 @@ class Hazard:
         Initialize the pmaps dictionary with zeros, if needed
         """
         L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
-        pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
+        pmaps[grp_id] = ProbabilityMap.build(L, G)
 
     def store_poes(self, grp_id, pmap):
         """
@@ -117,11 +117,10 @@ class Hazard:
         with self.mon:
             cmaker = self.cmakers[grp_id]
             dset = self.datastore['_poes']
-            start, stop = 0, self.N
             values = []
             for g in range(pmap.shape_z):
-                arr = pmap.array(start, stop, g)  # shape N'L
-                dset[cmaker.start + g, start:stop] = arr
+                arr = pmap.array(0, self.N, g)  # shape NL
+                dset[cmaker.start + g] = arr
                 values.append(arr.mean(axis=0) @ self.level_weights)
             self.acc[grp_id]['grp_start'] = cmaker.start
             self.acc[grp_id]['avg_poe'] = numpy.mean(values)
@@ -291,7 +290,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
         # NB: it is CRITICAL for performance to have shape GNL and not NLG
         # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
-        self.datastore.create_dset('_poes', F64, poes_shape, compression='gzip')
+        self.datastore.create_dset('_poes', F64, poes_shape,
+                                   compression='gzip')  # huge improvement
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
 
