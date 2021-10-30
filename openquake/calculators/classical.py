@@ -90,7 +90,7 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, pgetter, srcidx, mon):
+    def __init__(self, dstore, full_lt, pgetter, srcidx):
         self.datastore = dstore
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
@@ -99,32 +99,22 @@ class Hazard:
         self.level_weights = imtls.array / imtls.array.sum()
         self.sids = pgetter.sids
         self.srcidx = srcidx
-        self.mon = mon
         self.N = len(dstore['sitecol/sids'])
         self.acc = AccumDict(accum={})
-
-    def init(self, pmaps, grp_id):
-        """
-        Initialize the pmaps dictionary with zeros, if needed
-        """
-        L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
-        pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
     def store_poes(self, grp_id, pmap):
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        with self.mon:
-            cmaker = self.cmakers[grp_id]
-            dset = self.datastore['_poes']
-            start, stop = 0, self.N
-            values = []
-            for g in range(pmap.shape_z):
-                arr = pmap.array(start, stop, g)  # shape N'L
-                dset[cmaker.start + g, start:stop] = arr
-                values.append(arr.mean(axis=0) @ self.level_weights)
-            self.acc[grp_id]['grp_start'] = cmaker.start
-            self.acc[grp_id]['avg_poe'] = numpy.mean(values)
+        cmaker = self.cmakers[grp_id]
+        dset = self.datastore['_poes']
+        values = []
+        for g in range(pmap.shape_z):
+            arr = pmap.array(0, self.N, g)  # shape NL
+            dset[cmaker.start + g] = arr
+            values.append(arr.mean(axis=0) @ self.level_weights)
+        self.acc[grp_id]['grp_start'] = cmaker.start
+        self.acc[grp_id]['avg_poe'] = numpy.mean(values)
 
     def store_disagg(self, pmaps=None):
         """
@@ -197,10 +187,11 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id.split(':')[0]] = pmap
         if pmap:
-            if self.counts[grp_id] == 1:  # shortcut to save memory
-                self.haz.store_poes(grp_id, pmap)
-            else:
-                acc[grp_id] |= pmap
+            acc[grp_id] |= pmap
+        self.counts[grp_id] -= 1
+        if self.counts[grp_id] == 0:  # no other tasks for this grp_id
+            with self.monitor('storing PoEs', measuremem=True):
+                self.haz.store_poes(grp_id, acc.pop(grp_id))
         return acc
 
     def create_dsets(self):
@@ -291,7 +282,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
         # NB: it is CRITICAL for performance to have shape GNL and not NLG
         # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
-        self.datastore.create_dset('_poes', F64, poes_shape, compression='gzip')
+        self.datastore.create_dset('_poes', F64, poes_shape)
+        # NB: compressing the dataset causes a big slowdown in writing :-(
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
 
@@ -302,8 +294,8 @@ class ClassicalCalculator(base.HazardCalculator):
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         logging.info('Requiring %s for full ProbabilityMap of shape %s',
                      humansize(size), (G, N, L))
-        maxsize = 20_000 * max(num_gs) * self.oqparam.imtls.size * 8
-        logging.info('Requiring at max %s for gen_poes', humansize(maxsize))
+        maxsize = max(num_gs) * self.oqparam.imtls.size * 8
+        logging.info('Requiring at max %s per site', humansize(maxsize))
         if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
@@ -337,33 +329,25 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
-        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx,
-                          self.monitor('storing _poes', measuremem=True))
+        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
         args = self.get_args(grp_ids, self.haz.cmakers)
-        self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
+        self.counts = collections.Counter(arg[1].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.counts.values()))
+        L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
-        num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)
-                  if self.counts[grp] > 1]
-        if num_gs:
-            self.check_memory(self.N, oq.imtls.size, num_gs)
+        num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
+        self.check_memory(self.N, L, num_gs)
         h5 = self.datastore.hdf5
         smap = parallel.Starmap(classical, args, h5=h5)
         smap.monitor.save('sitecol', self.sitecol)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
-        acc = {}
-        for grp_id, num_tasks in self.counts.items():
-            if num_tasks > 1:
-                self.haz.init(acc, grp_id)
+        acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
+               for cm in self.haz.cmakers}
         logging.info('Sending %d tasks', len(args))
         smap.reduce(self.agg_dicts, acc)
         logging.debug("busy time: %s", smap.busytime)
         self.store_info(psd)
-        logging.info('Saving _poes')
-        for grp_id in list(acc):
-            if isinstance(grp_id, int):
-                self.haz.store_poes(grp_id, acc.pop(grp_id))
         self.haz.store_disagg(acc)
         return True
 
