@@ -295,8 +295,8 @@ class ClassicalCalculator(base.HazardCalculator):
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         logging.info('Requiring %s for full ProbabilityMap of shape %s',
                      humansize(size), (G, N, L))
-        maxsize = 20_000 * max(num_gs) * self.oqparam.imtls.size * 8
-        logging.info('Requiring at max %s for gen_poes', humansize(maxsize))
+        maxsize = max(num_gs) * self.oqparam.imtls.size * 8
+        logging.info('Requiring at max %s per site', humansize(maxsize))
         if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
