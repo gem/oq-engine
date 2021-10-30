@@ -282,8 +282,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
         # NB: it is CRITICAL for performance to have shape GNL and not NLG
         # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
-        self.datastore.create_dset('_poes', F64, poes_shape,
-                                   compression='gzip')  # huge improvement
+        self.datastore.create_dset('_poes', F64, poes_shape)
+        # NB: compressing the dataset causes a big slowdown in writing :-(
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
 
