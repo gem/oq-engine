@@ -1,12 +1,9 @@
   [Claudia Mascandola]
-  * Added the computation of tau and phi stdevs to the sgobba_2020 gmm.
-  * Added the corresponding tests and Verification Tables.
-  
-  [Claudia Mascandola]
+  * Added the computation of tau and phi stdevs to the sgobba_2020 GMPE
   * Added a new class to the lanzano_2019 gmm.
-  
+
   [Michele Simionato]
-  * Reduced the memory consumption in `get_poes` in classical calculations
+  * Reduced the memory (and disk) consumption in classical calculations
   * Changed the behavior of `sites_slice`
   * Changed `custom_site_id` to an ASCII string up to 6 characters
   * Fixed the error raised in presence of a mag-dep distance for a tectonic
