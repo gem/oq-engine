@@ -103,13 +103,6 @@ class Hazard:
         self.N = len(dstore['sitecol/sids'])
         self.acc = AccumDict(accum={})
 
-    def init(self, pmaps, grp_id):
-        """
-        Initialize the pmaps dictionary with zeros, if needed
-        """
-        L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
-        pmaps[grp_id] = ProbabilityMap.build(L, G)
-
     def store_poes(self, grp_id, pmap):
         """
         Store the pmap of the given group inside the _poes dataset
@@ -196,10 +189,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id.split(':')[0]] = pmap
         if pmap:
-            if self.counts[grp_id] == 1:  # shortcut to save memory
-                self.haz.store_poes(grp_id, pmap)
-            else:
-                acc[grp_id] |= pmap
+            acc[grp_id] |= pmap
         return acc
 
     def create_dsets(self):
@@ -342,20 +332,19 @@ class ClassicalCalculator(base.HazardCalculator):
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.counts = collections.Counter(arg[0][0].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.counts.values()))
+        L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)
                   if self.counts[grp] > 1]
         if num_gs:
-            self.check_memory(self.N, oq.imtls.size, num_gs)
+            self.check_memory(self.N, L, num_gs)
         h5 = self.datastore.hdf5
         smap = parallel.Starmap(classical, args, h5=h5)
         smap.monitor.save('sitecol', self.sitecol)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
-        acc = {}
-        for grp_id, num_tasks in self.counts.items():
-            if num_tasks > 1:
-                self.haz.init(acc, grp_id)
+        acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
+               for cm in self.haz.cmakers}
         logging.info('Sending %d tasks', len(args))
         smap.reduce(self.agg_dicts, acc)
         logging.debug("busy time: %s", smap.busytime)
