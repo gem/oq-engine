@@ -149,18 +149,19 @@ class PmapGetter(object):
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
             self.weights = weights
-        self.sids = sids
+        self.sids = list(sids)
         self.imtls = imtls
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
 
         # populate _pmap
-        df = dstore.read_df('_poes', sel={'sid': self.sids})
         G = len(dstore['rlzs_by_g'])
         self._pmap = probability_map.ProbabilityMap.build(self.L, G, sids)
-        for gid, sid, lid, poe in zip(df.gid, df.sid, df.lid, df.poe):
-            self._pmap[sid].array[lid, gid] = poe
+        for sid, slices in sids.items():
+            for start, stop in slices:
+                df = dstore.read_df('_poes', slc=slice(start, stop))
+                self._pmap[sid].array[df.lid, df.gid] = df.poe
         self.nbytes = self._pmap.nbytes
 
     @property
