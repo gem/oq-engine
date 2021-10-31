@@ -20,7 +20,6 @@ import os.path
 import logging
 import operator
 import itertools
-from datetime import datetime
 import numpy
 import pandas
 from scipy import sparse
@@ -28,7 +27,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
-from openquake.commonlib import logs, datastore
+from openquake.commonlib import datastore
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.post_risk import PostRiskCalculator, fix_dtypes
 
