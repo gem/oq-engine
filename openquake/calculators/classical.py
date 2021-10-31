@@ -51,6 +51,7 @@ get_weight = operator.attrgetter('weight')
 disagg_grp_dt = numpy.dtype([
     ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
     ('nsites', U32),  ('smrs', hdf5.vuint16)])
+poes_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'poe': F64}
 
 
 def get_source_id(src):  # used in submit_tasks
@@ -107,14 +108,22 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         cmaker = self.cmakers[grp_id]
-        dset = self.datastore['_poes']
-        values = []
-        for g in range(pmap.shape_z):
-            arr = pmap.array(0, self.N, g)  # shape NL
-            dset[cmaker.start + g] = arr
-            values.append(arr.mean(axis=0) @ self.level_weights)
+        dic = {key: [] for key in poes_dt}
+        tot_poe = 0
+        n = 0
+        for sid in pmap:
+            for (lid, g), poe in numpy.ndenumerate(pmap[sid].array):
+                tot_poe += poe * self.level_weights[lid]
+                n += 1
+                if poe:
+                    dic['gid'].append(cmaker.start + g)
+                    dic['sid'].append(sid)
+                    dic['lid'].append(lid)
+                    dic['poe'].append(poe)
+        for key, val in dic.items():
+            hdf5.extend(self.datastore['_poes/' + key], poes_dt[key](val))
         self.acc[grp_id]['grp_start'] = cmaker.start
-        self.acc[grp_id]['avg_poe'] = numpy.mean(values)
+        self.acc[grp_id]['avg_poe'] = tot_poe / n
         self.acc[grp_id]['nsites'] = len(pmap)
 
     def store_disagg(self, pmaps=None):
@@ -280,11 +289,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
 
-        poes_shape = len(rlzs_by_g), self.N, self.oqparam.imtls.size
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
-        # NB: it is CRITICAL for performance to have shape GNL and not NLG
-        # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
-        self.datastore.create_dset('_poes', F64, poes_shape)
+        self.datastore.create_df('_poes', poes_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
