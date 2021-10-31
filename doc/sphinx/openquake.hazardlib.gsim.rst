@@ -171,7 +171,13 @@ atkinson_macias_2009
     :members:
     :undoc-members:
     :show-inheritance:
-
+    
+bahrampouri_dm_2021
+----------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.bahrampouri_dm_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 baumont_2018
 ------------------------------------
