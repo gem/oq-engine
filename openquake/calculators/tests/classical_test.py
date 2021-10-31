@@ -966,7 +966,6 @@ hazard_uhs-std.csv
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
-        self.calc.datastore['_poes'].shape
         cmakers = contexts.read_cmakers(self.calc.datastore)
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
         ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
