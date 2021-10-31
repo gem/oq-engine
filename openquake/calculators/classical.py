@@ -188,8 +188,8 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id.split(':')[0]] = pmap
         if pmap:
             acc[grp_id] |= pmap
-        self.counts[grp_id] -= 1
-        if self.counts[grp_id] == 0:  # no other tasks for this grp_id
+        self.ntasks[grp_id] -= 1
+        if self.ntasks[grp_id] == 0:  # no other tasks for this grp_id
             with self.monitor('storing PoEs', measuremem=True):
                 self.haz.store_poes(grp_id, acc.pop(grp_id))
         return acc
@@ -331,8 +331,8 @@ class ClassicalCalculator(base.HazardCalculator):
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
         args = self.get_args(grp_ids, self.haz.cmakers)
-        self.counts = collections.Counter(arg[1].grp_id for arg in args)
-        logging.info('grp_id->ntasks: %s', list(self.counts.values()))
+        self.ntasks = collections.Counter(arg[1].grp_id for arg in args)
+        logging.info('grp_id->ntasks: %s', list(self.ntasks.values()))
         L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
