@@ -108,11 +108,11 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         cmaker = self.cmakers[grp_id]
-        tot_poe = 0
-        n = 0
         arr = numpy.zeros((self.N, pmap.shape_y, pmap.shape_z))
         for sid in pmap:
-            arr[sid] = pmap[sid].array
+            a = pmap[sid].array
+            # a[a < 1E-5] = 0.  # minimum_poe
+            arr[sid] = a
         sids, lids, gids = arr.nonzero()
         hdf5.extend(self.datastore['_poes/sid'], sids)
         hdf5.extend(self.datastore['_poes/gid'], gids + cmaker.start)
@@ -521,15 +521,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
         logging.info('Building hazard statistics')
-        self.weights = [rlz.weight for rlz in self.realizations]
+        self.weights = ws = [rlz.weight for rlz in self.realizations]
         dstore = (self.datastore.parent if oq.hazard_calculation_id
                   else self.datastore)
-        allargs = [  # this list is very fast to generate
-            (getters.PmapGetter(
-                dstore, self.weights, t.sids, oq.imtls, oq.poes),
-             N, hstats, individual_rlzs, oq.max_sites_disagg,
-             self.amplifier)
-            for t in self.sitecol.split_in_tiles(ct)]
+        iterargs = (
+            (getters.PmapGetter(dstore, ws, t.sids, oq.imtls, oq.poes),
+             N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)
+            for t in self.sitecol.split_in_tiles(ct))
         if self.few_sites:
             dist = 'no'
         else:
@@ -538,7 +536,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
         self.hazard = {}  # kind -> array
         parallel.Starmap(
-            postclassical, allargs, distribute=dist, h5=self.datastore.hdf5
+            postclassical, iterargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)

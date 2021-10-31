@@ -155,6 +155,14 @@ class PmapGetter(object):
         self.num_rlzs = len(weights)
         self.eids = None
 
+        # populate _pmap
+        df = dstore.read_df('_poes', sel={'sid': self.sids})
+        G = len(dstore['rlzs_by_g'])
+        self._pmap = probability_map.ProbabilityMap.build(self.L, G, sids)
+        for gid, sid, lid, poe in zip(df.gid, df.sid, df.lid, df.poe):
+            self._pmap[sid].array[lid, gid] = poe
+        self.nbytes = self._pmap.nbytes
+
     @property
     def imts(self):
         return list(self.imtls)
@@ -177,21 +185,10 @@ class PmapGetter(object):
 
     def init(self):
         """
-        Read the poes and set the .data attribute with the hazard curves
+        Read rlzs_by_g
         """
-        if hasattr(self, '_pmap'):  # already initialized
-            return self._pmap
-        dstore = hdf5.File(self.filename, 'r')
-        self.rlzs_by_g = dstore['rlzs_by_g'][()]
-
-        # populate _pmap
-        df = dstore.read_df('_poes', sel={'sid': self.sids})
-        G = len(self.rlzs_by_g)
-        self._pmap = probability_map.ProbabilityMap.build(self.L, G, self.sids)
-        for gid, sid, lid, poe in zip(df.gid, df.sid, df.lid, df.poe):
-            self._pmap[sid].array[lid, gid] = poe
-        self.nbytes = self._pmap.nbytes
-        dstore.close()
+        with hdf5.File(self.filename, 'r') as dstore:
+            self.rlzs_by_g = dstore['rlzs_by_g'][()]
         return self._pmap
 
     # used in risk calculation where there is a single site per getter
