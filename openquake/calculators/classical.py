@@ -108,22 +108,18 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         cmaker = self.cmakers[grp_id]
-        dic = {key: [] for key in poes_dt}
         tot_poe = 0
         n = 0
+        arr = numpy.zeros((self.N, pmap.shape_y, pmap.shape_z))
         for sid in pmap:
-            for (lid, g), poe in numpy.ndenumerate(pmap[sid].array):
-                tot_poe += poe * self.level_weights[lid]
-                n += 1
-                if poe:
-                    dic['gid'].append(cmaker.start + g)
-                    dic['sid'].append(sid)
-                    dic['lid'].append(lid)
-                    dic['poe'].append(poe)
-        for key, val in dic.items():
-            hdf5.extend(self.datastore['_poes/' + key], poes_dt[key](val))
+            arr[sid] = pmap[sid].array
+        sids, lids, gids = arr.nonzero()
+        hdf5.extend(self.datastore['_poes/sid'], sids)
+        hdf5.extend(self.datastore['_poes/gid'], gids + cmaker.start)
+        hdf5.extend(self.datastore['_poes/lid'], lids)
+        hdf5.extend(self.datastore['_poes/poe'], arr[sids, lids, gids])
         self.acc[grp_id]['grp_start'] = cmaker.start
-        self.acc[grp_id]['avg_poe'] = tot_poe / n
+        self.acc[grp_id]['avg_poe'] = 0
         self.acc[grp_id]['nsites'] = len(pmap)
 
     def store_disagg(self, pmaps=None):
