@@ -244,6 +244,15 @@ def dset2df(dset, indexfield, filterdict):
     return pandas.DataFrame(acc, index or None)
 
 
+def is_ok(value, expected):
+    """
+    :returns: True if the value is expected
+    """
+    if hasattr(expected, '__len__'):
+        return numpy.isin(value, expected)
+    return value == expected
+
+
 def extract_cols(datagrp, sel, slc, columns):
     """
     :param datagrp: something like and HDF5 data group
@@ -264,9 +273,9 @@ def extract_cols(datagrp, sel, slc, columns):
         dic = {col: datagrp[col][slc] for col in sel}
         for col in sel:
             if isinstance(ok, slice):  # first selection
-                ok = dic[col] == sel[col]
+                ok = is_ok(dic[col], sel[col])
             else:  # other selections
-                ok &= dic[col] == sel[col]
+                ok &= is_ok(dic[col], sel[col])
         for col in columns:
             acc[col].append(datagrp[col][slc][ok])
     return {k: numpy.concatenate(vs) for k, vs in acc.items()}
