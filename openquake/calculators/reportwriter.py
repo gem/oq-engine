@@ -102,7 +102,7 @@ class ReportWriter(object):
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
         if 'disagg_by_grp' in ds:
-            self.add('disagg_by_grp')            
+            self.add('disagg_by_grp')
         if 'source_info' in ds:
             self.add('slow_sources')
             self.add('eff_ruptures')
