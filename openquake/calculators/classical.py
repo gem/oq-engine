@@ -538,7 +538,9 @@ class ClassicalCalculator(base.HazardCalculator):
         slices = get_indices(dstore['_poes/sid'][:])
 
         def slicedic(tile):
-            return {sid: slices[sid] for sid in tile.sids if sid in slices}
+            sids = tile.sids
+            logging.info('Sending PoEs for sites %d..%d', sids[0], sids[-1])
+            return {sid: slices[sid] for sid in sids if sid in slices}
         iterargs = (
             (getters.PmapGetter(dstore, ws, slicedic(t), oq.imtls, oq.poes),
              N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)
