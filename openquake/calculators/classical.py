@@ -50,7 +50,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 get_weight = operator.attrgetter('weight')
 disagg_grp_dt = numpy.dtype([
     ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
-    ('smrs', hdf5.vuint16)])
+    ('nsites', U32),  ('smrs', hdf5.vuint16)])
 
 
 def get_source_id(src):  # used in submit_tasks
@@ -115,6 +115,7 @@ class Hazard:
             values.append(arr.mean(axis=0) @ self.level_weights)
         self.acc[grp_id]['grp_start'] = cmaker.start
         self.acc[grp_id]['avg_poe'] = numpy.mean(values)
+        self.acc[grp_id]['nsites'] = len(pmap)
 
     def store_disagg(self, pmaps=None):
         """
@@ -127,7 +128,8 @@ class Hazard:
             if dic:
                 trti, smrs = numpy.divmod(indices, n)
                 trt = self.full_lt.trts[trti[0]]
-                lst.append((dic['grp_start'], trt, dic['avg_poe'], smrs))
+                lst.append((dic['grp_start'], trt, dic['avg_poe'],
+                            dic['nsites'], smrs))
         self.datastore['disagg_by_grp'] = numpy.array(lst, disagg_grp_dt)
 
         if pmaps:  # called inside a loop
