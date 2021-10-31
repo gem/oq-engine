@@ -29,8 +29,8 @@ except ImportError:
 from openquake.baselib import parallel, hdf5, config
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg)
+    AccumDict, DictArray, block_splitter, groupby, humansize, get_indices,
+    get_nbytes_msg, agg_probs)
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -91,17 +91,31 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, pgetter, srcidx):
+    def __init__(self, dstore, full_lt, srcidx):
         self.datastore = dstore
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
-        self.get_hcurves = pgetter.get_hcurves
-        self.imtls = imtls = pgetter.imtls
+        self.imtls = imtls = dstore['oqparam'].imtls
         self.level_weights = imtls.array / imtls.array.sum()
-        self.sids = pgetter.sids
+        self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
         self.N = len(dstore['sitecol/sids'])
+        self.R = full_lt.get_num_paths()
         self.acc = AccumDict(accum={})
+
+    def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
+        """
+        :param pmap: a ProbabilityMap
+        :param rlzs_by_gsim: a dictionary gsim -> rlz IDs
+        :returns: an array of PoEs of shape (N, R, M, L)
+        """
+        res = numpy.zeros((self.N, self.R, self.imtls.size))
+        for sid, pc in pmap.items():
+            for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
+                poes = pc.array[:, gsim_idx]
+                for rlz in rlzis:
+                    res[sid, rlz] = agg_probs(res[sid, rlz], poes)
+        return res.reshape(self.N, self.R, len(self.imtls), -1)
 
     def store_poes(self, grp_id, pmap):
         """
@@ -328,12 +342,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        weights = [rlz.weight for rlz in self.realizations]
-        pgetter = getters.PmapGetter(
-            self.datastore, weights, self.sitecol.sids, oq.imtls)
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
-        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
+        self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.ntasks = collections.Counter(arg[1].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.ntasks.values()))
@@ -520,10 +531,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
-        logging.info('Building hazard statistics')
+        logging.info('Building hazard curves and statistics')
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         dstore = (self.datastore.parent if oq.hazard_calculation_id
                   else self.datastore)
+        
         iterargs = (
             (getters.PmapGetter(dstore, ws, t.sids, oq.imtls, oq.poes),
              N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)

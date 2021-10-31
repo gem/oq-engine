@@ -212,20 +212,6 @@ class PmapGetter(object):
             pass
         return pc0
 
-    def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
-        """
-        :param pmap: a ProbabilityMap
-        :param rlzs_by_gsim: a dictionary gsim -> rlz IDs
-        :returns: an array of PoEs of shape (N, R, M, L)
-        """
-        res = numpy.zeros((self.N, self.R, self.L))
-        for sid, pc in pmap.items():
-            for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
-                poes = pc.array[:, gsim_idx]
-                for rlz in rlzis:
-                    res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
-        return res.reshape(self.N, self.R, self.M, -1)
-
     def get_mean(self):
         """
         Compute the mean curve as a ProbabilityMap
