@@ -134,7 +134,7 @@ class Hazard:
         hdf5.extend(self.datastore['_poes/lid'], lids)
         hdf5.extend(self.datastore['_poes/poe'], arr[sids, lids, gids])
         self.acc[grp_id]['grp_start'] = cmaker.start
-        self.acc[grp_id]['avg_poe'] = 0
+        self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
         self.acc[grp_id]['nsites'] = len(pmap)
 
     def store_disagg(self, pmaps=None):
