@@ -995,13 +995,6 @@ class RiskCalculator(HazardCalculator):
         smap.monitor.save('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
-            for ri in block:
-                # we must use eager reading for performance reasons:
-                # concurrent reading on the workers would be extra-slow;
-                # also, I could not get lazy reading to work with
-                # the SWMR mode for event_based_risk
-                if not isinstance(ri.hazard_getter, getters.PmapGetter):
-                    ri.hazard_getter.init()
             smap.submit((block, self.param))
         return smap.reduce(self.combine, self.acc)
 
