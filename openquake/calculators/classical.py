@@ -86,6 +86,98 @@ def classical(srcs, cmaker, monitor):
     return hazclassical(srcs, monitor.read('sitecol'), cmaker)
 
 
+def postclassical(pgetter, N, hstats, individual_rlzs,
+                  max_sites_disagg, amplifier, monitor):
+    """
+    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :param N: the total number of sites
+    :param hstats: a list of pairs (statname, statfunc)
+    :param individual_rlzs: if True, also build the individual curves
+    :param max_sites_disagg: if there are less sites than this, store rup info
+    :param amplifier: instance of Amplifier or None
+    :param monitor: instance of Monitor
+    :returns: a dictionary kind -> ProbabilityMap
+
+    The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
+    used to specify the kind of output.
+    """
+    with monitor('read PoEs', measuremem=True):
+        pgetter.init()
+
+    if amplifier:
+        with hdf5.File(pgetter.filename, 'r') as f:
+            ampcode = f['sitecol'].ampcode
+        imtls = DictArray({imt: amplifier.amplevels
+                           for imt in pgetter.imtls})
+    else:
+        imtls = pgetter.imtls
+    poes, weights = pgetter.poes, pgetter.weights
+    M = len(imtls)
+    P = len(poes)
+    L = imtls.size
+    R = len(weights)
+    S = len(hstats)
+    pmap_by_kind = {}
+    if R > 1 and individual_rlzs or not hstats:
+        pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
+        if poes:
+            pmap_by_kind['hmaps-rlzs'] = [
+                ProbabilityMap(M, P) for r in range(R)]
+    if hstats:
+        pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
+        if poes:
+            pmap_by_kind['hmaps-stats'] = [
+                ProbabilityMap(M, P) for r in range(S)]
+    combine_mon = monitor('combine pmaps', measuremem=False)
+    compute_mon = monitor('compute stats', measuremem=False)
+    for sid in pgetter.sids:
+        with combine_mon:
+            pc = pgetter.get_pcurve(sid)  # shape (L, R)
+            if amplifier:
+                pc = amplifier.amplify(ampcode[sid], pc)
+                # NB: the pcurve have soil levels != IMT levels
+        if pc.array.sum() == 0:  # no data
+            continue
+        with compute_mon:
+            if hstats:
+                for s, (statname, stat) in enumerate(hstats.items()):
+                    sc = getters.build_stat_curve(pc, imtls, stat, weights)
+                    pmap_by_kind['hcurves-stats'][s][sid] = sc
+                    if poes:
+                        hmap = calc.make_hmap(sc, imtls, poes, sid)
+                        pmap_by_kind['hmaps-stats'][s].update(hmap)
+            if R > 1 and individual_rlzs or not hstats:
+                for r, pmap in enumerate(pmap_by_kind['hcurves-rlzs']):
+                    pmap[sid] = pc.extract(r)
+                if poes:
+                    for r in range(R):
+                        hmap = calc.make_hmap(pc.extract(r), imtls, poes, sid)
+                        pmap_by_kind['hmaps-rlzs'][r].update(hmap)
+    return pmap_by_kind
+
+
+def make_hmap_png(hmap, lons, lats):
+    """
+    :param hmap:
+        a dictionary with keys calc_id, m, p, imt, poe, inv_time, array
+    :param lons: an array of longitudes
+    :param lats: an array of latitudes
+    :returns: an Image object containing the hazard map
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.grid(True)
+    ax.set_title('hmap for IMT=%(imt)s, poe=%(poe)s\ncalculation %(calc_id)d,'
+                 'inv_time=%(inv_time)dy' % hmap)
+    ax.set_ylabel('Longitude')
+    coll = ax.scatter(lons, lats, c=hmap['array'], cmap='jet')
+    plt.colorbar(coll)
+    bio = io.BytesIO()
+    plt.savefig(bio, format='png')
+    return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
+
+
 class Hazard:
     """
     Helper class for storing the PoEs
@@ -579,95 +671,3 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(make_hmap_png, allargs)
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
-
-
-def make_hmap_png(hmap, lons, lats):
-    """
-    :param hmap:
-        a dictionary with keys calc_id, m, p, imt, poe, inv_time, array
-    :param lons: an array of longitudes
-    :param lats: an array of latitudes
-    :returns: an Image object containing the hazard map
-    """
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.grid(True)
-    ax.set_title('hmap for IMT=%(imt)s, poe=%(poe)s\ncalculation %(calc_id)d,'
-                 'inv_time=%(inv_time)dy' % hmap)
-    ax.set_ylabel('Longitude')
-    coll = ax.scatter(lons, lats, c=hmap['array'], cmap='jet')
-    plt.colorbar(coll)
-    bio = io.BytesIO()
-    plt.savefig(bio, format='png')
-    return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
-
-
-def postclassical(pgetter, N, hstats, individual_rlzs,
-                  max_sites_disagg, amplifier, monitor):
-    """
-    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
-    :param N: the total number of sites
-    :param hstats: a list of pairs (statname, statfunc)
-    :param individual_rlzs: if True, also build the individual curves
-    :param max_sites_disagg: if there are less sites than this, store rup info
-    :param amplifier: instance of Amplifier or None
-    :param monitor: instance of Monitor
-    :returns: a dictionary kind -> ProbabilityMap
-
-    The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
-    used to specify the kind of output.
-    """
-    with monitor('dframes to pcurves', measuremem=True):
-        pgetter.init()
-
-    if amplifier:
-        with hdf5.File(pgetter.filename, 'r') as f:
-            ampcode = f['sitecol'].ampcode
-        imtls = DictArray({imt: amplifier.amplevels
-                           for imt in pgetter.imtls})
-    else:
-        imtls = pgetter.imtls
-    poes, weights = pgetter.poes, pgetter.weights
-    M = len(imtls)
-    P = len(poes)
-    L = imtls.size
-    R = len(weights)
-    S = len(hstats)
-    pmap_by_kind = {}
-    if R > 1 and individual_rlzs or not hstats:
-        pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
-        if poes:
-            pmap_by_kind['hmaps-rlzs'] = [
-                ProbabilityMap(M, P) for r in range(R)]
-    if hstats:
-        pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
-        if poes:
-            pmap_by_kind['hmaps-stats'] = [
-                ProbabilityMap(M, P) for r in range(S)]
-    combine_mon = monitor('combine pmaps', measuremem=False)
-    compute_mon = monitor('compute stats', measuremem=False)
-    for sid in pgetter.sids:
-        with combine_mon:
-            pc = pgetter.get_pcurve(sid)  # shape (L, R)
-            if amplifier:
-                pc = amplifier.amplify(ampcode[sid], pc)
-                # NB: the pcurve have soil levels != IMT levels
-        if pc.array.sum() == 0:  # no data
-            continue
-        with compute_mon:
-            if hstats:
-                for s, (statname, stat) in enumerate(hstats.items()):
-                    sc = getters.build_stat_curve(pc, imtls, stat, weights)
-                    pmap_by_kind['hcurves-stats'][s][sid] = sc
-                    if poes:
-                        hmap = calc.make_hmap(sc, imtls, poes, sid)
-                        pmap_by_kind['hmaps-stats'][s].update(hmap)
-            if R > 1 and individual_rlzs or not hstats:
-                for r, pmap in enumerate(pmap_by_kind['hcurves-rlzs']):
-                    pmap[sid] = pc.extract(r)
-                if poes:
-                    for r in range(R):
-                        hmap = calc.make_hmap(pc.extract(r), imtls, poes, sid)
-                        pmap_by_kind['hmaps-rlzs'][r].update(hmap)
-    return pmap_by_kind
