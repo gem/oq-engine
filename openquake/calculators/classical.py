@@ -535,10 +535,11 @@ class ClassicalCalculator(base.HazardCalculator):
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         dstore = (self.datastore.parent if oq.hazard_calculation_id
                   else self.datastore)
-        nblocks = int(numpy.ceil(self.N / ct))
+        sites_per_task = int(numpy.ceil(self.N / ct))
         nbytes = len(dstore['_poes/sid']) * 4
         logging.info('Reading %s of _poes/sid', humansize(nbytes))
-        indices = performance.get_slices(dstore['_poes/sid'][:] // nblocks)
+        indices = performance.get_slices(
+            dstore['_poes/sid'][:] // sites_per_task)
         iterargs = (
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)
