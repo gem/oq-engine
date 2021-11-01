@@ -20,7 +20,7 @@ import logging
 import operator
 import numpy
 import pandas
-from openquake.baselib import hdf5, general, performance, parallel
+from openquake.baselib import general, performance, parallel
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import probability_map, stats

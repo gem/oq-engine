@@ -33,7 +33,7 @@ from openquake.baselib.general import (
     get_nbytes_msg, agg_probs)
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc, readinput
 from openquake.calculators import getters
 from openquake.calculators import base, preclassical
@@ -51,7 +51,6 @@ get_weight = operator.attrgetter('weight')
 disagg_grp_dt = numpy.dtype([
     ('grp_start', U16), ('grp_trt', hdf5.vstr), ('avg_poe', F32),
     ('nsites', U32),  ('smrs', hdf5.vuint16)])
-poes_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'poe': F64}
 
 
 def get_source_id(src):  # used in submit_tasks
@@ -125,6 +124,8 @@ class Hazard:
         arr = numpy.zeros((self.N, pmap.shape_y, pmap.shape_z))
         for sid in pmap:
             a = pmap[sid].array
+            # fix ones
+            a[a == 1.] = .9999999999999999
             # a[a < 1E-5] = 0.  # minimum_poe
             arr[sid] = a
         sids, lids, gids = arr.nonzero()
@@ -531,11 +532,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
-        logging.info('Building hazard curves and statistics')
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         dstore = (self.datastore.parent if oq.hazard_calculation_id
                   else self.datastore)
         nblocks = int(numpy.ceil(self.N / ct))
+        logging.info('Reading _poes/sid')
         indices = get_indices(dstore['_poes/sid'][:] // nblocks)
         iterargs = (
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
@@ -545,8 +546,9 @@ class ClassicalCalculator(base.HazardCalculator):
             dist = 'no'
         else:
             dist = None  # parallelize as usual
-        if oq.hazard_calculation_id is None:  # essential before Starmap
-            self.datastore.swmr_on()
+        #if oq.hazard_calculation_id is None:  # essential before Starmap
+        #    self.datastore.swmr_on()
+        logging.info('Building hazard curves and statistics')
         self.hazard = {}  # kind -> array
         parallel.Starmap(
             postclassical, iterargs, distribute=dist, h5=self.datastore.hdf5

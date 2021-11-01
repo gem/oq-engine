@@ -18,10 +18,15 @@
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import numba, compile
 import numpy
+import pandas
 
+U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+poes_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'poe': F64}
+
 
 if numba:
     @compile("void(float64[:, :], float64[:], uint32[:])")
@@ -286,6 +291,21 @@ class ProbabilityMap(dict):
             array = curve.array[:, inner_idx].reshape(-1, 1)
             out[sid] = ProbabilityCurve(array)
         return out
+
+    def to_dframe(self):
+        """
+        :returns: a DataFrame with fields sid, gid, lid, poe
+        """
+        dic = dict(sid=[], gid=[], lid=[], poe=[])
+        for sid in self:
+            for (lid, gid), poe in numpy.ndenumerate(self[sid].array):
+                dic['sid'].append(sid)
+                dic['gid'].append(gid)
+                dic['lid'].append(lid)
+                dic['poe'].append(poe)
+        for key, dt in poes_dt.items():
+            dic[key] = dt(dic[key])
+        return pandas.DataFrame(dic)
 
     def combine(self, pmap, rlz_groups):
         """
