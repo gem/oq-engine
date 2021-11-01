@@ -41,6 +41,8 @@ import multiprocessing
 from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
+import pandas
+import numba
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
@@ -1191,27 +1193,6 @@ def random_histogram(counts, nbins, seed):
         return numpy.array([counts])
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
-
-
-def get_slices(integers):
-    """
-    :param integers: a sequence of integers (with repetitions)
-    :returns: a dict integer -> [(start, stop), ...]
-
-    >>> from pprint import pprint
-    >>> pprint(get_slices([0, 0, 3, 3, 3, 2, 2, 0]))
-    {0: array([[0, 2],
-           [7, 8]], dtype=uint32),
-     2: array([[5, 7]], dtype=uint32),
-     3: array([[2, 5]], dtype=uint32)}
-    """
-    indices = AccumDict(accum=[])  # idx -> [(start, stop), ...]
-    start = 0
-    for i, vals in itertools.groupby(integers):
-        n = sum(1 for val in vals)
-        indices[i].append((start, start + n))
-        start += n
-    return {i: numpy.uint32(indices[i]) for i in indices}
 
 
 def safeprint(*args, **kwargs):

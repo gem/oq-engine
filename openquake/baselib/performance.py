@@ -359,3 +359,38 @@ else:
     def compile(sigstr):
         """Do nothing decorator, used if numba is missing"""
         return lambda func: func
+
+
+@compile("int64[:, :](int64[:])")
+def _int_start_stop(integers):
+    # given an array of integers returns an array of shape (n, 3)
+    out = []
+    start = 0
+    prev = integers[0]
+    for i, val in enumerate(integers[1:], 1):
+        if val != prev:
+            out.append((prev, start, i))
+            start = i
+        prev = val
+    out.append((prev, start, i + 1))
+    return numpy.array(out)
+
+
+def get_slices(integers):
+    """
+    :param integers: a sequence of integers (with repetitions)
+    :returns: a dict integer -> [(start, stop), ...]
+
+    >>> from pprint import pprint
+    >>> pprint(get_slices([0, 0, 3, 3, 3, 2, 2, 0]))
+    {0: array([[0, 2],
+           [7, 8]], dtype=uint32),
+     2: array([[5, 7]], dtype=uint32),
+     3: array([[2, 5]], dtype=uint32)}
+    """
+    indices = {}  # idx -> [(start, stop), ...]
+    for i, start, stop in _int_start_stop(numpy.int64(integers)):
+        if i not in indices:
+            indices[i] = []
+        indices[i].append((start, stop))
+    return {i: numpy.uint32(indices[i]) for i in indices}

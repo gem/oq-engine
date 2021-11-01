@@ -30,7 +30,7 @@ import pandas
 
 from openquake.baselib import (
     general, hdf5, __version__ as engine_version)
-from openquake.baselib import parallel, python3compat
+from openquake.baselib import performance, parallel, python3compat
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
@@ -966,7 +966,7 @@ class RiskCalculator(HazardCalculator):
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        slices = general.get_slices(dstore['_poes/sid'][:])
+        slices = performance.get_slices(dstore['_poes/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             if sid in slices:
                 # hcurves, shape (R, N)

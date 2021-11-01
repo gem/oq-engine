@@ -26,10 +26,10 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import parallel, hdf5, config
+from openquake.baselib import performance, parallel, hdf5, config
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize, get_slices,
+    AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg, agg_probs)
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -538,7 +538,7 @@ class ClassicalCalculator(base.HazardCalculator):
         nblocks = int(numpy.ceil(self.N / ct))
         nbytes = len(dstore['_poes/sid']) * 4
         logging.info('Reading %s of _poes/sid', humansize(nbytes))
-        indices = get_slices(dstore['_poes/sid'][:] // nblocks)
+        indices = performance.get_slices(dstore['_poes/sid'][:] // nblocks)
         iterargs = (
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)
