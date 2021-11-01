@@ -536,7 +536,8 @@ class ClassicalCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if oq.hazard_calculation_id
                   else self.datastore)
         nblocks = int(numpy.ceil(self.N / ct))
-        logging.info('Reading _poes/sid')
+        nbytes = len(dstore['_poes/sid']) * 4
+        logging.info('Reading %s of _poes/sid', humansize(nbytes))
         indices = get_indices(dstore['_poes/sid'][:] // nblocks)
         iterargs = (
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
@@ -615,15 +616,13 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('read PoEs'):
-        pgetter.init()
-        if amplifier:
-            with hdf5.File(pgetter.filename, 'r') as f:
-                ampcode = f['sitecol'].ampcode
-            imtls = DictArray({imt: amplifier.amplevels
-                               for imt in pgetter.imtls})
-        else:
-            imtls = pgetter.imtls
+    if amplifier:
+        with hdf5.File(pgetter.filename, 'r') as f:
+            ampcode = f['sitecol'].ampcode
+        imtls = DictArray({imt: amplifier.amplevels
+                           for imt in pgetter.imtls})
+    else:
+        imtls = pgetter.imtls
     poes, weights = pgetter.poes, pgetter.weights
     M = len(imtls)
     P = len(poes)
