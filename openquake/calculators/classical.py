@@ -618,6 +618,9 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
+    with monitor('dframes to pcurves', measuremem=True):
+        pgetter.init()
+
     if amplifier:
         with hdf5.File(pgetter.filename, 'r') as f:
             ampcode = f['sitecol'].ampcode

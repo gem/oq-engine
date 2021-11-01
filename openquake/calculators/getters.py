@@ -154,22 +154,16 @@ class PmapGetter(object):
         self.num_rlzs = len(weights)
         self.eids = None
         self.rlzs_by_g = dstore['rlzs_by_g'][()]
-        G = len(self.rlzs_by_g)
-
         # populate _pmap
-        self._pmap = {}
+        self._pmap = general.AccumDict(accum=[])  # sid -> DataFrames
         nbytes = 0
         for start, stop in slices:
             poes_df = dstore.read_df('_poes', slc=slice(start, stop))
             for sid, df in poes_df.groupby('sid'):
-                try:
-                    array = self._pmap[sid].array
-                except KeyError:
-                    array = numpy.zeros((self.L, G))
-                    self._pmap[sid] = probability_map.ProbabilityCurve(array)
-                array[df.lid, df.gid] = df.poe
-                nbytes += array.nbytes
+                self._pmap[sid].append(df)
+                nbytes += df.memory_usage()
         self.nbytes = nbytes
+        self.initialized = False
 
     @property
     def sids(self):
@@ -197,9 +191,23 @@ class PmapGetter(object):
 
     def init(self):
         """
-        Do nothing
+        Build the probability curves from the underlying dataframes
         """
-        return self._pmap
+        if self.initialized:
+            return self._pmap
+        pmap = {}
+        G = len(self.rlzs_by_g)
+        for sid, dfs in self._pmap.items():
+            for df in dfs:
+                try:
+                    array = pmap[sid].array
+                except KeyError:
+                    array = numpy.zeros((self.L, G))
+                    pmap[sid] = probability_map.ProbabilityCurve(array)
+                array[df.lid, df.gid] = df.poe
+        self._pmap = pmap
+        self.initialized = True
+        return pmap
 
     # used in risk calculation where there is a single site per getter
     def get_hazard(self, gsim=None):
