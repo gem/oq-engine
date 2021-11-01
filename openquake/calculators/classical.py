@@ -441,9 +441,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     allargs.append((block, cmakers[grp_id]))
         return allargs
 
-    def save_hazard(self, acc, pmap_by_kind):
+    def collect_hazard(self, acc, pmap_by_kind):
         """
-        Works by side effect by saving hcurves and hmaps on the datastore
+        Populate hcurves and hmaps in the .hazard dictionary
 
         :param acc: ignored
         :param pmap_by_kind: a dictionary of ProbabilityMaps
@@ -543,17 +543,18 @@ class ClassicalCalculator(base.HazardCalculator):
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)
             for slices in indices.values())
-        if self.few_sites:
-            dist = 'no'
-        else:
-            dist = None  # parallelize as usual
-        #if oq.hazard_calculation_id is None:  # essential before Starmap
-        #    self.datastore.swmr_on()
-        logging.info('Building hazard curves and statistics')
+        if oq.hazard_calculation_id is None:  # essential before Starmap
+            self.datastore.swmr_on()
         self.hazard = {}  # kind -> array
+        hcbytes = 8 * N * S * M * L1
+        hmbytes = 8 * N * S * M * P if oq.poes else 0
+        logging.info('Producing %s of hazard curves and %s of hazard maps',
+                     humansize(hcbytes), humansize(hmbytes))
         parallel.Starmap(
-            postclassical, iterargs, distribute=dist, h5=self.datastore.hdf5
-        ).reduce(self.save_hazard)
+            postclassical, iterargs,
+            distribute='no' if self.few_sites else None,
+            h5=self.datastore.hdf5
+        ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)
             self.datastore[kind][:] = self.hazard.pop(kind)
