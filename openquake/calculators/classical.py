@@ -540,10 +540,10 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Reading %s of _poes/sid', humansize(nbytes))
         indices = performance.get_slices(
             dstore['_poes/sid'][:] // sites_per_task)
-        iterargs = (
+        allargs = [
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)
-            for slices in indices.values())
+            for slices in indices.values()]
         if oq.hazard_calculation_id is None:  # essential before Starmap
             self.datastore.swmr_on()
         self.hazard = {}  # kind -> array
@@ -552,7 +552,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Producing %s of hazard curves and %s of hazard maps',
                      humansize(hcbytes), humansize(hmbytes))
         parallel.Starmap(
-            postclassical, iterargs,
+            postclassical, allargs,
             distribute='no' if self.few_sites else None,
             h5=self.datastore.hdf5
         ).reduce(self.collect_hazard)
