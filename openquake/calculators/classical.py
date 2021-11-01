@@ -29,7 +29,7 @@ except ImportError:
 from openquake.baselib import parallel, hdf5, config
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize, get_indices,
+    AccumDict, DictArray, block_splitter, groupby, humansize, get_slices,
     get_nbytes_msg, agg_probs)
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -538,7 +538,7 @@ class ClassicalCalculator(base.HazardCalculator):
         nblocks = int(numpy.ceil(self.N / ct))
         nbytes = len(dstore['_poes/sid']) * 4
         logging.info('Reading %s of _poes/sid', humansize(nbytes))
-        indices = get_indices(dstore['_poes/sid'][:] // nblocks)
+        indices = get_slices(dstore['_poes/sid'][:] // nblocks)
         iterargs = (
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)
@@ -556,7 +556,7 @@ class ClassicalCalculator(base.HazardCalculator):
             h5=self.datastore.hdf5
         ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
-            logging.info('Saving %s', kind)
+            logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
         if 'hmaps-stats' in self.datastore:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP

@@ -966,7 +966,7 @@ class RiskCalculator(HazardCalculator):
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        slices = general.get_indices(dstore['_poes/sid'][:])
+        slices = general.get_slices(dstore['_poes/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             if sid in slices:
                 # hcurves, shape (R, N)
