@@ -535,16 +535,12 @@ class ClassicalCalculator(base.HazardCalculator):
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         dstore = (self.datastore.parent if oq.hazard_calculation_id
                   else self.datastore)
-        slices = get_indices(dstore['_poes/sid'][:])
-
-        def slicedic(tile):
-            sids = tile.sids
-            logging.info('Sending PoEs for sites %d..%d', sids[0], sids[-1])
-            return {sid: slices[sid] for sid in sids if sid in slices}
+        nblocks = int(numpy.ceil(self.N / ct))
+        indices = get_indices(dstore['_poes/sid'][:] // nblocks)
         iterargs = (
-            (getters.PmapGetter(dstore, ws, slicedic(t), oq.imtls, oq.poes),
+            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)
-            for t in self.sitecol.split_in_tiles(ct))
+            for slices in indices.values())
         if self.few_sites:
             dist = 'no'
         else:

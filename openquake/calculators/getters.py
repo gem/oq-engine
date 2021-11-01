@@ -143,26 +143,37 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, weights, sids, imtls=(), poes=()):
+    def __init__(self, dstore, weights, slices, imtls=(), poes=()):
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
             self.weights = weights
-        self.sids = list(sids)
         self.imtls = imtls
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
+        self.rlzs_by_g = dstore['rlzs_by_g'][()]
+        G = len(self.rlzs_by_g)
 
         # populate _pmap
-        G = len(dstore['rlzs_by_g'])
-        self._pmap = probability_map.ProbabilityMap.build(self.L, G, sids)
-        for sid, slices in sids.items():
-            for start, stop in slices:
-                df = dstore.read_df('_poes', slc=slice(start, stop))
-                self._pmap[sid].array[df.lid, df.gid] = df.poe
-        self.nbytes = self._pmap.nbytes
+        self._pmap = {}
+        nbytes = 0
+        for start, stop in slices:
+            poes_df = dstore.read_df('_poes', slc=slice(start, stop))
+            for sid, df in poes_df.groupby('sid'):
+                try:
+                    array = self._pmap[sid].array
+                except KeyError:
+                    array = numpy.zeros((self.L, G))
+                    self._pmap[sid] = probability_map.ProbabilityCurve(array)
+                array[df.lid, df.gid] = df.poe
+                nbytes += array.nbytes
+        self.nbytes = nbytes
+
+    @property
+    def sids(self):
+        return list(self._pmap)
 
     @property
     def imts(self):
@@ -174,7 +185,7 @@ class PmapGetter(object):
 
     @property
     def N(self):
-        return len(self.sids)
+        return len(self._pmap)
 
     @property
     def M(self):
@@ -186,10 +197,8 @@ class PmapGetter(object):
 
     def init(self):
         """
-        Read rlzs_by_g
+        Do nothing
         """
-        with hdf5.File(self.filename, 'r') as dstore:
-            self.rlzs_by_g = dstore['rlzs_by_g'][()]
         return self._pmap
 
     # used in risk calculation where there is a single site per getter
