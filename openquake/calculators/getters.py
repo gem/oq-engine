@@ -159,6 +159,7 @@ class PmapGetter(object):
 
     @property
     def sids(self):
+        self.init()
         return list(self._pmap)
 
     @property
