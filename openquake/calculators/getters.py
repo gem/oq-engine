@@ -201,7 +201,7 @@ class PmapGetter(object):
                     array[df.lid, df.gid] = df.poe
         return self._pmap
 
-    # used in risk calculation where there is a single site per getter
+    # used in risk calculations where there is a single site per getter
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
