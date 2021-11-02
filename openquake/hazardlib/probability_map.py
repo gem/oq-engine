@@ -218,17 +218,17 @@ class ProbabilityMap(dict):
         """The ordered keys of the map as a numpy.uint32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
-    def array(self, start, stop, g=slice(None)):
+    def array(self, N, g=slice(None)):
         """
-        An array of shape (stop-start, L)
+        An array of shape (N, L, G) or (stop-start, L)
         """
         if isinstance(g, slice):
-            arr = numpy.zeros((stop-start, self.shape_y, self.shape_z))
+            arr = numpy.zeros((N, self.shape_y, self.shape_z))
         else:
-            arr = numpy.zeros((stop-start, self.shape_y))
-        for i, sid in enumerate(range(start, stop)):
+            arr = numpy.zeros((N, self.shape_y))
+        for sid in range(N):
             try:
-                arr[i] = self[sid].array[:, g]
+                arr[sid] = self[sid].array[:, g]
             except KeyError:
                 pass
         # Physically, an extremely small intensity measure level can have an

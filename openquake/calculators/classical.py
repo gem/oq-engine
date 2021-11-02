@@ -213,7 +213,7 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         cmaker = self.cmakers[grp_id]
-        arr = pmap.array(0, self.N)
+        arr = pmap.array(self.N)
         # arr[arr < 1E-5] = 0.  # minimum_poe
         sids, lids, gids = arr.nonzero()
         hdf5.extend(self.datastore['_poes/sid'], sids)
