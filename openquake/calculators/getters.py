@@ -172,6 +172,7 @@ class PmapGetter(object):
 
     @property
     def N(self):
+        self.init()
         return len(self._pmap)
 
     @property
