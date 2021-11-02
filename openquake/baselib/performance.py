@@ -367,7 +367,7 @@ else:
 def _int_start_stop(integers):
     # given an array of integers returns an array of shape (n, 3)
     out = []
-    start = 0
+    start = i = 0
     prev = integers[0]
     for i, val in enumerate(integers[1:], 1):
         if val != prev:
