@@ -448,10 +448,12 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
                for cm in self.haz.cmakers}
         logging.info('Sending %d tasks', len(args))
-        smap.reduce(self.agg_dicts, acc)
+        try:
+            smap.reduce(self.agg_dicts, acc)
+        finally:
+            self.store_info(psd)
+            self.haz.store_disagg(acc)
         logging.debug("busy time: %s", smap.busytime)
-        self.store_info(psd)
-        self.haz.store_disagg(acc)
         return True
 
     def store_info(self, psd):
