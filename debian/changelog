@@ -3,7 +3,8 @@
   * Added a new class to the lanzano_2019 gmm.
 
   [Michele Simionato]
-  * Reduced the memory consumption in classical calculations
+  * Changed completely the storage of the PoEs and reduced the memory
+    consumption in classical calculations (plus a 4x speedup in "postclassical")
   * Changed the behavior of `sites_slice`
   * Changed `custom_site_id` to an ASCII string up to 6 characters
   * Fixed the error raised in presence of a mag-dep distance for a tectonic
