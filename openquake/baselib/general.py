@@ -41,8 +41,6 @@ import multiprocessing
 from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
-import pandas
-import numba
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
