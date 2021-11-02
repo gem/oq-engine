@@ -56,7 +56,7 @@ class ClassicalDamageCase2TestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/damage_continuous.csv', fname)
 
     def test_discrete(self):
-        # a test producing NaNs
+        # a test with a putative poe == 1 causing log(0)
         self.run_calc(case_2.__file__, 'job_discrete.ini')
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)

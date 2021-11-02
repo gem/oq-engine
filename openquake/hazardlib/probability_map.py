@@ -308,6 +308,7 @@ class ProbabilityMap(dict):
                 dic['poe'].append(poe)
         for key, dt in poes_dt.items():
             dic[key] = dt(dic[key])
+        dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
     def combine(self, pmap, rlz_groups):
