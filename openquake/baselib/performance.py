@@ -364,7 +364,7 @@ else:
 
 
 @compile("int64[:, :](uint32[:])")
-def _int_start_stop(integers):
+def _idx_start_stop(integers):
     # given an array of integers returns an array of shape (n, 3)
     out = []
     start = i = 0
@@ -391,8 +391,8 @@ def get_slices(uint32s):
     if len(uint32s) == 0:
         return {}
     indices = {}  # idx -> [(start, stop), ...]
-    for i, start, stop in _int_start_stop(uint32s):
-        if i not in indices:
-            indices[i] = []
-        indices[i].append((start, stop))
+    for idx, start, stop in _idx_start_stop(uint32s):
+        if idx not in indices:
+            indices[idx] = []
+        indices[idx].append((start, stop))
     return indices
