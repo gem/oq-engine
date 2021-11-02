@@ -388,6 +388,8 @@ def get_slices(uint32s):
     >>> pprint(get_slices(numpy.uint32([0, 0, 3, 3, 3, 2, 2, 0])))
     {0: [(0, 2), (7, 8)], 2: [(5, 7)], 3: [(2, 5)]}
     """
+    if len(uint32s) == 0:
+        return {}
     indices = {}  # idx -> [(start, stop), ...]
     for i, start, stop in _int_start_stop(uint32s):
         if i not in indices:
