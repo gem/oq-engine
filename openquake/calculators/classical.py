@@ -440,10 +440,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
         self.check_memory(self.N, L, num_gs)
-        h5 = self.datastore.hdf5
-        smap = parallel.Starmap(classical, args, h5=h5)
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
-        self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
                for cm in self.haz.cmakers}
@@ -647,13 +646,12 @@ class ClassicalCalculator(base.HazardCalculator):
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in slicedic.values()]
-        if oq.hazard_calculation_id is None:  # essential before Starmap
-            self.datastore.swmr_on()
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
         logging.info('Producing %s of hazard curves and %s of hazard maps',
                      humansize(hcbytes), humansize(hmbytes))
+        self.datastore.swmr_on()  # essential before Starmap
         parallel.Starmap(
             postclassical, allargs,
             distribute='no' if self.few_sites else None,
