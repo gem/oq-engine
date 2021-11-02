@@ -18,8 +18,8 @@
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.bahrampouri_2021_duration import BahrampouriEtAldm2021Asc
-from openquake.hazardlib.gsim.bahrampouri_dm_2021 import BahrampouriEtAldm2021SInter
-from openquake.hazardlib.gsim.bahrampouri_dm_2021 import BahrampouriEtAldm2021SSlab
+from openquake.hazardlib.gsim.bahrampouri_2021_duration import BahrampouriEtAldm2021SInter
+from openquake.hazardlib.gsim.bahrampouri_2021_duration import BahrampouriEtAldm2021SSlab
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1
