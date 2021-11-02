@@ -1,5 +1,20 @@
-#!/usr/bin/env python
-# coding: utf-8
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2013-2021 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 
 """
@@ -56,13 +71,13 @@ def _get_site_term(C, ctx):
     """
     Implementing Eqs. 5, 6 and 12
     """
-    mean_z1pt0 = np.exp(((-5.23 / 2.) * np.log(((ctx.vs30 ** 2.)
-        + 412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.)))-0.9)
+    mean_z1pt0 = (np.exp(((-5.23 / 2.) * np.log(((ctx.vs30 ** 2.) +
+                  412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.)))-0.9))
     delta_z1pt0 = np.round(ctx.z1pt0 - mean_z1pt0, 4)
     fsite = []
     for i, value in enumerate(delta_z1pt0):
-        s = np.round(C['s1']*np.log(min(ctx.vs30[i], 600.)/600.)
-            + C['s2']*min(delta_z1pt0[i], 250.0) + C['s3'], 4)
+        s = (np.round(C['s1']*np.log(min(ctx.vs30[i], 600.)/600.) +
+             C['s2']*min(delta_z1pt0[i], 250.0) + C['s3'], 4))
         fsite.append(s)
     return fsite
 
@@ -125,8 +140,8 @@ class BahrampouriEtAldm2021Asc(GMPE):
             mean[m] = np.log(_get_source_term(C, ctx) +
                 _get_path_term(C, ctx)) + _get_site_term(C, ctx)
             sig[m], tau[m], phi[m] = _get_stddevs(C)
-            
-        
+
+
     COEFFS = CoeffsTable(table="""
     imt        m1     m2    m3_RS   m3_SS   m3_NS   M1    M2     r1      r2   R1       s1       s2      s3      sig    tau    phi_s2s  phi_ss
     rsd595  0.6899  6.511   4.584   4.252   5.522   4.    6.5  0.21960    0.  60.  -0.3008  0.00119   -0.1107  0.462   0.204   0.185    0.370
@@ -167,7 +182,7 @@ class BahrampouriEtAldm2021SSlab(GMPE):
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
 
-        
+
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """
@@ -180,7 +195,7 @@ class BahrampouriEtAldm2021SSlab(GMPE):
             mean[m] = np.log(_get_source_term(C, ctx) +
                 _get_path_term(C, ctx)) + _get_site_term(C, ctx)
             sig[m], tau[m], phi[m] = _get_stddevs(C)
-            
+
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt       m1     m2    m3_RS  m3_SS  m3_NS   M1  M2    r1      r2      R1     s1      s2        s3      sig    tau    phi_s2s  phi_ss
@@ -191,11 +206,11 @@ class BahrampouriEtAldm2021SSlab(GMPE):
 
 class BahrampouriEtAldm2021SInter(GMPE):
     """
-    Implements GMPE by Mahdi Bahrampouri, Adrian Rodriguez-Marek 
-    and Russell A Green developed from the KiK-net database. This GMPE is 
-    specifically derived for significant durations: Ds5-Ds95,D25-Ds75. This 
+    Implements GMPE by Mahdi Bahrampouri, Adrian Rodriguez-Marek
+    and Russell A Green developed from the KiK-net database. This GMPE is
+    specifically derived for significant durations: Ds5-Ds95,D25-Ds75. This
     GMPE is described in a paper published in 2021 on Earthquake Spectra,
-    Volume 37, Pg 903-920 and titled 'Ground motion prediction equations for 
+    Volume 37, Pg 903-920 and titled 'Ground motion prediction equations for
     significant duration using the KiK-net database'.
     """
     #: Supported tectonic region type is active shallow crust
@@ -221,8 +236,8 @@ class BahrampouriEtAldm2021SInter(GMPE):
 
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
-    
-    
+
+
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -234,7 +249,7 @@ class BahrampouriEtAldm2021SInter(GMPE):
             mean[m] = np.log(_get_source_term(C, ctx) +
                 _get_path_term(C, ctx)) + _get_site_term(C, ctx)
             sig[m], tau[m], phi[m] = _get_stddevs(C)
-            
+
 
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
