@@ -394,19 +394,19 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
 
     def check_memory(self, N, L, num_gs):
-        G = sum(num_gs)
+        """
+        Log the memory required to receive the largest ProbabilityMap,
+        assuming all sites are affected (upper limit)
+        """
+        G = max(num_gs)
         size = G * N * L * 8
-        bytes_per_grp = size / len(self.grp_ids)
-        avail = min(psutil.virtual_memory().available, config.memory.limit)
+        # for ESHM20 there are 95,000 sites and up to 72,000 can be affected
         logging.info('Requiring %s for full ProbabilityMap of shape %s',
                      humansize(size), (G, N, L))
-        maxsize = max(num_gs) * self.oqparam.imtls.size * 8
-        logging.info('Requiring at max %s per site', humansize(maxsize))
-        if avail < bytes_per_grp:
+        avail = min(psutil.virtual_memory().available, config.memory.limit)
+        if avail < size:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
-        elif avail < size:
-            logging.warning('You have only %s of free RAM' % humansize(avail))
 
     def execute(self):
         """
