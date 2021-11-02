@@ -963,22 +963,22 @@ class RiskCalculator(HazardCalculator):
         self.acc = None
         return riskinputs
 
+    # used only for classical_risk and classical_damage
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
         slices = performance.get_slices(dstore['_poes/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
-            if sid in slices:
-                # hcurves, shape (R, N)
-                ws = [rlz.weight for rlz in self.realizations]
-                getter = getters.PmapGetter(
-                    dstore, ws, slices[sid], self.oqparam.imtls)
-                for slc in general.split_in_slices(
-                        len(assets), self.oqparam.assets_per_site_limit):
-                    out.append(riskinput.RiskInput(getter, assets[slc]))
-                if slc.stop - slc.start >= TWO16:
-                    logging.error('There are %d assets on site #%d!',
-                                  slc.stop - slc.start, sid)
+            # hcurves, shape (R, N)
+            ws = [rlz.weight for rlz in self.realizations]
+            getter = getters.PmapGetter(
+                dstore, ws, slices.get(sid, []), self.oqparam.imtls)
+            for slc in general.split_in_slices(
+                    len(assets), self.oqparam.assets_per_site_limit):
+                out.append(riskinput.RiskInput(getter, assets[slc]))
+            if slc.stop - slc.start >= TWO16:
+                logging.error('There are %d assets on site #%d!',
+                              slc.stop - slc.start, sid)
         return out
 
     def execute(self):

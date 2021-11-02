@@ -207,6 +207,12 @@ class PmapGetter(object):
         :param gsim: ignored
         :returns: a probability curve of shape (L, R) for the given site
         """
+        self.init()
+        if not self.sids:
+            # this happens when the poes are all zeros, as in
+            # classical_risk/case_3 for the first site
+            return probability_map.ProbabilityCurve(
+                numpy.zeros((self.L, self.num_rlzs)))
         return self.get_pcurve(self.sids[0])
 
     def get_pcurve(self, sid):  # used in classical
