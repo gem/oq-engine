@@ -483,13 +483,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()  # needed
             self.post_classical()
 
-    def post_classical(self):
-        """
-        Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
-        """
+    def _create_hcurves_maps(self):
         oq = self.oqparam
-        if not oq.hazard_curves:  # do nothing
-            return
         N = len(self.sitecol)
         R = len(self.realizations)
         if oq.individual_rlzs is None:  # not specified in the job.ini
@@ -526,6 +521,17 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_shape_descr(
                     'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
+        return N, S, M, P, L1, individual_rlzs
+
+    def post_classical(self):
+        """
+        Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
+        """
+        oq = self.oqparam
+        hstats = oq.hazard_stats()
+        if not oq.hazard_curves:  # do nothing
+            return
+        N, S, M, P, L1, individual = self._create_hcurves_maps()
         ct = oq.concurrent_tasks or 1
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         dstore = (self.datastore.parent if oq.hazard_calculation_id
@@ -533,12 +539,20 @@ class ClassicalCalculator(base.HazardCalculator):
         sites_per_task = int(numpy.ceil(self.N / ct))
         nbytes = len(dstore['_poes/sid']) * 4
         logging.info('Reading %s of _poes/sid', humansize(nbytes))
-        indices = performance.get_slices(
+        # NB: there is a genious idea here, to split in tasks by using
+        # the formula ``taskno = sites_ids // sites_per_task`` and then
+        # extracting a dictionary of slices for each taskno. This works
+        # since by construction the site_ids are sequential and there are
+        # at most G slices per task. For instance if there are 6 sites
+        # disposed in 2 groups and we want to produce 2 tasks we can use
+        # 012345012345 // 3 = 000111000111 and the slices are
+        # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
+        slicedic = performance.get_slices(
             dstore['_poes/sid'][:] // sites_per_task)
         allargs = [
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
-             N, hstats, individual_rlzs, oq.max_sites_disagg, self.amplifier)
-            for slices in indices.values()]
+             N, hstats, individual, oq.max_sites_disagg, self.amplifier)
+            for slices in slicedic.values()]
         if oq.hazard_calculation_id is None:  # essential before Starmap
             self.datastore.swmr_on()
         self.hazard = {}  # kind -> array
