@@ -300,11 +300,11 @@ class File(h5py.File):
         """Raised when reading an empty dataset"""
 
     def __init__(self, name, mode='r', driver=None, libver='latest',
-                 userblock_size=None, swmr=True, rdcc_nslots=None,
+                 userblock_size=None, rdcc_nslots=None,
                  rdcc_nbytes=None, rdcc_w0=None, track_order=None,
                  **kwds):
         super().__init__(name, mode, driver, libver,
-                         userblock_size, swmr, rdcc_nslots,
+                         userblock_size, mode == 'r', rdcc_nslots,
                          rdcc_nbytes, rdcc_w0, track_order, **kwds)
 
     @classmethod
