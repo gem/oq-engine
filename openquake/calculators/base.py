@@ -30,7 +30,7 @@ import pandas
 
 from openquake.baselib import (
     general, hdf5, __version__ as engine_version)
-from openquake.baselib import parallel, python3compat
+from openquake.baselib import performance, parallel, python3compat
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
@@ -532,8 +532,7 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            poes = readinput.pmap.array(0, len(haz_sitecol), 0)  # shape NL
-            self.datastore['_poes'] = poes.reshape(1, self.N, -1)
+            self.datastore.create_df('_poes', readinput.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['rlzs_by_g'] = sum(
@@ -964,13 +963,16 @@ class RiskCalculator(HazardCalculator):
         self.acc = None
         return riskinputs
 
+    # used only for classical_risk and classical_damage
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
+        slices = performance.get_slices(dstore['_poes/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
             ws = [rlz.weight for rlz in self.realizations]
-            getter = getters.PmapGetter(dstore, ws, [sid], self.oqparam.imtls)
+            getter = getters.PmapGetter(
+                dstore, ws, slices.get(sid, []), self.oqparam.imtls)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):
                 out.append(riskinput.RiskInput(getter, assets[slc]))

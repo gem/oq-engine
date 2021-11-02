@@ -26,14 +26,14 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import parallel, hdf5, config
+from openquake.baselib import performance, parallel, hdf5, config
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg)
+    get_nbytes_msg, agg_probs)
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc, readinput
 from openquake.calculators import getters
 from openquake.calculators import base, preclassical
@@ -86,35 +86,142 @@ def classical(srcs, cmaker, monitor):
     return hazclassical(srcs, monitor.read('sitecol'), cmaker)
 
 
+def postclassical(pgetter, N, hstats, individual_rlzs,
+                  max_sites_disagg, amplifier, monitor):
+    """
+    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :param N: the total number of sites
+    :param hstats: a list of pairs (statname, statfunc)
+    :param individual_rlzs: if True, also build the individual curves
+    :param max_sites_disagg: if there are less sites than this, store rup info
+    :param amplifier: instance of Amplifier or None
+    :param monitor: instance of Monitor
+    :returns: a dictionary kind -> ProbabilityMap
+
+    The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
+    used to specify the kind of output.
+    """
+    with monitor('read PoEs', measuremem=True):
+        pgetter.init()
+
+    if amplifier:
+        with hdf5.File(pgetter.filename, 'r') as f:
+            ampcode = f['sitecol'].ampcode
+        imtls = DictArray({imt: amplifier.amplevels
+                           for imt in pgetter.imtls})
+    else:
+        imtls = pgetter.imtls
+    poes, weights = pgetter.poes, pgetter.weights
+    M = len(imtls)
+    P = len(poes)
+    L = imtls.size
+    R = len(weights)
+    S = len(hstats)
+    pmap_by_kind = {}
+    if R > 1 and individual_rlzs or not hstats:
+        pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
+        if poes:
+            pmap_by_kind['hmaps-rlzs'] = [
+                ProbabilityMap(M, P) for r in range(R)]
+    if hstats:
+        pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
+        if poes:
+            pmap_by_kind['hmaps-stats'] = [
+                ProbabilityMap(M, P) for r in range(S)]
+    combine_mon = monitor('combine pmaps', measuremem=False)
+    compute_mon = monitor('compute stats', measuremem=False)
+    for sid in pgetter.sids:
+        with combine_mon:
+            pc = pgetter.get_pcurve(sid)  # shape (L, R)
+            if amplifier:
+                pc = amplifier.amplify(ampcode[sid], pc)
+                # NB: the pcurve have soil levels != IMT levels
+        if pc.array.sum() == 0:  # no data
+            continue
+        with compute_mon:
+            if hstats:
+                for s, (statname, stat) in enumerate(hstats.items()):
+                    sc = getters.build_stat_curve(pc, imtls, stat, weights)
+                    pmap_by_kind['hcurves-stats'][s][sid] = sc
+                    if poes:
+                        hmap = calc.make_hmap(sc, imtls, poes, sid)
+                        pmap_by_kind['hmaps-stats'][s].update(hmap)
+            if R > 1 and individual_rlzs or not hstats:
+                for r, pmap in enumerate(pmap_by_kind['hcurves-rlzs']):
+                    pmap[sid] = pc.extract(r)
+                if poes:
+                    for r in range(R):
+                        hmap = calc.make_hmap(pc.extract(r), imtls, poes, sid)
+                        pmap_by_kind['hmaps-rlzs'][r].update(hmap)
+    return pmap_by_kind
+
+
+def make_hmap_png(hmap, lons, lats):
+    """
+    :param hmap:
+        a dictionary with keys calc_id, m, p, imt, poe, inv_time, array
+    :param lons: an array of longitudes
+    :param lats: an array of latitudes
+    :returns: an Image object containing the hazard map
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.grid(True)
+    ax.set_title('hmap for IMT=%(imt)s, poe=%(poe)s\ncalculation %(calc_id)d,'
+                 'inv_time=%(inv_time)dy' % hmap)
+    ax.set_ylabel('Longitude')
+    coll = ax.scatter(lons, lats, c=hmap['array'], cmap='jet')
+    plt.colorbar(coll)
+    bio = io.BytesIO()
+    plt.savefig(bio, format='png')
+    return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
+
+
 class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, pgetter, srcidx):
+    def __init__(self, dstore, full_lt, srcidx):
         self.datastore = dstore
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
-        self.get_hcurves = pgetter.get_hcurves
-        self.imtls = imtls = pgetter.imtls
+        self.imtls = imtls = dstore['oqparam'].imtls
         self.level_weights = imtls.array / imtls.array.sum()
-        self.sids = pgetter.sids
+        self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
         self.N = len(dstore['sitecol/sids'])
+        self.R = full_lt.get_num_paths()
         self.acc = AccumDict(accum={})
+
+    def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
+        """
+        :param pmap: a ProbabilityMap
+        :param rlzs_by_gsim: a dictionary gsim -> rlz IDs
+        :returns: an array of PoEs of shape (N, R, M, L)
+        """
+        res = numpy.zeros((self.N, self.R, self.imtls.size))
+        for sid, pc in pmap.items():
+            for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
+                poes = pc.array[:, gsim_idx]
+                for rlz in rlzis:
+                    res[sid, rlz] = agg_probs(res[sid, rlz], poes)
+        return res.reshape(self.N, self.R, len(self.imtls), -1)
 
     def store_poes(self, grp_id, pmap):
         """
         Store the pmap of the given group inside the _poes dataset
         """
         cmaker = self.cmakers[grp_id]
-        dset = self.datastore['_poes']
-        values = []
-        for g in range(pmap.shape_z):
-            arr = pmap.array(0, self.N, g)  # shape NL
-            dset[cmaker.start + g] = arr
-            values.append(arr.mean(axis=0) @ self.level_weights)
+        arr = pmap.array(self.N)
+        # arr[arr < 1E-5] = 0.  # minimum_poe
+        sids, lids, gids = arr.nonzero()
+        hdf5.extend(self.datastore['_poes/sid'], sids)
+        hdf5.extend(self.datastore['_poes/gid'], gids + cmaker.start)
+        hdf5.extend(self.datastore['_poes/lid'], lids)
+        hdf5.extend(self.datastore['_poes/poe'], arr[sids, lids, gids])
         self.acc[grp_id]['grp_start'] = cmaker.start
-        self.acc[grp_id]['avg_poe'] = numpy.mean(values)
+        self.acc[grp_id]['avg_poe'] = arr.mean(axis=(0, 2))@self.level_weights
         self.acc[grp_id]['nsites'] = len(pmap)
 
     def store_disagg(self, pmaps=None):
@@ -280,11 +387,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
 
-        poes_shape = len(rlzs_by_g), self.N, self.oqparam.imtls.size
         self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
-        # NB: it is CRITICAL for performance to have shape GNL and not NLG
-        # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
-        self.datastore.create_dset('_poes', F64, poes_shape)
+        self.datastore.create_df('_poes', poes_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
@@ -326,12 +430,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        weights = [rlz.weight for rlz in self.realizations]
-        pgetter = getters.PmapGetter(
-            self.datastore, weights, self.sitecol.sids, oq.imtls)
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
-        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
+        self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         args = self.get_args(grp_ids, self.haz.cmakers)
         self.ntasks = collections.Counter(arg[1].grp_id for arg in args)
         logging.info('grp_id->ntasks: %s', list(self.ntasks.values()))
@@ -427,30 +528,30 @@ class ClassicalCalculator(base.HazardCalculator):
                     allargs.append((block, cmakers[grp_id]))
         return allargs
 
-    def save_hazard(self, acc, pmap_by_kind):
+    def collect_hazard(self, acc, pmap_by_kind):
         """
-        Works by side effect by saving hcurves and hmaps on the datastore
+        Populate hcurves and hmaps in the .hazard dictionary
 
         :param acc: ignored
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
-        with self.monitor('collecting hazard'):
-            if pmap_by_kind is None:  # instead of a dict
-                raise MemoryError('You ran out of memory!')
-            for kind in pmap_by_kind:  # hmaps-XXX, hcurves-XXX
-                pmaps = pmap_by_kind[kind]
-                if kind in self.hazard:
-                    array = self.hazard[kind]
-                else:
-                    dset = self.datastore.getitem(kind)
-                    array = self.hazard[kind] = numpy.zeros(
-                        dset.shape, dset.dtype)
-                for r, pmap in enumerate(pmaps):
-                    for s in pmap:
-                        if kind.startswith('hmaps'):
-                            array[s, r] = pmap[s].array  # shape (M, P)
-                        else:  # hcurves
-                            array[s, r] = pmap[s].array.reshape(-1, self.L1)
+        # this is practically instantaneous
+        if pmap_by_kind is None:  # instead of a dict
+            raise MemoryError('You ran out of memory!')
+        for kind in pmap_by_kind:  # hmaps-XXX, hcurves-XXX
+            pmaps = pmap_by_kind[kind]
+            if kind in self.hazard:
+                array = self.hazard[kind]
+            else:
+                dset = self.datastore.getitem(kind)
+                array = self.hazard[kind] = numpy.zeros(
+                    dset.shape, dset.dtype)
+            for r, pmap in enumerate(pmaps):
+                for s in pmap:
+                    if kind.startswith('hmaps'):
+                        array[s, r] = pmap[s].array  # shape (M, P)
+                    else:  # hcurves
+                        array[s, r] = pmap[s].array.reshape(-1, self.L1)
 
     def post_execute(self, dummy):
         """
@@ -474,13 +575,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()  # needed
             self.post_classical()
 
-    def post_classical(self):
-        """
-        Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
-        """
+    def _create_hcurves_maps(self):
         oq = self.oqparam
-        if not oq.hazard_curves:  # do nothing
-            return
         N = len(self.sitecol)
         R = len(self.realizations)
         if oq.individual_rlzs is None:  # not specified in the job.ini
@@ -517,29 +613,52 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_shape_descr(
                     'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
+        return N, S, M, P, L1, individual_rlzs
+
+    def post_classical(self):
+        """
+        Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
+        """
+        oq = self.oqparam
+        hstats = oq.hazard_stats()
+        if not oq.hazard_curves:  # do nothing
+            return
+        N, S, M, P, L1, individual = self._create_hcurves_maps()
         ct = oq.concurrent_tasks or 1
-        logging.info('Building hazard statistics')
-        self.weights = [rlz.weight for rlz in self.realizations]
+        self.weights = ws = [rlz.weight for rlz in self.realizations]
         dstore = (self.datastore.parent if oq.hazard_calculation_id
                   else self.datastore)
-        allargs = [  # this list is very fast to generate
-            (getters.PmapGetter(
-                dstore, self.weights, t.sids, oq.imtls, oq.poes),
-             N, hstats, individual_rlzs, oq.max_sites_disagg,
-             self.amplifier)
-            for t in self.sitecol.split_in_tiles(ct)]
-        if self.few_sites:
-            dist = 'no'
-        else:
-            dist = None  # parallelize as usual
+        sites_per_task = int(numpy.ceil(self.N / ct))
+        nbytes = len(dstore['_poes/sid']) * 4
+        logging.info('Reading %s of _poes/sid', humansize(nbytes))
+        # NB: there is a genious idea here, to split in tasks by using
+        # the formula ``taskno = sites_ids // sites_per_task`` and then
+        # extracting a dictionary of slices for each taskno. This works
+        # since by construction the site_ids are sequential and there are
+        # at most G slices per task. For instance if there are 6 sites
+        # disposed in 2 groups and we want to produce 2 tasks we can use
+        # 012345012345 // 3 = 000111000111 and the slices are
+        # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
+        slicedic = performance.get_slices(
+            dstore['_poes/sid'][:] // sites_per_task)
+        allargs = [
+            (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
+             N, hstats, individual, oq.max_sites_disagg, self.amplifier)
+            for slices in slicedic.values()]
         if oq.hazard_calculation_id is None:  # essential before Starmap
             self.datastore.swmr_on()
         self.hazard = {}  # kind -> array
+        hcbytes = 8 * N * S * M * L1
+        hmbytes = 8 * N * S * M * P if oq.poes else 0
+        logging.info('Producing %s of hazard curves and %s of hazard maps',
+                     humansize(hcbytes), humansize(hmbytes))
         parallel.Starmap(
-            postclassical, allargs, distribute=dist, h5=self.datastore.hdf5
-        ).reduce(self.save_hazard)
+            postclassical, allargs,
+            distribute='no' if self.few_sites else None,
+            h5=self.datastore.hdf5
+        ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
-            logging.info('Saving %s', kind)
+            logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
         if 'hmaps-stats' in self.datastore:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
@@ -561,94 +680,3 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(make_hmap_png, allargs)
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
-
-
-def make_hmap_png(hmap, lons, lats):
-    """
-    :param hmap:
-        a dictionary with keys calc_id, m, p, imt, poe, inv_time, array
-    :param lons: an array of longitudes
-    :param lats: an array of latitudes
-    :returns: an Image object containing the hazard map
-    """
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.grid(True)
-    ax.set_title('hmap for IMT=%(imt)s, poe=%(poe)s\ncalculation %(calc_id)d,'
-                 'inv_time=%(inv_time)dy' % hmap)
-    ax.set_ylabel('Longitude')
-    coll = ax.scatter(lons, lats, c=hmap['array'], cmap='jet')
-    plt.colorbar(coll)
-    bio = io.BytesIO()
-    plt.savefig(bio, format='png')
-    return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
-
-
-def postclassical(pgetter, N, hstats, individual_rlzs,
-                  max_sites_disagg, amplifier, monitor):
-    """
-    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
-    :param N: the total number of sites
-    :param hstats: a list of pairs (statname, statfunc)
-    :param individual_rlzs: if True, also build the individual curves
-    :param max_sites_disagg: if there are less sites than this, store rup info
-    :param amplifier: instance of Amplifier or None
-    :param monitor: instance of Monitor
-    :returns: a dictionary kind -> ProbabilityMap
-
-    The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
-    used to specify the kind of output.
-    """
-    with monitor('read PoEs'):
-        pgetter.init()
-        if amplifier:
-            with hdf5.File(pgetter.filename, 'r') as f:
-                ampcode = f['sitecol'].ampcode
-            imtls = DictArray({imt: amplifier.amplevels
-                               for imt in pgetter.imtls})
-        else:
-            imtls = pgetter.imtls
-    poes, weights = pgetter.poes, pgetter.weights
-    M = len(imtls)
-    P = len(poes)
-    L = imtls.size
-    R = len(weights)
-    S = len(hstats)
-    pmap_by_kind = {}
-    if R > 1 and individual_rlzs or not hstats:
-        pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
-        if poes:
-            pmap_by_kind['hmaps-rlzs'] = [
-                ProbabilityMap(M, P) for r in range(R)]
-    if hstats:
-        pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
-        if poes:
-            pmap_by_kind['hmaps-stats'] = [
-                ProbabilityMap(M, P) for r in range(S)]
-    combine_mon = monitor('combine pmaps', measuremem=False)
-    compute_mon = monitor('compute stats', measuremem=False)
-    for sid in pgetter.sids:
-        with combine_mon:
-            pc = pgetter.get_pcurve(sid)  # shape (L, R)
-            if amplifier:
-                pc = amplifier.amplify(ampcode[sid], pc)
-                # NB: the pcurve have soil levels != IMT levels
-        if pc.array.sum() == 0:  # no data
-            continue
-        with compute_mon:
-            if hstats:
-                for s, (statname, stat) in enumerate(hstats.items()):
-                    sc = getters.build_stat_curve(pc, imtls, stat, weights)
-                    pmap_by_kind['hcurves-stats'][s][sid] = sc
-                    if poes:
-                        hmap = calc.make_hmap(sc, imtls, poes, sid)
-                        pmap_by_kind['hmaps-stats'][s].update(hmap)
-            if R > 1 and individual_rlzs or not hstats:
-                for r, pmap in enumerate(pmap_by_kind['hcurves-rlzs']):
-                    pmap[sid] = pc.extract(r)
-                if poes:
-                    for r in range(R):
-                        hmap = calc.make_hmap(pc.extract(r), imtls, poes, sid)
-                        pmap_by_kind['hmaps-rlzs'][r].update(hmap)
-    return pmap_by_kind

@@ -46,6 +46,8 @@ task_info_dt = numpy.dtype(
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
+I64 = numpy.int64
+
 
 def init_performance(hdf5file, swmr=False):
     """
@@ -359,3 +361,38 @@ else:
     def compile(sigstr):
         """Do nothing decorator, used if numba is missing"""
         return lambda func: func
+
+
+@compile("int64[:, :](uint32[:])")
+def _idx_start_stop(integers):
+    # given an array of integers returns an array of shape (n, 3)
+    out = []
+    start = i = 0
+    prev = integers[0]
+    for i, val in enumerate(integers[1:], 1):
+        if val != prev:
+            out.append((I64(prev), start, i))
+            start = i
+        prev = val
+    out.append((I64(prev), start, i + 1))
+    return numpy.array(out)
+
+
+# this is absurdly fast if you have numba
+def get_slices(uint32s):
+    """
+    :param uint32s: a sequence of uint32 integers (with repetitions)
+    :returns: a dict integer -> [(start, stop), ...]
+
+    >>> from pprint import pprint
+    >>> pprint(get_slices(numpy.uint32([0, 0, 3, 3, 3, 2, 2, 0])))
+    {0: [(0, 2), (7, 8)], 2: [(5, 7)], 3: [(2, 5)]}
+    """
+    if len(uint32s) == 0:
+        return {}
+    indices = {}  # idx -> [(start, stop), ...]
+    for idx, start, stop in _idx_start_stop(uint32s):
+        if idx not in indices:
+            indices[idx] = []
+        indices[idx].append((start, stop))
+    return indices

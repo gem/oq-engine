@@ -260,11 +260,6 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-rlz-000_PGA.csv'],
                               case_14.__file__)
 
-        # test sampling use the right number of gsims by looking at
-        # the poes datasets which have shape (N, L, G)
-        G = 1  # and not 2
-        self.calc.datastore['_poes'].shape[-1] == G
-
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\
@@ -971,7 +966,6 @@ hazard_uhs-std.csv
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
-        self.calc.datastore['_poes'].shape
         cmakers = contexts.read_cmakers(self.calc.datastore)
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
         ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
