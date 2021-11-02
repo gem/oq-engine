@@ -1213,17 +1213,3 @@ def view_src_groups(token, dstore):
     tbl.sort(key=operator.itemgetter(1), reverse=True)
     return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
                       ext='org')
-
-
-@view.add('nonzero_poes')
-def view_nonzero_poes(token, dstore):
-    """
-    Count the number of zero poes in _poes
-    """
-    G_, N, L = dstore['_poes'].shape
-    out = []  # pairs (g_, fraction)
-    for g_ in range(G_):
-        data = dstore['_poes'][g_]
-        sids, lvls = data.nonzero()
-        out.append((g_, len(lvls) / data.size))
-    return text_table(out, header=["g_", "nzfraction"], ext='org')
