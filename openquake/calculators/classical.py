@@ -663,9 +663,12 @@ class ClassicalCalculator(base.HazardCalculator):
         # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
         slicedic = performance.get_slices(
             dstore['_poes/sid'][:] // sites_per_task)
+        if not slicedic:
+            # no hazard, nothing to do, happens in case_60
+            return
         nslices = sum(len(slices) for slices in slicedic.values())
-        logging.info('There are %d slices of poes [%.1f per task]', nslices,
-                     nslices / len(slicedic))
+        logging.info('There are %d slices of poes [%.1f per task]',
+                     nslices, nslices / len(slicedic))
         allargs = [
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
