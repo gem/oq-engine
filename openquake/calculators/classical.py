@@ -84,6 +84,8 @@ def classical(srcs, tile, cmaker, monitor):
     """
     cmaker.init_monitoring(monitor)
     if tile is None:
+        # read from the temporary storage, this avoids sending the
+        # same sitecol hundreds of times
         tile = monitor.read('sitecol')
     return hazclassical(srcs, tile, cmaker)
 
@@ -444,7 +446,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.check_memory(max(self.tile_sizes), L, num_gs)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, sg_tl_cm, h5=self.datastore.hdf5)
-        smap.monitor.save('sitecol', self.sitecol)  # possibly in postclassical
+        smap.monitor.save('sitecol', self.sitecol)
         smap.h5 = self.datastore.hdf5
         acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
                for cm in self.haz.cmakers}
