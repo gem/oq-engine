@@ -122,7 +122,7 @@ def export_hcurves_by_imt_csv(
         lst.append(('poe-%.7f' % iml, F32))
     custom = 'custom_site_id' in sitecol.array.dtype.names
     if custom:
-        lst.insert(0, ('custom_site_id', U32))
+        lst.insert(0, ('custom_site_id', 'S6'))
     hcurves = numpy.zeros(nsites, lst)
     if custom:
         for sid, csi, lon, lat, dep in zip(
@@ -522,6 +522,7 @@ def export_disagg_csv(ekey, dstore):
         except IndexError:
             pass
     for s in range(N):
+        rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
         lon, lat = sitecol.lons[s], sitecol.lats[s]
         weights = numpy.array([rlzs[r].weight['weight'] for r in best_rlzs[s]])
         weights /= weights.sum()  # normalize to 1
@@ -537,8 +538,7 @@ def export_disagg_csv(ekey, dstore):
                         lon=lon, lat=lat)
         for k in oq.disagg_outputs:
             splits = k.lower().split('_')
-            header = (['imt', 'poe'] + splits +
-                      ['poe%d' % z for z in range(Z)])
+            header = ['imt', 'poe'] + splits + rlzcols
             values = []
             nonzeros = []
             for m, p in iproduct(M, P):

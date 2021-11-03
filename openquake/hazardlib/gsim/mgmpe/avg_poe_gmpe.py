@@ -38,6 +38,7 @@ while `AvgPoeGMPE` performs averages on the PoEs.
 """
 import copy
 import numpy
+from openquake.baselib import performance
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 
@@ -108,6 +109,10 @@ class AvgPoeGMPE(GMPE):
         :returns: an array of shape (N, L)
         """
         cm = copy.copy(cmaker)
+        cm.poe_mon = performance.Monitor()  # avoid double counts
         cm.gsims = self.gsims
-        [poes] = cm.gen_poes([ctx])  # shape N, L, G
-        return poes @ self.weights
+        avgs = []
+        for ctx, poes in cm.gen_poes([ctx]):
+            # poes has shape N', L, G
+            avgs.append(poes @ self.weights)
+        return numpy.concatenate(avgs)  # shape (N, L)

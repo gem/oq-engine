@@ -300,13 +300,13 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
         if 'sensitivity_analysis' in dic:
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
-                new = logs.init('job', dic.copy(), log_level, None,
-                                user_name, hc_id)
+                jobdic = dic.copy()
                 pars = dict(zip(analysis, values))
                 for param, value in pars.items():
-                    new.params[param] = str(value)
-                new.params['description'] = '%s %s' % (
-                    dic['description'], pars)
+                    jobdic[param] = str(value)
+                jobdic['description'] = '%s %s' % (dic['description'], pars)
+                new = logs.init('job', jobdic, log_level, None,
+                                user_name, hc_id)
                 jobs.append(new)
         else:
             jobs.append(

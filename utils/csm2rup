@@ -72,7 +72,7 @@ def csm2rup(csm, dstore):
     :param dstore: DataStore where to save the ruptures
     """
     def src_weight(src):
-        # make point sources 100x lighter
+        # make point sources 100x lighter, due to iter_ruptures_fast
         return .01 if src.code == b'P' else 1
 
     sources = csm.get_sources()
@@ -95,9 +95,8 @@ def main(job_ini):
     """
     with logs.init("job", job_ini) as log:
         oq = log.get_oqparam()
-        # change some parameter to improve the performance of point sources
         oq.calculation_mode = 'preclassical'
-        oq.pointsource_distance = MagDepDistance.new('0')
+        # drop sites and site_model files to work with an empty sitecol
         for k in ('sites', 'site_model'):
             oq.inputs.pop(k, None)
         calc = base.calculators(oq, log.calc_id)

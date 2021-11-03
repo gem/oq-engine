@@ -75,11 +75,12 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     archive_zip = archive_zip or os.path.join(basedir, 'ssmLT.zip')
     if os.path.exists(archive_zip):
         sys.exit('%s exists already' % archive_zip)
-    smlt = logictree.SourceModelLogicTree(ssmLT)
-    files = list(smlt.hdf5_files) + smlt.info.smpaths
+    info = logictree.collect_info(ssmLT)
+    files = info.h5paths + info.smpaths
     oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT},
                    random_seed=42, number_of_logic_tree_samples=0,
                    sampling_method='early_weights')
+    oq._input_files = readinput.get_input_files(oq)
     checksum = readinput.get_checksum32(oq)
     checkfile = os.path.join(os.path.dirname(ssmLT), 'CHECKSUM.txt')
     with open(checkfile, 'w') as f:
@@ -120,7 +121,7 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
     if risk_ini:
         risk_ini = os.path.normpath(os.path.abspath(risk_ini))
         oqr = readinput.get_oqparam(
-            risk_ini, kw=dict(hazard_calculation_id=1))
+            risk_ini, kw=dict(hazard_calculation_id=1), validate=False)
         del oqr.inputs['job_ini']
         oq.inputs.update(oqr.inputs)
         oq.shakemap_uri.update(oqr.shakemap_uri)

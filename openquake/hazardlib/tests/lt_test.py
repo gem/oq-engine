@@ -102,7 +102,7 @@ class CollapseTestCase(unittest.TestCase):
         res = classical(srcs, self.sitecol, cmaker)
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
-        curve = pmap.array(0, N, 0)[0]
+        curve = pmap.array(N)[0, :, 0]
         return curve, srcs, effrups, weights
 
     # this tests also the collapsing of the ruptures happening in contexts.py
@@ -139,3 +139,34 @@ class CollapseTestCase(unittest.TestCase):
         ax.loglog(self.imtls['PGA'], mean, label='mean')
         ax.loglog(self.imtls['PGA'], coll, label='coll')
         plt.show()
+
+
+class CompositeLogicTreeTestCase(unittest.TestCase):
+    def test(self):
+        # simple logic tree with 5 realizations
+        #        __/ AAA
+        #    bs1/  \ AAB
+        #   /   \__/ ABA
+        # bs0      \ ABB
+        #   \_______
+        #            B..
+        bs0 = lt.BranchSet('abGRAbsolute')
+        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
+                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
+
+        bs1 = lt.BranchSet('maxMagGRAbsolute',
+                           filters={'applyToBranches': 'A'})
+        bs1.branches = [lt.Branch('bs1', 'A', .5, 7.0),
+                        lt.Branch('bs1', 'B', .5, 7.6)]
+
+        bs2 = lt.BranchSet('applyToTRT',
+                           filters={'applyToBranches': 'A B'})
+        bs2.branches = [lt.Branch('bs2', 'A', .3, 'A'),
+                        lt.Branch('bs2', 'B', .7, 'B')]
+        for branch in bs1.branches:
+            branch.bset = bs2
+        clt = lt.CompositeLogicTree([bs0, bs1, bs2])
+        self.assertEqual(clt.get_all_paths(),
+                         ['AAA', 'AAB', 'ABA', 'ABB', 'B..'])
+        self.assertEqual(clt.basepaths,
+                         ['A**', 'B**', '*A*', '*B*', '**A', '**B'])

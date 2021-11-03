@@ -99,6 +99,7 @@ class ZhaoEtAl2006SSlabTestCase(BaseGSIMTestCase):
         ctx.rake = 0.0
         ctx.hypo_depth = 0.0
         ctx.rrup = numpy.array([0.0, 0.2])
+        ctx.occurrence_rate = .0001
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         ctx.rrup = numpy.array([0.1, 0.2])

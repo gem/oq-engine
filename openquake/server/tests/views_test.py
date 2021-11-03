@@ -251,11 +251,14 @@ class EngineServerTestCase(unittest.TestCase):
     def test_classical(self):
         job_id = self.postzip('classical.zip')
         self.wait()
-        # check that we get at least the following 6 outputs
-        # fullreport, input, hcurves, hmaps, realizations, events
+        # check that we get at least the following 4 outputs
+        # fullreport, hcurves, hmaps, realizations
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
-        self.assertGreaterEqual(len(results), 5)
+        resnames = [res['name'] for res in results]
+        self.assertGreaterEqual(resnames, ['Full Report', 'Hazard Curves',
+                                           'Hazard Maps',  'Input Files',
+                                           'Realizations'])
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
@@ -287,9 +290,9 @@ class EngineServerTestCase(unittest.TestCase):
         job_id = self.postzip('archive_err_1.zip')
         self.wait()
 
-        # download the datastore, even if incomplete
+        # there is no datastore since the calculation did not start
         resp = self.c.get('/v1/calc/%s/datastore' % job_id)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 404)
 
         tb = self.get('%s/traceback' % job_id)
         if not tb:
@@ -308,7 +311,7 @@ class EngineServerTestCase(unittest.TestCase):
     def test_err_3(self):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
         tb_str = self.postzip('archive_err_3.zip')
-        self.assertIn('Could not find any file of the form', tb_str)
+        self.assertIn('There are no .ini files in the archive', tb_str)
 
     def test_available_gsims(self):
         resp = self.c.get('/v1/available_gsims')

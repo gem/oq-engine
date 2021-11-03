@@ -63,8 +63,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         # Compute GM on rock
         self.cmaker = ContextMaker(
             'TRT', [gmmA], dict(imtls={str(im): [0] for im in imts}))
-        [self.meastd] = self.cmaker.get_mean_stds([ctx], const.StdDev.TOTAL)
-        # shp(2, N=1, M=2)
+        self.meastd = self.cmaker.get_mean_stds([ctx])[:2, 0]  # (2, N=1, M=2)
 
     def test01(self):
 

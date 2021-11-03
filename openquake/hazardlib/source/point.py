@@ -461,15 +461,6 @@ class CollapsedPointSource(PointSource):
         return sum(src.count_ruptures() for src in self.pointsources)
 
 
-def _coords(psources):
-    arr = numpy.zeros((len(psources), 3))
-    for p, psource in enumerate(psources):
-        arr[p, 0] = psource.location.x
-        arr[p, 1] = psource.location.y
-        arr[p, 2] = psource.location.z
-    return arr
-
-
 def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     """
     :param sources:
@@ -488,7 +479,11 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse
         return {grp_id: out + list(ps)}
-    coords = _coords(ps)
+    coords = numpy.zeros((len(ps), 3))
+    for p, psource in enumerate(ps):
+        coords[p, 0] = psource.location.x
+        coords[p, 1] = psource.location.y
+        coords[p, 2] = psource.location.z
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)

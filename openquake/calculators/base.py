@@ -30,7 +30,7 @@ import pandas
 
 from openquake.baselib import (
     general, hdf5, __version__ as engine_version)
-from openquake.baselib import parallel, python3compat
+from openquake.baselib import performance, parallel, python3compat
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
@@ -59,6 +59,17 @@ TWO32 = 2 ** 32
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
+
+
+def check_imtls(this, parent):
+    """
+    Fix the hazard_imtls of two calculations if possible
+    """
+    for imt, imls in this.items():
+        if (imls != parent[imt]).any():
+            raise ValueError('The intensity measure levels %s are different '
+                             'from the parent levels %s for %s' % (
+                                 imls, parent[imt], imt))
 
 
 # this is used for the minimum_intensity dictionaries
@@ -168,9 +179,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
-            attrs['checksum32'] = readinput.get_checksum32(
+            attrs['input_size'] = size = self.oqparam.get_input_size()
+            attrs['checksum32'] = check = readinput.get_checksum32(
                 self.oqparam, self.datastore.hdf5)
-            logging.info('Checksum of the input files: %(checksum32)s', attrs)
+            logging.info(f'Checksum of the inputs: {check} '
+                         f'(total size {general.humansize(size)})')
         self.datastore.flush()
 
     def check_precalc(self, precalc_mode):
@@ -241,7 +254,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
-                readinput.smlt_cache.clear()
                 readinput.gsim_lt_cache.clear()
 
                 # remove temporary hdf5 file, if any
@@ -520,8 +532,7 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            poes = readinput.pmap.array(0, len(haz_sitecol), 0)  # shape NL
-            self.datastore['_poes'] = poes.reshape(1, self.N, -1)
+            self.datastore.create_df('_poes', readinput.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['rlzs_by_g'] = sum(
@@ -533,7 +544,15 @@ class HazardCalculator(BaseCalculator):
             self.datastore.swmr_on()
         elif oq.hazard_calculation_id:
             parent = datastore.read(oq.hazard_calculation_id)
-            self.check_precalc(parent['oqparam'].calculation_mode)
+            oqparent = parent['oqparam']
+            if 'weights' in parent:
+                weights = numpy.unique(parent['weights'][:])
+                if oq.collect_rlzs and len(weights) > 1:
+                    raise ValueError(
+                        'collect_rlzs=true can be specified only if '
+                        'the realizations have identical weights')
+            check_imtls(self.oqparam.imtls, oqparent.imtls)
+            self.check_precalc(oqparent.calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
             if 'concurrent_tasks' not in vars(self.oqparam):
@@ -555,7 +574,8 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation had stats %s != %s' %
                     (hstats, rstats))
-            missing_imts = set(oq.risk_imtls) - set(oqp.imtls)
+            sec_imts = set(oq.get_sec_imts())
+            missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
             if missing_imts:
                 raise ValueError(
                     'The parent calculation is missing the IMT(s) %s' %
@@ -568,8 +588,10 @@ class HazardCalculator(BaseCalculator):
             calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             calc.datastore.close()
-            for name in ('csm param sitecol assetcol crmodel realizations '
-                         'policy_name policy_dict full_lt exported').split():
+            for name in (
+                    'csm param sitecol assetcol crmodel realizations '
+                    'amplifier policy_name policy_dict full_lt exported'
+            ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
@@ -762,6 +784,10 @@ class HazardCalculator(BaseCalculator):
                              len(self.assetcol), len(assetcol))
             else:
                 self.assetcol = assetcol
+                if ('site_id' in oq.aggregate_by and 'site_id' not
+                        in assetcol.tagcol.tagnames):
+                    assetcol.tagcol.add_tagname('site_id')
+                    assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
             self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
@@ -852,7 +878,6 @@ class HazardCalculator(BaseCalculator):
 
         :param rel_ruptures: dictionary TRT -> number of relevant ruptures
         """
-        oq = self.oqparam
         if hasattr(self, 'full_lt'):  # no scenario
             self.realizations = self.full_lt.get_realizations()
             if not self.realizations:
@@ -866,16 +891,6 @@ class HazardCalculator(BaseCalculator):
 
         self.datastore['weights'] = arr = build_weights(self.realizations)
         self.datastore.set_attrs('weights', nbytes=arr.nbytes)
-
-        if ('event_based' in oq.calculation_mode and R >= TWO16
-                or R >= TWO32):
-            raise ValueError(
-                'The logic tree has too many realizations (%d), use sampling '
-                'instead' % R)
-        elif R > 10000:
-            logging.warning(
-                'The logic tree has %d realizations(!), please consider '
-                'sampling it', R)
         if rel_ruptures:
             self.check_discardable(rel_ruptures)
 
@@ -907,8 +922,8 @@ class HazardCalculator(BaseCalculator):
         """
         self.csm.update_source_info(calc_times, nsites)
         recs = [tuple(row) for row in self.csm.source_info.values()]
-        hdf5.extend(self.datastore['source_info'],
-                    numpy.array(recs, readinput.source_info_dt))
+        self.datastore['source_info'][:] = numpy.array(
+            recs, readinput.source_info_dt)
         return [rec[0] for rec in recs]  # return source_ids
 
     def post_process(self):
@@ -948,13 +963,16 @@ class RiskCalculator(HazardCalculator):
         self.acc = None
         return riskinputs
 
+    # used only for classical_risk and classical_damage
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
+        slices = performance.get_slices(dstore['_poes/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
             ws = [rlz.weight for rlz in self.realizations]
-            getter = getters.PmapGetter(dstore, ws, [sid], self.oqparam.imtls)
+            getter = getters.PmapGetter(
+                dstore, ws, slices.get(sid, []), self.oqparam.imtls)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):
                 out.append(riskinput.RiskInput(getter, assets[slc]))
@@ -979,13 +997,6 @@ class RiskCalculator(HazardCalculator):
         smap.monitor.save('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
-            for ri in block:
-                # we must use eager reading for performance reasons:
-                # concurrent reading on the workers would be extra-slow;
-                # also, I could not get lazy reading to work with
-                # the SWMR mode for event_based_risk
-                if not isinstance(ri.hazard_getter, getters.PmapGetter):
-                    ri.hazard_getter.init()
             smap.submit((block, self.param))
         return smap.reduce(self.combine, self.acc)
 
@@ -1193,7 +1204,8 @@ def read_shakemap(calc, haz_sitecol, assetcol):
     """
     oq = calc.oqparam
     E = oq.number_of_ground_motion_fields
-    oq.risk_imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
+    imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
+    oq.risk_imtls = {imt: list(imls) for imt, imls in imtls.items()}
     logging.info('Getting/reducing shakemap')
     with calc.monitor('getting/reducing shakemap'):
         # for instance for the test case_shakemap the haz_sitecol

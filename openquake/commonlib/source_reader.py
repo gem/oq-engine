@@ -20,6 +20,7 @@ import os.path
 import pickle
 import operator
 import logging
+import gzip
 import zlib
 import numpy
 
@@ -84,7 +85,7 @@ def get_csm(oq, full_lt, h5=None):
         for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
             sg = copy.copy(grp)
             src_groups.append(sg)
-            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
+            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
             src.checksum = src.grp_id = src.id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
@@ -162,26 +163,27 @@ def fix_geometry_sections(smdict):
                     src.set_sections(sections)
 
 
+def _groups_ids(smlt_dir, smdict, fnames):
+    # extract the source groups and ids from a sequence of source files
+    groups = []
+    for fname in fnames:
+        fullname = os.path.abspath(os.path.join(smlt_dir, fname))
+        groups.extend(smdict[fullname].src_groups)
+    return groups, set(src.source_id for grp in groups for src in grp)
+
+
 def _build_groups(full_lt, smdict):
     # build all the possible source groups from the full logic tree
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
-
-    def _groups_ids(value):
-        # extract the source groups and ids from a sequence of source files
-        groups = []
-        for name in value.split():
-            fname = os.path.abspath(os.path.join(smlt_dir, name))
-            groups.extend(smdict[fname].src_groups)
-        return groups, set(src.source_id for grp in groups for src in grp)
-
     groups = []
     for rlz in full_lt.sm_rlzs:
-        src_groups, source_ids = _groups_ids(rlz.value)
-        bset_values = full_lt.source_model_lt.bset_values(rlz)
+        src_groups, source_ids = _groups_ids(
+            smlt_dir, smdict, rlz.value[0].split())
+        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
         if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
             (bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids(value)
+            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
             common = source_ids & extra_ids
             if common:
                 raise InvalidFile(
@@ -206,7 +208,7 @@ def _build_groups(full_lt, smdict):
                     "The source %s is not in the source model,"
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
-                                            rlz.value.split()))
+                                            rlz.value[0].split()))
     return groups
 
 
@@ -310,7 +312,11 @@ class CompositeSourceModel:
 
     def get_sources(self, atomic=None):
         """
-        :returns: list of sources in the composite source model
+        There are 3 options:
+
+        atomic == None => return all the sources (default)
+        atomic == True => return all the sources in atomic groups
+        atomic == True => return all the sources not in atomic groups
         """
         srcs = []
         for src_group in self.src_groups:
@@ -390,13 +396,33 @@ class CompositeSourceModel:
             n += src.count_ruptures()
         return n
 
+    def __toh5__(self):
+        data = gzip.compress(pickle.dumps(self))
+        logging.info(f'Storing {general.humansize(len(data))} '
+                     'of CompositeSourceModel')
+        return numpy.void(data), {}
+
+    def __fromh5__(self, blob, attrs):
+        other = pickle.loads(gzip.decompress(blob))
+        vars(self).update(vars(other))
+
     def __repr__(self):
         """
         Return a string representation of the composite model
         """
         contents = []
         for sg in self.src_groups:
-            arr = numpy.array([src.source_id for src in sg])
+            arr = numpy.array(_strip_colons(sg))
             line = f'grp_id={sg.sources[0].grp_id} {arr}'
             contents.append(line)
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(contents))
+
+
+def _strip_colons(sources):
+    ids = set()
+    for src in sources:
+        if ':' in src.source_id:
+            ids.add(src.source_id.split(':')[0])
+        else:
+            ids.add(src.source_id)
+    return sorted(ids)

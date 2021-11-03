@@ -20,7 +20,6 @@ import os.path
 import logging
 import operator
 import itertools
-from datetime import datetime
 import numpy
 import pandas
 from scipy import sparse
@@ -28,7 +27,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
-from openquake.commonlib import logs, datastore
+from openquake.commonlib import datastore
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.post_risk import PostRiskCalculator, fix_dtypes
 
@@ -77,12 +76,19 @@ def save_curve_stats(dstore):
     dstore.set_attrs('agg_curves-stats', units=units)
 
 
-def fast_agg(keys, values, correl, lni, acc):
+def fast_agg(keys, values, correl, li, acc):
+    """
+    :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
+    :param values: an array of (N, D) floats
+    :param correl: True if there is asset correlation
+    :param li: loss type index
+    :param acc: dictionary unique key -> array(L, D)
+    """
     ukeys, avalues = general.fast_agg2(keys, values)
     if correl:  # restore the variances
         avalues[:, 0] = avalues[:, 0] ** 2
     for ukey, avalue in zip(ukeys, avalues):
-        acc[ukey][lni] += avalue
+        acc[ukey][li] += avalue
 
 
 def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
@@ -119,7 +125,7 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
     (A, R, K, D), L = ARKD, len(oq.loss_types)
     acc = general.AccumDict(accum=numpy.zeros((L, D)))  # u8idx->array
     for out in outputs:
-        for lni, ln in enumerate(oq.loss_types):
+        for li, ln in enumerate(oq.loss_types):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln].reset_index()
@@ -134,10 +140,10 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
                     alt['variance'] = numpy.sqrt(alt.variance)
                 eids = alt.eid.to_numpy() * TWO32  # U64
                 values = numpy.array([alt[col] for col in value_cols]).T
-                fast_agg(eids + U64(K), values, correl, lni, acc)
+                fast_agg(eids + U64(K), values, correl, li, acc)
                 if len(kids):
                     aids = alt.aid.to_numpy()
-                    fast_agg(eids + U64(kids[aids]), values, correl, lni, acc)
+                    fast_agg(eids + U64(kids[aids]), values, correl, li, acc)
     with mon_df:
         dic = general.AccumDict(accum=[])
         for ukey, arr in acc.items():
@@ -162,7 +168,7 @@ def event_based_risk(df, param, monitor):
     :returns: a dictionary of arrays
     """
     dstore = datastore.read(param['hdf5path'], parentdir=param['parentdir'])
-    with dstore, monitor('reading data'):
+    with dstore, monitor('reading gmf_data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
@@ -173,9 +179,9 @@ def event_based_risk(df, param, monitor):
     ARKD = len(assets_df), len(weights), param['K'], param['D']
     oq = crmodel.oqparam
     if oq.ignore_master_seed or oq.ignore_covs:
-        rndgen = None
+        rng = None
     else:
-        rndgen = MultiEventRNG(
+        rng = MultiEventRNG(
             oq.master_seed, df.eid.unique(), int(oq.asset_correlation))
 
     def outputs():
@@ -185,13 +191,10 @@ def event_based_risk(df, param, monitor):
                                    asset_df.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
-            if rndgen:
-                with mon_risk:
-                    out = crmodel.get_output(
-                        taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
-                yield out
-            else:
-                yield from crmodel.gen_outputs(taxo, asset_df, gmf_df, param)
+            with mon_risk:
+                out = crmodel.get_output(
+                    taxo, asset_df, gmf_df, param['sec_losses'], rng)
+            yield out
 
     return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
 
@@ -203,12 +206,6 @@ def start_ebrisk(rgetter, param, monitor):
     srcfilter = monitor.read('srcfilter')
     rgetters = list(rgetter.split(srcfilter, param['maxweight']))
     for rg in rgetters[:-1]:
-        msg = 'produced subtask'
-        try:
-            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                       'ebrisk#%d' % monitor.task_no, msg)
-        except Exception:  # for `oq run`
-            print(msg)
         yield ebrisk, rg, param
     if rgetters:
         yield from ebrisk(rgetters[-1], param, monitor)
@@ -236,8 +233,8 @@ def ebrisk(rupgetter, param, monitor):
                 for key, val in data.items():
                     alldata[key].extend(data[key])
                 nbytes = len(data['sid']) * len(data) * 4
-                gmf_info.append((c.ebrupture.id, mon_haz.task_no, len(c.sids),
-                                 nbytes, mon_haz.dt))
+                gmf_info.append((c.ebrupture.id, mon_haz.task_no,
+                                 len(c.ctx.sids), nbytes, mon_haz.dt))
     if not alldata:
         return {}
     for key, val in sorted(alldata.items()):
@@ -269,9 +266,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         parent = self.datastore.parent
         if parent:
             self.datastore['full_lt'] = parent['full_lt']
-            ne = len(parent['events'])
+            self.parent_events = ne = len(parent['events'])
             logging.info('There are %d ruptures and %d events',
                          len(parent['ruptures']), ne)
+        else:
+            self.parent_events = None
 
         if oq.investigation_time and oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves
@@ -373,6 +372,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)
+        if self.parent_events:
+            assert self.parent_events == len(self.datastore['events'])
         return 1
 
     def log_info(self, eids):

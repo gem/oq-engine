@@ -1,16 +1,19 @@
 # Installing the OpenQuake Engine: overview
 
-The OpenQuake Engine can be installed in several different ways. The easiest and recommended way is to use the  [universal installation script](universal.md).
+The OpenQuake Engine can be installed in several different ways. The
+easiest and recommended way is to use the [universal installation
+script](universal.md) which works for any platform and for any version
+of the engine.
 
-If you are on Windows and you do not need to interact with any other Python software you may also use the **[self-installable binary distribution for Windows 10](windows.md)**. Administrator level access may be required.
-If you are on Linux and you do not need to interact with any other Python software you may also use the **binary packages for [Ubuntu](ubuntu.md)** or **[RedHat (and clones)](rhel.md)** that require root access.
+If you are on Windows and you do not need to interact with any other Python software you may also use the **[self-installable binary distribution for Windows 10](windows.md)** (available only for LTS versions). Administrator level access may be required.
+If you are on Linux and you do not need to interact with any other Python software you may also use the **binary packages for [Ubuntu](ubuntu.md)** or **[RedHat (and clones)](rhel.md)** (available only for LTS versions) that require root access.
 
 The binary distributions of the engine include their own Python, so they are totally separated by other Python software you may have. The universal installer uses the system Python, but installs the engine in its own virtual environment, so again if you want to integrate with other Python software (i.e. Jupyter notebooks) you must install the other software inside the virtual environment of the engine. You can get the location of the engine virtual enviroment with the command
 ```
 $ oq info venv
 ```
 
-Scientists wanting to develop new GMPEs or new features for the engine should look at the **[Installing the OpenQuake Engine for development on Linux and macOS](development.md)**  and the **[Installing the OpenQuake Engine for development on Windows](development-windows.md)** guides.
+Scientists wanting to develop new GMPEs or new features for the engine should **[Install the OpenQuake Engine for development](universal.md)**.
 
 ### PyPI
 

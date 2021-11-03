@@ -90,16 +90,13 @@ def floatdict(value):
     >>> floatdict("200")
     {'default': 200}
 
-    >>> text = "{'active shallow crust': 250., 'default': 200}"
-    >>> sorted(floatdict(text).items())
-    [('active shallow crust', 250.0), ('default', 200)]
+    >>> floatdict("{'active shallow crust': 250., 'default': 200}")
+    {'active shallow crust': 250.0, 'default': 200}
     """
     value = ast.literal_eval(value)
     if isinstance(value, (int, float, list)):
         return {'default': value}
-    dic = {'default': max(value.values())}
-    dic.update(value)
-    return dic
+    return value
 
 
 class MagDepDistance(dict):

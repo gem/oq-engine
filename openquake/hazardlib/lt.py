@@ -17,10 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import itertools
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, BASE64
 from openquake.hazardlib import geo, source as ohs
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -308,6 +309,11 @@ def _setLSD(utype, source, value):
     source.modify('set_lower_seismogenic_depth', dict(lsd=float(value)))
 
 
+@apply_uncertainty.add('dummy')  # do nothing
+def _dummy(utype, source, value):
+    pass
+
+
 # ######################### apply_uncertainties ########################### #
 
 def apply_uncertainties(bset_values, src_group):
@@ -335,7 +341,7 @@ def apply_uncertainties(bset_values, src_group):
                             'for %s' % src)
                     for br in bset.branches:
                         newsrc = copy.deepcopy(src)
-                        newsrc.scaling_rate = br.weight
+                        newsrc.scaling_rate = br.weight  # used in lt_test.py
                         apply_uncertainty(
                             bset.uncertainty_type, newsrc, br.value)
                         srcs.append(newsrc)
@@ -396,7 +402,7 @@ def _cdf(weighted_objects):
     weights = []
     for obj in weighted_objects:
         w = obj.weight
-        if isinstance(obj.weight, float):
+        if isinstance(obj.weight, (float, int)):
             weights.append(w)
         else:
             weights.append(w['weight'])
@@ -481,6 +487,12 @@ class Branch(object):
         self.value = value
         self.bset = None
 
+    def is_leaf(self):
+        """
+        :returns: True if the branch has no branchset or has a dummy branchset
+        """
+        return self.bset is None or self.bset.uncertainty_type == 'dummy'
+
     def __repr__(self):
         if self.bset:
             return '%s%s' % (self.branch_id, self.bset)
@@ -554,6 +566,8 @@ class BranchSet(object):
             Stable Shallow Crust, etc.) the uncertainty applies to. This
             filter is required for all branchsets in GMPE logic tree.
     """
+    applied = None  # to be replaced by a string in commonlib.logictree
+
     def __init__(self, uncertainty_type, ordinal=0, filters=None,
                  collapsed=False):
         self.uncertainty_type = uncertainty_type
@@ -633,7 +647,6 @@ class BranchSet(object):
         raise KeyError(branch_id)
 
     def filter_source(self, source):
-        # pylint: disable=R0911,R0912
         """
         Apply filters to ``source`` and return ``True`` if uncertainty should
         be applied to it.
@@ -665,6 +678,8 @@ class BranchSet(object):
             elif key == 'applyToSources':
                 if source and source.source_id not in value:
                     return False
+            elif key == 'applyToBranches':
+                pass
             else:
                 raise AssertionError("unknown filter '%s'" % key)
         # All filters pass, return True.
@@ -695,3 +710,91 @@ class BranchSet(object):
 
     def __repr__(self):
         return '<%s(%d)>' % (self.uncertainty_type, len(self))
+
+
+dummy_counter = itertools.count(1)
+
+
+def dummy_branchset():
+    """
+    :returns: a dummy BranchSet with a single branch
+    """
+    bset = BranchSet('dummy')
+    bset.branches = [Branch('dummy%d' % next(dummy_counter), '.', 1, None)]
+    bset.branches[0].short_id = '.'
+    return bset
+
+
+class Realization(object):
+    """
+    Generic Realization object with attributes value, weight, ordinal, lt_path,
+    samples.
+    """
+    def __init__(self, value, weight, ordinal, lt_path, samples=1):
+        self.value = value
+        self.weight = weight
+        self.ordinal = ordinal
+        self.lt_path = lt_path
+        self.samples = samples
+
+    @property
+    def pid(self):
+        return '~'.join(self.lt_path)  # path ID
+
+    def __repr__(self):
+        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
+        return '<%s #%d %s, path=%s, weight=%s%s>' % (
+            self.__class__.__name__, self.ordinal, self.value,
+            '~'.join(self.lt_path), self.weight, samples)
+
+
+def attach_to_branches(branchsets):
+    """
+    Attach branchsets to branches depending on the applyToBranches
+    attribute. Also attaches dummy branchsets to dummy branches.
+    """
+    previous_branches = branchsets[0].branches
+    for i, bset in enumerate(branchsets[1:]):
+        prev_ids = ' '.join(pb.branch_id for pb in previous_branches)
+        atb = bset.filters.get('applyToBranches') or prev_ids
+        dummies = []
+        for branch in previous_branches:
+            if branch.branch_id in atb:
+                branch.bset = bset
+            else:
+                branch.bset = dummy = dummy_branchset()
+                dummies.append(dummy.branches[0])
+        previous_branches = bset.branches + dummies
+
+
+class CompositeLogicTree(object):
+    """
+    Build a logic tree from a set of branches by automatically
+    setting the branch IDs.
+    """
+    def __init__(self, branchsets):
+        self.branchsets = branchsets
+        attach_to_branches(branchsets)
+        nb = len(branchsets)
+        paths = []
+        for bsno, bset in enumerate(branchsets):
+            for brno, br in enumerate(bset.branches):
+                path = ['*'] * nb
+                path[bsno] = br.short_id = BASE64[brno]
+                paths.append(''.join(path))
+        self.basepaths = paths
+
+    def __iter__(self):
+        nb = len(self.branchsets)
+        ordinal = 0
+        for weight, branches in self.branchsets[0].enumerate_paths():
+            value = [br.value for br in branches]
+            lt_path = ''.join(branch.short_id for branch in branches)
+            yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
+            ordinal += 1
+
+    def get_all_paths(self):
+        return [rlz.lt_path for rlz in self]
+
+    def __repr__(self):
+        return '<%s>' % self.branchsets

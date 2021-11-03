@@ -83,7 +83,7 @@ def extrapolate_in_PSA(gmpe, ctx, imt_high, set_imt, imt):
             c.rrup = np.array([ctx.rrup[d]])
         means_log10 = []
         for im in set_imt:
-            [mean_ln] = contexts.get_mean_stds([gmpe], c, [SA(im)], None)
+            mean_ln = contexts.get_mean_stds(gmpe, c, [SA(im)])[0]
             mean = np.exp(mean_ln[0])
             means_log10.append(np.log10(mean))
         mb = np.polyfit(t_log10, means_log10, 1)
@@ -317,12 +317,12 @@ class AlAtikSigmaModel(GMPE):
 
             # 1 - if imt.period < cornerp, no changes needed
             if self.extr and imt.period <= cornerp and imt.period <= hp:
-                [mean_] = contexts.get_mean_stds([self.gmpe], ctx, [imt], None)
+                mean_ = contexts.get_mean_stds(self.gmpe, ctx, [imt])[0]
             # if the period is larger than the corner period but the corner
             # period is less than the highest period
             elif self.extr and imt.period >= cornerp and cornerp <= hp:
-                [mean_] = contexts.get_mean_stds(
-                    [self.gmpe], ctx, [SA(cornerp)], None)
+                mean_ = contexts.get_mean_stds(
+                    self.gmpe, ctx, [SA(cornerp)])[0]
                 disp = get_disp_from_acc(mean_, cornerp)
                 mean_ = get_acc_from_disp(disp, imt.period)
             # if the corner period is longer than highest and imt is above
@@ -334,7 +334,7 @@ class AlAtikSigmaModel(GMPE):
                 disp = get_disp_from_acc(mean, cornerp)
                 mean_ = get_acc_from_disp(disp, imt.period)
             else:
-                [mean_] = contexts.get_mean_stds([self.gmpe], ctx, [imt], None)
+                mean_ = contexts.get_mean_stds(self.gmpe, ctx, [imt])[0]
 
             kappa = 1
             if self.kappa_file:

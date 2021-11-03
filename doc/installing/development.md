@@ -1,26 +1,9 @@
 # Installing the OpenQuake Engine for development
 
-To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
-
-The official supported distributions are
-
-### Linux
-
-- Ubuntu 18.04 LTS (Bionic)
-- RedHat Enterprise Linux 8 / CentOS 8 / Scientific Linux 8
-- Fedora 29/30/31
-
-This guide may work also on other Linux releases/distributions.
-
-### macOS
-
-- macOS 10.11 (El Capitan)
-- macOS 10.12 (Sierra)
-- macOS 10.13 (High Sierra)
-- macOS 10.14 (Mojave)
-- macOS 10.15 (Catalina)
-
-See also the [FAQ about SSL certificate validation on macOS](../faq.md#ertificate-verification-on-macOS).
+To develop with the OpenQuake Engine and Hazardlib an installation
+from sources must be performed. The easiest way it to use the
+[universal installer](universal.md). The guide here is for people
+wanting to do everything manually.
 
 ## Prerequisites
 

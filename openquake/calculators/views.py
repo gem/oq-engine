@@ -34,7 +34,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util
+from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
@@ -205,9 +205,18 @@ def view_contents(token, dstore):
     return numpy.array(rows, dt('dataset size'))
 
 
+def short_repr(lst):
+    if len(lst) <= 10:
+        return ' '.join(map(str, lst))
+    return '[%d rlzs]' % len(lst)
+
+
 @view.add('full_lt')
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
+    num_paths = full_lt.get_num_potential_paths()
+    if not full_lt.num_samples and num_paths > 15000:
+        return '<%d realizations>' % num_paths
     try:
         rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
     except KeyError:  # for scenario trt_smrs is missing
@@ -216,7 +225,7 @@ def view_full_lt(token, dstore):
     rows = []
     for grp_id, rbg in enumerate(rlzs_by_gsim_list):
         for gsim, rlzs in rbg.items():
-            rows.append((grp_id, repr(str(gsim)), str(list(rlzs))))
+            rows.append((grp_id, repr(str(gsim)), short_repr(rlzs)))
     return numpy.array(rows, dt(header))
 
 
@@ -567,7 +576,7 @@ def view_required_params_per_trt(token, dstore):
     full_lt = dstore['full_lt']
     tbl = []
     for trt in full_lt.trts:
-        gsims = full_lt.gsim_lt.get_gsims(trt)
+        gsims = full_lt.gsim_lt.values[trt]
         maker = ContextMaker(trt, gsims, {'imtls': {}})
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
@@ -773,7 +782,8 @@ def view_extreme_gmvs(token, dstore):
     err = binning_error(gmvs, eids)
     if err > .05:
         msg += ('Your results are expected to have a large dependency '
-                'from ses_seed')
+                'from ses_seed (or the rupture seed in scenarios): %d%%'
+                % (err * 100))
     if imt0.startswith(('PGA', 'SA(')):
         gmpe = GmpeExtractor(dstore)
         df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
@@ -844,14 +854,14 @@ Source = collections.namedtuple(
     'Source', 'source_id code num_ruptures checksum')
 
 
-@view.add('extreme_groups')
-def view_extreme_groups(token, dstore):
+@view.add('disagg_by_grp')
+def view_disagg_by_grp(token, dstore):
     """
     Show the source groups contributing the most to the highest IML
     """
     data = dstore['disagg_by_grp'][()]
-    data.sort(order='extreme_poe')
-    return text_table(data[::-1])
+    data.sort(order='avg_poe')
+    return data[::-1]
 
 
 @view.add('gmvs_to_hazard')
@@ -1057,25 +1067,37 @@ def view_composite_source_model(token, dstore):
     n = len(dstore['full_lt'].sm_rlzs)
     trt_smrs = dstore['trt_smrs'][:]
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
-        srcs = ' '.join(df['source_id'])
         trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
-        lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), srcs))
-    return numpy.array(lst, dt('grp_id trt smrs sources'))
+        lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), len(df)))
+    return numpy.array(lst, dt('grp_id trt smrs num_sources'))
 
 
-@view.add('branch_ids')
-def view_branch_ids(token, dstore):
+@view.add('branches')
+def view_branches(token, dstore):
     """
-    Show the branch IDs
+    Show info about the branches in the logic tree
     """
     full_lt = dstore['full_lt']
+    smlt = full_lt.source_model_lt
+    gslt = full_lt.gsim_lt
     tbl = []
     for k, v in full_lt.source_model_lt.shortener.items():
-        tbl.append((k, v, 'NA'))
-    gsims = sum(full_lt.gsim_lt.values.values(), [])
-    for g, (k, v) in enumerate(full_lt.gsim_lt.shortener.items()):
+        tbl.append((k, v, smlt.branches[k].value))
+    gsims = sum(gslt.values.values(), [])
+    for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
-    return numpy.array(tbl, dt('branch_id abbrev gsim'))
+    return numpy.array(tbl, dt('branch_id abbrev uvalue'))
+
+
+@view.add('branchsets')
+def view_branchsets(token, dstore):
+    """
+    Show the branchsets in the logic tree
+    """
+    flt = dstore['full_lt']
+    clt = logictree.compose(flt.gsim_lt, flt.source_model_lt)
+    return text_table(enumerate(map(repr, clt.branchsets)),
+                      header=['bsno', 'bset'], ext='org')
 
 
 @view.add('rupture')
@@ -1144,3 +1166,50 @@ def view_agg_id(token, dstore):
     concat = pandas.concat([df, totdf], ignore_index=True)
     concat.index.name = 'agg_id'
     return concat
+
+
+@view.add('mean_perils')
+def view_mean_perils(token, dstore):
+    """
+    For instance `oq show mean_perils`
+    """
+    oq = dstore['oqparam']
+    pdcols = dstore.get_attr('gmf_data', '__pdcolumns__').split()
+    perils = [col for col in pdcols[2:] if not col.startswith('gmv_')]
+    N = len(dstore['sitecol/sids'])
+    sid = dstore['gmf_data/sid'][:]
+    out = numpy.zeros(N, [(per, float) for per in perils])
+    if oq.number_of_logic_tree_samples:
+        E = len(dstore['events'])
+        for peril in perils:
+            out[peril] = fast_agg(sid, dstore['gmf_data/' + peril][:]) / E
+    else:
+        rlz_weights = dstore['weights'][:]
+        ev_weights = rlz_weights[dstore['events']['rlz_id']]
+        totw = ev_weights.sum()  # num_gmfs
+        for peril in perils:
+            data = dstore['gmf_data/' + peril][:]
+            weights = ev_weights[dstore['gmf_data/eid'][:]]
+            out[peril] = fast_agg(sid, data * weights) / totw
+    return out
+
+
+@view.add('src_groups')
+def view_src_groups(token, dstore):
+    """
+    Show the hazard contribution of each source group
+    """
+    disagg = dstore['disagg_by_grp'][:]
+    contrib = disagg['avg_poe'] / disagg['avg_poe'].sum()
+    source_info = dstore['source_info'][:]
+    tbl = []
+    for grp_id, rows in group_array(source_info, 'grp_id').items():
+        srcs = decode(rows['source_id'])
+        if len(srcs) > 2:
+            text = ' '.join(srcs[:2]) + ' ...'
+        else:
+            text = ' '.join(srcs)
+        tbl.append((grp_id, contrib[grp_id], text))
+    tbl.sort(key=operator.itemgetter(1), reverse=True)
+    return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
+                      ext='org')
