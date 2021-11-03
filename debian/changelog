@@ -1,3 +1,8 @@
+  [Shreyasvi Chandrasekhar]
+  * Added a new GMPE for significant duration proposed by Bahrampouri et al 
+    2021 in gsim.
+  * created tests and verification tables for bahrampouri_2021_duration model.
+
   [Michele Simionato]
   * Optimized the aggregation of losses in event_based_risk and made it possible
     to aggregate by site_id for more than 65,536 sites
