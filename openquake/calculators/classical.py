@@ -678,6 +678,8 @@ class ClassicalCalculator(base.HazardCalculator):
         hmbytes = 8 * N * S * M * P if oq.poes else 0
         logging.info('Producing %s of hazard curves and %s of hazard maps',
                      humansize(hcbytes), humansize(hmbytes))
+        if not performance.numba:
+            logging.info('numba is not installed: using the slow algorithm')
         self.datastore.swmr_on()  # essential before Starmap
         parallel.Starmap(
             postclassical, allargs,
