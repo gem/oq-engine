@@ -663,9 +663,12 @@ class ClassicalCalculator(base.HazardCalculator):
         # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
         slicedic = performance.get_slices(
             dstore['_poes/sid'][:] // sites_per_task)
+        if not slicedic:
+            # no hazard, nothing to do, happens in case_60
+            return
         nslices = sum(len(slices) for slices in slicedic.values())
-        logging.info('There are %d slices of poes [%.1f per task]', nslices,
-                     nslices / len(slicedic))
+        logging.info('There are %d slices of poes [%.1f per task]',
+                     nslices, nslices / len(slicedic))
         allargs = [
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
@@ -679,7 +682,8 @@ class ClassicalCalculator(base.HazardCalculator):
         parallel.Starmap(
             postclassical, allargs,
             distribute='no' if self.few_sites else None,
-            h5=self.datastore.hdf5, slowdown=1 if N > 10_000 else 0
+            h5=self.datastore.hdf5,
+            slowdown=1 if N > 10_000 and ct > 128 else 0
         ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
