@@ -292,6 +292,8 @@ class SgobbaEtAl2020(GMPE):
             std = np.sqrt(C['sigma_0'] ** 2 + self.be_std ** 2 + tau_L2L ** 2 +
                           Bs_model + phi_S2Sref ** 2 + Bp_model + phi_P2P ** 2)
             sig[m] = np.log(10.0 ** std)
+            tau[m] = np.log(10.0 ** self.be_std)
+            phi[m] = np.log(10.0 ** np.sqrt((std ** 2 - self.be_std ** 2)))
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
     IMT                a                   b1                  b2                   c1                   c2                    c3                     mref               tau_ev              tau_L2L               phi_S2S_ref   phi_S2S              phi_P2P             sigma_0            dL2L_cluster1          dL2L_cluster4         dL2L_cluster5

@@ -33,5 +33,5 @@ class LinEtAl2011FootWallCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check(os.path.join(DATA_PATH, 'lin2011_mean_fw.csv'),
-                       os.path.join(DATA_PATH, 'lin2011_std_fw.csv'),
-                       max_discrep_percentage=0.1)
+                   os.path.join(DATA_PATH, 'lin2011_std_fw.csv'),
+                   max_discrep_percentage=0.1)

@@ -933,6 +933,14 @@ class FullLogicTree(object):
         """
         return dict(zip(self.gsim_lt.values, rlz.gsim_rlz.value))
 
+    def get_num_paths(self):
+        """
+        :returns: number of the paths in the full logic tree
+        """
+        if self.num_samples:
+            return self.num_samples
+        return len(self.sm_rlzs) * self.gsim_lt.get_num_paths()
+
     def get_realizations(self):
         """
         :returns: the complete list of LtRealizations

@@ -359,7 +359,7 @@ class EventBasedCalculator(base.HazardCalculator):
         rgetters = get_rupture_getters(dstore, oq.concurrent_tasks * 1.25,
                                        srcfilter=self.srcfilter)
         allargs = [(rgetter, self.param) for rgetter in rgetters]
-        dstore.swmr_on()
+        dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(
             self.core_task.__func__, allargs, h5=dstore.hdf5)
         smap.monitor.save('srcfilter', self.srcfilter)

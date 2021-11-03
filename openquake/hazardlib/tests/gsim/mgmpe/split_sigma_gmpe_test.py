@@ -39,6 +39,7 @@ class SplitSigmaGMPETest(unittest.TestCase):
         ctx.sids = [0, 1, 2, 3]
         ctx.vs30 = [760.] * 4
         ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.occurrence_rate = .0001
         imt = PGA()
         stds_types = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
                       const.StdDev.INTRA_EVENT]

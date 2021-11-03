@@ -203,6 +203,7 @@ class BaseGSIMTestCase(unittest.TestCase):
 
         cmaker, df = read_cmaker_df(gsim, fnames)
         for ctx in gen_ctxs(df):
+            ctx.occurrence_rate = 0
             out = cmaker.get_mean_stds([ctx])[:, 0]
             for o, out_type in enumerate(out_types):
                 if not hasattr(ctx, out_type):
