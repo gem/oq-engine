@@ -78,12 +78,16 @@ def store_ctxs(dstore, rupdata, grp_id):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, cmaker, monitor):
+def classical(srcs, tile, cmaker, monitor):
     """
     Read the sitecol and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    return hazclassical(srcs, monitor.read('sitecol'), cmaker)
+    if tile is None:
+        # read from the temporary storage, this avoids sending the
+        # same sitecol hundreds of times
+        tile = monitor.read('sitecol')
+    return hazclassical(srcs, tile, cmaker)
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
@@ -433,20 +437,20 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
-        args = self.get_args(grp_ids, self.haz.cmakers)
-        self.ntasks = collections.Counter(arg[1].grp_id for arg in args)
+        sg_tl_cm = self.get_sg_tl_cm(grp_ids, self.haz.cmakers)
+        self.ntasks = collections.Counter(arg[2].grp_id for arg in sg_tl_cm)
         logging.info('grp_id->ntasks: %s', list(self.ntasks.values()))
         L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
-        self.check_memory(self.N, L, num_gs)
+        self.check_memory(max(self.tile_sizes), L, num_gs)
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(classical, sg_tl_cm, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
         smap.h5 = self.datastore.hdf5
         acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
                for cm in self.haz.cmakers}
-        logging.info('Sending %d tasks', len(args))
+        logging.info('Sending %d tasks', len(sg_tl_cm))
         try:
             smap.reduce(self.agg_dicts, acc)
         finally:
@@ -487,12 +491,12 @@ class ClassicalCalculator(base.HazardCalculator):
                              numsites / self.numctxs)
         self.calc_times.clear()  # save a bit of memory
 
-    def get_args(self, grp_ids, cmakers):
+    def get_sg_tl_cm(self, grp_ids, cmakers):
         """
-        :returns: a list of Starmap arguments
+        :returns: a list of triples (src_group, tile, cmaker)
         """
         oq = self.oqparam
-        allargs = []
+        triples = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
@@ -513,21 +517,38 @@ class ClassicalCalculator(base.HazardCalculator):
         self.param['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
-        for grp_id in grp_ids:
-            sg = src_groups[grp_id]
-            if sg.atomic:
-                # do not split atomic groups
-                allargs.append((sg, cmakers[grp_id]))
-            else:  # regroup the sources in blocks
-                blks = (groupby(sg, get_source_id).values()
-                        if oq.disagg_by_src else
-                        block_splitter(sg, max_weight, get_weight, sort=True))
-                blocks = list(blks)
-                for block in blocks:
-                    logging.debug('Sending %d source(s) with weight %d',
-                                  len(block), sum(src.weight for src in block))
-                    allargs.append((block, cmakers[grp_id]))
-        return allargs
+
+        tiling = self.N > oq.max_sites_per_tile
+        if tiling:
+            ntiles = numpy.ceil(self.N / oq.max_sites_per_tile)
+            tiles = self.sitecol.split_in_tiles(ntiles)
+        else:
+            tiles = [self.sitecol]
+        self.tile_sizes = []
+        for tile in tiles:
+            self.tile_sizes.append(len(tile))
+            if not tiling:
+                tile = None
+            for grp_id in grp_ids:
+                sg = src_groups[grp_id]
+                if sg.atomic:
+                    # do not split atomic groups
+                    triples.append((sg, tile, cmakers[grp_id]))
+                else:  # regroup the sources in blocks
+                    blks = (groupby(sg, get_source_id).values()
+                            if oq.disagg_by_src else
+                            block_splitter(
+                                sg, max_weight, get_weight, sort=True))
+                    blocks = list(blks)
+                    for block in blocks:
+                        logging.debug(
+                            'Sending %d source(s) with weight %d',
+                            len(block), sum(src.weight for src in block))
+                        triples.append((block, tile, cmakers[grp_id]))
+        if tiling:
+            logging.info('There are %d tiles of sizes %s',
+                         len(tiles), self.tile_sizes)
+        return triples
 
     def collect_hazard(self, acc, pmap_by_kind):
         """
@@ -642,6 +663,8 @@ class ClassicalCalculator(base.HazardCalculator):
         # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
         slicedic = performance.get_slices(
             dstore['_poes/sid'][:] // sites_per_task)
+        nslices = sum(len(slices) for slices in slicedic.values())
+        logging.info('There are %d slices of poes', nslices)
         allargs = [
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
