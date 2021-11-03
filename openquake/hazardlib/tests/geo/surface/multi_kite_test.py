@@ -53,7 +53,7 @@ class MultiSurfaceTestCase(unittest.TestCase):
 
     def test_rx(self):
         # Test Rx
-        expected = np.array([-3.492642, -13.384149])
+        expected = np.array([-3.48946183, -13.37945338])
         computed = self.msrf.get_rx_distance(self.mesh)
         np.testing.assert_allclose(computed, expected)
 
@@ -86,17 +86,17 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         self.mesh = mesh
 
     def test_get_edge_set(self):
-        expected = [np.array([[-70.33338023, 19.7128312, 18.75134376],
-                              [-70.38083767, 19.71732142, 18.7242976],
-                              [-70.42829775, 19.72179906, 18.69725144],
-                              [-70.47576048, 19.72626415, 18.67020527],
-                              [-70.52322584, 19.73071666, 18.64315911],
-                              [-70.57069383, 19.7351566, 18.61611295]]),
-                    np.array([[-70.14923984, 19.73051498, 18.96965629],
-                              [-70.19675982, 19.72669428, 18.88126907],
-                              [-70.24427754, 19.72286097, 18.79288186],
-                              [-70.29179300, 19.71901507, 18.70449464],
-                              [-70.33930617, 19.71515658, 18.61610742]])]
+        expected = [np.array([[-70.33000000, 19.70999225, 18.85470701],
+                              [-70.37757843, 19.71499279, 18.80781578],
+                              [-70.42469786, 19.71993234, 18.76092455],
+                              [-70.47228216, 19.72490775, 18.71357360],
+                              [-70.51940739, 19.72982240, 18.66668237],
+                              [-70.56699755, 19.73477266, 18.61933142]]),
+                    np.array([[-70.14910059, 19.72872782, 19.03202972],
+                              [-70.19665495, 19.72535393, 18.92804926],
+                              [-70.24420731, 19.72196743, 18.82406879],
+                              [-70.29175767, 19.71856832, 18.72008833],
+                              [-70.33930601, 19.7151566 , 18.61610787]])]
 
         # Note that method is executed when the object is initialized
         ess = self.msrf.edge_set
@@ -111,17 +111,15 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
     def test_get_strike(self):
         strike = self.msrf.get_strike()
 
-    # TODO
     def test_get_dip(self):
         dip = self.msrf.get_dip()
-        expected = 69.57436082462769
+        expected = 69.93523808772397
         msg = 'Multi fault surface: dip is wrong'
         aae(dip, expected, err_msg=msg)
 
     # TODO
     def test_get_width(self):
         width = self.msrf.get_width()
-        print(width)
 
     # TODO
     def test_get_area(self):
