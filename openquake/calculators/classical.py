@@ -78,12 +78,12 @@ def store_ctxs(dstore, rupdata, grp_id):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, cmaker, monitor):
+def classical(srcs, sitecol, cmaker, monitor):
     """
     Read the sitecol and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    return hazclassical(srcs, monitor.read('sitecol'), cmaker)
+    return hazclassical(srcs, sitecol, cmaker)
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
@@ -433,20 +433,20 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
-        args = self.get_args(grp_ids, self.haz.cmakers)
-        self.ntasks = collections.Counter(arg[1].grp_id for arg in args)
+        ssc = self.get_ssc(grp_ids, self.haz.cmakers)
+        self.ntasks = collections.Counter(arg[2].grp_id for arg in ssc)
         logging.info('grp_id->ntasks: %s', list(self.ntasks.values()))
         L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
         self.check_memory(self.N, L, num_gs)
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(classical, ssc, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
         smap.h5 = self.datastore.hdf5
         acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
                for cm in self.haz.cmakers}
-        logging.info('Sending %d tasks', len(args))
+        logging.info('Sending %d tasks', len(ssc))
         try:
             smap.reduce(self.agg_dicts, acc)
         finally:
@@ -487,12 +487,12 @@ class ClassicalCalculator(base.HazardCalculator):
                              numsites / self.numctxs)
         self.calc_times.clear()  # save a bit of memory
 
-    def get_args(self, grp_ids, cmakers):
+    def get_ssc(self, grp_ids, cmakers):
         """
         :returns: a list of Starmap arguments
         """
         oq = self.oqparam
-        allargs = []
+        allssc = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
@@ -513,21 +513,29 @@ class ClassicalCalculator(base.HazardCalculator):
         self.param['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
-        for grp_id in grp_ids:
-            sg = src_groups[grp_id]
-            if sg.atomic:
-                # do not split atomic groups
-                allargs.append((sg, cmakers[grp_id]))
-            else:  # regroup the sources in blocks
-                blks = (groupby(sg, get_source_id).values()
-                        if oq.disagg_by_src else
-                        block_splitter(sg, max_weight, get_weight, sort=True))
-                blocks = list(blks)
-                for block in blocks:
-                    logging.debug('Sending %d source(s) with weight %d',
-                                  len(block), sum(src.weight for src in block))
-                    allargs.append((block, cmakers[grp_id]))
-        return allargs
+
+        if self.N > oq.max_sites_per_tile:
+            ntiles = numpy.ceil(self.N / oq.max_sites_per_tile)
+        else:
+            ntiles = 1
+        for tile in self.sitecol.split_in_tiles(ntiles):
+            for grp_id in grp_ids:
+                sg = src_groups[grp_id]
+                if sg.atomic:
+                    # do not split atomic groups
+                    allssc.append((sg, tile, cmakers[grp_id]))
+                else:  # regroup the sources in blocks
+                    blks = (groupby(sg, get_source_id).values()
+                            if oq.disagg_by_src else
+                            block_splitter(
+                                sg, max_weight, get_weight, sort=True))
+                    blocks = list(blks)
+                    for block in blocks:
+                        logging.debug(
+                            'Sending %d source(s) with weight %d',
+                            len(block), sum(src.weight for src in block))
+                        allssc.append((block, tile, cmakers[grp_id]))
+        return allssc
 
     def collect_hazard(self, acc, pmap_by_kind):
         """
