@@ -435,20 +435,20 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
-        ssc = self.get_ssc(grp_ids, self.haz.cmakers)
-        self.ntasks = collections.Counter(arg[2].grp_id for arg in ssc)
+        sg_tl_cm = self.get_sg_tl_cm(grp_ids, self.haz.cmakers)
+        self.ntasks = collections.Counter(arg[2].grp_id for arg in sg_tl_cm)
         logging.info('grp_id->ntasks: %s', list(self.ntasks.values()))
         L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
         self.check_memory(max(self.tile_sizes), L, num_gs)
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, ssc, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(classical, sg_tl_cm, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)  # possibly in postclassical
         smap.h5 = self.datastore.hdf5
         acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
                for cm in self.haz.cmakers}
-        logging.info('Sending %d tasks', len(ssc))
+        logging.info('Sending %d tasks', len(sg_tl_cm))
         try:
             smap.reduce(self.agg_dicts, acc)
         finally:
@@ -489,12 +489,12 @@ class ClassicalCalculator(base.HazardCalculator):
                              numsites / self.numctxs)
         self.calc_times.clear()  # save a bit of memory
 
-    def get_ssc(self, grp_ids, cmakers):
+    def get_sg_tl_cm(self, grp_ids, cmakers):
         """
-        :returns: a list of Starmap arguments
+        :returns: a list of triples (src_group, tile, cmaker)
         """
         oq = self.oqparam
-        allssc = []
+        triples = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
@@ -531,7 +531,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 sg = src_groups[grp_id]
                 if sg.atomic:
                     # do not split atomic groups
-                    allssc.append((sg, tile, cmakers[grp_id]))
+                    triples.append((sg, tile, cmakers[grp_id]))
                 else:  # regroup the sources in blocks
                     blks = (groupby(sg, get_source_id).values()
                             if oq.disagg_by_src else
@@ -542,11 +542,11 @@ class ClassicalCalculator(base.HazardCalculator):
                         logging.debug(
                             'Sending %d source(s) with weight %d',
                             len(block), sum(src.weight for src in block))
-                        allssc.append((block, tile, cmakers[grp_id]))
+                        triples.append((block, tile, cmakers[grp_id]))
         if tiling:
             logging.info('There are %d tiles of sizes %s',
                          len(tiles), self.tile_sizes)
-        return allssc
+        return triples
 
     def collect_hazard(self, acc, pmap_by_kind):
         """
