@@ -797,8 +797,6 @@ class Starmap(object):
                 fname = func.__name__
                 argnames = getargnames(func)[:-1]
             self.sent[fname] += {a: len(p) for a, p in zip(argnames, args)}
-        # possibly slow down the sending of the tasks, give time to the workers
-        time.sleep(self.slowdown)
         res = submit[dist](self, func, args, monitor)
         self.task_no += 1
         self.tasks.append(res)
@@ -846,6 +844,9 @@ class Starmap(object):
             first_args = self.task_queue[:self.num_cores]
             self.task_queue[:] = self.task_queue[self.num_cores:]
             for func, args in first_args:
+                # possibly slow down the sending of the tasks
+                # to give time to the workers
+                time.sleep(self.slowdown)
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
