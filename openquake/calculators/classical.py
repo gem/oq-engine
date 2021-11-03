@@ -78,12 +78,14 @@ def store_ctxs(dstore, rupdata, grp_id):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, sitecol, cmaker, monitor):
+def classical(srcs, tile, cmaker, monitor):
     """
     Read the sitecol and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    return hazclassical(srcs, sitecol, cmaker)
+    if tile is None:
+        tile = monitor.read('sitecol')
+    return hazclassical(srcs, tile, cmaker)
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
@@ -442,7 +444,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.check_memory(max(self.tile_sizes), L, num_gs)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, ssc, h5=self.datastore.hdf5)
-        smap.monitor.save('sitecol', self.sitecol)
+        smap.monitor.save('sitecol', self.sitecol)  # possibly in postclassical
         smap.h5 = self.datastore.hdf5
         acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
                for cm in self.haz.cmakers}
@@ -514,7 +516,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
 
-        if self.N > oq.max_sites_per_tile:
+        tiling = self.N > oq.max_sites_per_tile
+        if tiling:
             ntiles = numpy.ceil(self.N / oq.max_sites_per_tile)
             tiles = self.sitecol.split_in_tiles(ntiles)
         else:
@@ -522,6 +525,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.tile_sizes = []
         for tile in tiles:
             self.tile_sizes.append(len(tile))
+            if not tiling:
+                tile = None
             for grp_id in grp_ids:
                 sg = src_groups[grp_id]
                 if sg.atomic:
@@ -538,7 +543,7 @@ class ClassicalCalculator(base.HazardCalculator):
                             'Sending %d source(s) with weight %d',
                             len(block), sum(src.weight for src in block))
                         allssc.append((block, tile, cmakers[grp_id]))
-        if self.N > oq.max_sites_per_tile:
+        if tiling:
             logging.info('There are %d tiles of sizes %s',
                          len(tiles), self.tile_sizes)
         return allssc
