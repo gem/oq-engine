@@ -173,6 +173,15 @@ atkinson_macias_2009
     :show-inheritance:
 
 
+bahrampouri_2021_duration
+----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bahrampouri_2021_duration
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 baumont_2018
 ------------------------------------
 
@@ -180,6 +189,7 @@ baumont_2018
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 bchydro_2016_epistemic
 ------------------------------------------------
