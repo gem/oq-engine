@@ -905,9 +905,7 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-4)
 
         # make sure we are not breaking event_based
-        self.run_calc(case_65.__file__, 'job.ini',
-                      calculation_mode='event_based',
-                      ses_per_logic_tree_path=100)
+        self.run_calc(case_65.__file__, 'job_eb.ini')
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-4)
 
