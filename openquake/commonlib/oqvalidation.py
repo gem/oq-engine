@@ -1033,6 +1033,12 @@ class OqParam(valid.ParamSet):
             # store input files, mandatory for the QGIS plugin
             self.save_disk_space = False
 
+        # check for tiling
+        if self.max_sites_disagg > self.max_sites_per_tile:
+            raise ValueError(
+                'max_sites_disagg is larger than max_sites_per_tile! (%d>%d)'
+                % (self.max_sites_disagg, self.max_sites_per_tile))
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and self.poes:

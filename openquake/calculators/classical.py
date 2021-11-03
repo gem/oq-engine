@@ -516,9 +516,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
         if self.N > oq.max_sites_per_tile:
             ntiles = numpy.ceil(self.N / oq.max_sites_per_tile)
+            tiles = self.sitecol.split_in_tiles(ntiles)
+            logging.info('There are %d tiles', len(tiles))
         else:
-            ntiles = 1
-        for tile in self.sitecol.split_in_tiles(ntiles):
+            tiles = [self.sitecol]
+        for tile in tiles:
             for grp_id in grp_ids:
                 sg = src_groups[grp_id]
                 if sg.atomic:
@@ -650,6 +652,8 @@ class ClassicalCalculator(base.HazardCalculator):
         # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
         slicedic = performance.get_slices(
             dstore['_poes/sid'][:] // sites_per_task)
+        nslices = sum(len(slices) for slices in slicedic.values())
+        logging.info('There are %d slices of poes', nslices)
         allargs = [
             (getters.PmapGetter(dstore, ws, slices, oq.imtls, oq.poes),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
