@@ -869,7 +869,7 @@ hazard_uhs-std.csv
         # kite fault
         self.run_calc(case_61.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
 
     def test_case_62(self):
         # multisurface with kite faults
