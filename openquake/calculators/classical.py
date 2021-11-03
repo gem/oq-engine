@@ -439,7 +439,7 @@ class ClassicalCalculator(base.HazardCalculator):
         L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
-        self.check_memory(self.N, L, num_gs)
+        self.check_memory(max(self.tile_sizes), L, num_gs)
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, ssc, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
@@ -517,10 +517,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.N > oq.max_sites_per_tile:
             ntiles = numpy.ceil(self.N / oq.max_sites_per_tile)
             tiles = self.sitecol.split_in_tiles(ntiles)
-            logging.info('There are %d tiles', len(tiles))
         else:
             tiles = [self.sitecol]
+        self.tile_sizes = []
         for tile in tiles:
+            self.tile_sizes.append(len(tile))
             for grp_id in grp_ids:
                 sg = src_groups[grp_id]
                 if sg.atomic:
@@ -537,6 +538,9 @@ class ClassicalCalculator(base.HazardCalculator):
                             'Sending %d source(s) with weight %d',
                             len(block), sum(src.weight for src in block))
                         allssc.append((block, tile, cmakers[grp_id]))
+        if self.N > oq.max_sites_per_tile:
+            logging.info('There are %d tiles of sizes %s',
+                         len(tiles), self.tile_sizes)
         return allssc
 
     def collect_hazard(self, acc, pmap_by_kind):
