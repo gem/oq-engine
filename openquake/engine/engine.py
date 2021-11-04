@@ -24,6 +24,7 @@ import re
 import sys
 import json
 import time
+import pickle
 import signal
 import getpass
 import logging
@@ -400,3 +401,12 @@ def check_obsolete_version(calculation_mode='WebUI'):
                 'still using version %s' % (tag_name, __version__))
     else:
         return ''
+
+
+if __name__ == '__main__':
+    from openquake.server import dbserver
+    # run a job object stored in a pickle file, called by job.yaml
+    with open(sys.argv[1], 'rb') as f:
+        job = pickle.load(f)
+    dbserver.ensure_on()
+    run_jobs([job])

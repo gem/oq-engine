@@ -158,7 +158,7 @@ class GmfComputer(object):
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
             array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
-            M, N, E = array.shape
+            M, N, E = array.shape  # sig and eps have shapes (M, E) instead
             for n in range(N):
                 for e in range(E):
                     if (array[:, n, e] < min_iml).all():
@@ -200,7 +200,7 @@ class GmfComputer(object):
         :param mean_stds: array of shape O, M, N
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
-            two arrays with shape (num_imts, num_events): sig for stddev_inter
+            two arrays with shape (num_imts, num_events): sig for tau
             and eps for the random part
         """
         result = numpy.zeros(
@@ -229,7 +229,7 @@ class GmfComputer(object):
         :param num_events: the number of seismic events
         :param imt: an IMT instance
         :param gsim: a GSIM instance
-        :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
+        :returns: (gmf(num_sites, num_events), tau(num_events),
                    epsilons(num_events))
         """
         num_sids = len(self.ctx.sids)
@@ -238,13 +238,11 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
-            mean = mean_stds[0]
-            gmf = to_imt_unit_values(mean, imt)
-            gmf.shape += (1, )
+            mean, _, _, _ = mean_stds
+            gmf = to_imt_unit_values(mean, imt)[:, None]
             gmf = gmf.repeat(num_events, axis=1)
-            return (gmf,
-                    numpy.zeros(num_events, F32),
-                    numpy.zeros(num_events, F32))
+            stdi = numpy.zeros(num_events, F32)
+            epsilons = numpy.zeros(num_events, F32)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -254,37 +252,38 @@ class GmfComputer(object):
                 raise CorrelationButNoInterIntraStdDevs(
                     self.correlation_model, gsim)
 
-            mean, stddev_total = mean_stds[:2]
-            stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
-            mean = mean.reshape(mean.shape + (1, ))
+            mean, sig, _, _ = mean_stds
+            sig = sig[:, None]
+            mean = mean[:, None]
 
-            total_residual = stddev_total * rvs(
-                self.distribution, num_sids, num_events)
-            gmf = to_imt_unit_values(mean + total_residual, imt)
-            stdi = numpy.nan
+            total_res = sig * rvs(self.distribution, num_sids, num_events)
+            gmf = to_imt_unit_values(mean + total_res, imt)
+            stdi = numpy.empty(num_events, F32)
+            stdi.fill(numpy.nan)
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
         else:
-            mean, stddev_total, stddev_inter, stddev_intra = mean_stds
-            stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
-            stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
-            mean = mean.reshape(mean.shape + (1, ))
-            intra_residual = stddev_intra * rvs(
-                self.distribution, num_sids, num_events)
+            mean, sig, tau, phi = mean_stds  # shape N -> (N, 1)
+            phi = phi[:, None]
+            tau = tau[:, None]
+            mean = mean[:, None]
+            # the [:, None] is used to implement multiplication by row;
+            # for instance if  a = [1 2], b = [[1 2] [3 4]] then
+            # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
+            # otherwise one would get multiplication by column [[1 4] [3 8]]
+            rnd_N1E = rvs(self.distribution, num_sids + 1, num_events)
+            intra_res = phi * rnd_N1E[:-1]  # shape (N, E)
+            epsilons = rnd_N1E[-1]  # shape E
 
             if self.correlation_model is not None:
-                intra_residual = self.correlation_model.apply_correlation(
-                    self.sites, imt, intra_residual, stddev_intra)
-                sh = intra_residual.shape
-                if len(sh) == 1:  # a vector
-                    intra_residual = intra_residual.reshape(sh + (1,))
+                intra_res = self.correlation_model.apply_correlation(
+                    self.sites, imt, intra_res, phi)
+                if len(intra_res.shape) == 1:  # a vector
+                    intra_res = intra_res[:, None]
 
-            epsilons = rvs(self.distribution, num_events)
-            inter_residual = stddev_inter * epsilons
-
-            gmf = to_imt_unit_values(
-                mean + intra_residual + inter_residual, imt)
-            stdi = stddev_inter.max(axis=0)
+            inter_res = tau * epsilons
+            gmf = to_imt_unit_values(mean + intra_res + inter_res, imt)
+            stdi = tau.max(axis=0)  # from shape (N, E) => E
         return gmf, stdi, epsilons
 
 

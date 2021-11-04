@@ -1,0 +1,54 @@
+apiVersion: batch/v1 
+kind: Job 
+metadata: 
+ name: ${CALC_NAME}
+spec: 
+ ttlSecondsAfterFinished: 60 
+ #activeDeadlineSeconds: 60 
+ template: 
+   metadata: 
+     name: master 
+   spec: 
+     securityContext: 
+       runAsUser: 1000 
+       runAsGroup: 1000 
+       fsGroup: 1000 
+     containers: 
+       - name: master 
+         image: openquake/engine:latest 
+         imagePullPolicy: Always 
+         resources: 
+          limits: 
+            memory: "8Gi" 
+            cpu: "8" 
+         #  requests: 
+         #    memory: "24Gi" 
+         #    cpu: "6" 
+         env: 
+         - name: OQ_CONFIG_FILE 
+           value: /opt/openquake/engine/openquake.cfg 
+         - name: HOME 
+           value: /opt/openquake 
+         - name: PATH 
+           value: /opt/openquake/engine/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin 
+         - name: OQ_WORKER_NAME 
+           valueFrom: 
+             fieldRef: 
+               fieldPath: metadata.name 
+         - name: OQ_WORKER_IP 
+           valueFrom: 
+             fieldRef: 
+               fieldPath: status.podIP 
+         ports: # need for svc 
+         - containerPort: 1909 
+         command: ["/bin/sh"] 
+         args: ["-c", "python -m openquake.engine.engine ${CALC_PIK}"]
+         volumeMounts: 
+         - mountPath: /opt/openquake 
+           name: data 
+           readOnly: false 
+     volumes: 
+       - name: data #name of volume 
+         persistentVolumeClaim: 
+           claimName: datacalc 
+     restartPolicy: Never
