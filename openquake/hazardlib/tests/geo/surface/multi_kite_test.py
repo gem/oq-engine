@@ -98,6 +98,18 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
                               [-70.29175767, 19.71856832, 18.72008833],
                               [-70.33930601, 19.7151566 , 18.61610787]])]
 
+        expected = [np.array([[-70.33365959,  19.71037733,  18.85108915],
+                           [-70.38106033,  19.71535823,  18.804094  ],
+                           [-70.42846401,  19.72032659,  18.75709885],
+                           [-70.47587061,  19.72528241,  18.7101037 ],
+                           [-70.52328014,  19.73022569,  18.66310854],
+                           [-70.57069257,  19.73515644,  18.61611339]]),
+                    np.array([[-70.14910201,  19.7287277 ,  19.03202724],
+                           [-70.19665637,  19.7253538 ,  18.9280474 ],
+                           [-70.24420873,  19.72196728,  18.82406756],
+                           [-70.29175909,  19.71856815,  18.72008771],
+                           [-70.33930743,  19.71515642,  18.61610787]])]
+
         # Note that method is executed when the object is initialized
         ess = self.msrf.edge_set
         for es, expct in zip(ess, expected):
@@ -113,7 +125,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
 
     def test_get_dip(self):
         dip = self.msrf.get_dip()
-        expected = 69.93523808772397
+        expected = 69.9393384310589
         msg = 'Multi fault surface: dip is wrong'
         aae(dip, expected, err_msg=msg)
 
