@@ -200,7 +200,7 @@ class GmfComputer(object):
         :param mean_stds: array of shape O, M, N
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
-            two arrays with shape (num_imts, num_events): sig for stddev_inter
+            two arrays with shape (num_imts, num_events): sig for tau
             and eps for the random part
         """
         result = numpy.zeros(
@@ -229,7 +229,7 @@ class GmfComputer(object):
         :param num_events: the number of seismic events
         :param imt: an IMT instance
         :param gsim: a GSIM instance
-        :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
+        :returns: (gmf(num_sites, num_events), tau(num_events),
                    epsilons(num_events))
         """
         num_sids = len(self.ctx.sids)
@@ -242,9 +242,8 @@ class GmfComputer(object):
             gmf = to_imt_unit_values(mean, imt)
             gmf.shape += (1, )
             gmf = gmf.repeat(num_events, axis=1)
-            return (gmf,
-                    numpy.zeros(num_events, F32),
-                    numpy.zeros(num_events, F32))
+            stdi = numpy.zeros(num_events, F32)
+            epsilons = numpy.zeros(num_events, F32)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -254,37 +253,37 @@ class GmfComputer(object):
                 raise CorrelationButNoInterIntraStdDevs(
                     self.correlation_model, gsim)
 
-            mean, stddev_total = mean_stds[:2]
-            stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
+            mean, sig = mean_stds[:2]
+            sig = sig.reshape(sig.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
 
-            total_residual = stddev_total * rvs(
+            total_residual = sig * rvs(
                 self.distribution, num_sids, num_events)
             gmf = to_imt_unit_values(mean + total_residual, imt)
             stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
         else:
-            mean, stddev_total, stddev_inter, stddev_intra = mean_stds
-            stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
-            stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
+            mean, sig, tau, phi = mean_stds
+            phi = phi.reshape(phi.shape + (1, ))
+            tau = tau.reshape(tau.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
-            intra_residual = stddev_intra * rvs(
+            intra_residual = phi * rvs(
                 self.distribution, num_sids, num_events)
 
             if self.correlation_model is not None:
                 intra_residual = self.correlation_model.apply_correlation(
-                    self.sites, imt, intra_residual, stddev_intra)
+                    self.sites, imt, intra_residual, phi)
                 sh = intra_residual.shape
                 if len(sh) == 1:  # a vector
                     intra_residual = intra_residual.reshape(sh + (1,))
 
             epsilons = rvs(self.distribution, num_events)
-            inter_residual = stddev_inter * epsilons
+            inter_residual = tau * epsilons
 
             gmf = to_imt_unit_values(
                 mean + intra_residual + inter_residual, imt)
-            stdi = stddev_inter.max(axis=0)
+            stdi = tau.max(axis=0)
         return gmf, stdi, epsilons
 
 
