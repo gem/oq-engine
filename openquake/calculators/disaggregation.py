@@ -256,8 +256,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
+        nrows = len(dstore['_poes/sid'])
         self.pgetter = getters.PmapGetter(
-            dstore, ws, self.sitecol.sids, oq.imtls, oq.poes)
+            dstore, ws, [(0, nrows + 1)], oq.imtls, oq.poes)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:

@@ -20,7 +20,7 @@ import logging
 import operator
 import numpy
 import pandas
-from openquake.baselib import hdf5, general, performance, parallel
+from openquake.baselib import general, performance, parallel, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import probability_map, stats
@@ -143,17 +143,24 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, weights, sids, imtls=(), poes=()):
+    def __init__(self, dstore, weights, slices, imtls=(), poes=()):
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
             self.weights = weights
-        self.sids = sids
         self.imtls = imtls
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
+        self.rlzs_by_g = dstore['rlzs_by_g'][()]
+        self.slices = slices
+        self._pmap = {}
+
+    @property
+    def sids(self):
+        self.init()
+        return list(self._pmap)
 
     @property
     def imts(self):
@@ -165,7 +172,8 @@ class PmapGetter(object):
 
     @property
     def N(self):
-        return len(self.sids)
+        self.init()
+        return len(self._pmap)
 
     @property
     def M(self):
@@ -177,30 +185,36 @@ class PmapGetter(object):
 
     def init(self):
         """
-        Read the poes and set the .data attribute with the hazard curves
+        Build the probability curves from the underlying dataframes
         """
-        if hasattr(self, '_pmap'):  # already initialized
+        if self._pmap:
             return self._pmap
-        dstore = hdf5.File(self.filename, 'r')
-        self.rlzs_by_g = dstore['rlzs_by_g'][()]
-
-        # populate _pmap
-        dset = dstore['_poes']  # GNL
-        G, N, L = dset.shape
-        self._pmap = probability_map.ProbabilityMap.build(L, G, self.sids)
-        data = dset[:, self.sids, :]  # shape (G, N, L)
-        for i, sid in enumerate(self.sids):
-            self._pmap[sid].array = data[:, i, :].T  # shape (L, G)
-        self.nbytes = self._pmap.nbytes
-        dstore.close()
+        G = len(self.rlzs_by_g)
+        with hdf5.File(self.filename) as dstore:
+            for start, stop in self.slices:
+                poes_df = dstore.read_df('_poes', slc=slice(start, stop))
+                for sid, df in poes_df.groupby('sid'):
+                    try:
+                        array = self._pmap[sid].array
+                    except KeyError:
+                        array = numpy.zeros((self.L, G))
+                        self._pmap[sid] = probability_map.ProbabilityCurve(
+                            array)
+                    array[df.lid, df.gid] = df.poe
         return self._pmap
 
-    # used in risk calculation where there is a single site per getter
+    # used in risk calculations where there is a single site per getter
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
         :returns: a probability curve of shape (L, R) for the given site
         """
+        self.init()
+        if not self.sids:
+            # this happens when the poes are all zeros, as in
+            # classical_risk/case_3 for the first site
+            return probability_map.ProbabilityCurve(
+                numpy.zeros((self.L, self.num_rlzs)))
         return self.get_pcurve(self.sids[0])
 
     def get_pcurve(self, sid):  # used in classical
@@ -215,20 +229,6 @@ class PmapGetter(object):
         except KeyError:  # no hazard for sid
             pass
         return pc0
-
-    def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
-        """
-        :param pmap: a ProbabilityMap
-        :param rlzs_by_gsim: a dictionary gsim -> rlz IDs
-        :returns: an array of PoEs of shape (N, R, M, L)
-        """
-        res = numpy.zeros((self.N, self.R, self.L))
-        for sid, pc in pmap.items():
-            for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
-                poes = pc.array[:, gsim_idx]
-                for rlz in rlzis:
-                    res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
-        return res.reshape(self.N, self.R, self.M, -1)
 
     def get_mean(self):
         """

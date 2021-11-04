@@ -260,11 +260,6 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-rlz-000_PGA.csv'],
                               case_14.__file__)
 
-        # test sampling use the right number of gsims by looking at
-        # the poes datasets which have shape (N, L, G)
-        G = 1  # and not 2
-        self.calc.datastore['_poes'].shape[-1] == G
-
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\
@@ -874,13 +869,13 @@ hazard_uhs-std.csv
         # kite fault
         self.run_calc(case_61.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
 
     def test_case_62(self):
         # multisurface with kite faults
         self.run_calc(case_62.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
 
     def test_case_63(self):
         # test soiltype
@@ -907,18 +902,16 @@ hazard_uhs-std.csv
         self.run_calc(case_65.__file__, 'job.ini')
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-4)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
 
         # make sure we are not breaking event_based
-        self.run_calc(case_65.__file__, 'job.ini',
-                      calculation_mode='event_based',
-                      ses_per_logic_tree_path=100)
+        self.run_calc(case_65.__file__, 'job_eb.ini')
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-4)
+        self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-5)
 
         rups = extract(self.calc.datastore, 'ruptures')
         csv = general.gettemp(rups.array)
-        self.assertEqualFiles('expected/full_ruptures.csv', csv, delta=1E-4)
+        self.assertEqualFiles('expected/full_ruptures.csv', csv, delta=1E-5)
 
         files = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
@@ -971,7 +964,6 @@ hazard_uhs-std.csv
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
-        self.calc.datastore['_poes'].shape
         cmakers = contexts.read_cmakers(self.calc.datastore)
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
         ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])

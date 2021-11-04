@@ -688,7 +688,8 @@ def get_full_lt(oqparam, branchID=None):
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
-    p = source_model_lt.num_paths * gsim_lt.get_num_paths()
+    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
+    p = full_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
         logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
             oqparam.number_of_logic_tree_samples, p))
@@ -713,7 +714,6 @@ def get_full_lt(oqparam, branchID=None):
             dupl.append(src_id)
     if dupl:
         logging.info('There are %d non-unique source IDs', len(dupl))
-    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
     return full_lt
 
 

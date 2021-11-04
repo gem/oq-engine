@@ -710,7 +710,7 @@ class Starmap(object):
         return cls(task, taskargs, distribute, progress, h5)
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, h5=None):
+                 progress=logging.info, h5=None, slowdown=0):
         self.__class__.init(distribute=distribute)
         self.task_func = task_func
         if h5:
@@ -727,6 +727,7 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
+        self.slowdown = slowdown
         self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
@@ -843,6 +844,9 @@ class Starmap(object):
             first_args = self.task_queue[:self.num_cores]
             self.task_queue[:] = self.task_queue[self.num_cores:]
             for func, args in first_args:
+                # possibly slow down the sending of the tasks
+                # to give time to the workers
+                time.sleep(self.slowdown)
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()

@@ -1,8 +1,15 @@
+  [Shreyasvi Chandrasekhar]
+  * Added a new GMPE for significant duration proposed by Bahrampouri et al 
+    2021 in gsim.
+  * created tests and verification tables for bahrampouri_2021_duration model.
+
   [Claudia Mascandola]
+  * Added the computation of tau and phi stdevs to the sgobba_2020 GMPE
   * Added a new class to the lanzano_2019 gmm.
-  
+
   [Michele Simionato]
-  * Reduced the memory consumption in `get_poes` in classical calculations
+  * Changed completely the storage of the PoEs and reduced the memory
+    consumption in classical calculations (plus a 4x speedup in "postclassical")
   * Changed the behavior of `sites_slice`
   * Changed `custom_site_id` to an ASCII string up to 6 characters
   * Fixed the error raised in presence of a mag-dep distance for a tectonic
