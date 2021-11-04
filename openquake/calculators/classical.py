@@ -87,7 +87,27 @@ def classical(srcs, tile, cmaker, monitor):
         # read from the temporary storage, this avoids sending the
         # same sitecol hundreds of times
         tile = monitor.read('sitecol')
-    return hazclassical(srcs, tile, cmaker)
+    res = hazclassical(srcs, tile, cmaker)
+    res['imtslice'] = slice(None)
+    res['END'] = True
+    yield res
+
+
+def classical_big(srcs, sitecol, cmaker, monitor):
+    """
+    Called for many sites and many IMTs
+    """
+    cmaker.init_monitoring(monitor)
+    sitecol = monitor.read('sitecol')
+    imtls = cmaker.imtls
+    M = len(imtls)
+    for m, (imt, imls) in enumerate(imtls.items()):
+        cmaker.imtls = {imt: imls}
+        res = hazclassical(srcs, sitecol, cmaker)
+        res['imtslice'] = imtls(imt)
+        if m == M - 1:
+            res['END'] = True
+        yield res
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
@@ -300,8 +320,9 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id.split(':')[0]] = pmap
         if pmap:
-            acc[grp_id] |= pmap
-        self.ntasks[grp_id] -= 1
+            acc[grp_id].combine2(pmap, dic['imtslice'])
+        if 'END' in dic:
+            self.ntasks[grp_id] -= 1
         if self.ntasks[grp_id] == 0:  # no other tasks for this grp_id
             with self.monitor('storing PoEs', measuremem=True):
                 self.haz.store_poes(grp_id, acc.pop(grp_id))
