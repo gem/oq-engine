@@ -590,14 +590,13 @@ def submit_job(request_files, ini, username, hc_id):
     big_job = oq.get_input_size() > int(config.distribution.min_input_size)
     if submit_cmd == ENGINE:  # used for debugging
         for job in jobs:
-            pathpik = save(job, custom_tmp)
-            subprocess.Popen(submit_cmd + [pathpik])
+            subprocess.Popen(submit_cmd + [save(job, custom_tmp)])
     elif submit_cmd == KUBECTL and big_job:
         for job in jobs:
-            pathpik = save(job, custom_tmp)
             with open(os.path.join(CWD, 'job.yaml')) as f:
                 yaml = string.Template(f.read()).substitute(
-                    CALC_PIK=pathpik, CALC_NAME='calc%d' % job.calc_id)
+                    CALC_PIK=save(job, custom_tmp),
+                    CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
         Process(target=engine.run_jobs, args=(jobs,)).start()
