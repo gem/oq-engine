@@ -685,7 +685,7 @@ class ClassicalCalculator(base.HazardCalculator):
             postclassical, allargs,
             distribute='no' if self.few_sites else None,
             h5=self.datastore.hdf5,
-            slowdown=1 if N > 10_000 and ct > 128 else 0
+            slowdown=1 if N > 20_000 and ct > 256 else 0
         ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
