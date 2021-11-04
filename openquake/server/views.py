@@ -87,6 +87,9 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
 
+KUBECTL = "kubectl apply -f -".split()
+ENGINE = "python -m openquake.engine.engine".split()
+
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
 
@@ -538,7 +541,7 @@ def calc_run(request):
         job_id = submit_job(request.FILES, ini, user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
-        exc_msg = str(exc)
+        exc_msg = traceback.format_exc() + str(exc)
         logging.error(exc_msg)
         response_data = exc_msg.splitlines()
         status = 500
@@ -581,22 +584,34 @@ def submit_job(request_files, ini, username, hc_id):
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         raise
+
+    custom_tmp = os.path.dirname(job_ini)
     submit_cmd = config.distribution.submit_cmd.split()
-    if (submit_cmd == ["kubectl", "apply", "-f", "-"]
-            and oq.get_input_size() > int(config.distribution.min_input_size)):
-        with open(os.path.join(CWD, 'job.yaml')) as f:
-            templ = string.Template(f.read())
+    big_job = oq.get_input_size() > int(config.distribution.min_input_size)
+    if submit_cmd == ENGINE:  # used for debugging
         for job in jobs:
-            path = os.path.join(
-                os.path.dirname(job_ini), 'calc%d.pik' % job.calc_id)
-            with open(path, 'w') as f:
-                pickle.dump(job, f)
-            yaml = templ.substitute(
-                CALC_PIK=path, CALC_NAME='calc%d' % job.calc_id)
+            pathpik = save(job, custom_tmp)
+            subprocess.Popen(submit_cmd + [pathpik])
+    elif submit_cmd == KUBECTL and big_job:
+        for job in jobs:
+            pathpik = save(job, custom_tmp)
+            with open(os.path.join(CWD, 'job.yaml')) as f:
+                yaml = string.Template(f.read()).substitute(
+                    CALC_PIK=pathpik, CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
         Process(target=engine.run_jobs, args=(jobs,)).start()
     return job.calc_id
+
+
+def save(job, dirname):
+    """
+    Save a LogContext object in pickled format; returns the path to it
+    """
+    pathpik = os.path.join(dirname, 'calc%d.pik' % job.calc_id)
+    with open(pathpik, 'wb') as f:
+        pickle.dump(job, f)
+    return pathpik
 
 
 @require_http_methods(['GET'])
