@@ -271,8 +271,9 @@ class GmfComputer(object):
             # for instance if  a = [1 2], b = [[1 2] [3 4]] then
             # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
-            intra_res = phi * rvs(self.distribution, num_sids, num_events)
-            # shape (N, E)
+            rnd_N1E = rvs(self.distribution, num_sids + 1, num_events)
+            intra_res = phi * rnd_N1E[:-1]  # shape (N, E)
+            epsilons = rnd_N1E[-1]  # shape E
 
             if self.correlation_model is not None:
                 intra_res = self.correlation_model.apply_correlation(
@@ -280,7 +281,6 @@ class GmfComputer(object):
                 if len(intra_res.shape) == 1:  # a vector
                     intra_res = intra_res[:, None]
 
-            epsilons = rvs(self.distribution, num_events)  # shape E
             inter_res = tau * epsilons
             gmf = to_imt_unit_values(mean + intra_res + inter_res, imt)
             stdi = tau.max(axis=0)  # from shape (N, E) => E
