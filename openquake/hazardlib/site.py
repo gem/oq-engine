@@ -426,9 +426,10 @@ class SiteCollection(object):
             return [self]
         hint = int(numpy.ceil(N / max_sites_per_tile))
         tiles = []
-        for seq in split_in_blocks(range(N), hint):
+        for i in range(hint):
             sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.array[numpy.array(seq, int)]
+            # smart trick to split in "homogenous" tiles
+            sc.array = self.array[self.sids % hint == i]
             sc.complete = self
             tiles.append(sc)
         return tiles
