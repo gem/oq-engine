@@ -191,6 +191,7 @@ class ContextMaker(object):
         param = param
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
+        self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
         self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = param.get('collapse_level', False)
         self.disagg_by_src = param.get('disagg_by_src', False)
@@ -1263,6 +1264,7 @@ def read_cmakers(dstore, full_lt=None):
              'ses_seed': oq.ses_seed,
              'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
              'max_sites_disagg': oq.max_sites_disagg,
+             'max_sites_per_tile': oq.max_sites_per_tile,
              'disagg_by_src': oq.disagg_by_src,
              'min_iml': oq.min_iml,
              'imtls': oq.imtls,

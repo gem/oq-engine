@@ -416,17 +416,17 @@ class SiteCollection(object):
         """True if all depths are zero"""
         return (self.depths == 0).all()
 
-    # used in the engine when computing the hazard statistics
-    def split_in_tiles(self, hint):
+    # used in the engine
+    def split_in_tiles(self, max_sites_per_tile):
         """
         Split a SiteCollection into a set of tiles (SiteCollection instances).
-
-        :param hint: hint for how many tiles to generate (> 0)
         """
-        if hint < 2:
+        N = len(self)
+        if N < max_sites_per_tile:  # do not split
             return [self]
+        hint = int(numpy.ceil(N / max_sites_per_tile))
         tiles = []
-        for seq in split_in_blocks(range(len(self)), hint):
+        for seq in split_in_blocks(range(N), hint):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.array[numpy.array(seq, int)]
             sc.complete = self
