@@ -102,7 +102,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         # Note that method is executed when the object is initialized
         ess = self.msrf.edge_set
         for es, expct in zip(ess, expected):
-            np.testing.assert_array_almost_equal(es, expct, decimal=4)
+            np.testing.assert_array_almost_equal(es, expct, decimal=3)
 
     # TODO
     def test_get_cartesian_edge_set(self):
