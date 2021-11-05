@@ -311,9 +311,9 @@ def make_figure_task_info(extractors, what):
     [(task_name, task_info)] = ex.get(what).to_dict().items()
     x = task_info['duration']
     ax = fig.add_subplot(1, 1, 1)
-    mean, std = x.mean(), x.std(ddof=1)
+    mean, std, med = x.mean(), x.std(ddof=1), numpy.median(x)
     ax.hist(x, bins=50, rwidth=0.9)
-    ax.set_xlabel("mean=%d+-%d seconds" % (mean, std))
+    ax.set_xlabel("mean=%d+-%d seconds, median=%d" % (mean, std, med))
     ax.set_ylabel("tasks=%d" % len(x))
     #from scipy.stats import linregress
     #ax = fig.add_subplot(2, 1, 2)
