@@ -114,9 +114,9 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
 
     def test_get_dip(self):
         dip = self.msrf.get_dip()
-        expected = 69.9393384310589
+        expected = 69.93
         msg = 'Multi fault surface: dip is wrong'
-        aae(dip, expected, err_msg=msg, decimal=3)
+        aae(dip, expected, err_msg=msg, decimal=2)
 
     # TODO
     def test_get_width(self):
