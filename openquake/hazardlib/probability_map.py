@@ -320,6 +320,15 @@ class ProbabilityMap(dict):
         for sid in pmap:
             self[sid].combine(pmap[sid], rlz_groups)
 
+    def combine_by_imt(self, pmap, imtslice):
+        """
+        Update a ProbabilityMap with shape (L, R) with a pmap with shape
+        (L1, G) using the given imtslice.
+        """
+        for sid in pmap:
+            arr = self.setdefault(sid, 0).array[imtslice]
+            arr += pmap[sid].array * (1. - arr)
+
     def __ior__(self, other):
         if not other:
             return self

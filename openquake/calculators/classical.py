@@ -79,27 +79,32 @@ def store_ctxs(dstore, rupdata, grp_id):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, tile, cmaker, monitor):
+def classical(srcs, imtslice, cmaker, monitor):
     """
     Read the sitecol and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    if tile is None:
-        # read from the temporary storage, this avoids sending the
-        # same sitecol hundreds of times
-        tiles = monitor.read('sitecol').split_in_tiles(
-            cmaker.max_sites_per_tile)
-        t0 = time.time()
-        res = hazclassical(srcs, tiles[0], cmaker)
-        dt = time.time() - t0
+    sitecol = monitor.read('sitecol')
+    imts = list(cmaker.imtls)
+    cmakers = cmaker.split_by_imt()
+    if len(imts) == 1:  # no split
+        res = hazclassical(srcs, sitecol, cmaker)
+        res['imtslice'] = imtslice
         yield res
-        for tile in tiles[1:]:
-            if dt < cmaker.time_per_tile:  # fast, do everything in core
-                yield hazclassical(srcs, tile, cmaker)
-            else:  # spawn subtasks
-                yield classical, srcs, tile, cmaker
     else:
-        yield hazclassical(srcs, tile, cmaker)
+        t0 = time.time()
+        res = hazclassical(srcs, sitecol, cmakers[0])
+        dt = time.time() - t0
+        res['imtslice'] = cmaker.imtls(imts[0])
+        yield res
+        for imt, cm in zip(imts[1:], cmakers[1:]):
+            imtslice = cmaker.imtls(imt)
+            if dt < cmaker.time_per_tile:  # fast, do everything in core
+                res = hazclassical(srcs, sitecol, cm)
+                res['imtslice'] = imtslice
+                yield res
+            else:  # spawn subtasks
+                yield classical, imtslice, srcs, cm
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
@@ -312,7 +317,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id.split(':')[0]] = pmap
         if pmap:
-            acc[grp_id] |= pmap
+            acc[grp_id].combine_by_imt(pmap, dic['imtslice'])
         self.n_outs[grp_id] -= 1
         if self.n_outs[grp_id] == 0:  # no other tasks for this grp_id
             with self.monitor('storing PoEs', measuremem=True):
@@ -538,11 +543,12 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             self.tile_sizes = [self.N]
             ntiles = 1
+        imtslice = slice(None)
         for grp_id in grp_ids:
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
-                triples.append((sg, None, cmakers[grp_id]))
+                triples.append((sg, imtslice, cmakers[grp_id]))
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src else
@@ -553,10 +559,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug(
                         'Sending %d source(s) with weight %d',
                         len(block), sum(src.weight for src in block))
-                    triples.append((block, None, cmakers[grp_id]))
+                    triples.append((block, imtslice, cmakers[grp_id]))
         self.n_outs = collections.Counter(t[2].grp_id for t in triples)
         for grp_id in grp_ids:
-            self.n_outs[grp_id] *= ntiles
+            self.n_outs[grp_id] *= len(oq.imtls)
         logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return triples
 

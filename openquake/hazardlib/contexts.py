@@ -178,6 +178,7 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
     rup_indep = True
+    collect_rupdata = True
     tom = None
 
     @property
@@ -271,6 +272,24 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
+
+    def split_by_imt(self):
+        """
+        Split in multiple ContextMakers
+        """
+        M = len(self.imtls)
+        if M == 1:
+            return [self]
+        out = []
+        for m, (imt, imls) in enumerate(self.imtls.items()):
+            cmaker = copy.copy(self)
+            cmaker.imtls = DictArray({imt: imls})
+            cmaker.min_iml = [self.min_iml[m]]
+            cmaker.loglevels = DictArray({imt: self.loglevels[imt]})
+            if m > 0:
+                cmaker.collect_rupdata = False
+            out.append(cmaker)
+        return out
 
     def read_ctxs(self, dstore, slc=None):
         """
@@ -735,7 +754,8 @@ class PmapMaker(object):
             for ctx in ctxs:
                 self.numsites += len(ctx.sids)
                 self.numctxs += 1
-                if self.fewsites:  # keep the contexts in memory
+                if self.fewsites and self.cmaker.collect_rupdata:
+                    # keep the contexts in memory
                     self.rupdata.append(ctx)
                 out.append(ctx)
         return out
