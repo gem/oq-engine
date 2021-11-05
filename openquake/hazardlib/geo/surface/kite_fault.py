@@ -37,7 +37,7 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.geodetic import distance, azimuth
 
-TOL = 0.2
+TOL = 0.4
 
 
 def profile_node(points):
@@ -132,7 +132,6 @@ class KiteSurface(BaseSurface):
             polygon, mesh_xx, mesh_yy)
 
         return distances
-
 
     def _fix_right_hand(self):
         # This method fixes the mesh used to represent the grid surface so
@@ -519,7 +518,7 @@ def _resample_profile(line, sampling_dist):
     :parameter line:
         An instance of :class:`openquake.hazardlib.geo.line.Line`
     :parameter sampling_dist:
-        A scalar definining the distance [km] used to sample the profile
+        A scalar defining the distance [km] used to sample the profile
     :returns:
         An instance of :class:`openquake.hazardlib.geo.line.Line`
     """
@@ -576,11 +575,12 @@ def _resample_profile(line, sampling_dist):
         # Compute the distance between the starting point and the next point
         # on the profile
         segment_len = distance(slo, sla, sde, lo[idx+1], la[idx+1], de[idx+1])
+        azim = azimuth(slo, sla, lo[idx+1], la[idx+1])
 
-        # Search for the point
+        # Search for the point along the profile
         if cdist+segment_len > sampling_dist:
 
-            # This is the lenght of the last segment-fraction needed to
+            # This is the length of the last segment-fraction needed to
             # obtain the sampling distance
             delta = sampling_dist - cdist
 
@@ -592,7 +592,7 @@ def _resample_profile(line, sampling_dist):
             else:
                 segment_slope = 90.
 
-            # Horizontal and vertical lenght of delta
+            # Horizontal and vertical length of delta
             delta_v = delta * np.sin(segment_slope)
             delta_h = delta * np.cos(segment_slope)
 
@@ -622,7 +622,18 @@ def _resample_profile(line, sampling_dist):
         dst = distance(coo[i, 0], coo[i, 1], coo[i, 2],
                        coo[i+1, 0], coo[i+1, 1], coo[i+1, 2])
         if abs(dst-sampling_dist) > 0.1*sampling_dist:
-            raise ValueError('Wrong distance between points along the profile')
+            msg = 'Distance between points along the profile larger than 10%'
+
+            fmt = '\n   Expected {:.2f} Computed {:.2f}'
+            msg += fmt.format(sampling_dist, dst)
+
+            fmt = '\n   Point {:.2f} {:.2f} {:.2f}'
+            msg += fmt.format(*[coo[i, j] for j in range(3)])
+            msg += fmt.format(*[coo[i+1, j] for j in range(3)])
+
+            msg += '\n   Please, change the sampling distance or the'
+            msg += ' points along the profile'
+            raise ValueError(msg)
 
     return Line(resampled_cs)
 
@@ -721,17 +732,21 @@ def get_mesh(pfs, rfi, sd, idl):
     """
     g = Geod(ellps='WGS84')
 
-    # Residual distance, last index
+    # Instantiate lists with the residual distance and the last profile index
+    # with a finite value at a given depth
     rdist = [0 for _ in range(0, len(pfs[0]))]
     laidx = [0 for _ in range(0, len(pfs[0]))]
+    angle = [0 for _ in range(0, len(pfs[0]))]
 
-    # New profiles
+    # Creating a new list used to collect the new profiles which will describe
+    # the mesh. We start with the initial profile i.e. the one identified by
+    # the reference index rfi
     npr = list([copy.copy(pfs[rfi])])
 
     # Run for all the profiles 'after' the reference one
     for i in range(rfi, len(pfs)-1):
 
-        # Profiles
+        # Profiles: left and right
         pr = pfs[i+1]
         pl = pfs[i]
 
@@ -742,11 +757,14 @@ def get_mesh(pfs, rfi, sd, idl):
                 ptmp = ptmp+360 if ptmp < 0 else ptmp
                 pl[ii][0] = ptmp
 
-        # Point in common on the two profiles
+        # Points in common on the two profiles i.e. points with finite
+        # coordinates on both of them
         cmm = np.logical_and(np.isfinite(pr[:, 2]), np.isfinite(pl[:, 2]))
         cmmi = np.nonzero(cmm)[0].astype(int)
 
-        # Update last profile index
+        # Find the index of the profiles previously analysed and with at least
+        # a node in common with the current profile (i.e. with a continuity in
+        # the mesh)
         mxx = 0
         for ll in laidx:
             if ll is not None:
@@ -755,7 +773,7 @@ def get_mesh(pfs, rfi, sd, idl):
         # Loop over the points in the right profile
         for x in range(0, len(pr[:, 2])):
 
-            # This edge is in common between the last and the current profiles
+            # If true this edge connects the right and left profiles
             if x in cmmi and laidx[x] is None:
                 iii = []
                 for li, lv in enumerate(laidx):
@@ -765,21 +783,36 @@ def get_mesh(pfs, rfi, sd, idl):
                 minidx = np.argmin(abs(iii-x))
                 laidx[x] = mxx
                 rdist[x] = rdist[minidx]
+                angle[x] = angle[minidx]
             elif x not in cmmi:
                 laidx[x] = None
                 rdist[x] = 0
+                angle[x] = None
 
-        # Loop over profiles
+        # Loop over the indexes of the edges in common for the two profiles
+        # starting from the top and going down
         for k in list(np.nonzero(cmm)[0]):
 
-            # Compute distance and azimuth between the corresponding points
-            # on the two profiles
+            # Compute distance [km] and azimuth between the corresponding
+            # points on the two consecutive profiles
             az12, _, hdist = g.inv(pl[k, 0], pl[k, 1], pr[k, 0], pr[k, 1])
             hdist /= 1e3
+            # Vertical distance
             vdist = pr[k, 2] - pl[k, 2]
+            # Total distance
             tdist = (vdist**2 + hdist**2)**.5
-            ndists = int(np.floor((tdist+rdist[k])/sd))
 
+            # Update rdist
+            new_rdist = rdist[k]
+            if rdist[k] > 0 and abs(az12 - angle[k] > 2):
+                new_rdist = update_rdist(rdist[k], az12, angle[k], sd)
+
+            # Number of grid points
+            # ndists = int(np.floor((tdist+rdist[k])/sd))
+            ndists = int(np.floor((tdist+new_rdist)/sd))
+
+            # Calculate points between the corresponding nodes on the
+            # two profiles
             ll = g.npts(pl[k, 0], pl[k, 1], pr[k, 0], pr[k, 1],
                         np.ceil(tdist)*20)
             ll = np.array(ll)
@@ -793,12 +826,14 @@ def get_mesh(pfs, rfi, sd, idl):
             tdsts = (hdsts**2 + (pl[k, 2]-deps)**2)**0.5
             assert len(deps) == ll.shape[0]
 
-            # Compute distance between consecutive profiles
+            # Compute distance between nodels at depth 'k' on the two
+            # consecutive profiles
             dd = distance(pl[k, 0], pl[k, 1], pl[k, 2],
                           pr[k, 0], pr[k, 1], pr[k, 2])
 
-            # Check distance
-            if abs(dd-tdist) > 0.1*tdist:
+            # Check that the actual distance between these nodes is similar to
+            # the one originally defined
+            if abs(dd - tdist) > 0.1*tdist:
                 print('dd:', dd)
                 tmps = 'Error while building the mesh'
                 tmps += '\nDistances: {:f} {:f}'
@@ -807,21 +842,27 @@ def get_mesh(pfs, rfi, sd, idl):
             # Adding new points along the edge with index k
             for j in range(ndists):
 
-                # Add new profile
+                # Add new profile to 'npr' i.e. the list containing the new
+                # set of profiles
                 if len(npr)-1 < laidx[k]+1:
                     npr = add_empty_profile(npr)
 
                 # Compute the coordinates of intermediate points along the
-                # current edge
-                tmp = (j+1)*sd - rdist[k]
-                lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
-                                  tmp*hdist/tdist*1e3)
+                # current edge. 'tmp' is the distance between the node on the
+                # left edge and the j-th node on the edge. 'lo' and 'la' are
+                # the coordinates of this new node
+                # tmp = (j+1)*sd - rdist[k]
+                tmp = (j+1)*sd - new_rdist
+                # lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
+                #                  tmp*hdist/tdist*1e3)
 
+                # Find the index of the closest node in the vector sampled at
+                # high frequency
                 tidx = np.argmin(abs(tdsts-tmp))
                 lo = ll[tidx, 0]
                 la = ll[tidx, 1]
 
-                # Fix longitudes
+                # Fix longitudes in proximity of the IDL
                 if idl:
                     lo = lo+360 if lo < 0 else lo
 
@@ -829,26 +870,65 @@ def get_mesh(pfs, rfi, sd, idl):
                 de = pl[k, 2] + tmp*vdist/hdist
                 de = deps[tidx]
 
+                # Updating the new profile
                 npr[laidx[k]+1][k] = [lo, la, de]
                 if (k > 0 and np.all(np.isfinite(npr[laidx[k]+1][k])) and
                         np.all(np.isfinite(npr[laidx[k]][k]))):
 
+                    # Computing the distance between consecutive points on
+                    # one edge
                     p1 = npr[laidx[k]][k]
                     p2 = npr[laidx[k]+1][k]
                     d = distance(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
 
-                    # Check
-                    if abs(d-sd) > 0.1*sd:
-                        tmpf = 'd: {:f} diff: {:f} tol: {:f} sd:{:f}'
-                        tmpf += '\nresidual: {:f}'
-                        tmps = tmpf.format(d, d-sd, TOL*sd, sd, rdist[k])
+                    # Check if the distance between consecutive points on one
+                    # edge (with index k) is within a tolerance limit of the
+                    # mesh distance defined by the user
+                    if abs(d-sd) > TOL*sd:
+                        tmpf = '\ndistance: {:f} difference: {:f} '
+                        tmpf += '\ntolerance dist: {:f} sampling dist: {:f}'
+                        tmpf += '\nresidual distance: {:f}'
+                        tmps = tmpf.format(d, d-sd, TOL*sd, sd, new_rdist)
                         raise ValueError(tmps)
                 laidx[k] += 1
 
-            rdist[k] = tdist - sd*ndists + rdist[k]
+            # Check that the residual distance along each edge is lower than
+            # the sampling distance
+            rdist[k] = tdist - sd*ndists + new_rdist
+            angle[k] = az12
             assert rdist[k] < sd
 
     return npr
+
+
+def update_rdist(rdist, az12, angle, sd):
+    r"""
+    Here we adjust the residual distance to make sure that the size of the
+    mesh is consistent with the sampling. This is particularly needed when the
+    mesh has a kink
+
+    v1
+    ------------------------------  angle[k]
+             beta  \ az12-angle[k]
+                    \
+                     \
+                      \ v2
+
+    alpha is the angle between angle[k] and the v1 to v2 direction
+    gamma is the angle between az12 (the new azimuth) and v1-v2 i.e.
+    the third angle in the triangle
+    """
+    assert rdist > 0
+    beta = 180.0 - abs(az12 - angle)
+    side_b = sd
+    side_a = (sd - rdist)
+    ratio = side_b / np.sin(np.radians(beta))
+    alpha = np.rad2deg(np.arcsin(side_a / ratio))
+    gamma = 180.0 - (alpha + beta)
+    assert gamma > 0
+    rdist_new = ratio * np.sin(np.radians(gamma))
+    assert (rdist_new) > 0
+    return rdist_new
 
 
 def get_mesh_back(pfs, rfi, sd, idl):
@@ -875,6 +955,7 @@ def get_mesh_back(pfs, rfi, sd, idl):
     # Initialize residual distance and last index lists
     rdist = [0 for _ in range(0, len(pfs[0]))]
     laidx = [0 for _ in range(0, len(pfs[0]))]
+    angle = [0 for _ in range(0, len(pfs[0]))]
 
     # Create list containing the new profiles. We start by adding the
     # reference profile
@@ -891,16 +972,20 @@ def get_mesh_back(pfs, rfi, sd, idl):
         # profiles are not NaN
         cmm = np.logical_and(np.isfinite(pr[:, 2]), np.isfinite(pl[:, 2]))
 
-        # Transform the indexes into integers and initialise the maximum
-        # index of the points in common
+        # Transform the 'cmm' indexes into integers and calculate the index of
+        # the last valid profile i.e. the index of the closest one to the
+        # current left profile
         cmmi = np.nonzero(cmm)[0].astype(int)
         mxx = 0
         for ll in laidx:
             if ll is not None:
                 mxx = max(mxx, ll)
 
-        # Update indexes
+        # For each edge in the right profile we compute
         for x in range(0, len(pr[:, 2])):
+
+            # If this index is in cmmi and last index is None the mesh at this
+            # depth starts from this profile
             if x in cmmi and laidx[x] is None:
                 iii = []
                 for li, lv in enumerate(laidx):
@@ -910,9 +995,11 @@ def get_mesh_back(pfs, rfi, sd, idl):
                 minidx = np.argmin(abs(iii-x))
                 laidx[x] = mxx
                 rdist[x] = rdist[minidx]
+                angle[x] = angle[minidx]
             elif x not in cmmi:
                 laidx[x] = None
                 rdist[x] = 0
+                angle[x] = None
 
         # Loop over the points in common between the two profiles
         for k in list(np.nonzero(cmm)[0]):
@@ -922,7 +1009,16 @@ def get_mesh_back(pfs, rfi, sd, idl):
             hdist /= 1e3
             vdist = pr[k, 2] - pl[k, 2]
             tdist = (vdist**2 + hdist**2)**.5
-            ndists = int(np.floor((tdist+rdist[k])/sd))
+
+            # Update rdist if this is larger than 0 and the new edge has a
+            # different direction than the previous one
+            new_rdist = rdist[k]
+            if rdist[k] > 0 and abs(az12 - angle[k] > 2):
+                new_rdist = update_rdist(rdist[k], az12, angle[k], sd)
+
+            # Calculate the number of cells
+            #ndists = int(np.floor((tdist+rdist[k])/sd))
+            ndists = int(np.floor((tdist+new_rdist)/sd))
 
             # Adding new points along edge with index k
             for j, _ in enumerate(range(ndists)):
@@ -932,7 +1028,8 @@ def get_mesh_back(pfs, rfi, sd, idl):
                     npr = add_empty_profile(npr)
                 #
                 # fix distance
-                tmp = (j+1)*sd - rdist[k]
+                #tmp = (j+1)*sd - rdist[k]
+                tmp = (j+1)*sd - new_rdist
                 lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
                                   tmp*hdist/tdist*1e3)
 
@@ -948,18 +1045,28 @@ def get_mesh_back(pfs, rfi, sd, idl):
                     p1 = npr[laidx[k]][k]
                     p2 = npr[laidx[k]+1][k]
                     d = distance(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
-                    #
-                    # >>> TOLERANCE
+
+                    # This checks that the size of each newly created cell
+                    # is similar (within some tolerance) to the intial mesh
+                    # size provided by the user
                     if abs(d-sd) > TOL*sd:
                         tmpf = 'd: {:f} diff: {:f} tol: {:f} sd:{:f}'
                         tmpf += '\nresidual: {:f}'
-                        tmps = tmpf.format(d, d-sd, TOL*sd, sd, rdist[k])
+                        tmps = tmpf.format(d, d-sd, TOL*sd, sd, new_rdist)
                         msg = 'The mesh spacing exceeds the tolerance limits'
                         tmps += '\n {:s}'.format(msg)
                         raise ValueError(tmps)
 
+                # Updating the index of the last profile in the mesh at depth
+                # 'k'
                 laidx[k] += 1
-            rdist[k] = tdist - sd*ndists + rdist[k]
+
+            # Updating residual distances and angle (i.e. azimuth)
+            rdist[k] = tdist - sd*ndists + new_rdist
+            angle[k] = az12
+
+            # Checking that the residual distance is lower than the sampling
+            # distance
             assert rdist[k] < sd
 
     tmp = []
