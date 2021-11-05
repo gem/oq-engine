@@ -663,6 +663,12 @@ time_event:
   Example: *time_event = day*.
   Default: None
 
+time_per_tile:
+  Used in classical calculatins with tiling. If running a tile takes longer
+  then time_per_tile seconds, use subtasks for the other tiles in the task.
+  Example: *time_per_tile=300*
+  Default: 60
+
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
@@ -877,6 +883,7 @@ class OqParam(valid.ParamSet):
     min_weight = valid.Param(valid.positiveint, 200)  # used in classical
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
     time_event = valid.Param(str, None)
+    time_per_tile = valid.Param(str, 60)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
