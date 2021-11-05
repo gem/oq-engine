@@ -883,7 +883,7 @@ class OqParam(valid.ParamSet):
     min_weight = valid.Param(valid.positiveint, 200)  # used in classical
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
     time_event = valid.Param(str, None)
-    time_per_tile = valid.Param(str, 60)
+    time_per_tile = valid.Param(valid.positivefloat, 60)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import time
 import psutil
 import logging
 import operator
@@ -88,8 +89,15 @@ def classical(srcs, tile, cmaker, monitor):
         # same sitecol hundreds of times
         tiles = monitor.read('sitecol').split_in_tiles(
             cmaker.max_sites_per_tile)
-        for tile in tiles:
-            yield hazclassical(srcs, tile, cmaker)
+        t0 = time.time()
+        res = hazclassical(srcs, tiles[0], cmaker)
+        dt = time.time() - t0
+        yield res
+        for tile in tiles[1:]:
+            if dt < cmaker.time_per_tile:  # fast, do everything in core
+                yield hazclassical(srcs, tile, cmaker)
+            else:  # spawn subtasks
+                yield classical, srcs, tile, cmaker
     else:
         yield hazclassical(srcs, tile, cmaker)
 
