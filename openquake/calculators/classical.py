@@ -86,8 +86,12 @@ def classical(srcs, tile, cmaker, monitor):
     if tile is None:
         # read from the temporary storage, this avoids sending the
         # same sitecol hundreds of times
-        tile = monitor.read('sitecol')
-    return hazclassical(srcs, tile, cmaker)
+        tiles = monitor.read('sitecol').split_in_tiles(
+            cmaker.max_sites_per_tile)
+        for tile in tiles:
+            yield hazclassical(srcs, tile, cmaker)
+    else:
+        yield hazclassical(srcs, tile, cmaker)
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
@@ -301,8 +305,8 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[source_id.split(':')[0]] = pmap
         if pmap:
             acc[grp_id] |= pmap
-        self.ntasks[grp_id] -= 1
-        if self.ntasks[grp_id] == 0:  # no other tasks for this grp_id
+        self.n_outs[grp_id] -= 1
+        if self.n_outs[grp_id] == 0:  # no other tasks for this grp_id
             with self.monitor('storing PoEs', measuremem=True):
                 self.haz.store_poes(grp_id, acc.pop(grp_id))
         return acc
@@ -438,8 +442,6 @@ class ClassicalCalculator(base.HazardCalculator):
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         sg_tl_cm = self.get_sg_tl_cm(grp_ids, self.haz.cmakers)
-        self.ntasks = collections.Counter(arg[2].grp_id for arg in sg_tl_cm)
-        logging.info('grp_id->ntasks: %s', list(self.ntasks.values()))
         L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
@@ -520,34 +522,34 @@ class ClassicalCalculator(base.HazardCalculator):
 
         tiling = self.N > oq.max_sites_per_tile
         if tiling:
-            ntiles = numpy.ceil(self.N / oq.max_sites_per_tile)
-            tiles = self.sitecol.split_in_tiles(ntiles)
-        else:
-            tiles = [self.sitecol]
-        self.tile_sizes = []
-        for tile in tiles:
-            self.tile_sizes.append(len(tile))
-            if not tiling:
-                tile = None
-            for grp_id in grp_ids:
-                sg = src_groups[grp_id]
-                if sg.atomic:
-                    # do not split atomic groups
-                    triples.append((sg, tile, cmakers[grp_id]))
-                else:  # regroup the sources in blocks
-                    blks = (groupby(sg, get_source_id).values()
-                            if oq.disagg_by_src else
-                            block_splitter(
-                                sg, max_weight, get_weight, sort=True))
-                    blocks = list(blks)
-                    for block in blocks:
-                        logging.debug(
-                            'Sending %d source(s) with weight %d',
-                            len(block), sum(src.weight for src in block))
-                        triples.append((block, tile, cmakers[grp_id]))
-        if tiling:
+            tiles = self.sitecol.split_in_tiles(oq.max_sites_per_tile)
+            self.tile_sizes = [len(tile) for tile in tiles]
+            ntiles = len(tiles)
             logging.info('There are %d tiles of sizes %s',
-                         len(tiles), self.tile_sizes)
+                         ntiles, self.tile_sizes)
+        else:
+            self.tile_sizes = [self.N]
+            ntiles = 1
+        for grp_id in grp_ids:
+            sg = src_groups[grp_id]
+            if sg.atomic:
+                # do not split atomic groups
+                triples.append((sg, None, cmakers[grp_id]))
+            else:  # regroup the sources in blocks
+                blks = (groupby(sg, get_source_id).values()
+                        if oq.disagg_by_src else
+                        block_splitter(
+                            sg, max_weight, get_weight, sort=True))
+                blocks = list(blks)
+                for block in blocks:
+                    logging.debug(
+                        'Sending %d source(s) with weight %d',
+                        len(block), sum(src.weight for src in block))
+                    triples.append((block, None, cmakers[grp_id]))
+        self.n_outs = collections.Counter(t[2].grp_id for t in triples)
+        for grp_id in grp_ids:
+            self.n_outs[grp_id] *= ntiles
+        logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return triples
 
     def collect_hazard(self, acc, pmap_by_kind):
@@ -685,7 +687,7 @@ class ClassicalCalculator(base.HazardCalculator):
             postclassical, allargs,
             distribute='no' if self.few_sites else None,
             h5=self.datastore.hdf5,
-            slowdown=1 if N > 20_000 and ct > 256 else 0
+            slowdown=.5 if N > 20_000 and ct > 256 else 0
         ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
