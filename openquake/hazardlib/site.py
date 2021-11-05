@@ -421,10 +421,12 @@ class SiteCollection(object):
         """
         Split a SiteCollection into a set of tiles (SiteCollection instances).
 
-        :param hint: hint for how many tiles to generate
+        :param hint: hint for how many tiles to generate (> 0)
         """
+        if hint < 2:
+            return [self]
         tiles = []
-        for seq in split_in_blocks(range(len(self)), hint or 1):
+        for seq in split_in_blocks(range(len(self)), hint):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.array[numpy.array(seq, int)]
             sc.complete = self
