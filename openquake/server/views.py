@@ -18,9 +18,12 @@
 
 import shutil
 import json
+import string
+import pickle
 import logging
 import os
 import tempfile
+import subprocess
 import multiprocessing
 import traceback
 import signal
@@ -61,7 +64,7 @@ if settings.LOCKDOWN:
 
 Process = multiprocessing.get_context('spawn').Process
 
-
+CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 
@@ -83,6 +86,9 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
+
+KUBECTL = "kubectl apply -f -".split()
+ENGINE = "python -m openquake.engine.engine".split()
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -535,7 +541,7 @@ def calc_run(request):
         job_id = submit_job(request.FILES, ini, user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
-        exc_msg = str(exc)
+        exc_msg = traceback.format_exc() + str(exc)
         logging.error(exc_msg)
         response_data = exc_msg.splitlines()
         status = 500
@@ -566,7 +572,7 @@ def submit_job(request_files, ini, username, hc_id):
         if oq.sensitivity_analysis:
             logs.dbcmd('set_status', job.calc_id, 'deleted')  # hide it
             jobs = engine.create_jobs([job_ini], config.distribution.log_level,
-                                      None, username, hc_id)
+                                      None, username, hc_id, True)
         else:
             dic = dict(calculation_mode=oq.calculation_mode,
                        description=oq.description, hazard_calculation_id=hc_id)
@@ -578,9 +584,33 @@ def submit_job(request_files, ini, username, hc_id):
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         raise
-    proc = Process(target=engine.run_jobs, args=(jobs,))
-    proc.start()
+
+    custom_tmp = os.path.dirname(job_ini)
+    submit_cmd = config.distribution.submit_cmd.split()
+    big_job = oq.get_input_size() > int(config.distribution.min_input_size)
+    if submit_cmd == ENGINE:  # used for debugging
+        for job in jobs:
+            subprocess.Popen(submit_cmd + [save(job, custom_tmp)])
+    elif submit_cmd == KUBECTL and big_job:
+        for job in jobs:
+            with open(os.path.join(CWD, 'job.yaml')) as f:
+                yaml = string.Template(f.read()).substitute(
+                    CALC_PIK=save(job, custom_tmp),
+                    CALC_NAME='calc%d' % job.calc_id)
+            subprocess.run(submit_cmd, input=yaml.encode('ascii'))
+    else:
+        Process(target=engine.run_jobs, args=(jobs,)).start()
     return job.calc_id
+
+
+def save(job, dirname):
+    """
+    Save a LogContext object in pickled format; returns the path to it
+    """
+    pathpik = os.path.join(dirname, 'calc%d.pik' % job.calc_id)
+    with open(pathpik, 'wb') as f:
+        pickle.dump(job, f)
+    return pathpik
 
 
 @require_http_methods(['GET'])

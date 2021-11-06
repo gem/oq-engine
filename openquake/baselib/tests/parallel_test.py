@@ -122,7 +122,7 @@ class StarmapTestCase(unittest.TestCase):
         numchars = sum(len(arg) for arg, in allargs)  # 61
         tmpdir = tempfile.mkdtemp()
         tmp = os.path.join(tmpdir, 'calc_1.hdf5')
-        performance.init_performance(tmp, swmr=True)
+        performance.init_performance(tmp)
         smap = parallel.Starmap(supertask, allargs, h5=hdf5.File(tmp, 'a'))
         res = smap.reduce()
         smap.h5.close()
@@ -185,7 +185,7 @@ class SWMRTestCase(unittest.TestCase):
         cls.tmp = os.path.join(tmpdir, 'calc_1.hdf5')
         with hdf5.File(cls.tmp, 'w') as h:
             h['array'] = numpy.arange(100)
-        performance.init_performance(cls.tmp, swmr=True)
+        performance.init_performance(cls.tmp)
 
     def test(self):
         allargs = []

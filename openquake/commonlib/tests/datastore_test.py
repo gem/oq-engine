@@ -148,6 +148,10 @@ class DataStoreTestCase(unittest.TestCase):
         self.assertEqual(list(df.sid), [0])
         self.assertEqual(list(df.val), [.1])
 
+        # testing list selection
+        df = self.dstore.read_df('df', 'eid', sel={'sid': [0, 2]})
+        self.assertEqual(list(df.val), [.1, .3])
+
     def test_pandas_vlen(self):
         self.dstore['test/val'] = [.2, .3]
         self.dstore.hdf5.save_vlen(

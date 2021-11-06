@@ -286,6 +286,7 @@ class ContextTestCase(unittest.TestCase):
         ctx.sids = [0, 1]
         ctx.vs30 = [760., 760.]
         ctx.rrup = [100., 110.]
+        ctx.occurrence_rate = .000001
         mean, _stddevs = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imt, [])
         numpy.testing.assert_allclose(mean, [-5.81116004, -6.00192455])
 

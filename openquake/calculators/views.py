@@ -855,13 +855,13 @@ Source = collections.namedtuple(
 
 
 @view.add('disagg_by_grp')
-def view_extreme_groups(token, dstore):
+def view_disagg_by_grp(token, dstore):
     """
     Show the source groups contributing the most to the highest IML
     """
     data = dstore['disagg_by_grp'][()]
     data.sort(order='avg_poe')
-    return text_table(data[::-1])
+    return data[::-1]
 
 
 @view.add('gmvs_to_hazard')

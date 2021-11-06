@@ -428,12 +428,17 @@ class MultiSurface(BaseSurface):
         """
         # Get projection space for cartesian projection
         edge_sets = numpy.vstack(self.edge_set)
+        idx = numpy.isfinite(edge_sets[:, 0])
+        edge_sets = edge_sets[idx, :]
+        # Get bounding box
         west, east, north, south = utils.get_spherical_bounding_box(
             edge_sets[:, 0],
             edge_sets[:, 1])
         self.proj = utils.OrthographicProjection(west, east, north, south)
 
         for edges in self.edge_set:
+            idx = numpy.isfinite(edges[:, 0])
+            edges = edges[idx, :]
             # Project edges into cartesian space
             px, py = self.proj(edges[:, 0], edges[:, 1])
             # Store the two end-points of the trace
@@ -575,7 +580,6 @@ class MultiSurface(BaseSurface):
         # Loop over the traces
         for j, edges in enumerate(self.cartesian_edges):
 
-            # import pdb; pdb.set_trace()
             ok = numpy.isfinite(edges)
             if not ok.all():
                 edges = edges[ok]

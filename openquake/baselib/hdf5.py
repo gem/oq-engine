@@ -244,6 +244,15 @@ def dset2df(dset, indexfield, filterdict):
     return pandas.DataFrame(acc, index or None)
 
 
+def is_ok(value, expected):
+    """
+    :returns: True if the value is expected
+    """
+    if hasattr(expected, '__len__'):
+        return numpy.isin(value, expected)
+    return value == expected
+
+
 def extract_cols(datagrp, sel, slc, columns):
     """
     :param datagrp: something like and HDF5 data group
@@ -264,9 +273,9 @@ def extract_cols(datagrp, sel, slc, columns):
         dic = {col: datagrp[col][slc] for col in sel}
         for col in sel:
             if isinstance(ok, slice):  # first selection
-                ok = dic[col] == sel[col]
+                ok = is_ok(dic[col], sel[col])
             else:  # other selections
-                ok &= dic[col] == sel[col]
+                ok &= is_ok(dic[col], sel[col])
         for col in columns:
             acc[col].append(datagrp[col][slc][ok])
     return {k: numpy.concatenate(vs) for k, vs in acc.items()}
@@ -291,11 +300,11 @@ class File(h5py.File):
         """Raised when reading an empty dataset"""
 
     def __init__(self, name, mode='r', driver=None, libver='latest',
-                 userblock_size=None, swmr=True, rdcc_nslots=None,
+                 userblock_size=None, rdcc_nslots=None,
                  rdcc_nbytes=None, rdcc_w0=None, track_order=None,
                  **kwds):
         super().__init__(name, mode, driver, libver,
-                         userblock_size, swmr, rdcc_nslots,
+                         userblock_size, mode == 'r', rdcc_nslots,
                          rdcc_nbytes, rdcc_w0, track_order, **kwds)
 
     @classmethod

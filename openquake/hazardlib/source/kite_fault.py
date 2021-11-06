@@ -266,7 +266,7 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
     :param sampling:
         The sampling distance [km] along the strike
     :param aspr:
-            The rupture aspect ratio [L/W]
+        The rupture aspect ratio [L/W]
     :param sampling_y:
         The sampling distance [km] along the dip
     :returns:
@@ -318,6 +318,9 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
         wdt = None
         lng = None
     elif area_error > 0.25 and lng > 1e-10 and wdt > 1e-10:
-        raise ValueError('Area discrepancy: ', area, lng*wdt, lng, wdt)
-
+        msg = '\nSampling along strike : {:f}\n'.format(sampling)
+        msg += 'Sampling along dip   : {:f}\n'.format(sampling_y)
+        msg += 'Area expected        : {:f}\n'.format(area)
+        msg += 'Area computed        : {:f}\n'.format(lng*wdt)
+        raise ValueError(msg)
     return lng, wdt
