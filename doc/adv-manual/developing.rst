@@ -358,5 +358,4 @@ compare with the values in the verification table:
 *sig* refers to the "TOTAL_STDDEV", *tau* to the "INTER_EVENT_STDDEV"
 and *phi* to the "INTRA_EVENT_STDDEV". This is how the tests
 in hazardlib are implemented. Interested users should look at the
-code in
-*https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/gsim/utils.py.
+code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/gsim/utils.py.
