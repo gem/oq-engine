@@ -275,13 +275,8 @@ by the rupture associated to the context:
 array([0], dtype=uint32)
 
 Once you have the contexts, the ``ContextMaker`` is able to compute
-means and standard deviations from the underlying GMPEs on each context.
-For instance, suppose you are only interested in the total standard
-deviation:
-
->>> from openquake.hazardlib.const import StdDev
-
-Then you can get mean and standard deviations (for engine version >= 3.13):
+means and standard deviations from the underlying GMPEs as follows
+(for engine version >= 3.13):
 
 >>> mean, sig, tau, phi = cmaker.get_mean_stds(ctxs)
 
@@ -292,13 +287,13 @@ Since in this example there is a single gsim and a single IMT you will get:
 >>> sig.shape
 (1, 1, 705)
 
-The shape of the arrays in general is (G, M, C) where G is the number of GSIMs,
-M the number of intensity measure types and C the
+The shape of the arrays in general is (G, M, N) where G is the number of GSIMs,
+M the number of intensity measure types and N the
 total size of the contexts. Since this is an example with a single
-site, each context has size 1, therefore C = 705 * 1 = 705. In general
-if there are multiple sites a context C is the total number of affected
+site, each context has size 1, therefore N = 705 * 1 = 705. In general
+if there are multiple sites a context M is the total number of affected
 sites. For instance if there are two contexts and the first affect
-1 sites and the second 2 sites then C would be 1 + 2 = 3. This
+1 sites and the second 2 sites then N would be 1 + 2 = 3. This
 example correspond to 1 + 1 + ... + 1 = 705.
 
 From the mean and standard deviation is possible to compute the

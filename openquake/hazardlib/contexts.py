@@ -42,7 +42,7 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
-from openquake.hazardlib.calc.filters import MagDepDistance
+from openquake.hazardlib.calc.filters import MagDepDistance, get_distances
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -83,45 +83,6 @@ class Timer(object):
 
 # object used to measure the time needed to process each source
 timer = Timer(os.environ.get('OQ_TIMER'))
-
-
-def get_distances(rupture, sites, param):
-    """
-    :param rupture: a rupture
-    :param sites: a mesh of points or a site collection
-    :param param: the kind of distance to compute (default rjb)
-    :returns: an array of distances from the given sites
-    """
-    if not rupture.surface:  # PointRupture
-        dist = rupture.hypocenter.distance_to_mesh(sites)
-    elif param == 'rrup':
-        dist = rupture.surface.get_min_distance(sites)
-    elif param == 'rx':
-        dist = rupture.surface.get_rx_distance(sites)
-    elif param == 'ry0':
-        dist = rupture.surface.get_ry0_distance(sites)
-    elif param == 'rjb':
-        dist = rupture.surface.get_joyner_boore_distance(sites)
-    elif param == 'rhypo':
-        dist = rupture.hypocenter.distance_to_mesh(sites)
-    elif param == 'repi':
-        dist = rupture.hypocenter.distance_to_mesh(sites, with_depths=False)
-    elif param == 'rcdpp':
-        dist = rupture.get_cdppvalue(sites)
-    elif param == 'azimuth':
-        dist = rupture.surface.get_azimuth(sites)
-    elif param == 'azimuth_cp':
-        dist = rupture.surface.get_azimuth_of_closest_point(sites)
-    elif param == 'closest_point':
-        t = rupture.surface.get_closest_points(sites)
-        dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
-    elif param == "rvolc":
-        # Volcanic distance not yet supported, defaulting to zero
-        dist = numpy.zeros_like(sites.lons)
-    else:
-        raise ValueError('Unknown distance measure %r' % param)
-    dist.flags.writeable = False
-    return dist
 
 
 class FarAwayRupture(Exception):

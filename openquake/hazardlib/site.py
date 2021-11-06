@@ -342,7 +342,7 @@ class SiteCollection(object):
             idx = 0
         return self.filtered([self.sids[idx]])
 
-    # used for debugging purposes
+    # used in preclassical
     def get_cdist(self, rec_or_loc):
         """
         :param rec_or_loc: a record with field 'hypo' or a Point instance
