@@ -119,8 +119,8 @@ def calc_average(pointsources):
     return dic
 
 
-def ruptures_by_mag(src, np, hc, point_rup):
-    # generate one rupture for each magnitude, called only if nphc > 1.
+def _ruptures_by_mag(src, np, hc, point_rup):
+    # generate one (point)rupture for each magnitude
     for mag, mag_occ_rate in src.get_annual_occurrence_rates():
         if point_rup:
             yield PointRupture(
@@ -242,14 +242,14 @@ class PointSource(ParametricSeismicSource):
                         self.temporal_occurrence_model)
 
     # PointSource
-    def avg_ruptures(self, point_rup=False):
+    def iruptures(self, point_rup=False):
         """
         Generate one rupture for each magnitude, called only if nphc > 1
         """
         avg = calc_average([self])  # over nodal planes and hypocenters
         np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
-        yield from ruptures_by_mag(self, np, hc, point_rup)
+        yield from _ruptures_by_mag(self, np, hc, point_rup)
 
     def count_nphc(self):
         """
@@ -437,12 +437,12 @@ class CollapsedPointSource(PointSource):
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource
-    def avg_ruptures(self, point_rup=False):
+    def iruptures(self, point_rup=False):
         """
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
         np = Mock(strike=self.strike, dip=self.dip, rake=self.rake)
-        yield from ruptures_by_mag(self, np, self.location, point_rup)
+        yield from _ruptures_by_mag(self, np, self.location, point_rup)
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """
