@@ -256,19 +256,6 @@ class SourceFilter(object):
             else MagDepDistance(integration_distance))
         self.slc = slice(None)
 
-    def split_in_tiles(self, hint):
-        """
-        Split the SourceFilter by splitting the site collection in tiles
-        """
-        if hint == 1:
-            return [self]
-        out = []
-        for tile in self.sitecol.split_in_tiles(hint):
-            sf = self.__class__(tile, self.integration_distance)
-            sf.slc = slice(tile.sids[0], tile.sids[-1] + 1)
-            out.append(sf)
-        return out
-
     # not used right now
     def reduce(self, factor=100):
         """

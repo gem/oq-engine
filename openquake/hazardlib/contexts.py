@@ -816,12 +816,12 @@ class PmapMaker(object):
         bigps = getattr(src, 'location', None) and src.count_nphc() > 1
         if bigps and self.pointsource_distance == 0:
             # finite size effects are averaged always
-            yield from rups(src.avg_ruptures(), sites)
+            yield from rups(src.iruptures(), sites)
         elif bigps and self.pointsource_distance:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             cdist = sites.get_cdist(src.location)
-            for ar in src.avg_ruptures():
+            for ar in src.iruptures():
                 pdist = self.pointsource_distance['%.2f' % ar.mag]
                 close = sites.filter(cdist <= pdist)
                 far = sites.filter(cdist > pdist)
