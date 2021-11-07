@@ -525,12 +525,12 @@ def stats(name, array, *extras):
     Returns statistics from an array of numbers.
 
     :param name: a descriptive string
-    :returns: (name, mean, rel_std, min, max, len)
+    :returns: (name, mean, rel_std, min, max, len, slowfac)
     """
     avg = numpy.mean(array)
     std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
-    return (name, len(array), avg, std,
-            numpy.min(array), numpy.max(array)) + extras
+    max_ = numpy.max(array)
+    return (name, len(array), avg, std, numpy.min(array), max_) + extras
 
 
 @view.add('num_units')
@@ -612,11 +612,11 @@ def view_task_info(token, dstore):
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):
-            data.append(stats(task, val))
+            data.append(stats(task, val, val.max() / val.mean()))
     if not data:
         return 'Not available'
     return numpy.array(
-        data, dt('operation-duration counts mean stddev min max'))
+        data, dt('operation-duration counts mean stddev min max slowfac'))
 
 
 @view.add('task_durations')
@@ -650,7 +650,7 @@ def view_task_hazard(token, dstore):
     taskno = rec['task_no']
     eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
     eff_sites = dstore['by_task/eff_sites'][taskno]
-    srcids = dstore['by_task/srcids'][taskno]
+    srcids = decode(dstore['by_task/srcids'][taskno])
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
                              srcids))
