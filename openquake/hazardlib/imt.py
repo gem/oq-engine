@@ -233,3 +233,9 @@ def PGDGeomMean(vert_settlement, lat_spread):
     Geometric mean between vert_settlement and lat_spread
     """
     return numpy.sqrt(vert_settlement * lat_spread)
+
+def EAS():
+    """
+    Effective amplitude spectrum in Fourier domain
+    """
+    return IMT('EAS')
