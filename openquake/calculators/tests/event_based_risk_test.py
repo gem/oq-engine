@@ -473,7 +473,7 @@ agg_id
         # notrivial taxonomy mapping
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv')
         [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-3)
 
     # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):
