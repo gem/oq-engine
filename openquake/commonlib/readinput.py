@@ -689,7 +689,7 @@ def get_full_lt(oqparam, branchID=None):
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
-    p = full_lt.get_num_paths()
+    p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
         logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
             oqparam.number_of_logic_tree_samples, p))
