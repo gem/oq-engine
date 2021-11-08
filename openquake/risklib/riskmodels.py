@@ -243,7 +243,7 @@ class RiskModel(object):
     def __call__(self, loss_type, assets, gmf_df, col=None, rndgen=None):
         meth = getattr(self, self.calcmode)
         res = meth(loss_type, assets, gmf_df, col, rndgen)
-        return res
+        return res  # for event_based_risk this is a DataFrame (eid, aid, loss)
 
     def __toh5__(self):
         return self.risk_functions, {'taxonomy': self.taxonomy}
@@ -701,7 +701,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if weights[0] != 1:
                     dic[lt].loss *= weights[0]
                 for alt, w in zip(outs[1:], weights[1:]):
-                    dic[lt].loss += alt.loss * w
+                    dic[lt].loss = dic[lt].loss.add(alt.loss * w, fill_value=0)
             elif len(weights) > 1:  # scenario_damage
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
         return dic

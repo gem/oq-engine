@@ -42,7 +42,7 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
-from openquake.hazardlib.calc.filters import MagDepDistance
+from openquake.hazardlib.calc.filters import MagDepDistance, get_distances
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -83,45 +83,6 @@ class Timer(object):
 
 # object used to measure the time needed to process each source
 timer = Timer(os.environ.get('OQ_TIMER'))
-
-
-def get_distances(rupture, sites, param):
-    """
-    :param rupture: a rupture
-    :param sites: a mesh of points or a site collection
-    :param param: the kind of distance to compute (default rjb)
-    :returns: an array of distances from the given sites
-    """
-    if not rupture.surface:  # PointRupture
-        dist = rupture.hypocenter.distance_to_mesh(sites)
-    elif param == 'rrup':
-        dist = rupture.surface.get_min_distance(sites)
-    elif param == 'rx':
-        dist = rupture.surface.get_rx_distance(sites)
-    elif param == 'ry0':
-        dist = rupture.surface.get_ry0_distance(sites)
-    elif param == 'rjb':
-        dist = rupture.surface.get_joyner_boore_distance(sites)
-    elif param == 'rhypo':
-        dist = rupture.hypocenter.distance_to_mesh(sites)
-    elif param == 'repi':
-        dist = rupture.hypocenter.distance_to_mesh(sites, with_depths=False)
-    elif param == 'rcdpp':
-        dist = rupture.get_cdppvalue(sites)
-    elif param == 'azimuth':
-        dist = rupture.surface.get_azimuth(sites)
-    elif param == 'azimuth_cp':
-        dist = rupture.surface.get_azimuth_of_closest_point(sites)
-    elif param == 'closest_point':
-        t = rupture.surface.get_closest_points(sites)
-        dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
-    elif param == "rvolc":
-        # Volcanic distance not yet supported, defaulting to zero
-        dist = numpy.zeros_like(sites.lons)
-    else:
-        raise ValueError('Unknown distance measure %r' % param)
-    dist.flags.writeable = False
-    return dist
 
 
 class FarAwayRupture(Exception):
@@ -191,6 +152,8 @@ class ContextMaker(object):
         param = param
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
+        self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
+        self.time_per_tile = param.get('time_per_tile', 60)
         self.disagg_by_src = param.get('disagg_by_src')
         self.collapse_level = param.get('collapse_level', False)
         self.disagg_by_src = param.get('disagg_by_src', False)
@@ -814,12 +777,12 @@ class PmapMaker(object):
         bigps = getattr(src, 'location', None) and src.count_nphc() > 1
         if bigps and self.pointsource_distance == 0:
             # finite size effects are averaged always
-            yield from rups(src.avg_ruptures(), sites)
+            yield from rups(src.iruptures(), sites)
         elif bigps and self.pointsource_distance:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             cdist = sites.get_cdist(src.location)
-            for ar in src.avg_ruptures():
+            for ar in src.iruptures():
                 pdist = self.pointsource_distance['%.2f' % ar.mag]
                 close = sites.filter(cdist <= pdist)
                 far = sites.filter(cdist > pdist)
@@ -1263,6 +1226,8 @@ def read_cmakers(dstore, full_lt=None):
              'ses_seed': oq.ses_seed,
              'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
              'max_sites_disagg': oq.max_sites_disagg,
+             'max_sites_per_tile': oq.max_sites_per_tile,
+             'time_per_tile': oq.time_per_tile,
              'disagg_by_src': oq.disagg_by_src,
              'min_iml': oq.min_iml,
              'imtls': oq.imtls,
@@ -1303,6 +1268,8 @@ def read_cmaker(dstore, trt_smr):
          'ses_seed': oq.ses_seed,
          'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
          'max_sites_disagg': oq.max_sites_disagg,
+         'max_sites_per_tile': oq.max_sites_per_tile,
+         'time_per_tile': oq.time_per_tile,
          'disagg_by_src': oq.disagg_by_src,
          'min_iml': oq.min_iml,
          'imtls': oq.imtls,

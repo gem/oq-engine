@@ -397,7 +397,7 @@ class CompositeSourceModel:
         return n
 
     def __toh5__(self):
-        data = gzip.compress(pickle.dumps(self))
+        data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL))
         logging.info(f'Storing {general.humansize(len(data))} '
                      'of CompositeSourceModel')
         return numpy.void(data), {}

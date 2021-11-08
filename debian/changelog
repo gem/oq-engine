@@ -1,5 +1,10 @@
+  [Michele Simionato]
+  * Fixed a bug in event_based_risk with nontrivial taxonomy mapping producing
+    NaNs in the event loss table
+  * Internal: added kubernetes support from the WebUI
+
   [Shreyasvi Chandrasekhar]
-  * Added a new GMPE for significant duration proposed by Bahrampouri et al 
+  * Added a new GMPE for significant duration proposed by Bahrampouri et al
     2021 in gsim.
   * created tests and verification tables for bahrampouri_2021_duration model.
 

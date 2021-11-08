@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import csv
+import logging
 import unittest
 
 import numpy as np
@@ -92,8 +93,8 @@ def read_cmaker_df(gsim, csvfnames):
     num_rows = sum(len(df) for df in dfs)
     if num_rows == 0:
         raise ValueError('The files %s are empty!' % ' '.join(csvfnames))
-    print('\n%s' % gsim)
-    print('num_checks = {:_d}'.format(num_rows))
+    logging.info('\n%s' % gsim)
+    logging.info('num_checks = {:_d}'.format(num_rows))
     if not all_equals([sorted(df.columns) for df in dfs]):
         colset = set.intersection(*[set(df.columns) for df in dfs])
         cols = [col for col in dfs[0].columns if col in colset]
@@ -130,19 +131,19 @@ def read_cmaker_df(gsim, csvfnames):
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
-        print(name, df[name].unique())
+        logging.info(name, df[name].unique())
     for dist in cmaker.REQUIRES_SITES_PARAMETERS:
         name = 'site_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
-        print(name, df[name].unique())
+        logging.info(name, df[name].unique())
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
         if name not in df.columns:  # i.e. missing rake
             df[name] = np.zeros(len(df), cmaker.dtype[par])
         else:
             df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
-        print(name, df[name].unique())
-    print('result_type', df['result_type'].unique())
+        logging.info(name, df[name].unique())
+    logging.info('result_type', df['result_type'].unique())
     return cmaker, df.rename(columns=cmap)
 
 

@@ -207,7 +207,8 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
     db.close()
 
     # reset any computation left in the 'executing' state
-    actions.reset_is_running(db)
+    # NB: temporarily disabled for kubernetes on charles
+    # actions.reset_is_running(db)
 
     # start the dbserver
     if hasattr(os, 'fork') and not (config.multi_user or foreground):

@@ -86,7 +86,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
                                  self.tectonic_region_type, [rup_pmf])
             src.num_ruptures = 1
             src.trt_smr = self.trt_smr
-            src.id = self.id
             yield src
 
     def count_ruptures(self):

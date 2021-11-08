@@ -36,6 +36,45 @@ MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
 
 
+def get_distances(rupture, sites, param):
+    """
+    :param rupture: a rupture
+    :param sites: a mesh of points or a site collection
+    :param param: the kind of distance to compute (default rjb)
+    :returns: an array of distances from the given sites
+    """
+    if not rupture.surface:  # PointRupture
+        dist = rupture.hypocenter.distance_to_mesh(sites)
+    elif param == 'rrup':
+        dist = rupture.surface.get_min_distance(sites)
+    elif param == 'rx':
+        dist = rupture.surface.get_rx_distance(sites)
+    elif param == 'ry0':
+        dist = rupture.surface.get_ry0_distance(sites)
+    elif param == 'rjb':
+        dist = rupture.surface.get_joyner_boore_distance(sites)
+    elif param == 'rhypo':
+        dist = rupture.hypocenter.distance_to_mesh(sites)
+    elif param == 'repi':
+        dist = rupture.hypocenter.distance_to_mesh(sites, with_depths=False)
+    elif param == 'rcdpp':
+        dist = rupture.get_cdppvalue(sites)
+    elif param == 'azimuth':
+        dist = rupture.surface.get_azimuth(sites)
+    elif param == 'azimuth_cp':
+        dist = rupture.surface.get_azimuth_of_closest_point(sites)
+    elif param == 'closest_point':
+        t = rupture.surface.get_closest_points(sites)
+        dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
+    elif param == "rvolc":
+        # Volcanic distance not yet supported, defaulting to zero
+        dist = numpy.zeros_like(sites.lons)
+    else:
+        raise ValueError('Unknown distance measure %r' % param)
+    dist.flags.writeable = False
+    return dist
+
+
 @contextmanager
 def context(src):
     """
@@ -256,19 +295,6 @@ class SourceFilter(object):
             else MagDepDistance(integration_distance))
         self.slc = slice(None)
 
-    def split_in_tiles(self, hint):
-        """
-        Split the SourceFilter by splitting the site collection in tiles
-        """
-        if hint == 1:
-            return [self]
-        out = []
-        for tile in self.sitecol.split_in_tiles(hint):
-            sf = self.__class__(tile, self.integration_distance)
-            sf.slc = slice(tile.sids[0], tile.sids[-1] + 1)
-            out.append(sf)
-        return out
-
     # not used right now
     def reduce(self, factor=100):
         """
@@ -404,6 +430,23 @@ class SourceFilter(object):
             sids = self.close_sids(src)
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
+
+    def set_nsites(self, sources):
+        """
+        Set the nsites attribute on each source to the sum of the affected
+        sites
+        """
+        for src, sites in self.filter(sources):
+            if hasattr(src, 'location'):  # fast lane for point sources
+                irups = src.iruptures(point_rup=True)
+            else:
+                irups = src.iter_ruptures()
+            src.nsites = 0
+            for rup in irups:
+                dists = get_distances(rup, sites, 'rrup')
+                idist = self.integration_distance(
+                    src.tectonic_region_type, rup.mag)
+                src.nsites += (dists <= idist).count()
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:

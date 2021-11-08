@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-from unittest import mock, SkipTest
+from unittest import mock
 import numpy
 
 from openquake.baselib.general import gettemp
@@ -30,7 +30,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
-    case_miriam, occupants, case_1f, case_1g, case_7a, recompute)
+    case_miriam, occupants, case_1f, case_1g, case_7a, case_8, recompute)
 
 aac = numpy.testing.assert_allclose
 
@@ -394,31 +394,6 @@ agg_id
         self.assertEqualFiles(
             'expected/portfolio_losses_ampl.txt', fname, delta=1E-5)
 
-    # NB: big difference between Ubuntu 18 and 20
-    def test_case_7a(self):
-        # case with preimported exposure
-        self.run_calc(case_7a.__file__,  'job_h.ini')
-        self.run_calc(case_7a.__file__,  'job_r.ini',
-                      hazard_calculation_id=str(self.calc.datastore.calc_id))
-        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-4)
-        rup_ids = set(read_csv(fname, {None: '<S50'})['rup_id'])
-
-        [fname] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
-
-        # check that the IDs in risk_by_event.csv exist in ruptures.csv
-        # this is using extract/rupture_info internally
-        [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        rupids = set(read_csv(fname, {None: '<S50'})['rup_id'])
-        self.assertTrue(rup_ids <= rupids, 'There are non-existing rupture IDs'
-                        ' in the event loss table!')
-
-        # check that the exported ruptures can be re-imported
-        text = extract(self.calc.datastore, 'ruptures').array
-        rups = get_ruptures(gettemp(text))
-        aac(rups['n_occ'], [1, 1, 1, 1])
-
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
         # it has 8 realizations but 4 of them have 0 ruptures
@@ -468,6 +443,43 @@ agg_id
         del elt_df['variance']
         fname = gettemp(str(elt_df))
         self.assertEqualFiles('expected/stddevs.txt', fname, delta=1E-4)
+
+    # NB: big difference between Ubuntu 18 and 20
+    def test_case_7a(self):
+        # case with preimported exposure
+        self.run_calc(case_7a.__file__,  'job_h.ini')
+        self.run_calc(case_7a.__file__,  'job_r.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-4)
+        rup_ids = set(read_csv(fname, {None: '<S50'})['rup_id'])
+
+        [fname] = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
+
+        # check that the IDs in risk_by_event.csv exist in ruptures.csv
+        # this is using extract/rupture_info internally
+        [fname] = export(('ruptures', 'csv'), self.calc.datastore)
+        rupids = set(read_csv(fname, {None: '<S50'})['rup_id'])
+        self.assertTrue(rup_ids <= rupids, 'There are non-existing rupture IDs'
+                        ' in the event loss table!')
+
+        # check that the exported ruptures can be re-imported
+        text = extract(self.calc.datastore, 'ruptures').array
+        rups = get_ruptures(gettemp(text))
+        aac(rups['n_occ'], [1, 1, 1, 1])
+
+    def test_case_8(self):
+        # notrivial taxonomy mapping; NB: there is taskno-dependency here!
+        out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
+                            concurrent_tasks='0')
+        [fname] = out['aggrisk', 'csv']
+        self.assertEqualFiles('expected/aggrisk0.csv', fname)
+
+        out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
+                            concurrent_tasks='4')
+        [fname] = out['aggrisk', 'csv']
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
 
     # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):
