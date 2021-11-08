@@ -782,8 +782,7 @@ def view_extreme_gmvs(token, dstore):
     err = binning_error(gmvs, eids)
     if err > .05:
         msg += ('Your results are expected to have a large dependency '
-                'from ses_seed (or the rupture seed in scenarios): %d%%'
-                % (err * 100))
+                'from the rupture seed: %d%%' % (err * 100))
     if imt0.startswith(('PGA', 'SA(')):
         gmpe = GmpeExtractor(dstore)
         df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
