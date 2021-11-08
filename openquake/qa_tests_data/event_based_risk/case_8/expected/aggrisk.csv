@@ -1,6 +1,6 @@
-#,,,"generated_by='OpenQuake engine 3.13.0-git23ee4fcdb8', start_date='2021-11-08T09:02:27', checksum=513780296, investigation_time=None, risk_investigation_time=1.0"
+#,,,"generated_by='OpenQuake engine 3.13.0-gitf87bb56508', start_date='2021-11-08T09:57:45', checksum=3741755820, investigation_time=None, risk_investigation_time=1.0"
 loss_type,OCCUPANCY,loss_value,loss_ratio
-structural,Res,2.50999E+03,7.65546E-05
+structural,Res,2.50751E+03,7.64791E-05
 structural,Com,4.20420E+01,1.43316E-06
-structural,Ind,2.18437E+02,7.49423E-06
-structural,*total*,2.77047E+03,3.03548E-05
+structural,Ind,1.55654E+02,5.34025E-06
+structural,*total*,2.70521E+03,2.96398E-05

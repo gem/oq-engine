@@ -471,7 +471,8 @@ agg_id
 
     def test_case_8(self):
         # notrivial taxonomy mapping
-        out = self.run_calc(case_8.__file__,  'job.ini', exports='csv')
+        out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
+                            concurrent_tasks='4')
         [fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-3)
 
