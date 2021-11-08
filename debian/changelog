@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in event_based_risk with nontrivial taxonomy mapping producing
+    NaNs in the event loss table
   * Bug fix: pointsource_distance = 0 was not honored
   * Improved the universal installer when installing over a previous
     installation from packages
