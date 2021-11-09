@@ -240,7 +240,7 @@ class GmfComputer(object):
             mean, _, _, _ = mean_stds
             gmf = exp(mean, imt)[:, None]
             gmf = gmf.repeat(num_events, axis=1)
-            sigma = numpy.zeros(num_events, F32)
+            sigma = 0
             epsilons = numpy.zeros(num_events, F32)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
@@ -257,8 +257,7 @@ class GmfComputer(object):
 
             total_res = sig * rnd[:-1]
             gmf = exp(mean + total_res, imt)
-            sigma = numpy.empty(num_events, F32)
-            sigma.fill(numpy.nan)
+            sigma = numpy.nan
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
         else:
