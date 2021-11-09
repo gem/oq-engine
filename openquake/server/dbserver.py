@@ -206,10 +206,6 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
     # we need new connections, see https://github.com/gem/oq-engine/pull/3002
     db.close()
 
-    # reset any computation left in the 'executing' state
-    # NB: temporarily disabled for kubernetes on charles
-    # actions.reset_is_running(db)
-
     # start the dbserver
     if hasattr(os, 'fork') and not (config.multi_user or foreground):
         # needed for https://github.com/gem/oq-engine/issues/3211

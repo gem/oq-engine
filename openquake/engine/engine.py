@@ -210,19 +210,15 @@ def poll_queue(job_id, poll_time):
     if offset >= 0:
         first_time = True
         while True:
-            jobs = logs.dbcmd(GET_JOBS)
-            failed = [job.id for job in jobs if not psutil.pid_exists(job.pid)]
-            if failed:
-                for job in failed:
-                    logs.dbcmd('update_job', job,
-                               {'status': 'failed', 'is_running': 0})
-            elif any(j.id < job_id - offset for j in jobs):
+            running = logs.dbcmd(GET_JOBS)
+            previous = [job for job in running if job.id < job_id - offset]
+            if previous:
                 if first_time:
-                    print('Waiting for jobs %s' % [j.id for j in jobs
-                                                   if j.id < job_id - offset])
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': _PID})
                     first_time = False
+                    # the logging is not yet initialized, so use a print
+                    print('Waiting for jobs %s', previous)
                 time.sleep(poll_time)
             else:
                 break

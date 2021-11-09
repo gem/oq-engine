@@ -68,7 +68,7 @@ class BakerJayaram2008(CrossCorrelation):
             corr = np.amin([c2, c4])
         else:
             corr = c4
-        return corr
+        return corr  # a scalar
 
 
 def get_correlation_mtx(corr_model: CrossCorrelation,
