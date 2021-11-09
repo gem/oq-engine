@@ -206,8 +206,8 @@ class GmfComputer(object):
         M = len(self.imts)
         result = numpy.zeros(
             (len(self.imts), len(self.ctx.sids), num_events), F32)
-        sig = numpy.zeros((M, num_events), F32)
-        eps = numpy.zeros((M, num_events), F32)
+        sig = numpy.zeros((M, num_events), F32)  # same for all events
+        eps = numpy.zeros((M, num_events), F32)  # not the same
         numpy.random.seed(self.seed)
         num_sids = len(self.ctx.sids)
         if self.distribution:
@@ -240,7 +240,7 @@ class GmfComputer(object):
             mean, _, _, _ = mean_stds
             gmf = exp(mean, imt)[:, None]
             gmf = gmf.repeat(num_events, axis=1)
-            stdi = numpy.zeros(num_events, F32)
+            sigma = numpy.zeros(num_events, F32)
             epsilons = numpy.zeros(num_events, F32)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
@@ -257,8 +257,8 @@ class GmfComputer(object):
 
             total_res = sig * rnd[:-1]
             gmf = exp(mean + total_res, imt)
-            stdi = numpy.empty(num_events, F32)
-            stdi.fill(numpy.nan)
+            sigma = numpy.empty(num_events, F32)
+            sigma.fill(numpy.nan)
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
         else:
@@ -281,8 +281,8 @@ class GmfComputer(object):
 
             inter_res = tau * epsilons  # shape (N, 1) * E => (N, E)
             gmf = exp(mean + intra_res + inter_res, imt)
-            stdi = tau.max(axis=0)  # from shape (N, E) => E
-        return gmf, stdi, epsilons
+            sigma = tau.max()  # from shape (N, 1) => scalar
+        return gmf, sigma, epsilons
 
 
 # this is not used in the engine; it is still useful for usage in IPython
