@@ -53,7 +53,7 @@ def rvs(distribution, *size):
     return array
 
 
-def to_imt_unit_values(vals, imt):
+def exp(vals, imt):
     """
     Exponentiate the values unless the IMT is MMI
     """
@@ -238,7 +238,7 @@ class GmfComputer(object):
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
             mean, _, _, _ = mean_stds
-            gmf = to_imt_unit_values(mean, imt)[:, None]
+            gmf = exp(mean, imt)[:, None]
             gmf = gmf.repeat(num_events, axis=1)
             stdi = numpy.zeros(num_events, F32)
             epsilons = numpy.zeros(num_events, F32)
@@ -256,7 +256,7 @@ class GmfComputer(object):
             mean = mean[:, None]
 
             total_res = sig * rnd[:-1]
-            gmf = to_imt_unit_values(mean + total_res, imt)
+            gmf = exp(mean + total_res, imt)
             stdi = numpy.empty(num_events, F32)
             stdi.fill(numpy.nan)
             epsilons = numpy.empty(num_events, F32)
@@ -280,7 +280,7 @@ class GmfComputer(object):
                     intra_res = intra_res[:, None]
 
             inter_res = tau * epsilons  # shape (N, 1) * E => (N, E)
-            gmf = to_imt_unit_values(mean + intra_res + inter_res, imt)
+            gmf = exp(mean + intra_res + inter_res, imt)
             stdi = tau.max(axis=0)  # from shape (N, E) => E
         return gmf, stdi, epsilons
 
