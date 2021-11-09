@@ -203,15 +203,23 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for tau
             and eps for the random part
         """
+        M = len(self.imts)
         result = numpy.zeros(
             (len(self.imts), len(self.ctx.sids), num_events), F32)
-        sig = numpy.zeros((len(self.imts), num_events), F32)
-        eps = numpy.zeros((len(self.imts), num_events), F32)
+        sig = numpy.zeros((M, num_events), F32)
+        eps = numpy.zeros((M, num_events), F32)
         numpy.random.seed(self.seed)
+        num_sids = len(self.ctx.sids)
+        if self.distribution:
+            # build M arrays of random numbers of shape (N+1, E)
+            rnd = [rvs(self.distribution, num_sids + 1, num_events)
+                   for _ in range(M)]
+        else:
+            rnd = [None] * M
         for imti, imt in enumerate(self.imts):
             try:
                 result[imti], sig[imti], eps[imti] = self._compute(
-                     mean_stds[:, imti], num_events, imt, gsim)
+                     mean_stds[:, imti], num_events, imt, gsim, rnd[imti])
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
@@ -223,16 +231,7 @@ class GmfComputer(object):
                 self.ctx.ampcode, result, self.imts, self.seed)
         return result, sig, eps
 
-    def _compute(self, mean_stds, num_events, imt, gsim):
-        """
-        :param mean_stds: array of shape (4, N)
-        :param num_events: the number of seismic events
-        :param imt: an IMT instance
-        :param gsim: a GSIM instance
-        :returns: (gmf(num_sites, num_events), tau(num_events),
-                   epsilons(num_events))
-        """
-        num_sids = len(self.ctx.sids)
+    def _compute(self, mean_stds, num_events, imt, gsim, rnd):
         if self.distribution is None:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
@@ -256,7 +255,7 @@ class GmfComputer(object):
             sig = sig[:, None]
             mean = mean[:, None]
 
-            total_res = sig * rvs(self.distribution, num_sids, num_events)
+            total_res = sig * rnd[:-1]
             gmf = to_imt_unit_values(mean + total_res, imt)
             stdi = numpy.empty(num_events, F32)
             stdi.fill(numpy.nan)
@@ -271,9 +270,8 @@ class GmfComputer(object):
             # for instance if  a = [1 2], b = [[1 2] [3 4]] then
             # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
-            rnd_N1E = rvs(self.distribution, num_sids + 1, num_events)
-            intra_res = phi * rnd_N1E[:-1]  # shape (N, E)
-            epsilons = rnd_N1E[-1]  # shape E
+            intra_res = phi * rnd[:-1]  # shape (N, E)
+            epsilons = rnd[-1]  # shape E
 
             if self.correlation_model is not None:
                 intra_res = self.correlation_model.apply_correlation(

@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-git46607e9a50', start_date='2021-06-22T06:41:40', checksum=931855453, investigation_time=1.0, risk_investigation_time=50.0"
+#,,,,"generated_by='OpenQuake engine 3.13.0-git0ce1c56853', start_date='2021-11-09T15:43:10', checksum=3095828164, investigation_time=1.0, risk_investigation_time=50.0"
 event_id,loss,loss_type,rup_id,year
 0,3.56007E+02,business_interruption,0,1
 0,3.37332E+03,contents,0,1
@@ -48,7 +48,7 @@ event_id,loss,loss_type,rup_id,year
 9,2.20560E+03,nonstructural,4,1
 9,3.05163E-03,occupants,4,1
 10,1.40437E+02,business_interruption,4,1
-10,9.59862E+02,contents,4,1
+10,9.59863E+02,contents,4,1
 10,1.31260E+03,nonstructural,4,1
 10,2.76438E-03,occupants,4,1
 10,1.19698E+02,structural,4,1

@@ -1,4 +1,4 @@
-#,,,"generated_by='OpenQuake engine 3.13.0-gitadeec46500', start_date='2021-10-01T07:34:28', checksum=147663202, investigation_time=1000.0, risk_investigation_time=1.0"
+#,,,"generated_by='OpenQuake engine 3.13.0-git0ce1c56853', start_date='2021-11-09T15:43:18', checksum=147663202, investigation_time=1000.0, risk_investigation_time=1.0"
 loss_type,NAME_1,loss_value,loss_ratio
 structural,West,1.56280E+06,1.47741E-02
 structural,Far-Western,1.07002E+06,2.98413E-02

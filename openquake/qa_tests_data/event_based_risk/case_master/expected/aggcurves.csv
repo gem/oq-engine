@@ -1,4 +1,4 @@
-#,,,,,"generated_by='OpenQuake engine 3.13.0-gitc7648930bb', start_date='2021-09-27T17:03:33', checksum=931855453, risk_investigation_time=50.0, num_events=48, effective_time=80.0, limit_states=''"
+#,,,,,"generated_by='OpenQuake engine 3.13.0-git0ce1c56853', start_date='2021-11-09T15:43:10', checksum=3095828164, risk_investigation_time=50.0, num_events=48, effective_time=80.0, limit_states=''"
 return_period,id,loss_type,rlz_id,loss_value,loss_ratio
 1,a3,business_interruption,0,0.00000E+00,0.00000E+00
 2,a3,business_interruption,0,0.00000E+00,0.00000E+00
@@ -106,7 +106,7 @@ return_period,id,loss_type,rlz_id,loss_value,loss_ratio
 10,a2,business_interruption,0,6.00690E+01,3.00345E-02
 1,a2,contents,0,0.00000E+00,0.00000E+00
 2,a2,contents,0,2.79636E+02,5.59272E-02
-5,a2,contents,0,4.95078E+02,9.90156E-02
+5,a2,contents,0,4.95078E+02,9.90155E-02
 10,a2,contents,0,1.26315E+03,2.52629E-01
 1,a2,nonstructural,0,0.00000E+00,0.00000E+00
 2,a2,nonstructural,0,4.29247E+02,2.86165E-02
@@ -252,7 +252,7 @@ return_period,id,loss_type,rlz_id,loss_value,loss_ratio
 2,a5,structural,1,0.00000E+00,0.00000E+00
 5,a5,structural,1,0.00000E+00,0.00000E+00
 10,a5,structural,1,1.43126E+02,1.43126E-02
-1,a5,business_interruption,2,2.19585E+01,1.09792E-02
+1,a5,business_interruption,2,2.19585E+01,1.09793E-02
 2,a5,business_interruption,2,2.79407E+01,1.39703E-02
 5,a5,business_interruption,2,2.92981E+01,1.46490E-02
 10,a5,business_interruption,2,3.75645E+01,1.87823E-02
@@ -274,7 +274,7 @@ return_period,id,loss_type,rlz_id,loss_value,loss_ratio
 10,a5,business_interruption,3,2.27492E+01,1.13746E-02
 1,a5,contents,3,0.00000E+00,0.00000E+00
 2,a5,contents,3,1.06822E+02,2.13644E-02
-5,a5,contents,3,1.17624E+02,2.35247E-02
+5,a5,contents,3,1.17624E+02,2.35248E-02
 10,a5,contents,3,1.21576E+02,2.43153E-02
 1,a5,nonstructural,3,0.00000E+00,0.00000E+00
 2,a5,nonstructural,3,1.72238E+02,1.14826E-02
@@ -481,14 +481,14 @@ return_period,id,loss_type,rlz_id,loss_value,loss_ratio
 5,a1,contents,2,4.77557E+02,9.55114E-02
 10,a1,contents,2,7.37921E+02,1.47584E-01
 1,a1,nonstructural,2,3.17401E+02,2.11601E-02
-2,a1,nonstructural,2,5.16059E+02,3.44040E-02
+2,a1,nonstructural,2,5.16059E+02,3.44039E-02
 5,a1,nonstructural,2,6.29202E+02,4.19468E-02
 10,a1,nonstructural,2,9.30364E+02,6.20243E-02
 1,a1,occupants,2,8.07208E-04,2.01802E-04
 2,a1,occupants,2,1.09669E-03,2.74172E-04
 5,a1,occupants,2,1.63468E-03,4.08669E-04
 10,a1,occupants,2,1.96041E-03,4.90103E-04
-1,a1,structural,2,9.86077E+01,9.86077E-03
+1,a1,structural,2,9.86077E+01,9.86078E-03
 2,a1,structural,2,1.63459E+02,1.63459E-02
 5,a1,structural,2,2.96612E+02,2.96612E-02
 10,a1,structural,2,3.36510E+02,3.36510E-02
@@ -875,7 +875,7 @@ return_period,id,loss_type,rlz_id,loss_value,loss_ratio
 1,*total*,nonstructural,7,0.00000E+00,0.00000E+00
 2,*total*,nonstructural,7,0.00000E+00,0.00000E+00
 5,*total*,nonstructural,7,1.29198E+04,1.23046E-01
-10,*total*,nonstructural,7,4.32974E+04,4.12357E-01
+10,*total*,nonstructural,7,4.32974E+04,4.12356E-01
 1,*total*,occupants,7,0.00000E+00,0.00000E+00
 2,*total*,occupants,7,0.00000E+00,0.00000E+00
 5,*total*,occupants,7,1.04346E-02,3.72665E-04

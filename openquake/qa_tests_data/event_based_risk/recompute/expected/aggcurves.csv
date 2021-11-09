@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.13.0-gitc7648930bb', start_date='2021-09-27T17:03:42', checksum=147663202, risk_investigation_time=1.0, num_events=25, effective_time=1000.0, limit_states=''"
+#,,,,,,"generated_by='OpenQuake engine 3.13.0-git0ce1c56853', start_date='2021-11-09T15:43:18', checksum=124001358, risk_investigation_time=1.0, num_events=25, effective_time=1000.0, limit_states=''"
 return_period,NAME_1,NAME_2,taxonomy,loss_type,loss_value,loss_ratio
 50,West,Dhaualagiri,Wood,structural,0.00000E+00,0.00000E+00
 100,West,Dhaualagiri,Wood,structural,0.00000E+00,0.00000E+00
