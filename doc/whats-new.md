@@ -84,7 +84,7 @@ Event based risk calculators
 `ebrisk` calculators - started in engine 3.11 - has been finally
 completed. Thanks to this work the `ebrisk` calculator is now
 deprecated. You should use the `event_based_risk` calculator instead,
-since it is more efficient than `ebrisk` even was. The trick was to
+since it is more efficient than `ebrisk` ever was. The trick was to
 change `event_based_risk` to use the same distribution mechanism as
 `ebrisk` (i.e. distribution by ruptures, not by site).
 
