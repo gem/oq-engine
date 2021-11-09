@@ -217,7 +217,8 @@ def poll_queue(job_id, poll_time):
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': _PID})
                     first_time = False
-                    logging.info('Waiting for jobs %s', previous)
+                    # the logging is not yet initialized, so use a print
+                    print('Waiting for jobs %s', previous)
                 time.sleep(poll_time)
             else:
                 break
