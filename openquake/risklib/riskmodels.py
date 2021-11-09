@@ -18,7 +18,6 @@
 import re
 import ast
 import copy
-import logging
 import operator
 import functools
 import collections
@@ -708,10 +707,11 @@ class CompositeRiskModel(collections.abc.Mapping):
             # average on the risk models (unsupported for classical)
             dic[lt] = outs[0]
             if hasattr(dic[lt], 'loss'):  # event_based_risk
-                if weights[0] != 1:
-                    dic[lt].loss *= weights[0]
-                for alt, w in zip(outs[1:], weights[1:]):
-                    dic[lt].loss = dic[lt].loss.add(alt.loss * w, fill_value=0)
+                if len(weights) > 1:
+                    # computing the average dataframe
+                    df = pandas.concat(
+                        [out * w for out, w in zip(outs, weights)])
+                    dic[lt] = df.groupby(['eid', 'aid']).sum()
             elif len(weights) > 1:  # scenario_damage
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
         # compute secondary losses, if any
