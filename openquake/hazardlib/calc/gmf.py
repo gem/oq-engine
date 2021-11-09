@@ -279,7 +279,7 @@ class GmfComputer(object):
                 if len(intra_res.shape) == 1:  # a vector
                     intra_res = intra_res[:, None]
 
-            inter_res = tau * epsilons
+            inter_res = tau * epsilons  # shape (N, 1) * E => (N, E)
             gmf = to_imt_unit_values(mean + intra_res + inter_res, imt)
             stdi = tau.max(axis=0)  # from shape (N, E) => E
         return gmf, stdi, epsilons
