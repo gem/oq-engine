@@ -1,6 +1,6 @@
-#,,,,"generated_by='OpenQuake engine 3.13.0-git2aed169c74', start_date='2021-11-04T07:16:03', checksum=3228602707, investigation_time=None, risk_investigation_time=None"
+#,,,,"generated_by='OpenQuake engine 3.13.0-git0ce1c56853', start_date='2021-11-09T15:45:47', checksum=3228602707, investigation_time=None, risk_investigation_time=None"
 asset_id,taxonomy,lon,lat,structural
 a1,RM,81.29850,29.10980,1.39968E+02
-a2,RC,83.08230,27.90060,2.02801E+02
+a2,RC,83.08230,27.90060,2.03297E+02
 a4,W,85.74700,27.90000,0.00000E+00
-a3,W,85.74770,27.90150,2.42453E+02
+a3,W,85.74770,27.90150,2.52778E+02

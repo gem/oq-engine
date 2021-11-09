@@ -211,14 +211,15 @@ class GmfComputer(object):
         numpy.random.seed(self.seed)
         num_sids = len(self.ctx.sids)
         if self.distribution:
-            # build an array of random numbers of shape (N+1, E)
-            rnd = rvs(self.distribution, num_sids + 1, num_events)
+            # build M arrays of random numbers of shape (N+1, E)
+            rnd = [rvs(self.distribution, num_sids + 1, num_events)
+                   for _ in range(M)]
         else:
-            rnd = None
+            rnd = [None] * M
         for imti, imt in enumerate(self.imts):
             try:
                 result[imti], sig[imti], eps[imti] = self._compute(
-                     mean_stds[:, imti], num_events, imt, gsim, rnd)
+                     mean_stds[:, imti], num_events, imt, gsim, rnd[imti])
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %

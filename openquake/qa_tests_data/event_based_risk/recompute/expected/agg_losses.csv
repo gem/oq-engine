@@ -1,4 +1,4 @@
-#,,,,,"generated_by='OpenQuake engine 3.13.0-git2aed169c74', start_date='2021-11-04T07:15:25', checksum=124001358, investigation_time=1000.0, risk_investigation_time=1.0"
+#,,,,,"generated_by='OpenQuake engine 3.13.0-git0ce1c56853', start_date='2021-11-09T15:43:18', checksum=124001358, investigation_time=1000.0, risk_investigation_time=1.0"
 loss_type,NAME_1,NAME_2,taxonomy,loss_value,loss_ratio
 structural,West,Dhaualagiri,Wood,4.76511E+04,6.17947E-03
 structural,West,Dhaualagiri,Adobe,3.04551E+04,1.19894E-02
@@ -9,22 +9,22 @@ structural,West,Gandaki,Adobe,4.00503E+03,1.85883E-02
 structural,West,Gandaki,Unreinforced-Brick-Masonry,6.09123E+04,3.58097E-02
 structural,West,Lumbini,Wood,5.21483E+04,6.29947E-03
 structural,West,Lumbini,Adobe,4.59265E+05,1.64833E-02
-structural,West,Lumbini,Stone-Masonry,8.59035E+04,9.02893E-03
+structural,West,Lumbini,Stone-Masonry,8.59036E+04,9.02893E-03
 structural,West,Lumbini,Unreinforced-Brick-Masonry,7.87507E+04,1.53640E-02
 structural,Far-Western,Seti,Wood,2.10640E+04,4.32982E-03
 structural,Far-Western,Seti,Adobe,5.25479E+05,3.47626E-02
 structural,Far-Western,Seti,Stone-Masonry,2.47307E+05,2.95907E-02
 structural,Far-Western,Seti,Unreinforced-Brick-Masonry,7.72347E+02,2.27027E-02
-structural,Far-Western,Seti,Concrete,9.70429E+04,4.86226E-02
+structural,Far-Western,Seti,Concrete,1.18972E+05,5.96100E-02
 structural,Far-Western,Mahakali,Adobe,3.74058E+04,2.49892E-02
 structural,Far-Western,Mahakali,Stone-Masonry,7.16826E+04,2.89964E-02
 structural,Far-Western,Mahakali,Unreinforced-Brick-Masonry,4.73385E+04,3.11528E-02
-structural,Mid-Western,Karnali,Wood,3.41168E+04,6.01707E-03
+structural,Mid-Western,Karnali,Wood,3.41168E+04,6.01706E-03
 structural,Mid-Western,Karnali,Adobe,1.08526E+04,1.10002E-02
 structural,Mid-Western,Karnali,Stone-Masonry,2.39396E+04,2.04959E-02
 structural,Mid-Western,Karnali,Unreinforced-Brick-Masonry,2.04963E+03,1.29102E-02
 structural,Mid-Western,Bheri,Wood,2.13442E+05,2.34689E-02
-structural,Mid-Western,Bheri,Adobe,1.33360E+06,4.39303E-02
+structural,Mid-Western,Bheri,Adobe,1.33360E+06,4.39302E-02
 structural,Mid-Western,Bheri,Stone-Masonry,3.48988E+04,6.15498E-02
 structural,Mid-Western,Bheri,Unreinforced-Brick-Masonry,3.39605E+05,3.55672E-02
 structural,Mid-Western,Rapti,Wood,2.63182E+04,1.02239E-02
@@ -35,7 +35,7 @@ structural,East,Sagarmatha,Wood,8.89655E+04,1.66214E-02
 structural,East,Sagarmatha,Adobe,7.32575E+05,4.86453E-02
 structural,East,Sagarmatha,Stone-Masonry,1.58300E+06,6.05353E-02
 structural,East,Koshi,Wood,1.06872E+05,6.15565E-03
-structural,East,Koshi,Adobe,3.60547E+03,6.35885E-02
+structural,East,Koshi,Adobe,3.60547E+03,6.35884E-02
 structural,East,Koshi,Stone-Masonry,2.20340E+05,1.91999E-02
 structural,East,Koshi,Unreinforced-Brick-Masonry,1.49257E+05,8.98432E-03
 structural,East,Mechi,Wood,4.12814E+04,1.04397E-03
@@ -52,4 +52,4 @@ structural,Central,Narayani,Wood,3.19900E+05,9.75108E-03
 structural,Central,Narayani,Adobe,3.52491E+06,3.23521E-02
 structural,Central,Narayani,Stone-Masonry,1.05207E+06,3.59176E-02
 structural,Central,Narayani,Unreinforced-Brick-Masonry,3.20878E+05,4.21701E-02
-structural,*total*,*total*,*total*,6.31227E+07,3.97709E-02
+structural,*total*,*total*,*total*,6.31446E+07,3.97847E-02
