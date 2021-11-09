@@ -886,6 +886,9 @@ def get_crmodel(oqparam):
     loss_types = oqparam.loss_dt().names
     consdict = {}
     if 'consequence' in oqparam.inputs:
+        if not risklist.limit_states:
+            raise InvalidFile('Missing fragility functions in %s' %
+                              oqparam.inputs['job_ini'])
         # build consdict of the form consequence_by_tagname -> tag -> array
         for by, fnames in oqparam.inputs['consequence'].items():
             if isinstance(fnames, str):  # single file
