@@ -165,7 +165,7 @@ class DamageCalculator(EventBasedRiskCalculator):
     accept_precalc = ['scenario', 'event_based',
                       'event_based_risk', 'event_based_damage']
 
-    def save_avg_losses(self):
+    def create_avg_losses(self):
         """
         Do nothing: there are no losses in the DamageCalculator
         """

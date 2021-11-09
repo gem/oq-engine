@@ -470,12 +470,14 @@ agg_id
         aac(rups['n_occ'], [1, 1, 1, 1])
 
     def test_case_8(self):
-        # notrivial taxonomy mapping; NB: there is taskno-dependency here!
+        # nontrivial taxonomy mapping
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='0')
         [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/aggrisk0.csv', fname)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
 
+        # NB: there was a taskno-dependency here, so make sure there are
+        # no regressions
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='4')
         [fname] = out['aggrisk', 'csv']

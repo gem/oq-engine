@@ -95,9 +95,9 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
     """
     :returns: a sparse coo matrix with the losses per asset and realization
     """
-    if collect_rlzs:
+    if collect_rlzs or len(numpy.unique(rlz_id)) == 1:
         ldf = pandas.DataFrame(
-            dict(aid=alt.aid.to_numpy(), loss=alt.loss))
+            dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy()))
         tot = ldf.groupby('aid').loss.sum()
         aids = tot.index.to_numpy()
         rlzs = numpy.zeros_like(tot)
@@ -313,14 +313,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         if oq.avg_losses:
-            self.save_avg_losses()
+            self.create_avg_losses()
         alt_nbytes = 4 * self.E * L
         if alt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The risk_by_event is too big to be transfer'
                                'ed with %d tasks' % oq.concurrent_tasks)
         self.datastore.create_dset('gmf_info', gmf_info_dt)
 
-    def save_avg_losses(self):
+    def create_avg_losses(self):
         oq = self.oqparam
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
