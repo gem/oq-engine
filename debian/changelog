@@ -1,3 +1,5 @@
+python3-oq-engine (3.12.1-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Fixed a bug in event_based_risk with nontrivial taxonomy mapping producing
     NaNs in the event loss table
@@ -9,6 +11,8 @@
   * Fixed the ShakeMap calculator failing with a TypeError:
     get_array_usgs_id() got an unexpected keyword argument 'id'
   * Fixed the Abrahamson Gulerce GMPE failing with a scalar<->array error
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 10 Nov 2021 08:57:05 +0000
 
 python3-oq-engine (3.12.0-1~xenial01) xenial; urgency=low
 
