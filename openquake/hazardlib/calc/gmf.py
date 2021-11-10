@@ -241,7 +241,7 @@ class GmfComputer(object):
             gmf = exp(mean, imt)[:, None]
             gmf = gmf.repeat(num_events, axis=1)
             sigma = 0
-            epsilons = numpy.zeros(num_events, F32)
+            inter_eps = numpy.zeros(num_events, F32)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -252,22 +252,18 @@ class GmfComputer(object):
                     self.correlation_model, gsim)
 
             mean, sig, _, _ = mean_stds
-            sig = sig[:, None]
-            mean = mean[:, None]
-
-            total_res = sig * rnd[:-1]
-            gmf = exp(mean + total_res, imt)
+            gmf = exp(mean[:, None] + sig[:, None] * rnd[:-1], imt)
             sigma = numpy.nan
-            epsilons = numpy.empty(num_events, F32)
-            epsilons.fill(numpy.nan)
+            inter_eps = numpy.empty(num_events, F32)
+            inter_eps.fill(numpy.nan)
         else:
+            inter_eps, intra_eps = rnd[-1], rnd[:-1]  # shapes E, (N, E)
             mean, sig, tau, phi = mean_stds
             # the [:, None] is used to implement multiplication by row;
             # for instance if  a = [1 2], b = [[1 2] [3 4]] then
             # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
-            intra_res = phi[:, None] * rnd[:-1]  # shape (N, E)
-            epsilons = rnd[-1]  # shape E
+            intra_res = phi[:, None] * intra_eps  # shape (N, E)
 
             if self.correlation_model is not None:
                 intra_res = self.correlation_model.apply_correlation(
@@ -275,10 +271,10 @@ class GmfComputer(object):
                 if len(intra_res.shape) == 1:  # a vector
                     intra_res = intra_res[:, None]
 
-            inter_res = tau[:, None] * epsilons  # shape (N, 1) * E => (N, E)
-            gmf = exp(mean[:, None] + intra_res + inter_res, imt)
+            inter_res = tau[:, None] * inter_eps  # shape (N, 1) * E => (N, E)
+            gmf = exp(mean[:, None] + intra_res + inter_res, imt)  # (N, E)
             sigma = tau.max()  # from shape (N, 1) => scalar
-        return gmf, sigma, epsilons
+        return gmf, sigma, inter_eps  # shapes (N, E), 1, E
 
 
 # this is not used in the engine; it is still useful for usage in IPython
