@@ -100,7 +100,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/agg_loss.csv', fname)
+        self.assertEqualFiles('expected/agg_loss.csv', fname, delta=1E-5)
 
     def test_case_5(self):
         # case with site model and 11 sites filled out of 17
