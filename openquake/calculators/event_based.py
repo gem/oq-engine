@@ -114,6 +114,9 @@ class EventBasedCalculator(base.HazardCalculator):
     accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
 
     def init(self):
+        if self.oqparam.cross_correl.__class__.__name__ == 'GodaAtkinson2009':
+            logging.warning(
+                'The truncation_level param is ignored with GodaAtkinson2009')
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         if hasattr(self.oqparam, 'maximum_distance'):

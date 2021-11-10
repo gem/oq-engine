@@ -76,7 +76,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the src_loss_table extractor
         [fname] = export(('src_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
     def test_case_1_eb(self):
         # this is a case with insured losses and tags
@@ -88,7 +89,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [687.92365])
+        numpy.testing.assert_allclose(aw.array, [685.50146])
 
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
@@ -514,7 +515,8 @@ agg_id
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
         oq.__dict__['aggregate_by'] = ['NAME_1']
-        log = logs.init('calc', {'calculation_mode': 'post_risk'})
+        log = logs.init('job', {'calculation_mode': 'post_risk',
+                                'description': 'test recompute'})
         prc = PostRiskCalculator(oq, log.calc_id)
         prc.assetcol = self.calc.assetcol
         oq.hazard_calculation_id = parent.calc_id

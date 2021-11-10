@@ -187,10 +187,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         df = self.calc.datastore.read_df('risk_by_event', 'event_id',
                                          {'agg_id': K})
         dmg = df.loc[1937]  # damage caused by the event 1937
-        self.assertEqual(dmg.dmg_1.sum(), 51)
-        self.assertEqual(dmg.dmg_2.sum(), 64)
-        self.assertEqual(dmg.dmg_3.sum(), 41)
-        self.assertEqual(dmg.dmg_4.sum(), 20)
+        self.assertEqual(dmg.dmg_1.sum(), 49)
+        self.assertEqual(dmg.dmg_2.sum(), 62)
+        self.assertEqual(dmg.dmg_3.sum(), 42)
+        self.assertEqual(dmg.dmg_4.sum(), 25)
 
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname)

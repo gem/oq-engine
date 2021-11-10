@@ -100,7 +100,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/agg_loss.csv', fname)
+        self.assertEqualFiles('expected/agg_loss.csv', fname, delta=1E-5)
 
     def test_case_5(self):
         # case with site model and 11 sites filled out of 17
@@ -169,7 +169,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2786.1294]], atol=.001)  # from avg_losses-stats
+        aac(obj.array, [[2764.5115]], atol=.001)  # from avg_losses-stats
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))

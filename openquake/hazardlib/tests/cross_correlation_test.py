@@ -83,8 +83,10 @@ class GodaAtkinson2009Test(unittest.TestCase):
 
         numpy.random.seed(42)
         eps = self.cm.get_inter_eps(self.imts, 2)  # a 4x2 matrix
-        aac(eps, numpy.array([[-0.606248, -0.134417, -0.667341, -0.35735 ],
-                              [-0.306698,  0.62123 ,  0.284299,  0.035089]]),
+        aac(eps, numpy.array([[-0.60624845, -0.3066977 ],
+                              [-0.13441677,  0.62122982],
+                              [-0.667341  ,  0.28429873],
+                              [-0.3573499 ,  0.0350888 ]]),
             rtol=1e-5)
 
 

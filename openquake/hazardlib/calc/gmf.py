@@ -207,17 +207,18 @@ class GmfComputer(object):
         numpy.random.seed(self.seed)
         num_sids = len(self.ctx.sids)
         if self.cross_correl.distribution:
-            # build M arrays of random numbers of shape (N, E) and E
-            intra_inter = [
-                (rvs(self.cross_correl.distribution, num_sids, num_events),
-                 rvs(self.cross_correl.distribution, num_events))
+            # build arrays of random numbers of shape (M, N, E) and (M, E)
+            intra_eps = [
+                rvs(self.cross_correl.distribution, num_sids, num_events)
                 for _ in range(M)]
+            inter_eps = self.cross_correl.get_inter_eps(self.imts, num_events)
         else:
-            intra_inter = [(None, numpy.zeros(num_events))] * M
+            intra_eps = [None] * M
+            inter_eps = [numpy.zeros(num_events)] * M
         for m, imt in enumerate(self.imts):
             try:
                 result[m], sig[m], eps[m] = self._compute(
-                    mean_stds[:, m], imt, gsim, *intra_inter[m])
+                    mean_stds[:, m], imt, gsim, intra_eps[m], inter_eps[m])
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
