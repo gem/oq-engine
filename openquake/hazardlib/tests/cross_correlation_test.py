@@ -21,7 +21,7 @@ import numpy
 from numpy.testing import assert_allclose as aac
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.cross_correlation import (
-    BakerJayaram2008, GodaAtkinson2009)
+    BakerJayaram2008, GodaAtkinson2009, NoCrossCorrelation)
 
 
 class BakerJayaram2008Test(unittest.TestCase):
@@ -84,4 +84,20 @@ class GodaAtkinson2009Test(unittest.TestCase):
         eps = self.cm.get_inter_eps(self.imts, 2)  # a 4x2 matrix
         aac(eps, numpy.array([[-0.606248, -0.134417, -0.667341, -0.35735 ],
                               [-0.306698,  0.62123 ,  0.284299,  0.035089]]),
+            rtol=1e-5)
+
+
+class NoCrossCorrelationTest(unittest.TestCase):
+    """
+    Tests the case of uncorrelated epsilons
+    """
+    def test(self):
+        cm = NoCrossCorrelation(trunclevel=3.)
+        imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
+        numpy.random.seed(42)
+        eps = cm.get_inter_eps(imts, 2)  # a 4x2 matrix
+        aac(eps, numpy.array([[-0.318959,  1.640001],
+                              [ 0.616954,  0.249188],
+                              [-1.007084, -1.007184],
+                              [-1.560874,  1.103927]]),
             rtol=1e-5)

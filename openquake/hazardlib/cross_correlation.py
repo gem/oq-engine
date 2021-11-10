@@ -18,7 +18,7 @@
 
 import numpy as np
 import numpy.matlib
-from scipy import constants
+from scipy import constants, stats
 from abc import ABC, abstractmethod
 from openquake.hazardlib.imt import IMT
 
@@ -36,6 +36,7 @@ class CrossCorrelation(ABC):
         """
 
 
+# used in the conditional_spectrum calculator, not in event_based/scenario
 class BakerJayaram2008(CrossCorrelation):
     """
     Implements the correlation model of Baker and Jayaram published in 2008
@@ -145,3 +146,28 @@ class GodaAtkinson2009(CrossCorrelation):
         corma = self._get_correlation_matrix(imts)
         return numpy.random.multivariate_normal(
             numpy.zeros(len(imts)), corma, num_events)
+
+
+class NoCrossCorrelation(CrossCorrelation):
+    """
+    Used when there is no cross correlation
+    """
+    def __init__(self, trunclevel=None):
+        self.trunclevel = trunclevel
+        if self.trunclevel is None:
+            self.distribution = stats.norm()
+        else:
+            self.distribution = stats.truncnorm(-trunclevel, trunclevel)
+
+    def get_correlation(self, from_imt, to_imt):
+        return from_imt == to_imt
+
+    def get_inter_eps(self, imts, num_events):
+        """
+        :param imts: a list of M intensity measure types
+        :param num_events: the number of events to consider (E)
+        :returns: an uncorrelated matrix of epsilons of shape (M, E)
+
+        NB: the user must specify the random seed first
+        """
+        return numpy.array([self.distribution.rvs(num_events) for imt in imts])
