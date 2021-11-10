@@ -160,7 +160,7 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         """
         corma = self._get_correlation_matrix(imts)
         return numpy.random.multivariate_normal(
-            numpy.zeros(len(imts)), corma, num_events)
+            numpy.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
 
     def _get_correlation_matrix(self, imts):
         # cached on the periods
