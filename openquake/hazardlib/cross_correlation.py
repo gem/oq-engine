@@ -23,6 +23,8 @@ from abc import ABC, abstractmethod
 from openquake.hazardlib.imt import IMT
 
 
+# ############ CrossCorrelation for the conditional spectrum ############ #
+
 class CrossCorrelation(ABC):
     # TODO We need to specify the HORIZONTAL GMM COMPONENT used
     @abstractmethod
@@ -36,7 +38,6 @@ class CrossCorrelation(ABC):
         """
 
 
-# used in the conditional_spectrum calculator, not in event_based/scenario
 class BakerJayaram2008(CrossCorrelation):
     """
     Implements the correlation model of Baker and Jayaram published in 2008
@@ -93,7 +94,33 @@ def get_correlation_mtx(corr_model: CrossCorrelation,
     return corr
 
 
-class GodaAtkinson2009(CrossCorrelation):
+# ######################## CrossCorrelationBetween ########################## #
+
+class CrossCorrelationBetween(ABC):
+    def __init__(self, trunclevel=None):
+        self.trunclevel = trunclevel
+        if self.trunclevel is None:
+            self.distribution = stats.norm()
+        elif self.trunclevel == 0:
+            self.distribution = None
+        else:
+            self.distribution = stats.truncnorm(-trunclevel, trunclevel)
+
+    @abstractmethod
+    def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
+        """
+        :param from_imt:
+            An intensity measure type
+        :param to_imt:
+            An intensity measure type
+        :return: a scalar
+        """
+    @abstractmethod
+    def get_inter_eps(self, imts, num_events):
+        pass
+
+
+class GodaAtkinson2009(CrossCorrelationBetween):
     """
     Implements the correlation model of Goda and Atkinson published in 2009
     https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/99/5/3003/342221/Probabilistic-Characterization-of-Spatially
@@ -123,18 +150,6 @@ class GodaAtkinson2009(CrossCorrelation):
         delta = 1 + np.cos(-1.5 * np.log10(Tmin / Tmax))
         return (1. - np.cos(angle) + delta) / 3.
 
-    def _get_correlation_matrix(self, imts):
-        # cached on the periods
-        periods = tuple(imt.period for imt in imts)
-        try:
-            return self.cache[periods]
-        except KeyError:
-            self.cache[periods] = corma = np.zeros((len(imts), len(imts)))
-        for i, imi in enumerate(imts):
-            for j, imj in enumerate(imts):
-                corma[i, j] = self.get_correlation(imi, imj)
-        return corma
-
     def get_inter_eps(self, imts, num_events):
         """
         :param imts: a list of M intensity measure types
@@ -147,20 +162,23 @@ class GodaAtkinson2009(CrossCorrelation):
         return numpy.random.multivariate_normal(
             numpy.zeros(len(imts)), corma, num_events)
 
+    def _get_correlation_matrix(self, imts):
+        # cached on the periods
+        periods = tuple(imt.period for imt in imts)
+        try:
+            return self.cache[periods]
+        except KeyError:
+            self.cache[periods] = corma = np.zeros((len(imts), len(imts)))
+        for i, imi in enumerate(imts):
+            for j, imj in enumerate(imts):
+                corma[i, j] = self.get_correlation(imi, imj)
+        return corma
 
-class NoCrossCorrelation(CrossCorrelation):
+
+class NoCrossCorrelation(CrossCorrelationBetween):
     """
     Used when there is no cross correlation
     """
-    def __init__(self, trunclevel=None):
-        self.trunclevel = trunclevel
-        if self.trunclevel is None:
-            self.distribution = stats.norm()
-        elif self.trunclevel == 0:
-            self.distribution = None
-        else:
-            self.distribution = stats.truncnorm(-trunclevel, trunclevel)
-
     def get_correlation(self, from_imt, to_imt):
         return from_imt == to_imt
 
@@ -173,3 +191,22 @@ class NoCrossCorrelation(CrossCorrelation):
         NB: the user must specify the random seed first
         """
         return numpy.array([self.distribution.rvs(num_events) for imt in imts])
+
+
+class FullCrossCorrelation(CrossCorrelationBetween):
+    """
+    Used when there is full cross correlation, i.e. same epsilons for all IMTs
+    """
+    def get_correlation(self, from_imt, to_imt):
+        return 1.
+
+    def get_inter_eps(self, imts, num_events):
+        """
+        :param imts: a list of M intensity measure types
+        :param num_events: the number of events to consider (E)
+        :returns: an uncorrelated matrix of epsilons of shape (M, E)
+
+        NB: the user must specify the random seed first
+        """
+        eps = self.distribution.rvs(num_events)
+        return numpy.array([eps for imt in imts])
