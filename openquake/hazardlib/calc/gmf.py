@@ -212,14 +212,16 @@ class GmfComputer(object):
         num_sids = len(self.ctx.sids)
         if self.distribution:
             # build M arrays of random numbers of shape (N+1, E)
-            rnd = [rvs(self.distribution, num_sids + 1, num_events)
-                   for _ in range(M)]
+            intra_inter = [(rvs(self.distribution, num_sids, num_events),
+                            rvs(self.distribution, num_events))
+                           for _ in range(M)]
         else:
-            rnd = [None] * M
+            intra_inter = [(None, None)] * M
         for imti, imt in enumerate(self.imts):
             try:
                 result[imti], sig[imti], eps[imti] = self._compute(
-                     mean_stds[:, imti], num_events, imt, gsim, rnd[imti])
+                     mean_stds[:, imti], num_events, imt, gsim,
+                    *intra_inter[imti])
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
@@ -231,7 +233,7 @@ class GmfComputer(object):
                 self.ctx.ampcode, result, self.imts, self.seed)
         return result, sig, eps
 
-    def _compute(self, mean_stds, num_events, imt, gsim, rnd):
+    def _compute(self, mean_stds, num_events, imt, gsim, intra_eps, inter_eps):
         if self.distribution is None:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
@@ -252,12 +254,10 @@ class GmfComputer(object):
                     self.correlation_model, gsim)
 
             mean, sig, _, _ = mean_stds
-            gmf = exp(mean[:, None] + sig[:, None] * rnd[:-1], imt)
+            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, imt)
             sigma = numpy.nan
-            inter_eps = numpy.empty(num_events, F32)
             inter_eps.fill(numpy.nan)
         else:
-            inter_eps, intra_eps = rnd[-1], rnd[:-1]  # shapes E, (N, E)
             mean, sig, tau, phi = mean_stds
             # the [:, None] is used to implement multiplication by row;
             # for instance if  a = [1 2], b = [[1 2] [3 4]] then
