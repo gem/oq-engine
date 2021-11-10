@@ -261,15 +261,12 @@ class GmfComputer(object):
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
         else:
-            mean, sig, tau, phi = mean_stds  # shape N -> (N, 1)
-            phi = phi[:, None]
-            tau = tau[:, None]
-            mean = mean[:, None]
+            mean, sig, tau, phi = mean_stds
             # the [:, None] is used to implement multiplication by row;
             # for instance if  a = [1 2], b = [[1 2] [3 4]] then
             # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
-            intra_res = phi * rnd[:-1]  # shape (N, E)
+            intra_res = phi[:, None] * rnd[:-1]  # shape (N, E)
             epsilons = rnd[-1]  # shape E
 
             if self.correlation_model is not None:
@@ -278,8 +275,8 @@ class GmfComputer(object):
                 if len(intra_res.shape) == 1:  # a vector
                     intra_res = intra_res[:, None]
 
-            inter_res = tau * epsilons  # shape (N, 1) * E => (N, E)
-            gmf = exp(mean + intra_res + inter_res, imt)
+            inter_res = tau[:, None] * epsilons  # shape (N, 1) * E => (N, E)
+            gmf = exp(mean[:, None] + intra_res + inter_res, imt)
             sigma = tau.max()  # from shape (N, 1) => scalar
         return gmf, sigma, epsilons
 
