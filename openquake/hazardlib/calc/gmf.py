@@ -241,7 +241,7 @@ class GmfComputer(object):
             mean, _, _, _ = mean_stds
             gmf = exp(mean, imt)[:, None]
             gmf = gmf.repeat(len(inter_eps), axis=1)
-            sigma = 0
+            inter_sig = 0
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -253,8 +253,7 @@ class GmfComputer(object):
 
             mean, sig, _, _ = mean_stds
             gmf = exp(mean[:, None] + sig[:, None] * intra_eps, imt)
-            sigma = numpy.nan
-            inter_eps.fill(numpy.nan)
+            inter_sig = numpy.nan
         else:
             mean, sig, tau, phi = mean_stds
             # the [:, None] is used to implement multiplication by row;
@@ -271,8 +270,8 @@ class GmfComputer(object):
 
             inter_res = tau[:, None] * inter_eps  # shape (N, 1) * E => (N, E)
             gmf = exp(mean[:, None] + intra_res + inter_res, imt)  # (N, E)
-            sigma = tau.max()  # from shape (N, 1) => scalar
-        return gmf, sigma, inter_eps  # shapes (N, E), 1, E
+            inter_sig = tau.max()  # from shape (N, 1) => scalar
+        return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
 # this is not used in the engine; it is still useful for usage in IPython
