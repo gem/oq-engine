@@ -197,7 +197,7 @@ class GmfComputer(object):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
-        :param mean_stds: array of shape O, M, N
+        :param mean_stds: array of shape (4, M, N)
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for tau
@@ -216,12 +216,11 @@ class GmfComputer(object):
                             rvs(self.distribution, num_events))
                            for _ in range(M)]
         else:
-            intra_inter = [(None, None)] * M
-        for imti, imt in enumerate(self.imts):
+            intra_inter = [(None, numpy.zeros(num_events))] * M
+        for m, imt in enumerate(self.imts):
             try:
-                result[imti], sig[imti], eps[imti] = self._compute(
-                     mean_stds[:, imti], num_events, imt, gsim,
-                    *intra_inter[imti])
+                result[m], sig[m], eps[m] = self._compute(
+                    mean_stds[:, m], imt, gsim, *intra_inter[m])
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
@@ -233,7 +232,7 @@ class GmfComputer(object):
                 self.ctx.ampcode, result, self.imts, self.seed)
         return result, sig, eps
 
-    def _compute(self, mean_stds, num_events, imt, gsim, intra_eps, inter_eps):
+    def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
         if self.distribution is None:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
@@ -241,9 +240,8 @@ class GmfComputer(object):
                                  'no correlation model')
             mean, _, _, _ = mean_stds
             gmf = exp(mean, imt)[:, None]
-            gmf = gmf.repeat(num_events, axis=1)
+            gmf = gmf.repeat(len(inter_eps), axis=1)
             sigma = 0
-            inter_eps = numpy.zeros(num_events, F32)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -330,4 +328,4 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
     res, _sig, _eps = gc.compute(gsim, realizations, mean_stds)
-    return {imt: res[imti] for imti, imt in enumerate(gc.imts)}
+    return {imt: res[m] for m, imt in enumerate(gc.imts)}
