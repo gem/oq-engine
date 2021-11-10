@@ -100,8 +100,9 @@ class GodaAtkinson2009(CrossCorrelation):
     cache = {}  # periods -> correlation matrix
 
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
-        # Goda and Atkinson (2009) correlation model, provided by Vitor
-
+        """
+        :returns: a scalar in the range 0..1
+        """
         if from_imt == to_imt:
             return 1
 
