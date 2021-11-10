@@ -288,6 +288,7 @@ class GmfGetter(object):
         self.cmaker = ContextMaker(
             rupgetter.trt, rupgetter.rlzs_by_gsim, param)
         self.correl_model = oqparam.correl_model
+        self.cross_correl = oqparam.cross_correl
 
     def gen_computers(self, mon):
         """
@@ -306,7 +307,7 @@ class GmfGetter(object):
                 try:
                     computer = gmf.GmfComputer(
                         ebr, sitecol, self.cmaker, self.correl_model,
-                        self.amplifier, self.sec_perils)
+                        self.cross_correl, self.amplifier, self.sec_perils)
                 except FarAwayRupture:
                     continue
                 # due to numeric errors ruptures within the maximum_distance
