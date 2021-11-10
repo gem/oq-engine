@@ -32,6 +32,7 @@ class CrossCorrelation(ABC):
             An intensity measure type
         :param to_imt:
             An intensity measure type
+        :return: a scalar
         """
 
 
