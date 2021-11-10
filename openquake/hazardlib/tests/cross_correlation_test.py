@@ -17,8 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from openquake.hazardlib.imt import SA
-from openquake.hazardlib.cross_correlation import BakerJayaram2008
+import numpy
+from numpy.testing import assert_allclose as aac
+from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.cross_correlation import (
+    BakerJayaram2008, GodaAtkinson2009)
 
 
 class BakerJayaram2008Test(unittest.TestCase):
@@ -59,3 +62,26 @@ class BakerJayaram2008Test(unittest.TestCase):
         imt_to = SA(0.10)
         expected = 0.9421213925
         self._test(imt_from, imt_to, expected)
+
+
+class GodaAtkinson2009Test(unittest.TestCase):
+    """
+    Tests the implementation of the Goda and Atkinson (2009) model.
+    """
+    def setUp(self):
+        self.cm = GodaAtkinson2009()
+        self.imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
+
+    def test(self):
+        corma = self.cm._get_correlation_matrix(self.imts)
+        aac(corma,
+            numpy.array([[1.        , 0.71678166, 0.41330149, 0.23046633],
+                         [0.71678166, 1.        , 0.83261724, 0.68322083],
+                         [0.41330149, 0.83261724, 1.        , 0.88167281],
+                         [0.23046633, 0.68322083, 0.88167281, 1.        ]]))
+
+        numpy.random.seed(42)
+        eps = self.cm.get_inter_eps(self.imts, 2)
+        aac(eps, numpy.array([[-0.606248, -0.134417, -0.667341, -0.35735 ],
+                              [-0.306698,  0.62123 ,  0.284299,  0.035089]]),
+            rtol=1e-5)

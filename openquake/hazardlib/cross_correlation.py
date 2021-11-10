@@ -90,3 +90,57 @@ def get_correlation_mtx(corr_model: CrossCorrelation,
                      for imt in target_imts])
     corr = np.matlib.repmat(np.squeeze(corr), num_sites, 1).T
     return corr
+
+
+class GodaAtkinson2009(CrossCorrelation):
+    """
+    Implements the correlation model of Goda and Atkinson published in 2009
+    https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/99/5/3003/342221/Probabilistic-Characterization-of-Spatially
+    """
+    cache = {}  # periods -> correlation matrix
+
+    def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
+        # Goda and Atkinson (2009) correlation model, provided by Vitor
+
+        if from_imt == to_imt:
+            return 1
+
+        T1 = from_imt.period or 0.05  # for PGA
+        T2 = to_imt.period or 0.05  # for PGA
+
+        Tmin = min(T1, T2)
+        Tmax = max(T1, T2)
+        ITmin = 1. if Tmin < 0.25 else 0.
+
+        theta1 = 1.374
+        theta2 = 5.586
+        theta3 = 0.728
+
+        angle = np.pi/2. - (theta1 + theta2 * ITmin * (Tmin / Tmax) ** theta3 *
+                            np.log10(Tmin / 0.25)) * np.log10(Tmax / Tmin)
+        delta = 1 + np.cos(-1.5 * np.log10(Tmin / Tmax))
+        return (1. - np.cos(angle) + delta) / 3.
+
+    def _get_correlation_matrix(self, imts):
+        # cached on the periods
+        periods = tuple(imt.period for imt in imts)
+        try:
+            return self.cache[periods]
+        except KeyError:
+            self.cache[periods] = corma = np.zeros((len(imts), len(imts)))
+        for i, imi in enumerate(imts):
+            for j, imj in enumerate(imts):
+                corma[i, j] = self.get_correlation(imi, imj)
+        return corma
+
+    def get_inter_eps(self, imts, num_events):
+        """
+        :param imts: a list of M intensity measure types
+        :param num_events: the number of events to consider (E)
+        :returns: a correlated matrix of epsilons of shape (M, E)
+
+        NB: the user must specify the random seed first
+        """
+        corma = self._get_correlation_matrix(imts)
+        return numpy.random.multivariate_normal(
+            numpy.zeros(len(imts)), corma, num_events)
