@@ -1,4 +1,4 @@
-#,,"generated_by='OpenQuake engine 3.13.0-gitb633fe5457', start_date='2021-11-10T11:10:41', checksum=2186660181, investigation_time=50.0, risk_investigation_time=50.0"
+#,,"generated_by='OpenQuake engine 3.13.0-git7a6dec73a0', start_date='2021-11-10T12:10:42', checksum=2186660181, investigation_time=50.0, risk_investigation_time=50.0"
 source,loss_type,loss_value
 1,nonstructural,9.14384E+02
 1,structural,2.40759E+03

@@ -76,7 +76,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the src_loss_table extractor
         [fname] = export(('src_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
     def test_case_1_eb(self):
         # this is a case with insured losses and tags
