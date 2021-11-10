@@ -22,11 +22,11 @@ Module :mod:`~openquake.hazardlib.calc.gmf` exports
 """
 import time
 import numpy
-import scipy.stats
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
@@ -101,7 +101,7 @@ class GmfComputer(object):
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sitecol, cmaker, correlation_model=None,
-                 amplifier=None, sec_perils=()):
+                 cross_correl=None, amplifier=None, sec_perils=()):
         if len(sitecol) == 0:
             raise ValueError('No sites')
         elif len(cmaker.imtls) == 0:
@@ -129,14 +129,10 @@ class GmfComputer(object):
         self.ctx = ctxs[0]
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
-        if cmaker.trunclevel is None:
-            self.distribution = scipy.stats.norm()
-        elif cmaker.trunclevel == 0:
-            self.distribution = None
+        if cross_correl is None:
+            self.cross_correl = NoCrossCorrelation(cmaker.trunclevel)
         else:
-            assert cmaker.trunclevel > 0, cmaker.trunclevel
-            self.distribution = scipy.stats.truncnorm(
-                - cmaker.trunclevel, cmaker.trunclevel)
+            self.cross_correl = cross_correl
 
     def compute_all(self, sig_eps=None):
         """
@@ -210,11 +206,12 @@ class GmfComputer(object):
         eps = numpy.zeros((M, num_events), F32)  # not the same
         numpy.random.seed(self.seed)
         num_sids = len(self.ctx.sids)
-        if self.distribution:
+        if self.cross_correl.distribution:
             # build M arrays of random numbers of shape (N, E) and E
-            intra_inter = [(rvs(self.distribution, num_sids, num_events),
-                            rvs(self.distribution, num_events))
-                           for _ in range(M)]
+            intra_inter = [
+                (rvs(self.cross_correl.distribution, num_sids, num_events),
+                 rvs(self.cross_correl.distribution, num_events))
+                for _ in range(M)]
         else:
             intra_inter = [(None, numpy.zeros(num_events))] * M
         for m, imt in enumerate(self.imts):
@@ -233,7 +230,7 @@ class GmfComputer(object):
         return result, sig, eps
 
     def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
-        if self.distribution is None:
+        if self.cmaker.trunclevel == 0:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '

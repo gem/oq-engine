@@ -156,6 +156,8 @@ class NoCrossCorrelation(CrossCorrelation):
         self.trunclevel = trunclevel
         if self.trunclevel is None:
             self.distribution = stats.norm()
+        elif self.trunclevel == 0:
+            self.distribution = None
         else:
             self.distribution = stats.truncnorm(-trunclevel, trunclevel)
 
