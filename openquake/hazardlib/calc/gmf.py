@@ -211,7 +211,7 @@ class GmfComputer(object):
         numpy.random.seed(self.seed)
         num_sids = len(self.ctx.sids)
         if self.distribution:
-            # build M arrays of random numbers of shape (N+1, E)
+            # build M arrays of random numbers of shape (N, E) and E
             intra_inter = [(rvs(self.distribution, num_sids, num_events),
                             rvs(self.distribution, num_events))
                            for _ in range(M)]
