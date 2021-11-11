@@ -290,15 +290,15 @@ class GmfGetter(object):
         self.correl_model = oqparam.correl_model
         self.cross_correl = oqparam.cross_correl
 
-    def gen_computers(self, mon):
+    def gen_computers(self, rmon, fmon):
         """
         Yield a GmfComputer instance for each non-discarded rupture
         """
         trt = self.rupgetter.trt
-        with mon:
+        with rmon:
             proxies = self.rupgetter.get_proxies()
         for proxy in proxies:
-            with mon:
+            with fmon:
                 ebr = proxy.to_ebr(trt)
                 sids = self.srcfilter.close_sids(proxy, trt)
                 if len(sids) == 0:  # filtered away
@@ -327,14 +327,15 @@ class GmfGetter(object):
     def imts(self):
         return list(self.oqparam.imtls)
 
-    def get_gmfdata(self, mon=performance.Monitor()):
+    def get_gmfdata(
+            self, rmon=performance.Monitor(), fmon=performance.Monitor()):
         """
         :returns: a DataFrame with fields eid, sid, gmv_X, ...
         """
         alldata = general.AccumDict(accum=[])
         self.sig_eps = []
         self.times = []  # rup_id, nsites, dt
-        for computer in self.gen_computers(mon):
+        for computer in self.gen_computers(rmon, fmon):
             data, dt = computer.compute_all(self.sig_eps)
             self.times.append(
                 (computer.ebrupture.id, len(computer.ctx.sids), dt))
@@ -360,11 +361,12 @@ class GmfGetter(object):
         :returns: a dict with keys gmfdata, hcurves
         """
         oq = self.oqparam
-        mon = monitor('getting ruptures', measuremem=True)
+        rmon = monitor('getting ruptures', measuremem=True)
+        fmon = monitor('filtering ruptures', measuremem=True)
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
-            gmfdata = self.get_gmfdata(mon)  # returned later
+            gmfdata = self.get_gmfdata(rmon, fmon)  # returned later
             if len(gmfdata) == 0:
                 return dict(gmfdata=(), hcurves=hcurves)
             for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
@@ -376,7 +378,7 @@ class GmfGetter(object):
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
         if not oq.hazard_curves_from_gmfs:
-            gmfdata = self.get_gmfdata(mon)
+            gmfdata = self.get_gmfdata(rmon, fmon)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
