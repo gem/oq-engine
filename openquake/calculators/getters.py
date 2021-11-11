@@ -362,7 +362,7 @@ class GmfGetter(object):
         """
         oq = self.oqparam
         rmon = monitor('getting ruptures', measuremem=True)
-        fmon = monitor('filtering ruptures', measuremem=True)
+        fmon = monitor('filtering ruptures', measuremem=False)
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
