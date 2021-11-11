@@ -1,0 +1,49 @@
+---
+name: Test Python 3.9 Releases
+on:
+  push:
+    branches: [ releases_python3.9 ]
+jobs:
+  demos:
+    runs-on: ubuntu-18.04
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+        #more $GITHUB_EVENT_PATH
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - name: Upgrade pip and install requirements
+        run: |
+          pip install -U pip
+          #pip install -r ./requirements-py38-linux64.txt
+          pip install fiona
+      - name: Install oq engine
+        run: pip install -e .
+      - name: Run demos 
+        shell: bash
+        env:
+          DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
+        run: |
+          zip -q -r /tmp/demos.zip demos/
+          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
+          oq dump /tmp/oqdata.zip
+          oq restore /tmp/oqdata.zip /tmp/oqdata
+          helpers/zipdemos.sh $(pwd)/demos
+          echo " Check if this is a pull request or not"
+          if [ -z "$GITHUB_HD_REF" ]
+             then
+              echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
+              GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
+             else
+              echo " Is a pull request, use branch: $GITHUB_HD_BR"
+              GITHUB_BR=`echo ${{ github.head_ref }}`
+          fi
+          echo "BRANCH set to $GITHUB_BR"
