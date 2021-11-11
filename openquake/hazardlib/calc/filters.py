@@ -446,7 +446,16 @@ class SourceFilter(object):
                 dists = get_distances(rup, sites, 'rrup')
                 idist = self.integration_distance(
                     src.tectonic_region_type, rup.mag)
-                src.nsites += (dists <= idist).count()
+                src.nsites += (dists <= idist).sum()
+
+    def get_nsites(self, rup):
+        """
+        :returns: the number of sites affected by the rupture (precise)
+        """
+        dists = get_distances(rup, self, 'rrup')
+        idist = self.integration_distance(
+            rup.tectonic_region_type, rup.mag)
+        return (dists <= idist).sum()
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:
