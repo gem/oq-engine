@@ -781,7 +781,7 @@ class RuptureProxy(object):
             number of occurrences and number of presumably affected sites
         """
         return self['n_occ'] * (
-            10 if self.nsites is None else numpy.clip(self.nsites, 10, 1000))
+            10 if self.nsites is None else numpy.clip(self.nsites, 100, 2000))
 
     def __getitem__(self, name):
         return self.rec[name]
