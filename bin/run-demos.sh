@@ -41,8 +41,8 @@ MPLBACKEND=Agg oq plot memory? -1
 MPLBACKEND=Agg oq plot sources? 9
 
 # fake a failed/executing calculation to check that it is not exported
-oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquake/engine/openquake.cfg
-oq db set_status -1 executing
+#oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquake/engine/openquake.cfg
+#oq db set_status -1 executing
 
 # run multi_risk test
 oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
