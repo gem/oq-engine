@@ -1,3 +1,7 @@
+  [Giuseppina Tusa]
+  * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs
+    from Tusa et al. (2020).
+
   [Michele Simionato]
   * ShakeMap calculations failing with a nonpositive definite correlation
     matrix now point out to the manual for the solution of the problem
