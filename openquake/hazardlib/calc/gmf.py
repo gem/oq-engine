@@ -129,10 +129,8 @@ class GmfComputer(object):
         self.ctx = ctxs[0]
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
-        if cross_correl is None:
-            self.cross_correl = NoCrossCorrelation(cmaker.trunclevel)
-        else:
-            self.cross_correl = cross_correl
+        self.cross_correl = cross_correl or NoCrossCorrelation(
+            cmaker.trunclevel)
 
     def compute_all(self, sig_eps=None):
         """

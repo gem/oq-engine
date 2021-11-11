@@ -781,7 +781,7 @@ class RuptureProxy(object):
             number of occurrences and number of presumably affected sites
         """
         return self['n_occ'] * (
-            10 if self.nsites is None else max(self.nsites, 10))
+            10 if self.nsites is None else numpy.clip(self.nsites, 100, 2000))
 
     def __getitem__(self, name):
         return self.rec[name]
@@ -797,6 +797,10 @@ class RuptureProxy(object):
                         self.rec['n_occ'], self.rec['id'], self.rec['e0'],
                         self.scenario)
         return ebr
+
+    def __repr__(self):
+        src = self.rec['source_id'].decode('ascii')
+        return '<%s[%s], w=%d>' % (self.__class__.__name__, src, self.weight)
 
 
 def get_ruptures(fname_csv):

@@ -219,6 +219,7 @@ def ebrisk(rupgetter, param, monitor):
     :returns: a dictionary of arrays
     """
     mon_rup = monitor('getting ruptures', measuremem=False)
+    mon_fil = monitor('filtering ruptures', measuremem=False)
     mon_haz = monitor('getting hazard', measuremem=True)
     alldata = general.AccumDict(accum=[])
     gmf_info = []
@@ -227,7 +228,7 @@ def ebrisk(rupgetter, param, monitor):
     gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
                            param['amplifier'])
     with mon_haz:
-        for c in gg.gen_computers(mon_rup):
+        for c in gg.gen_computers(mon_rup, mon_fil):
             data, time_by_rup = c.compute_all()
             if len(data):
                 for key, val in data.items():
