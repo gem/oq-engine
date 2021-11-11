@@ -26,7 +26,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.calc.filters import nofilter
+from openquake.hazardlib.calc.filters import SourceFilter, nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture, get_ruptures
@@ -359,8 +359,11 @@ class EventBasedCalculator(base.HazardCalculator):
         # compute_gmfs in parallel
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
+        srcfilter = SourceFilter(
+            self.sitecol.reduce(2000) if self.sitecol else None,
+            oq.maximum_distance)
         rgetters = get_rupture_getters(dstore, oq.concurrent_tasks * 1.25,
-                                       srcfilter=self.srcfilter)
+                                       srcfilter=srcfilter)
         allargs = [(rgetter, self.param) for rgetter in rgetters]
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(
