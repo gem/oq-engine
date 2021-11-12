@@ -859,6 +859,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_asset_loss=%s', mal)
         oq._amplifier = self.amplifier
         oq._sec_perils = sec_perils
+        # self.param below is used in classical risk
         self.param = dict(individual_rlzs=oq.individual_rlzs,
                           ps_grid_spacing=oq.ps_grid_spacing,
                           minimum_distance=oq.minimum_distance,
