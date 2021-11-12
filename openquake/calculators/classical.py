@@ -524,7 +524,6 @@ class ClassicalCalculator(base.HazardCalculator):
         assert tot_weight
         ct = oq.concurrent_tasks or 1
         max_weight = max(tot_weight / ct, oq.min_weight)
-        self.param['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
 

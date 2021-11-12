@@ -859,17 +859,6 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_asset_loss=%s', mal)
         oq._amplifier = self.amplifier
         oq._sec_perils = sec_perils
-        # self.param below is used in classical risk
-        self.param = dict(individual_rlzs=oq.individual_rlzs,
-                          ps_grid_spacing=oq.ps_grid_spacing,
-                          minimum_distance=oq.minimum_distance,
-                          min_iml=oq.min_iml,
-                          collapse_level=int(oq.collapse_level),
-                          split_sources=oq.split_sources,
-                          avg_losses=oq.avg_losses,
-                          amplifier=self.amplifier,
-                          sec_perils=sec_perils,
-                          ses_seed=oq.ses_seed)
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
@@ -1000,7 +989,7 @@ class RiskCalculator(HazardCalculator):
         smap.monitor.save('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
-            smap.submit((block, self.param))
+            smap.submit((block, self.oqparam))
         return smap.reduce(self.combine, self.acc)
 
     def combine(self, acc, res):
