@@ -70,14 +70,12 @@ def count_ruptures(src):
     return {src.source_id: src.count_ruptures()}
 
 
-def compute_gmfs(rupgetter, param, monitor):
+def compute_gmfs(rupgetter, oqparam, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    oq = param['oqparam']
     srcfilter = monitor.read('srcfilter')
-    getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'],
-                       param['sec_perils'])
+    getter = GmfGetter(rupgetter, srcfilter, oqparam)
     return getter.compute_gmfs_curves(monitor)
 
 
@@ -252,20 +250,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.flush()
         return acc
 
-    def set_param(self, **kw):
-        oq = self.oqparam
-        if oq.ground_motion_fields and oq.min_iml.sum() == 0:
-            logging.warning('The GMFs are not filtered: '
-                            'you may want to set a minimum_intensity')
-        else:
-            logging.info('minimum_intensity=%s', oq.minimum_intensity)
-        self.param.update(
-            oqparam=oq,
-            gmf=oq.ground_motion_fields,
-            truncation_level=oq.truncation_level,
-            imtls=oq.imtls,
-            ses_per_logic_tree_path=oq.ses_per_logic_tree_path, **kw)
-
     def _read_scenario_ruptures(self):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(self.oqparam)
@@ -325,7 +309,11 @@ class EventBasedCalculator(base.HazardCalculator):
     def execute(self):
         oq = self.oqparam
         dstore = self.datastore
-        self.set_param()
+        if oq.ground_motion_fields and oq.min_iml.sum() == 0:
+            logging.warning('The GMFs are not filtered: '
+                            'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
@@ -361,7 +349,7 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Reading {:_d} ruptures'.format(nr))
         rgetters = get_rupture_getters(dstore, oq.concurrent_tasks * 1.25,
                                        srcfilter=self.srcfilter)
-        allargs = [(rgetter, self.param) for rgetter in rgetters]
+        allargs = [(rgetter, oq) for rgetter in rgetters]
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(
             self.core_task.__func__, allargs, h5=dstore.hdf5)

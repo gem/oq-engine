@@ -45,16 +45,16 @@ def zero_dmgcsq(A, R, crmodel):
     return numpy.zeros((A, R, L, Dc), F32)
 
 
-def event_based_damage(df, param, monitor):
+def event_based_damage(df, oqparam, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param param: a dictionary of parameters coming from the job.ini
+    :param oqparam: parameters coming from the job.ini
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
-    dstore = datastore.read(param['hdf5path'])
-    K = param['K']
+    dstore = datastore.read(oqparam.hdf5path)
+    K = oqparam.K
     with monitor('reading gmf_data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
@@ -62,17 +62,17 @@ def event_based_damage(df, param, monitor):
         kids = (dstore['assetcol/kids'][:] if K
                 else numpy.zeros(len(assets_df), U16))
         crmodel = monitor.read('crmodel')
-    master_seed = crmodel.oqparam.master_seed
-    sec_sims = crmodel.oqparam.secondary_simulations.items()
+    master_seed = oqparam.master_seed
+    sec_sims = oqparam.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
-    dmgcsq = zero_dmgcsq(len(assets_df), param['R'], crmodel)
+    dmgcsq = zero_dmgcsq(len(assets_df), oqparam.R, crmodel)
     A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     loss_types = crmodel.oqparam.loss_types
-    float_dmg_dist = param['float_dmg_dist']  # True by default
+    float_dmg_dist = oqparam.float_dmg_dist  # True by default
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assets_df.groupby('site_id'):
@@ -181,8 +181,8 @@ class DamageCalculator(EventBasedRiskCalculator):
             raise ValueError(
                 'The exposure contains %d non-integer asset numbers: '
                 'you cannot use dicrete_damage_distribution=true' % num_floats)
-        self.param['R'] = self.R  # 1 if collect_rlzs
-        self.param['float_dmg_dist'] = not oq.discrete_damage_distribution
+        oq.R = self.R  # 1 if collect_rlzs
+        oq.float_dmg_dist = not oq.discrete_damage_distribution
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
