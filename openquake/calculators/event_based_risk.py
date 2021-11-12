@@ -160,29 +160,28 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
     return dict(avg=loss_by_AR, alt=df)
 
 
-def event_based_risk(df, param, monitor):
+def event_based_risk(df, oqparam, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param param: a dictionary of parameters coming from the job.ini
+    :param oqparam: parameters coming from the job.ini
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    dstore = datastore.read(param['hdf5path'], parentdir=param['parentdir'])
+    dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
     with dstore, monitor('reading gmf_data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = dstore['assetcol/kids'][:] if param['K'] else ()
+        kids = dstore['assetcol/kids'][:] if oqparam.K else ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
-        weights = [1] if param['collect_rlzs'] else dstore['weights'][()]
-    ARKD = len(assets_df), len(weights), param['K'], param['D']
-    oq = crmodel.oqparam
-    if oq.ignore_master_seed or oq.ignore_covs:
+        weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
+    ARKD = len(assets_df), len(weights), oqparam.K, oqparam.D
+    if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
-        rng = MultiEventRNG(
-            oq.master_seed, df.eid.unique(), int(oq.asset_correlation))
+        rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
+                            int(oqparam.asset_correlation))
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=False)
@@ -193,28 +192,28 @@ def event_based_risk(df, param, monitor):
                 continue
             with mon_risk:
                 out = crmodel.get_output(
-                    taxo, asset_df, gmf_df, param['sec_losses'], rng)
+                    taxo, asset_df, gmf_df, oqparam._sec_losses, rng)
             yield out
 
     return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
 
 
-def start_ebrisk(rgetter, param, monitor):
+def start_ebrisk(rgetter, oqparam, monitor):
     """
     Launcher for ebrisk tasks
     """
     srcfilter = monitor.read('srcfilter')
-    rgetters = list(rgetter.split(srcfilter, param['maxweight']))
+    rgetters = list(rgetter.split(srcfilter, oqparam.maxweight))
     for rg in rgetters[:-1]:
-        yield ebrisk, rg, param
+        yield ebrisk, rg, oqparam
     if rgetters:
-        yield from ebrisk(rgetters[-1], param, monitor)
+        yield from ebrisk(rgetters[-1], oqparam, monitor)
 
 
-def ebrisk(rupgetter, param, monitor):
+def ebrisk(rupgetter, oqparam, monitor):
     """
     :param rupgetter: RuptureGetter with multiple ruptures
-    :param param: dictionary of parameters coming from oqparam
+    :param oqparam: input parameters
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
@@ -224,9 +223,8 @@ def ebrisk(rupgetter, param, monitor):
     alldata = general.AccumDict(accum=[])
     gmf_info = []
     srcfilter = monitor.read('srcfilter')
-    param['N'] = len(srcfilter.sitecol.complete)
-    gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
-                           param['amplifier'])
+    oqparam.N = len(srcfilter.sitecol.complete)
+    gg = getters.GmfGetter(rupgetter, srcfilter, oqparam)
     with mon_haz:
         for c in gg.gen_computers(mon_rup, mon_fil):
             data, time_by_rup = c.compute_all()
@@ -243,7 +241,7 @@ def ebrisk(rupgetter, param, monitor):
             alldata[key] = U32(alldata[key])
         else:
             alldata[key] = F32(alldata[key])
-    yield event_based_risk(pandas.DataFrame(alldata), param, monitor)
+    yield event_based_risk(pandas.DataFrame(alldata), oqparam, monitor)
     if gmf_info:
         yield {'gmf_info': numpy.array(gmf_info, gmf_info_dt)}
 
@@ -283,27 +281,26 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         super().pre_execute()
         parentdir = (os.path.dirname(self.datastore.ppath)
                      if self.datastore.ppath else None)
-        self.set_param(hdf5path=self.datastore.filename,
-                       parentdir=parentdir)
+        oq.hdf5path = self.datastore.filename
+        oq.parentdir = parentdir
         logging.info(
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
-        self.param['D'] = 2
+        oq.D = 2
         if self.policy_dict:
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
-            self.param['D'] = 3
+            self.oqparam.D = 3
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
-        self.param['sec_losses'] = sec_losses
-        self.param['M'] = len(oq.all_imts())
-        self.param['N'] = self.N
-        self.param['K'] = len(self.aggkey)
+        oq._sec_losses = sec_losses
+        oq.M = len(oq.all_imts())
+        oq.N = self.N
+        oq.K = len(self.aggkey)
         ct = oq.concurrent_tasks or 1
-        self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
-        self.param['collect_rlzs'] = oq.collect_rlzs
+        oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
@@ -354,7 +351,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             for rg in getters.get_rupture_getters(
                     self.datastore, self.oqparam.concurrent_tasks,
                     srcfilter=srcfilter):
-                smap.submit((rg, self.param))
+                smap.submit((rg, self.oqparam))
             smap.reduce(self.agg_dicts)
             gmf_bytes = self.datastore['gmf_info']['gmfbytes']
             if len(gmf_bytes) == 0:
@@ -383,9 +380,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         E = len(numpy.unique(eids))
-        K = self.param['K']
+        K = self.oqparam.K
         names = {'loss', 'variance'}
-        for sec_loss in self.param['sec_losses']:
+        for sec_loss in self.oqparam._sec_losses:
             names.update(sec_loss.sec_names)
         D = len(names)
         logging.info('Risk parameters (rel_E={:_d}, K={:_d}, L={}, D={})'.
@@ -465,8 +462,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                yield slice(start, stop), self.param
+                yield slice(start, stop), self.oqparam
                 weight = 0
                 start = stop
         if weight:
-            yield slice(start, stop), self.param
+            yield slice(start, stop), self.oqparam
