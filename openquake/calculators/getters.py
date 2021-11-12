@@ -271,8 +271,8 @@ class GmfGetter(object):
         self.srcfilter = srcfilter
         self.sitecol = srcfilter.sitecol.complete
         self.oqparam = oqparam
-        self.amplifier = oqparam._amplifier
-        self.sec_perils = oqparam._sec_perils
+        self.amplifier = getattr(oqparam, '_amplifier', None)
+        self.sec_perils = getattr(oqparam, '_sec_perils', ())
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
