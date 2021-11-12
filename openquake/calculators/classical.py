@@ -94,7 +94,7 @@ def classical(srcs, tile, cmaker, monitor):
         dt = time.time() - t0
         yield res
         for tile in tiles[1:]:
-            if dt < cmaker.time_per_tile:  # fast, do everything in core
+            if dt < cmaker.time_per_task:  # fast, do everything in core
                 yield hazclassical(srcs, tile, cmaker)
             else:  # spawn subtasks
                 yield classical, srcs, tile, cmaker
