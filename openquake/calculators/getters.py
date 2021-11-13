@@ -16,11 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import operator
 import numpy
 import pandas
-from openquake.baselib import general, performance, parallel, hdf5
+from openquake.baselib import general, performance, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import probability_map, stats
@@ -35,7 +34,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
-weight = operator.attrgetter('weight')
+weight = operator.itemgetter('n_occ')
 
 
 class NotFound(Exception):
@@ -432,10 +431,7 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
             proxies, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
-        if len(rlzs_by_gsim) == 1:
-            [rbg] = rlzs_by_gsim.values()
-        else:
-            rbg = rlzs_by_gsim[trt_smr]
+        rbg = rlzs_by_gsim[trt_smr]
         rg = RuptureGetter(block, dstore.filename, trt_smr,
                            full_lt.trt_by(trt_smr), rbg)
         rgetters.append(rg)
@@ -558,7 +554,6 @@ class RuptureGetter(object):
         for proxy in self.proxies:
             sids = srcfilter.close_sids(proxy.rec, self.trt)
             if len(sids):
-                proxy.nsites = len(sids)
                 proxies.append(proxy)
         rgetters = []
         for block in general.block_splitter(proxies, maxw, weight):
