@@ -21,8 +21,9 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib import const, contexts
+from openquake.hazardlib.contexts import STD_TYPES
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.const import StdDev
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
@@ -41,17 +42,15 @@ def set_between_epsilon(self, ctx, imt, epsilon_tau):
     :param epsilon_tau:
         the epsilon value used to constrain the between event variability
     """
-    # Index for the between event standard deviation
-    key = const.StdDev.INTER_EVENT
-    self.mean += epsilon_tau * getattr(self, key)
+    # index for the between event standard deviation
+    self.mean += epsilon_tau * getattr(self, StdDev.INTER_EVENT)
 
-    # Set between event variability to 0
-    keya = const.StdDev.TOTAL
-    setattr(self, key, np.zeros_like(getattr(self, keya)))
+    # set between event variability to 0
+    setattr(self, StdDev.INTER_EVENT,
+            np.zeros_like(getattr(self, StdDev.TOTAL)))
 
-    # Set total variability equal to the within-event one
-    keyb = const.StdDev.INTRA_EVENT
-    setattr(self, keya, getattr(self, keyb))
+    # set total variability equal to the within-event one
+    setattr(self, StdDev.TOTAL, getattr(self, StdDev.INTRA_EVENT))
 
 
 def set_scale_median_scalar(self, ctx, imt, scaling_factor):
@@ -79,9 +78,9 @@ def set_scale_total_sigma_scalar(self, ctx, imt, scaling_factor):
     :param scaling_factor:
         Factor to scale the standard deviations
     """
-    total_stddev = getattr(self, const.StdDev.TOTAL)
+    total_stddev = getattr(self, StdDev.TOTAL)
     total_stddev *= scaling_factor
-    setattr(self, const.StdDev.TOTAL, total_stddev)
+    setattr(self, StdDev.TOTAL, total_stddev)
 
 
 def set_scale_total_sigma_vector(self, ctx, imt, scaling_factor):
@@ -92,9 +91,9 @@ def set_scale_total_sigma_vector(self, ctx, imt, scaling_factor):
         CoeffsTable
     """
     C = scaling_factor[imt]
-    total_stddev = getattr(self, const.StdDev.TOTAL)
+    total_stddev = getattr(self, StdDev.TOTAL)
     total_stddev *= C["scaling_factor"]
-    setattr(self, const.StdDev.TOTAL, total_stddev)
+    setattr(self, StdDev.TOTAL, total_stddev)
 
 
 def set_fixed_total_sigma(self, ctx, imt, total_sigma):
@@ -104,8 +103,8 @@ def set_fixed_total_sigma(self, ctx, imt, total_sigma):
         IMT-dependent total standard deviation as a CoeffsTable
     """
     C = total_sigma[imt]
-    shp = getattr(self, const.StdDev.TOTAL).shape
-    setattr(self, const.StdDev.TOTAL, C["total_sigma"] + np.zeros(shp))
+    shp = getattr(self, StdDev.TOTAL).shape
+    setattr(self, StdDev.TOTAL, C["total_sigma"] + np.zeros(shp))
 
 
 def add_delta_std_to_total_std(self, ctx, imt, delta):
@@ -113,9 +112,9 @@ def add_delta_std_to_total_std(self, ctx, imt, delta):
     :param delta:
         A delta std e.g. a phi S2S to be removed from total
     """
-    total_stddev = getattr(self, const.StdDev.TOTAL)
+    total_stddev = getattr(self, StdDev.TOTAL)
     total_stddev = (total_stddev**2 + np.sign(delta) * delta**2)**0.5
-    setattr(self, const.StdDev.TOTAL, total_stddev)
+    setattr(self, StdDev.TOTAL, total_stddev)
 
 
 def set_total_std_as_tau_plus_delta(self, ctx, imt, delta):
@@ -123,9 +122,9 @@ def set_total_std_as_tau_plus_delta(self, ctx, imt, delta):
     :param delta:
         A delta std e.g. a phi SS to be combined with between std, tau.
     """
-    tau = getattr(self, const.StdDev.INTER_EVENT)
+    tau = getattr(self, StdDev.INTER_EVENT)
     total_stddev = (tau**2 + np.sign(delta) * delta**2)**0.5
-    setattr(self, const.StdDev.TOTAL, total_stddev)
+    setattr(self, StdDev.TOTAL, total_stddev)
 
 
 def _dict_to_coeffs_table(input_dict, name):
@@ -161,7 +160,7 @@ class ModifiableGMPE(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
@@ -190,7 +189,7 @@ class ModifiableGMPE(GMPE):
         """
         if ('set_between_epsilon' in self.params or
             'set_total_std_as_tau_plus_delta' in self.params) and (
-                const.StdDev.INTER_EVENT not in
+                StdDev.INTER_EVENT not in
                 self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
             raise ValueError('The GMPE does not have between event std')
 
@@ -202,7 +201,7 @@ class ModifiableGMPE(GMPE):
         g = globals()
         for m, imt in enumerate(imts):
             # Save mean and stds
-            kvs = list(zip(contexts.STD_TYPES, [sig[m], tau[m], phi[m]]))
+            kvs = list(zip(STD_TYPES, [sig[m], tau[m], phi[m]]))
             self.mean = mean[m]
             for key, val in kvs:
                 setattr(self, key, val)
