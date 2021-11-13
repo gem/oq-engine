@@ -87,7 +87,7 @@ def classical(srcs, tile, cmaker, monitor):
     if tile is None:
         # read from the temporary storage, this avoids sending the
         # same sitecol hundreds of times
-        tiles = monitor.read('sitecol').split_in_tiles(
+        tiles = monitor.read('sitecol').split_max(
             cmaker.max_sites_per_tile)
         t0 = time.time()
         res = hazclassical(srcs, tiles[0], cmaker)
@@ -529,7 +529,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         tiling = self.N > oq.max_sites_per_tile
         if tiling:
-            tiles = self.sitecol.split_in_tiles(oq.max_sites_per_tile)
+            tiles = self.sitecol.split_max(oq.max_sites_per_tile)
             self.tile_sizes = [len(tile) for tile in tiles]
             ntiles = len(tiles)
             logging.info('There are %d tiles of sizes %s',
