@@ -425,7 +425,7 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     rup_array.sort(order=['trt_smr', 'n_occ'])
     scenario = 'scenario' in dstore['oqparam'].calculation_mode
     proxies = [RuptureProxy(rec, scenario) for rec in rup_array]
-    maxweight = rup_array['n_occ'].sum() / (ct or 1)
+    maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
     rgetters = []
     for block in general.block_splitter(
             proxies, maxweight, operator.itemgetter('n_occ'),

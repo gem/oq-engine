@@ -75,8 +75,13 @@ def compute_gmfs(rupgetter, oqparam, monitor):
     Compute GMFs and optionally hazard curves
     """
     srcfilter = monitor.read('srcfilter')
-    getter = GmfGetter(rupgetter, srcfilter, oqparam)
-    return getter.compute_gmfs_curves(monitor)
+    rgetters = list(rupgetter.split(srcfilter, 10_000))
+    print(len(rgetters))
+    getter = GmfGetter(rgetters[0], srcfilter, oqparam)
+    yield getter.compute_gmfs_curves(monitor)
+    for rg in rgetters[1:]:
+        getter = GmfGetter(rg, srcfilter, oqparam)
+        yield GmfGetter.compute_gmfs_curves, getter
 
 
 def compute_avg_gmf(gmf_df, weights, min_iml):
