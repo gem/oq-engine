@@ -201,9 +201,9 @@ class SWMRTestCase(unittest.TestCase):
         shutil.rmtree(os.path.dirname(cls.tmp))
 
 
-def process_elements(elements, monitor):
+def process_elements(elements, timefactor, monitor):
     for el in elements:
-        time.sleep(el / 5)
+        time.sleep(el * timefactor)
     return sum(elements)
 
 
@@ -214,12 +214,13 @@ class SplitTaskTestCase(unittest.TestCase):
         tmpdir = tempfile.mkdtemp()
         tmp = os.path.join(tmpdir, 'calc_1.hdf5')
         print('Creating', tmp)
+        duration = .5
+        timefactor = .2
+        args = (elements, process_elements, (timefactor,), duration)
         with hdf5.File(tmp, 'w') as h5:
             performance.init_performance(h5)
             res = parallel.Starmap.apply(
-                process_elements, (elements,),
-                concurrent_tasks=4, h5=h5
+                parallel.split_task, args, concurrent_tasks=4, h5=h5
             ).reduce(acc=0)
         print(res)
-        #shutil.rmtree(tmpdir)
-
+        shutil.rmtree(tmpdir)

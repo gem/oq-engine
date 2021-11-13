@@ -905,22 +905,24 @@ def count(word):
     return collections.Counter(word)
 
 
-def split_task(elements, func, *args, monitor):
+def split_task(elements, func, args, duration, monitor):
     """
     :param func: a task function with a monitor as last argument
     :param args: arguments of the task function, with args[0] being a sequence
     :param duration: split the task if it exceeds the duration
     :yields: a partial result, 0 or more task objects
     """
+    elements = numpy.array(elements)  # from WeightedSequence to array
     idxs = numpy.arange(len(elements))
     split_elems = [elements[idxs % 5 == i] for i in range(5)]
+    # see how long it takes to run the first slice
     t0 = time.time()
-    res = func(split_elems[0], *args)
+    res = func(split_elems[0], *args, monitor=monitor)
     dt = (time.time() - t0)
     yield res
     for elems in split_elems[1:]:
-        if dt < 1:  # fast, do everything in core
-            yield func(elems, *args)
+        if dt < duration:  # fast, do everything in core
+            yield func(elems, *args, monitor=monitor)
         else:  # slow, spawn subtasks
             yield (func, elems) + args
 
