@@ -766,22 +766,10 @@ class RuptureProxy(object):
     A proxy for a rupture record.
 
     :param rec: a record with the rupture parameters
-    :param nsites: approx number of sites affected by the rupture
     """
-    def __init__(self, rec, nsites=None, scenario=False):
+    def __init__(self, rec, scenario=False):
         self.rec = rec
-        self.nsites = nsites
         self.scenario = scenario
-
-    @property
-    def weight(self):
-        """
-        :returns:
-            heuristic weight for the underlying rupture, depending on the
-            number of occurrences and number of presumably affected sites
-        """
-        return self['n_occ'] * (
-            10 if self.nsites is None else numpy.clip(self.nsites, 100, 2000))
 
     def __getitem__(self, name):
         return self.rec[name]

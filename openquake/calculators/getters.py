@@ -423,22 +423,13 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     rup_array = dstore['ruptures'][slc]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
-    rup_array.sort(order='trt_smr')  # avoid generating too many tasks
+    rup_array.sort(order=['trt_smr', 'n_occ'])
     scenario = 'scenario' in dstore['oqparam'].calculation_mode
-    if srcfilter is None:
-        proxies = [RuptureProxy(rec, None, scenario) for rec in rup_array]
-    elif len(rup_array) <= 1000:  # do not parallelize
-        proxies = weight_ruptures(
-            rup_array, srcfilter, full_lt.trt_by, scenario)
-    else:  # parallelize the weighting of the ruptures
-        proxies = parallel.Starmap.apply(
-            weight_ruptures, (rup_array, srcfilter, full_lt.trt_by, scenario),
-            concurrent_tasks=ct, progress=logging.debug
-        ).reduce(acc=[])
-    maxweight = sum(proxy.weight for proxy in proxies) / (ct or 1)
+    proxies = [RuptureProxy(rec, scenario) for rec in rup_array]
+    maxweight = rup_array['n_occ'].sum() / (ct or 1)
     rgetters = []
     for block in general.block_splitter(
-            proxies, maxweight, operator.attrgetter('weight'),
+            proxies, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
         if len(rlzs_by_gsim) == 1:
@@ -508,7 +499,7 @@ class RuptureGetter(object):
     """
     def __init__(self, proxies, filename, trt_smr, trt, rlzs_by_gsim):
         self.proxies = proxies
-        self.weight = sum(proxy.weight for proxy in proxies)
+        self.weight = sum(proxy['n_occ'] for proxy in proxies)
         self.filename = filename
         self.trt_smr = trt_smr
         self.trt = trt
