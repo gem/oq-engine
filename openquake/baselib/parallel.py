@@ -709,6 +709,19 @@ class Starmap(object):
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, taskargs, distribute, progress, h5)
 
+    @classmethod
+    def apply_split(cls, task, allargs, concurrent_tasks=None,
+                    maxweight=None, weight=lambda item: 1,
+                    key=lambda item: 'Unspecified',
+                    distribute=None, progress=logging.info, h5=None,
+                    duration=300, splitno=5):
+        """
+        Same as Starmap.apply, but possibly produces subtasks
+        """
+        args = (allargs[0], task, allargs[1:], duration, splitno)
+        return cls.apply(split_task, args, concurrent_tasks // 2 or 1,
+                         maxweight, weight, key, distribute, progress, h5)
+
     def __init__(self, task_func, task_args=(), distribute=None,
                  progress=logging.info, h5=None, slowdown=0):
         self.__class__.init(distribute=distribute)
@@ -905,26 +918,31 @@ def count(word):
     return collections.Counter(word)
 
 
-def split_task(elements, func, args, duration, monitor):
+def split_task(elements, func, args, duration, splitno, monitor):
     """
     :param func: a task function with a monitor as last argument
     :param args: arguments of the task function, with args[0] being a sequence
     :param duration: split the task if it exceeds the duration
+    :param splitno: number of splits to try (ex. 5)
     :yields: a partial result, 0 or more task objects
     """
+    n = len(elements)
+    if splitno > n:  # too many splits
+        splitno = n
     elements = numpy.array(elements)  # from WeightedSequence to array
-    idxs = numpy.arange(len(elements))
-    split_elems = [elements[idxs % 5 == i] for i in range(5)]
+    idxs = numpy.arange(n)
+    split_elems = [elements[idxs % splitno == i] for i in range(splitno)]
     # see how long it takes to run the first slice
     t0 = time.time()
-    res = func(split_elems[0], *args, monitor=monitor)
-    dt = (time.time() - t0)
-    yield res
-    for elems in split_elems[1:]:
-        if dt < duration:  # fast, do everything in core
-            yield func(elems, *args, monitor=monitor)
-        else:  # slow, spawn subtasks
-            yield (func, elems) + args
+    for i, elems in enumerate(split_elems):
+        res = func(split_elems[0], *args, monitor=monitor)
+        dt = time.time() - t0
+        yield res
+        if dt > duration:
+            # spawn subtasks for the rest and exit
+            for els in split_elems[i + 1:]:
+                yield (func, els) + args
+            break
 
 #                             start/stop workers                             #
 

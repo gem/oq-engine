@@ -216,11 +216,11 @@ class SplitTaskTestCase(unittest.TestCase):
         print('Creating', tmp)
         duration = .5
         timefactor = .2
-        args = (elements, process_elements, (timefactor,), duration)
         with hdf5.File(tmp, 'w') as h5:
             performance.init_performance(h5)
-            res = parallel.Starmap.apply(
-                parallel.split_task, args, concurrent_tasks=4, h5=h5
+            res = parallel.Starmap.apply_split(
+                process_elements, (elements, timefactor),
+                concurrent_tasks=4, h5=h5, duration=duration
             ).reduce(acc=0)
-        print(res)
+        self.assertAlmostEqual(res, 48.6718458266)
         shutil.rmtree(tmpdir)
