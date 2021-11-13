@@ -417,14 +417,14 @@ class SiteCollection(object):
         return (self.depths == 0).all()
 
     # used in the engine
-    def split_in_tiles(self, max_sites_per_tile):
+    def split_max(self, max_sites):
         """
-        Split a SiteCollection into a set of tiles (SiteCollection instances).
+        Split a SiteCollection into SiteCollection instances
         """
         N = len(self)
-        if N < max_sites_per_tile:  # do not split
+        if N < max_sites:  # do not split
             return [self]
-        hint = int(numpy.ceil(N / max_sites_per_tile))
+        hint = int(numpy.ceil(N / max_sites))
         tiles = []
         for i in range(hint):
             sc = SiteCollection.__new__(SiteCollection)
