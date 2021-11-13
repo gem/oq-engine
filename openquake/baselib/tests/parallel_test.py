@@ -24,7 +24,7 @@ import unittest
 import itertools
 import tempfile
 import numpy
-from openquake.baselib import parallel, general, hdf5, workerpool, performance
+from openquake.baselib import parallel, general, hdf5, performance
 
 try:
     import celery
@@ -199,3 +199,27 @@ class SWMRTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(os.path.dirname(cls.tmp))
+
+
+def process_elements(elements, monitor):
+    for el in elements:
+        time.sleep(el / 5)
+    return sum(elements)
+
+
+class SplitTaskTestCase(unittest.TestCase):
+    def test(self):
+        rng = numpy.random.default_rng(42)
+        elements = rng.random(size=100)
+        tmpdir = tempfile.mkdtemp()
+        tmp = os.path.join(tmpdir, 'calc_1.hdf5')
+        print('Creating', tmp)
+        with hdf5.File(tmp, 'w') as h5:
+            performance.init_performance(h5)
+            res = parallel.Starmap.apply(
+                process_elements, (elements,),
+                concurrent_tasks=4, h5=h5
+            ).reduce(acc=0)
+        print(res)
+        #shutil.rmtree(tmpdir)
+

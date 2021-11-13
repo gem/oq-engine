@@ -677,7 +677,7 @@ class Starmap(object):
             del cls.dask_client
 
     @classmethod
-    def apply(cls, task, args, concurrent_tasks=None,
+    def apply(cls, task, allargs, concurrent_tasks=None,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               distribute=None, progress=logging.info, h5=None):
@@ -698,7 +698,7 @@ class Starmap(object):
         :param h5: an open hdf5.File where to store the performance info
         :returns: an :class:`IterResult` object
         """
-        arg0, *args = args
+        arg0, *args = allargs
         if maxweight:  # block_splitter is lazy
             taskargs = ([blk] + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
@@ -905,32 +905,24 @@ def count(word):
     return collections.Counter(word)
 
 
-def split_task(func, *args, duration=1000,
-               weight=operator.attrgetter('weight')):
+def split_task(elements, func, *args, monitor):
     """
     :param func: a task function with a monitor as last argument
-    :param args: arguments of the task function
+    :param args: arguments of the task function, with args[0] being a sequence
     :param duration: split the task if it exceeds the duration
-    :param weight: weight function for the elements in args[0]
-    :yields: a partial result, 0 or more task objects, 0 or 1 partial result
+    :yields: a partial result, 0 or more task objects
     """
-    elements = numpy.array(sorted(args[0], key=weight, reverse=True))
-    n = len(elements)
-    # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
-    assert n > 0, 'Passed an empty sequence!'
-    if n == 1:
-        yield func(*args)
-        return
-    first, *other = elements
-    first_weight = weight(first)
+    idxs = numpy.arange(len(elements))
+    split_elems = [elements[idxs % 5 == i] for i in range(5)]
     t0 = time.time()
-    res = func(*([first],) + args[1:])
-    dt = (time.time() - t0) / first_weight  # time per unit of weight
+    res = func(split_elems[0], *args)
+    dt = (time.time() - t0)
     yield res
-    blocks = list(block_splitter(other, duration, lambda el: weight(el) * dt))
-    for block in blocks[:-1]:
-        yield (func, block) + args[1:-1]
-    yield func(*(blocks[-1],) + args[1:])
+    for elems in split_elems[1:]:
+        if dt < 1:  # fast, do everything in core
+            yield func(elems, *args)
+        else:  # slow, spawn subtasks
+            yield (func, elems) + args
 
 #                             start/stop workers                             #
 
