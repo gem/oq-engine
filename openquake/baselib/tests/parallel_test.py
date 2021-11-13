@@ -222,5 +222,5 @@ class SplitTaskTestCase(unittest.TestCase):
                 process_elements, (elements, timefactor),
                 concurrent_tasks=4, h5=h5, duration=duration
             ).reduce(acc=0)
-        print(res)
+        self.assertAlmostEqual(res, 48.6718458266)
         shutil.rmtree(tmpdir)
