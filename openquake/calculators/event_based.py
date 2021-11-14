@@ -96,7 +96,10 @@ def compute_gmfs(proxies, oqparam, dstore, monitor):
         full_lt = dstore['full_lt']
         rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
         trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
-        cmaker = ContextMaker(trt, rlzs_by_gsim, vars(oqparam))
+        param = vars(oqparam).copy()
+        param['imtls'] = oqparam.imtls
+        param['min_iml'] = oqparam.min_iml
+        cmaker = ContextMaker(trt, rlzs_by_gsim, param)
         min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
             if proxy['mag'] < min_mag:
