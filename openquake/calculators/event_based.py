@@ -81,7 +81,7 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
-def compute_gmfs(proxies, full_lt, oqparam, dstore, monitor):
+def event_based(proxies, full_lt, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -92,7 +92,7 @@ def compute_gmfs(proxies, full_lt, oqparam, dstore, monitor):
     hcurves = {}  # key -> poes
     trt_smr = proxies[0]['trt_smr']
     fmon = monitor('filtering ruptures', measuremem=False)
-    cmon = monitor('computing GMFs', measuremem=False)
+    cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
         rupgeoms = dstore['rupgeoms']
         rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
@@ -174,7 +174,7 @@ class EventBasedCalculator(base.HazardCalculator):
     the hazard curves from the ruptures, depending on the configuration
     parameters.
     """
-    core_task = compute_gmfs
+    core_task = event_based
     is_stochastic = True
     accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
 
@@ -411,7 +411,7 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore.create_dset('gmf_data/time_by_rup',
                                time_dt, (nrups,), fillvalue=None)
 
-        # compute_gmfs in parallel
+        # event_based in parallel
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
         scenario = 'scenario' in oq.calculation_mode
