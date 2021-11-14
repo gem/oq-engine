@@ -935,7 +935,7 @@ def split_task(elements, func, args, duration, splitno, monitor):
     # see how long it takes to run the first slice
     t0 = time.time()
     for i, elems in enumerate(split_elems):
-        res = func(split_elems[0], *args, monitor=monitor)
+        res = func(elems, *args, monitor=monitor)
         dt = time.time() - t0
         yield res
         if dt > duration:
