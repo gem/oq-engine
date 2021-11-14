@@ -351,6 +351,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = get_ruptures(oq.inputs['rupture_model'])
+            if len(gsim_lt.values) == 1:  # fix for scenario_damage/case_12
+                aw['trt_smr'] = 0  # a single TRT
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
