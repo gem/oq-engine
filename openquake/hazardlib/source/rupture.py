@@ -781,14 +781,14 @@ class RuptureProxy(object):
         """
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
-        ebr = EBRupture(rupture, self.rec['source_id'], self.rec['trt_smr'],
-                        self.rec['n_occ'], self.rec['id'], self.rec['e0'],
-                        self.scenario)
+        ebr = EBRupture(rupture, self['source_id'], self['trt_smr'],
+                        self['n_occ'], self['id'], self['e0'], self.scenario)
         return ebr
 
     def __repr__(self):
-        src = self.rec['source_id'].decode('ascii')
-        return '<%s[%s], w=%d>' % (self.__class__.__name__, src, self.weight)
+        src = self['source_id'].decode('ascii')
+        return '<%s#%d[%s], w=%d>' % (self.__class__.__name__,
+                                      self['id'], src, self['n_occ'])
 
 
 def get_ruptures(fname_csv):

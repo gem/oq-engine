@@ -81,12 +81,11 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
-def compute_gmfs(proxies, oqparam, dstore, monitor):
+def compute_gmfs(proxies, full_lt, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
     srcfilter = monitor.read('srcfilter')
-    full_lt = monitor.read('full_lt')
     alldata = AccumDict(accum=[])
     sig_eps = []
     times = []  # rup_id, nsites, dt
@@ -133,8 +132,6 @@ def compute_gmfs(proxies, oqparam, dstore, monitor):
     gmfdata = strip_zeros(pandas.DataFrame(alldata))
     if oqparam.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
-        if len(gmfdata) == 0:
-            return dict(gmfdata=(), hcurves=hcurves, times=times)
         for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
             with hc_mon:
                 poes = calc.gmvs_to_poes(
@@ -143,6 +140,8 @@ def compute_gmfs(proxies, oqparam, dstore, monitor):
                     hcurves[rsi2str(rlz, sid, imt)] = poes[m]
     times = numpy.array([tup + (monitor.task_no,) for tup in times], time_dt)
     times.sort(order='rup_id')
+    if not oqparam.ground_motion_fields:
+        gmfdata = ()
     return dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
                 sig_eps=numpy.array(sig_eps, sig_eps_dt(oqparam.imtls)))
 
@@ -418,14 +417,14 @@ class EventBasedCalculator(base.HazardCalculator):
         scenario = 'scenario' in oq.calculation_mode
         proxies = [RuptureProxy(rec, scenario)
                    for rec in dstore['ruptures'][:]]
+        full_lt = self.datastore['full_lt']
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap.apply_split(
-            self.core_task.__func__, (proxies, oq, self.datastore),
+            self.core_task.__func__, (proxies, full_lt, oq, self.datastore),
             key=operator.itemgetter('trt_smr'),
             weight=operator.itemgetter('n_occ'),
             h5=dstore.hdf5, duration=oq.time_per_task, splitno=5)
         smap.monitor.save('srcfilter', self.srcfilter)
-        smap.monitor.save('full_lt', self.full_lt)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
             return acc
