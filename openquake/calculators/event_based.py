@@ -86,14 +86,16 @@ def compute_gmfs(proxies, oqparam, dstore, monitor):
     Compute GMFs and optionally hazard curves
     """
     srcfilter = monitor.read('srcfilter')
+    full_lt = monitor.read('full_lt')
     alldata = AccumDict(accum=[])
     sig_eps = []
     times = []  # rup_id, nsites, dt
     hcurves = {}  # key -> poes
     trt_smr = proxies[0]['trt_smr']
+    fmon = monitor('filtering ruptures', measuremem=False)
+    cmon = monitor('computing GMFs', measuremem=False)
     with dstore:
         rupgeoms = dstore['rupgeoms']
-        full_lt = dstore['full_lt']
         rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
         trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
         param = vars(oqparam).copy()
@@ -102,21 +104,23 @@ def compute_gmfs(proxies, oqparam, dstore, monitor):
         cmaker = ContextMaker(trt, rlzs_by_gsim, param)
         min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
-            if proxy['mag'] < min_mag:
-                continue
-            sids = srcfilter.close_sids(proxy, trt)
-            if len(sids) == 0:  # filtered away
-                continue
-            proxy.geom = rupgeoms[proxy['geom_id']]
-            ebr = proxy.to_ebr(cmaker.trt)  # after the geometry is set
-            try:
-                computer = GmfComputer(
-                    ebr, srcfilter.sitecol.filtered(sids), cmaker,
-                    oqparam.correl_model, oqparam.cross_correl,
-                    oqparam._amplifier, oqparam._sec_perils)
-            except FarAwayRupture:
-                continue
-            data, dt = computer.compute_all(sig_eps)
+            with fmon:
+                if proxy['mag'] < min_mag:
+                    continue
+                sids = srcfilter.close_sids(proxy, trt)
+                if len(sids) == 0:  # filtered away
+                    continue
+                proxy.geom = rupgeoms[proxy['geom_id']]
+                ebr = proxy.to_ebr(cmaker.trt)  # after the geometry is set
+                try:
+                    computer = GmfComputer(
+                        ebr, srcfilter.sitecol.filtered(sids), cmaker,
+                        oqparam.correl_model, oqparam.cross_correl,
+                        oqparam._amplifier, oqparam._sec_perils)
+                except FarAwayRupture:
+                    continue
+            with cmon:
+                data, dt = computer.compute_all(sig_eps)
             times.append(
                 (computer.ebrupture.id, len(computer.ctx.sids), dt))
             for key in data:
@@ -412,7 +416,8 @@ class EventBasedCalculator(base.HazardCalculator):
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
         scenario = 'scenario' in oq.calculation_mode
-        proxies = [RuptureProxy(rec, scenario) for rec in dstore['ruptures']]
+        proxies = [RuptureProxy(rec, scenario)
+                   for rec in dstore['ruptures'][:]]
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap.apply_split(
             self.core_task.__func__, (proxies, oq, self.datastore),
@@ -420,6 +425,7 @@ class EventBasedCalculator(base.HazardCalculator):
             weight=operator.itemgetter('n_occ'),
             h5=dstore.hdf5, duration=oq.time_per_task, splitno=5)
         smap.monitor.save('srcfilter', self.srcfilter)
+        smap.monitor.save('full_lt', self.full_lt)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
             return acc
