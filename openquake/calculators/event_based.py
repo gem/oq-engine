@@ -18,24 +18,28 @@
 
 import os.path
 import logging
+import operator
 import numpy
+import pandas
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.calc.filters import nofilter
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
+from openquake.hazardlib.calc.filters import nofilter, getdefault
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
-from openquake.hazardlib.source.rupture import EBRupture, get_ruptures
+from openquake.hazardlib.source.rupture import (
+    RuptureProxy, EBRupture, get_ruptures)
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
-from openquake.risklib.riskinput import str2rsi
+from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import (
-    GmfGetter, get_rupture_getters, sig_eps_dt, time_dt)
+    get_rupture_getters, sig_eps_dt, time_dt)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 
@@ -70,18 +74,70 @@ def count_ruptures(src):
     return {src.source_id: src.count_ruptures()}
 
 
-def compute_gmfs(rupgetter, oqparam, monitor):
+def strip_zeros(gmf_df):
+    # remove the rows with all zero values
+    df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
+    ok = df.to_numpy().sum(axis=1) > 0
+    return gmf_df[ok]
+
+
+def compute_gmfs(proxies, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
     srcfilter = monitor.read('srcfilter')
-    rgetters = list(rupgetter.split(srcfilter, 10_000))
-    print(len(rgetters))
-    getter = GmfGetter(rgetters[0], srcfilter, oqparam)
-    yield getter.compute_gmfs_curves(monitor)
-    for rg in rgetters[1:]:
-        getter = GmfGetter(rg, srcfilter, oqparam)
-        yield GmfGetter.compute_gmfs_curves, getter
+    alldata = AccumDict(accum=[])
+    sig_eps = []
+    times = []  # rup_id, nsites, dt
+    hcurves = {}  # key -> poes
+    trt_smr = proxies[0]['trt_smr']
+    with dstore:
+        rupgeoms = dstore['rupgeoms']
+        full_lt = dstore['full_lt']
+        rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
+        trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+        cmaker = ContextMaker(trt, rlzs_by_gsim, vars(oqparam))
+        min_mag = getdefault(oqparam.minimum_magnitude, trt)
+        for proxy in proxies:
+            if proxy['mag'] < min_mag:
+                continue
+            sids = srcfilter.close_sids(proxy, trt)
+            if len(sids) == 0:  # filtered away
+                continue
+            proxy.geom = rupgeoms[proxy['geom_id']]
+            ebr = proxy.to_ebr(cmaker.trt)  # after the geometry is set
+            try:
+                computer = GmfComputer(
+                    ebr, srcfilter.sitecol.filtered(sids), cmaker,
+                    oqparam.correl_model, oqparam.cross_correl,
+                    oqparam._amplifier, oqparam._sec_perils)
+            except FarAwayRupture:
+                continue
+            data, dt = computer.compute_all(sig_eps)
+            times.append(
+                (computer.ebrupture.id, len(computer.ctx.sids), dt))
+            for key in data:
+                alldata[key].extend(data[key])
+    for key, val in sorted(alldata.items()):
+        if key in 'eid sid rlz':
+            alldata[key] = U32(alldata[key])
+        else:
+            alldata[key] = F32(alldata[key])
+    gmfdata = strip_zeros(pandas.DataFrame(alldata))
+    if oqparam.hazard_curves_from_gmfs:
+        hc_mon = monitor('building hazard curves', measuremem=False)
+        if len(gmfdata) == 0:
+            return dict(gmfdata=(), hcurves=hcurves, times=times)
+        for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
+            with hc_mon:
+                poes = calc.gmvs_to_poes(
+                    df, oqparam.imtls, oqparam.ses_per_logic_tree_path)
+                for m, imt in enumerate(oqparam.imtls):
+                    hcurves[rsi2str(rlz, sid, imt)] = poes[m]
+    times = numpy.array([tup + (monitor.task_no,) for tup in times], time_dt)
+    times.sort(order='rup_id')
+    return dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
+                sig_eps=numpy.array(sig_eps, sig_eps_dt(oqparam.imtls)))
 
 
 def compute_avg_gmf(gmf_df, weights, min_iml):
@@ -352,12 +408,14 @@ class EventBasedCalculator(base.HazardCalculator):
         # compute_gmfs in parallel
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
-        rgetters = get_rupture_getters(dstore, oq.concurrent_tasks * 1.25,
-                                       srcfilter=self.srcfilter)
-        allargs = [(rgetter, oq) for rgetter in rgetters]
+        scenario = 'scenario' in oq.calculation_mode
+        proxies = [RuptureProxy(rec, scenario) for rec in dstore['ruptures']]
         dstore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(
-            self.core_task.__func__, allargs, h5=dstore.hdf5)
+        smap = parallel.Starmap.apply_split(
+            self.core_task.__func__, (proxies, oq, self.datastore),
+            key=operator.itemgetter('trt_smr'),
+            weight=operator.itemgetter('n_occ'),
+            h5=dstore.hdf5, duration=oq.time_per_task, splitno=5)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
