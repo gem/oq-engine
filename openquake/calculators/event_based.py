@@ -130,7 +130,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
         else:
             alldata[key] = F32(alldata[key])
     gmfdata = strip_zeros(pandas.DataFrame(alldata))
-    if oqparam.hazard_curves_from_gmfs:
+    if len(gmfdata) and oqparam.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
             with hc_mon:
