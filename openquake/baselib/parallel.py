@@ -719,7 +719,6 @@ class Starmap(object):
         Same as Starmap.apply, but possibly produces subtasks
         """
         args = (allargs[0], task, allargs[1:], duration, splitno)
-        split_task.__name__ = 'split_' + task.__name__
         return cls.apply(split_task, args, cls.num_cores,
                          maxweight, weight, key, distribute, progress, h5)
 
@@ -737,7 +736,7 @@ class Starmap(object):
         self.monitor = Monitor(task_func.__name__)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
-        self.name = self.monitor.operation or task_func.__name__
+        self.name = self.monitor.operation
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
