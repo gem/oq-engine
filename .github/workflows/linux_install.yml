@@ -1,10 +1,10 @@
-name: Linux Install engine for 3.6, 3.7 and 3.8 
+name: Linux Install engine for 3.6, 3.7, 3.8 and 3.9
 
 on:
   schedule:
     - cron: "0 4 * * *"
   push:
-    branches: [ requirements ]
+    branches: [ releases_python3.9 ]
 
 jobs:
 
@@ -19,7 +19,7 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
