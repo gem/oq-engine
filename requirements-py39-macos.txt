@@ -2,8 +2,7 @@
 # !! must update pip first! so wheels will be used !!
 
 # GEM Mirror
-# We also provide pre-compiled manylinux1 wheels for
-# h5py, Shapely, psutil
+# 
 https://wheelhouse.openquake.org/v3/macos/py/setuptools-56.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/pytz-2019.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py39/h5py-3.1.0-cp39-cp39-macosx_10_9_x86_64.whl
