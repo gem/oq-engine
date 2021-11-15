@@ -348,11 +348,12 @@ class CompositeSourceModel:
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
-                if hasattr(src, 'mags'):  # UCERF
+                if hasattr(src, 'mags'):
                     all_mags = set(numpy.round(src.mags, 2))
-                    for bg_src in src.get_background_sources():
-                        all_mags.update(mag for mag, rate in bg_src.
-                                        get_annual_occurrence_rates())
+                    if hasattr(src, 'get_background_sources'):  # UCERF
+                        for bg_src in src.get_background_sources():
+                            all_mags.update(mag for mag, rate in bg_src.
+                                            get_annual_occurrence_rates())
                     srcmags = ['%.2f' % mag for mag in sorted(all_mags)]
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = ['%.2f' % item[0].mag for item in src.data]
