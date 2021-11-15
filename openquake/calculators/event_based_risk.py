@@ -26,6 +26,7 @@ from scipy import sparse
 
 from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats
+from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import datastore
 from openquake.calculators import base, event_based, getters
@@ -40,9 +41,6 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
-
-gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
-                           ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
 def save_curve_stats(dstore):
@@ -198,52 +196,17 @@ def event_based_risk(df, oqparam, monitor):
     return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
 
 
-def start_ebrisk(rgetter, oqparam, monitor):
+def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
     """
-    Launcher for ebrisk tasks
-    """
-    srcfilter = monitor.read('srcfilter')
-    rgetters = list(rgetter.split(srcfilter, oqparam.maxweight))
-    for rg in rgetters[:-1]:
-        yield ebrisk, rg, oqparam
-    if rgetters:
-        yield from ebrisk(rgetters[-1], oqparam, monitor)
-
-
-def ebrisk(rupgetter, oqparam, monitor):
-    """
-    :param rupgetter: RuptureGetter with multiple ruptures
+    :param proxies: list of RuptureProxies with the same trt_smr
+    :param full_lt: a FullLogicTree instance
     :param oqparam: input parameters
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    mon_rup = monitor('getting ruptures', measuremem=False)
-    mon_fil = monitor('filtering ruptures', measuremem=False)
-    mon_haz = monitor('getting hazard', measuremem=True)
-    alldata = general.AccumDict(accum=[])
-    gmf_info = []
-    srcfilter = monitor.read('srcfilter')
-    oqparam.N = len(srcfilter.sitecol.complete)
-    gg = getters.GmfGetter(rupgetter, srcfilter, oqparam)
-    with mon_haz:
-        for c in gg.gen_computers(mon_rup, mon_fil):
-            data = c.compute_all()
-            if len(data):
-                for key, val in data.items():
-                    alldata[key].extend(data[key])
-                nbytes = len(data['sid']) * len(data) * 4
-                gmf_info.append((c.ebrupture.id, mon_haz.task_no,
-                                 len(c.ctx.sids), nbytes, mon_haz.dt))
-    if not alldata:
-        return {}
-    for key, val in sorted(alldata.items()):
-        if key in 'eid sid rlz':
-            alldata[key] = U32(alldata[key])
-        else:
-            alldata[key] = F32(alldata[key])
-    yield event_based_risk(pandas.DataFrame(alldata), oqparam, monitor)
-    if gmf_info:
-        yield {'gmf_info': numpy.array(gmf_info, gmf_info_dt)}
+    oqparam.ground_motion_fields = True
+    dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
+    return event_based_risk(dic['gmfdata'], oqparam, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -251,7 +214,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     """
     Event based risk calculator generating event loss tables
     """
-    core_task = start_ebrisk
+    core_task = ebrisk
     is_stochastic = True
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
@@ -316,7 +279,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if alt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The risk_by_event is too big to be transfer'
                                'ed with %d tasks' % oq.concurrent_tasks)
-        self.datastore.create_dset('gmf_info', gmf_info_dt)
 
     def create_avg_losses(self):
         oq = self.oqparam
@@ -342,24 +304,32 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         Compute risk from GMFs or ruptures depending on what is stored
         """
+        oq = self.oqparam
+        self.gmf_bytes = 0
         if 'gmf_data' not in self.datastore:  # start from ruptures
             srcfilter = self.src_filter()
-            smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
+            scenario = 'scenario' in oq.calculation_mode
+            proxies = [RuptureProxy(rec, scenario)
+                       for rec in self.datastore['ruptures'][:]]
+            full_lt = self.datastore['full_lt']
+            self.datastore.swmr_on()  # must come before the Starmap
+            smap = parallel.Starmap.apply_split(
+                ebrisk, (proxies, full_lt, oq, self.datastore),
+                key=operator.itemgetter('trt_smr'),
+                weight=operator.itemgetter('n_occ'),
+                h5=self.datastore.hdf5,
+                duration=oq.time_per_task,
+                splitno=5)
             smap.monitor.save('srcfilter', srcfilter)
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
-            for rg in getters.get_rupture_getters(
-                    self.datastore, self.oqparam.concurrent_tasks,
-                    srcfilter=srcfilter):
-                smap.submit((rg, self.oqparam))
             smap.reduce(self.agg_dicts)
-            gmf_bytes = self.datastore['gmf_info']['gmfbytes']
-            if len(gmf_bytes) == 0:
+            if self.gmf_bytes == 0:
                 raise RuntimeError(
                     'No GMFs were generated, perhaps they were '
                     'all below the minimum_intensity threshold')
             logging.info(
-                'Produced %s of GMFs', general.humansize(gmf_bytes.sum()))
+                'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
             eids = self.datastore['gmf_data/eid'][:]
             self.log_info(eids)
@@ -391,13 +361,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
-        :param dic: dictionary with keys "avg", "alt", "gmf_info"
+        :param dic: dictionary with keys "avg", "alt"
         """
         if not dic:
             return
-        if 'gmf_info' in dic:
-            hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
-            return
+        self.gmf_bytes += dic['alt'].memory_usage().sum()
         lti = self.oqparam.lti
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving risk_by_event'):
