@@ -206,6 +206,8 @@ def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
     """
     oqparam.ground_motion_fields = True
     dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
+    if len(dic['gmfdata']) == 0:  # no GMFs
+        return {}
     return event_based_risk(dic['gmfdata'], oqparam, monitor)
 
 

@@ -34,7 +34,6 @@ from openquake.commonlib.calc import gmvs_to_poes
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.getters import get_gmfgetter
 from openquake.calculators.event_based import get_mean_curves, compute_avg_gmf
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import case_18 as gmpe_tables
@@ -351,14 +350,6 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-5)
-
-        # test get_gmfgetter
-        gg = get_gmfgetter(self.calc.datastore, rup_id=0)
-        self.assertEqual(str(gg.get_hazard()), '''\
-   sid  eid  rlz     gmv_0
-0    0    0    0  0.730127
-1    1    0    0  0.998477
-2    2    0    0  0.876034''')
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
