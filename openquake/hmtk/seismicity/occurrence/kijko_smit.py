@@ -101,15 +101,16 @@ class KijkoSmit(SeismicityOccurrence):
                 nyr[ival] = ctime[ival - 1] - ctime[ival]
             neq[ival] = np.sum(id1)
             # Get a- and b- value for the selected events
-            temp_rec_table = recurrence_table(catalogue.data['magnitude'][id1],
-                                              dmag,
-                                              catalogue.data['year'][id1])
+            if len(id1) > 0:
+                temp_rec_table = recurrence_table(
+                    catalogue.data['magnitude'][id1], dmag,
+                    catalogue.data['year'][id1])
 
-            aki_ml = AkiMaxLikelihood()
-            b_est[ival] = aki_ml._aki_ml(temp_rec_table[:, 0],
-                                         temp_rec_table[:, 1],
-                                         dmag, m_c)[0]
-            ival += 1
+                aki_ml = AkiMaxLikelihood()
+                b_est[ival] = aki_ml._aki_ml(temp_rec_table[:, 0],
+                                             temp_rec_table[:, 1],
+                                             dmag, m_c)[0]
+            #ival += 1
         total_neq = np.float(np.sum(neq))
         bval = self._harmonic_mean(b_est, neq)
         sigma_b = bval / np.sqrt(total_neq)
@@ -141,7 +142,24 @@ class KijkoSmit(SeismicityOccurrence):
         """
         Calculates the rate of events >= ref_mag using the b-value estimator
         and Eq. 10 of Kijko & Smit
-        """
 
-        denominator = np.sum(nyr * np.exp(-bval * (cmag - ref_mag)))
-        return nvalue / denominator
+        :param bval:
+            b-value
+        :param nvalue:
+            Number of earthquakes within the completeness window
+        :param nyr:
+            A vector with the duration [yr] of each completeness interval
+        :param cmag:
+            A vector with the magnitude lower limit of each completeness
+            interval
+        :param
+        """
+        # Computing the rate for eqs above the min magnitude included in the
+        # completeness window
+        mmin = min(cmag)
+        denominator = np.sum(nyr * np.exp(-bval * (cmag - mmin)))
+        rate_above_mmin = nvalue / denominator
+        # Computing aGR
+        agr = np.log10(rate_above_mmin) + bval * mmin
+        # Returning rate above the reference magnitude provided
+        return 10**(agr-bval*ref_mag)
