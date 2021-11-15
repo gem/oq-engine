@@ -719,6 +719,7 @@ class Starmap(object):
         Same as Starmap.apply, but possibly produces subtasks
         """
         args = (allargs[0], task, allargs[1:], duration, splitno)
+        split_task.__name__ = 'split_' + task.__name__
         return cls.apply(split_task, args, cls.num_cores,
                          maxweight, weight, key, distribute, progress, h5)
 
