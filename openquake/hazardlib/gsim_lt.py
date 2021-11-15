@@ -299,15 +299,15 @@ class GsimLogicTree(object):
         self.branches = []
         self.shortener = {}
         self.values = defaultdict(list)
+        dirname = os.path.dirname(dic['filename'])
         for no, branch in enumerate(array):
             branch = fix_bytes(branch)
             br_id = branch['branch']
-            gsim = valid.gsim(branch['uncertainty'])
+            gsim = valid.gsim(branch['uncertainty'], dirname)
             for k, v in gsim.kwargs.items():
                 if k.endswith(('_file', '_table')):
                     arr = numpy.asarray(dic[os.path.basename(v)][()])
                     gsim.kwargs[k] = io.BytesIO(bytes(arr))
-            gsim.__init__(**gsim.kwargs)
             self.values[branch['trt']].append(gsim)
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
