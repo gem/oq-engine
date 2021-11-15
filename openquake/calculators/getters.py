@@ -16,11 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
+import time
 import operator
 import numpy
 import pandas
-from openquake.baselib import general, performance, parallel, hdf5
+
+from openquake.baselib import general, performance, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import probability_map, stats
@@ -35,7 +36,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
-weight = operator.attrgetter('weight')
+weight = operator.itemgetter('n_occ')
 
 
 class NotFound(Exception):
@@ -335,7 +336,9 @@ class GmfGetter(object):
         self.sig_eps = []
         self.times = []  # rup_id, nsites, dt
         for computer in self.gen_computers(rmon, fmon):
-            data, dt = computer.compute_all(self.sig_eps)
+            t0 = time.time()
+            data = computer.compute_all(self.sig_eps)
+            dt = time.time() - t0
             self.times.append(
                 (computer.ebrupture.id, len(computer.ctx.sids), dt))
             for key in data:
@@ -423,28 +426,16 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     rup_array = dstore['ruptures'][slc]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
-    rup_array.sort(order='trt_smr')  # avoid generating too many tasks
+    rup_array.sort(order=['trt_smr', 'n_occ'])
     scenario = 'scenario' in dstore['oqparam'].calculation_mode
-    if srcfilter is None:
-        proxies = [RuptureProxy(rec, None, scenario) for rec in rup_array]
-    elif len(rup_array) <= 1000:  # do not parallelize
-        proxies = weight_ruptures(
-            rup_array, srcfilter, full_lt.trt_by, scenario)
-    else:  # parallelize the weighting of the ruptures
-        proxies = parallel.Starmap.apply(
-            weight_ruptures, (rup_array, srcfilter, full_lt.trt_by, scenario),
-            concurrent_tasks=ct, progress=logging.debug
-        ).reduce(acc=[])
-    maxweight = sum(proxy.weight for proxy in proxies) / (ct or 1)
+    proxies = [RuptureProxy(rec, scenario) for rec in rup_array]
+    maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
     rgetters = []
     for block in general.block_splitter(
-            proxies, maxweight, operator.attrgetter('weight'),
+            proxies, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
-        if len(rlzs_by_gsim) == 1:
-            [rbg] = rlzs_by_gsim.values()
-        else:
-            rbg = rlzs_by_gsim[trt_smr]
+        rbg = rlzs_by_gsim[trt_smr]
         rg = RuptureGetter(block, dstore.filename, trt_smr,
                            full_lt.trt_by(trt_smr), rbg)
         rgetters.append(rg)
@@ -508,7 +499,7 @@ class RuptureGetter(object):
     """
     def __init__(self, proxies, filename, trt_smr, trt, rlzs_by_gsim):
         self.proxies = proxies
-        self.weight = sum(proxy.weight for proxy in proxies)
+        self.weight = sum(proxy['n_occ'] for proxy in proxies)
         self.filename = filename
         self.trt_smr = trt_smr
         self.trt = trt
@@ -567,7 +558,6 @@ class RuptureGetter(object):
         for proxy in self.proxies:
             sids = srcfilter.close_sids(proxy.rec, self.trt)
             if len(sids):
-                proxy.nsites = len(sids)
                 proxies.append(proxy)
         rgetters = []
         for block in general.block_splitter(proxies, maxw, weight):

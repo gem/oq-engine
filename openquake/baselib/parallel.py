@@ -710,7 +710,7 @@ class Starmap(object):
         return cls(task, taskargs, distribute, progress, h5)
 
     @classmethod
-    def apply_split(cls, task, allargs, concurrent_tasks=None,
+    def apply_split(cls, task, allargs,
                     maxweight=None, weight=lambda item: 1,
                     key=lambda item: 'Unspecified',
                     distribute=None, progress=logging.info, h5=None,
@@ -736,7 +736,7 @@ class Starmap(object):
         self.monitor = Monitor(task_func.__name__)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
-        self.name = self.monitor.operation or task_func.__name__
+        self.name = self.monitor.operation
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5

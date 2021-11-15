@@ -327,6 +327,8 @@ class UCERFSource(BaseSeismicSource):
                 src_name = "|".join([self.ukey["total_key"], str(bg_idx)])
                 mag_idx = (self.min_mag <= mags) & (mags < mmax[i])
                 src_mags = mags[mag_idx]
+                if len(src_mags) == 1:  # too short
+                    continue
                 src_mfd = EvenlyDiscretizedMFD(
                     src_mags[0],
                     src_mags[1] - src_mags[0],

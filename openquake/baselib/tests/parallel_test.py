@@ -220,7 +220,7 @@ class SplitTaskTestCase(unittest.TestCase):
             performance.init_performance(h5)
             res = parallel.Starmap.apply_split(
                 process_elements, (elements, timefactor),
-                concurrent_tasks=4, h5=h5, duration=duration
+                h5=h5, duration=duration
             ).reduce(acc=0)
         self.assertAlmostEqual(res, 48.6718458266)
         shutil.rmtree(tmpdir)
