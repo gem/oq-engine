@@ -227,7 +227,7 @@ def ebrisk(rupgetter, oqparam, monitor):
     gg = getters.GmfGetter(rupgetter, srcfilter, oqparam)
     with mon_haz:
         for c in gg.gen_computers(mon_rup, mon_fil):
-            data, time_by_rup = c.compute_all()
+            data = c.compute_all()
             if len(data):
                 for key, val in data.items():
                     alldata[key].extend(data[key])

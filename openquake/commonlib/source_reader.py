@@ -349,8 +349,11 @@ class CompositeSourceModel:
         for sg in self.src_groups:
             for src in sg:
                 if hasattr(src, 'mags'):  # UCERF
-                    srcmags = ['%.2f' % mag for mag in numpy.unique(
-                        numpy.round(src.mags, 2))]
+                    all_mags = set(numpy.round(src.mags, 2))
+                    for bg_src in src.get_background_sources():
+                        all_mags.update(mag for mag, rate in bg_src.
+                                        get_annual_occurrence_rates())
+                    srcmags = ['%.2f' % mag for mag in sorted(all_mags)]
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = ['%.2f' % item[0].mag for item in src.data]
                 else:

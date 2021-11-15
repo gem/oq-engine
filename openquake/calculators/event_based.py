@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import os.path
 import logging
 import operator
@@ -103,6 +104,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
         cmaker = ContextMaker(trt, rlzs_by_gsim, param)
         min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
+            t0 = time.time()
             with fmon:
                 if proxy['mag'] < min_mag:
                     continue
@@ -119,7 +121,8 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                 except FarAwayRupture:
                     continue
             with cmon:
-                data, dt = computer.compute_all(sig_eps)
+                data = computer.compute_all(sig_eps)
+            dt = time.time() - t0
             times.append(
                 (computer.ebrupture.id, len(computer.ctx.sids), dt))
             for key in data:

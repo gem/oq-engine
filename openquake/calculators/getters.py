@@ -16,9 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import operator
 import numpy
 import pandas
+
 from openquake.baselib import general, performance, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -334,7 +336,9 @@ class GmfGetter(object):
         self.sig_eps = []
         self.times = []  # rup_id, nsites, dt
         for computer in self.gen_computers(rmon, fmon):
-            data, dt = computer.compute_all(self.sig_eps)
+            t0 = time.time()
+            data = computer.compute_all(self.sig_eps)
+            dt = time.time() - t0
             self.times.append(
                 (computer.ebrupture.id, len(computer.ctx.sids), dt))
             for key in data:

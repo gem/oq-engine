@@ -191,7 +191,10 @@ class MagDepDistance(dict):
         elif mag is None:
             return getdefault(self, trt)[-1][1]
         elif hasattr(self, 'ddic'):
-            return self.ddic[trt]['%.2f' % mag]
+            try:
+                return self.ddic[trt]['%.2f' % mag]
+            except:
+                import pdb; pdb.set_trace()
         else:
             xs, ys = zip(*getdefault(self, trt))
             return numpy.interp(mag, xs, ys)
