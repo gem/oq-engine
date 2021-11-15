@@ -178,6 +178,18 @@ GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
 STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
 
 
+def get_branch(version):
+    """
+    Convert "version" into a branch name
+    """
+    if version is None:
+        return 'master'
+    elif re.match(r'\d+(\.\d+)+', version):
+        return 'engine-' + version
+    else:
+        return version
+
+
 def install_standalone(venv):
     """
     Install the standalone Django applications if possible
@@ -325,7 +337,8 @@ def install(inst, version):
                                    'pip', 'wheel'])
 
     # install the requirements
-    req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
+    branch = get_branch(version)
+    req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
         'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
