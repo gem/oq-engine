@@ -44,9 +44,6 @@ MPLBACKEND=Agg oq plot sources? 9
 #oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquake/engine/openquake.cfg
 #oq db set_status -1 executing
 
-echo "Testing csm2rup"
-utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
-
 # run multi_risk test
 oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
 
@@ -64,6 +61,9 @@ oq show agg_values
 # recompute losses
 oq reaggregate -1 NAME_1
 oq engine --list-outputs -1
+
+echo "Testing csm2rup"
+utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
 
 # display the calculations
 oq db find %
