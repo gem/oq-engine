@@ -46,7 +46,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                           if f.endswith(exports) and 'by_taxon' not in f)
         self.assertEqual(len(got), len(expected))
         for fname, actual in zip(expected, got):
-            self.assertEqualFiles('expected/%s' % fname, actual)
+            self.assertEqualFiles('expected/%s' % fname, actual, delta=1E-5)
 
     def test_case_1(self):
         # test with a single event and a missing tag
