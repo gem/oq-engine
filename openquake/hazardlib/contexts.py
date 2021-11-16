@@ -161,6 +161,8 @@ class ContextMaker(object):
         self.gsims = gsims
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
+        # sanity check
+        assert isinstance(self.maximum_distance, MagDepDistance)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         if self.investigation_time:
