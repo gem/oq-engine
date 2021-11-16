@@ -525,7 +525,7 @@ def stats(name, array, *extras):
     Returns statistics from an array of numbers.
 
     :param name: a descriptive string
-    :returns: (name, mean, rel_std, min, max, len, slowfac)
+    :returns: (name, mean, rel_std, min, max, len) + extras
     """
     avg = numpy.mean(array)
     std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
@@ -1212,3 +1212,13 @@ def view_src_groups(token, dstore):
     tbl.sort(key=operator.itemgetter(1), reverse=True)
     return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
                       ext='org')
+
+
+@view.add('rup_stats')
+def view_rup_stats(token, dstore):
+    """
+    Show the statistics of event based ruptures
+    """
+    rups = dstore['ruptures'][:]
+    out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
+    return numpy.array(out, dt('kind counts mean stddev min max'))

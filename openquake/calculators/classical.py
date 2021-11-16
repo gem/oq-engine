@@ -87,14 +87,14 @@ def classical(srcs, tile, cmaker, monitor):
     if tile is None:
         # read from the temporary storage, this avoids sending the
         # same sitecol hundreds of times
-        tiles = monitor.read('sitecol').split_in_tiles(
+        tiles = monitor.read('sitecol').split_max(
             cmaker.max_sites_per_tile)
         t0 = time.time()
         res = hazclassical(srcs, tiles[0], cmaker)
         dt = time.time() - t0
         yield res
         for tile in tiles[1:]:
-            if dt < cmaker.time_per_tile:  # fast, do everything in core
+            if dt < cmaker.time_per_task:  # fast, do everything in core
                 yield hazclassical(srcs, tile, cmaker)
             else:  # spawn subtasks
                 yield classical, srcs, tile, cmaker
@@ -524,13 +524,12 @@ class ClassicalCalculator(base.HazardCalculator):
         assert tot_weight
         ct = oq.concurrent_tasks or 1
         max_weight = max(tot_weight / ct, oq.min_weight)
-        self.param['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
 
         tiling = self.N > oq.max_sites_per_tile
         if tiling:
-            tiles = self.sitecol.split_in_tiles(oq.max_sites_per_tile)
+            tiles = self.sitecol.split_max(oq.max_sites_per_tile)
             self.tile_sizes = [len(tile) for tile in tiles]
             ntiles = len(tiles)
             logging.info('There are %d tiles of sizes %s',

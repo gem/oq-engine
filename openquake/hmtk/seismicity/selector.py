@@ -97,7 +97,7 @@ def _get_decimal_from_datetime(time):
     '''
 
     # Get decimal seconds from seconds + microseconds
-    temp_seconds = np.float(time.second) + (np.float(time.microsecond) / 1.0E6)
+    temp_seconds = float(time.second) + (float(time.microsecond) / 1.0E6)
     return decimal_time(np.array([time.year], dtype=int),
                         np.array([time.month], dtype=int),
                         np.array([time.day], dtype=int),

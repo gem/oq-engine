@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Solved the issue of "compute gmfs" slow tasks in event_based
+  * Made sure `valid.gsim` instantiates the GSIM
   * ShakeMap calculations failing with a nonpositive definite correlation
     matrix now point out to the manual for the solution of the problem
   * Introduced the GodaAtkinson2009 cross correlation between event model

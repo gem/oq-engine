@@ -124,7 +124,7 @@ site_param_dt = {
     'lat': numpy.float64,
     'depth': numpy.float64,
     'vs30': numpy.float64,
-    'vs30measured': numpy.bool,
+    'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
@@ -132,7 +132,7 @@ site_param_dt = {
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
     'xvf': numpy.float64,
     'soiltype': numpy.uint32,
-    'bas': numpy.bool,
+    'bas': bool,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
@@ -417,14 +417,14 @@ class SiteCollection(object):
         return (self.depths == 0).all()
 
     # used in the engine
-    def split_in_tiles(self, max_sites_per_tile):
+    def split_max(self, max_sites):
         """
-        Split a SiteCollection into a set of tiles (SiteCollection instances).
+        Split a SiteCollection into SiteCollection instances
         """
         N = len(self)
-        if N < max_sites_per_tile:  # do not split
+        if N < max_sites:  # do not split
             return [self]
-        hint = int(numpy.ceil(N / max_sites_per_tile))
+        hint = int(numpy.ceil(N / max_sites))
         tiles = []
         for i in range(hint):
             sc = SiteCollection.__new__(SiteCollection)

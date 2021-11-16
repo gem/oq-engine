@@ -138,7 +138,6 @@ class GmfComputer(object):
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        t0 = time.time()
         sids = self.ctx.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
@@ -185,7 +184,7 @@ class GmfComputer(object):
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
-        return data, time.time() - t0
+        return data
 
     def compute(self, gsim, num_events, mean_stds):
         """

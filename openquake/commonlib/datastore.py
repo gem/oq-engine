@@ -84,14 +84,18 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
         jid = calc_id
     # look in the db
     job = dbcmd('get_job', jid)
-    if job and datadir is None:
+    if job:
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
             dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
             hc_id = haz_id
         if hc_id and hc_id != jid:
-            ppath = dbcmd('get_job', hc_id).ds_calc_dir + '.hdf5'
+            hc = dbcmd('get_job', hc_id)
+            if hc:
+                ppath = hc.ds_calc_dir + '.hdf5'
+            else:
+                ppath = os.path.join(ddir, 'calc_%d.hdf5' % hc_id)
     else:  # when using oq run there is no job in the db
         path = os.path.join(ddir, 'calc_%s.hdf5' % jid)
     return DataStore(path, ppath, mode)
@@ -116,10 +120,8 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     except KeyError:  # no oqparam
         hc_id = None
     if hc_id:
-        # assume the parent datadir is the same of the children datadir
-        pdir = parentdir or os.path.dirname(dstore.filename)
-        dstore.ppath = os.path.join(pdir, 'calc_%d.hdf5' % hc_id)
-        dstore.parent = read(hc_id, datadir=pdir)
+        dstore.parent = _read(hc_id, datadir, 'r')
+        dstore.ppath = dstore.parent.filename
     return dstore.open(mode)
 
 

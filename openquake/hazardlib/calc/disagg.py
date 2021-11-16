@@ -263,7 +263,7 @@ def _digitize_lons(lons, lon_bins):
         An instance of `numpy.ndarray`.
     """
     if cross_idl(lon_bins[0], lon_bins[-1]):
-        idx = numpy.zeros_like(lons, dtype=numpy.int)
+        idx = numpy.zeros_like(lons, dtype=int)
         for i_lon in range(len(lon_bins) - 1):
             extents = get_longitudinal_extent(lons, lon_bins[i_lon + 1])
             lon_idx = extents > 0
