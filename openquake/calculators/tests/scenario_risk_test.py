@@ -82,7 +82,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/agg_loss.csv', fname)
+        self.assertEqualFiles('expected/agg_loss.csv', fname, delta=5E-6)
 
     def test_case_4(self):
         # this test is sensitive to the ordering of the epsilons

@@ -25,11 +25,11 @@ import pandas
 from scipy import sparse
 
 from openquake.baselib import hdf5, parallel, general
-from openquake.hazardlib import stats
+from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import datastore
-from openquake.calculators import base, event_based, getters
+from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import PostRiskCalculator, fix_dtypes
 
 U8 = numpy.uint8
@@ -309,6 +309,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         self.gmf_bytes = 0
         if 'gmf_data' not in self.datastore:  # start from ruptures
+            if not hasattr(oq, 'maximum_distance'):
+                raise InvalidFile('Missing maximum_distance in %s'
+                                  % oq.inputs['job_ini'])
             srcfilter = self.src_filter()
             scenario = 'scenario' in oq.calculation_mode
             proxies = [RuptureProxy(rec, scenario)
