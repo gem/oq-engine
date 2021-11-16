@@ -446,11 +446,12 @@ class ClassicalCalculator(base.HazardCalculator):
             for size in sizes:
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        self.n_outs = AccumDict(accum=0)
         acc = {}
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
             tileslc = slice(tile.sids.min(), tile.sids.max() + 1)
-            smap, self.n_outs = self.submit(tileslc, grp_ids, self.haz.cmakers)
+            smap = self.submit(tileslc, grp_ids, self.haz.cmakers)
             for cm in self.haz.cmakers:
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
@@ -517,8 +518,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     spc = oq.complex_fault_mesh_spacing
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        ct = oq.concurrent_tasks or 1
-        max_weight = max(tot_weight / ct, oq.min_weight)
+        nc = parallel.Starmap.num_cores
+        max_weight = max(tot_weight / nc, oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
         for grp_id in grp_ids:
@@ -541,9 +542,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     trip = (block, tileslc, cmakers[grp_id])
                     triples.append(trip)
                     smap.submit_split(trip, oq.time_per_task, splitno=5)
-        n_outs = collections.Counter(t[2].grp_id for t in triples)
-        logging.info('grp_id->n_outs: %s', list(n_outs.values()))
-        return smap, n_outs
+        for sg, tl, grp_id in triples:
+            self.n_outs[grp_id] += 1
+        if tileslc.start == 0:  # the first time
+            logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
+        return smap
 
     def collect_hazard(self, acc, pmap_by_kind):
         """
