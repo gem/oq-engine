@@ -48,11 +48,11 @@ class EventBasedDamageTestCase(CalculatorTestCase):
 
         # check damages-rlzs
         [f] = export(('damages-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=2E-4)
 
         # check aggcurves
         [f] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=2E-4)
 
     def test_case_12a(self):
         # test event_based_damage, no aggregate_by,
