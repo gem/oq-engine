@@ -542,8 +542,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     trip = (block, tileslc, cmakers[grp_id])
                     triples.append(trip)
                     smap.submit_split(trip, oq.time_per_task, splitno=5)
-        for sg, tl, grp_id in triples:
-            self.n_outs[grp_id] += 1
+        for sg, tl, cm in triples:
+            self.n_outs[cm.grp_id] += 1
         if tileslc.start == 0:  # the first time
             logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return smap
