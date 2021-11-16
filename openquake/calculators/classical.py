@@ -449,12 +449,8 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}
         for t, tile in enumerate(tiles, 1):
             tileslc = slice(tile.sids.min(), tile.sids.max() + 1)
-            triples = self.get_triples(tileslc, grp_ids, self.haz.cmakers)
+            smap = self.submit(tileslc, grp_ids, self.haz.cmakers)
             self.check_memory(len(tile), L, num_gs)
-            self.datastore.swmr_on()  # must come before the Starmap
-            smap = parallel.Starmap(classical, triples, h5=self.datastore.hdf5)
-            if t == 1:
-                smap.monitor.save('sitecol', self.sitecol)
             for cm in self.haz.cmakers:
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
@@ -496,11 +492,15 @@ class ClassicalCalculator(base.HazardCalculator):
                              numsites / self.numctxs)
         self.calc_times.clear()  # save a bit of memory
 
-    def get_triples(self, tileslc, grp_ids, cmakers):
+    def submit(self, tileslc, grp_ids, cmakers):
         """
-        :returns: a list of triples (src_group, tile, cmaker)
+        :returns: a Starmap instance for the current tile
         """
         oq = self.oqparam
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        if tileslc.start == 0:  # the first time
+            smap.monitor.save('sitecol', self.sitecol)
         triples = []
         src_groups = self.csm.src_groups
         tot_weight = 0
@@ -525,7 +525,9 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
-                triples.append((sg, tileslc, cmakers[grp_id]))
+                trip = (sg, tileslc, cmakers[grp_id])
+                triples.append(trip)
+                smap.submit(trip)
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src else
@@ -536,10 +538,12 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug(
                         'Sending %d source(s) with weight %d',
                         len(block), sum(src.weight for src in block))
-                    triples.append((block, tileslc, cmakers[grp_id]))
+                    trip = (block, tileslc, cmakers[grp_id])
+                    triples.append(trip)
+                    smap.submit(trip)
         self.n_outs = collections.Counter(t[2].grp_id for t in triples)
         logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
-        return triples
+        return smap
 
     def collect_hazard(self, acc, pmap_by_kind):
         """
