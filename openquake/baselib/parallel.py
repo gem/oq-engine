@@ -818,8 +818,11 @@ class Starmap(object):
         """
         Submit the given arguments to the underlying task
         """
-        self.submit((args[0], self.task_func, args[1:], duration, splitno),
-                    func=split_task)
+        if len(args[0]) > splitno:
+            self.submit((args[0], self.task_func, args[1:], duration, splitno),
+                        func=split_task)
+        else:
+            self.submit(args)
 
     def submit_all(self):
         """
@@ -934,8 +937,6 @@ def split_task(elements, func, args, duration, splitno, monitor):
     :yields: a partial result, 0 or more task objects
     """
     n = len(elements)
-    if splitno > n:  # too many splits
-        splitno = n
     elements = numpy.array(elements)  # from WeightedSequence to array
     idxs = numpy.arange(n)
     split_elems = [elements[idxs % splitno == i] for i in range(splitno)]

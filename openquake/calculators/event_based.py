@@ -19,12 +19,12 @@
 import time
 import os.path
 import logging
-import operator
 import numpy
 import pandas
 
 from openquake.baselib import hdf5, parallel
-from openquake.baselib.general import AccumDict, copyobj, humansize
+from openquake.baselib.general import (
+    AccumDict, copyobj, humansize, group_array)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -82,7 +82,7 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
-def event_based(proxies, full_lt, oqparam, dstore, monitor):
+def event_based(proxies, cmaker, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -91,24 +91,19 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     sig_eps = []
     times = []  # rup_id, nsites, dt
     hcurves = {}  # key -> poes
-    trt_smr = proxies[0]['trt_smr']
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
         rupgeoms = dstore['rupgeoms']
-        rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-        trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
         param = vars(oqparam).copy()
         param['imtls'] = oqparam.imtls
         param['min_iml'] = oqparam.min_iml
-        cmaker = ContextMaker(trt, rlzs_by_gsim, param)
-        min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
             t0 = time.time()
             with fmon:
-                if proxy['mag'] < min_mag:
+                if proxy['mag'] < cmaker.min_mag:
                     continue
-                sids = srcfilter.close_sids(proxy, trt)
+                sids = srcfilter.close_sids(proxy, cmaker.trt)
                 if len(sids) == 0:  # filtered away
                     continue
                 proxy.geom = rupgeoms[proxy['geom_id']]
@@ -422,13 +417,23 @@ class EventBasedCalculator(base.HazardCalculator):
         scenario = 'scenario' in oq.calculation_mode
         proxies = [RuptureProxy(rec, scenario)
                    for rec in dstore['ruptures'][:]]
+        assert proxies
         full_lt = self.datastore['full_lt']
         dstore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap.apply_split(
-            self.core_task.__func__, (proxies, full_lt, oq, self.datastore),
-            key=operator.itemgetter('trt_smr'),
-            weight=operator.itemgetter('n_occ'),
-            h5=dstore.hdf5, duration=oq.time_per_task, splitno=5)
+        smap = parallel.Starmap(event_based, h5=dstore.hdf5)
+        items = group_array(dstore['ruptures'][:], 'trt_smr').items()
+        for trt_smr, array in items:
+            proxies = [RuptureProxy(rec, scenario)
+                       for rec in array]
+            trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+            rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
+            param = vars(oq).copy()
+            param['imtls'] = oq.imtls
+            param['min_iml'] = oq.min_iml
+            cmaker = ContextMaker(trt, rlzs_by_gsim, param)
+            cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+            smap.submit_split((proxies, cmaker, oq, self.datastore),
+                              duration=oq.time_per_task, splitno=5)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
