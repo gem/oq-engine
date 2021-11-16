@@ -62,7 +62,7 @@ from openquake.hmtk.seismicity.declusterer.distance_time_windows import (
 @DECLUSTERER_METHODS.add(
     "decluster",
     time_distance_window=TIME_DISTANCE_WINDOW_FUNCTIONS,
-    fs_time_prop=np.float)
+    fs_time_prop=float)
 class GardnerKnopoffType1(BaseCatalogueDecluster):
     """
     This class implements the Gardner Knopoff algorithm as described in

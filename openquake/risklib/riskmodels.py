@@ -654,7 +654,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         :returns: a 1-dimensional composite array with loss ratios by loss type
         """
-        lst = [('user_provided', numpy.bool)]
+        lst = [('user_provided', bool)]
         for cp in self.curve_params:
             lst.append((cp.loss_type, F32, len(cp.ratios)))
         loss_ratios = numpy.zeros(1, numpy.dtype(lst))
