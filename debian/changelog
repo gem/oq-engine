@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed mag-dependent filtering in event based
   * Solved the issue of "compute gmfs" slow tasks in event_based
   * Made sure `valid.gsim` instantiates the GSIM
   * ShakeMap calculations failing with a nonpositive definite correlation
