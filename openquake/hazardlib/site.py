@@ -22,8 +22,7 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib.general import (
-    split_in_blocks, not_equal, get_duplicates)
+from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
 from openquake.hazardlib.geo.mesh import Mesh
