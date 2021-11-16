@@ -517,9 +517,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     spc = oq.complex_fault_mesh_spacing
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        splitno = 5
-        nc = parallel.Starmap.num_cores
-        max_weight = max(tot_weight / nc, oq.min_weight)
+        split_level = oq.split_level
+        max_weight = max(tot_weight/(oq.concurrent_tasks or 1), oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
         for grp_id in grp_ids:
@@ -542,9 +541,9 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, tileslc, cmakers[grp_id])
                     triples.append(trip)
-                    if len(block) > splitno:
-                        smap.submit_split(trip, oq.time_per_task, splitno)
-                        self.n_outs[grp_id] += splitno
+                    if len(block) > split_level:
+                        smap.submit_split(trip, oq.time_per_task, split_level)
+                        self.n_outs[grp_id] += split_level
                     else:
                         smap.submit(trip)
                         self.n_outs[grp_id] += 1

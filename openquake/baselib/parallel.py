@@ -714,11 +714,11 @@ class Starmap(object):
                     maxweight=None, weight=lambda item: 1,
                     key=lambda item: 'Unspecified',
                     distribute=None, progress=logging.info, h5=None,
-                    duration=300, splitno=5):
+                    duration=300, split_level=5):
         """
         Same as Starmap.apply, but possibly produces subtasks
         """
-        args = (allargs[0], task, allargs[1:], duration, splitno)
+        args = (allargs[0], task, allargs[1:], duration, split_level)
         return cls.apply(split_task, args, cls.num_cores,
                          maxweight, weight, key, distribute, progress, h5)
 
@@ -814,11 +814,11 @@ class Starmap(object):
         self.task_no += 1
         self.tasks.append(res)
 
-    def submit_split(self, args,  duration, splitno):
+    def submit_split(self, args,  duration, split_level):
         """
         Submit the given arguments to the underlying task
         """
-        self.submit((args[0], self.task_func, args[1:], duration, splitno),
+        self.submit((args[0], self.task_func, args[1:], duration, split_level),
                     func=split_task)
 
     def submit_all(self):
@@ -925,20 +925,20 @@ def count(word):
     return collections.Counter(word)
 
 
-def split_task(elements, func, args, duration, splitno, monitor):
+def split_task(elements, func, args, duration, split_level, monitor):
     """
     :param func: a task function with a monitor as last argument
     :param args: arguments of the task function, with args[0] being a sequence
     :param duration: split the task if it exceeds the duration
-    :param splitno: number of splits to try (ex. 5)
+    :param split_level: number of splits to try (ex. 5)
     :yields: a partial result, 0 or more task objects
     """
     n = len(elements)
-    if splitno > n:  # too many splits
-        splitno = n
+    if split_level > n:  # too many splits
+        split_level = n
     elements = numpy.array(elements)  # from WeightedSequence to array
     idxs = numpy.arange(n)
-    split_elems = [elements[idxs % splitno == i] for i in range(splitno)]
+    split_elems = [elements[idxs % split_level == i] for i in range(split_level)]
     # see how long it takes to run the first slice
     t0 = time.time()
     for i, elems in enumerate(split_elems):
