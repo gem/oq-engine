@@ -389,7 +389,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # an example for Japan testing also the XML rupture exporter
         self.run_calc(case_15.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', fname)
+        self.assertEqualFiles('expected/ruptures.csv', fname, atol=1.)
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure
