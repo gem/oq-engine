@@ -542,9 +542,12 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, tileslc, cmakers[grp_id])
                     triples.append(trip)
-                    #smap.submit_split(trip, oq.time_per_task, splitno)
-                    smap.submit(trip)
-                    self.n_outs[grp_id] += 1
+                    if len(block) > splitno:
+                        smap.submit_split(trip, oq.time_per_task, splitno)
+                        self.n_outs[grp_id] += splitno
+                    else:
+                        smap.submit(trip)
+                        self.n_outs[grp_id] += 1
         if tileslc.start == 0:  # the first time
             logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return smap
