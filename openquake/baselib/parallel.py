@@ -814,6 +814,13 @@ class Starmap(object):
         self.task_no += 1
         self.tasks.append(res)
 
+    def submit_split(self, args,  duration, splitno):
+        """
+        Submit the given arguments to the underlying task
+        """
+        self.submit((args[0], self.task_func, args[1:], duration, splitno),
+                    func=split_task)
+
     def submit_all(self):
         """
         :returns: an IterResult object
