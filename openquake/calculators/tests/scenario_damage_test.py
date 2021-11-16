@@ -83,7 +83,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         # check risk_by_event
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         # check agg_damages extraction
         total = extract(self.calc.datastore, 'agg_damages/structural')
@@ -106,18 +107,19 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
 
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=5E-6)
+                              delta=1E-5)
 
         return  # TODO: fix avg_losses
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # one per realization
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=5E-6)
+                                  delta=1E-5)
 
         #df = view('portfolio_damage_error', self.calc.datastore)
         #fname = gettemp(text_table(df))
