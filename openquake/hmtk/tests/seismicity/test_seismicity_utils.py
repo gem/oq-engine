@@ -354,7 +354,7 @@ class TestBootstrapHistograms(unittest.TestCase):
         Tests the bootstrap 1D histrogram function with uncertainties
         """
         self.x_sigma = 1.0 * np.ones(len(self.x), dtype=float)
-        expected_array = np.array([0.16, 0.22, 0.22, 0.22, 0.17])
+        expected_array = np.array([0.17, 0.22, 0.22, 0.22, 0.17])
         x_range = np.arange(0., 60., 10.)
         hist_values = utils.bootstrap_histogram_1D(
             self.x,
