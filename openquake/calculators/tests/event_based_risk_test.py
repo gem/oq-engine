@@ -245,7 +245,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+                                  delta=2E-5)
 
     def test_case_5(self):
         # taxonomy mapping, the numbers are different in Ubuntu 20 vs 18
