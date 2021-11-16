@@ -448,9 +448,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         acc = {}
         for t, tile in enumerate(tiles, 1):
-            tileslc = slice(tile.sids.min(), tile.sids.max() + 1)
-            smap = self.submit(tileslc, grp_ids, self.haz.cmakers)
             self.check_memory(len(tile), L, num_gs)
+            tileslc = slice(tile.sids.min(), tile.sids.max() + 1)
+            smap, self.n_outs = self.submit(tileslc, grp_ids, self.haz.cmakers)
             for cm in self.haz.cmakers:
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
@@ -540,10 +540,10 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, tileslc, cmakers[grp_id])
                     triples.append(trip)
-                    smap.submit(trip)
-        self.n_outs = collections.Counter(t[2].grp_id for t in triples)
-        logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
-        return smap
+                    smap.submit_split(trip, oq.time_per_task, splitno=5)
+        n_outs = collections.Counter(t[2].grp_id for t in triples)
+        logging.info('grp_id->n_outs: %s', list(n_outs.values()))
+        return smap, n_outs
 
     def collect_hazard(self, acc, pmap_by_kind):
         """
