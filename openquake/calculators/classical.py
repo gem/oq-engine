@@ -449,18 +449,18 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
-        sg_tl_cm = self.get_sg_tl_cm(grp_ids, self.haz.cmakers)
+        triples = self.get_triples(grp_ids, self.haz.cmakers)
         L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
         self.check_memory(max(self.tile_sizes), L, num_gs)
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, sg_tl_cm, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(classical, triples, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
         smap.h5 = self.datastore.hdf5
         acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
                for cm in self.haz.cmakers}
-        logging.info('Sending %d tasks', len(sg_tl_cm))
+        logging.info('Sending %d tasks', len(triples))
         try:
             smap.reduce(self.agg_dicts, acc)
         finally:
@@ -501,7 +501,7 @@ class ClassicalCalculator(base.HazardCalculator):
                              numsites / self.numctxs)
         self.calc_times.clear()  # save a bit of memory
 
-    def get_sg_tl_cm(self, grp_ids, cmakers):
+    def get_triples(self, grp_ids, cmakers):
         """
         :returns: a list of triples (src_group, tile, cmaker)
         """
