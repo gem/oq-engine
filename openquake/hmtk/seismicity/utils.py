@@ -51,47 +51,44 @@ Utility functions for seismicity calculations
 import numpy as np
 from shapely import geometry
 from openquake.hazardlib.pmf import PRECISION
-try:
-    from scipy.stats._continuous_distns import (truncnorm_gen,
-                                                _norm_cdf, _norm_sf,
-                                                _norm_ppf, _norm_isf)
+from scipy.stats._continuous_distns import (truncnorm_gen,
+                                            _norm_cdf, _norm_sf,
+                                            _norm_ppf, _norm_isf)
 
-    class hmtk_truncnorm_gen(truncnorm_gen):
-        """
-        At present, the scipy.stats.truncnorm.rvs object does not support
-        vector inputs for the bounds - this piece of duck punching changes that
-        """
 
-        def _argcheck(self, a, b):
-            self.a = a
-            self.b = b
-            self._nb = _norm_cdf(b)
-            self._na = _norm_cdf(a)
-            self._sb = _norm_sf(b)
-            self._sa = _norm_sf(a)
-            self._delta = self._nb - self._na
-            idx = self.a > 0
-            self._delta[idx] = -(self._sb[idx] - self._sa[idx])
-            self._logdelta = np.log(self._delta)
-            return (a != b)
+class hmtk_truncnorm_gen(truncnorm_gen):
+    """
+    At present, the scipy.stats.truncnorm.rvs object does not support
+    vector inputs for the bounds - this piece of duck punching changes that
+    """
 
-        def _ppf(self, q, a, b):
-            output = np.zeros_like(self.a)
-            idx = self.a > 0
-            if np.any(idx):
-                output[idx] = _norm_isf(q[idx] * self._sb[idx] +
-                                        self._sa[idx] * (-q[idx] + 1.0))
-            idx = np.logical_not(idx)
-            if np.any(idx):
-                output[idx] = _norm_ppf(q[idx] * self._nb[idx] +
-                                        self._na[idx] * (-q[idx] + 1.0))
-            return output
+    def _argcheck(self, a, b):
+        self.a = a
+        self.b = b
+        self._nb = _norm_cdf(b)
+        self._na = _norm_cdf(a)
+        self._sb = _norm_sf(b)
+        self._sa = _norm_sf(a)
+        self._delta = self._nb - self._na
+        idx = self.a > 0
+        self._delta[idx] = -(self._sb[idx] - self._sa[idx])
+        self._logdelta = np.log(self._delta)
+        return (a != b)
 
-    hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
-except Exception:
-    print("Continuous distributions not available on Scipy version < 0.15\n")
-    print("Bootstrap sampling of the depth distribution will raise an error")
-    hmtk_truncnorm = None
+    def _ppf(self, q, a, b):
+        output = np.zeros_like(self.a)
+        idx = self.a > 0
+        if np.any(idx):
+            output[idx] = _norm_isf(q[idx] * self._sb[idx] +
+                                    self._sa[idx] * (-q[idx] + 1.0))
+        idx = np.logical_not(idx)
+        if np.any(idx):
+            output[idx] = _norm_ppf(q[idx] * self._nb[idx] +
+                                    self._na[idx] * (-q[idx] + 1.0))
+        return output
+
+
+hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
 
 MARKER_NORMAL = np.array([0, 31, 59, 90, 120, 151, 181,
                           212, 243, 273, 304, 334])
