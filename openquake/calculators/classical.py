@@ -84,9 +84,10 @@ def classical(srcs, site_slice, cmaker, monitor):
     """
     cmaker.init_monitoring(monitor)
     sitecol = monitor.read('sitecol')
-    sites = sitecol.filter((sitecol.sids >= site_slice.start) &
-                           (sitecol.sids < site_slice.stop))
-    return hazclassical(srcs, sites, cmaker)
+    if site_slice.stop - site_slice.start < len(sitecol):  # a slice
+        sitecol = sitecol.filter((sitecol.sids >= site_slice.start) &
+                                 (sitecol.sids < site_slice.stop))
+    return hazclassical(srcs, sitecol, cmaker)
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
