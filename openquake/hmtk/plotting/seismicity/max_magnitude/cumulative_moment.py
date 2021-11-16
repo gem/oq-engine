@@ -71,7 +71,7 @@ def plot_cumulative_moment(year, mag, figure_size=(8, 6),
     # Calculate seismic moment
     m_o = 10. ** (9.05 + 1.5 * mag)
     year_range = np.arange(np.min(year), np.max(year) + 1, 1)
-    nyr = np.int(np.shape(year_range)[0])
+    nyr = int(np.shape(year_range)[0])
     morate = np.zeros(nyr, dtype=float)
     # Get moment release per year
     for loc, tyr in enumerate(year_range):

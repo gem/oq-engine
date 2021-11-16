@@ -311,10 +311,10 @@ def _get_deltas_2(kind, ctx):
     delta_D = 1 for site class D, 0 otherwise
     """
     siteclass = ctx.siteclass
-    delta_C = np.zeros_like(siteclass, dtype=np.float)
+    delta_C = np.zeros_like(siteclass, dtype=float)
     delta_C[siteclass == b'C'] = 1
 
-    delta_D = np.zeros_like(siteclass, dtype=np.float)
+    delta_D = np.zeros_like(siteclass, dtype=float)
     delta_D[siteclass == b'D'] = 1
 
     return delta_C, delta_D
@@ -369,7 +369,7 @@ def _get_site_class_2(kind, ctx):
     class C or D).
     """
     siteclass = ctx.siteclass
-    S = np.zeros_like(siteclass, dtype=np.float)
+    S = np.zeros_like(siteclass, dtype=float)
     S[(siteclass == b'C') | (siteclass == b'D')] = 1
 
     return S

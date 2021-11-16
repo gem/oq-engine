@@ -124,7 +124,7 @@ site_param_dt = {
     'lat': numpy.float64,
     'depth': numpy.float64,
     'vs30': numpy.float64,
-    'vs30measured': numpy.bool,
+    'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
@@ -132,7 +132,7 @@ site_param_dt = {
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
     'xvf': numpy.float64,
     'soiltype': numpy.uint32,
-    'bas': numpy.bool,
+    'bas': bool,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
