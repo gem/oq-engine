@@ -1,7 +1,7 @@
-#,,,,,"generated_by='OpenQuake engine 3.13.0-gitbbe3e7d5bd', start_date='2021-11-15T17:21:28', checksum=572001388, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
+#,,,,,"generated_by='OpenQuake engine 3.13.0-gitd078956cf8', start_date='2021-11-16T09:26:25', checksum=572001388, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
 return_period,county,taxonomy,loss_type,losses_value,losses_ratio
 50,Solano,tax1,structural,8.78371E+02,6.27408E-03
-100,Solano,tax1,structural,1.12443E+04,8.03162E-02
+100,Solano,tax1,structural,1.12443E+04,8.03163E-02
 200,Solano,tax1,structural,1.58803E+04,1.13431E-01
 50,Solano,tax2,structural,1.77647E+03,7.40194E-03
 100,Solano,tax2,structural,3.04609E+03,1.26920E-02
