@@ -246,6 +246,7 @@ class Hazard:
                 if isinstance(key, str):
                     # contains only string keys in case of disaggregation
                     rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
+                    # works because disagg_by_src disables submit_split
                     self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                         self.get_hcurves(pmap, rlzs_by_gsim))
 
@@ -539,7 +540,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, sids, cmakers[grp_id])
                     triples.append(trip)
-                    if len(block) > split_level:
+                    if len(block) > split_level and not oq.disagg_by_src:
                         smap.submit_split(trip, oq.time_per_task, split_level)
                         self.n_outs[grp_id] += split_level
                     else:

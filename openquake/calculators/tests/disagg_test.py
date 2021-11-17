@@ -149,8 +149,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
-        # FIXME: temporarily disabled
-        # check_disagg_by_src(self.calc.datastore)
+        check_disagg_by_src(self.calc.datastore)
 
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
@@ -191,5 +190,4 @@ class DisaggregationTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
-        # FIXME: temporarily disabled
-        # check_disagg_by_src(self.calc.datastore
+        check_disagg_by_src(self.calc.datastore)
