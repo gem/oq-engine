@@ -20,7 +20,6 @@ import io
 import psutil
 import logging
 import operator
-import collections
 import numpy
 try:
     from PIL import Image
@@ -78,15 +77,14 @@ def store_ctxs(dstore, rupdata, grp_id):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, site_slice, cmaker, monitor):
+def classical(srcs, sids, cmaker, monitor):
     """
     Read the sitecol and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
     sitecol = monitor.read('sitecol')
-    if site_slice.stop - site_slice.start < len(sitecol):  # a slice
-        sitecol = sitecol.filter((sitecol.sids >= site_slice.start) &
-                                 (sitecol.sids < site_slice.stop))
+    if sids is not None:
+        sitecol = sitecol.filter(numpy.isin(sitecol.sids, sids))
     return hazclassical(srcs, sitecol, cmaker)
 
 
@@ -439,22 +437,19 @@ class ClassicalCalculator(base.HazardCalculator):
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
         L = oq.imtls.size
-        tiles = self.sitecol.split_in_tiles(oq.max_sites_per_tile)
+        tiles = self.sitecol.split_max(oq.max_sites_per_tile)
         if len(tiles) > 1:
             sizes = [len(tile) for tile in tiles]
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
             for size in sizes:
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        self.n_outs = AccumDict(accum=0)
         acc = {}
         for t, tile in enumerate(tiles, 1):
-            tileslc = slice(tile.sids.min(), tile.sids.max() + 1)
-            triples = self.get_triples(tileslc, grp_ids, self.haz.cmakers)
             self.check_memory(len(tile), L, num_gs)
-            self.datastore.swmr_on()  # must come before the Starmap
-            smap = parallel.Starmap(classical, triples, h5=self.datastore.hdf5)
-            if t == 1:
-                smap.monitor.save('sitecol', self.sitecol)
+            sids = tile.sids if len(tiles) > 1 else None
+            smap = self.submit(sids, grp_ids, self.haz.cmakers)
             for cm in self.haz.cmakers:
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
@@ -496,11 +491,14 @@ class ClassicalCalculator(base.HazardCalculator):
                              numsites / self.numctxs)
         self.calc_times.clear()  # save a bit of memory
 
-    def get_triples(self, tileslc, grp_ids, cmakers):
+    def submit(self, sids, grp_ids, cmakers):
         """
-        :returns: a list of triples (src_group, tile, cmaker)
+        :returns: a Starmap instance for the current tile
         """
         oq = self.oqparam
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        smap.monitor.save('sitecol', self.sitecol)
         triples = []
         src_groups = self.csm.src_groups
         tot_weight = 0
@@ -517,15 +515,18 @@ class ClassicalCalculator(base.HazardCalculator):
                     spc = oq.complex_fault_mesh_spacing
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        ct = oq.concurrent_tasks or 1
-        max_weight = max(tot_weight / ct, oq.min_weight)
+        split_level = oq.split_level
+        max_weight = max(tot_weight/(oq.concurrent_tasks or 1), oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
         for grp_id in grp_ids:
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
-                triples.append((sg, tileslc, cmakers[grp_id]))
+                trip = (sg, sids, cmakers[grp_id])
+                triples.append(trip)
+                smap.submit(trip)
+                self.n_outs[grp_id] += 1
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src else
@@ -536,10 +537,16 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug(
                         'Sending %d source(s) with weight %d',
                         len(block), sum(src.weight for src in block))
-                    triples.append((block, tileslc, cmakers[grp_id]))
-        self.n_outs = collections.Counter(t[2].grp_id for t in triples)
+                    trip = (block, sids, cmakers[grp_id])
+                    triples.append(trip)
+                    if len(block) > split_level:
+                        smap.submit_split(trip, oq.time_per_task, split_level)
+                        self.n_outs[grp_id] += split_level
+                    else:
+                        smap.submit(trip)
+                        self.n_outs[grp_id] += 1
         logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
-        return triples
+        return smap
 
     def collect_hazard(self, acc, pmap_by_kind):
         """

@@ -215,7 +215,15 @@ class SplitTaskTestCase(unittest.TestCase):
         tmp = os.path.join(tmpdir, 'calc_1.hdf5')
         print('Creating', tmp)
         duration = .5
+        split_level = 5
         timefactor = .2
+        with hdf5.File(tmp, 'w') as h5:
+            performance.init_performance(h5)
+            smap = parallel.Starmap(process_elements, h5=h5)
+            smap.submit_split((elements, timefactor), duration, split_level)
+            res = smap.reduce(acc=0)
+        self.assertAlmostEqual(res, 48.6718458266)
+        """
         with hdf5.File(tmp, 'w') as h5:
             performance.init_performance(h5)
             res = parallel.Starmap.apply_split(
@@ -223,4 +231,5 @@ class SplitTaskTestCase(unittest.TestCase):
                 h5=h5, duration=duration
             ).reduce(acc=0)
         self.assertAlmostEqual(res, 48.6718458266)
+        """
         shutil.rmtree(tmpdir)
