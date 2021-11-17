@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import time
 import psutil
 import logging
 import operator
@@ -79,27 +78,16 @@ def store_ctxs(dstore, rupdata, grp_id):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, tile, cmaker, monitor):
+def classical(srcs, site_slice, cmaker, monitor):
     """
     Read the sitecol and call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    if tile is None:
-        # read from the temporary storage, this avoids sending the
-        # same sitecol hundreds of times
-        tiles = monitor.read('sitecol').split_max(
-            cmaker.max_sites_per_tile)
-        t0 = time.time()
-        res = hazclassical(srcs, tiles[0], cmaker)
-        dt = time.time() - t0
-        yield res
-        for tile in tiles[1:]:
-            if dt < cmaker.time_per_task:  # fast, do everything in core
-                yield hazclassical(srcs, tile, cmaker)
-            else:  # spawn subtasks
-                yield classical, srcs, tile, cmaker
-    else:
-        yield hazclassical(srcs, tile, cmaker)
+    sitecol = monitor.read('sitecol')
+    if site_slice.stop - site_slice.start < len(sitecol):  # a slice
+        sitecol = sitecol.filter((sitecol.sids >= site_slice.start) &
+                                 (sitecol.sids < site_slice.stop))
+    return hazclassical(srcs, sitecol, cmaker)
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
@@ -445,28 +433,35 @@ class ClassicalCalculator(base.HazardCalculator):
                     'source_info', (num_srcs,), readinput.source_info_dt)
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
-        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
-        sg_tl_cm = self.get_sg_tl_cm(grp_ids, self.haz.cmakers)
-        L = oq.imtls.size
         # only groups generating more than 1 task preallocate memory
         num_gs = [len(cm.gsims) for grp, cm in enumerate(self.haz.cmakers)]
-        self.check_memory(max(self.tile_sizes), L, num_gs)
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, sg_tl_cm, h5=self.datastore.hdf5)
-        smap.monitor.save('sitecol', self.sitecol)
-        smap.h5 = self.datastore.hdf5
-        acc = {cm.grp_id: ProbabilityMap.build(L, len(cm.gsims))
-               for cm in self.haz.cmakers}
-        logging.info('Sending %d tasks', len(sg_tl_cm))
-        try:
+        L = oq.imtls.size
+        tiles = self.sitecol.split_in_tiles(oq.max_sites_per_tile)
+        if len(tiles) > 1:
+            sizes = [len(tile) for tile in tiles]
+            logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
+            for size in sizes:
+                assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
+        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        acc = {}
+        for t, tile in enumerate(tiles, 1):
+            tileslc = slice(tile.sids.min(), tile.sids.max() + 1)
+            triples = self.get_triples(tileslc, grp_ids, self.haz.cmakers)
+            self.check_memory(len(tile), L, num_gs)
+            self.datastore.swmr_on()  # must come before the Starmap
+            smap = parallel.Starmap(classical, triples, h5=self.datastore.hdf5)
+            if t == 1:
+                smap.monitor.save('sitecol', self.sitecol)
+            for cm in self.haz.cmakers:
+                acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
-        finally:
-            self.store_info(psd)
-            self.haz.store_disagg(acc)
-        logging.debug("busy time: %s", smap.busytime)
+            logging.debug("busy time: %s", smap.busytime)
+            logging.info('Finished tile %d of %d', t, len(tiles))
+        self.store_info(psd)
+        self.haz.store_disagg(acc)
         return True
 
     def store_info(self, psd):
@@ -501,7 +496,7 @@ class ClassicalCalculator(base.HazardCalculator):
                              numsites / self.numctxs)
         self.calc_times.clear()  # save a bit of memory
 
-    def get_sg_tl_cm(self, grp_ids, cmakers):
+    def get_triples(self, tileslc, grp_ids, cmakers):
         """
         :returns: a list of triples (src_group, tile, cmaker)
         """
@@ -526,22 +521,11 @@ class ClassicalCalculator(base.HazardCalculator):
         max_weight = max(tot_weight / ct, oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
-
-        tiling = self.N > oq.max_sites_per_tile
-        if tiling:
-            tiles = self.sitecol.split_max(oq.max_sites_per_tile)
-            self.tile_sizes = [len(tile) for tile in tiles]
-            ntiles = len(tiles)
-            logging.info('There are %d tiles of sizes %s',
-                         ntiles, self.tile_sizes)
-        else:
-            self.tile_sizes = [self.N]
-            ntiles = 1
         for grp_id in grp_ids:
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
-                triples.append((sg, None, cmakers[grp_id]))
+                triples.append((sg, tileslc, cmakers[grp_id]))
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src else
@@ -552,10 +536,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug(
                         'Sending %d source(s) with weight %d',
                         len(block), sum(src.weight for src in block))
-                    triples.append((block, None, cmakers[grp_id]))
+                    triples.append((block, tileslc, cmakers[grp_id]))
         self.n_outs = collections.Counter(t[2].grp_id for t in triples)
-        for grp_id in grp_ids:
-            self.n_outs[grp_id] *= ntiles
         logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return triples
 
