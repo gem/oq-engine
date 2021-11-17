@@ -921,6 +921,10 @@ def count(word):
     return collections.Counter(word)
 
 
+# for instance with split_level=5 supposing the splits 0 and 1 are below
+# the duration, then we must call split_task on the [2, 3, 4] with split_level=3
+# begin 3 = 5 - i; if [0, 1, 2] are below the duration then we must call
+# split_task  with [3, 4] and split_level = 2 = 5- i
 def split_task(elements, func, args, duration, split_level, monitor):
     """
     :param func: a task function with a monitor as last argument
@@ -934,7 +938,8 @@ def split_task(elements, func, args, duration, split_level, monitor):
         split_level = n
     elements = numpy.array(elements)  # from WeightedSequence to array
     idxs = numpy.arange(n)
-    split_elems = [elements[idxs % split_level == i] for i in range(split_level)]
+    split_elems = [elements[idxs % split_level == i]
+                   for i in range(split_level)]
     # see how long it takes to run the first slice
     t0 = time.time()
     for i, elems in enumerate(split_elems):
@@ -943,8 +948,8 @@ def split_task(elements, func, args, duration, split_level, monitor):
         yield res
         if dt > duration:
             # spawn subtasks for the rest and exit
-            for els in split_elems[i + 1:]:
-                yield (func, els) + args
+            els = numpy.concatenate(split_elems[i + 1:])
+            yield split_task, els, func, args, duration, split_level-i
             break
 
 #                             start/stop workers                             #
