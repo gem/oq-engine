@@ -118,16 +118,17 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
         [f] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk.csv', f)
+        self.assertEqualFiles('expected/aggrisk.csv', f, delta=5E-5)
 
         # testing the totlosses view
         dstore = self.calc.datastore
         fname = gettemp(view('totlosses', dstore))
-        self.assertEqualFiles('expected/totlosses.txt', fname)
+        self.assertEqualFiles('expected/totlosses.txt', fname, delta=5E-5)
 
         # testing portfolio_losses
         fname = gettemp(view('portfolio_losses', dstore))
-        self.assertEqualFiles('expected/portfolio_losses.txt', fname)
+        self.assertEqualFiles('expected/portfolio_losses.txt', fname,
+                              delta=5E-5)
 
         # two equal gsims
         with self.assertRaises(InvalidLogicTree):
