@@ -186,7 +186,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_9.__file__, 'job.ini')
 
         [fname] = export(('damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/damages.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/damages.csv', fname, delta=2E-5)
 
         # check risk_by_event
         K = self.calc.datastore.get_attr('risk_by_event', 'K')
@@ -199,7 +199,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqual(dmg.dmg_4.sum(), 25)
 
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=2E-5)
 
     def test_case_10(self):
         self.run_calc(case_10.__file__, 'job.ini')
