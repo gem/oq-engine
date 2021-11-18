@@ -260,7 +260,7 @@ def dask_submit(self, func, args, monitor):
 
 @submit.add('ipp')
 def ipp_submit(self, func, args, monitor):
-    return self.ipp_cluster.submit(
+    return self.executor.submit(
         safely_call, func, args, self.task_no, monitor)
 
 
@@ -676,7 +676,8 @@ class Starmap(object):
         elif cls.distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
         elif cls.distribute == 'ipp':
-            cls.ipp_cluster = Cluster(cls.num_cores)
+            rc = Cluster(n=cls.num_cores).start_and_connect_sync()
+            cls.executor = rc.executor()
 
     @classmethod
     def shutdown(cls):
@@ -690,6 +691,8 @@ class Starmap(object):
             cls.pids = []
         if hasattr(cls, 'dask_client'):
             del cls.dask_client
+        elif hasattr(cls, 'executor'):
+            cls.executor.shutdown()
 
     @classmethod
     def apply(cls, task, allargs, concurrent_tasks=None,
