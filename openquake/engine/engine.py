@@ -218,7 +218,7 @@ def poll_queue(job_id, poll_time):
                                {'status': 'submitted', 'pid': _PID})
                     first_time = False
                     # the logging is not yet initialized, so use a print
-                    print('Waiting for jobs %s', previous)
+                    print('Waiting for jobs %s' % [p.id for p in previous])
                 time.sleep(poll_time)
             else:
                 break

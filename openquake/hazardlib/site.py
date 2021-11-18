@@ -22,8 +22,7 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib.general import (
-    split_in_blocks, not_equal, get_duplicates)
+from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
 from openquake.hazardlib.geo.mesh import Mesh
@@ -430,6 +429,19 @@ class SiteCollection(object):
             sc = SiteCollection.__new__(SiteCollection)
             # smart trick to split in "homogenous" tiles
             sc.array = self.array[self.sids % hint == i]
+            sc.complete = self
+            tiles.append(sc)
+        return tiles
+
+    def split_in_tiles(self, max_sites):
+        """
+        Split a SiteCollection into a set of tiles with contiguous site IDs
+        """
+        hint = int(numpy.ceil(len(self) / max_sites))
+        tiles = []
+        for sids in numpy.array_split(self.sids, hint):
+            sc = SiteCollection.__new__(SiteCollection)
+            sc.array = self.array[sids]
             sc.complete = self
             tiles.append(sc)
         return tiles

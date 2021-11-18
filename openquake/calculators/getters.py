@@ -19,17 +19,13 @@
 import time
 import operator
 import numpy
-import pandas
 
-from openquake.baselib import general, performance, hdf5
+from openquake.baselib import general, hdf5
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import probability_map, stats
-from openquake.hazardlib.calc import filters, gmf
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, to_arrays)
-from openquake.risklib.riskinput import rsi2str
-from openquake.commonlib import calc, datastore
+from openquake.commonlib import datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
