@@ -33,6 +33,9 @@ by_id = operator.attrgetter('source_id')
 
 CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
 
+def magstr(mag):
+    return '%.2f' % numpy.float32(mag)
+
 
 def trt_smrs(src):
     return tuple(src.trt_smrs)
@@ -349,15 +352,15 @@ class CompositeSourceModel:
         for sg in self.src_groups:
             for src in sg:
                 if hasattr(src, 'mags'):
-                    srcmags = {'%.2f' % mag for mag in src.mags}
+                    srcmags = {magstr(mag) for mag in src.mags}
                     if hasattr(src, 'get_background_sources'):  # UCERF
                         for bg_src in src.get_background_sources():
-                            srcmags.update('%.2f' % mag for mag, _ in bg_src.
+                            srcmags.update(magstr(mag) for mag, _ in bg_src.
                                            get_annual_occurrence_rates())
                 elif hasattr(src, 'data'):  # nonparametric
-                    srcmags = {'%.2f' % item[0].mag for item in src.data}
+                    srcmags = {magstr(item[0].mag) for item in src.data}
                 else:
-                    srcmags = {'%.2f' % item[0] for item in
+                    srcmags = {magstr(item[0]) for item in
                                src.get_annual_occurrence_rates()}
                 mags[sg.trt].update(srcmags)
         return {trt: sorted(mags[trt]) for trt in mags}
