@@ -258,13 +258,19 @@ def dask_submit(self, func, args, monitor):
         safely_call, func, args, self.task_no, monitor)
 
 
+@submit.add('ipp')
+def ipp_submit(self, func, args, monitor):
+    return self.ipp_cluster.submit(
+        safely_call, func, args, self.task_no, monitor)
+
+
 def oq_distribute(task=None):
     """
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
     if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
-                    'dask'):
+                    'dask', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
@@ -514,6 +520,9 @@ if oq_distribute().startswith('celery'):
 elif oq_distribute() == 'dask':
     from dask.distributed import Client
 
+elif oq_distribute() == 'ipp':
+    from ipyparallel import Cluster
+
 
 class IterResult(object):
     """
@@ -666,6 +675,8 @@ class Starmap(object):
             cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
         elif cls.distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
+        elif cls.distribute == 'ipp':
+            cls.ipp_cluster = Cluster(cls.num_cores)
 
     @classmethod
     def shutdown(cls):
