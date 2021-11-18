@@ -199,7 +199,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqual(dmg.dmg_4.sum(), 25)
 
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=2E-5)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-4)
 
     def test_case_10(self):
         self.run_calc(case_10.__file__, 'job.ini')
