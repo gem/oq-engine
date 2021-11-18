@@ -675,7 +675,7 @@ class Starmap(object):
             cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
         elif cls.distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
-        elif cls.distribute == 'ipp':
+        elif cls.distribute == 'ipp' and not hasattr(cls, 'executor'):
             rc = Cluster(n=cls.num_cores).start_and_connect_sync()
             cls.executor = rc.executor()
 
