@@ -1,9 +1,9 @@
-name: MacOS Install engine for 3.6, 3.7, 3.8 and 3.9
+name: MacOS Install engine for 3.7, 3.8 and 3.9
 'on':
   schedule:
     - cron: "0 1 * * *"
-  push:
-    branches: [ releases_python3.9 ]
+#  push:
+#    branches: [ releases_python3.9 ]
 
 jobs:
 
@@ -13,7 +13,7 @@ jobs:
       matrix:
         #os: [macos-latest, windows-latest, ubuntu-latest]
         os: [macos-10.15, macos-11]
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
