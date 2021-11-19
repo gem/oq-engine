@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended `oq prepare_site_model` to support .csv.gz files
   * Solved the issue of "compute gmfs" slow tasks in event_based and used
     the same approach in classical calculations too
   * Made sure `valid.gsim` instantiates the GSIM

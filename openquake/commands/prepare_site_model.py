@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import gzip
 import logging
 import numpy
 from openquake.baselib import performance, writers
@@ -59,6 +60,13 @@ def calculate_z2pt5_ngaw2(vs30):
     return z2pt5
 
 
+def read(fname):
+    if fname.endswith('.gz'):
+        return gzip.open(fname, 'rt', encoding='utf-8-sig')
+    else:
+        return open(fname, 'rt', encoding='utf-8-sig')
+
+
 def read_vs30(fnames, forbidden):
     """
     :param fnames: a list of CSV files with fields lon,lat,vs30
@@ -68,8 +76,9 @@ def read_vs30(fnames, forbidden):
     data = []
     for fname in fnames:
         check_fname(fname, 'vs30_csv', forbidden)
-        for line in open(fname, encoding='utf-8-sig'):
-            data.append(tuple(line.split(',')))
+        with read(fname) as f:
+            for line in f:
+                data.append(tuple(line.split(',')))
     return numpy.array(data, vs30_dt)
 
 
@@ -141,7 +150,7 @@ def main(
             lons, lats = [], []
             for fname in sites_csv:
                 check_fname(fname, 'sites_csv', output)
-                with open(fname) as csv:
+                with read(fname) as csv:
                     for line in csv:
                         if line.startswith('lon,lat'):  # possible header
                             continue
