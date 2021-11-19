@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import gzip
 import json
 import logging
@@ -27,10 +28,10 @@ from openquake.calculators.extract import Extractor, WebExtractor, clusterize
 
 
 def import_plt():
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:
+    if os.environ.get('TEXT'):
         import plotext as plt
+    else:
+        import matplotlib.pyplot as plt
     return plt
 
 
