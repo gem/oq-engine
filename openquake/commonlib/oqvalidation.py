@@ -215,16 +215,18 @@ ebrisk_maxsize:
   INTERNAL
 
 floating_x_step:
-  Integer, used in rupture generation for kite faults. indicates the spacing
-  between nodes along strike in the mesh used to create ruptures (i.e. "2" 
-  is every other node)
+  Integer, used in rupture generation for kite faults. indicates the division  
+  of the fault length used to float ruptures by dividing the number of nodes
+  along strike by the given integer (i.e. "2" floats the ruptures at half the 
+  rupture length; "3" floats at ~1/3 the rupture length)
   Example: *floating_x_step = 2*
   Default: 1
 
 floating_y_step:
-  Integer, used in rupture generation for kite faults. indicates the spacing
-  between nodes along dip in the mesh used to create ruptures (i.e. "2" 
-  is every other node)
+  Integer, used in rupture generation for kite faults. indicates the division  
+  of the fault width used to float ruptures by dividing the number of nodes
+  down dip by the given integer (i.e. "2" floats the ruptures at half the 
+  rupture length; "3" floats at ~1/3 the rupture length)
   Example: *floating_y_step = 2*
   Default: 1
 
