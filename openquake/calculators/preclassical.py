@@ -134,8 +134,28 @@ def preclassical(srcs, srcfilter, params, monitor):
     """
     # src.id -> nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
-    sources = []
+    split_sources = []
+    spacing = params['ps_grid_spacing']
     grp_id = srcs[0].grp_id
+    if srcfilter.sitecol is None:
+        # in csm2rup just split the sources and count the ruptures
+        for src in srcs:
+            t0 = time.time()
+            ss = split_source(src)
+            if len(ss) > 1:
+                for ss_ in ss:
+                    ss_.nsites = 1
+            split_sources.extend(ss)
+            nrups = src.count_ruptures()
+            src.nsites = 1
+            dt = time.time() - t0
+            calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
+        dic = {grp_id: split_sources}
+        dic['calc_times'] = calc_times
+        dic['before'] = len(srcs)
+        dic['after'] = len(dic[grp_id])
+        return dic
+
     trt = srcs[0].tectonic_region_type
     md = params['maximum_distance'](trt)
     pd = (params['pointsource_distance'](trt)
@@ -144,28 +164,25 @@ def preclassical(srcs, srcfilter, params, monitor):
         # this can be slow
         for src in srcs:
             t0 = time.time()
-            if srcfilter.sitecol:
-                src.nsites = len(srcfilter.close_sids(src))  # can be 0
-            else:
-                src.nsites = 1  # don't discard
+            src.nsites = len(srcfilter.close_sids(src))  # can be 0
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (
                 params['split_sources'] and src.nsites) else [src]
-            sources.extend(splits)
+            split_sources.extend(splits)
             nrups = src.count_ruptures() if src.nsites else 0
             dt = time.time() - t0
             calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
         for arr in calc_times.values():
             arr[3] = monitor.task_no
-    dic = grid_point_sources(sources, params['ps_grid_spacing'], monitor)
+    dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
         # this is normally fast
         for src in dic[grp_id]:
             if not src.nsites:  # filtered out
                 src.nsites = EPS
             is_ps = isinstance(src, PointSource)
-            if is_ps and srcfilter.sitecol:
+            if is_ps:
                 # NB: using cKDTree would not help, performance-wise
                 cdist = srcfilter.sitecol.get_cdist(src.location)
                 src.nsites = (cdist <= md + pd).sum() or EPS
@@ -178,7 +195,7 @@ def preclassical(srcs, srcfilter, params, monitor):
                     factor = (close + (far + EPS) / nphc) / (close + far + EPS)
                     src.num_ruptures *= factor
     dic['calc_times'] = calc_times
-    dic['before'] = len(sources)
+    dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if params['ps_grid_spacing']:
         dic['ps_grid/%02d' % monitor.task_no] = [
