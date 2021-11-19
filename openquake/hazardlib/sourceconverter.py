@@ -957,8 +957,8 @@ class SourceConverter(RuptureConverter):
             xstep = int(float(~node.floating_x_step))
             ystep = int(float(~node.floating_y_step))
         except Exception:
-            xstep = 1
-            ystep = 1
+            xstep = self.floating_x_step
+            ystep = self.floating_y_step
 
         with context(self.fname, node):
             if as_kite:
@@ -992,8 +992,8 @@ class SourceConverter(RuptureConverter):
                     dip=~geom.dip,
                     rake=~node.rake,
                     temporal_occurrence_model=self.get_tom(node),
-                    floating_x_step=1,
-                    floating_y_step=1)
+                    floating_x_step=xstep,
+                    floating_y_step=ystep)
         return outsrc
 
     def convert_complexFaultSource(self, node):

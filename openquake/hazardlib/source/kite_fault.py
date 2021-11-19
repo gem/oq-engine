@@ -43,8 +43,8 @@ class KiteFaultSource(ParametricSeismicSource):
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model,
                  # kite fault specific parameters
-                 profiles, floating_x_step,
-                 floating_y_step, rake, profiles_sampling=None):
+                 profiles, rake, floating_x_step=1,
+                 floating_y_step=1, profiles_sampling=None):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
