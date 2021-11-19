@@ -112,7 +112,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-5)
+                              delta=2E-5)
 
         return  # TODO: fix avg_losses
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)

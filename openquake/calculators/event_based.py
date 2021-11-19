@@ -433,7 +433,7 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(trt, rlzs_by_gsim, param)
             cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
             smap.submit_split((proxies, cmaker, oq, self.datastore),
-                              duration=oq.time_per_task, splitno=5)
+                              oq.time_per_task, oq.split_level)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
