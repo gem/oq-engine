@@ -73,7 +73,7 @@ def set_concurrent_tasks_default(calc):
     OqParam.concurrent_tasks.default. Abort the calculations if no
     workers are available. Do nothing for trivial distributions.
     """
-    if OQ_DISTRIBUTE in 'no processpool':  # do nothing
+    if OQ_DISTRIBUTE in 'no processpool ipp':  # do nothing
         num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.Starmap.CT // 2
         logging.warning('Using %d cores on %s', num_workers, platform.node())
         return
