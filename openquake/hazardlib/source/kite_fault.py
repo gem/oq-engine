@@ -151,7 +151,9 @@ class KiteFaultSource(ParametricSeismicSource):
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
             ruptures = []
-            for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid):
+            for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid, 
+                                          f_strike=self.floating_x_step,
+                                          f_dip=self.floating_y_step):
                 ruptures.append(rup)
             if len(ruptures) < 1:
                 continue

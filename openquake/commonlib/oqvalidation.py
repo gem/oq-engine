@@ -214,6 +214,20 @@ distance_bin_width:
 ebrisk_maxsize:
   INTERNAL
 
+floating_x_step:
+  Integer, used in rupture generation for kite faults. indicates the spacing
+  between nodes along strike in the mesh used to create ruptures (i.e. "2" 
+  is every other node)
+  Example: *floating_x_step = 2*
+  Default: 1
+
+floating_y_step:
+  Integer, used in rupture generation for kite faults. indicates the spacing
+  between nodes along dip in the mesh used to create ruptures (i.e. "2" 
+  is every other node)
+  Example: *floating_y_step = 2*
+  Default: 1
+
 ignore_encoding_errors:
   If set, skip characters with non-UTF8 encoding
   Example: *ignore_encoding_errors = true*.
@@ -785,6 +799,8 @@ class OqParam(valid.ParamSet):
     discrete_damage_distribution = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
+    floating_x_step = valid.Param(valid.positiveint)
+    floating_y_step = valid.Param(valid.positiveint)
     ignore_encoding_errors = valid.Param(valid.boolean, False)
     ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
