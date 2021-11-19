@@ -650,7 +650,7 @@ split_sources:
 split_level:
   How many outputs per task to generate (honored in some calculators)
   Example: *split_level = 5*
-  Default: 3
+  Default: 4
 
 std:
   Compute the standard deviation  across realizations. Akin to mean and max.
@@ -882,7 +882,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
-    split_level = valid.Param(valid.positiveint, 3)
+    split_level = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     # NB: you cannot increase too much min_weight otherwise too few tasks will
     # be generated in cases like Ecuador inside full South America
