@@ -68,16 +68,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         Determine the source weight from the number of ruptures
         """
-        # NB: for point sources .num_ruptures is preset in preclassical,
-        # and it is less than the real number of ruptures if the
-        # pointsource_distance is set
+        # NB: for point sources .num_ruptures is preset in preclassical
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        w = self.num_ruptures * self.ngsims * (.1 if self.nsites == EPS else 1)
-        if hasattr(self, 'data'):  # nonparametric rupture
-            w *= 20  # increase weight 20 times
-        elif not hasattr(self, 'nodal_plane_distribution'):  # not pointlike
-            w *= 5  # increase weight of non point sources
+        w = self.num_ruptures * self.ngsims
         return w
 
     @property
