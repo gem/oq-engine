@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended `oq prepare_site_model` to support .csv.gz files
   * Solved the issue of "compute gmfs" slow tasks in event_based and used
     the same approach in classical calculations too
   * Made sure `valid.gsim` instantiates the GSIM
@@ -12,8 +13,7 @@
 
   [Shreyasvi Chandrasekhar]
   * Added a new GMPE for significant duration proposed by Bahrampouri et al
-    2021 in gsim.
-  * created tests and verification tables for bahrampouri_2021_duration model.
+    (2021).
 
   [Claudia Mascandola]
   * Added the computation of tau and phi stdevs to the sgobba_2020 GMPE
@@ -21,7 +21,7 @@
 
   [Michele Simionato]
   * Changed completely the storage of the PoEs and reduced the memory
-    consumption in classical calculations (plus a 4x speedup in "postclassical")
+    consumption in classical calculations (plus 4x speedup in "postclassical")
   * Changed the behavior of `sites_slice`
   * Changed `custom_site_id` to an ASCII string up to 6 characters
   * Fixed the error raised in presence of a mag-dep distance for a tectonic

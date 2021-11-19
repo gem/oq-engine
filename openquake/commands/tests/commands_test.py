@@ -614,7 +614,7 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         output = gettemp(suffix='.csv')
         grid_spacing = 50
         exposure_xml = os.path.join(inputdir, 'exposure.xml')
-        vs30_csv = os.path.join(inputdir, 'vs30.csv')
+        vs30_csv = os.path.join(inputdir, 'vs30.csv.gz')
         sitecol = sap.runline('openquake.commands prepare_site_model '
                               f'-123 {vs30_csv} -e {exposure_xml} '
                               f'-g {grid_spacing} --assoc-distance=5 '
