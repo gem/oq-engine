@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Solved the issue of "compute gmfs" slow tasks in event_based
+  * Solved the issue of "compute gmfs" slow tasks in event_based and used
+    the same approach in classical calculations too
   * Made sure `valid.gsim` instantiates the GSIM
   * ShakeMap calculations failing with a nonpositive definite correlation
     matrix now point out to the manual for the solution of the problem
