@@ -314,15 +314,13 @@ def make_figure_task_info(extractors, what):
     $ oq plot "task_info?kind=classical"
     """
     plt = import_plt()
-    fig = plt.figure()
     [ex] = extractors
     [(task_name, task_info)] = ex.get(what).to_dict().items()
     x = task_info['duration']
-    ax = fig.add_subplot(1, 1, 1)
     mean, std, med = x.mean(), x.std(ddof=1), numpy.median(x)
-    ax.hist(x, bins=50, rwidth=0.9)
-    ax.set_xlabel("mean=%d+-%d seconds, median=%d" % (mean, std, med))
-    ax.set_ylabel("tasks=%d" % len(x))
+    plt.hist(x, bins=50)
+    plt.title("mean=%d+-%d seconds, median=%d" % (mean, std, med))
+    #plt.set_ylabel("tasks=%d" % len(x))
     #from scipy.stats import linregress
     #ax = fig.add_subplot(2, 1, 2)
     #arr = numpy.sort(task_info, order='duration')
