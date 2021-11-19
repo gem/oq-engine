@@ -146,10 +146,12 @@ def preclassical(srcs, srcfilter, params, monitor):
                 for ss_ in ss:
                     ss_.nsites = 1
             split_sources.extend(ss)
-            nrups = src.count_ruptures()
+            src.num_ruptures = src.count_ruptures()
             src.nsites = 1
             dt = time.time() - t0
-            calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
+            calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
+        for arr in calc_times.values():
+            arr[3] = monitor.task_no
         dic = {grp_id: split_sources}
         dic['calc_times'] = calc_times
         dic['before'] = len(srcs)
@@ -164,6 +166,7 @@ def preclassical(srcs, srcfilter, params, monitor):
         # this can be slow
         for src in srcs:
             t0 = time.time()
+            # NB: this is approximate, since the sitecol is sampled!
             src.nsites = len(srcfilter.close_sids(src))  # can be 0
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
@@ -177,29 +180,15 @@ def preclassical(srcs, srcfilter, params, monitor):
             arr[3] = monitor.task_no
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        # this is normally fast
         for src in dic[grp_id]:
-            if not src.nsites:  # filtered out
+            if not src.nsites:  # avoid nsites = 0
                 src.nsites = EPS
-            is_ps = isinstance(src, PointSource)
-            if is_ps:
-                # NB: using cKDTree would not help, performance-wise
-                cdist = srcfilter.sitecol.get_cdist(src.location)
-                src.nsites = (cdist <= md + pd).sum() or EPS
             src.num_ruptures = src.count_ruptures()
-            if pd and is_ps:
-                nphc = src.count_nphc()
-                if nphc > 1:
-                    close = (cdist <= pd * BUFFER).sum()
-                    far = src.nsites - close
-                    factor = (close + (far + EPS) / nphc) / (close + far + EPS)
-                    src.num_ruptures *= factor
     dic['calc_times'] = calc_times
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if params['ps_grid_spacing']:
-        dic['ps_grid/%02d' % monitor.task_no] = [
-            src for src in dic[grp_id] if src.nsites > EPS]
+        dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
     return dic
 
 
