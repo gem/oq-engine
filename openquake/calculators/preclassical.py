@@ -142,9 +142,8 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
                     ss_.nsites = 1
             split_sources.extend(ss)
             src.num_ruptures = src.count_ruptures()
-            src.nsites = 1
             dt = time.time() - t0
-            calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
+            calc_times[src.id] += F32([src.num_ruptures, 1, dt, 0])
         for arr in calc_times.values():
             arr[3] = monitor.task_no
         dic = {grp_id: split_sources}
@@ -158,15 +157,15 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
         for src in srcs:
             t0 = time.time()
             # NB: this is approximate, since the sitecol is sampled!
-            src.nsites = len(srcfilter.close_sids(src))  # can be 0
+            nsites = len(srcfilter.close_sids(src))  # can be 0
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (
-                oqparam.split_sources and src.nsites) else [src]
+                oqparam.split_sources and nsites) else [src]
             split_sources.extend(splits)
-            nrups = src.count_ruptures() if src.nsites else 0
+            nrups = src.count_ruptures() if nsites else 0
             dt = time.time() - t0
-            calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
+            calc_times[src.id] += F32([nrups, nsites, dt, 0])
         for arr in calc_times.values():
             arr[3] = monitor.task_no
     dic = grid_point_sources(split_sources, spacing, monitor)
