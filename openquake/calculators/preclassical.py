@@ -55,10 +55,6 @@ def run_preclassical(csm, oqparam, h5):
     sources_by_grp = groupby(
         csm.get_sources(atomic=False),
         lambda src: (src.grp_id, msr_name(src)))
-    param = dict(maximum_distance=oqparam.maximum_distance,
-                 pointsource_distance=oqparam.pointsource_distance,
-                 ps_grid_spacing=oqparam.ps_grid_spacing,
-                 split_sources=oqparam.split_sources)
     srcfilter = SourceFilter(
         csm.sitecol.reduce(10000) if csm.sitecol else None,
         oqparam.maximum_distance)
@@ -66,13 +62,13 @@ def run_preclassical(csm, oqparam, h5):
         logging.info('Sending %s', srcfilter.sitecol)
     if oqparam.ps_grid_spacing:
         # produce a preclassical task for each group
-        allargs = ((srcs, srcfilter, param)
+        allargs = ((srcs, srcfilter, oqparam)
                    for srcs in sources_by_grp.values())
     else:
         # produce many preclassical task
         maxw = sum(len(srcs) for srcs in sources_by_grp.values()) / (
             oqparam.concurrent_tasks or 1)
-        allargs = ((blk, srcfilter, param)
+        allargs = ((blk, srcfilter, oqparam)
                    for srcs in sources_by_grp.values()
                    for blk in block_splitter(srcs, maxw))
     res = parallel.Starmap(
@@ -124,7 +120,7 @@ def run_preclassical(csm, oqparam, h5):
     return res
 
 
-def preclassical(srcs, srcfilter, params, monitor):
+def preclassical(srcs, srcfilter, oqparam, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
@@ -134,7 +130,7 @@ def preclassical(srcs, srcfilter, params, monitor):
     # src.id -> nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     split_sources = []
-    spacing = params['ps_grid_spacing']
+    spacing = oqparam.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if srcfilter.sitecol is None:
         # in csm2rup just split the sources and count the ruptures
@@ -166,7 +162,7 @@ def preclassical(srcs, srcfilter, params, monitor):
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (
-                params['split_sources'] and src.nsites) else [src]
+                oqparam.split_sources and src.nsites) else [src]
             split_sources.extend(splits)
             nrups = src.count_ruptures() if src.nsites else 0
             dt = time.time() - t0
@@ -175,11 +171,15 @@ def preclassical(srcs, srcfilter, params, monitor):
             arr[3] = monitor.task_no
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        srcfilter.set_weight(dic[grp_id])
+        if len(srcfilter.sitecol) > oqparam.max_sites_disagg:
+            srcfilter.set_weight(dic[grp_id])
+        else:  # if there are few sites use a trivial weight
+            for src in dic[grp_id]:
+                src.weight = src.num_ruptures = src.count_ruptures()
     dic['calc_times'] = calc_times
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
-    if params['ps_grid_spacing']:
+    if spacing:
         dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
     return dic
 
