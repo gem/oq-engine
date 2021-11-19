@@ -13,8 +13,7 @@
 
   [Shreyasvi Chandrasekhar]
   * Added a new GMPE for significant duration proposed by Bahrampouri et al
-    2021 in gsim.
-  * created tests and verification tables for bahrampouri_2021_duration model.
+    (2021).
 
   [Claudia Mascandola]
   * Added the computation of tau and phi stdevs to the sgobba_2020 GMPE
