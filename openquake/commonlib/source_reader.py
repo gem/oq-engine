@@ -26,15 +26,13 @@ import numpy
 
 from openquake.baselib import parallel, general
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
 
 CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
-
-def magstr(mag):
-    return '%.2f' % numpy.float32(mag)
 
 
 def trt_smrs(src):

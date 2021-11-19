@@ -54,25 +54,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     trt_smr = 0  # set by the engine
     nsites = 0  # set when filtering the source
-    ngsims = 1
+
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
+    weight = 1
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
         pass
-
-    @property
-    def weight(self):
-        """
-        Determine the source weight from the number of ruptures
-        """
-        # NB: for point sources .num_ruptures is preset in preclassical
-        if not self.num_ruptures:
-            self.num_ruptures = self.count_ruptures()
-        w = self.num_ruptures * self.ngsims
-        return w
 
     @property
     def trt_smrs(self):

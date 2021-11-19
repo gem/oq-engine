@@ -23,9 +23,8 @@ from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, groupby, get_nbytes_msg)
-from openquake.hazardlib.source.point import (
-    PointSource, grid_point_sources, msr_name)
-from openquake.hazardlib.source.base import EPS, get_code2cls
+from openquake.hazardlib.source.point import grid_point_sources, msr_name
+from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.calculators import base
@@ -107,7 +106,7 @@ def run_preclassical(csm, oqparam, h5):
     for sg in csm.src_groups:
         for src in sg:
             assert src.num_ruptures
-            assert src.nsites
+            assert src.weight
 
     # store ps_grid data, if any
     for key, sources in res.items():
@@ -158,10 +157,6 @@ def preclassical(srcs, srcfilter, params, monitor):
         dic['after'] = len(dic[grp_id])
         return dic
 
-    trt = srcs[0].tectonic_region_type
-    md = params['maximum_distance'](trt)
-    pd = (params['pointsource_distance'](trt)
-          if params['pointsource_distance'] else 0)
     with monitor('splitting sources'):
         # this can be slow
         for src in srcs:
@@ -180,10 +175,7 @@ def preclassical(srcs, srcfilter, params, monitor):
             arr[3] = monitor.task_no
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        for src in dic[grp_id]:
-            if not src.nsites:  # avoid nsites = 0
-                src.nsites = EPS
-            src.num_ruptures = src.count_ruptures()
+        srcfilter.set_weight(dic[grp_id])
     dic['calc_times'] = calc_times
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
