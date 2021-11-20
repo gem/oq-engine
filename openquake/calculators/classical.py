@@ -427,7 +427,8 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # after preclassical, like in case_36
                 self.csm = parent['_csm']
                 self.full_lt = parent['full_lt']
-        source_reader.create_source_info(self.csm, self.datastore.hdf5)
+        if 'source_info' not in self.datastore:
+            source_reader.create_source_info(self.csm, self.datastore.hdf5)
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         srcidx = {
