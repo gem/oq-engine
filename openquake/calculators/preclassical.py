@@ -41,12 +41,15 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def run_preclassical(csm, oqparam, h5):
+def run_preclassical(calc):
     """
     :param csm: a CompositeSourceModel with attribute .srcfilter
     :param oqparam: the parameters in job.ini file
     :param h5: a DataStore instance
     """
+    csm = calc.csm
+    oqparam = calc.oqparam
+    h5 = calc.datastore.hdf5
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
@@ -87,7 +90,7 @@ def run_preclassical(csm, oqparam, h5):
                      format(res['before'], res['after']))
 
     if res and h5:
-        csm.update_source_info(res['calc_times'], nsites=True)
+        calc.store_source_info(res['calc_times'], nsites=False)
 
     acc = AccumDict(accum=0)
     code2cls = get_code2cls()
@@ -256,9 +259,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        oq = self.oqparam
         self.set_psd()  # set the pointsource_distance, needed for ps_grid_spc
-        res = run_preclassical(self.csm, oq, self.datastore)
+        res = run_preclassical(self)
         if res:
             self.store_source_info(res['calc_times'])
         return self.csm
