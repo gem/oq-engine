@@ -455,8 +455,6 @@ class SourceFilter(object):
                 idist = self.integration_distance(
                     src.tectonic_region_type, rup.mag)
                 src.weight += (dists <= idist).sum()
-            if not hasattr(src, 'location'):  # non-point sources are slow
-                src.weight *= 5
 
     def get_nsites(self, rup):
         """

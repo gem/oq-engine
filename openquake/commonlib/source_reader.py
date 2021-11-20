@@ -24,15 +24,67 @@ import gzip
 import zlib
 import numpy
 
-from openquake.baselib import parallel, general
+from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
-
 CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
+
+source_info_dt = numpy.dtype([
+    ('source_id', hdf5.vstr),          # 0
+    ('grp_id', numpy.uint16),          # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('calc_time', numpy.float32),      # 3
+    ('num_sites', numpy.uint32),       # 4
+    ('eff_ruptures', numpy.uint32),    # 5
+    ('trti', numpy.uint8),             # 6
+    ('task_no', numpy.uint16),         # 7
+])
+
+
+def get_tom_name(sg):
+    """
+    :param sg: a source group instance
+    :returns: name of the associated temporal occurrence model
+    """
+    if sg.temporal_occurrence_model:
+        return sg.temporal_occurrence_model.__class__.__name__
+    else:
+        return 'PoissonTOM'
+
+
+def create_source_info(csm, h5):
+    """
+    Creates source_info, source_wkt, trt_smrs, toms
+    """
+    data = {}  # src_id -> row
+    wkts = []
+    lens = []
+    for sg in csm.src_groups:
+        for src in sg:
+            trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
+            lens.append(len(src.trt_smrs))
+            row = [src.source_id, src.grp_id, src.code,
+                   0, 0, 0, trti, 0]
+            wkts.append(src._wkt)
+            data[src.id] = row
+    logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
+                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
+                 numpy.mean(lens))
+    csm.source_info = data  # src_id -> row
+    num_srcs = len(csm.source_info)
+    # avoid hdf5 damned bug by creating source_info in advance
+    h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
+    h5['source_info'].attrs['atomic'] = any(
+        grp.atomic for grp in csm.src_groups)
+    h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
+    h5['trt_smrs'] = csm.get_trt_smrs()
+    h5['toms'] = numpy.array(
+        [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
+
 
 
 def trt_smrs(src):
