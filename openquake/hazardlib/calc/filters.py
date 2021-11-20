@@ -36,6 +36,13 @@ MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
 
 
+def magstr(mag):
+    """
+    :returns: a string representation of the magnitude
+    """
+    return '%.2f' % numpy.float32(mag)
+
+
 def get_distances(rupture, sites, param):
     """
     :param rupture: a rupture
@@ -182,7 +189,7 @@ class MagDepDistance(dict):
             else:
                 ms = numpy.float64(mags)
             dists = numpy.interp(ms, xs, ys)
-            ddic[trt] = {'%.2f' % mag: dist for mag, dist in zip(ms, dists)}
+            ddic[trt] = {magstr(mag): dist for mag, dist in zip(ms, dists)}
         self.ddic = ddic
 
     def __call__(self, trt, mag=None):
@@ -191,7 +198,7 @@ class MagDepDistance(dict):
         elif mag is None:
             return getdefault(self, trt)[-1][1]
         elif hasattr(self, 'ddic'):
-            return self.ddic[trt]['%.2f' % mag]
+            return self.ddic[trt][magstr(mag)]
         else:
             xs, ys = zip(*getdefault(self, trt))
             return numpy.interp(mag, xs, ys)
@@ -431,22 +438,25 @@ class SourceFilter(object):
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
 
-    def set_nsites(self, sources):
+    def set_weight(self, sources):
         """
-        Set the nsites attribute on each source to the sum of the affected
+        Set the weight attribute on each source to the sum of the affected
         sites
         """
+        for src in sources:
+            src.num_ruptures = src.count_ruptures()
         for src, sites in self.filter(sources):
             if hasattr(src, 'location'):  # fast lane for point sources
                 irups = src.iruptures(point_rup=True)
             else:
                 irups = src.iter_ruptures()
-            src.nsites = 0
             for rup in irups:
                 dists = get_distances(rup, sites, 'rrup')
                 idist = self.integration_distance(
                     src.tectonic_region_type, rup.mag)
-                src.nsites += (dists <= idist).sum()
+                src.weight += (dists <= idist).sum()
+        if hasattr(src, 'pointsources'):  # make CollapsedPointSource heavier
+            src.weight *= 3
 
     def get_nsites(self, rup):
         """

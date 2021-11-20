@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 
 TWO16 = 2 ** 16  # 65,536
@@ -86,9 +87,6 @@ def create_source_info(csm, calc_times, h5):
     h5['toms'] = numpy.array(
         [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
 
-
-def magstr(mag):
-    return '%.2f' % numpy.float32(mag)
 
 
 def trt_smrs(src):

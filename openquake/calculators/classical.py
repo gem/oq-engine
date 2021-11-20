@@ -33,7 +33,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc, source_reader
+from openquake.commonlib import calc
 from openquake.calculators import getters
 from openquake.calculators import base, preclassical
 
@@ -389,8 +389,6 @@ class ClassicalCalculator(base.HazardCalculator):
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
-
-        self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
         self.datastore.create_df('_poes', poes_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
         if not self.oqparam.hazard_calculation_id:
@@ -515,7 +513,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         split_level = oq.split_level
-        max_weight = max(tot_weight/(oq.concurrent_tasks or 1), oq.min_weight)
+        max_weight = max(tot_weight / (oq.concurrent_tasks * .75 or 1),
+                         oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
         for grp_id in grp_ids:
