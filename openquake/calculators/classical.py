@@ -33,7 +33,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc, readinput
+from openquake.commonlib import calc, source_reader
 from openquake.calculators import getters
 from openquake.calculators import base, preclassical
 
@@ -427,9 +427,7 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # after preclassical, like in case_36
                 self.csm = parent['_csm']
                 self.full_lt = parent['full_lt']
-                num_srcs = len(self.csm.source_info)
-                self.datastore.hdf5.create_dataset(
-                    'source_info', (num_srcs,), readinput.source_info_dt)
+                self.datastore['source_info'] = parent['source_info'][:]
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         srcidx = {

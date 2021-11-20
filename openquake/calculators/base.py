@@ -40,7 +40,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, datastore
+from openquake.commonlib import readinput, logictree, datastore, source_reader
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -908,14 +908,17 @@ class HazardCalculator(BaseCalculator):
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
-    def store_source_info(self, calc_times, nsites=False):
+    def store_source_info(self, calc_times):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        self.csm.update_source_info(calc_times, nsites)
+        if 'source_info' not in self.datastore:
+            source_reader.create_source_info(
+                self.csm, calc_times, self.datastore.hdf5)
+        self.csm.update_source_info(calc_times)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
-            recs, readinput.source_info_dt)
+            recs, source_reader.source_info_dt)
         return [rec[0] for rec in recs]  # return source_ids
 
     def post_process(self):
