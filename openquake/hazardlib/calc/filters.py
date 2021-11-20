@@ -455,6 +455,8 @@ class SourceFilter(object):
                 idist = self.integration_distance(
                     src.tectonic_region_type, rup.mag)
                 src.weight += (dists <= idist).sum()
+        if hasattr(src, 'pointsources'):  # make CollapsedPointSource heavier
+            src.weight *= 3
 
     def get_nsites(self, rup):
         """

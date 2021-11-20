@@ -33,7 +33,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc, source_reader
+from openquake.commonlib import calc
 from openquake.calculators import getters
 from openquake.calculators import base, preclassical
 
@@ -85,9 +85,7 @@ def classical(srcs, sids, cmaker, monitor):
     sitecol = monitor.read('sitecol')
     if sids is not None:
         sitecol = sitecol.filter(numpy.isin(sitecol.sids, sids))
-    res = hazclassical(srcs, sitecol, cmaker)
-    print('taskno', monitor.task_no, srcs)
-    return res
+    return hazclassical(srcs, sitecol, cmaker)
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
