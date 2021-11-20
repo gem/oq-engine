@@ -41,6 +41,14 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
+def zero_times(sources):
+    # src.id -> nrups, nsites, time, task_no
+    calc_times = AccumDict(accum=numpy.zeros(4, F32))
+    for src in sources:
+        calc_times[src.id]
+    return calc_times
+
+
 def run_preclassical(calc):
     """
     :param csm: a CompositeSourceModel with attribute .srcfilter
@@ -51,14 +59,15 @@ def run_preclassical(calc):
     oqparam = calc.oqparam
     h5 = calc.datastore.hdf5
     # do nothing for atomic sources except counting the ruptures
-    for src in csm.get_sources(atomic=True):
+    atomic_sources = csm.get_sources(atomic=True)
+    normal_sources = csm.get_sources(atomic=False)
+    for src in atomic_sources:
         src.num_ruptures = src.count_ruptures()
         src.nsites = len(csm.sitecol) if csm.sitecol else 1
 
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
-        csm.get_sources(atomic=False),
-        lambda src: (src.grp_id, msr_name(src)))
+        normal_sources, lambda src: (src.grp_id, msr_name(src)))
     param = dict(maximum_distance=oqparam.maximum_distance,
                  pointsource_distance=oqparam.pointsource_distance,
                  ps_grid_spacing=oqparam.ps_grid_spacing,
@@ -79,24 +88,32 @@ def run_preclassical(calc):
         allargs = ((blk, srcfilter, param)
                    for srcs in sources_by_grp.values()
                    for blk in block_splitter(srcs, maxw))
-    res = parallel.Starmap(
+    if atomic_sources:  # case_35
+        n = len(atomic_sources)
+        atomic = AccumDict({'before': n, 'after': n,
+                            'calc_times': zero_times(atomic_sources)})
+        for grp_id, srcs in groupby(
+                atomic_sources, lambda src: src.grp_id).items():
+            atomic[grp_id] = srcs
+    else:
+        grp_id = normal_sources[0].grp_id
+        atomic = AccumDict()
+    normal = parallel.Starmap(
         preclassical, allargs,  h5=h5,
         distribute=None if len(sources_by_grp) > 1 else 'no'
     ).reduce()
-    # res is empty in the test case_35
-
-    if res and res['before'] != res['after']:
+    res = atomic + normal
+    if res['before'] != res['after']:
         logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
                      format(res['before'], res['after']))
 
-    if res and h5:
-        calc.store_source_info(res['calc_times'])
+    calc.store_source_info(res['calc_times'])
 
     acc = AccumDict(accum=0)
     code2cls = get_code2cls()
     for grp_id, srcs in res.items():
         # srcs can be empty if the minimum_magnitude filter is on
-        if srcs and not isinstance(grp_id, str):
+        if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
             newsg = SourceGroup(srcs[0].tectonic_region_type)
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
@@ -136,7 +153,7 @@ def preclassical(srcs, srcfilter, params, monitor):
     NB: srcfilter can be on a reduced site collection for performance reasons
     """
     # src.id -> nrups, nsites, time, task_no
-    calc_times = AccumDict(accum=numpy.zeros(4, F32))
+    calc_times = zero_times(srcs)
     split_sources = []
     spacing = params['ps_grid_spacing']
     grp_id = srcs[0].grp_id
