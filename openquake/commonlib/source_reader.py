@@ -56,7 +56,7 @@ def get_tom_name(sg):
         return 'PoissonTOM'
 
 
-def create_source_info(csm, h5):
+def create_source_info(csm, calc_times, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
     """
@@ -65,6 +65,8 @@ def create_source_info(csm, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
+            if src.id not in calc_times:
+                continue
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             lens.append(len(src.trt_smrs))
             row = [src.source_id, src.grp_id, src.code,
@@ -430,18 +432,17 @@ class CompositeSourceModel:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
 
-    def update_source_info(self, calc_times, nsites=False):
+    def update_source_info(self, calc_times):
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         for src_id, arr in calc_times.items():
             row = self.source_info[src_id]
-            row[CALC_TIME] += arr[2]
+            row[CALC_TIME] = arr[2]
             if len(arr) == 4:  # after preclassical
                 row[TASK_NO] = arr[3]
-            if nsites:
-                row[EFF_RUPTURES] += arr[0]
-                row[NUM_SITES] += arr[1]
+            row[EFF_RUPTURES] = arr[0]
+            row[NUM_SITES] = arr[1]
 
     def count_ruptures(self):
         """
