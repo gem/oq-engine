@@ -90,7 +90,7 @@ def run_preclassical(calc):
                      format(res['before'], res['after']))
 
     if res and h5:
-        calc.store_source_info(res['calc_times'], nsites=False)
+        calc.store_source_info(res['calc_times'])
 
     acc = AccumDict(accum=0)
     code2cls = get_code2cls()
