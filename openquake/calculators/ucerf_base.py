@@ -27,6 +27,7 @@ import zlib
 
 from openquake.baselib.general import AccumDict, cached_property
 from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.source.rupture import PointRupture
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface

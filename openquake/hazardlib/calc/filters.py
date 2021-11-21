@@ -446,7 +446,10 @@ class SourceFilter(object):
         for src in sources:
             src.num_ruptures = src.count_ruptures()
         for src, sites in self.filter(sources):
-            if hasattr(src, 'location'):  # fast lane for point sources
+            if 'UCERF' in src.__class__.__name__:
+                src.weight += src.num_ruptures * len(sites)
+                continue
+            if hasattr(src, 'iruptures'):  # fast lane
                 irups = src.iruptures(point_rup=True)
             else:
                 irups = src.iter_ruptures()
@@ -455,8 +458,9 @@ class SourceFilter(object):
                 idist = self.integration_distance(
                     src.tectonic_region_type, rup.mag)
                 src.weight += (dists <= idist).sum()
-        if hasattr(src, 'pointsources'):  # make CollapsedPointSource heavier
-            src.weight *= 3
+            if hasattr(src, 'pointsources'):
+                # make CollapsedPointSource heavier
+                src.weight *= 3
 
     def get_nsites(self, rup):
         """

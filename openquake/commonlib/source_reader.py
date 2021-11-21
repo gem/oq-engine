@@ -405,10 +405,6 @@ class CompositeSourceModel:
             for src in sg:
                 if hasattr(src, 'mags'):
                     srcmags = {magstr(mag) for mag in src.mags}
-                    if hasattr(src, 'get_background_sources'):  # UCERF
-                        for bg_src in src.get_background_sources():
-                            srcmags.update(magstr(mag) for mag, _ in bg_src.
-                                           get_annual_occurrence_rates())
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = {magstr(item[0].mag) for item in src.data}
                 else:
