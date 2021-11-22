@@ -401,8 +401,14 @@ class CompositeSourceModel:
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
-                if hasattr(src, 'mags'):
+                if hasattr(src, 'mags'):  # MultiFaultSource
                     srcmags = {magstr(mag) for mag in src.mags}
+                    if hasattr(src, 'source_file'):  # UcerfSource
+                        grid_key = "/".join(["Grid", src.ukey["grid_key"]])
+                        # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
+                        with hdf5.File(src.source_file, "r") as h5:
+                            srcmags.update(magstr(mag) for mag in
+                                           h5[grid_key + "/Magnitude"][:])
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = {magstr(item[0].mag) for item in src.data}
                 else:
