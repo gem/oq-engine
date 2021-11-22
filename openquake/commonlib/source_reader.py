@@ -87,7 +87,6 @@ def create_source_info(csm, calc_times, h5):
         [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
 
 
-
 def trt_smrs(src):
     return tuple(src.trt_smrs)
 
