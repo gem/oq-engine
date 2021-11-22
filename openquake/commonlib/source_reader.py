@@ -66,12 +66,12 @@ def create_source_info(csm, calc_times, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
+            srcid = basename(src)
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             lens.append(len(src.trt_smrs))
-            row = [src.source_id, src.grp_id, src.code,
-                   0, 0, 0, trti, 0]
+            row = [srcid, src.grp_id, src.code, 0, 0, 0, trti, 0]
             wkts.append(getattr(src, '_wkt', ''))
-            data[basename(src)] = row
+            data[srcid] = row
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
