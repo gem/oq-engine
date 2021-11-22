@@ -214,7 +214,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_counter[src.id][rup.idx] += 1
                 # Store info
                 dt = time.time() - t0
-                calc_times[src.id] += numpy.array(
+                calc_times[basename(src)] += numpy.array(
                     [len(rup_data[src.id]), src.nsites, dt])
         elif param['src_interdep'] == 'mutex':
             raise NotImplementedError('src_interdep == mutex')
