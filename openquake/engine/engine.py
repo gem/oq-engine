@@ -31,7 +31,6 @@ import logging
 import itertools
 import platform
 from os.path import getsize
-import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -346,7 +345,10 @@ def run_jobs(jobs):
             for job in jobs:
                 run_calc(job)
     finally:
-        if config.zworkers['host_cores']:
+        # for serialize_jobs > 1 there could be something still running:
+        # don't stop the zworkers in that case!
+        if config.zworkers['host_cores'] and sum(
+                r for h, r, t in parallel.workers_status()) == 0:
             print('Stopping the workers')
             parallel.workers_stop()
     return jobs
