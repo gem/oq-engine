@@ -361,7 +361,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.M = len(oq.imtls)
         self.L1 = oq.imtls.size // self.M
-        sources = encode([src_id for src_id in self.csm.source_info])
+        sources = list(self.csm.source_info)
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
         ps = 'pointSource' in self.full_lt.source_model_lt.source_types
@@ -461,7 +461,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Store full_lt, source_info and by_task
         """
         self.store_rlz_info(self.rel_ruptures)
-        source_ids = self.store_source_info(self.calc_times)
+        self.store_source_info(self.calc_times)
         if self.by_task:
             logging.info('Storing by_task information')
             num_tasks = max(self.by_task) + 1,
@@ -476,7 +476,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 effrups, effsites, srcids = rec
                 er[task_no] = effrups
                 es[task_no] = effsites
-                si[task_no] = ' '.join(source_ids[s] for s in srcids)
+                si[task_no] = ' '.join(srcids)
             self.by_task.clear()
         if self.calc_times:  # can be empty in case of errors
             self.numctxs = sum(arr[0] for arr in self.calc_times.values())

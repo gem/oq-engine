@@ -89,6 +89,13 @@ class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
 
+def basename(src):
+    """
+    :returns: the base name of a split source
+    """
+    return src.source_id.split(':')[0]
+
+
 def get_num_distances(gsims):
     """
     :returns: the number of distances required for the given GSIMs
@@ -718,7 +725,7 @@ class PmapMaker(object):
             rups = self._gen_rups(src, sites)
             self.cmaker.get_pmap(self._get_ctxs(rups, sites, src.id), pmap)
             dt = time.time() - t0
-            self.calc_times[src.id] += numpy.array(
+            self.calc_times[basename(src)] += numpy.array(
                 [self.numctxs, self.numsites, dt])
             timer.save(src, self.numctxs, self.numsites, dt,
                        self.cmaker.task_no)
@@ -739,7 +746,7 @@ class PmapMaker(object):
             p *= src.mutex_weight
             pmap += p
             dt = time.time() - t0
-            self.calc_times[src.id] += numpy.array(
+            self.calc_times[basename(src)] += numpy.array(
                 [self.numctxs, self.numsites, dt])
             timer.save(src, self.numctxs, self.numsites, dt,
                        self.cmaker.task_no)

@@ -609,6 +609,12 @@ hazard_uhs-std.csv
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
         self.assertEqual(self.calc.numctxs, 2986)  # number of contexts
 
+        # check CollapsedPointSources in source_info
+        info = self.calc.datastore.read_df('source_info')
+        source_ids = decode(list(info.source_id))
+        num_cps = sum(1 for s in source_ids if s.startswith('cps-'))
+        self.assertEqual(num_cps, 163)
+
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
         # using the same input and a simpler calculator implemented in a

@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 
@@ -65,14 +66,12 @@ def create_source_info(csm, calc_times, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
-            if src.id not in calc_times:
-                continue
+            srcid = basename(src)
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             lens.append(len(src.trt_smrs))
-            row = [src.source_id, src.grp_id, src.code,
-                   0, 0, 0, trti, 0]
+            row = [srcid, src.grp_id, src.code, 0, 0, 0, trti, 0]
             wkts.append(getattr(src, '_wkt', ''))
-            data[src.id] = row
+            data[srcid] = row
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
@@ -86,7 +85,6 @@ def create_source_info(csm, calc_times, h5):
     h5['trt_smrs'] = csm.get_trt_smrs()
     h5['toms'] = numpy.array(
         [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
-
 
 
 def trt_smrs(src):
@@ -403,8 +401,14 @@ class CompositeSourceModel:
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
-                if hasattr(src, 'mags'):
+                if hasattr(src, 'mags'):  # MultiFaultSource
                     srcmags = {magstr(mag) for mag in src.mags}
+                    if hasattr(src, 'source_file'):  # UcerfSource
+                        grid_key = "/".join(["Grid", src.ukey["grid_key"]])
+                        # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
+                        with hdf5.File(src.source_file, "r") as h5:
+                            srcmags.update(magstr(mag) for mag in
+                                           h5[grid_key + "/Magnitude"][:])
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = {magstr(item[0].mag) for item in src.data}
                 else:
