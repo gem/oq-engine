@@ -1,5 +1,6 @@
 name: MacOS Install engine for 3.7, 3.8 and 3.9
 'on':
+  workflow_dispatch:
   schedule:
     - cron: "0 1 * * *"
 #  push:
