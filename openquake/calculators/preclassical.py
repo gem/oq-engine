@@ -23,6 +23,7 @@ from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, groupby, get_nbytes_msg)
+from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -44,7 +45,7 @@ def zero_times(sources):
     # src.id -> nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     for src in sources:
-        calc_times[src.id]
+        calc_times[basename(src)]
     return calc_times
 
 
@@ -101,9 +102,6 @@ def run_preclassical(calc):
     if res['before'] != res['after']:
         logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
                      format(res['before'], res['after']))
-
-    calc.store_source_info(res['calc_times'])
-
     acc = AccumDict(accum=0)
     code2cls = get_code2cls()
     for grp_id, srcs in res.items():
@@ -117,6 +115,8 @@ def run_preclassical(calc):
     for val, key in sorted((val, key) for key, val in acc.items()):
         cls = code2cls[key].__name__
         logging.info('{} ruptures: {:_d}'.format(cls, val))
+
+    calc.store_source_info(res['calc_times'])
 
     # sanity check
     for sg in csm.src_groups:
@@ -163,7 +163,7 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
             split_sources.extend(ss)
             src.num_ruptures = src.count_ruptures()
             dt = time.time() - t0
-            calc_times[src.id] += F32([src.num_ruptures, 1, dt, 0])
+            calc_times[basename(src)] += F32([src.num_ruptures, 1, dt, 0])
         for arr in calc_times.values():
             arr[3] = monitor.task_no
         dic = {grp_id: split_sources}
@@ -185,7 +185,7 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
             split_sources.extend(splits)
             nrups = src.count_ruptures() if nsites else 0
             dt = time.time() - t0
-            calc_times[src.id] += F32([nrups, nsites, dt, 0])
+            calc_times[basename(src)] += F32([nrups, nsites, dt, 0])
         for arr in calc_times.values():
             arr[3] = monitor.task_no
     dic = grid_point_sources(split_sources, spacing, monitor)

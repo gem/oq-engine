@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 
@@ -65,14 +66,12 @@ def create_source_info(csm, calc_times, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
-            if src.id not in calc_times:
-                continue
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
             lens.append(len(src.trt_smrs))
             row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, trti, 0]
             wkts.append(getattr(src, '_wkt', ''))
-            data[src.id] = row
+            data[basename(src)] = row
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
