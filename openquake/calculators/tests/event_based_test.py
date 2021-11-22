@@ -349,7 +349,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
-        self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-4)
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
@@ -389,7 +389,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # an example for Japan testing also the XML rupture exporter
         self.run_calc(case_15.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', fname)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=.004)
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure

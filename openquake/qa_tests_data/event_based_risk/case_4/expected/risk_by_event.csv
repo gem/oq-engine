@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.13.0-gitb633fe5457', start_date='2021-11-10T10:59:05', checksum=3505762451, investigation_time=10.0, risk_investigation_time=10.0"
+#,,,,"generated_by='OpenQuake engine 3.13.0-gitbbe3e7d5bd', start_date='2021-11-15T17:21:36', checksum=3505762451, investigation_time=10.0, risk_investigation_time=10.0"
 event_id,loss,loss_type,rup_id,year
 4,3.47877E+04,structural,4,4
 5,2.76321E+04,structural,5,3
@@ -7,7 +7,7 @@ event_id,loss,loss_type,rup_id,year
 8,1.01995E+06,structural,8,6
 9,7.64025E+05,structural,8,10
 10,1.73537E+06,structural,9,6
-11,2.03661E+06,structural,10,9
+11,2.03664E+06,structural,10,9
 12,7.73267E+05,structural,11,9
 13,2.90308E+06,structural,12,7
 14,6.54601E+05,structural,13,3
@@ -38,7 +38,7 @@ event_id,loss,loss_type,rup_id,year
 39,4.03881E+05,structural,36,8
 40,9.59604E+05,structural,37,8
 41,4.60299E+05,structural,38,9
-42,2.19431E+05,structural,39,1
+42,2.19430E+05,structural,39,1
 43,2.22728E+05,structural,40,6
 44,2.39626E+05,structural,41,5
 46,2.29392E+05,structural,43,8
@@ -52,15 +52,15 @@ event_id,loss,loss_type,rup_id,year
 73,1.31452E+05,structural,68,1
 74,5.93784E+05,structural,69,3
 75,1.58730E+05,structural,70,7
-76,5.51293E+05,structural,71,8
-77,8.21296E+05,structural,72,10
+76,5.51292E+05,structural,71,8
+77,8.21298E+05,structural,72,10
 78,1.49779E+05,structural,73,6
 80,1.66806E+05,structural,75,4
 81,1.28076E+05,structural,76,4
 82,2.45321E+05,structural,77,7
 83,2.67034E+05,structural,78,5
 84,1.67410E+05,structural,79,5
-85,2.48468E+06,structural,80,8
+85,2.48469E+06,structural,80,8
 86,1.34384E+06,structural,81,1
 87,1.63221E+06,structural,82,6
 88,8.64128E+04,structural,83,9
@@ -73,7 +73,7 @@ event_id,loss,loss_type,rup_id,year
 103,3.96840E+04,structural,97,5
 104,1.11307E+05,structural,98,4
 105,6.92514E+05,structural,99,7
-106,5.59664E+05,structural,100,2
+106,5.59662E+05,structural,100,2
 107,5.64195E+05,structural,101,8
 108,1.82523E+06,structural,102,2
 109,7.07951E+05,structural,103,10

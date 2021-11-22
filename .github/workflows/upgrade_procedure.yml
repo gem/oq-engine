@@ -3,8 +3,8 @@ name: Upgrade procedure for engine from 3.11 to 3.12
 on:
   schedule:
     - cron: "30 12 * * *"
-  push:
-    branches: [ ci ]
+#  push:
+#    branches: [ ci ]
 
 jobs:
 
