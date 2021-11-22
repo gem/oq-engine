@@ -19,7 +19,7 @@ import os
 import gzip
 import logging
 import numpy
-from openquake.baselib import performance, writers
+from openquake.baselib import performance, writers, hdf5
 from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
@@ -89,6 +89,23 @@ def check_fname(fname, kind, forbidden):
     if os.path.basename(fname).lower() == forbidden:
         raise NameError('A file of kind %s cannot be called %r!'
                         % (kind, forbidden))
+
+
+def associate(sitecol, vs30fnames, assoc_distance):
+    if vs30fnames[0].endswith('.hdf5'):
+        geohashes = numpy.unique(sitecol.geohash(2))
+        with hdf5.File(vs30fnames[0]) as f:
+            data = numpy.concatenate([f[gh][:] for gh in geohashes])
+            vs30orig = numpy.zeros(len(data), vs30_dt)
+            vs30orig['lon'] = data[:, 0]
+            vs30orig['lat'] = data[:, 1]
+            vs30orig['vs30'] = data[:, 2]
+    else:
+        vs30orig = read_vs30(vs30fnames, 'site_model.csv')
+    logging.info('Associating %d hazard sites to %d site parameters',
+                 len(sitecol), len(vs30orig))
+    return sitecol.assoc(vs30orig, assoc_distance,
+                         ignore={'z1pt0', 'z2pt5'})
 
 
 def main(
@@ -166,11 +183,7 @@ def main(
                     grid.lons, grid.lats, req_site_params=req_site_params)
         else:
             raise RuntimeError('Missing exposures or missing sites')
-        vs30orig = read_vs30(vs30_csv, output)
-        logging.info('Associating %d hazard sites to %d site parameters',
-                     len(haz_sitecol), len(vs30orig))
-        vs30 = haz_sitecol.assoc(vs30orig, assoc_distance,
-                                 ignore={'z1pt0', 'z2pt5'})
+        vs30 = associate(haz_sitecol, vs30_csv, assoc_distance)
         if z1pt0:
             haz_sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
         if z2pt5:
