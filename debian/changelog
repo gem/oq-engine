@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Supported Python 3.9 and deprecated Python 3.6
   * Extended `oq prepare_site_model` to support .csv.gz files
   * Solved the issue of "compute gmfs" slow tasks in event_based and used
     the same approach in classical calculations too
