@@ -452,8 +452,13 @@ def export_gmf_data_hdf5(ekey, dstore):
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol'].complete
+    if 'custom_site_id' in sitecol.array.dtype.names:
+        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
+    else:
+        dic = dict(site_id=sitecol.sids)
+    dic['lon'] = sitecol.lons
+    dic['lat'] = sitecol.lats
     data = dstore['avg_gmf'][:]  # shape (2, N, M)
-    dic = {'site_id': sitecol.sids, 'lon': sitecol.lons, 'lat': sitecol.lats}
     for m, imt in enumerate(oq.imtls):
         dic['gmv_' + imt] = data[0, :, m]
         dic['gsd_' + imt] = data[1, :, m]
