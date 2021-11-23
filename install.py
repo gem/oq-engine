@@ -184,8 +184,9 @@ def get_branch(version):
     """
     if version is None:
         return 'master'
-    elif re.match(r'\d+(\.\d+)+', version):
-        return 'engine-' + version
+    mo = re.match(r'(\d+\.\d+)+', version)
+    if mo:
+        return 'engine-' + mo.group(0)
     else:
         return version
 
