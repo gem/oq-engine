@@ -33,7 +33,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc, readinput
+from openquake.commonlib import calc
 from openquake.calculators import getters
 from openquake.calculators import base, preclassical
 
@@ -361,7 +361,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.M = len(oq.imtls)
         self.L1 = oq.imtls.size // self.M
-        sources = encode([src_id for src_id in self.csm.source_info])
+        sources = list(self.csm.source_info)
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
         ps = 'pointSource' in self.full_lt.source_model_lt.source_types
@@ -389,8 +389,6 @@ class ClassicalCalculator(base.HazardCalculator):
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
-
-        self.ct = self.oqparam.concurrent_tasks * 1.5 or 1
         self.datastore.create_df('_poes', poes_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
         if not self.oqparam.hazard_calculation_id:
@@ -427,9 +425,7 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # after preclassical, like in case_36
                 self.csm = parent['_csm']
                 self.full_lt = parent['full_lt']
-                num_srcs = len(self.csm.source_info)
-                self.datastore.hdf5.create_dataset(
-                    'source_info', (num_srcs,), readinput.source_info_dt)
+                self.datastore['source_info'] = parent['source_info'][:]
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         srcidx = {
@@ -465,7 +461,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Store full_lt, source_info and by_task
         """
         self.store_rlz_info(self.rel_ruptures)
-        source_ids = self.store_source_info(self.calc_times)
+        self.store_source_info(self.calc_times)
         if self.by_task:
             logging.info('Storing by_task information')
             num_tasks = max(self.by_task) + 1,
@@ -480,7 +476,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 effrups, effsites, srcids = rec
                 er[task_no] = effrups
                 es[task_no] = effsites
-                si[task_no] = ' '.join(source_ids[s] for s in srcids)
+                si[task_no] = ' '.join(srcids)
             self.by_task.clear()
         if self.calc_times:  # can be empty in case of errors
             self.numctxs = sum(arr[0] for arr in self.calc_times.values())
@@ -517,7 +513,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         split_level = oq.split_level
-        max_weight = max(tot_weight/(oq.concurrent_tasks or 1), oq.min_weight)
+        max_weight = max(tot_weight / (oq.concurrent_tasks * .75 or 1),
+                         oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
         for grp_id in grp_ids:
@@ -540,7 +537,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, sids, cmakers[grp_id])
                     triples.append(trip)
-                    if len(block) > split_level and not oq.disagg_by_src:
+                    if len(block) >= split_level and not oq.disagg_by_src:
                         smap.submit_split(trip, oq.time_per_task, split_level)
                         self.n_outs[grp_id] += split_level
                     else:

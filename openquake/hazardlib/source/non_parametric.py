@@ -179,7 +179,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
             i += 1
 
     def __repr__(self):
-        return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
+        return '<%s %s gridded=%s>' % (
+            self.__class__.__name__, self.source_id, self.is_gridded())
 
     @property
     def polygon(self):

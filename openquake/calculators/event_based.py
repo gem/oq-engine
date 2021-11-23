@@ -267,9 +267,9 @@ class EventBasedCalculator(base.HazardCalculator):
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'investigation time is too short')
 
-        # must be called before storing the events
-        self.store_rlz_info(eff_ruptures)  # store full_lt
+        # don't change the order of the 3 things below!
         self.store_source_info(calc_times)
+        self.store_rlz_info(eff_ruptures)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
             imp.import_rups_events(
