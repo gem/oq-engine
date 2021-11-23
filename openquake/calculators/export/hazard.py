@@ -409,22 +409,38 @@ def export_hazard_npz(ekey, dstore):
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     imts = list(oq.imtls)
+
+    # exporting sitemesh
+    f = dstore.build_fname('sitemesh', '', 'csv')
+    sitecol = dstore['sitecol']
+    names = sitecol.array.dtype.names
+    arr = sitecol[['lon', 'lat']]
+    if 'custom_site_id' in names:
+        sites = util.compose_arrays(
+            sitecol.custom_site_id, arr, 'custom_site_id')
+    else:
+        sites = util.compose_arrays(sitecol.sids, arr, 'site_id')
+    writers.write_csv(f, sites, comment=dstore.metadata)
+
+    # exporting gmfs
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
-    ren = {'sid': 'site_id', 'eid': 'event_id'}
+    if 'custom_site_id' in names:
+        df['csi'] = decode(sitecol.custom_site_id[df.sid])
+        ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
+        del df['sid']
+    else:
+        ren = {'sid': 'site_id', 'eid': 'event_id'}
     for m, imt in enumerate(imts):
         ren[f'gmv_{m}'] = 'gmv_' + imt
     for imt in oq.get_sec_imts():
         ren[imt] = f'sep_{imt}'
     df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
-    f = dstore.build_fname('sitemesh', '', 'csv')
-    arr = dstore['sitecol'][['lon', 'lat']]
-    sids = numpy.arange(len(arr), dtype=U32)
-    sites = util.compose_arrays(sids, arr, 'site_id')
-    writers.write_csv(f, sites, comment=dstore.metadata)
     fname = dstore.build_fname('gmf', 'data', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         df, fname, comment=dstore.metadata)
+
+    # exporting sigma_epsilon
     if 'sigma_epsilon' in dstore['gmf_data']:
         sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
         sig_eps = dstore['gmf_data/sigma_epsilon'][()]
