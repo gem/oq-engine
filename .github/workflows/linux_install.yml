@@ -45,8 +45,8 @@ jobs:
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
         python install.py devel 
-    - name: Run demos to test installation
+    - name: Run tests
       run: |
         source ~/openquake/bin/activate
-        oq --version
-        oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+        oq dbserver start
+        pytest -vsx ~/oq-engine/openquake/calculators
