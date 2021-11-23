@@ -23,9 +23,10 @@ was as trivial as joining the generated CSV files. Without the
 ``custom_site_id`` the site IDs would overlap, thus making impossible to
 join the outputs.
 
-When using the ``max_sites_per_tiles`` feature of the classical calculator,
-a ``custom_site_id`` is automatically generated as a geohash string
-(see https://en.wikipedia.org/wiki/Geohash).
+A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good
+``custom_site_id`` since it allows to identify uniquely all the sites
+in the world.
+
 
 The `minimum_distance` parameter
 -------------------------------------------
