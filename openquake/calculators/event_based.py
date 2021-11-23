@@ -272,9 +272,9 @@ class EventBasedCalculator(base.HazardCalculator):
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'investigation time is too short')
 
-        # must be called before storing the events
-        self.store_rlz_info(eff_ruptures)  # store full_lt
+        # don't change the order of the 3 things below!
         self.store_source_info(calc_times)
+        self.store_rlz_info(eff_ruptures)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
             imp.import_rups_events(
@@ -428,7 +428,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.core_task.__func__, (proxies, full_lt, oq, self.datastore),
             key=operator.itemgetter('trt_smr'),
             weight=operator.itemgetter('n_occ'),
-            h5=dstore.hdf5, duration=oq.time_per_task, splitno=5)
+            h5=dstore.hdf5, duration=oq.time_per_task, split_level=5)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:

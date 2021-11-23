@@ -1,10 +1,11 @@
-name: Windows Install engine for 3.6, 3.7 and 3.8 
+name: Windows Install engine for 3.7, 3.8 and 3.9
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "00 22 * * *"
-  push:
-    branches: [ requirements ]
+#  push:
+#    branches: [ releases_python3.9 ]
 
 jobs:
   install:
@@ -17,7 +18,7 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
       - name: Check out the codebase.

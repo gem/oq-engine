@@ -31,7 +31,6 @@ import logging
 import itertools
 import platform
 from os.path import getsize
-import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -73,7 +72,7 @@ def set_concurrent_tasks_default(calc):
     OqParam.concurrent_tasks.default. Abort the calculations if no
     workers are available. Do nothing for trivial distributions.
     """
-    if OQ_DISTRIBUTE in 'no processpool':  # do nothing
+    if OQ_DISTRIBUTE in 'no processpool ipp':  # do nothing
         num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.Starmap.CT // 2
         logging.warning('Using %d cores on %s', num_workers, platform.node())
         return
@@ -218,7 +217,7 @@ def poll_queue(job_id, poll_time):
                                {'status': 'submitted', 'pid': _PID})
                     first_time = False
                     # the logging is not yet initialized, so use a print
-                    print('Waiting for jobs #%d' % previous.id)
+                    print('Waiting for jobs %s' % [p.id for p in previous])
                 time.sleep(poll_time)
             else:
                 break
@@ -346,7 +345,10 @@ def run_jobs(jobs):
             for job in jobs:
                 run_calc(job)
     finally:
-        if config.zworkers['host_cores']:
+        # for serialize_jobs > 1 there could be something still running:
+        # don't stop the zworkers in that case!
+        if config.zworkers['host_cores'] and sum(
+                r for h, r, t in parallel.workers_status()) == 0:
             print('Stopping the workers')
             parallel.workers_stop()
     return jobs

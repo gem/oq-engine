@@ -41,7 +41,7 @@ from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
     case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_25, case_26, mutex)
+    case_25, case_26, case_27, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -349,7 +349,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
-        self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-4)
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
@@ -389,7 +389,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # an example for Japan testing also the XML rupture exporter
         self.run_calc(case_15.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', fname)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=.004)
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure
@@ -528,6 +528,23 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_26.__file__, 'job_liq.ini')
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('avg_gmf.csv', fname)
+
+    def test_case_27(self):
+        # splitting ruptures + gmf1 + gmf2
+        self.run_calc(case_27.__file__, 'job.ini',
+                      ground_motion_fields="false")
+        self.assertEqual(len(self.calc.datastore['ruptures']), 15)
+        hc_id = str(self.calc.datastore.calc_id)
+
+        self.run_calc(case_27.__file__, 'job.ini', sites_slice="0:41",
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf1.csv', fname)
+
+        self.run_calc(case_27.__file__, 'job.ini', sites_slice="41:82",
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf2.csv', fname)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
