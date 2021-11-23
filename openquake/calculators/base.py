@@ -552,8 +552,10 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam.__class__.concurrent_tasks.default)
             params = {name: value for name, value in
                       vars(parent['oqparam']).items()
-                      if name not in vars(self.oqparam)}
-            self.save_params(**params)
+                      if name not in vars(self.oqparam)
+                      and name != 'ground_motion_fields'}
+            if params:
+                self.save_params(**params)
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
             oqp = parent['oqparam']
@@ -770,7 +772,11 @@ class HazardCalculator(BaseCalculator):
             else:
                 self.assetcol = assetcol
         else:  # no exposure
-            self.sitecol = haz_sitecol
+            if oq.hazard_calculation_id:  # read the sitecol of the child
+                self.sitecol = readinput.get_site_collection(oq)
+                self.datastore['sitecol'] = self.sitecol
+            else:
+                self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)
