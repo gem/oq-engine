@@ -791,7 +791,11 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.add_tagname('site_id')
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
-            self.sitecol = haz_sitecol
+            if oq.hazard_calculation_id:  # read the sitecol of the child
+                self.sitecol = readinput.get_site_collection(oq)
+                self.datastore['sitecol'] = self.sitecol
+            else:
+                self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)

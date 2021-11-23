@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Bug fix: the site collection of the child calculation was ignored when
+    using the --hazard-calculation-id option
   * Supported Python 3.9 and deprecated Python 3.6
   * Extended `oq prepare_site_model` to support .csv.gz files
   * Solved the issue of "compute gmfs" slow tasks in event_based and used
