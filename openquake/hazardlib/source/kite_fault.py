@@ -165,6 +165,8 @@ class KiteFaultSource(ParametricSeismicSource):
             # accommodates
             ruptures = []
 
+            print(surface.mesh.lons)
+            print(surface.mesh.lats)
             for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid, 
                                           f_strike=fstrike, f_dip=fdip):
                 ruptures.append(rup)
@@ -217,6 +219,7 @@ class KiteFaultSource(ParametricSeismicSource):
         # Float the rupture on the mesh describing the surface of the fault
         for i in np.arange(0, omsh.lons.shape[1] - rup_s + 1, f_strike):
             for j in np.arange(0, omsh.lons.shape[0] - rup_d + 1, f_dip):
+                import pdb; pdb.set_trace()
                 nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
                 nna = np.sum(np.isfinite(omsh.lons[j:j + rup_d, i:i + rup_s]))
                 prc = nna/nel*100.
