@@ -395,7 +395,11 @@ max_sites_per_gmf:
   Default: 65536
 
 max_sites_per_tile:
-  INTERNAL
+  Used in classical calculations which are to big to run within the
+  available memory. This effectively splits the calculation in homogeneous
+  tiles with less than `max_sites_per_tile`. To be used as last resort.
+  Example: *max_sites_per_tile = 50_000*
+  Default: 500_000
 
 max_weight:
   INTERNAL

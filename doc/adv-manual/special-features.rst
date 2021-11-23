@@ -5,6 +5,28 @@ There are few rarely used feature of the engine that are not
 documented in the manual, since their usage is quite specific. They are
 documented here.
 
+The ``custom_site_id``
+----------------------
+
+Since engine 3.13 it is possible to using a 6-characters ASCII string
+as an unique identifier for the sites. This can be convenient in various
+situations, especially when splitting a calculation in geographic regions.
+The way to enable it is to add a field called ``custom_sited_id`` to
+the site model file, which must be unique.
+
+The hazard curve and ground motion field exporters have been modified
+to export the ``custom_site_id`` instead of the ``site_id`` (if present).
+
+We used this feature to split the ESHM20 model in two parts (Northern
+Europe and Southern Europe) and then creating the full hazard map
+was as trivial as joining the generated CSV files. Without the
+``custom_site_id`` the site IDs would overlap, thus making impossible to
+join the outputs.
+
+When using the ``max_sites_per_tiles`` feature of the classical calculator,
+a ``custom_site_id`` is automatically generated as a geohash string
+(see https://en.wikipedia.org/wiki/Geohash).
+
 The `minimum_distance` parameter
 -------------------------------------------
 
@@ -76,7 +98,6 @@ disaggregation calculators: in the event based case only the default
 ``uncertaintyWeight`` (i.e. the first in the list of weights, the one
 without ``imt`` attribute) would be taken for all IMTs.
 
-
 Equivalent Epicenter Distance Approximation
 -------------------------------------------
 
@@ -111,7 +132,6 @@ Notice that the equivalent epicenter distance approximation only
 applies to ruptures coming from
 PointSources/AreaSources/MultiPointSources, fault sources are
 untouched.
-
 
 Ruptures in CSV format
 -------------------------------------------
