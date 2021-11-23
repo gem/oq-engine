@@ -132,6 +132,14 @@ armenia_2016
     :undoc-members:
     :show-inheritance:
 
+arroyo_2010
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.arroyo_2010
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 atkinson_2015
 ---------------------------------------------
 

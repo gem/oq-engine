@@ -1,3 +1,6 @@
+  [Miguel Leonardo-Suárez]
+  * Added the GMPE Arroyo et al. (2010) for Mexican subduction interface events
+  
   [Michele Simionato]
   * Supported Python 3.9 and deprecated Python 3.6
   * Extended `oq prepare_site_model` to support .csv.gz files
