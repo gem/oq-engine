@@ -560,8 +560,10 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam.__class__.concurrent_tasks.default)
             params = {name: value for name, value in
                       vars(parent['oqparam']).items()
-                      if name not in vars(self.oqparam)}
-            self.save_params(**params)
+                      if name not in vars(self.oqparam)
+                      and name != 'ground_motion_fields'}
+            if params:
+                self.save_params(**params)
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
             oqp = parent['oqparam']
