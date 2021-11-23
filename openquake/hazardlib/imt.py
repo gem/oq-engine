@@ -234,8 +234,9 @@ def PGDGeomMean(vert_settlement, lat_spread):
     """
     return numpy.sqrt(vert_settlement * lat_spread)
 
-def EAS():
+def EAS(frequency):
     """
     Effective amplitude spectrum in Fourier domain
     """
-    return IMT('EAS')
+    frequency = float(frequency)
+    return IMT('EAS(%s)' % frequency, frequency)
