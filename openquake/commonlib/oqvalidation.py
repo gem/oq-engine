@@ -215,19 +215,19 @@ ebrisk_maxsize:
   INTERNAL
 
 floating_x_step:
-  Integer, used in rupture generation for kite faults. indicates the division  
-  of the fault length used to float ruptures by dividing the number of nodes
-  along strike by the given integer (i.e. "2" floats the ruptures at half the 
-  rupture length; "3" floats at ~1/3 the rupture length)
-  Example: *floating_x_step = 2*
+  Float, used in rupture generation for kite faults. indicates the fraction  
+  of fault length used to float ruptures by multiplying the number of mesh 
+  nodes along strike by the given float (i.e. "0.5" floats the ruptures at 
+  half the rupture length)
+  Example: *floating_x_step = 0.5*
   Default: 1
 
 floating_y_step:
-  Integer, used in rupture generation for kite faults. indicates the division  
-  of the fault width used to float ruptures by dividing the number of nodes
-  down dip by the given integer (i.e. "2" floats the ruptures at half the 
-  rupture length; "3" floats at ~1/3 the rupture length)
-  Example: *floating_y_step = 2*
+  Float, used in rupture generation for kite faults. indicates the fraction  
+  of fault width used to float ruptures by multiplying the number of mesh
+  nodes down dip by the given float (i.e. "0.5" floats the ruptures at half 
+  the rupture length)
+  Example: *floating_y_step = 0.5*
   Default: 1
 
 ignore_encoding_errors:
@@ -801,8 +801,8 @@ class OqParam(valid.ParamSet):
     discrete_damage_distribution = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
-    floating_x_step = valid.Param(valid.positiveint)
-    floating_y_step = valid.Param(valid.positiveint)
+    floating_x_step = valid.Param(valid.positivefloat)
+    floating_y_step = valid.Param(valid.positivefloat)
     ignore_encoding_errors = valid.Param(valid.boolean, False)
     ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')

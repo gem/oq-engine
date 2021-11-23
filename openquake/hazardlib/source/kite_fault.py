@@ -148,8 +148,9 @@ class KiteFaultSource(ParametricSeismicSource):
             rup_len = int(np.round(lng/self.rupture_mesh_spacing)) + 1
             rup_wid = int(np.round(wdt/self.profiles_sampling)) + 1
 
-            fstrike = int(rup_len/self.floating_x_step)
-            fdip = int(rup_len/self.floating_y_step)
+
+            fstrike = int(rup_len*self.floating_x_step)
+            fdip = int(rup_len*self.floating_y_step)
 
             if fstrike==0 or fdip==0:
                 msg = 'x step {} or y step {}'.format(self.floating_x_step, 
@@ -163,10 +164,9 @@ class KiteFaultSource(ParametricSeismicSource):
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
             ruptures = []
+
             for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid, 
                                           f_strike=fstrike, f_dip=fdip):
-#                                          f_strike=self.floating_x_step,
-#                                          f_dip=self.floating_y_step):
                 ruptures.append(rup)
             if len(ruptures) < 1:
                 continue
