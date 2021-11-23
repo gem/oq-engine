@@ -415,13 +415,13 @@ class EventBasedCalculator(base.HazardCalculator):
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
         scenario = 'scenario' in oq.calculation_mode
-        proxies = [RuptureProxy(rec, scenario)
-                   for rec in dstore['ruptures'][:]]
+        rups = dstore['ruptures'][:]
+        proxies = [RuptureProxy(rec, scenario) for rec in rups]
         assert proxies
         full_lt = self.datastore['full_lt']
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-        items = group_array(dstore['ruptures'][:], 'trt_smr').items()
+        items = group_array(rups, 'trt_smr').items()
         for trt_smr, array in items:
             proxies = [RuptureProxy(rec, scenario)
                        for rec in array]
