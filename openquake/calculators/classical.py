@@ -536,14 +536,17 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug(
                         'Sending %d source(s) with weight %d',
                         len(block), sum(src.weight for src in block))
-                    trip = (block, sids, cmakers[grp_id])
-                    triples.append(trip)
                     if len(block) >= split_level and not oq.disagg_by_src:
+                        trip = (block, sids, cmakers[grp_id])
+                        triples.append(trip)
                         smap.submit_split(trip, oq.time_per_task, split_level)
                         self.n_outs[grp_id] += split_level
                     else:
-                        smap.submit(trip)
-                        self.n_outs[grp_id] += 1
+                        for src in block:
+                            trip = ([src], sids, cmakers[grp_id])
+                            triples.append(trip)
+                            smap.submit(trip)
+                            self.n_outs[grp_id] += 1
         logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return smap
 
