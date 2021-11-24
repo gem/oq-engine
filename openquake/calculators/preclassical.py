@@ -286,5 +286,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Store the CompositeSourceModel in binary format
         """
-        if self.oqparam.calculation_mode == 'preclassical':
+        if self.oqparam.calculation_mode == 'preclassical' or os.environ.get(
+                'OQ_SAMPLE_SOURCES'):
             self.datastore['_csm'] = csm
