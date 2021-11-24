@@ -445,6 +445,7 @@ class SourceFilter(object):
         """
         for src in sources:
             src.num_ruptures = src.count_ruptures()
+            src.weight = src.num_ruptures * 100
         for src, sites in self.filter(sources):
             if 'UCERF' in src.__class__.__name__:
                 src.weight += src.num_ruptures * len(sites)
