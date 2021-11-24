@@ -167,6 +167,7 @@ def calc_hazard_curves(
             tom = getattr(src, 'temporal_occurrence_model', None)
             if tom:
                 span = tom.time_span
+            src.weight = src.count_ruptures()
             src.grp_id = i
             src.id = idx
             idx += 1
@@ -184,9 +185,6 @@ def calc_hazard_curves(
     for group in groups:
         trt = group.trt
         cmaker = ContextMaker(trt, [gsim_by_trt[trt]], param, mon)
-        for src in group:
-            if not src.nsites:  # not set
-                src.nsites = 1
         if group.atomic:  # do not split
             it = [classical(group, sitecol, cmaker)]
         else:  # split the group and apply `classical` in parallel
