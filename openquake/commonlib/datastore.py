@@ -101,12 +101,13 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
     return DataStore(path, ppath, mode)
 
 
-def read(calc_id, mode='r', datadir=None, parentdir=None):
+def read(calc_id, mode='r', datadir=None, parentdir=None, read_parent=True):
     """
     :param calc_id: calculation ID or filename
     :param mode: 'r' or 'w'
     :param datadir: the directory where to look
     :param parentdir: the datadir of the parent calculation
+    :param read_parent: read the parent calculation if it is there
     :returns: the corresponding DataStore instance
 
     Read the datastore, if it exists and it is accessible.
@@ -119,10 +120,10 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
         hc_id = None
-    if hc_id and parentdir:
+    if read_parent and hc_id and parentdir:
         dstore.ppath = os.path.join(parentdir, 'calc_%d.hdf5' % hc_id)
         dstore.parent = DataStore(dstore.ppath, mode='r')
-    elif hc_id:
+    elif read_parent and hc_id:
         dstore.parent = _read(hc_id, datadir, 'r')
         dstore.ppath = dstore.parent.filename
     return dstore.open(mode)
