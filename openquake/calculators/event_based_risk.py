@@ -31,7 +31,7 @@ from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import datastore
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
-    PostRiskCalculator, post_run, fix_dtypes)
+    PostRiskCalculator, post_aggregate, fix_dtypes)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -413,7 +413,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         self.build_aggcurves()
         if oq.reaggregate_by:
-            post_run(self.datastore.calc_id,  ','.join(oq.reaggregate_by))
+            post_aggregate(self.datastore.calc_id,  ','.join(oq.reaggregate_by))
 
     def build_aggcurves(self):
         prc = PostRiskCalculator(self.oqparam, self.datastore.calc_id)

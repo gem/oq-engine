@@ -327,7 +327,7 @@ class PostRiskCalculator(base.RiskCalculator):
                         '%s != %s\nsee %s', oq.loss_types[li], agg, avg, url)
 
 
-def post_run(calc_id: int, aggregate_by):
+def post_aggregate(calc_id: int, aggregate_by):
     """
     Re-run the postprocessing after an event based risk calculation
     """

@@ -18,6 +18,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import getpass
-from openquake.calculators.post_risk import post_run as main
+from openquake.calculators.post_risk import post_aggregate as main
 main.calc_id = 'ID of the risk calculation'
 main.aggregate_by = 'comma-separated list of tag names'
