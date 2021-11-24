@@ -499,11 +499,13 @@ class ClassicalCalculator(base.HazardCalculator):
         triples = []
         src_groups = self.csm.src_groups
         tot_weight = 0
+        nsources = 0
         for grp_id in grp_ids:
             cmaker = cmakers[grp_id]
             gsims = cmaker.gsims
             sg = src_groups[grp_id]
             for src in sg:
+                nsources += 1
                 src.ngsims = len(gsims)
                 tot_weight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
@@ -515,8 +517,8 @@ class ClassicalCalculator(base.HazardCalculator):
         split_level = oq.split_level
         max_weight = max(tot_weight / (oq.concurrent_tasks * .75 or 1),
                          oq.min_weight)
-        logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
-            int(tot_weight), int(max_weight)))
+        logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
+                     format(int(tot_weight), int(max_weight), nsources))
         for grp_id in grp_ids:
             sg = src_groups[grp_id]
             if sg.atomic:
