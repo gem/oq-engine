@@ -119,7 +119,10 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
         hc_id = None
-    if hc_id:
+    if hc_id and parentdir:
+        dstore.ppath = os.path.join(parentdir, 'calc_%d.hdf5' % hc_id)
+        dstore.parent = DataStore(dstore.ppath, mode='r')
+    elif hc_id:
         dstore.parent = _read(hc_id, datadir, 'r')
         dstore.ppath = dstore.parent.filename
     return dstore.open(mode)
