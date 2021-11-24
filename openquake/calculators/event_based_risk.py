@@ -25,10 +25,11 @@ import pandas
 from scipy import sparse
 
 from openquake.baselib import hdf5, parallel, general
-from openquake.hazardlib import stats, InvalidFile
+from openquake.hazardlib import stats, contexts, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import datastore
+from openquake.hazardlib.calc.filters import getdefault
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import PostRiskCalculator, fix_dtypes
 
@@ -196,16 +197,16 @@ def event_based_risk(df, oqparam, monitor):
     return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
 
 
-def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
+def ebrisk(proxies, cmaker, oqparam, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
-    :param full_lt: a FullLogicTree instance
+    :param cmaker: a ContextMaker instance
     :param oqparam: input parameters
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
     oqparam.ground_motion_fields = True
-    dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
+    dic = event_based.event_based(proxies, cmaker, oqparam, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
     return event_based_risk(dic['gmfdata'], oqparam, monitor)
@@ -264,8 +265,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.M = len(oq.all_imts())
         oq.N = self.N
         oq.K = len(self.aggkey)
-        ct = oq.concurrent_tasks or 1
-        oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
@@ -312,20 +311,24 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             if not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
-            srcfilter = self.src_filter()
             scenario = 'scenario' in oq.calculation_mode
-            proxies = [RuptureProxy(rec, scenario)
-                       for rec in self.datastore['ruptures'][:]]
+            rups = self.datastore['ruptures'][:]
             full_lt = self.datastore['full_lt']
             self.datastore.swmr_on()  # must come before the Starmap
-            smap = parallel.Starmap.apply_split(
-                ebrisk, (proxies, full_lt, oq, self.datastore),
-                key=operator.itemgetter('trt_smr'),
-                weight=operator.itemgetter('n_occ'),
-                h5=self.datastore.hdf5,
-                duration=oq.time_per_task,
-                split_level=5)
-            smap.monitor.save('srcfilter', srcfilter)
+            smap = parallel.Starmap(ebrisk, h5=self.datastore.hdf5)
+            items = general.group_array(rups, 'trt_smr').items()
+            for trt_smr, array in items:
+                proxies = [RuptureProxy(rec, scenario)
+                           for rec in array]
+                trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+                rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
+                param = vars(oq).copy()
+                param['imtls'] = oq.imtls
+                param['min_iml'] = oq.min_iml
+                cmaker = contexts.ContextMaker(trt, rlzs_by_gsim, param)
+                cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+                smap.submit_split((proxies, cmaker, oq, self.datastore),
+                                  oq.time_per_task, oq.split_level)
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)

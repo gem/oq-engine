@@ -211,9 +211,6 @@ distance_bin_width:
   Example: *distance_bin_width = 20*.
   Default: no default
 
-ebrisk_maxsize:
-  INTERNAL
-
 ignore_encoding_errors:
   If set, skip characters with non-UTF8 encoding
   Example: *ignore_encoding_errors = true*.
@@ -887,7 +884,6 @@ class OqParam(valid.ParamSet):
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
     split_level = valid.Param(valid.positiveint, 4)
-    ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     # NB: you cannot increase too much min_weight otherwise too few tasks will
     # be generated in cases like Ecuador inside full South America
     min_weight = valid.Param(valid.positiveint, 200)  # used in classical
