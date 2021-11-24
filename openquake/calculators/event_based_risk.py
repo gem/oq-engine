@@ -160,28 +160,28 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
     return dict(avg=loss_by_AR, alt=df)
 
 
-def event_based_risk(df, oqparam, monitor):
+def event_based_risk(df, crmodel, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
+    oq = crmodel.oqparam
+    dstore = datastore.read(oq.hdf5path, parentdir=oq.parentdir)
     with dstore, monitor('reading gmf_data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = dstore['assetcol/kids'][:] if oqparam.K else ()
-        crmodel = monitor.read('crmodel')
+        kids = dstore['assetcol/kids'][:] if oq.K else ()
         rlz_id = monitor.read('rlz_id')
-        weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
-    ARKD = len(assets_df), len(weights), oqparam.K, oqparam.D
-    if oqparam.ignore_master_seed or oqparam.ignore_covs:
+        weights = [1] if oq.collect_rlzs else dstore['weights'][()]
+    ARKD = len(assets_df), len(weights), oq.K, oq.D
+    if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
-        rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
-                            int(oqparam.asset_correlation))
+        rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
+                            int(oq.asset_correlation))
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=False)
@@ -192,25 +192,26 @@ def event_based_risk(df, oqparam, monitor):
                 continue
             with mon_risk:
                 out = crmodel.get_output(
-                    taxo, asset_df, gmf_df, oqparam._sec_losses, rng)
+                    taxo, asset_df, gmf_df, oq._sec_losses, rng)
             yield out
 
     return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
 
 
-def ebrisk(proxies, cmaker, oqparam, dstore, monitor):
+def ebrisk(proxies, cmaker, crmodel, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
     :param cmaker: a ContextMaker instance
-    :param oqparam: input parameters
+    :param crmodel: a CompositeRiskModel instance
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    oqparam.ground_motion_fields = True
-    dic = event_based.event_based(proxies, cmaker, oqparam, dstore, monitor)
+    crmodel.oqparam.ground_motion_fields = True
+    dic = event_based.event_based(
+        proxies, cmaker, crmodel.oqparam, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    return event_based_risk(dic['gmfdata'], oqparam, monitor)
+    return event_based_risk(dic['gmfdata'], crmodel, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -328,9 +329,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 param['min_iml'] = oq.min_iml
                 cmaker = contexts.ContextMaker(trt, rlzs_by_gsim, param)
                 cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-                smap.submit_split((proxies, cmaker, oq, self.datastore),
-                                  oq.time_per_task, oq.split_level)
-            smap.monitor.save('crmodel', self.crmodel)
+                smap.submit_split(
+                    (proxies, cmaker, self.crmodel, self.datastore),
+                    oq.time_per_task, oq.split_level)
             smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
@@ -346,7 +347,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             smap = parallel.Starmap(
                 event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe())
-            smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)
         if self.parent_events:
@@ -416,7 +416,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         self.build_aggcurves()
         if oq.reaggregate_by:
-            post_aggregate(self.datastore.calc_id,  ','.join(oq.reaggregate_by))
+            post_aggregate(self.datastore.calc_id, ','.join(oq.reaggregate_by))
 
     def build_aggcurves(self):
         prc = PostRiskCalculator(self.oqparam, self.datastore.calc_id)
@@ -444,8 +444,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                yield slice(start, stop), self.oqparam
+                yield slice(start, stop), self.crmodel
                 weight = 0
                 start = stop
         if weight:
-            yield slice(start, stop), self.oqparam
+            yield slice(start, stop), self.crmodel
