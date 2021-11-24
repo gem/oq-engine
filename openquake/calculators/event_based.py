@@ -29,7 +29,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib.calc.filters import nofilter, getdefault
+from openquake.hazardlib.calc.filters import nofilter, getdefault, SourceFilter
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
@@ -86,7 +86,6 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    srcfilter = monitor.read('srcfilter')
     alldata = AccumDict(accum=[])
     sig_eps = []
     times = []  # rup_id, nsites, dt
@@ -94,6 +93,7 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
+        srcfilter = SourceFilter(dstore['sitecol'], oqparam.maximum_distance)
         rupgeoms = dstore['rupgeoms']
         param = vars(oqparam).copy()
         param['imtls'] = oqparam.imtls
@@ -434,7 +434,6 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
             smap.submit_split((proxies, cmaker, oq, self.datastore),
                               oq.time_per_task, oq.split_level)
-        smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
             return acc
