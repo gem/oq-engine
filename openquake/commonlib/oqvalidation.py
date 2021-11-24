@@ -55,6 +55,12 @@ aggregate_by:
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
 
+reaggregate_by:
+  Used to perform additional aggregations in risk calculations. Takes in
+  input a proper subset of the tags in the aggregate_by option.
+  Example: *reaggregate_by = region*.
+  Default: empty list
+
 amplification_method:
   Used in classical PSHA calculations to amplify the hazard curves with
   the convolution or kernel method.
@@ -757,6 +763,7 @@ class OqParam(valid.ParamSet):
                     'occupants_vulnerability'}
     hazard_imtls = {}
     aggregate_by = valid.Param(valid.namelist, [])
+    reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), None)
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
