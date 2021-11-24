@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import logging
 import numpy
-from openquake.baselib import parallel
+from openquake.baselib import general, parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, groupby, get_nbytes_msg)
@@ -34,10 +35,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
-# with BUFFER = 1 we would have lots of apparently light sources
-# collected together in an extra-slow task, as it happens in SHARE
-# with ps_grid_spacing=50
 
 
 def zero_times(sources):
@@ -100,13 +97,18 @@ def run_preclassical(calc):
     ).reduce()
     res = atomic + normal
     if res['before'] != res['after']:
-        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
+        logging.info('Reduced the number of point sources from {:_d} -> {:_d}'.
                      format(res['before'], res['after']))
     acc = AccumDict(accum=0)
     code2cls = get_code2cls()
     for grp_id, srcs in res.items():
         # srcs can be empty if the minimum_magnitude filter is on
         if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
+            # check if OQ_SAMPLE_SOURCES is set
+            ss = os.environ.get('OQ_SAMPLE_SOURCES')
+            if ss:
+                logging.info('Reduced num_sources for group #%d', grp_id)
+                srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
             newsg = SourceGroup(srcs[0].tectonic_region_type)
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
@@ -284,5 +286,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Store the CompositeSourceModel in binary format
         """
-        if self.oqparam.calculation_mode == 'preclassical':
+        if self.oqparam.calculation_mode == 'preclassical' or os.environ.get(
+                'OQ_SAMPLE_SOURCES'):
             self.datastore['_csm'] = csm

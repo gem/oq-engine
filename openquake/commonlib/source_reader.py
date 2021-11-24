@@ -308,16 +308,6 @@ def _get_csm(full_lt, groups):
                 srcs = reduce_sources(srcs)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
-            # check if OQ_SAMPLE_SOURCES is set
-            ss = os.environ.get('OQ_SAMPLE_SOURCES')
-            if ss:
-                logging.info('Reducing the number of sources for %s', trt)
-                split = []
-                for src in sources:
-                    for s in src:
-                        s.trt_smr = src.trt_smr
-                        split.append(s)
-                sources = general.random_filter(split, float(ss)) or split[0]
             # set ._wkt attribute (for later storage in the source_wkt dataset)
             for src in sources:
                 src._wkt = src.wkt()
