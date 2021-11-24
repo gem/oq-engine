@@ -219,11 +219,11 @@ class EventBasedCalculator(base.HazardCalculator):
             progress=logging.debug
         ).reduce()
         for src in sources:
-            src.nsites = 1  # avoid 0 weight
             try:
                 src.num_ruptures = nrups[src.source_id]
             except KeyError:
                 src.num_ruptures = src.count_ruptures()
+            src.weight = src.num_ruptures
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
