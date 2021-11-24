@@ -952,7 +952,8 @@ def split_task(elements, func, args, duration, split_level, monitor):
         split_level = n
     elements = numpy.array(elements)  # from WeightedSequence to array
     idxs = numpy.arange(n)
-    split_elems = [elements[idxs % split_level == i] for i in range(split_level)]
+    split_elems = [elements[idxs % split_level == i]
+                   for i in range(split_level)]
     # see how long it takes to run the first slice
     t0 = time.time()
     for i, elems in enumerate(split_elems):
