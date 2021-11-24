@@ -428,7 +428,10 @@ class EventBasedCalculator(base.HazardCalculator):
             self.core_task.__func__, (proxies, full_lt, oq, self.datastore),
             key=operator.itemgetter('trt_smr'),
             weight=operator.itemgetter('n_occ'),
-            h5=dstore.hdf5, duration=oq.time_per_task, split_level=5)
+            h5=dstore.hdf5,
+            concurrent_tasks=oq.concurrent_tasks or 1,
+            duration=oq.time_per_task,
+            split_level=oq.split_level)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
