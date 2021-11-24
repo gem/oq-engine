@@ -41,6 +41,8 @@ def imt2tup(string):
     ('SA(1.0)', 1.0)
     >>> imt2tup('SA(1)')
     ('SA(1.0)', 1.0)
+    >>> imt2tup('EAS(0.1)')
+    ('EAS(0.1)', 0.1)
     """
     s = string.strip()
     name, *rest = s.split('(')

@@ -225,7 +225,7 @@ def smooth2(*args):
         y = y[idx]
 
     # TODO df is not defined
-    c = np.empty((len(df),1)) * np.nan
+    c = np.empty((len(args[0]),1)) * np.nan
     ok = ~np.isnan(x)
     if method == 'lowess':
         robust = 0
@@ -236,7 +236,7 @@ def smooth2(*args):
     return c
 
 
-def _get_stddevs(self, C, ctx, stddev_types, vs30):
+def _get_stddevs(self, C, ctx):
     """
     Compute the standard deviations
     """
@@ -254,23 +254,12 @@ def _get_stddevs(self, C, ctx, stddev_types, vs30):
         phi_s2s = C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4)
         phi_ss = C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4)
     # Collect the requested stds
-    stddevs = []
-    for stddev_type in stddev_types:
-        assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        if stddev_type == const.StdDev.TOTAL:
-            sigma = np.sqrt(tau**2+phi_s2s**2+phi_ss**2+C['c1a']**2)
-            stddevs.append(np.ones_like(ctx.vs30) * sigma)
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            sigma = np.sqrt(phi_s2s**2+phi_ss**2)
-            stddevs.append(np.ones_like(ctx.vs30) * sigma)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(np.ones_like(ctx.vs30) * tau)
-        elif stddev_type == const.StdDev.SINGLE_STATION:
-            # TODO need to check if the shape correction factor is needed
-            # in this case
-            sigma = np.sqrt(tau**2+phi_ss**2+C['c1a']**2)
-            stddevs.append(np.ones_like(ctx.vs30) * sigma)
-    return stddevs
+    sigma = np.sqrt(tau**2+phi_s2s**2+phi_ss**2+C['c1a']**2)
+    phi = np.sqrt(phi_s2s**2+phi_ss**2)
+    phi_ss = np.sqrt(tau**2+phi_ss**2+C['c1a']**2)
+    
+    return sigma, tau, phi, phi_ss
+
 
 
 def _get_nl_site_response(self, C, ctx,ln_ir_outcrop):
@@ -314,14 +303,6 @@ def _get_mean(self, C, ctx, imt):
 
     return np.log(mean)
 
-#         EAS_lin = np.concatenate((fnl_0[:index+1], np.ones(len(fnl_0)-index) * val))
-#             kappa=exp(-0.4*log(Vs/760)-3.5); % kappa-vs30 relationship
-# D=exp(-pi*kappa*(fextrap-maxfreq)); % diminution operator
-# EAS_Array_lin=[FAS_spectrum(1:imax1-1) FAS_maxfreq.*D]; % extrapolated EAS array without the nonlinear amp
-
-#         # Get standard deviations
-#         stddevs = self._get_stddevs(C, ctx, stddev_types, vs30)
-#         return mean, stddevs
 
 
 class BaylessAbrahamson2018(GMPE):
@@ -370,9 +351,9 @@ class BaylessAbrahamson2018(GMPE):
             lin_component = _get_mean(self, C, ctx, imt)
             nl_component = _get_nl_site_response(self, C, ctx,ln_ir_outcrop)
             mean = lin_component + nl_component
-            sigma = _get_stddevs(self, C, ctx, stddev_types)
+            sigma, tau, phi, phi_ss = _get_stddevs(self, C, ctx)
 
-            return mean, sigma
+            return mean, sigma, tau, phi, phi_ss
 
     COEFFS = CoeffsTable(table="""IMT	        c1	                c2	c3	                cn	                cM	                c4	c5	c6	chm	c7	c8	c9	c10	c11a	c11b	c11c	c11d	c1a	s1	s2	s3	s4	s5	s6	f3	f4	f5
     0.1	        -3.64999998939925	1.27	3.485706508525035	1.55229046897076	6.79837319084988	-1.86	7.5818	0.45	3.838	-9.93453596454375e-11	-0.743231724355658	-0.0312053545141881	-0.2	0.435485417713765	0.264594095765709	0.2068246443273	0.0769258704714028	0.162699640269275	0.55708674413389	0.428744430241036	0.350000003358367	0.350000003545105	0.403571174846991	0.403571174846991	1.0	-0.0001	-0.02
