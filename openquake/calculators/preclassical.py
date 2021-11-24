@@ -49,26 +49,24 @@ def zero_times(sources):
 
 def run_preclassical(calc):
     """
-    :param csm: a CompositeSourceModel with attribute .srcfilter
+    :param csm: a CompositeSourceModel
     :param oqparam: the parameters in job.ini file
     :param h5: a DataStore instance
     """
     csm = calc.csm
     oqparam = calc.oqparam
     h5 = calc.datastore.hdf5
+    srcfilter = SourceFilter(
+        csm.sitecol.reduce(10000) if csm.sitecol else None,
+        oqparam.maximum_distance)
     # do nothing for atomic sources except counting the ruptures
     atomic_sources = csm.get_sources(atomic=True)
     normal_sources = csm.get_sources(atomic=False)
-    for src in atomic_sources:
-        src.num_ruptures = src.count_ruptures()
-        src.nsites = len(csm.sitecol) if csm.sitecol else 1
+    srcfilter.set_weight(atomic_sources)
 
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
-    srcfilter = SourceFilter(
-        csm.sitecol.reduce(10000) if csm.sitecol else None,
-        oqparam.maximum_distance)
     if csm.sitecol:
         logging.info('Sending %s', srcfilter.sitecol)
     if oqparam.ps_grid_spacing:

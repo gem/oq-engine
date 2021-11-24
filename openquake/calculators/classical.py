@@ -26,7 +26,6 @@ try:
 except ImportError:
     Image = None
 from openquake.baselib import performance, parallel, hdf5, config
-from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg, agg_probs)
