@@ -26,7 +26,7 @@ class BaylessAbrahamson2018TestCase(BaseGSIMTestCase):
     # the BSSA paper
 
     def test_mean(self):
-        self.check('BA18/BA18_MEAN.csv',
+        self.check('BA18/BA18_mean.csv',
                    max_discrep_percentage=0.1)
 
 """
