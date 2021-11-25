@@ -38,12 +38,12 @@ TWO32 = 2 ** 32
 
 
 def zero_times(sources):
-    # src.id -> nrups, nsites, time
-    calc_times = AccumDict(accum=numpy.zeros(3, F32))
+    # src.id -> nrups, nsites, time, weight
+    calc_times = AccumDict(accum=numpy.zeros(4, F32))
     for src in sources:
         row = calc_times[basename(src)]
         row[0] += src.num_ruptures
-        row[1] += src.weight
+        row[3] += src.weight
     return calc_times
 
 
