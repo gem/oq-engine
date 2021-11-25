@@ -50,15 +50,14 @@ class KiteFaultSource(ParametricSeismicSource):
             magnitude_scaling_relationship, rupture_aspect_ratio,
             temporal_occurrence_model)
 
-        import pdb; pdb.set_trace()
         # TODO add checks
         self.profiles = profiles
         if profiles_sampling is None:
             self.profiles_sampling = (rupture_mesh_spacing /
                                       rupture_aspect_ratio)
+        self.rake = rake
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
-        self.rake = rake
 
         min_mag, max_mag = self.mfd.get_min_max_mag()
 
@@ -81,8 +80,8 @@ class KiteFaultSource(ParametricSeismicSource):
         self = cls(source_id, name, tectonic_region_type, mfd,
                    rupture_mesh_spacing, magnitude_scaling_relationship,
                    rupture_aspect_ratio, temporal_occurrence_model,
-                   profiles, floating_x_step,
-                   floating_y_step, rake)
+                   profiles, rake, floating_x_step,
+                   floating_y_step)
         return self
 
     @property

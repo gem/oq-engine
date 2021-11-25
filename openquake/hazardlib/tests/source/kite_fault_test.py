@@ -31,8 +31,8 @@ from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 
 # Movies are in /tmp
-MAKE_MOVIES = False
-MAKE_PICTURES = False
+MAKE_MOVIES = True
+MAKE_PICTURES = True
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
@@ -62,9 +62,8 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         if profiles is None:
             profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.01, 15.0)]),
                         Line([Point(0.3, 0.0, 0.0), Point(0.3, 0.01, 15.0)])]
-        floating_x_step = 0.25
+        floating_x_step = 0.5
         floating_y_step = 0.5
-        import pdb; pdb.set_trace()
 
         # Create the source instance
         kfs = KiteFaultSource(source_id, name, trt, mfd, rupture_mesh_spacing,
@@ -155,8 +154,8 @@ class FromSimpleFaultDataTestCase(unittest.TestCase):
                             Point(0.03974514139, 0.0723925718855)])
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.8, max_mag=6.2,
                              bin_width=0.1)
-        floating_x_step = 0.25
-        floating_y_step = 0.25
+        floating_x_step = 0.5
+        floating_y_step = 0.5
         dip = 90.0
         src = KiteFaultSource.as_simple_fault(
             source_id, name, trt, mfd, rupture_mesh_spacing,
