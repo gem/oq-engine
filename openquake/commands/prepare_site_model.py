@@ -102,8 +102,8 @@ def associate(sitecol, vs30fnames, assoc_distance):
             vs30orig['vs30'] = data[:, 2]
     else:
         vs30orig = read_vs30(vs30fnames, 'site_model.csv')
-    logging.info('Associating %d hazard sites to %d site parameters',
-                 len(sitecol), len(vs30orig))
+    logging.info('Associating {:_d} hazard sites to {:_d} site parameters'.
+                 format(len(sitecol), len(vs30orig)))
     return sitecol.assoc(vs30orig, assoc_distance,
                          ignore={'z1pt0', 'z2pt5'})
 
