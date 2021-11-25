@@ -124,7 +124,7 @@ def event_based_damage(df, oqparam, monitor):
                                 else:
                                     d3[a, :, d] *= dprobs
 
-                        csq = crmodel.compute_csq(asset, fractions[a], lt)
+                        csq = crmodel.compute_csq(asset, d3[a, :, :D], lt)
                         for name, values in csq.items():
                             d3[a, :, ci[name]] = values
                     if R == 1:
