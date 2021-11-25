@@ -9,8 +9,8 @@ on:
         required: true
   schedule:
     - cron: "0 4 * * *"
-#  push:
-#    branches: [ releases_python3.9 ]
+  pull:
+    branches: [ master ]
 
 jobs:
 
