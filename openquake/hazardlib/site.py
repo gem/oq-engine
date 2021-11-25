@@ -303,8 +303,8 @@ class SiteCollection(object):
         :returns: a filtered SiteCollection with around nsites (if nsites<=N)
         """
         N = len(self.complete)
-        n = N // nsites + 1
-        if n == 1:
+        n = N // nsites
+        if n <= 1:
             return self
         sids, = numpy.where(self.complete.sids % n == 0)
         return self.filtered(sids)

@@ -84,7 +84,9 @@ def classical(srcs, sids, cmaker, monitor):
     sitecol = monitor.read('sitecol')
     if sids is not None:
         sitecol = sitecol.filter(numpy.isin(sitecol.sids, sids))
-    return hazclassical(srcs, sitecol, cmaker)
+    result = hazclassical(srcs, sitecol, cmaker)
+    # print(srcs, sum(src.weight for src in srcs))
+    return result
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
