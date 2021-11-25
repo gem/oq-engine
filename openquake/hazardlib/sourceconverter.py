@@ -954,8 +954,8 @@ class SourceConverter(RuptureConverter):
         msr = valid.SCALEREL[~node.magScaleRel]()
         mfd = self.convert_mfdist(node)
         try: 
-            xstep = int(valid.float_(~node.floating_x_step))
-            ystep = int(valid.float_(~node.floating_y_step))
+            xstep = valid.float_(~node.floating_x_step)
+            ystep = valid.float_(~node.floating_y_step)
         except Exception:
             xstep = self.floating_x_step
             ystep = self.floating_y_step

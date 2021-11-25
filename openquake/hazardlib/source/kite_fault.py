@@ -50,6 +50,7 @@ class KiteFaultSource(ParametricSeismicSource):
             magnitude_scaling_relationship, rupture_aspect_ratio,
             temporal_occurrence_model)
 
+        import pdb; pdb.set_trace()
         # TODO add checks
         self.profiles = profiles
         if profiles_sampling is None:
@@ -150,12 +151,12 @@ class KiteFaultSource(ParametricSeismicSource):
 
 
             fstrike = int(rup_len*self.floating_x_step)
-            fdip = int(rup_len*self.floating_y_step)
+            fdip = int(rup_wid*self.floating_y_step)
 
             if fstrike==0 or fdip==0:
                 msg = 'x step {} or y step {}'.format(self.floating_x_step, 
                                                       self.floating_y_step)
-                msg += ' exceeds number of x mesh nodes {}'.format(rup_len)
+                msg += 'is too small for x mesh nodes {}'.format(rup_len)
                 msg += 'or y mesh nodes {}. '.format(rup_wid)
                 msg += 'Reduce floating_x_step or floating_y_step'
                 raise ValueError(msg)
@@ -165,8 +166,6 @@ class KiteFaultSource(ParametricSeismicSource):
             # accommodates
             ruptures = []
 
-            print(surface.mesh.lons)
-            print(surface.mesh.lats)
             for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid, 
                                           f_strike=fstrike, f_dip=fdip):
                 ruptures.append(rup)
@@ -219,7 +218,6 @@ class KiteFaultSource(ParametricSeismicSource):
         # Float the rupture on the mesh describing the surface of the fault
         for i in np.arange(0, omsh.lons.shape[1] - rup_s + 1, f_strike):
             for j in np.arange(0, omsh.lons.shape[0] - rup_d + 1, f_dip):
-                import pdb; pdb.set_trace()
                 nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
                 nna = np.sum(np.isfinite(omsh.lons[j:j + rup_d, i:i + rup_s]))
                 prc = nna/nel*100.
