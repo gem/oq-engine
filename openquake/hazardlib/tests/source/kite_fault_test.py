@@ -29,10 +29,11 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
 from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
+from openquake.hazardlib.geo.geodetic import geodetic_distance
 
 # Movies are in /tmp
-MAKE_MOVIES = True
-MAKE_PICTURES = True
+MAKE_MOVIES = False
+MAKE_PICTURES = False
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
@@ -62,8 +63,8 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         if profiles is None:
             profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.01, 15.0)]),
                         Line([Point(0.3, 0.0, 0.0), Point(0.3, 0.01, 15.0)])]
-        floating_x_step = 0.5
-        floating_y_step = 0.5
+        floating_x_step = 0.25
+        floating_y_step = 0.25
 
         # Create the source instance
         kfs = KiteFaultSource(source_id, name, trt, mfd, rupture_mesh_spacing,
@@ -218,7 +219,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(rup.surface.mesh.lons.shape[1], 8, msg)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 42, msg)
+        self.assertEqual(source.count_ruptures(), 20, msg)
 
         if MAKE_PICTURES:
             ppp(source.profiles, source.surface)
