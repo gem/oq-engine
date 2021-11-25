@@ -2,6 +2,11 @@ name: Linux Install engine for 3.7, 3.8 and 3.9
 
 on:
   workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
   schedule:
     - cron: "0 4 * * *"
 #  push:
@@ -23,6 +28,15 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
 
     steps:
+  # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
       uses: actions/setup-python@v2
