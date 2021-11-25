@@ -46,7 +46,7 @@ from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
+STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT, StdDev.SINGLE_STATION)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -528,6 +528,7 @@ class ContextMaker(object):
         :param ctxs: a list of contexts
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
+        import pdb; pdb.set_trace()
         if not hasattr(self, 'imts'):
             self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         N = sum(len(ctx.sids) for ctx in ctxs)
