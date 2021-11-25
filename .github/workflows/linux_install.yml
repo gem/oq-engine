@@ -9,7 +9,7 @@ on:
         required: true
   schedule:
     - cron: "0 4 * * *"
-  pull:
+  pull_request:
     branches: [ master ]
 
 jobs:
