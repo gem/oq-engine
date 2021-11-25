@@ -926,6 +926,8 @@ def full_context(sites, rup, dctx=None):
     self = RuptureContext()
     for par, val in vars(rup).items():
         setattr(self, par, val)
+    if not hasattr(self, 'occurrence_rate'):
+        self.occurrence_rate = numpy.nan
     if hasattr(sites, 'array'):  # is a SiteCollection
         for par in sites.array.dtype.names:
             setattr(self, par, sites[par])
