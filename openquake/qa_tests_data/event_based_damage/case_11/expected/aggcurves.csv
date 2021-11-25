@@ -1,20 +1,20 @@
-#,,,,,"generated_by='OpenQuake engine 3.13.0-git8d8b6bc6ed', start_date='2021-11-25T05:15:41', checksum=572001388, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
+#,,,,,"generated_by='OpenQuake engine 3.13.0-git4df12b7ee8', start_date='2021-11-25T05:30:24', checksum=572001388, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
 return_period,county,taxonomy,loss_type,losses_value,losses_ratio
-50,Solano,tax1,structural,3.51348E+03,2.50963E-02
-100,Solano,tax1,structural,7.60748E+04,5.43391E-01
-200,Solano,tax1,structural,1.08527E+05,7.75192E-01
-50,Solano,tax2,structural,7.10587E+03,2.96078E-02
-100,Solano,tax2,structural,9.64511E+03,4.01880E-02
-200,Solano,tax2,structural,8.19207E+04,3.41336E-01
-50,Marin,tax1,structural,4.70556E+03,3.13704E-02
-100,Marin,tax1,structural,4.70556E+03,3.13704E-02
-200,Marin,tax1,structural,4.70556E+03,3.13704E-02
-50,Contra Costa,tax1,structural,2.82333E+03,1.88222E-02
-100,Contra Costa,tax1,structural,2.82333E+03,1.88222E-02
-200,Contra Costa,tax1,structural,2.82333E+03,1.88222E-02
-50,Contra Costa,tax3,structural,2.43095E+03,1.51934E-02
-100,Contra Costa,tax3,structural,8.73396E+03,5.45873E-02
-200,Contra Costa,tax3,structural,2.26235E+04,1.41397E-01
-50,*total*,*total*,structural,2.05792E+04,2.44990E-02
-100,*total*,*total*,structural,1.34435E+05,1.60042E-01
-200,*total*,*total*,structural,1.88148E+05,2.23986E-01
+50,Solano,tax1,structural,8.78371E+02,6.27408E-03
+100,Solano,tax1,structural,1.12443E+04,8.03162E-02
+200,Solano,tax1,structural,1.58803E+04,1.13431E-01
+50,Solano,tax2,structural,1.77647E+03,7.40194E-03
+100,Solano,tax2,structural,3.04609E+03,1.26920E-02
+200,Solano,tax2,structural,1.55285E+04,6.47021E-02
+50,Marin,tax1,structural,9.41111E+02,6.27408E-03
+100,Marin,tax1,structural,9.41111E+02,6.27408E-03
+200,Marin,tax1,structural,9.41111E+02,6.27408E-03
+50,Contra Costa,tax1,structural,9.41111E+02,6.27408E-03
+100,Contra Costa,tax1,structural,9.41111E+02,6.27408E-03
+200,Contra Costa,tax1,structural,9.41111E+02,6.27408E-03
+50,Contra Costa,tax3,structural,6.07736E+02,3.79835E-03
+100,Contra Costa,tax3,structural,2.18378E+03,1.36486E-02
+200,Contra Costa,tax3,structural,5.65587E+03,3.53492E-02
+50,*total*,*total*,structural,5.14480E+03,6.12476E-03
+100,*total*,*total*,structural,2.29924E+04,2.73719E-02
+200,*total*,*total*,structural,3.43109E+04,4.08463E-02
