@@ -48,5 +48,6 @@ jobs:
     - name: Run tests
       run: |
         source ~/openquake/bin/activate
+        pip install pytest
         oq dbserver start
         pytest -vsx ~/oq-engine/openquake/calculators
