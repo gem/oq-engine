@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * The flag discrete_damage_distribution=true was incorrectly ignored when
+    computing the consequences
   * Implemented `reaggregate_by` feature
   * Supported the `custom_site_id` in the GMF exporters
   * Bug fix: the site collection of the child calculation was ignored when
