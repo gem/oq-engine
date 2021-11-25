@@ -457,7 +457,7 @@ class SourceFilter(object):
             for rup in irups:
                 dists = get_distances(rup, sites, 'rrup')
                 idist = self.integration_distance(
-                    src.tectonic_region_type, rup.mag)
+                    src.tectonic_region_type, rup.mag) + rup.mag * 10
                 src.weight += (dists <= idist).sum()
         for src in sources:
             if hasattr(src, 'pointsources'):
