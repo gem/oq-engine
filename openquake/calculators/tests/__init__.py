@@ -200,7 +200,8 @@ class CalculatorTestCase(unittest.TestCase):
             else:
                 actual_lines.append(line)
         self.assertEqual(len(expected_lines), len(actual_lines))
-        self.assertEqual(expected_lines[0], actual_lines[0])  # header
+        if expected_lines[0][0] != '+':  # header unless .rst table
+            self.assertEqual(expected_lines[0], actual_lines[0])
         try:
             for exp, got in zip(make_comparable(expected_lines),
                                 make_comparable(actual_lines)):
