@@ -580,7 +580,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
-            dur = task_info.loc[b'classical'].duration
+            dur = task_info.loc[b'split_task'].duration
         except KeyError:  # no data
             pass
         else:
@@ -591,9 +591,7 @@ class ClassicalCalculator(base.HazardCalculator):
               if name.startswith('rup_')}
         if nr:  # few sites, log the number of ruptures per magnitude
             logging.info('%s', nr)
-        if (self.oqparam.hazard_calculation_id is None
-                and '_poes' in self.datastore):
-            self.datastore.swmr_on()  # needed
+        if '_poes' in self.datastore:
             self.post_classical()
 
     def _create_hcurves_maps(self):
@@ -647,8 +645,10 @@ class ClassicalCalculator(base.HazardCalculator):
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         ct = oq.concurrent_tasks or 1
         self.weights = ws = [rlz.weight for rlz in self.realizations]
-        dstore = (self.datastore.parent if oq.hazard_calculation_id
-                  else self.datastore)
+        if '_poes' in set(self.datastore):
+            dstore = self.datastore
+        else:
+            dstore = self.datastore.parent
         sites_per_task = int(numpy.ceil(self.N / ct))
         nbytes = len(dstore['_poes/sid']) * 4
         logging.info('Reading %s of _poes/sid', humansize(nbytes))

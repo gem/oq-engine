@@ -606,9 +606,17 @@ hazard_uhs-std.csv
 
     def test_case_43(self):
         # this is a test for pointsource_distance and ps_grid_spacing
-        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
-                               "hazard_map-mean-PGA.csv"], case_43.__file__)
+        # it also checks running a classical after a preclassical
+        self.run_calc(case_43.__file__, 'job.ini',
+                      calculation_mode='preclassical')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_43.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id)
         self.assertEqual(self.calc.numctxs, 2986)  # number of contexts
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
+        [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles("expected/hazard_map-mean-PGA.csv", fname)
 
         # check CollapsedPointSources in source_info
         info = self.calc.datastore.read_df('source_info')
