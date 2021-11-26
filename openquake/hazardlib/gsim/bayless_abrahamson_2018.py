@@ -211,8 +211,6 @@ class BaylessAbrahamson2018(GMPE):
 
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            # import pdb; pdb.set_trace()
-            # print(imt.period)
             imt = EAS(imt.period)
             ln_ir_outcrop = _get_ln_ir_outcrop(self, ctx)
             lin_component = _get_mean(self, C, ctx, imt)
