@@ -90,7 +90,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         if NOT_DARWIN:
             for fname in fnames:
                 self.assertEqualFiles(
-                    'expected/' + strip_calc_id(fname), fname)
+                    'expected/' + strip_calc_id(fname), fname, delta=5E-5)
 
         # exported the npz, not checking the content
         for kind in ('rlzs', 'stats'):
