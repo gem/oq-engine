@@ -220,7 +220,7 @@ floating_x_step:
   nodes along strike by the given float (i.e. "0.5" floats the ruptures at
   half the rupture length)
   Example: *floating_x_step = 0.5*
-  Default: 1
+  Default: 0
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
@@ -228,7 +228,7 @@ floating_y_step:
   nodes down dip by the given float (i.e. "0.5" floats the ruptures at half
   the rupture length)
   Example: *floating_y_step = 0.5*
-  Default: 1
+  Default: 0
 
 ignore_encoding_errors:
   If set, skip characters with non-UTF8 encoding
