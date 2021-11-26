@@ -43,6 +43,7 @@ def zero_times(sources):
     for src in sources:
         row = calc_times[basename(src)]
         row[0] += src.num_ruptures
+        row[1] += src.nsites
         row[3] += src.weight
     return calc_times
 

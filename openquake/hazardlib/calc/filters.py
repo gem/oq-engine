@@ -454,11 +454,8 @@ class SourceFilter(object):
                 irups = src.iruptures(point_rup=True)
             else:
                 irups = src.iter_ruptures()
-            for rup in irups:
-                dists = get_distances(rup, sites, 'rrup')
-                idist = self.integration_distance(
-                    src.tectonic_region_type, rup.mag) + rup.mag * 10
-                src.weight += (dists <= idist).sum()
+            src.nsites = sum(self.get_nsites(irups))
+            src.weight += src.nsites
         for src in sources:
             if hasattr(src, 'pointsources'):
                 # make CollapsedPointSource heavier
@@ -467,14 +464,19 @@ class SourceFilter(object):
                 # make non point sources even heavier
                 src.weight *= 10
 
-    def get_nsites(self, rup):
+    def get_nsites(self, rups):
         """
-        :returns: the number of sites affected by the rupture (precise)
+        :returns: the number of sites affected by the ruptures
         """
-        dists = get_distances(rup, self, 'rrup')
-        idist = self.integration_distance(
-            rup.tectonic_region_type, rup.mag)
-        return (dists <= idist).sum()
+        nsites = []
+        for rup in rups:
+            dists = get_distances(rup, self.sitecol, 'rrup')
+            idist = self.integration_distance(
+                rup.tectonic_region_type, rup.mag)
+            if not rup.surface:  # PointRupture
+                idist += rup.mag * 10
+            nsites.append((dists <= idist).sum())
+        return nsites
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:
