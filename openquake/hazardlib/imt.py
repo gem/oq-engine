@@ -41,8 +41,6 @@ def imt2tup(string):
     ('SA(1.0)', 1.0)
     >>> imt2tup('SA(1)')
     ('SA(1.0)', 1.0)
-    >>> imt2tup('EAS(0.1)')
-    ('EAS(0.1)', 0.1)
     """
     s = string.strip()
     name, *rest = s.split('(')
@@ -106,6 +104,13 @@ def PGD():
     Peak ground displacement during an earthquake measured in units of ``cm``.
     """
     return IMT('PGD')
+
+def EAS(frequency):
+    """
+    Effective Amplitude Spectrum in terms of a frequency (in Hz).
+    """
+    period = 1. / frequency
+    return IMT('EAS(%s)' % period, period, 5.0)
 
 
 def SA(period, damping=5.0):
@@ -235,10 +240,3 @@ def PGDGeomMean(vert_settlement, lat_spread):
     Geometric mean between vert_settlement and lat_spread
     """
     return numpy.sqrt(vert_settlement * lat_spread)
-
-def EAS(frequency):
-    """
-    Effective amplitude spectrum in Fourier domain
-    """
-    frequency = float(frequency)
-    return IMT('EAS(%s)' % frequency, frequency)
