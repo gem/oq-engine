@@ -263,7 +263,6 @@ class AbrahamsonEtAl2018SInter(GMPE):
         """
         C_PGA = self.COEFFS[PGA()]
         slab = self.CASCADIA_ADJUSTMENT == "adj_slab"
-        import pdb; pdb.set_trace()
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # compute median pga on rock (vs30=1000), needed for site response
