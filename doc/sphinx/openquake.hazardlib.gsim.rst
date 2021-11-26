@@ -190,6 +190,13 @@ baumont_2018
     :undoc-members:
     :show-inheritance:
 
+bayless_abrahamson_2018
+------------------------------------
+.. automodule:: openquake.hazardlib.gsim.bayless_abrahamson_2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 bchydro_2016_epistemic
 ------------------------------------------------
