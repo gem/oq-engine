@@ -82,6 +82,7 @@ IMT.__gt__ = lambda self, other: self[1] > other[1]
 IMT.__le__ = lambda self, other: self[1] <= other[1]
 IMT.__ge__ = lambda self, other: self[1] >= other[1]
 IMT.__repr__ = repr
+IMT.frequency = property(lambda self: 1. / self.period)
 
 
 def PGA():
