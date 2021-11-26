@@ -8,8 +8,6 @@
 Module exports :class:`BaylessAbrahamson2018`
 """
 
-import re
-import math
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -37,12 +35,12 @@ def _path_scaling(C, ctx):
 
 def _normal_fault_effect(C, ctx):
     """ Compute the correction coefficient for the normal faulting """
-    
+
     fnm = 0
     idx = (ctx.rake > -150) & (ctx.rake < -30)
     fnm = np.zeros_like(ctx.rake)
     fnm[idx] = 1
-    
+
     return C['c10'] * fnm
 
 
@@ -51,7 +49,7 @@ def _ztor_scaling(C, ctx):
     return C['c9'] * np.minimum(ctx.ztor, 20.)
 
 
-def _get_ln_ir_outcrop(self,ctx):
+def _get_ln_ir_outcrop(self, ctx):
     """
     Compute the natural logarithm of peak PGA at rock outcrop, Ir.
     See eq.10e page 2092.
@@ -62,7 +60,7 @@ def _get_ln_ir_outcrop(self,ctx):
     tc = self.COEFFS[im]
     # Get mean
     mean = (_magnitude_scaling(tc, ctx) +
-            _path_scaling( tc, ctx) +
+            _path_scaling(tc, ctx) +
             _ztor_scaling(tc, ctx) +
             _normal_fault_effect(tc, ctx))
     return 1.238 + 0.846 * mean
@@ -70,7 +68,7 @@ def _get_ln_ir_outcrop(self,ctx):
 
 def _linear_site_response(C, ctx):
     """ Compute the site response term """
-    
+
     tmp = np.minimum(ctx.vs30, 1000.)
     fsl = C['c8'] * np.log(tmp / 1000.)
     return fsl
@@ -79,7 +77,7 @@ def _linear_site_response(C, ctx):
 def _soil_depth_scaling(C, ctx):
     """ Compute the soil depth scaling term """
     # Set the c11 coefficient - See eq.13b at page 2093
-    
+
     c11 = np.ones_like(ctx.vs30) * C['c11a']
     c11[(ctx.vs30 <= 300) & (ctx.vs30 > 200)] = C['c11b']
     c11[(ctx.vs30 <= 500) & (ctx.vs30 > 300)] = C['c11c']
@@ -92,151 +90,12 @@ def _soil_depth_scaling(C, ctx):
     return c11 * np.log(tmp / (z1ref + 0.01))
 
 
-def lowess(x=None, y=None, span=None, method=None, robust=None, iter=None):
-    """ LOWESS  Smooth data using Lowess or Loess method """
-
-    # The difference between LOWESS and LOESS is that LOWESS uses a
-    # linear model to do the local fitting whereas LOESS uses a
-    # quadratic model to do the local fitting. Some other software
-    # may not have LOWESS, instead, they use LOESS with order 1 or 2 to
-    # represent these two smoothing method.
-    # Reference: "Trimmed resistant weighted scatterplot smooth" by
-    # Matthew C Hutcheson.
-    n = len(y)
-    span = int(math.floor(span))
-    span = min(span, n)
-    if span <= 0:
-        raise Exception('Span must be an integer between 1 and length of x.')
-
-    if span == 1:
-        c = y
-        return c
-
-    c = np.zeros((y.shape))
-    # pre-allocate space for lower and upper indices for each fit
-    if robust:
-        lbound = np.zeros((n,1))
-        rbound = np.zeros((n,1))
-        dmaxv = np.zeros((n,1))
-
-    ynan = np.isnan(y)
-    seps = np.sqrt(np.finfo(float).eps)
-    for i in np.arange(0,n):
-        if i > np.logical_and(1,x[i]) == x[i - 1]:
-            c[i] = c[i - 1]
-            if robust:
-                lbound[i] = lbound[i - 1]
-                rbound[i] = rbound[i - 1]
-                dmaxv[i] = dmaxv[i - 1]
-            continue
-        mx = x[i]
-
-        diff = np.abs(x - mx)
-        dsort=np.sort(diff)
-        idx=diff.argsort()
-
-        idx = idx[np.logical_and(dsort <= dsort[span-1],~ynan[idx])]
-        if len(idx)==0:
-            c[i] = np.nan
-            continue
-        x1 = x[idx] - mx
-        y1 = y[idx]
-        dsort = diff[idx]
-        dmax = max(dsort)
-        if dmax == 0:
-            dmax = 1
-        if robust:
-            lbound[i] = min(idx)
-            rbound[i] = max(idx)
-            dmaxv[i] = dmax
-        weight = (1 - (dsort / dmax) ** 3) ** 1.5
-        if np.all(weight < seps):
-            weight = 1
-        v = np.array([np.ones((x1.shape)),x1])
-
-        if method=='loess':
-            v = np.array([v,np.multiply(x1,x1)])
-        v = (weight.reshape(-1,1) *np.ones((1,v.shape[0]))) * v.T
-        y1 = np.multiply(weight,y1)
-        if v.shape[0] == v.shape[1]:
-            # Square v may give infs in the \ solution, so force least squares
-            b = np.linalg.lstsq(np.array([[v],[np.zeros((1,v.shape[0]))]]),np.array([[y1],[0]]))
-        else:
-            b = np.linalg.lstsq(v,y1,rcond=None)
-        c[i] = b[0][0]
-
-    return c
-
-
-def smooth2(*args):
-
-    # is x given as the first argument?
-    if len(args) == 1 or (len(args) > 1 and (len(args[2]) == 1 or isinstance(args[2], str))):
-        # smooth(Y) | smooth(Y,span,...) | smooth(Y,method,...)
-        is_x = 0
-        y = args[0]
-        y = y
-        x = np.transpose((np.arange(1,len(y)+1)))
-    else:
-        is_x = 1
-        y = args[2]
-        x = args[0]
-        y = y
-        x = x
-
-    # is span given?
-    span = []
-    if len(args) == 1 + is_x or isinstance(args[1 + is_x], str):
-        # smooth(Y), smooth(X,Y) | smooth(X,Y,method,..), smooth(Y,method)
-        is_span = 0
-    else:
-        # smooth(...,SPAN,...)
-        is_span = 1
-    span = args[1 + is_x]
-
-    # is method given?
-
-    method = []
-    if len(args) >= 1 + is_x + is_span:
-        # smooth(...,Y,method,...) | smooth(...,Y,span,method,...)
-        method = args[1 + is_x + is_span]
-
-    t = len(y)
-    if len(x) != t:
-        raise Exception('X and Y must be the same length.')
-
-    # realize span
-    if span <= 0:
-        raise Exception('SPAN must be positive.')
-
-    if span < 1:
-        span = math.ceil(span * t)
-
-    idx = np.arange(0,t)
-    sortx = np.any(np.diff(np.isnan(x)) < 0)
-
-    if np.logical_or(sortx, np.any(np.diff(x) < 0)):
-        x = x.sort(axis=1)
-        idx = x.argsort(axis=1)
-        y = y[idx]
-
-    c = np.empty((len(args[0]),1)) * np.nan
-    ok = ~np.isnan(x)
-    if method == 'lowess':
-        robust = 0
-        iter = 5
-        c = lowess(x,y,span,method,robust,iter)
-    c[idx] = c
-
-    return c
-
-
-def _get_stddevs( C, ctx):
+def _get_stddevs(C, ctx):
     """
     Compute the standard deviations
     """
     # Set components of std
-    
+
     tau = np.zeros_like(ctx.mag)
     phi_s2s = np.zeros_like(ctx.mag)
     phi_ss = np.zeros_like(ctx.mag)
@@ -249,38 +108,35 @@ def _get_stddevs( C, ctx):
     phi_s2s[(ctx.mag > 6)] = C['s4']
     phi_ss[(ctx.mag > 6)] = C['s6']
 
-    tau[(ctx.mag >= 4) & (ctx.mag <= 6) ] = C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag-4)
-    phi_s2s[(ctx.mag >= 4) & (ctx.mag <= 6)] = C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4)
-    phi_ss[(ctx.mag >= 4) & (ctx.mag <= 6)] = C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4)
+    tau[(ctx.mag >= 4) & (ctx.mag <= 6)] = (
+        C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag-4))
+    phi_s2s[(ctx.mag >= 4) & (ctx.mag <= 6)] = (
+        C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4))
+    phi_ss[(ctx.mag >= 4) & (ctx.mag <= 6)] = (
+        C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4))
 
     # Collect the requested stds
     sigma = np.sqrt(tau**2+phi_s2s**2+phi_ss**2+C['c1a']**2)
     phi = np.sqrt(phi_s2s**2+phi_ss**2)
-    #phi_ss = np.sqrt(tau**2+phi_ss**2+C['c1a']**2)
-    
+
     return sigma, tau, phi
 
 
+def _get_nl_site_response(C, ctx, ln_ir_outcrop):
 
-def _smoothing(fnl_mod0):
-    fNL = smooth2(fnl_mod0, 20, 'lowess')
-    return fNL
-
-
-def _get_nl_site_response(C, ctx,ln_ir_outcrop):
-    
     vsref = 760.0
     t1 = np.exp(C['f5'] * (np.minimum(ctx.vs30, vsref)-360.))
     t2 = np.exp(C['f5'] * (vsref-360.))
     f2 = C['f4'] * (t1 - t2)
-    fnl_0 = f2 * np.log((np.exp(ln_ir_outcrop )+C['f3']) / C['f3'])
-    val, index = min((v, i) for i, v in enumerate (fnl_0))
-    fnl_mod0 = np.concatenate((fnl_0[:index+1], np.ones(len(fnl_0)-index) * val))
+    fnl_0 = f2 * np.log((np.exp(ln_ir_outcrop)+C['f3']) / C['f3'])
+    val, index = min((v, i) for i, v in enumerate(fnl_0))
+    fnl_mod0 = np.concatenate((fnl_0[:index+1],
+                               np.ones(len(fnl_0)-index) * val))
     return fnl_mod0[0]
-    
+
 
 def _get_dimunition_factor(ctx, imt):
-    
+
     max_freq = 23.988321
     kappa = np.exp(-0.4*np.log(ctx.vs30/760)-3.5)
     D = np.exp(-np.pi * kappa * (imt[1] - max_freq))
@@ -288,29 +144,25 @@ def _get_dimunition_factor(ctx, imt):
 
 
 def _get_mean_linear(C, ctx):
-    
+
     mean = (_magnitude_scaling(C, ctx) +
             _path_scaling(C, ctx) +
             _linear_site_response(C, ctx) +
-            _ztor_scaling( C, ctx) +
+            _ztor_scaling(C, ctx) +
             _normal_fault_effect(C, ctx) +
             _soil_depth_scaling(C, ctx))
     return mean
 
 
-def _get_mean( self, C, ctx, imt):
-    
-    C = self.COEFFS[imt]
-    mean = _get_mean_linear( C, ctx)
-
+def _get_mean(self, C, ctx, imt):
     if imt[1] >= 24.:
         im = EAS(23.988321)
         c = self.COEFFS[im]
-        t1 = np.exp(_get_mean_linear( c, ctx))
+        t1 = np.exp(_get_mean_linear(c, ctx))
         mean = np.log(_get_dimunition_factor(ctx, imt) * t1)
-
+    else:
+        mean = _get_mean_linear(C, ctx)
     return mean
-
 
 
 class BaylessAbrahamson2018(GMPE):
@@ -324,11 +176,10 @@ class BaylessAbrahamson2018(GMPE):
     Ground-Motion Model for Fourier Amplitude Spectra for Crustal Earthquakes
     in California.  Bull. Seism. Soc. Am., 109(5): 2088–2105
 
-    Disclaimer: The authors describe a smoothing technique that needs to be 
-    applied to the non linear component of the site response. 
-    The functions for this technique are _smoothing, smooth2 and lowess and
-    these functions have been made available here but not applied in the implementation.
-    Interested users can locally modify these functions to be applied in the computation
+    Disclaimer: The authors describe a smoothing technique that needs to be
+    applied to the non linear component of the site response. We did not
+    implement these smoothing functions in this initial versions since the
+    match with the values in the verification tables is good even without it.
     """
 
     #: Supported tectonic region type is active shallow crust, see title!
@@ -357,17 +208,19 @@ class BaylessAbrahamson2018(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
-        
-        for m, imt in enumerate(imts):
-            
-            C = self.COEFFS[imt]
-            ln_ir_outcrop = _get_ln_ir_outcrop(self,ctx)
-            lin_component = _get_mean(self, C, ctx, imt)
-            nl_component = _get_nl_site_response(C, ctx,ln_ir_outcrop)
-            mean[m] = (lin_component + nl_component)[0]
-            sigma[m],tau[m],phi[m]  = _get_stddevs(C, ctx)
 
-    COEFFS = CoeffsTable(table=""" 
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            # import pdb; pdb.set_trace()
+            # print(imt.period)
+            imt = EAS(imt.period)
+            ln_ir_outcrop = _get_ln_ir_outcrop(self, ctx)
+            lin_component = _get_mean(self, C, ctx, imt)
+            nl_component = _get_nl_site_response(C, ctx, ln_ir_outcrop)
+            mean[m] = (lin_component + nl_component)[0]
+            sigma[m], tau[m], phi[m] = _get_stddevs(C, ctx)
+
+    COEFFS = CoeffsTable(table="""
 IMT	             c1	         c2	         c3	        cn	        cM	      c4	       c5	    c6	         chm	          c7	          c8	         c9	         c10	    c11a	   c11b	        c11c	   c11d	      c1a	             s1	         s2	       s3	        s4	         s5	        s6	    f3	        f4	      f5
 0.1     	-3.649999989	1.27	3.485706509	1.552290469	6.798373191	-1.86	    7.5818	    0.45	    3.838	    -9.93E-11	    -0.743231724	-0.031205355	-0.2	0.435485418	0.264594096	0.206824644	0.07692587	0.16269964	    0.557086744	0.42874443	0.350000003	0.350000004	0.403571175	0.403571175	1	        -0.0001	-0.02
 0.1023293	-3.647746288	1.27	3.481357442	1.562804944	6.786185091	-1.86	    7.5818	    0.45	    3.838	    -2.63E-05	    -0.749511189	-0.031217395	-0.2	0.436075163	0.265781871	0.207919363	0.079101481	0.171104361	    0.557086744	0.42874443	0.350890996	0.350890996	0.403859134	0.403859134	1	        -0.0001	-0.02
