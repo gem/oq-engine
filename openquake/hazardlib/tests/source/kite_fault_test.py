@@ -32,7 +32,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 
 # Movies are in /tmp
-MAKE_MOVIES = False
+MAKE_MOVIES = True
 MAKE_PICTURES = False
 
 
@@ -41,7 +41,8 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
     RAKE = 0
     TOM = PoissonTOM(1.)
 
-    def _make_source(self, mfd, aspect_ratio, profiles=None):
+    def _make_source(self, mfd, aspect_ratio, profiles=None, 
+                     floating_x_step=0.5, floating_y_step=0.5):
         """
         Utility method for creating quickly fault instances
         :param mfd:
@@ -63,8 +64,6 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         if profiles is None:
             profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.01, 15.0)]),
                         Line([Point(0.3, 0.0, 0.0), Point(0.3, 0.01, 15.0)])]
-        floating_x_step = 0.25
-        floating_y_step = 0.25
 
         # Create the source instance
         kfs = KiteFaultSource(source_id, name, trt, mfd, rupture_mesh_spacing,
@@ -219,7 +218,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(rup.surface.mesh.lons.shape[1], 8, msg)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 20, msg)
+        self.assertEqual(source.count_ruptures(), 6, msg)
 
         if MAKE_PICTURES:
             ppp(source.profiles, source.surface)
@@ -244,9 +243,33 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                                    profiles=profiles)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 28, msg)
+        self.assertEqual(source.count_ruptures(), 8, msg)
 
         if MAKE_MOVIES:
             ruptures = [r for r in source.iter_ruptures()]
             self._ruptures_animation('test02', source.surface, ruptures,
+                                     source.profiles)
+            
+            
+    def test03(self):
+        """ Simplest test - checking when standard floating is used """
+
+        profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.001, 15.0)]),
+                    Line([Point(0.1, 0.0, 0.0), Point(0.1, 0.010, 12.0)]),
+                    Line([Point(0.2, 0.0, 0.0), Point(0.2, 0.020,  9.0)]),
+                    Line([Point(0.3, 0.0, 0.0), Point(0.3, 0.030,  6.0)])]
+
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.8, max_mag=6.2,
+                             bin_width=0.1)
+
+        source = self._make_source(mfd=mfd, aspect_ratio=1.5,
+                                   profiles=profiles, 
+                                   floating_x_step=0, floating_y_step=0)
+
+        msg = 'Wrong number of ruptures'
+        self.assertEqual(source.count_ruptures(), 28, msg)
+
+        if MAKE_MOVIES:
+            ruptures = [r for r in source.iter_ruptures()]
+            self._ruptures_animation('test03', source.surface, ruptures,
                                      source.profiles)

@@ -649,7 +649,7 @@ class SourceConverter(RuptureConverter):
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
                  source_id=None, discard_trts='',
-                 floating_x_step=1, floating_y_step=1):
+                 floating_x_step=0, floating_y_step=0):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
