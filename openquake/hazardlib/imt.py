@@ -106,6 +106,14 @@ def PGD():
     return IMT('PGD')
 
 
+def EAS(frequency):
+    """
+    Effective Amplitude Spectrum in terms of a frequency (in Hz).
+    """
+    period = 1. / frequency
+    return IMT('EAS(%s)' % period, period, 5.0)
+
+
 def SA(period, damping=5.0):
     """
     Spectral acceleration, defined as the maximum acceleration of a damped,
