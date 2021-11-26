@@ -19,6 +19,7 @@ Module :mod:`openquake.hazardlib.source.kite_fault` defines
 """
 import copy
 import numpy as np
+import logging
 from typing import Tuple
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point, Polygon
@@ -148,23 +149,21 @@ class KiteFaultSource(ParametricSeismicSource):
             rup_len = int(np.round(lng/self.rupture_mesh_spacing)) + 1
             rup_wid = int(np.round(wdt/self.profiles_sampling)) + 1
 
-
             fstrike = int(rup_len*self.floating_x_step)
             fdip = int(rup_wid*self.floating_y_step)
 
-            if fstrike==0 or fdip==0:
+            if fstrike == 0 or fdip == 0:
                 msg = 'floating_x_step or floating_y_step is 0. Using all mesh'
                 msg += 'nodes to float ruptures'
-                fstrike=1
-                fdip=1
-                print(msg)
-
+                fstrike = 1
+                fdip = 1
+                logging.warning(msg)
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
             ruptures = []
 
-            for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid, 
+            for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid,
                                           f_strike=fstrike, f_dip=fdip):
                 ruptures.append(rup)
             if len(ruptures) < 1:

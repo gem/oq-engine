@@ -215,17 +215,17 @@ ebrisk_maxsize:
   INTERNAL
 
 floating_x_step:
-  Float, used in rupture generation for kite faults. indicates the fraction  
-  of fault length used to float ruptures by multiplying the number of mesh 
-  nodes along strike by the given float (i.e. "0.5" floats the ruptures at 
+  Float, used in rupture generation for kite faults. indicates the fraction
+  of fault length used to float ruptures by multiplying the number of mesh
+  nodes along strike by the given float (i.e. "0.5" floats the ruptures at
   half the rupture length)
   Example: *floating_x_step = 0.5*
   Default: 1
 
 floating_y_step:
-  Float, used in rupture generation for kite faults. indicates the fraction  
+  Float, used in rupture generation for kite faults. indicates the fraction
   of fault width used to float ruptures by multiplying the number of mesh
-  nodes down dip by the given float (i.e. "0.5" floats the ruptures at half 
+  nodes down dip by the given float (i.e. "0.5" floats the ruptures at half
   the rupture length)
   Example: *floating_y_step = 0.5*
   Default: 1

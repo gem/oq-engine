@@ -29,7 +29,6 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
 from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
-from openquake.hazardlib.geo.geodetic import geodetic_distance
 
 # Movies are in /tmp
 MAKE_MOVIES = True
@@ -41,7 +40,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
     RAKE = 0
     TOM = PoissonTOM(1.)
 
-    def _make_source(self, mfd, aspect_ratio, profiles=None, 
+    def _make_source(self, mfd, aspect_ratio, profiles=None,
                      floating_x_step=0.5, floating_y_step=0.5):
         """
         Utility method for creating quickly fault instances
@@ -69,7 +68,8 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         kfs = KiteFaultSource(source_id, name, trt, mfd, rupture_mesh_spacing,
                               magnitude_scaling_relationship,
                               rupture_aspect_ratio, tom, profiles, rake,
-                              floating_x_step=floating_x_step, floating_y_step=floating_y_step)
+                              floating_x_step=floating_x_step,
+                              floating_y_step=floating_y_step)
 
         # Check we can create a pickled version of this object
         assert_pickleable(kfs)
@@ -249,8 +249,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
             ruptures = [r for r in source.iter_ruptures()]
             self._ruptures_animation('test02', source.surface, ruptures,
                                      source.profiles)
-            
-            
+
     def test03(self):
         """ Simplest test - checking when standard floating is used """
 
@@ -263,7 +262,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                              bin_width=0.1)
 
         source = self._make_source(mfd=mfd, aspect_ratio=1.5,
-                                   profiles=profiles, 
+                                   profiles=profiles,
                                    floating_x_step=0, floating_y_step=0)
 
         msg = 'Wrong number of ruptures'
