@@ -28,32 +28,32 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 def _compute_mean(C, g, ctx):
-        """
-        Compute mean according to equation 8a, page 773.
-        """
-        mag = ctx.mag
-        dis = ctx.rrup
+    """
+    Compute mean according to equation 8a, page 773.
+    """
+    mag = ctx.mag
+    dis = ctx.rrup
 
-        # computing r02 parameter and the average distance to the fault surface
-        ro2 = 1.4447e-5 * np.exp(2.3026 * mag)
-        avg = np.sqrt(dis ** 2 + ro2)
+    # computing r02 parameter and the average distance to the fault surface
+    ro2 = 1.4447e-5 * np.exp(2.3026 * mag)
+    avg = np.sqrt(dis ** 2 + ro2)
+
+    # computing fourth term of Eq. 8a, page 773.
+    trm4 = (exp1(C['c4'] * dis) - exp1(C['c4'] * avg)) / ro2
+
+    # computing the mean
+    mean = C['c1'] + C['c2'] * mag + C['c3'] * np.log(trm4)
         
-        # computing fourth term of Eq. 8a, page 773.
-        trm4 = (exp1(C['c4'] * dis) - exp1(C['c4'] * avg)) / ro2
-    
-        # computing the mean
-        mean = C['c1'] + C['c2'] * mag + C['c3'] * np.log(trm4)
-            
-        # convert from cm/s**2 to 'g'
-        mean = np.log(np.exp(mean) * 1e-2 / g)
-        return mean
+    # convert from cm/s**2 to 'g'
+    mean = np.log(np.exp(mean) * 1e-2 / g)
+    return mean
 
 def _get_stddevs(C):
-        """
-        Return standard deviations as defined in table 2, pag 776.
-        """
-        stds = np.array([C['s_t'], C['s_e'], C['s_r']])
-        return stds
+    """
+    Return standard deviations as defined in table 2, page 776.
+    """
+    stds = np.array([C['s_t'], C['s_e'], C['s_r']])
+    return stds
 
 
 class ArroyoEtAl2010SInter(GMPE):
@@ -117,7 +117,7 @@ class ArroyoEtAl2010SInter(GMPE):
 
         
     #: Equation coefficients for geometric average of the maximum of the two
-    #: horizontal components, as described in Table 2 on pp. 776.
+    #: horizontal components, as described in Table 2 on page 776.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT     c1      c2      c3      c4      g_e     bias     s_t     s_e     s_r
     0.040   3.8123  0.8636  0.5578  0.0150  0.3962  -0.0254  0.8228  0.5179  0.6394
