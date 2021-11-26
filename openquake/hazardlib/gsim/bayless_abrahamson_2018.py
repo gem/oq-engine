@@ -302,16 +302,14 @@ def _get_mean_linear(C, ctx):
 
 def _get_mean( self, C, ctx, imt):
     
-    # Get the necessary set of coefficients
+    C = self.COEFFS[imt]
+    mean = _get_mean_linear( C, ctx)
+
     if imt[1] >= 24.:
-        max_imt = EAS(23.988321)
-        c = self.COEFFS[max_imt]
+        im = EAS(23.988321)
+        c = self.COEFFS[im]
         t1 = np.exp(_get_mean_linear( c, ctx))
         mean = np.log(_get_dimunition_factor(ctx, imt) * t1)
-    else:
-        C = self.COEFFS[imt]
-        mean = _get_mean_linear( C, ctx)
-
 
     return mean
 
@@ -327,6 +325,12 @@ class BaylessAbrahamson2018(GMPE):
     - Bayless, J. and N.A. Abrahamson (2019). Summary of the BA18
     Ground-Motion Model for Fourier Amplitude Spectra for Crustal Earthquakes
     in California.  Bull. Seism. Soc. Am., 109(5): 2088–2105
+
+    Disclaimer: The authors describe a smoothing technique that needs to be 
+    applied to the non linear component of the site response. 
+    The functions for this technique are _smoothing, smooth2 and lowess and
+    these functions have been made available here but not applied in the implementation.
+    Interested users can locally modify these functions to be applied in the computation
     """
 
     #: Supported tectonic region type is active shallow crust, see title!
@@ -342,8 +346,7 @@ class BaylessAbrahamson2018(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-        const.StdDev.SINGLE_STATION
+        const.StdDev.INTRA_EVENT
     }
 
     #: Required site parameters
