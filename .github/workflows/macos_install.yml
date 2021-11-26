@@ -8,19 +8,18 @@ name: MacOS Install engine for 3.7, 3.8 and 3.9
         required: true
   schedule:
     - cron: "0 1 * * *"
-  push:
-    branches: [ test_os ]
+# push:
+#    branches: [ test_os ]
 
 jobs:
 
-  Matrix-build:
+  Install_and_test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         #os: [macos-latest, windows-latest, ubuntu-latest]
         os: [macos-latest]
-          #python-version: [3.7, 3.8, 3.9]
-        python-version: [3.8]
+        python-version: [3.7, 3.8, 3.9]
     steps:
     # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)

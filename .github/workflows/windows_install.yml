@@ -54,10 +54,10 @@ jobs:
       - name: Run demos to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          ls D:\a\oq-engine\oq-engine\openquake
+          ls C:\Users\runneradmin\openquake\Scripts
+          #
           oq --version
-          oq dbserver start
-          #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           python -m pip install pytest
-          dir D:\a\oq-engine\oq-engine\openquake
-          pwd
           pytest -vsx D:\a\oq-engine\oq-engine\openquake\calculators
