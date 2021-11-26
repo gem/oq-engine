@@ -32,7 +32,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 
 # Movies are in /tmp
 MAKE_MOVIES = True
-MAKE_PICTURES = False
+MAKE_PICTURES = True
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
