@@ -2,10 +2,15 @@ name: Windows Install engine for 3.7, 3.8 and 3.9
 
 on:
   workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
   schedule:
     - cron: "00 22 * * *"
-#  push:
-#    branches: [ releases_python3.9 ]
+  push:
+    branches: [ test_os ]
 
 jobs:
   install:
@@ -18,11 +23,14 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        #python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8]
 
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+        with:
+          path: enginedemo
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -40,4 +48,5 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          python -m pip install pytest
