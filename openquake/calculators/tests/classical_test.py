@@ -608,7 +608,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance and ps_grid_spacing
         # it also checks running a classical after a preclassical
         self.run_calc(case_43.__file__, 'job.ini',
-                      calculation_mode='preclassical')
+                      calculation_mode='preclassical', concurrent_tasks='4')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
