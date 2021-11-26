@@ -31,8 +31,8 @@ from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 
 # Movies are in /tmp
-MAKE_MOVIES = True
-MAKE_PICTURES = True
+MAKE_MOVIES = False
+MAKE_PICTURES = False
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
