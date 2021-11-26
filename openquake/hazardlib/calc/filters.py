@@ -456,8 +456,6 @@ class SourceFilter(object):
                 irups = src.iter_ruptures()
             src.nsites = sum(self.get_nsites(irups))
             src.weight += src.nsites
-            if src.source_id == '156':
-                import pdb; pdb.set_trace()
         for src in sources:
             if hasattr(src, 'pointsources'):
                 # make CollapsedPointSource heavier
