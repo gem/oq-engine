@@ -64,7 +64,6 @@ Current stable version is the **OpenQuake Engine 3.12**. The documentation is av
 
 ### Installation
 
-* [Technology stack and requirements](doc/requirements.md)
 * [Which installation method should I use?](doc/installing/README.md)
 * [Installing with the universal installer](doc/installing/universal.md)
 * [Installing from Debian packages](doc/installing/ubuntu.md)
