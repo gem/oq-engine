@@ -13,7 +13,7 @@ on:
     branches: [ test_os ]
 
 jobs:
-  install:
+  install_and_test:
     runs-on: windows-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
@@ -46,6 +46,7 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
+          oq dbserver start
           #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
           python -m pip install pytest
           dir D:\a\oq-engine\oq-engine\openquake
