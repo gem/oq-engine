@@ -11,7 +11,6 @@ Module exports :class:`BaylessAbrahamson2018`
 import re
 import math
 import numpy as np
-# import statsmodels.api as sm
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
@@ -59,7 +58,6 @@ def _get_ln_ir_outcrop(self,ctx):
     """
     # Set imt and cofficients. The value of frequency is consistent with
     # the one used in the matlab script - line 156
-    # import pdb; pdb.set_trace()
     im = EAS(5.0118725)
     tc = self.COEFFS[im]
     # Get mean
@@ -270,7 +268,7 @@ def _smoothing(fnl_mod0):
 
 
 def _get_nl_site_response(C, ctx,ln_ir_outcrop):
-    # import pdb; pdb.set_trace()
+    
     vsref = 760.0
     t1 = np.exp(C['f5'] * (np.minimum(ctx.vs30, vsref)-360.))
     t2 = np.exp(C['f5'] * (vsref-360.))
@@ -282,7 +280,7 @@ def _get_nl_site_response(C, ctx,ln_ir_outcrop):
     
 
 def _get_dimunition_factor(ctx, imt):
-    #
+    
     max_freq = 23.988321
     kappa = np.exp(-0.4*np.log(ctx.vs30/760)-3.5)
     D = np.exp(-np.pi * kappa * (imt[1] - max_freq))
@@ -361,7 +359,7 @@ class BaylessAbrahamson2018(GMPE):
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         
         for m, imt in enumerate(imts):
-
+            
             C = self.COEFFS[imt]
             ln_ir_outcrop = _get_ln_ir_outcrop(self,ctx)
             lin_component = _get_mean(self, C, ctx, imt)

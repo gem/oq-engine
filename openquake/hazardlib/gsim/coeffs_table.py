@@ -182,11 +182,6 @@ class CoeffsTable(object):
         return {imt: self._coeffs[imt] for imt in self._coeffs
                 if imt.string[:2] != 'SA'}
 
-    @property
-    def f_coeffs(self):
-        return {imt: self._coeffs[imt] for imt in self._coeffs
-                if imt.string[:3] == 'EAS'}
-
     def __getitem__(self, imt):
         """
         Return a dictionary of coefficients corresponding to ``imt``
