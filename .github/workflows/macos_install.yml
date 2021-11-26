@@ -8,8 +8,8 @@ name: MacOS Install engine for 3.7, 3.8 and 3.9
         required: true
   schedule:
     - cron: "0 1 * * *"
-# push:
-#    branches: [ test_os ]
+  push:
+    branches: [ test_os ]
 
 jobs:
 
@@ -34,8 +34,6 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version:  ${{ matrix.python-version }}
-      - name: Install pytest to use with oqengine
-        run: pip3 install pytest
       - name: Run Installation of oq-engine in devel mode
         run: |
             #PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
@@ -51,5 +49,5 @@ jobs:
           pip3 install pytest
           oq --version
           oq dbserver start
-          pytest -vsx /Users/runner/work/oq-engine/oq-engine/openquake/calculators
+          pytest -vs /Users/runner/work/oq-engine/oq-engine/openquake/calculators
           #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"

@@ -23,8 +23,7 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        #python-version: [3.7, 3.8, 3.9]
-        python-version: [3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
       - name: Check out the codebase.
@@ -60,4 +59,4 @@ jobs:
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           python -m pip install pytest
-          pytest -vsx D:\a\oq-engine\oq-engine\openquake\calculators
+          pytest -vs D:\a\oq-engine\oq-engine\openquake\calculators
