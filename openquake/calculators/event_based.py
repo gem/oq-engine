@@ -219,11 +219,11 @@ class EventBasedCalculator(base.HazardCalculator):
             progress=logging.debug
         ).reduce()
         for src in sources:
-            src.nsites = 1  # avoid 0 weight
             try:
                 src.num_ruptures = nrups[src.source_id]
             except KeyError:
                 src.num_ruptures = src.count_ruptures()
+            src.weight = src.num_ruptures
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
@@ -272,9 +272,9 @@ class EventBasedCalculator(base.HazardCalculator):
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'investigation time is too short')
 
-        # must be called before storing the events
-        self.store_rlz_info(eff_ruptures)  # store full_lt
+        # don't change the order of the 3 things below!
         self.store_source_info(calc_times)
+        self.store_rlz_info(eff_ruptures)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
             imp.import_rups_events(
@@ -428,7 +428,10 @@ class EventBasedCalculator(base.HazardCalculator):
             self.core_task.__func__, (proxies, full_lt, oq, self.datastore),
             key=operator.itemgetter('trt_smr'),
             weight=operator.itemgetter('n_occ'),
-            h5=dstore.hdf5, duration=oq.time_per_task, split_level=5)
+            h5=dstore.hdf5,
+            concurrent_tasks=oq.concurrent_tasks or 1,
+            duration=oq.time_per_task,
+            split_level=oq.split_level)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:

@@ -728,7 +728,7 @@ class Starmap(object):
         return cls(task, taskargs, distribute, progress, h5)
 
     @classmethod
-    def apply_split(cls, task, allargs,
+    def apply_split(cls, task, allargs, concurrent_tasks=None,
                     maxweight=None, weight=lambda item: 1,
                     key=lambda item: 'Unspecified',
                     distribute=None, progress=logging.info, h5=None,
@@ -737,7 +737,7 @@ class Starmap(object):
         Same as Starmap.apply, but possibly produces subtasks
         """
         args = (allargs[0], task, allargs[1:], duration, split_level)
-        return cls.apply(split_task, args, cls.num_cores,
+        return cls.apply(split_task, args, concurrent_tasks or 2*cls.num_cores,
                          maxweight, weight, key, distribute, progress, h5)
 
     def __init__(self, task_func, task_args=(), distribute=None,
@@ -952,7 +952,8 @@ def split_task(elements, func, args, duration, split_level, monitor):
         split_level = n
     elements = numpy.array(elements)  # from WeightedSequence to array
     idxs = numpy.arange(n)
-    split_elems = [elements[idxs % split_level == i] for i in range(split_level)]
+    split_elems = [elements[idxs % split_level == i]
+                   for i in range(split_level)]
     # see how long it takes to run the first slice
     t0 = time.time()
     for i, elems in enumerate(split_elems):
@@ -1057,6 +1058,8 @@ def workers_status():
 
     elif OQDIST == 'zmq':
         return workerpool.WorkerMaster().status()
+
+    return []
 
 
 def workers_wait(seconds=30):

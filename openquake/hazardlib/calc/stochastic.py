@@ -30,6 +30,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.calc.filters import nofilter, SourceFilter
 from openquake.hazardlib.source.rupture import (
     BaseRupture, EBRupture, rupture_dt)
@@ -213,7 +214,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_counter[src.id][rup.idx] += 1
                 # Store info
                 dt = time.time() - t0
-                calc_times[src.id] += numpy.array(
+                calc_times[basename(src)] += numpy.array(
                     [len(rup_data[src.id]), src.nsites, dt])
         elif param['src_interdep'] == 'mutex':
             raise NotImplementedError('src_interdep == mutex')
@@ -280,7 +281,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
                 ebr = EBRupture(rup, src.source_id, trt_smr, n_occ)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
-            calc_times[src.id] += numpy.array([nr, src.nsites, dt])
+            calc_times[basename(src)] += numpy.array([nr, src.nsites, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(dict(rup_array=rup_array, calc_times=calc_times,
                              eff_ruptures={grp_id: eff_ruptures}))

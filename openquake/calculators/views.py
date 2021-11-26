@@ -233,7 +233,7 @@ def view_full_lt(token, dstore):
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
-    del df['grp_id'], df['trti'], df['task_no']
+    del df['grp_id'], df['trti']
     return text_table(df)
 
 

@@ -442,8 +442,8 @@ hazard_uhs-std.csv
         self.assert_curves_ok(['hazard_curve.csv'],
                               case_23.__file__, delta=1e-5)
         attrs = dict(self.calc.datastore['/'].attrs)
-        self.assertEqual(attrs['checksum32'], 3098153713)
-        self.assertEqual(attrs['input_size'], 6631)
+        self.assertIn('checksum32', attrs)
+        self.assertIn('input_size', attrs)
 
     def test_case_24(self):  # UHS
         # this is a case with rjb and an hypocenter distribution
@@ -468,7 +468,8 @@ hazard_uhs-std.csv
         self.assert_curves_ok(['hazard_curve-rlz-000.csv'], case_26.__file__)
 
     def test_case_27(self):  # Nankai mutex model
-        self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
+        self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__,
+                              delta=1E-5)
         # make sure probs_occur are stored as expected
         probs_occur = self.calc.datastore['rup/probs_occur_'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
@@ -605,9 +606,23 @@ hazard_uhs-std.csv
 
     def test_case_43(self):
         # this is a test for pointsource_distance and ps_grid_spacing
-        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
-                               "hazard_map-mean-PGA.csv"], case_43.__file__)
+        # it also checks running a classical after a preclassical
+        self.run_calc(case_43.__file__, 'job.ini',
+                      calculation_mode='preclassical', concurrent_tasks='4')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_43.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id)
         self.assertEqual(self.calc.numctxs, 2986)  # number of contexts
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
+        [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles("expected/hazard_map-mean-PGA.csv", fname)
+
+        # check CollapsedPointSources in source_info
+        info = self.calc.datastore.read_df('source_info')
+        source_ids = decode(list(info.source_id))
+        num_cps = sum(1 for s in source_ids if s.startswith('cps-'))
+        self.assertEqual(num_cps, 163)
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results

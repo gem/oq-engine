@@ -40,7 +40,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, datastore
+from openquake.commonlib import readinput, logictree, datastore, source_reader
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -560,8 +560,10 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam.__class__.concurrent_tasks.default)
             params = {name: value for name, value in
                       vars(parent['oqparam']).items()
-                      if name not in vars(self.oqparam)}
-            self.save_params(**params)
+                      if name not in vars(self.oqparam)
+                      and name != 'ground_motion_fields'}
+            if params:
+                self.save_params(**params)
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
             oqp = parent['oqparam']
@@ -789,7 +791,11 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.add_tagname('site_id')
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
-            self.sitecol = haz_sitecol
+            if oq.hazard_calculation_id:  # read the sitecol of the child
+                self.sitecol = readinput.get_site_collection(oq)
+                self.datastore['sitecol'] = self.sitecol
+            else:
+                self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)
@@ -852,6 +858,8 @@ class HazardCalculator(BaseCalculator):
         sec_perils = oq.get_sec_perils()
         for sp in sec_perils:
             sp.prepare(self.sitecol)  # add columns as needed
+        if sec_perils:
+            self.datastore['sitecol'] = self.sitecol
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
@@ -908,15 +916,17 @@ class HazardCalculator(BaseCalculator):
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
-    def store_source_info(self, calc_times, nsites=False):
+    def store_source_info(self, calc_times):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        self.csm.update_source_info(calc_times, nsites)
+        if 'source_info' not in self.datastore:
+            source_reader.create_source_info(
+                self.csm, calc_times, self.datastore.hdf5)
+        self.csm.update_source_info(calc_times)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
-            recs, readinput.source_info_dt)
-        return [rec[0] for rec in recs]  # return source_ids
+            recs, source_reader.source_info_dt)
 
     def post_process(self):
         """For compatibility with the engine"""

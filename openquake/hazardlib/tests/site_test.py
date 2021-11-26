@@ -242,7 +242,7 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         col = SiteCollection(self.SITES)
         self.assertEqual(len(col.reduce(1)), 1)
         self.assertEqual(len(col.reduce(2)), 2)
-        self.assertEqual(len(col.reduce(3)), 2)
+        self.assertEqual(len(col.reduce(3)), 4)
 
 
 class WithinBBoxTestCase(unittest.TestCase):
