@@ -29,8 +29,6 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
-        with:
-          path: enginedemo
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -50,3 +48,6 @@ jobs:
           oq --version
           #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
           python -m pip install pytest
+          dir D:\a\oq-engine\oq-engine\openquake
+          pwd
+          pytest -vsx D:\a\oq-engine\oq-engine\openquake\calculators
