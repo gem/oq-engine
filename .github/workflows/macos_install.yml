@@ -1,10 +1,15 @@
 name: MacOS Install engine for 3.7, 3.8 and 3.9
 'on':
   workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
   schedule:
     - cron: "0 1 * * *"
-#  push:
-#    branches: [ gdal_macos ]
+  push:
+    branches: [ test_os ]
 
 jobs:
 
@@ -13,13 +18,19 @@ jobs:
     strategy:
       matrix:
         #os: [macos-latest, windows-latest, ubuntu-latest]
-        os: [macos-10.15, macos-11]
-        python-version: [3.7, 3.8, 3.9]
+        os: [macos-latest]
+          #python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8]
     steps:
-      - name: Check out the codebase.
+    # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
         uses: actions/checkout@v2
-        #with:
-          #  ref: cleanup
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python3
         uses: actions/setup-python@v2
         with:
@@ -30,13 +41,16 @@ jobs:
         run: |
             #PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
             #echo $PY_VER
-            export PIP_DEFAULT_TIMEOUT=100
-            pip3 install -U pip wheel setuptools
             #pip3 install -r requirements-$PY_VER-macos.txt
             #pip3 install -e .\[osgeo\]
+            export PIP_DEFAULT_TIMEOUT=100
+            pip3 install -U pip wheel setuptools
             python install.py devel
       - name: Run demos to test installation
         run: |
           source ~/openquake/bin/activate
+          pip3 install pytest
           oq --version
-          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          oq dbserver start
+          pytest -vsx /Users/runner/work/oq-engine/oq-engine/openquake/calculators
+          #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"

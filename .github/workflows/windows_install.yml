@@ -29,6 +29,15 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+    # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
