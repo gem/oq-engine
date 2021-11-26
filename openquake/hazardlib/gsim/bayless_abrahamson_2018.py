@@ -17,9 +17,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
 
 
-def _magnitude_scaling(self, C, ctx):
+def _magnitude_scaling(C, ctx):
     """ Compute the magnitude scaling term """
-    #import pdb; pdb.set_trace()
     t1 = C['c1']
     t2 = C['c2'] * (ctx.mag - 6.)
     tmp = np.log(1.0 + np.exp(C['cn']*(C['cM']-ctx.mag)))
@@ -27,9 +26,8 @@ def _magnitude_scaling(self, C, ctx):
     return t1 + t2 + t3
 
 
-def _path_scaling(self, C, ctx):
+def _path_scaling(C, ctx):
     """ Compute path scaling term """
-    #import pdb; pdb.set_trace()
     tmp = np.maximum(ctx.mag-C['chm'], 0.)
     t1 = C['c4'] * np.log(ctx.rrup + C['c5'] * np.cosh(C['c6'] * tmp))
     tmp = (ctx.rrup**2 + 50.**2)**0.5
@@ -38,51 +36,52 @@ def _path_scaling(self, C, ctx):
     return t1 + t2 + t3
 
 
-def _normal_fault_effect(self, C, ctx):
+def _normal_fault_effect(C, ctx):
     """ Compute the correction coefficient for the normal faulting """
+    
     fnm = 0
-    # Compute the normal faulting switch. Rake range as defined at page
-    # 2093 top of the right column.
-    if ctx.rake > -150 and ctx.rake < -30:
-        fnm = 1
+    idx = (ctx.rake > -150) & (ctx.rake < -30)
+    fnm = np.zeros_like(ctx.rake)
+    fnm[idx] = 1
+    
     return C['c10'] * fnm
 
 
-def _ztor_scaling(self, C, ctx):
+def _ztor_scaling(C, ctx):
     """ Compute top of rupture term """
     return C['c9'] * np.minimum(ctx.ztor, 20.)
 
 
-def _get_ln_ir_outcrop(self, ctx):
+def _get_ln_ir_outcrop(self,ctx):
     """
     Compute the natural logarithm of peak PGA at rock outcrop, Ir.
     See eq.10e page 2092.
     """
     # Set imt and cofficients. The value of frequency is consistent with
     # the one used in the matlab script - line 156
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     im = EAS(5.0118725)
     tc = self.COEFFS[im]
     # Get mean
-    mean = (_magnitude_scaling(self, tc, ctx) +
-            _path_scaling(self, tc, ctx) +
-            _ztor_scaling(self, tc, ctx) +
-            _normal_fault_effect(self, tc, ctx))
+    mean = (_magnitude_scaling(tc, ctx) +
+            _path_scaling( tc, ctx) +
+            _ztor_scaling(tc, ctx) +
+            _normal_fault_effect(tc, ctx))
     return 1.238 + 0.846 * mean
 
 
-def _linear_site_response(self, C, ctx):
+def _linear_site_response(C, ctx):
     """ Compute the site response term """
-    # import pdb; pdb.set_trace()
+    
     tmp = np.minimum(ctx.vs30, 1000.)
     fsl = C['c8'] * np.log(tmp / 1000.)
     return fsl
 
 
-def _soil_depth_scaling(self, C, ctx):
+def _soil_depth_scaling(C, ctx):
     """ Compute the soil depth scaling term """
     # Set the c11 coefficient - See eq.13b at page 2093
-    #import pdb; pdb.set_trace()
+    
     c11 = np.ones_like(ctx.vs30) * C['c11a']
     c11[(ctx.vs30 <= 300) & (ctx.vs30 > 200)] = C['c11b']
     c11[(ctx.vs30 <= 500) & (ctx.vs30 > 300)] = C['c11c']
@@ -172,8 +171,8 @@ def lowess(x=None, y=None, span=None, method=None, robust=None, iter=None):
 
 
 def smooth2(*args):
+
     # is x given as the first argument?
-#     #import pdb; pdb.set_trace()
     if len(args) == 1 or (len(args) > 1 and (len(args[2]) == 1 or isinstance(args[2], str))):
         # smooth(Y) | smooth(Y,span,...) | smooth(Y,method,...)
         is_x = 0
@@ -234,37 +233,43 @@ def smooth2(*args):
     return c
 
 
-def _get_stddevs(self, C, ctx):
+def _get_stddevs( C, ctx):
     """
     Compute the standard deviations
     """
     # Set components of std
-    #import pdb; pdb.set_trace()
-    if ctx.mag < 4:
-        tau = C['s1']
-        phi_s2s = C['s3']
-        phi_ss = C['s5']
-    elif ctx.mag > 6:
-        tau = C['s2']
-        phi_s2s = C['s4']
-        phi_ss = C['s6']
-    else:
-        tau = C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag-4)
-        phi_s2s = C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4)
-        phi_ss = C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4)
+    
+    tau = np.zeros_like(ctx.mag)
+    phi_s2s = np.zeros_like(ctx.mag)
+    phi_ss = np.zeros_like(ctx.mag)
+
+    tau[(ctx.mag < 4)] = C['s1']
+    phi_s2s[(ctx.mag < 4)] = C['s3']
+    phi_ss[(ctx.mag < 4)] = C['s5']
+
+    tau[(ctx.mag > 6)] = C['s2']
+    phi_s2s[(ctx.mag > 6)] = C['s4']
+    phi_ss[(ctx.mag > 6)] = C['s6']
+
+    tau[(ctx.mag >= 4) & (ctx.mag <= 6) ] = C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag-4)
+    phi_s2s[(ctx.mag >= 4) & (ctx.mag <= 6)] = C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4)
+    phi_ss[(ctx.mag >= 4) & (ctx.mag <= 6)] = C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4)
+
     # Collect the requested stds
     sigma = np.sqrt(tau**2+phi_s2s**2+phi_ss**2+C['c1a']**2)
     phi = np.sqrt(phi_s2s**2+phi_ss**2)
-    phi_ss = np.sqrt(tau**2+phi_ss**2+C['c1a']**2)
+    #phi_ss = np.sqrt(tau**2+phi_ss**2+C['c1a']**2)
     
-    return sigma, tau, phi, phi_ss
+    return sigma, tau, phi
+
+
 
 def _smoothing(fnl_mod0):
     fNL = smooth2(fnl_mod0, 20, 'lowess')
     return fNL
 
 
-def _get_nl_site_response(self, C, ctx,ln_ir_outcrop):
+def _get_nl_site_response(C, ctx,ln_ir_outcrop):
     # import pdb; pdb.set_trace()
     vsref = 760.0
     t1 = np.exp(C['f5'] * (np.minimum(ctx.vs30, vsref)-360.))
@@ -276,36 +281,37 @@ def _get_nl_site_response(self, C, ctx,ln_ir_outcrop):
     return fnl_mod0[0]
     
 
-def _get_dimunition_factor(ctx):
-    # import pdb; pdb.set_trace()
+def _get_dimunition_factor(ctx, imt):
+    #
     max_freq = 23.988321
     kappa = np.exp(-0.4*np.log(ctx.vs30/760)-3.5)
     D = np.exp(-np.pi * kappa * (imt[1] - max_freq))
     return D
 
 
-def _get_mean_linear(self, C, ctx):
-    #import pdb; pdb.set_trace()
-    mean = (_magnitude_scaling(self, C, ctx) +
-            _path_scaling(self, C, ctx) +
-            _linear_site_response(self, C, ctx) +
-            _ztor_scaling(self, C, ctx) +
-            _normal_fault_effect(self, C, ctx) +
-            _soil_depth_scaling(self, C, ctx))
+def _get_mean_linear(C, ctx):
+    
+    mean = (_magnitude_scaling(C, ctx) +
+            _path_scaling(C, ctx) +
+            _linear_site_response(C, ctx) +
+            _ztor_scaling( C, ctx) +
+            _normal_fault_effect(C, ctx) +
+            _soil_depth_scaling(C, ctx))
     return mean
 
 
-def _get_mean(self, C, ctx, imt):
-    #import pdb; pdb.set_trace()
+def _get_mean( self, C, ctx, imt):
+    
     # Get the necessary set of coefficients
-    C = self.COEFFS[imt]
-    mean = _get_mean_linear(self, C, ctx)
-
     if imt[1] >= 24.:
         max_imt = EAS(23.988321)
-        C = self.COEFFS[max_imt]
-        t1 = np.exp(_get_mean_linear(self, C, ctx))
-        mean = np.log(_get_dimunition_factor(ctx) * t1)
+        c = self.COEFFS[max_imt]
+        t1 = np.exp(_get_mean_linear( c, ctx))
+        mean = np.log(_get_dimunition_factor(ctx, imt) * t1)
+    else:
+        C = self.COEFFS[imt]
+        mean = _get_mean_linear( C, ctx)
+
 
     return mean
 
@@ -333,12 +339,12 @@ class BaylessAbrahamson2018(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation types
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT,
         const.StdDev.SINGLE_STATION
-    ])
+    }
 
     #: Required site parameters
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
@@ -349,18 +355,16 @@ class BaylessAbrahamson2018(GMPE):
     #: Required distance measures
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
-        ##import pdb; pdb.set_trace()
+    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+        
         for m, imt in enumerate(imts):
-            
-            C = self.COEFFS[imt]
-            ln_ir_outcrop = _get_ln_ir_outcrop(self, ctx)
-            lin_component = _get_mean(self, C, ctx, imt)
-            nl_component = _get_nl_site_response(self, C, ctx,ln_ir_outcrop)
-            mean = (lin_component + nl_component)[0]
-            sigma, tau, phi, phi_ss = _get_stddevs(self, C, ctx)
 
-            return mean, sigma, tau, phi, phi_ss
+            C = self.COEFFS[imt]
+            ln_ir_outcrop = _get_ln_ir_outcrop(self,ctx)
+            lin_component = _get_mean(self, C, ctx, imt)
+            nl_component = _get_nl_site_response(C, ctx,ln_ir_outcrop)
+            mean[m] = (lin_component + nl_component)[0]
+            sigma[m],tau[m],phi[m]  = _get_stddevs(C, ctx)
 
     COEFFS = CoeffsTable(table=""" 
 IMT	             c1	         c2	         c3	        cn	        cM	      c4	       c5	    c6	         chm	          c7	          c8	         c9	         c10	    c11a	   c11b	        c11c	   c11d	      c1a	             s1	         s2	       s3	        s4	         s5	        s6	    f3	        f4	      f5
