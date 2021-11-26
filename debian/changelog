@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * The option `--log-file` was ignored
   * When using `--hazard_calculation_id` the children site collection was
     ignored and the parameter `ground_motion_fields` was ignored too
   * Made sure `valid.gsim` instantiates all GSIMs correctly; for instance

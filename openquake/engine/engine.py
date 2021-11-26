@@ -298,7 +298,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
         if 'sensitivity_analysis' in dic:
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
-                new = logs.init('job', dic.copy(), log_level, None,
+                new = logs.init('job', dic.copy(), log_level, log_file,
                                 user_name, hc_id)
                 pars = dict(zip(analysis, values))
                 for param, value in pars.items():
@@ -308,7 +308,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                 jobs.append(new)
         else:
             jobs.append(
-                logs.init('job', dic, log_level, None, user_name, hc_id))
+                logs.init('job', dic, log_level, log_file, user_name, hc_id))
     if multi:
         for job in jobs:
             job.multi = True
