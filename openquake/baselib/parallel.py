@@ -939,6 +939,10 @@ def count(word):
     return collections.Counter(word)
 
 
+class List(list):
+    weight = 0
+
+
 def split_task(elements, func, args, duration, split_level, monitor):
     """
     :param func: a task function with a monitor as last argument
@@ -963,7 +967,9 @@ def split_task(elements, func, args, duration, split_level, monitor):
         if dt > duration:
             # spawn subtasks for the rest and exit
             for els in split_elems[i + 1:]:
-                yield (func, els) + args
+                ls = List(els)
+                ls.weight = sum(el.weight for el in els)
+                yield (func, ls) + args
             break
 
 #                             start/stop workers                             #
