@@ -678,6 +678,11 @@ def view_task_hazard(token, dstore):
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
                              srcids))
+    info = dstore.read_df('source_info', 'source_id')
+    rows = [info.loc[s] for s in dstore['by_task/srcids'][taskno].split()]
+    maxrow = max(rows, key=lambda row: row.calc_time)
+    res += '\nWorst source: %s, num_sites=%d, calc_time=%d' % (
+        maxrow.name, maxrow.num_sites, maxrow.calc_time)
     return res
 
 
