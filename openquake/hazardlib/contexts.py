@@ -468,6 +468,44 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
+    def _ruptures(self, src, filtermag=None):
+        return src.iter_ruptures(
+            shift_hypo=self.shift_hypo, mag=filtermag)
+
+    def _gen_rups(self, src, sites):
+        # yield ruptures, each one with a .sites attribute
+        def rups(rupiter, sites):
+            for rup in rupiter:
+                rup.sites = sites
+                yield rup
+        bigps = getattr(src, 'location', None) and src.count_nphc() > 1
+        if bigps and self.pointsource_distance == 0:
+            # finite size effects are averaged always
+            yield from rups(src.iruptures(), sites)
+        elif bigps and self.pointsource_distance:
+            # finite site effects are averaged for sites over the
+            # pointsource_distance from the rupture (if any)
+            cdist = sites.get_cdist(src.location)
+            for ar in src.iruptures():
+                pdist = self.pointsource_distance['%.2f' % ar.mag]
+                close = sites.filter(cdist <= pdist)
+                far = sites.filter(cdist > pdist)
+                if self.fewsites:
+                    if close is None:  # all is far, common for small mag
+                        yield from rups([ar], sites)
+                    else:  # something is close
+                        yield from rups(self._ruptures(src, ar.mag), sites)
+                else:  # many sites
+                    if close is None:  # all is far
+                        yield from rups([ar], far)
+                    elif far is None:  # all is close
+                        yield from rups(self._ruptures(src, ar.mag), close)
+                    else:  # some sites are far, some are close
+                        yield from rups([ar], far)
+                        yield from rups(self._ruptures(src, ar.mag), close)
+        else:  # just add the ruptures
+            yield from rups(self._ruptures(src), sites)
+
     def get_pmap(self, ctxs, probmap=None):
         """
         :param ctxs: a list of contexts
@@ -692,10 +730,6 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _ruptures(self, src, filtermag=None):
-        return src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag)
-
     def _get_ctxs(self, rups, sites, srcid):
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
@@ -714,38 +748,40 @@ class PmapMaker(object):
         # split the sources only if there is more than 1 site
         filt = (self.srcfilter.split_less if self.N == 1
                 else self.srcfilter.split)
+        cm = self.cmaker
         for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
-            ctxs = self._get_ctxs(self._gen_rups(src, sites), sites, src.id)
+            ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
             numctxs = len(ctxs)
             numsites = sum(len(ctx.sids) for ctx in ctxs)
-            self.cmaker.get_pmap(ctxs, pmap)
+            cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
             self.calc_times[basename(src)] += numpy.array(
                 [numctxs, numsites, dt])
-            timer.save(src, numctxs, numsites, dt, self.cmaker.task_no)
-        return ~pmap if self.cmaker.rup_indep else pmap
+            timer.save(src, numctxs, numsites, dt, cm.task_no)
+        return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
+        cm = self.cmaker
         for src, sites in self.srcfilter.filter(self.group):
             t0 = time.time()
-            pm = ProbabilityMap(self.cmaker.imtls.size, len(self.cmaker.gsims))
+            pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
             ctxs = self._get_ctxs(self._ruptures(src), sites, src.id)
             numctxs = len(ctxs)
             numsites = sum(len(ctx.sids) for ctx in ctxs)
-            self.cmaker.get_pmap(ctxs, pm)
+            cm.get_pmap(ctxs, pm)
             p = pm
-            if self.cmaker.rup_indep:
+            if cm.rup_indep:
                 p = ~p
             p *= src.mutex_weight
             pmap += p
             dt = time.time() - t0
             self.calc_times[basename(src)] += numpy.array(
                 [numctxs, numsites, dt])
-            timer.save(src, numctxs, numsites, dt, self.cmaker.task_no)
+            timer.save(src, numctxs, numsites, dt, cm.task_no)
         return pmap
 
     def dictarray(self, ctxs):
@@ -772,40 +808,6 @@ class PmapMaker(object):
         if self.disagg_by_src:
             dic['source_id'] = self.group[0].source_id
         return dic
-
-    def _gen_rups(self, src, sites):
-        # yield ruptures, each one with a .sites attribute
-        def rups(rupiter, sites):
-            for rup in rupiter:
-                rup.sites = sites
-                yield rup
-        bigps = getattr(src, 'location', None) and src.count_nphc() > 1
-        if bigps and self.pointsource_distance == 0:
-            # finite size effects are averaged always
-            yield from rups(src.iruptures(), sites)
-        elif bigps and self.pointsource_distance:
-            # finite site effects are averaged for sites over the
-            # pointsource_distance from the rupture (if any)
-            cdist = sites.get_cdist(src.location)
-            for ar in src.iruptures():
-                pdist = self.pointsource_distance['%.2f' % ar.mag]
-                close = sites.filter(cdist <= pdist)
-                far = sites.filter(cdist > pdist)
-                if self.fewsites:
-                    if close is None:  # all is far, common for small mag
-                        yield from rups([ar], sites)
-                    else:  # something is close
-                        yield from rups(self._ruptures(src, ar.mag), sites)
-                else:  # many sites
-                    if close is None:  # all is far
-                        yield from rups([ar], far)
-                    elif far is None:  # all is close
-                        yield from rups(self._ruptures(src, ar.mag), close)
-                    else:  # some sites are far, some are close
-                        yield from rups([ar], far)
-                        yield from rups(self._ruptures(src, ar.mag), close)
-        else:  # just add the ruptures
-            yield from rups(self._ruptures(src), sites)
 
 
 class BaseContext(metaclass=abc.ABCMeta):
