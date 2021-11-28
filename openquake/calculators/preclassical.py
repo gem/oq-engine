@@ -181,7 +181,7 @@ def preclassical(srcs, srcfilter, cmaker, monitor):
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        srcfilter.set_weight(dic[grp_id])
+        srcfilter.set_weight(dic[grp_id], cmaker)
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:
