@@ -77,13 +77,13 @@ def run_preclassical(calc):
     if oqparam.ps_grid_spacing:
         # produce a preclassical task for each group
         allargs = ((srcs, srcfilter, cmakers[grp_id])
-                   for (grp_id, name), srcs in sources_by_grp.items())
+                   for (grp_id, msr), srcs in sources_by_grp.items())
     else:
         # produce many preclassical task
         maxw = sum(len(srcs) for srcs in sources_by_grp.values()) / (
             oqparam.concurrent_tasks or 1)
         allargs = ((blk, srcfilter, cmakers[grp_id])
-                   for (grp_id, name), srcs in sources_by_grp.items()
+                   for (grp_id, msr), srcs in sources_by_grp.items()
                    for blk in block_splitter(srcs, maxw))
     if atomic_sources:  # case_35
         n = len(atomic_sources)
