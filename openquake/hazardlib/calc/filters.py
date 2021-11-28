@@ -438,7 +438,7 @@ class SourceFilter(object):
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
 
-    def set_weight(self, sources, psdist={}):
+    def set_weight(self, sources):
         """
         Set the weight attribute on each source to the sum of the affected
         sites
@@ -450,25 +450,24 @@ class SourceFilter(object):
             if 'UCERF' in src.__class__.__name__:
                 src.weight += src.num_ruptures * len(sites)
                 continue
-            src.nsites = sum(self.get_nsites(src, psdist))
+            if hasattr(src, 'iruptures'):  # fast lane
+                irups = src.iruptures(point_rup=True)
+            else:
+                irups = src.iter_ruptures()
+            src.nsites = sum(self.get_nsites(irups))
             src.weight += src.nsites
         for src in sources:
-            if not hasattr(src, 'location'):
-                # make non point sources heavier
+            if hasattr(src, 'pointsources'):
+                # make CollapsedPointSource heavier
+                src.weight *= 3
+            elif not hasattr(src, 'location'):
+                # make non point sources even heavier
                 src.weight *= 10
 
-    def get_nsites(self, src, psdist):
+    def get_nsites(self, rups):
         """
-        :param src: a source object
-        :psdist: a dictionary magnitude string -> point source distance
         :returns: the number of sites affected by the ruptures
         """
-        fast = hasattr(src, 'iruptures')
-        if fast:  # fast source
-            rups = list(src.iruptures(point_rup=True))
-            factor = src.num_ruptures / len(rups)
-        else:
-            rups = list(src.iter_ruptures())
         nsites = []
         for rup in rups:
             dists = get_distances(rup, self.sitecol, 'rrup')
@@ -476,12 +475,7 @@ class SourceFilter(object):
                 rup.tectonic_region_type, rup.mag)
             if not rup.surface:  # PointRupture
                 idist += rup.mag * 10
-            close = dists <= idist
-            if fast and psdist:
-                veryclose = dists <= psdist[magstr(rup.mag)]
-                nsites.append(close.sum() + veryclose.sum() * factor)
-            else:
-                nsites.append(close.sum())
+            nsites.append((dists <= idist).sum())
         return nsites
 
     def __getitem__(self, slc):
