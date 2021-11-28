@@ -454,8 +454,14 @@ class SourceFilter(object):
             if 'UCERF' in src.__class__.__name__ or not cmaker:
                 src.weight += src.num_ruptures * len(sites)
                 continue
-            ctxs = cmaker.get_ctxs(src, sites)
-            src.nsites = sum(len(ctx) for ctx in ctxs)
+            if hasattr(src, 'iruptures'):
+                rups = list(src.iruptures(point_rup=True))
+                factor = src.num_ruptures / len(rups)
+            else:
+                rups = src.iter_ruptures()
+                factor = 1
+            ctxs = cmaker.get_ctxs(rups, sites)
+            src.nsites = sum(len(ctx) for ctx in ctxs) * factor
             src.weight += src.nsites
 
     def __getitem__(self, slc):
