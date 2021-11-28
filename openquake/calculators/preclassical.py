@@ -177,11 +177,7 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        if len(srcfilter.sitecol) > oqparam.max_sites_disagg:
-            srcfilter.set_weight(dic[grp_id])
-        else:  # if there are few sites use a trivial weight
-            for src in dic[grp_id]:
-                src.weight = src.num_ruptures = src.count_ruptures()
+        srcfilter.set_weight(dic[grp_id])
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:

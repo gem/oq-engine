@@ -330,7 +330,7 @@ def make_figure_task_info(extractors, what):
     ax = fig.add_subplot(2, 1, 1)
     mean, std = x.mean(), x.std(ddof=1)
     ax.hist(x, bins=50, rwidth=0.9)
-    ax.set_xlabel("mean=%d+-%d seconds" % (mean, std))
+    ax.set_title("mean=%d+-%d seconds" % (mean, std))
     ax.set_ylabel("tasks=%d" % len(x))
 
     from scipy.stats import linregress
