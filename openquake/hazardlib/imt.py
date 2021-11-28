@@ -24,6 +24,8 @@ import re
 import collections
 import numpy
 
+EAS_PERIOD_PATTERN = '^EAS\\((\\d+\\.*\\d*)\\)'
+
 
 def positivefloat(val):
     """
@@ -64,7 +66,11 @@ def from_string(imt, _damping=5.0):
     :param str imt:
         Intensity Measure Type.
     """
-    if re.match(r'[ \+\d\.]+', imt):
+    m = re.match(EAS_PERIOD_PATTERN, imt)
+    if m:
+        im = EAS(float(m.group(1)))
+        return(im)
+    elif re.match(r'[ \+\d\.]+', imt):
         return SA(float(imt))
     return IMT(*imt2tup(imt))
 
@@ -82,6 +88,7 @@ IMT.__gt__ = lambda self, other: self[1] > other[1]
 IMT.__le__ = lambda self, other: self[1] <= other[1]
 IMT.__ge__ = lambda self, other: self[1] >= other[1]
 IMT.__repr__ = repr
+IMT.frequency = property(lambda self: 1. / self.period)
 
 
 def PGA():
@@ -104,6 +111,7 @@ def PGD():
     Peak ground displacement during an earthquake measured in units of ``cm``.
     """
     return IMT('PGD')
+
 
 def EAS(frequency):
     """
