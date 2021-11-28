@@ -19,11 +19,11 @@
 import os
 import logging
 import numpy
-from openquake.baselib import general, parallel
+from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, groupby, get_nbytes_msg)
-from openquake.hazardlib.contexts import basename
+from openquake.hazardlib.contexts import basename, read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -55,6 +55,10 @@ def run_preclassical(calc):
     :param h5: a DataStore instance
     """
     csm = calc.csm
+    calc.datastore['trt_smrs'] = csm.get_trt_smrs()
+    calc.datastore['toms'] = numpy.array(
+        [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
+    cmakers = read_cmakers(calc.datastore, csm.full_lt)
     oqparam = calc.oqparam
     h5 = calc.datastore.hdf5
     srcfilter = SourceFilter(
@@ -72,14 +76,14 @@ def run_preclassical(calc):
         logging.info('Sending %s', srcfilter.sitecol)
     if oqparam.ps_grid_spacing:
         # produce a preclassical task for each group
-        allargs = ((srcs, srcfilter, oqparam)
-                   for srcs in sources_by_grp.values())
+        allargs = ((srcs, srcfilter, cmakers[grp_id])
+                   for (grp_id, name), srcs in sources_by_grp.items())
     else:
         # produce many preclassical task
         maxw = sum(len(srcs) for srcs in sources_by_grp.values()) / (
             oqparam.concurrent_tasks or 1)
-        allargs = ((blk, srcfilter, oqparam)
-                   for srcs in sources_by_grp.values()
+        allargs = ((blk, srcfilter, cmakers[grp_id])
+                   for (grp_id, name), srcs in sources_by_grp.items()
                    for blk in block_splitter(srcs, maxw))
     if atomic_sources:  # case_35
         n = len(atomic_sources)
@@ -141,7 +145,7 @@ def run_preclassical(calc):
     return res
 
 
-def preclassical(srcs, srcfilter, oqparam, monitor):
+def preclassical(srcs, srcfilter, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
@@ -149,7 +153,7 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
     NB: srcfilter can be on a reduced site collection for performance reasons
     """
     split_sources = []
-    spacing = oqparam.ps_grid_spacing
+    spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if srcfilter.sitecol is None:
         # in csm2rup just split the sources and count the ruptures
@@ -173,7 +177,7 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (
-                oqparam.split_sources and nsites) else [src]
+                cmaker.split_sources and nsites) else [src]
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):

@@ -46,17 +46,6 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def get_tom_name(sg):
-    """
-    :param sg: a source group instance
-    :returns: name of the associated temporal occurrence model
-    """
-    if sg.temporal_occurrence_model:
-        return sg.temporal_occurrence_model.__class__.__name__
-    else:
-        return 'PoissonTOM'
-
-
 def create_source_info(csm, calc_times, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
@@ -82,9 +71,6 @@ def create_source_info(csm, calc_times, h5):
     h5['source_info'].attrs['atomic'] = any(
         grp.atomic for grp in csm.src_groups)
     h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-    h5['trt_smrs'] = csm.get_trt_smrs()
-    h5['toms'] = numpy.array(
-        [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
 
 
 def trt_smrs(src):

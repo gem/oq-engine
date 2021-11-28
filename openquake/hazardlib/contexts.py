@@ -179,6 +179,8 @@ class ContextMaker(object):
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.cross_correl = param.get('cross_correl')
+        self.ps_grid_spacing = param.get('ps_grid_spacing')
+        self.split_sources = param.get('split_sources')
         self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
         self.use_recarray = use_recarray(gsims)
@@ -1236,6 +1238,8 @@ def read_cmakers(dstore, full_lt=None):
              'maximum_distance': oq.maximum_distance,
              'pointsource_distance': oq.pointsource_distance,
              'minimum_distance': oq.minimum_distance,
+             'ps_grid_spacing': oq.ps_grid_spacing,
+             'split_sources': oq.split_sources,
              'ses_seed': oq.ses_seed,
              'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
              'max_sites_disagg': oq.max_sites_disagg,
