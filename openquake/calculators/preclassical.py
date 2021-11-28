@@ -165,7 +165,6 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
         dic['after'] = len(dic[grp_id])
         return dic
 
-    psdist = oqparam.pointsource_distance.ddic[srcs[0].tectonic_region_type]
     with monitor('splitting sources'):
         # this can be slow
         for src in srcs:
@@ -178,7 +177,7 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        srcfilter.set_weight(dic[grp_id], psdist)
+        srcfilter.set_weight(dic[grp_id])
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:
