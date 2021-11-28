@@ -968,7 +968,7 @@ def split_task(elements, func, args, duration, split_level, monitor):
             # spawn subtasks for the rest and exit
             for els in split_elems[i + 1:]:
                 ls = List(els)
-                ls.weight = sum(el.weight for el in els)
+                ls.weight = sum(getattr(el, 'weight', 1.) for el in els)
                 yield (func, ls) + args
             break
 
