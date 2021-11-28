@@ -198,7 +198,11 @@ class MagDepDistance(dict):
         elif mag is None:
             return getdefault(self, trt)[-1][1]
         elif hasattr(self, 'ddic'):
-            return self.ddic[trt][magstr(mag)]
+            if len(self.ddic) == 1:
+                [dic] = self.ddic.values()
+            else:
+                dic = self.ddic[trt]
+            return dic[magstr(mag)]
         else:
             xs, ys = zip(*getdefault(self, trt))
             return numpy.interp(mag, xs, ys)
