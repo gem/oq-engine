@@ -548,7 +548,7 @@ class ContextMaker(object):
         """
         if not hasattr(self, 'imts'):
             self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
-        N = sum(len(ctx.sids) for ctx in ctxs)
+        N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
@@ -732,7 +732,7 @@ class PmapMaker(object):
         dparams = len(self.cmaker.REQUIRES_DISTANCES)
         nbytes = 0
         for ctx in ctxs:
-            nsites = len(ctx.sids)
+            nsites = len(ctx)
             nbytes += 8 * rparams
             nbytes += 8 * sparams * nsites
             nbytes += 8 * dparams * nsites
@@ -763,7 +763,7 @@ class PmapMaker(object):
                 sites = sites.complete
             ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
             nctxs = len(ctxs)
-            nsites = sum(len(ctx.sids) for ctx in ctxs)
+            nsites = sum(len(ctx) for ctx in ctxs)
             cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
             self.calc_times[basename(src)] += numpy.array([nctxs, nsites, dt])
@@ -778,7 +778,7 @@ class PmapMaker(object):
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
             ctxs = self._get_ctxs(cm._ruptures(src), sites, src.id)
             nctxs = len(ctxs)
-            nsites = sum(len(ctx.sids) for ctx in ctxs)
+            nsites = sum(len(ctx) for ctx in ctxs)
             cm.get_pmap(ctxs, pm)
             p = pm
             if cm.rup_indep:
