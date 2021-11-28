@@ -537,8 +537,6 @@ class ContextMaker(object):
                     im = 'EAS({:.6f})'.format(1./float(m.group(1)))
                 tmp.append(imt_module.from_string(im))
             self.imts = tuple(tmp)
-            # This is what we had
-            #self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)

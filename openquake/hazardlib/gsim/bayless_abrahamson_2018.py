@@ -152,7 +152,6 @@ def _get_mean_linear(C, ctx):
 
 
 def _get_mean(self, C, ctx, imt):
-    print('>>', imt, imt.period)
     if imt.frequency >= 24.:
         im = EAS(23.988321)
         C = self.COEFFS[im]
