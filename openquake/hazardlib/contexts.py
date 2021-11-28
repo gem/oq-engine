@@ -375,7 +375,7 @@ class ContextMaker(object):
             fat RuptureContexts
         """
         if hasattr(src_or_ruptures, 'source_id'):
-            irups = self._gen_rups(src_or_ruptures)
+            irups = self._gen_rups(src_or_ruptures, sitecol)
         else:
             irups = src_or_ruptures
         ctxs = []
