@@ -1262,7 +1262,7 @@ def read_cmaker(dstore, trt_smr):
     full_lt = dstore['full_lt']
     trts = list(full_lt.gsim_lt.values)
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
-    rlzs_by_gsim = full_lt.get_rlzs_by_gsim()[trt_smr]
+    rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
     mags = dstore['source_mags']
     md = MagDepDistance.new(str(oq.maximum_distance))
     md.interp({trt: mags[trt][:] for trt in mags})
