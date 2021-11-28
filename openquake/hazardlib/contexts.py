@@ -703,8 +703,6 @@ class PmapMaker(object):
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
             out = []
             for ctx in ctxs:
-                self.numsites += len(ctx.sids)
-                self.numctxs += 1
                 if self.fewsites:  # keep the contexts in memory
                     self.rupdata.append(ctx)
                 out.append(ctx)
@@ -720,26 +718,25 @@ class PmapMaker(object):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
-            self.numctxs = 0
-            self.numsites = 0
-            rups = self._gen_rups(src, sites)
-            self.cmaker.get_pmap(self._get_ctxs(rups, sites, src.id), pmap)
+            ctxs = self._get_ctxs(self._gen_rups(src, sites), sites, src.id)
+            numctxs = len(ctxs)
+            numsites = sum(len(ctx.sids) for ctx in ctxs)
+            self.cmaker.get_pmap(ctxs, pmap)
             dt = time.time() - t0
             self.calc_times[basename(src)] += numpy.array(
-                [self.numctxs, self.numsites, dt])
-            timer.save(src, self.numctxs, self.numsites, dt,
-                       self.cmaker.task_no)
+                [numctxs, numsites, dt])
+            timer.save(src, numctxs, numsites, dt, self.cmaker.task_no)
         return ~pmap if self.cmaker.rup_indep else pmap
 
     def _make_src_mutex(self):
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         for src, sites in self.srcfilter.filter(self.group):
             t0 = time.time()
-            self.numctxs = 0
-            self.numsites = 0
-            rups = self._ruptures(src)
             pm = ProbabilityMap(self.cmaker.imtls.size, len(self.cmaker.gsims))
-            self.cmaker.get_pmap(self._get_ctxs(rups, sites, src.id), pm)
+            ctxs = self._get_ctxs(self._ruptures(src), sites, src.id)
+            numctxs = len(ctxs)
+            numsites = sum(len(ctx.sids) for ctx in ctxs)
+            self.cmaker.get_pmap(ctxs, pm)
             p = pm
             if self.cmaker.rup_indep:
                 p = ~p
@@ -747,9 +744,8 @@ class PmapMaker(object):
             pmap += p
             dt = time.time() - t0
             self.calc_times[basename(src)] += numpy.array(
-                [self.numctxs, self.numsites, dt])
-            timer.save(src, self.numctxs, self.numsites, dt,
-                       self.cmaker.task_no)
+                [numctxs, numsites, dt])
+            timer.save(src, numctxs, numsites, dt, self.cmaker.task_no)
         return pmap
 
     def dictarray(self, ctxs):
