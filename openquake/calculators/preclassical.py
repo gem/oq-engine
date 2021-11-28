@@ -88,7 +88,6 @@ def run_preclassical(calc):
                 atomic_sources, lambda src: src.grp_id).items():
             atomic[grp_id] = srcs
     else:
-        grp_id = normal_sources[0].grp_id
         atomic = AccumDict()
     normal = parallel.Starmap(
         preclassical, allargs,  h5=h5,
@@ -266,16 +265,6 @@ class PreClassicalCalculator(base.HazardCalculator):
                     if len(set(dists)) > 1:
                         md = '%s->%d ... %s->%d' % (it[0] + it[-1])
                         logging.info('ps_dist %s: %s', trt, md)
-        self.params = dict(
-            truncation_level=oq.truncation_level,
-            investigation_time=oq.investigation_time,
-            imtls=oq.imtls, reqv=oq.get_reqv(),
-            pointsource_distance=oq.pointsource_distance,
-            shift_hypo=oq.shift_hypo,
-            min_weight=oq.min_weight,
-            collapse_level=int(oq.collapse_level),
-            max_sites_disagg=oq.max_sites_disagg,
-            split_sources=oq.split_sources, af=self.af)
         return psd
 
     def post_execute(self, csm):
