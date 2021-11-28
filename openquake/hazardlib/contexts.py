@@ -473,6 +473,8 @@ class ContextMaker(object):
             shift_hypo=self.shift_hypo, mag=filtermag)
 
     def _gen_rups(self, src, sites):
+        fewsites = len(sites) <= self.max_sites_disagg
+
         # yield ruptures, each one with a .sites attribute
         def rups(rupiter, sites):
             for rup in rupiter:
@@ -490,7 +492,7 @@ class ContextMaker(object):
                 pdist = self.pointsource_distance['%.2f' % ar.mag]
                 close = sites.filter(cdist <= pdist)
                 far = sites.filter(cdist > pdist)
-                if self.fewsites:
+                if fewsites:
                     if close is None:  # all is far, common for small mag
                         yield from rups([ar], sites)
                     else:  # something is close
@@ -754,13 +756,12 @@ class PmapMaker(object):
             if self.fewsites:
                 sites = sites.complete
             ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
-            numctxs = len(ctxs)
-            numsites = sum(len(ctx.sids) for ctx in ctxs)
+            nctxs = len(ctxs)
+            nsites = sum(len(ctx.sids) for ctx in ctxs)
             cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
-            self.calc_times[basename(src)] += numpy.array(
-                [numctxs, numsites, dt])
-            timer.save(src, numctxs, numsites, dt, cm.task_no)
+            self.calc_times[basename(src)] += numpy.array([nctxs, nsites, dt])
+            timer.save(src, nctxs, nsites, dt, cm.task_no)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
@@ -769,9 +770,9 @@ class PmapMaker(object):
         for src, sites in self.srcfilter.filter(self.group):
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
-            ctxs = self._get_ctxs(self._ruptures(src), sites, src.id)
-            numctxs = len(ctxs)
-            numsites = sum(len(ctx.sids) for ctx in ctxs)
+            ctxs = self._get_ctxs(cm._ruptures(src), sites, src.id)
+            nctxs = len(ctxs)
+            nsites = sum(len(ctx.sids) for ctx in ctxs)
             cm.get_pmap(ctxs, pm)
             p = pm
             if cm.rup_indep:
@@ -779,9 +780,8 @@ class PmapMaker(object):
             p *= src.mutex_weight
             pmap += p
             dt = time.time() - t0
-            self.calc_times[basename(src)] += numpy.array(
-                [numctxs, numsites, dt])
-            timer.save(src, numctxs, numsites, dt, cm.task_no)
+            self.calc_times[basename(src)] += numpy.array([nctxs, nsites, dt])
+            timer.save(src, nctxs, nsites, dt, cm.task_no)
         return pmap
 
     def dictarray(self, ctxs):
