@@ -960,7 +960,6 @@ class SourceConverter(RuptureConverter):
             xstep = self.floating_x_step
             ystep = self.floating_y_step
 
-        print('steps: {},{}'.format(xstep, ystep))
         with context(self.fname, node):
             if as_kite:
                 outsrc = source.KiteFaultSource(
