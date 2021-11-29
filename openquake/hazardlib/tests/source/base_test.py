@@ -93,3 +93,26 @@ class GenerateOneRuptureTestCase(unittest.TestCase):
         src = groups[0].sources[0]
         rup = src.get_one_rupture(ses_seed=0)
         self.assertEqual(rup.mag, 5.2)
+
+
+class RecomputeMmaxTestCase(unittest.TestCase):
+
+    def test_mmax_simple_fault_src(self):
+        # We test the method used to recompute the maximum magnitude after
+        # a change in the geometry of the surface of the fault
+
+        d = os.path.dirname(os.path.abspath(__file__))
+        fname = 'simple_fault_source_recompute_mmax.xml'
+        source_model = os.path.join(d, 'data', fname)
+        groups = nrml.to_python(source_model, SourceConverter(
+            investigation_time=1., rupture_mesh_spacing=2.,
+            width_of_mfd_bin=0.1))
+        src = groups[0][0]
+        msr = src.magnitude_scaling_relationship
+        area = src.get_fault_surface_area()
+        print(msr, area, src.mfd.max_mag, src.lower_seismogenic_depth)
+
+        src.lower_seismogenic_depth = 20.0
+        src.modify_recompute_mmax()
+        area = src.get_fault_surface_area()
+        print(msr, area, src.mfd.max_mag, src.lower_seismogenic_depth)
