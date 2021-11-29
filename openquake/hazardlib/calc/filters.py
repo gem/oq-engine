@@ -385,9 +385,8 @@ class SourceFilter(object):
            the site indices within the maximum_distance of the hypocenter,
            plus the maximum size of the bounding box
         """
-        if self.sitecol is None:
-            return []
-        elif not self.integration_distance:  # do not filter
+        assert self.sitecol is not None
+        if not self.integration_distance:  # do not filter
             return self.sitecol.sids
         if trt:  # rupture proxy
             assert hasattr(self.integration_distance, 'x')
