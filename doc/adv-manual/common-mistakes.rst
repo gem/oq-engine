@@ -84,18 +84,12 @@ the engine will ignore all sites over the maximum distance ``md(trt, mag)``.
 The precise value is given via linear interpolation of the values listed
 in the job.ini; you can determine the distance as follows:
 
->>> from openquake.hazardlib.calc.filters import MagDepDistance 
->>> md = MagDepDistance.new('[(5, 0), (6, 100), (7, 200), (8, 300)]')
->>> md('TRT', 4.5)
-0.0
->>> md('TRT', 5.5)
-50.0
->>> md('TRT', 6.5)
-150.0
->>> md('TRT', 7.5)
-250.0
->>> md('TRT', 8.5)
-300.0
+>>> from openquake.hazardlib.calc.filters import IntegrationDistance 
+>>> idist = IntegrationDistance.new('[(4, 0), (6, 100), (7, 200), (8.5, 300)]')
+>>> interp = idist('TRT')
+>>> interp([4.5, 5.5, 6.5, 7.5, 8])
+array([ 25.        ,  75.        , 150.        , 233.33333333,
+       266.66666667])
 
 pointsource_distance
 ----------------------------

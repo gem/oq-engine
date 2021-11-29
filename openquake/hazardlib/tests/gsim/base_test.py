@@ -156,7 +156,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
 
         self.rupture_hypocenter = Point(2, 3, 40)
         self.rupture = BaseRupture(
-            mag=123.45, rake=123.56,
+            mag=4.5, rake=123.56,
             tectonic_region_type=const.TRT.VOLCANIC,
             hypocenter=self.rupture_hypocenter, surface=FakeSurface())
         self.gsim_class.DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
@@ -184,7 +184,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'vs30 vs30measured z1pt0 z2pt5 lon lat'.split())
         sites = SiteCollection([self.site1, self.site2])
         ctx = self.get_ctx(self.rupture, sites)
-        self.assertEqual(ctx.mag, 123.45)
+        self.assertEqual(ctx.mag, 4.5)
         self.assertEqual(ctx.rake, 123.56)
         self.assertEqual(ctx.strike, 60.123)
         self.assertEqual(ctx.dip, 45.4545)
@@ -223,7 +223,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         ctx = self.get_ctx(self.rupture, sites)
         self.assertEqual(
             (ctx.mag, ctx.rake, ctx.strike, ctx.hypo_lon),
-            (123.45, 123.56, 60.123, 2))
+            (4.5, 123.56, 60.123, 2))
         aac(ctx.vs30, (456, 1456))
         aac(ctx.z1pt0, (12.1, 112.1))
         aac(ctx.lon, [1, -2])
