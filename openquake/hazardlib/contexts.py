@@ -129,7 +129,7 @@ def csdict(M, N, P, start, stop):
     return ddic
 
 
-def mddist(param, name):
+def get_interp(param, name):
     try:
         mdd = param[name]
     except KeyError:
@@ -175,8 +175,8 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
-        self.maximum_distance = mddist(param, 'maximum_distance')
-        self.pointsource_distance = mddist(param, 'pointsource_distance')
+        self.maximum_distance = get_interp(param, 'maximum_distance')
+        self.pointsource_distance = get_interp(param, 'pointsource_distance')
         # sanity check
         # assert isinstance(self.maximum_distance, IntegrationDistance)
         self.minimum_distance = param.get('minimum_distance', 0)

@@ -152,7 +152,7 @@ def magdepdist(pairs):
     :returns: a scipy.interpolate.interp1d function
     """
     mags, dists = zip(*pairs)
-    return interp1d(mags, dists, fill_value="extrapolate")
+    return interp1d(mags, dists)
 
 
 class IntegrationDistance(dict):

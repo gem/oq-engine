@@ -38,6 +38,12 @@ class IntegrationDistanceTestCase(unittest.TestCase):
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
         aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
 
+    def test_maximum_magnitude(self):
+        maxdist = IntegrationDistance.new(
+            '[(4, 200), (7, 200), (7.01, 0), (8, 0)]')
+        interp = maxdist('default')
+        aae(interp([5, 6, 7, 7.2, 8]), [200., 200., 200.,   0.,   0.])
+
 
 class SourceFilterTestCase(unittest.TestCase):
 
