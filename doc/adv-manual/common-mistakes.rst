@@ -85,10 +85,11 @@ The precise value is given via linear interpolation of the values listed
 in the job.ini; you can determine the distance as follows:
 
 >>> from openquake.hazardlib.calc.filters import IntegrationDistance 
->>> idist = IntegrationDistance.new('[(5, 0), (6, 100), (7, 200), (8, 300)]')
+>>> idist = IntegrationDistance.new('[(4, 0), (6, 100), (7, 200), (8.5, 300)]')
 >>> interp = idist('TRT')
->>> interp([4.5, 5.5, 6.5, 7.5, 8.5])
-array([-50.,  50., 150., 250., 350.])
+>>> interp([4.5, 5.5, 6.5, 7.5, 8])
+array([ 25.        ,  75.        , 150.        , 233.33333333,
+       266.66666667])
 
 pointsource_distance
 ----------------------------
