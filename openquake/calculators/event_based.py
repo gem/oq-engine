@@ -29,7 +29,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib.calc.filters import nofilter, getdefault
+from openquake.hazardlib.calc.filters import nofilter, getdefault, SourceFilter
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
@@ -86,7 +86,6 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    srcfilter = monitor.read('srcfilter')
     alldata = AccumDict(accum=[])
     sig_eps = []
     times = []  # rup_id, nsites, dt
@@ -95,12 +94,15 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
+        trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+        srcfilter = SourceFilter(
+            dstore['sitecol'], oqparam.maximum_distance(trt))
         rupgeoms = dstore['rupgeoms']
         rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-        trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
         param = vars(oqparam).copy()
         param['imtls'] = oqparam.imtls
         param['min_iml'] = oqparam.min_iml
+        param['maximum_distance'] = oqparam.maximum_distance(trt)
         cmaker = ContextMaker(trt, rlzs_by_gsim, param)
         min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
@@ -207,8 +209,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        params = dict(maximum_distance=oq.maximum_distance,
-                      imtls=oq.imtls,
+        params = dict(imtls=oq.imtls,
                       ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                       ses_seed=oq.ses_seed)
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
@@ -242,6 +243,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if not sg.sources:
                 continue
             logging.info('Sending %s', sg)
+            params['maximum_distance'] = oq.maximum_distance(sg.trt)
             cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], params)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
@@ -335,10 +337,11 @@ class EventBasedCalculator(base.HazardCalculator):
                     'branchset, found %d!' % (oq.inputs['job_ini'], bsets))
             [(trt, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_trt().items()
             self.cmaker = ContextMaker(
-                trt, rlzs_by_gsim, {'maximum_distance': oq.maximum_distance,
-                                    'minimum_distance': oq.minimum_distance,
-                                    'truncation_level': oq.truncation_level,
-                                    'imtls': oq.imtls})
+                trt, rlzs_by_gsim,
+                {'maximum_distance': oq.maximum_distance(trt),
+                 'minimum_distance': oq.minimum_distance,
+                 'truncation_level': oq.truncation_level,
+                 'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
@@ -347,7 +350,8 @@ class EventBasedCalculator(base.HazardCalculator):
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 'NA', 0, G * ngmfs, rup.rup_id,
                                   scenario=True)]
-            aw = get_rup_array(ebrs, self.srcfilter)
+            srcfilter = SourceFilter(self.sitecol, oq.maximum_distance(trt))
+            aw = get_rup_array(ebrs, srcfilter)
             if len(aw) == 0:
                 raise RuntimeError(
                     'The rupture is too far from the sites! Please check the '
@@ -368,7 +372,7 @@ class EventBasedCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'There are no sites within the maximum_distance'
                 ' of %s km from the rupture' % oq.maximum_distance(
-                    rup.tectonic_region_type, rup.mag))
+                    rup.tectonic_region_type)(rup.mag))
 
         fake = logictree.FullLogicTree.fake(gsim_lt)
         self.realizations = fake.get_realizations()
@@ -432,7 +436,6 @@ class EventBasedCalculator(base.HazardCalculator):
             concurrent_tasks=oq.concurrent_tasks or 1,
             duration=oq.time_per_task,
             split_level=oq.split_level)
-        smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
             return acc
