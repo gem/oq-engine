@@ -149,26 +149,29 @@ class KiteFaultSource(ParametricSeismicSource):
             rup_len = int(np.round(lng/self.rupture_mesh_spacing)) + 1
             rup_wid = int(np.round(wdt/self.profiles_sampling)) + 1
 
-            fstrike = int(rup_len*self.floating_x_step)
-            fdip = int(rup_wid*self.floating_y_step)
+            if self.floating_x_step == 0:
+                fstrike = 1 
+            else:
+                fstrike = int(rup_len*self.floating_x_step)
+                if fstrike == 0:
+                    fstrike = 1
+                    msg = 'floating_x_step {} too '.format(self.floating_x_step)
+                    msg += 'small for rupture mesh spacing '
+                    msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
+                    msg += ' {}. Using traditional rupture floating.'.format(mag)
+                    logging.warning(msg)
 
-            if fstrike == 0:
-                msg = 'floating_x_step {} too '.format(self.floating_x_step)
-                msg += 'small for rupture mesh spacing '
-                msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
-                msg += ' {}. Using traditional rupture floating.'.format(mag)
-                fstrike = 1
+            if self.floating_x_step == 0:
                 fdip = 1
-                logging.warning(msg)
-
-            if fdip == 0:
-                msg = 'floating_y_step {} too '.format(self.floating_y_step)
-                msg += 'small for rupture mesh spacing '
-                msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
-                msg += ' {}. Using traditional rupture floating.'.format(mag)
-                fstrike = 1
-                fdip = 1
-                logging.warning(msg)
+            else:
+                fdip = int(rup_wid*self.floating_y_step)
+                if fdip == 0:
+                    fdip = 1
+                    msg = 'floating_y_step {} too '.format(self.floating_y_step)
+                    msg += 'small for rupture mesh spacing '
+                    msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
+                    msg += ' {}. Using traditional rupture floating.'.format(mag)
+                    logging.warning(msg)
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
