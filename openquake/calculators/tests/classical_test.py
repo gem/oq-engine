@@ -688,7 +688,7 @@ hazard_uhs-std.csv
             case_48.__file__, 'job.ini', pointsource_distance=
             '{"default": [(5.1, 42), (5.3, 47), (5.5, 52), (5.7, 58), '
             '(5.9, 65), (6.1, 72), (6.3, 80), (6.5, 89), (6.7, 99), '
-            '(6.9, 110)]}')
+            '(6.900001, 110)]}')
 
         psdist = self.calc.oqparam.pointsource_distance('default')
         rup_df = self.calc.datastore.read_df('rup')

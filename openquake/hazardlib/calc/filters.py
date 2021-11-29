@@ -314,8 +314,8 @@ class SourceFilter(object):
             if hasattr(self.integration_distance, 'y'):  # interp1d
                 maxdist = self.integration_distance.y[-1]
             else:
-                maxdist = self.integration_distance[
-                    src.tectonic_region_type][-1][1]
+                maxdist = getdefault(self.integration_distance,
+                                     src.tectonic_region_type)[-1][1]
         try:
             bbox = get_bounding_box(src, maxdist)
         except Exception as exc:

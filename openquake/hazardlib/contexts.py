@@ -129,13 +129,15 @@ def csdict(M, N, P, start, stop):
     return ddic
 
 
-def get_interp(param, name):
+def _interp(param, name, trt):
     try:
         mdd = param[name]
     except KeyError:
         return magdepdist([(1, 1000), (10, 1000)])
     if isinstance(mdd, IntegrationDistance):
-        return mdd('default')
+        return mdd(trt)
+    elif isinstance(mdd, dict):
+        return magdepdist(getdefault(mdd, trt))
     return mdd
 
 
@@ -175,10 +177,8 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
-        self.maximum_distance = get_interp(param, 'maximum_distance')
-        self.pointsource_distance = get_interp(param, 'pointsource_distance')
-        # sanity check
-        # assert isinstance(self.maximum_distance, IntegrationDistance)
+        self.maximum_distance = _interp(param, 'maximum_distance', trt)
+        self.pointsource_distance = _interp(param, 'pointsource_distance', trt)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         if self.investigation_time:
@@ -1168,19 +1168,14 @@ def read_cmakers(dstore, full_lt=None):
             af = AmplFunction.from_dframe(df)
         else:
             af = None
-        maxdist = magdepdist(getdefault(oq.maximum_distance, trt))
-        if oq.pointsource_distance:
-            psdist = magdepdist(getdefault(oq.pointsource_distance, trt))
-        else:
-            psdist = maxdist
         cmaker = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': oq.truncation_level,
              'collapse_level': int(oq.collapse_level),
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
-             'maximum_distance': maxdist,
-             'pointsource_distance': psdist,
+             'maximum_distance': oq.maximum_distance,
+             'pointsource_distance': oq.pointsource_distance,
              'minimum_distance': oq.minimum_distance,
              'ses_seed': oq.ses_seed,
              'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
@@ -1203,6 +1198,7 @@ def read_cmakers(dstore, full_lt=None):
     return cmakers
 
 
+# used in event_based
 def read_cmaker(dstore, trt_smr):
     """
     :param dstore: a DataStore-like object
@@ -1219,8 +1215,8 @@ def read_cmaker(dstore, trt_smr):
          'collapse_level': int(oq.collapse_level),
          'num_epsilon_bins': oq.num_epsilon_bins,
          'investigation_time': oq.investigation_time,
-         'maximum_distance': oq.maximum_distance(trt),
-         'minimum_distance': oq.minimum_distance[trt],
+         'maximum_distance': oq.maximum_distance,
+         'minimum_distance': oq.minimum_distance,
          'ses_seed': oq.ses_seed,
          'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
          'max_sites_disagg': oq.max_sites_disagg,
