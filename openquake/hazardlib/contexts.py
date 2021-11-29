@@ -42,7 +42,8 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
-from openquake.hazardlib.calc.filters import MagDepDistance, get_distances
+from openquake.hazardlib.calc.filters import (
+    IntegrationDistance, magdepdist, get_distances, getdefault)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -166,10 +167,12 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
-        self.maximum_distance = (
-            param.get('maximum_distance') or MagDepDistance({}))
+        self.maximum_distance = param.get(
+            'maximum_distance', magdepdist([(1, 1000), (10, 1000)]))
+        self.pointsource_distance = param.get(
+            'pointsource_distance', self.maximum_distance)
         # sanity check
-        # assert isinstance(self.maximum_distance, MagDepDistance)
+        # assert isinstance(self.maximum_distance, IntegrationDistance)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         if self.investigation_time:
@@ -187,14 +190,6 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        # self.pointsource_distance is a dict mag -> dist, possibly empty
-        psd = param.get('pointsource_distance')
-        if hasattr(psd, 'ddic'):
-            self.pointsource_distance = psd.ddic.get(trt, {})
-            if all(val == 0 for val in self.pointsource_distance.values()):
-                self.pointsource_distance = 0
-        else:
-            self.pointsource_distance = {}
         if 'imtls' in param:
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
@@ -322,7 +317,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rup, sites, 'rrup')
-        mdist = self.maximum_distance(self.trt, rup.mag)
+        mdist = self.maximum_distance(rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
@@ -485,15 +480,15 @@ class ContextMaker(object):
                 rup.sites = sites
                 yield rup
         bigps = getattr(src, 'location', None) and src.count_nphc() > 1
-        if bigps and self.pointsource_distance == 0:
+        if bigps and (self.pointsource_distance.y == 0).all():
             # finite size effects are averaged always
             yield from rups(src.iruptures(), sites)
-        elif bigps and self.pointsource_distance:
+        elif bigps and self.pointsource_distance != self.maximum_distance:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             cdist = sites.get_cdist(src.location)
             for ar in src.iruptures():
-                pdist = self.pointsource_distance['%.2f' % ar.mag]
+                pdist = self.pointsource_distance(ar.mag)
                 close = sites.filter(cdist <= pdist)
                 far = sites.filter(cdist > pdist)
                 if fewsites:
@@ -1126,7 +1121,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     :param mags: an ordered list of magnitude strings with format %.2f
     :param sitecol1: a SiteCollection with a single site
     :param gsims_by_trt: a dictionary trt -> gsims
-    :param maximum_distance: an MagDepDistance object
+    :param maximum_distance: an IntegrationDistance object
     :param imtls: a DictArray with intensity measure types and levels
     :returns: a dict magnitude-string -> array(#dists, #trts)
     """
@@ -1212,16 +1207,6 @@ def read_cmakers(dstore, full_lt=None):
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
-    # some ugly magic on the distances
-    mags = {trt: dset[:] for trt, dset in dstore['source_mags'].items()}
-    if oq.maximum_distance:
-        md = MagDepDistance.new(str(oq.maximum_distance))
-        md.interp(mags)
-        oq.maximum_distance = md
-    if oq.pointsource_distance:
-        psd = MagDepDistance.new(str(oq.pointsource_distance))
-        psd.interp(mags)
-        oq.pointsource_distance = psd
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
         trt = trts[trti]
@@ -1231,14 +1216,19 @@ def read_cmakers(dstore, full_lt=None):
             af = AmplFunction.from_dframe(df)
         else:
             af = None
+        maxdist = magdepdist(getdefault(oq.maximum_distance, trt))
+        if oq.pointsource_distance:
+            psdist = magdepdist(getdefault(oq.pointsource_distance, trt))
+        else:
+            psdist = maxdist
         cmaker = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': oq.truncation_level,
              'collapse_level': int(oq.collapse_level),
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
-             'maximum_distance': oq.maximum_distance,
-             'pointsource_distance': oq.pointsource_distance,
+             'maximum_distance': maxdist,
+             'pointsource_distance': psdist,
              'minimum_distance': oq.minimum_distance,
              'ses_seed': oq.ses_seed,
              'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
@@ -1271,16 +1261,14 @@ def read_cmaker(dstore, trt_smr):
     trts = list(full_lt.gsim_lt.values)
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
     rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-    mags = dstore['source_mags']
-    md = MagDepDistance.new(str(oq.maximum_distance))
-    md.interp({trt: mags[trt][:] for trt in mags})
+    maxdist = magdepdist(getdefault(oq.maximum_distance, trt))
     cmaker = ContextMaker(
         trt, rlzs_by_gsim,
         {'truncation_level': oq.truncation_level,
          'collapse_level': int(oq.collapse_level),
          'num_epsilon_bins': oq.num_epsilon_bins,
          'investigation_time': oq.investigation_time,
-         'maximum_distance': md,
+         'maximum_distance': maxdist,
          'minimum_distance': oq.minimum_distance,
          'ses_seed': oq.ses_seed,
          'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,

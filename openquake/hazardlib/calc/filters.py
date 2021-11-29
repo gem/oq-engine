@@ -24,6 +24,7 @@ import itertools
 from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree
+from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site, mfd
@@ -145,7 +146,16 @@ def floatdict(value):
     return value
 
 
-class MagDepDistance(dict):
+def magdepdist(pairs):
+    """
+    :param pairs: a list of pairs [(mag, dist), ...]
+    :returns: a scipy.interpolate.interp1d function
+    """
+    mags, dists = zip(*pairs)
+    return interp1d(mags, dists)
+
+
+class IntegrationDistance(dict):
     """
     A dictionary trt -> [(mag, dist), ...]
     """
@@ -153,9 +163,9 @@ class MagDepDistance(dict):
     def new(cls, value):
         """
         :param value: string to be converted
-        :returns: MagDepDistance dictionary
+        :returns: IntegrationDistance dictionary
 
-        >>> md = MagDepDistance.new('50')
+        >>> md = IntegrationDistance.new('50')
         >>> md
         {'default': [(1.0, 50), (10.0, 50)]}
         >>> md.max()
@@ -300,10 +310,10 @@ class SourceFilter(object):
         if sitecol is None:
             integration_distance = {}
         self.sitecol = sitecol
-        self.integration_distance = (
-            integration_distance
-            if isinstance(integration_distance, MagDepDistance)
-            else MagDepDistance(integration_distance))
+        if hasattr(integration_distance, 'x'):  # interp1d instance
+            pairs = list(zip(integration_distance.x, integration_distance.y))
+            integration_distance = IntegrationDistance({'default': pairs})
+        self.integration_distance = integration_distance
         self.slc = slice(None)
 
     # not used right now

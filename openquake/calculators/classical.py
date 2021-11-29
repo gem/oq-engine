@@ -417,7 +417,6 @@ class ClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        psd = preclassical.PreClassicalCalculator.set_psd(self)
         if oq.hazard_calculation_id:
             parent = self.datastore.parent
             if '_poes' in parent:
@@ -453,11 +452,11 @@ class ClassicalCalculator(base.HazardCalculator):
             smap.reduce(self.agg_dicts, acc)
             logging.debug("busy time: %s", smap.busytime)
             logging.info('Finished tile %d of %d', t, len(tiles))
-        self.store_info(psd)
+        self.store_info()
         self.haz.store_disagg(acc)
         return True
 
-    def store_info(self, psd):
+    def store_info(self):
         """
         Store full_lt, source_info and by_task
         """
