@@ -928,6 +928,10 @@ class HazardCalculator(BaseCalculator):
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)
+        if 'trt_smrs' not in self.datastore:
+            self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
+            self.datastore['toms'] = numpy.array(
+                [sg.tom_name for sg in self.csm.src_groups], hdf5.vstr)
 
     def post_process(self):
         """For compatibility with the engine"""
