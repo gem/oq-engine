@@ -170,8 +170,6 @@ class IntegrationDistance(dict):
         {'default': [(1.0, 50), (10.0, 50)]}
         >>> md.max()
         {'default': 50}
-        >>> md.interp(dict(default=[5.0, 5.1, 5.2])); md.ddic
-        {'default': {'5.00': 50.0, '5.10': 50.0, '5.20': 50.0}}
         """
         items_by_trt = floatdict(value)
         self = cls()

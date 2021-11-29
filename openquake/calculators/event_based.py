@@ -371,8 +371,8 @@ class EventBasedCalculator(base.HazardCalculator):
         if len(rup_array) == 0:
             raise RuntimeError(
                 'There are no sites within the maximum_distance'
-                ' of %s km from the rupture' % oq.maximum_distance[
-                    rup.tectonic_region_type][-1][1])
+                ' of %s km from the rupture' % oq.maximum_distance(
+                    rup.tectonic_region_type)(rup.mag))
 
         fake = logictree.FullLogicTree.fake(gsim_lt)
         self.realizations = fake.get_realizations()

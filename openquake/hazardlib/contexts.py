@@ -1137,60 +1137,6 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-# not used at the moment
-def get_effect(mags, sitecol1, gsims_by_trt, oq):
-    """
-    :params mags:
-       a dictionary trt -> magnitudes
-    :param sitecol1:
-       a SiteCollection with a single site
-    :param gsims_by_trt:
-       a dictionary trt -> gsims
-    :param oq:
-       an object with attributes imtls, minimum_intensity,
-       maximum_distance and pointsource_distance
-    :returns:
-       an ArrayWrapper trt -> effect_by_mag_dst and a nested dictionary
-       trt -> mag -> dist with the effective pointsource_distance
-
-    Updates oq.maximum_distance.magdist
-    """
-    assert list(mags) == list(gsims_by_trt), 'Missing TRTs!'
-    dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
-                 for trt in gsims_by_trt}
-    aw = hdf5.ArrayWrapper((), {})
-    # computing the effect make sense only if all IMTs have the same
-    # unity of measure; for simplicity we will consider only PGA and SA
-    psd = oq.pointsource_distance
-    if psd is not None:
-        psd.interp(mags)
-        psd = psd.ddic
-    if psd:
-        logging.info('Computing effect of the ruptures')
-        allmags = set()
-        for trt in mags:
-            allmags.update(mags[trt])
-        eff_by_mag = parallel.Starmap.apply(
-            get_effect_by_mag, (sorted(allmags), sitecol1, gsims_by_trt,
-                                oq.maximum_distance, oq.imtls)
-        ).reduce()
-        effect = {}
-        for t, trt in enumerate(mags):
-            arr = numpy.array([eff_by_mag[mag][:, t] for mag in mags[trt]])
-            setattr(aw, trt, arr)  # shape (#mags, #dists)
-            setattr(aw, trt + '_dist_bins', dist_bins[trt])
-            effect[trt] = Effect(dict(zip(mags[trt], arr)), dist_bins[trt])
-        minint = oq.minimum_intensity.get('default', 0)
-        for trt, eff in effect.items():
-            if minint:
-                oq.maximum_distance.ddic[trt] = eff.dist_by_mag(minint)
-            # build a dict trt -> mag -> dst
-            if psd and set(psd[trt].values()) == {-1}:
-                maxdist = oq.maximum_distance(trt)
-                psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
-    return aw
-
-
 def read_cmakers(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
