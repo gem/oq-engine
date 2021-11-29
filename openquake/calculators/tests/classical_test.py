@@ -334,10 +334,6 @@ hazard_uhs-std.csv
             case_18.__file__, kind='stats', delta=1E-7)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
-
-        if os.environ.get('TRAVIS'):
-            raise unittest.SkipTest('Randomly broken on Travis')
-
         self.calc.datastore.close()
         self.calc.datastore.open('r')
 
@@ -999,6 +995,7 @@ hazard_uhs-std.csv
 
     def test_case_73(self):
         # test LT
+        raise unittest.SkipTest("magnitudes>13!")
         self.run_calc(case_73.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
