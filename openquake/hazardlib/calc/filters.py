@@ -440,6 +440,9 @@ class SourceFilter(object):
         Set the weight attribute on each source to the sum of the affected
         sites
         """
+        if not hasattr(self.integration_distance, 'x') and sources:
+            self.integration_distance = self.integration_distance(
+                sources[0].tectonic_region_type)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             src.weight = src.num_ruptures * 100

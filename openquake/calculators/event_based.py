@@ -350,7 +350,8 @@ class EventBasedCalculator(base.HazardCalculator):
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 'NA', 0, G * ngmfs, rup.rup_id,
                                   scenario=True)]
-            aw = get_rup_array(ebrs, self.srcfilter)
+            srcfilter = SourceFilter(self.sitecol, oq.maximum_distance(trt))
+            aw = get_rup_array(ebrs, srcfilter)
             if len(aw) == 0:
                 raise RuntimeError(
                     'The rupture is too far from the sites! Please check the '
