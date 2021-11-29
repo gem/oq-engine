@@ -35,8 +35,6 @@ class AngularDistanceTestCase(unittest.TestCase):
 class IntegrationDistanceTestCase(unittest.TestCase):
     def test_bounding_box(self):
         maxdist = IntegrationDistance.new('400')
-
-        aae(maxdist('ANY_TRT'), 400)
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
         aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
 

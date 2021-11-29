@@ -135,7 +135,8 @@ def read_input(hparams, **extra):
         hparams = hparams.copy()
         hparams.update(extra)
     assert 'imts' in hparams or 'imtls' in hparams
-    assert isinstance(hparams['maximum_distance'], IntegrationDistance)
+    idistance = hparams['maximum_distance']
+    assert isinstance(idistance, IntegrationDistance)
     smfname = hparams.get('source_model_file')
     if smfname:  # nonscenario
         itime = hparams['investigation_time']
@@ -185,7 +186,9 @@ def read_input(hparams, **extra):
     n = hparams.get('number_of_logic_tree_samples', 0)
     s = hparams.get('random_seed', 42)
     for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
-        cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
+        params = hparams.copy()
+        params['maximum_distance'] = idistance(trt)
+        cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, params)
         cmakerdict[trt].start = start
         start += len(rlzs_by_gsim)
     if rmfname:

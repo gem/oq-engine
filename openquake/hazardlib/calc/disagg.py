@@ -29,7 +29,6 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod
-from openquake.hazardlib import const
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
@@ -371,7 +370,7 @@ def disaggregation(
         cmaker[trt] = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': truncation_level,
-             'maximum_distance': source_filter.integration_distance,
+             'maximum_distance': source_filter.integration_distance(trt),
              'imtls': {str(imt): [iml]}})
         rups[trt].extend(cmaker[trt].from_srcs(srcs, sitecol))
     min_mag = min(r.mag for rs in rups.values() for r in rs)

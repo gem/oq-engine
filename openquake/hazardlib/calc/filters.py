@@ -273,6 +273,9 @@ def split_source(src):
     return splits
 
 
+default = IntegrationDistance({'default': [(1, 1000), (10, 1000)]})
+
+
 class SourceFilter(object):
     """
     Filter objects have a .filter method yielding filtered sources
@@ -280,10 +283,10 @@ class SourceFilter(object):
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
-    def __init__(self, sitecol, integration_distance):
+    def __init__(self, sitecol, integration_distance=default):
         self.sitecol = sitecol
         if sitecol is None:
-            self.integration_distance = {}
+            self.integration_distance = default
         else:
             self.integration_distance = integration_distance
         self.slc = slice(None)

@@ -20,7 +20,6 @@ import os
 import abc
 import copy
 import time
-import logging
 import warnings
 import itertools
 import functools
@@ -32,7 +31,6 @@ try:
     import numba
 except ImportError:
     numba = None
-from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, RecordBuilder, block_splitter)
 from openquake.baselib.performance import Monitor
@@ -131,6 +129,16 @@ def csdict(M, N, P, start, stop):
     return ddic
 
 
+def mddist(param, name):
+    try:
+        mdd = param[name]
+    except KeyError:
+        return magdepdist([(1, 1000), (10, 1000)])
+    if isinstance(mdd, IntegrationDistance):
+        return mdd('default')
+    return mdd
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -167,10 +175,8 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
-        self.maximum_distance = param.get(
-            'maximum_distance', magdepdist([(1, 1000), (10, 1000)]))
-        self.pointsource_distance = param.get(
-            'pointsource_distance', self.maximum_distance)
+        self.maximum_distance = mddist(param, 'maximum_distance')
+        self.pointsource_distance = mddist(param, 'pointsource_distance')
         # sanity check
         # assert isinstance(self.maximum_distance, IntegrationDistance)
         self.minimum_distance = param.get('minimum_distance', 0)
