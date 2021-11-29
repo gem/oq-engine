@@ -152,7 +152,7 @@ def magdepdist(pairs):
     :returns: a scipy.interpolate.interp1d function
     """
     mags, dists = zip(*pairs)
-    return interp1d(mags, dists)
+    return interp1d(mags, dists, fill_value="extrapolate")
 
 
 class IntegrationDistance(dict):
@@ -177,45 +177,22 @@ class IntegrationDistance(dict):
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):
-                self[trt] = unique_sorted([tuple(it) for it in items])
-                for mag, dist in self[trt]:
+                pairs = unique_sorted([tuple(it) for it in items])
+                for mag, dist in pairs:
                     if mag < 1 or mag > 10:
                         raise ValueError('Invalid magnitude %s' % mag)
+                self[trt] = pairs
             else:  # assume scalar distance
                 assert items >= 0, items
                 self[trt] = [(1., items), (10., items)]
         return self
 
-    def interp(self, mags_by_trt):
-        """
-        :param mags_by_trt: a dictionary trt -> magnitudes as strings
-        :returns: a dictionary trt->mag->dist
-        """
-        ddic = {}
-        for trt, mags in mags_by_trt.items():
-            xs, ys = zip(*getdefault(self, trt))
-            if len(mags) == 1:
-                ms = [numpy.float64(mags)]
-            else:
-                ms = numpy.float64(mags)
-            dists = numpy.interp(ms, xs, ys)
-            ddic[trt] = {magstr(mag): dist for mag, dist in zip(ms, dists)}
-        self.ddic = ddic
+    def __call__(self, trt):
+        return magdepdist(self[trt])
 
-    def __call__(self, trt, mag=None):
-        if not self:
-            return MAX_DISTANCE
-        elif mag is None:
-            return getdefault(self, trt)[-1][1]
-        elif hasattr(self, 'ddic'):
-            if len(self.ddic) == 1:
-                [dic] = self.ddic.values()
-            else:
-                dic = self.ddic[trt]
-            return dic[magstr(mag)]
-        else:
-            xs, ys = zip(*getdefault(self, trt))
-            return numpy.interp(mag, xs, ys)
+    def __missing__(self, trt):
+        assert 'default' in self
+        return self['default']
 
     def max(self):
         """
@@ -223,7 +200,7 @@ class IntegrationDistance(dict):
         """
         return {trt: self[trt][-1][1] for trt in self}
 
-    def get_bounding_box(self, lon, lat, trt=None, mag=None):
+    def get_bounding_box(self, lon, lat, trt=None):
         """
         Build a bounding box around the given lon, lat by computing the
         maximum_distance at the given tectonic region type and magnitude.
@@ -231,13 +208,12 @@ class IntegrationDistance(dict):
         :param lon: longitude
         :param lat: latitude
         :param trt: tectonic region type, possibly None
-        :param mag: magnitude, possibly None
         :returns: min_lon, min_lat, max_lon, max_lat
         """
         if trt is None:  # take the greatest integration distance
-            maxdist = max(self(trt, mag) for trt in self)
+            maxdist = max(self.max().values())
         else:  # get the integration distance for the given TRT
-            maxdist = self(trt, mag)
+            maxdist = self[trt][-1][1]
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
@@ -307,13 +283,11 @@ class SourceFilter(object):
     based on numpy.
     """
     def __init__(self, sitecol, integration_distance):
-        if sitecol is None:
-            integration_distance = {}
         self.sitecol = sitecol
-        if hasattr(integration_distance, 'x'):  # interp1d instance
-            pairs = list(zip(integration_distance.x, integration_distance.y))
-            integration_distance = IntegrationDistance({'default': pairs})
-        self.integration_distance = integration_distance
+        if sitecol is None:
+            self.integration_distance = {}
+        else:
+            self.integration_distance = integration_distance
         self.slc = slice(None)
 
     # not used right now
@@ -336,7 +310,11 @@ class SourceFilter(object):
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
         if maxdist is None:
-            maxdist = self.integration_distance(src.tectonic_region_type)
+            if hasattr(self.integration_distance, 'y'):  # interp1d
+                maxdist = self.integration_distance.y[-1]
+            else:
+                maxdist = self.integration_distance[
+                    src.tectonic_region_type][-1][1]
         try:
             bbox = get_bounding_box(src, maxdist)
         except Exception as exc:
@@ -411,11 +389,16 @@ class SourceFilter(object):
         elif not self.integration_distance:  # do not filter
             return self.sitecol.sids
         if trt:  # rupture proxy
+            assert hasattr(self.integration_distance, 'x')
+            if hasattr(self.integration_distance, 'x'):
+                idist = self.integration_distance
+            else:
+                idist = self.integration_distance(trt)
             dlon = get_longitudinal_extent(
                 src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
             dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.
             lon, lat, dep = src_or_rec['hypo']
-            dist = self.integration_distance(trt) + numpy.sqrt(
+            dist = idist(src_or_rec['mag']) + numpy.sqrt(
                 dlon**2 + dlat**2) / KM_TO_DEGREES
             dist += 10  # added 10 km of buffer to guard against numeric errors
             # the test most sensitive to the buffer effect is in oq-risk-tests,
@@ -482,11 +465,11 @@ class SourceFilter(object):
         """
         :returns: the number of sites affected by the ruptures
         """
+        assert hasattr(self.integration_distance, 'x')  # interp1d
         nsites = []
         for rup in rups:
             dists = get_distances(rup, self.sitecol, 'rrup')
-            idist = self.integration_distance(
-                rup.tectonic_region_type, rup.mag)
+            idist = self.integration_distance(rup.mag)
             if not rup.surface:  # PointRupture
                 idist += rup.mag * 10
             nsites.append((dists <= idist).sum())

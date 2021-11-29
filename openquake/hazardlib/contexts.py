@@ -169,6 +169,8 @@ class ContextMaker(object):
         self.gsims = gsims
         self.maximum_distance = param.get(
             'maximum_distance', magdepdist([(1, 1000), (10, 1000)]))
+        if not hasattr(self.maximum_distance, 'x'):
+            import pdb; pdb.set_trace()
         self.pointsource_distance = param.get(
             'pointsource_distance', self.maximum_distance)
         # sanity check
@@ -1261,15 +1263,14 @@ def read_cmaker(dstore, trt_smr):
     trts = list(full_lt.gsim_lt.values)
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
     rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-    maxdist = magdepdist(getdefault(oq.maximum_distance, trt))
     cmaker = ContextMaker(
         trt, rlzs_by_gsim,
         {'truncation_level': oq.truncation_level,
          'collapse_level': int(oq.collapse_level),
          'num_epsilon_bins': oq.num_epsilon_bins,
          'investigation_time': oq.investigation_time,
-         'maximum_distance': maxdist,
-         'minimum_distance': oq.minimum_distance,
+         'maximum_distance': oq.maximum_distance(trt),
+         'minimum_distance': oq.minimum_distance[trt],
          'ses_seed': oq.ses_seed,
          'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
          'max_sites_disagg': oq.max_sites_disagg,
