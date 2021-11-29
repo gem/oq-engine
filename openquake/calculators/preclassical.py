@@ -242,33 +242,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        self.set_psd()  # set the pointsource_distance, needed for ps_grid_spc
         run_preclassical(self)
         return self.csm
-
-    def set_psd(self):
-        """
-        Set the pointsource_distance
-        """
-        oq = self.oqparam
-        mags = self.datastore['source_mags']  # by TRT
-        if len(mags) == 0:  # everything was discarded
-            raise RuntimeError('All sources were discarded!?')
-        mags_by_trt = {}
-        for trt in mags:
-            mags_by_trt[trt] = mags[trt][()]
-        psd = oq.pointsource_distance
-        if psd is not None:
-            psd.interp(mags_by_trt)
-            for trt, dic in psd.ddic.items():
-                # the sum is zero for {'default': [(1, 0), (10, 0)]}
-                if sum(dic.values()):
-                    it = list(dic.items())
-                    dists = {i[1] for i in it}
-                    if len(set(dists)) > 1:
-                        md = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                        logging.info('ps_dist %s: %s', trt, md)
-        return psd
 
     def post_execute(self, csm):
         """

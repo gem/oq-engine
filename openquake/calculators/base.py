@@ -465,14 +465,15 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
                 mags_by_trt = csm.get_mags_by_trt()
-                oq.maximum_distance.interp(mags_by_trt)
                 for trt in mags_by_trt:
                     self.datastore['source_mags/' + trt] = numpy.array(
                         mags_by_trt[trt])
-                    it = list(oq.maximum_distance.ddic[trt].items())
-                    if len(it) > 2:
+                    interp = oq.maximum_distance(trt)
+                    if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
-                            it[0] + it[-2] + it[-1])
+                            interp.x[0], interp.y[0],
+                            interp.x[-2], interp.y[-2],
+                            interp.x[-1], interp.y[-1])
                         logging.info('max_dist %s: %s', trt, md)
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute

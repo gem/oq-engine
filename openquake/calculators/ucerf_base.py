@@ -243,7 +243,8 @@ class UCERFSource(BaseSeismicSource):
             bg_locations = hdf5["Grid/Locations"][()]
             if hasattr(self, 'src_filter'):
                 # in event based
-                idist = self.src_filter.integration_distance(DEFAULT_TRT)
+                idist = self.src_filter.integration_distance[
+                    DEFAULT_TRT][-1][1]
             else:
                 # in classical
                 return numpy.arange(len(bg_locations))
