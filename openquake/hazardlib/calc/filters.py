@@ -390,15 +390,11 @@ class SourceFilter(object):
             return self.sitecol.sids
         if trt:  # rupture proxy
             assert hasattr(self.integration_distance, 'x')
-            if hasattr(self.integration_distance, 'x'):
-                idist = self.integration_distance
-            else:
-                idist = self.integration_distance(trt)
             dlon = get_longitudinal_extent(
                 src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
             dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.
             lon, lat, dep = src_or_rec['hypo']
-            dist = idist(src_or_rec['mag']) + numpy.sqrt(
+            dist = self.integration_distance(src_or_rec['mag']) + numpy.sqrt(
                 dlon**2 + dlat**2) / KM_TO_DEGREES
             dist += 10  # added 10 km of buffer to guard against numeric errors
             # the test most sensitive to the buffer effect is in oq-risk-tests,

@@ -169,8 +169,6 @@ class ContextMaker(object):
         self.gsims = gsims
         self.maximum_distance = param.get(
             'maximum_distance', magdepdist([(1, 1000), (10, 1000)]))
-        if not hasattr(self.maximum_distance, 'x'):
-            import pdb; pdb.set_trace()
         self.pointsource_distance = param.get(
             'pointsource_distance', self.maximum_distance)
         # sanity check
