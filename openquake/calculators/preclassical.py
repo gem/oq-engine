@@ -88,7 +88,6 @@ def run_preclassical(calc):
                 atomic_sources, lambda src: src.grp_id).items():
             atomic[grp_id] = srcs
     else:
-        grp_id = normal_sources[0].grp_id
         atomic = AccumDict()
     normal = parallel.Starmap(
         preclassical, allargs,  h5=h5,
@@ -178,11 +177,7 @@ def preclassical(srcs, srcfilter, oqparam, monitor):
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        if len(srcfilter.sitecol) > oqparam.max_sites_disagg:
-            srcfilter.set_weight(dic[grp_id])
-        else:  # if there are few sites use a trivial weight
-            for src in dic[grp_id]:
-                src.weight = src.num_ruptures = src.count_ruptures()
+        srcfilter.set_weight(dic[grp_id])
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:
@@ -269,16 +264,6 @@ class PreClassicalCalculator(base.HazardCalculator):
                     if len(set(dists)) > 1:
                         md = '%s->%d ... %s->%d' % (it[0] + it[-1])
                         logging.info('ps_dist %s: %s', trt, md)
-        self.params = dict(
-            truncation_level=oq.truncation_level,
-            investigation_time=oq.investigation_time,
-            imtls=oq.imtls, reqv=oq.get_reqv(),
-            pointsource_distance=oq.pointsource_distance,
-            shift_hypo=oq.shift_hypo,
-            min_weight=oq.min_weight,
-            collapse_level=int(oq.collapse_level),
-            max_sites_disagg=oq.max_sites_disagg,
-            split_sources=oq.split_sources, af=self.af)
         return psd
 
     def post_execute(self, csm):
