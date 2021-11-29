@@ -485,7 +485,6 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_24(self):
         # This is a test for shift_hypo = true - The expected results are the
         # same ones defined for the case_44 of the classical methodology
-        print(case_24.__file__)
         self.run_calc(case_24.__file__, 'job.ini')
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
