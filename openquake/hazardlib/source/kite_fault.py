@@ -152,7 +152,7 @@ class KiteFaultSource(ParametricSeismicSource):
             fstrike = int(rup_len*self.floating_x_step)
             fdip = int(rup_wid*self.floating_y_step)
 
-            if fstrike == 0 and self.floating_x_step != 0:
+            if fstrike == 0:
                 msg = 'floating_x_step {} too '.format(self.floating_x_step)
                 msg += 'small for rupture mesh spacing '
                 msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
@@ -161,7 +161,7 @@ class KiteFaultSource(ParametricSeismicSource):
                 fdip = 1
                 logging.warning(msg)
 
-            if fdip == 0 and self.floating_y_step != 0:
+            if fdip == 0:
                 msg = 'floating_y_step {} too '.format(self.floating_y_step)
                 msg += 'small for rupture mesh spacing '
                 msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
