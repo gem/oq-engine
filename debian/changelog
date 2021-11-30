@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Fixed a bug in the `modify_recompute_mmax` method
+
   [Michele Simionato]
   * Extended the mag-dependent filtering to the event based calculator
   * The flag discrete_damage_distribution=true was incorrectly ignored when
