@@ -59,7 +59,6 @@ def run_preclassical(calc):
     calc.datastore['toms'] = numpy.array(
         [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
-    oqparam = calc.oqparam
     h5 = calc.datastore.hdf5
     sites = csm.sitecol.reduce(2000) if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
@@ -116,6 +115,8 @@ def run_preclassical(calc):
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
             for src in srcs:
+                assert src.weight
+                assert src.num_ruptures
                 acc[src.code] += int(src.num_ruptures)
     for val, key in sorted((val, key) for key, val in acc.items()):
         cls = code2cls[key].__name__
@@ -123,13 +124,6 @@ def run_preclassical(calc):
 
     calc_times = zero_times(csm.get_sources())
     calc.store_source_info(calc_times)
-
-    # sanity check
-    for sg in csm.src_groups:
-        for src in sg:
-            assert src.num_ruptures
-            assert src.weight
-
     # store ps_grid data, if any
     for key, sources in res.items():
         if isinstance(key, str) and key.startswith('ps_grid/'):

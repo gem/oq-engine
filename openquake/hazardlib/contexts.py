@@ -660,19 +660,20 @@ class ContextMaker(object):
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             src.weight = src.nsites = src.num_ruptures * .001
-        for src, sites in srcfilter.filter(sources):
-            if 'UCERF' in src.__class__.__name__ or not sitecol:
-                src.weight += src.num_ruptures * len(sites)
+            sids = srcfilter.close_sids(src)
+            if len(sids) == 0:
+                continue
+            elif 'UCERF' in src.__class__.__name__ or not sitecol:
+                src.weight = src.num_ruptures
+                src.nsites = src.num_ruptures * len(sids)
                 continue
             if hasattr(src, 'iruptures'):
-                rups = list(src.iruptures(point_rup=True))
-                factor = src.num_ruptures / len(rups)
+                rups = src.iruptures(point_rup=True)
             else:
                 rups = src.iter_ruptures()
-                factor = 1
-            ctxs = self.get_ctxs(rups, sites)
-            src.nsites = sum(len(ctx) for ctx in ctxs) * factor
-            src.weight += src.nsites
+            ctxs = self.get_ctxs(rups, sitecol.filtered(sids))
+            src.weight += len(ctxs)
+            src.nsites = sum(len(ctx) for ctx in ctxs)
 
 
 # see contexts_tests.py for examples of collapse
