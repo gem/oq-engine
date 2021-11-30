@@ -678,6 +678,8 @@ class ContextMaker(object):
             ctxs = self.get_ctxs(rups, sitecol.filtered(sids))
             src.weight += len(ctxs)
             src.nsites = sum(len(ctx) for ctx in ctxs)
+            if hasattr(src, 'pointsources'):
+                src.weight *= src.num_ruptures / len(rups)
             if not hasattr(src, 'location'):
                 src.weight *= 10
 
