@@ -593,7 +593,10 @@ def get_gsim_lt(oqparam, trts=('*',)):
             # but it is not an error, it is actually the most common case!
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             {StdDev.TOTAL}):
-                raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
+                modifications = list(gsim.kwargs.keys())
+                if not (type(gsim).__name__ == 'ModifiableGMPE' and
+                        'add_between_within_stds' in modifications):
+                    raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
         logging.error('IMT-dependent weights in the logic tree cannot work '

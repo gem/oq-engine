@@ -179,6 +179,8 @@ class IntegrationDistance(dict):
                 for mag, dist in pairs:
                     if mag < 1 or mag > 10:
                         raise ValueError('Invalid magnitude %s' % mag)
+                if pairs[-1][0] < 10:  # extend the range to the right
+                    pairs.append((10, pairs[-1][1]))
                 self[trt] = pairs
             else:  # assume scalar distance
                 assert items >= 0, items

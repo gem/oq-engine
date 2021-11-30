@@ -995,7 +995,6 @@ hazard_uhs-std.csv
 
     def test_case_73(self):
         # test LT
-        raise unittest.SkipTest("magnitudes>13!")
         self.run_calc(case_73.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
