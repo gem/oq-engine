@@ -61,28 +61,31 @@ def run_preclassical(calc):
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
     oqparam = calc.oqparam
     h5 = calc.datastore.hdf5
-    srcfilter = SourceFilter(
-        csm.sitecol.reduce(10000) if csm.sitecol else None,
-        oqparam.maximum_distance)
+    sites = csm.sitecol.reduce(2000) if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
-    atomic_sources = csm.get_sources(atomic=True)
-    normal_sources = csm.get_sources(atomic=False)
-    srcfilter.set_weight(atomic_sources)
-
+    atomic_sources = []
+    normal_sources = []
+    for sg in csm.src_groups:
+        grp_id = sg.sources[0].grp_id
+        if sg.atomic:
+            cmakers[grp_id].set_weight(sg, sites)
+            atomic_sources.extend(sg)
+        else:
+            normal_sources.extend(sg)
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
     if csm.sitecol:
-        logging.info('Sending %s', srcfilter.sitecol)
+        logging.info('Sending %s', sites)
     if oqparam.ps_grid_spacing:
         # produce a preclassical task for each group
-        allargs = ((srcs, srcfilter, cmakers[grp_id])
+        allargs = ((srcs, sites, cmakers[grp_id])
                    for (grp_id, msr), srcs in sources_by_grp.items())
     else:
         # produce many preclassical task
         maxw = sum(len(srcs) for srcs in sources_by_grp.values()) / (
             oqparam.concurrent_tasks or 1)
-        allargs = ((blk, srcfilter, cmakers[grp_id])
+        allargs = ((blk, sites, cmakers[grp_id])
                    for (grp_id, msr), srcs in sources_by_grp.items()
                    for blk in block_splitter(srcs, maxw))
     if atomic_sources:  # case_35
@@ -145,7 +148,7 @@ def run_preclassical(calc):
     return res
 
 
-def preclassical(srcs, srcfilter, cmaker, monitor):
+def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
@@ -155,7 +158,7 @@ def preclassical(srcs, srcfilter, cmaker, monitor):
     split_sources = []
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
-    if srcfilter.sitecol is None:
+    if sites is None:
         # in csm2rup just split the sources and count the ruptures
         for src in srcs:
             ss = split_source(src)
@@ -170,10 +173,11 @@ def preclassical(srcs, srcfilter, cmaker, monitor):
         return dic
 
     with monitor('splitting sources'):
+        sf = SourceFilter(sites, cmaker.maximum_distance)
         # this can be slow
         for src in srcs:
-            # NB: this is approximate, since the sitecol is sampled!
-            nsites = len(srcfilter.close_sids(src))  # can be 0
+            # NB: this is approximate, since the sites are sampled
+            nsites = len(sf.close_sids(src))  # can be 0
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (
@@ -181,7 +185,7 @@ def preclassical(srcs, srcfilter, cmaker, monitor):
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        srcfilter.set_weight(dic[grp_id], cmaker)
+        cmaker.set_weight(dic[grp_id], sites)
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:
@@ -242,33 +246,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        self.set_psd()  # set the pointsource_distance, needed for ps_grid_spc
         run_preclassical(self)
         return self.csm
-
-    def set_psd(self):
-        """
-        Set the pointsource_distance
-        """
-        oq = self.oqparam
-        mags = self.datastore['source_mags']  # by TRT
-        if len(mags) == 0:  # everything was discarded
-            raise RuntimeError('All sources were discarded!?')
-        mags_by_trt = {}
-        for trt in mags:
-            mags_by_trt[trt] = mags[trt][()]
-        psd = oq.pointsource_distance
-        if psd is not None:
-            psd.interp(mags_by_trt)
-            for trt, dic in psd.ddic.items():
-                # the sum is zero for {'default': [(1, 0), (10, 0)]}
-                if sum(dic.values()):
-                    it = list(dic.items())
-                    dists = {i[1] for i in it}
-                    if len(set(dists)) > 1:
-                        md = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                        logging.info('ps_dist %s: %s', trt, md)
-        return psd
 
     def post_execute(self, csm):
         """
