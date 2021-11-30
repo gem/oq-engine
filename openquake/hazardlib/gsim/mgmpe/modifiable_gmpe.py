@@ -32,7 +32,7 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
 def add_between_within_stds(self, ctx, imt, with_betw_ratio):
     """
     This adds the between and within standard deviations to a model which has
-    only the total standatd deviation. This function requires a ratio between
+    only the total standard deviation. This function requires a ratio between
     the within-event standard deviation and the between-event one.
 
     :param with_betw_ratio:
