@@ -41,7 +41,7 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, magdepdist, get_distances, getdefault)
+    IntegrationDistance, magdepdist, get_distances, getdefault, SourceFilter)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -549,7 +549,7 @@ class ContextMaker(object):
         """
         if not hasattr(self, 'imts'):
             self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
-        N = sum(len(ctx.sids) for ctx in ctxs)
+        N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
@@ -651,6 +651,38 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
+    def set_weight(self, sources, sitecol):
+        """
+        Set the weight attribute on each source to the sum of the affected
+        sites
+        """
+        srcfilter = SourceFilter(sitecol, self.maximum_distance)
+        for src in sources:
+            src.num_ruptures = src.count_ruptures()
+            src.weight = src.nsites = src.num_ruptures * .001
+            sids = srcfilter.close_sids(src)
+            if len(sids) == 0:
+                continue
+            elif 'UCERF' in src.__class__.__name__ or not sitecol:
+                src.weight = src.num_ruptures
+                src.nsites = src.num_ruptures * len(sids)
+                continue
+            if hasattr(src, 'iruptures'):
+                rups = list(src.iruptures(point_rup=True))
+            else:
+                rups = list(src.iter_ruptures())
+            maxmag = max(rup.mag for rup in rups)
+            if maxmag >= 10:
+                raise ValueError('%s produces a magnitude %d!' %
+                                 (src.source_id, maxmag))
+            ctxs = self.get_ctxs(rups, sitecol.filtered(sids))
+            src.weight += len(ctxs)
+            src.nsites = sum(len(ctx) for ctx in ctxs)
+            if hasattr(src, 'pointsources'):
+                src.weight *= src.num_ruptures / len(rups)
+            if not hasattr(src, 'location'):
+                src.weight *= 10
+
 
 # see contexts_tests.py for examples of collapse
 def combine_pmf(o1, o2):
@@ -733,7 +765,7 @@ class PmapMaker(object):
         dparams = len(self.cmaker.REQUIRES_DISTANCES)
         nbytes = 0
         for ctx in ctxs:
-            nsites = len(ctx.sids)
+            nsites = len(ctx)
             nbytes += 8 * rparams
             nbytes += 8 * sparams * nsites
             nbytes += 8 * dparams * nsites
@@ -764,7 +796,7 @@ class PmapMaker(object):
                 sites = sites.complete
             ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
             nctxs = len(ctxs)
-            nsites = sum(len(ctx.sids) for ctx in ctxs)
+            nsites = sum(len(ctx) for ctx in ctxs)
             cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
             self.calc_times[basename(src)] += numpy.array([nctxs, nsites, dt])
@@ -779,7 +811,7 @@ class PmapMaker(object):
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
             ctxs = self._get_ctxs(cm._ruptures(src), sites, src.id)
             nctxs = len(ctxs)
-            nsites = sum(len(ctx.sids) for ctx in ctxs)
+            nsites = sum(len(ctx) for ctx in ctxs)
             cm.get_pmap(ctxs, pm)
             p = pm
             if cm.rup_indep:

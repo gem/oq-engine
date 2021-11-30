@@ -433,49 +433,6 @@ class SourceFilter(object):
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
 
-    def set_weight(self, sources):
-        """
-        Set the weight attribute on each source to the sum of the affected
-        sites
-        """
-        if not hasattr(self.integration_distance, 'x') and sources:
-            self.integration_distance = self.integration_distance(
-                sources[0].tectonic_region_type)
-        for src in sources:
-            src.num_ruptures = src.count_ruptures()
-            src.weight = src.num_ruptures * 100
-        for src, sites in self.filter(sources):
-            if 'UCERF' in src.__class__.__name__:
-                src.weight += src.num_ruptures * len(sites)
-                continue
-            if hasattr(src, 'iruptures'):  # fast lane
-                irups = src.iruptures(point_rup=True)
-            else:
-                irups = src.iter_ruptures()
-            src.nsites = sum(self.get_nsites(irups))
-            src.weight += src.nsites
-        for src in sources:
-            if hasattr(src, 'pointsources'):
-                # make CollapsedPointSource heavier
-                src.weight *= 3
-            elif not hasattr(src, 'location'):
-                # make non point sources even heavier
-                src.weight *= 10
-
-    def get_nsites(self, rups):
-        """
-        :returns: the number of sites affected by the ruptures
-        """
-        assert hasattr(self.integration_distance, 'x')  # interp1d
-        nsites = []
-        for rup in rups:
-            dists = get_distances(rup, self.sitecol, 'rrup')
-            idist = self.integration_distance(rup.mag)
-            if not rup.surface:  # PointRupture
-                idist += rup.mag * 10
-            nsites.append((dists <= idist).sum())
-        return nsites
-
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:
             return self

@@ -22,7 +22,7 @@ import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, block_splitter, groupby, get_nbytes_msg)
+    AccumDict, groupby, get_nbytes_msg)
 from openquake.hazardlib.contexts import basename, read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
@@ -59,32 +59,36 @@ def run_preclassical(calc):
     calc.datastore['toms'] = numpy.array(
         [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
-    oqparam = calc.oqparam
     h5 = calc.datastore.hdf5
-    srcfilter = SourceFilter(
-        csm.sitecol.reduce(10000) if csm.sitecol else None,
-        oqparam.maximum_distance)
+    sites = csm.sitecol.reduce(2000) if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
-    atomic_sources = csm.get_sources(atomic=True)
-    normal_sources = csm.get_sources(atomic=False)
-    srcfilter.set_weight(atomic_sources)
-
+    atomic_sources = []
+    normal_sources = []
+    for sg in csm.src_groups:
+        grp_id = sg.sources[0].grp_id
+        if sg.atomic:
+            cmakers[grp_id].set_weight(sg, sites)
+            atomic_sources.extend(sg)
+        else:
+            normal_sources.extend(sg)
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
     if csm.sitecol:
-        logging.info('Sending %s', srcfilter.sitecol)
-    if oqparam.ps_grid_spacing:
-        # produce a preclassical task for each group
-        allargs = ((srcs, srcfilter, cmakers[grp_id])
-                   for (grp_id, name), srcs in sources_by_grp.items())
-    else:
-        # produce many preclassical task
-        maxw = sum(len(srcs) for srcs in sources_by_grp.values()) / (
-            oqparam.concurrent_tasks or 1)
-        allargs = ((blk, srcfilter, cmakers[grp_id])
-                   for (grp_id, name), srcs in sources_by_grp.items()
-                   for blk in block_splitter(srcs, maxw))
+        logging.info('Sending %s', sites)
+    smap = parallel.Starmap(preclassical, h5=h5)
+    for (grp_id, msr), srcs in sources_by_grp.items():
+        pointlike, other = [], []
+        for src in srcs:
+            if hasattr(src, 'nodal_plane_distribution'):
+                pointlike.append(src)
+            else:
+                other.append(src)
+        if pointlike:
+            smap.submit((pointlike, sites, cmakers[grp_id]))
+        for src in other:
+            smap.submit(([src], sites, cmakers[grp_id]))
+    normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
         atomic = AccumDict({'before': n, 'after': n})
@@ -93,11 +97,7 @@ def run_preclassical(calc):
             atomic[grp_id] = srcs
     else:
         atomic = AccumDict()
-    normal = parallel.Starmap(
-        preclassical, allargs,  h5=h5,
-        distribute=None if len(sources_by_grp) > 1 else 'no'
-    ).reduce()
-    res = atomic + normal
+    res = normal + atomic
     if res['before'] != res['after']:
         logging.info('Reduced the number of point sources from {:_d} -> {:_d}'.
                      format(res['before'], res['after']))
@@ -109,12 +109,14 @@ def run_preclassical(calc):
             # check if OQ_SAMPLE_SOURCES is set
             ss = os.environ.get('OQ_SAMPLE_SOURCES')
             if ss:
-                logging.info('Reduced num_sources for group #%d', grp_id)
+                logging.info('Sampled sources for group #%d', grp_id)
                 srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
             newsg = SourceGroup(srcs[0].tectonic_region_type)
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
             for src in srcs:
+                assert src.weight
+                assert src.num_ruptures
                 acc[src.code] += int(src.num_ruptures)
     for val, key in sorted((val, key) for key, val in acc.items()):
         cls = code2cls[key].__name__
@@ -122,13 +124,6 @@ def run_preclassical(calc):
 
     calc_times = zero_times(csm.get_sources())
     calc.store_source_info(calc_times)
-
-    # sanity check
-    for sg in csm.src_groups:
-        for src in sg:
-            assert src.num_ruptures
-            assert src.weight
-
     # store ps_grid data, if any
     for key, sources in res.items():
         if isinstance(key, str) and key.startswith('ps_grid/'):
@@ -145,7 +140,7 @@ def run_preclassical(calc):
     return res
 
 
-def preclassical(srcs, srcfilter, cmaker, monitor):
+def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
@@ -155,7 +150,7 @@ def preclassical(srcs, srcfilter, cmaker, monitor):
     split_sources = []
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
-    if srcfilter.sitecol is None:
+    if sites is None:
         # in csm2rup just split the sources and count the ruptures
         for src in srcs:
             ss = split_source(src)
@@ -170,10 +165,11 @@ def preclassical(srcs, srcfilter, cmaker, monitor):
         return dic
 
     with monitor('splitting sources'):
+        sf = SourceFilter(sites, cmaker.maximum_distance)
         # this can be slow
         for src in srcs:
-            # NB: this is approximate, since the sitecol is sampled!
-            nsites = len(srcfilter.close_sids(src))  # can be 0
+            # NB: this is approximate, since the sites are sampled
+            nsites = len(sf.close_sids(src))  # can be 0
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (
@@ -181,7 +177,7 @@ def preclassical(srcs, srcfilter, cmaker, monitor):
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        srcfilter.set_weight(dic[grp_id])
+        cmaker.set_weight(dic[grp_id], sites)
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:
