@@ -22,7 +22,7 @@ import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, block_splitter, groupby, get_nbytes_msg)
+    AccumDict, groupby, get_nbytes_msg)
 from openquake.hazardlib.contexts import basename, read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
@@ -77,17 +77,19 @@ def run_preclassical(calc):
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
     if csm.sitecol:
         logging.info('Sending %s', sites)
-    if oqparam.ps_grid_spacing:
-        # produce a preclassical task for each group
-        allargs = ((srcs, sites, cmakers[grp_id])
-                   for (grp_id, msr), srcs in sources_by_grp.items())
-    else:
-        # produce many preclassical task
-        maxw = sum(len(srcs) for srcs in sources_by_grp.values()) / (
-            oqparam.concurrent_tasks or 1)
-        allargs = ((blk, sites, cmakers[grp_id])
-                   for (grp_id, msr), srcs in sources_by_grp.items()
-                   for blk in block_splitter(srcs, maxw))
+    smap = parallel.Starmap(preclassical, h5=h5)
+    for (grp_id, msr), srcs in sources_by_grp.items():
+        pointlike, other = [], []
+        for src in srcs:
+            if hasattr(src, 'nodal_plane_distribution'):
+                pointlike.append(src)
+            else:
+                other.append(src)
+        if pointlike:
+            smap.submit((pointlike, sites, cmakers[grp_id]))
+        for src in other:
+            smap.submit(([src], sites, cmakers[grp_id]))
+    normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
         atomic = AccumDict({'before': n, 'after': n})
@@ -96,11 +98,7 @@ def run_preclassical(calc):
             atomic[grp_id] = srcs
     else:
         atomic = AccumDict()
-    normal = parallel.Starmap(
-        preclassical, allargs,  h5=h5,
-        distribute=None if len(sources_by_grp) > 1 else 'no'
-    ).reduce()
-    res = atomic + normal
+    res = normal + atomic
     if res['before'] != res['after']:
         logging.info('Reduced the number of point sources from {:_d} -> {:_d}'.
                      format(res['before'], res['after']))
