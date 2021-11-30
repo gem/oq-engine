@@ -19,6 +19,9 @@
 from openquake.hazardlib.gsim.arroyo_2010 import ArroyoEtAl2010SInter
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
+# The verification tables were generated using a Visual Basic code 
+# provided by Danny Arroyo. The format of the tables was adapted to 
+# the requirements of the OQ tests.
 
 class ArroyoEtAl2010SInterTestCase(BaseGSIMTestCase):
     """
