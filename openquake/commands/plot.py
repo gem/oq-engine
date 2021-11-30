@@ -23,7 +23,7 @@ import shapely
 import numpy
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
+from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
 
 
@@ -330,7 +330,7 @@ def make_figure_task_info(extractors, what):
     ax = fig.add_subplot(2, 1, 1)
     mean, std = x.mean(), x.std(ddof=1)
     ax.hist(x, bins=50, rwidth=0.9)
-    ax.set_xlabel("mean=%d+-%d seconds" % (mean, std))
+    ax.set_title("mean=%d+-%d seconds" % (mean, std))
     ax.set_ylabel("tasks=%d" % len(x))
 
     from scipy.stats import linregress
@@ -618,7 +618,7 @@ def make_figure_effect_by_mag(extractors, what):
         effect = ex.get('effect')
     except KeyError:
         onesite = ex.get('sitecol').one()
-        maximum_distance = MagDepDistance(ex.oqparam.maximum_distance)
+        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
         imtls = ex.oqparam.imtls
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)

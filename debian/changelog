@@ -2,8 +2,10 @@
   * Adds a new method to the modifiable GMPE with which is possible to 
     compute spatially correlated ground-motion fields even when the initial
     GMM only provides the total standard deviation.
+  * Fixed a bug in the `modify_recompute_mma
 
   [Michele Simionato]
+  * Extended the mag-dependent filtering to the event based calculator
   * The flag discrete_damage_distribution=true was incorrectly ignored when
     computing the consequences
   * Implemented `reaggregate_by` feature

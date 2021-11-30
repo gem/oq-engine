@@ -132,7 +132,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         rec['maxlat'] = maxlat = numpy.nanmax(lats)
         rec['mag'] = rup.mag
         rec['hypo'] = hypo
-        if srcfilter.integration_distance and len(
+        if srcfilter.sitecol is not None and len(
                 srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
         rate = getattr(rup, 'occurrence_rate', numpy.nan)

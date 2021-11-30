@@ -28,7 +28,7 @@ from openquake.hazardlib import (
     geo, site, nrml, sourceconverter, gsim_lt, contexts)
 from openquake.hazardlib.source.rupture import (
     EBRupture, get_ruptures, _get_rupture)
-from openquake.hazardlib.calc.filters import MagDepDistance
+from openquake.hazardlib.calc.filters import IntegrationDistance
 
 bytrt = operator.attrgetter('tectonic_region_type')
 Input = collections.namedtuple('Input', 'groups sitecol gsim_lt cmakerdict')
@@ -135,7 +135,8 @@ def read_input(hparams, **extra):
         hparams = hparams.copy()
         hparams.update(extra)
     assert 'imts' in hparams or 'imtls' in hparams
-    assert isinstance(hparams['maximum_distance'], MagDepDistance)
+    idistance = hparams['maximum_distance']
+    assert isinstance(idistance, IntegrationDistance)
     smfname = hparams.get('source_model_file')
     if smfname:  # nonscenario
         itime = hparams['investigation_time']
@@ -164,13 +165,13 @@ def read_input(hparams, **extra):
         raise KeyError('Missing source_model_file or rupture_file')
     trts = set(grp.trt for grp in groups)
     if 'gsim' in hparams:
-        lt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
+        gslt = gsim_lt.GsimLogicTree.from_(hparams['gsim'])
     else:
-        lt = gsim_lt.GsimLogicTree(hparams['gsim_logic_tree_file'], trts)
+        gslt = gsim_lt.GsimLogicTree(hparams['gsim_logic_tree_file'], trts)
 
     # fix source attributes
     idx = 0
-    num_rlzs = lt.get_num_paths()
+    num_rlzs = gslt.get_num_paths()
     for grp_id, sg in enumerate(groups):
         assert len(sg)  # sanity check
         for src in sg:
@@ -180,22 +181,24 @@ def read_input(hparams, **extra):
             src.samples = num_rlzs
             idx += 1
 
-    cmaker = {}  # trt => cmaker
+    cmakerdict = {}  # trt => cmaker
     start = 0
     n = hparams.get('number_of_logic_tree_samples', 0)
     s = hparams.get('random_seed', 42)
-    for trt, rlzs_by_gsim in lt.get_rlzs_by_gsim_trt(n, s).items():
-        cmaker[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, hparams)
-        cmaker[trt].start = start
+    for trt, rlzs_by_gsim in gslt.get_rlzs_by_gsim_trt(n, s).items():
+        params = hparams.copy()
+        params['maximum_distance'] = idistance(trt)
+        cmakerdict[trt] = contexts.ContextMaker(trt, rlzs_by_gsim, params)
+        cmakerdict[trt].start = start
         start += len(rlzs_by_gsim)
     if rmfname:
         # for instance for 2 TRTs with 5x2 GSIMs and ngmfs=10, then the
         # number of occupation is 100 for each rupture, for a total
         # of 200 events, see scenario/case_13
-        nrlzs = lt.get_num_paths()
+        nrlzs = gslt.get_num_paths()
         for grp in groups:
             for ebr in grp:
                 ebr.n_occ = ngmfs * nrlzs
 
-    sitecol = _get_sitecol(hparams, lt.req_site_params)
-    return Input(groups, sitecol, lt, cmaker)
+    sitecol = _get_sitecol(hparams, gslt.req_site_params)
+    return Input(groups, sitecol, gslt, cmakerdict)

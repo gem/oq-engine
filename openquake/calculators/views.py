@@ -165,6 +165,30 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     return '\n'.join(lines)
 
 
+@view.add('worst_sources')
+def view_worst_sources(token, dstore):
+    """
+    Returns the sources with worst weights
+    """
+    info = dstore.read_df('source_info', 'source_id').sort_values(
+        'calc_time').tail(20)
+    del info['trti'], info['grp_id']
+    info['slow_rate'] = info.calc_time / info.weight
+    return info
+
+
+@view.add('worst_tasks')
+def view_worst_tasks(token, dstore):
+    """
+    Returns the sources with worst weights
+    """
+    info = dstore.read_df('task_info', 'task_no').sort_values(
+        'duration').tail(20)
+    del info['received'], info['mem_gb']
+    info['slow_rate'] = info.duration / info.weight
+    return info
+
+
 @view.add('slow_sources')
 def view_slow_sources(token, dstore, maxrows=20):
     """
@@ -654,6 +678,11 @@ def view_task_hazard(token, dstore):
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
                              srcids))
+    info = dstore.read_df('source_info', 'source_id')
+    rows = [info.loc[s] for s in dstore['by_task/srcids'][taskno].split()]
+    maxrow = max(rows, key=lambda row: row.calc_time)
+    res += '\nWorst source: %s, num_sites=%d, calc_time=%d' % (
+        maxrow.name, maxrow.num_sites, maxrow.calc_time)
     return res
 
 
