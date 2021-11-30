@@ -668,12 +668,18 @@ class ContextMaker(object):
                 src.nsites = src.num_ruptures * len(sids)
                 continue
             if hasattr(src, 'iruptures'):
-                rups = src.iruptures(point_rup=True)
+                rups = list(src.iruptures(point_rup=True))
             else:
-                rups = src.iter_ruptures()
+                rups = list(src.iter_ruptures())
+            maxmag = max(rup.mag for rup in rups)
+            if maxmag >= 10:
+                raise ValueError('%s produces a magnitude %d!' %
+                                 (src.source_id, maxmag))
             ctxs = self.get_ctxs(rups, sitecol.filtered(sids))
             src.weight += len(ctxs)
             src.nsites = sum(len(ctx) for ctx in ctxs)
+            if not hasattr(src, 'location'):
+                src.weight *= 10
 
 
 # see contexts_tests.py for examples of collapse
