@@ -109,7 +109,7 @@ def run_preclassical(calc):
             # check if OQ_SAMPLE_SOURCES is set
             ss = os.environ.get('OQ_SAMPLE_SOURCES')
             if ss:
-                logging.info('Reduced num_sources for group #%d', grp_id)
+                logging.info('Sampled sources for group #%d', grp_id)
                 srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
             newsg = SourceGroup(srcs[0].tectonic_region_type)
             newsg.sources = srcs
