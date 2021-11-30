@@ -34,7 +34,7 @@ from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc
 from openquake.calculators import getters
-from openquake.calculators import base, preclassical
+from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -283,8 +283,8 @@ class ClassicalCalculator(base.HazardCalculator):
             eff_rups += rec[0]
             if rec[0]:
                 eff_sites += rec[1] / rec[0]
-        self.by_task[dic['task_no']] = (
-            eff_rups, eff_sites, sorted(srcids))
+        self.by_task[dic['task_no']] += dict(
+            effrups=eff_rups, effsites=eff_sites, srcids=sorted(srcids))
         grp_id = dic.pop('grp_id')
         self.rel_ruptures[grp_id] += eff_rups
 
@@ -341,7 +341,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
-        self.by_task = {}  # task_no => src_ids
+        self.by_task = AccumDict(accum=AccumDict())
+        # task_no => effrups, effsites, srcids
         self.Ns = len(self.csm.source_info)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
@@ -472,11 +473,10 @@ class ClassicalCalculator(base.HazardCalculator):
             si = self.datastore.create_dset('by_task/srcids',
                                             hdf5.vstr, num_tasks,
                                             fillvalue=None)
-            for task_no, rec in self.by_task.items():
-                effrups, effsites, srcids = rec
-                er[task_no] = effrups
-                es[task_no] = effsites
-                si[task_no] = ' '.join(srcids)
+            for task_no, dic in self.by_task.items():
+                er[task_no] = dic['effrups']
+                es[task_no] = dic['effsites']
+                si[task_no] = ' '.join(dic['srcids'])
             self.by_task.clear()
         if self.calc_times:  # can be empty in case of errors
             self.numctxs = sum(arr[0] for arr in self.calc_times.values())
