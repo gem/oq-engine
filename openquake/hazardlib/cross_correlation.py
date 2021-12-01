@@ -138,8 +138,8 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        return numpy.random.multivariate_normal(
-            numpy.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
+        return np.random.multivariate_normal(
+            np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
 
     def _get_correlation_matrix(self, imts):
         # cached on the periods
@@ -169,7 +169,7 @@ class NoCrossCorrelation(CrossCorrelationBetween):
 
         NB: the user must specify the random seed first
         """
-        return numpy.array([self.distribution.rvs(num_events) for imt in imts])
+        return np.array([self.distribution.rvs(num_events) for imt in imts])
 
 
 class FullCrossCorrelation(CrossCorrelationBetween):
@@ -188,4 +188,4 @@ class FullCrossCorrelation(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         eps = self.distribution.rvs(num_events)
-        return numpy.array([eps for imt in imts])
+        return np.array([eps for imt in imts])
