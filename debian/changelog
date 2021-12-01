@@ -1,8 +1,14 @@
+  [Michele Simionato]
+  * Internal: rup/src_id now refers to the row in the source_info table
+
+  [Miguel Leonardo-Suárez]
+  * Added the GMPE Arroyo et al. (2010) for Mexican subduction interface events
+
   [Marco Pagani]
   * Adds a new method to the modifiable GMPE with which is possible to 
     compute spatially correlated ground-motion fields even when the initial
     GMM only provides the total standard deviation.
-  * Fixed a bug in the `modify_recompute_mma
+  * Fixed a bug in the `modify_recompute_mmax`
 
   [Michele Simionato]
   * Extended the mag-dependent filtering to the event based calculator

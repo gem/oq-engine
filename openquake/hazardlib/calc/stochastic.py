@@ -201,21 +201,22 @@ def sample_cluster(sources, srcfilter, num_ses, param):
             for src, _ in srcfilter.filter(sources):
                 # Track calculation time
                 t0 = time.time()
+                src_id = src.source_id
                 rup = src.get_one_rupture(ses_seed)
                 # The problem here is that we do not know a-priori the
                 # number of occurrences of a given rupture.
-                if src.id not in rup_counter:
-                    rup_counter[src.id] = {}
-                    rup_data[src.id] = {}
-                if rup.idx not in rup_counter[src.id]:
-                    rup_counter[src.id][rup.idx] = 1
-                    rup_data[src.id][rup.idx] = [rup, src.id, trt_smr]
+                if src_id not in rup_counter:
+                    rup_counter[src_id] = {}
+                    rup_data[src_id] = {}
+                if rup.idx not in rup_counter[src_id]:
+                    rup_counter[src_id][rup.idx] = 1
+                    rup_data[src_id][rup.idx] = [rup, src_id, trt_smr]
                 else:
-                    rup_counter[src.id][rup.idx] += 1
+                    rup_counter[src_id][rup.idx] += 1
                 # Store info
                 dt = time.time() - t0
                 calc_times[basename(src)] += numpy.array(
-                    [len(rup_data[src.id]), src.nsites, dt])
+                    [len(rup_data[src_id]), src.nsites, dt])
         elif param['src_interdep'] == 'mutex':
             raise NotImplementedError('src_interdep == mutex')
     # Create event based ruptures

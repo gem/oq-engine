@@ -52,6 +52,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
+    id = -1  # to be set
     trt_smr = 0  # set by the engine
     nsites = 0  # set when filtering the source
 

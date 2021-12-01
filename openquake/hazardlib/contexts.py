@@ -371,7 +371,7 @@ class ContextMaker(object):
         :param sitecol:
             a (filtered) SiteCollection
         :param src_id:
-            the ID of the source (for debugging purposes)
+            the numeric ID of the source (to be assigned to the ruptures)
         :returns:
             fat RuptureContexts
         """
@@ -824,11 +824,18 @@ class PmapMaker(object):
         return pmap
 
     def dictarray(self, ctxs):
-        dic = {}  # par -> array
-        z = numpy.zeros(0)
+        dic = {'src_id': []}  # par -> array
+        if not ctxs:
+            return dic
         for par in self.cmaker.get_ctx_params():
             pa = par[:-1] if par.endswith('_') else par
-            dic[par] = numpy.array([getattr(ctx, pa, z) for ctx in ctxs])
+            if pa not in vars(ctxs[0]):
+                continue
+            elif par.endswith('_'):
+                dic[par] = numpy.array(
+                    [getattr(ctx, pa) for ctx in ctxs], dtype=object)
+            else:
+                dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
         return dic
 
     def make(self):
