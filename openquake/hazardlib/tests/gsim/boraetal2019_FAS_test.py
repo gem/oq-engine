@@ -23,7 +23,7 @@ from openquake.hazardlib.gsim.boraetal2019_FAS import Boraetal2019FAS
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class BaylessAbrahamson2018TestCase(BaseGSIMTestCase):
+class Boraetal2019FASTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Boraetal2019FAS
 
     # Tables computed using the matlab script included in the supplement to
