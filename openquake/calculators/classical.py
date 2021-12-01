@@ -289,7 +289,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rel_ruptures[grp_id] += eff_rups
 
         # store rup_data if there are few sites
-        if self.few_sites and len(dic['rup_data']['src_id']):
+        if self.few_sites and dic['rup_data']:
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
