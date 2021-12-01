@@ -1182,7 +1182,7 @@ def extract_disagg_layer(dstore, what):
     """
     qdict = parse(what)
     oq = dstore['oqparam']
-    oq.maximum_distance = filters.MagDepDistance(oq.maximum_distance)
+    oq.maximum_distance = filters.IntegrationDistance(oq.maximum_distance)
     if 'kind' in qdict:
         kinds = qdict['kind']
     else:

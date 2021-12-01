@@ -46,7 +46,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                           if f.endswith(exports) and 'by_taxon' not in f)
         self.assertEqual(len(got), len(expected))
         for fname, actual in zip(expected, got):
-            self.assertEqualFiles('expected/%s' % fname, actual)
+            self.assertEqualFiles('expected/%s' % fname, actual, delta=1E-5)
 
     def test_case_1(self):
         # test with a single event and a missing tag
@@ -83,7 +83,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         # check risk_by_event
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         # check agg_damages extraction
         total = extract(self.calc.datastore, 'agg_damages/structural')
@@ -106,18 +107,19 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
 
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=5E-5)
 
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=5E-6)
+                              delta=5E-5)
 
         return  # TODO: fix avg_losses
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # one per realization
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=5E-6)
+                                  delta=5E-5)
 
         #df = view('portfolio_damage_error', self.calc.datastore)
         #fname = gettemp(text_table(df))
@@ -141,15 +143,17 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # this is a case with two gsims and one asset
         self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
-        tmpname = write_csv(None, dmg, fmt='%.5E')  # (T, R, D) == (1, 2, 5)
-        self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
+        self.assertEqual(dmg.array.shape, (1, 2, 5))  # (T, R, D)
+        aac(dmg.array[0].sum(axis=0),
+            [0.72431, 0.599795, 0.292081, 0.15108, 0.232734], atol=1E-5)
 
     def test_case_6(self):
         # this is a case with 5 assets on the same point
         self.assert_ok(case_6, 'job_h.ini,job_r.ini')
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         tmpname = write_csv(None, dmg, fmt='%.5E')  # (T, R, D) == (5, 1, 5)
-        self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
+        self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname,
+                              delta=1E-5)
 
     def test_case_7(self):
         # this is a case with three loss types
@@ -180,20 +184,20 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_9.__file__, 'job.ini')
 
         [fname] = export(('damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/damages.csv', fname)
+        self.assertEqualFiles('expected/damages.csv', fname, delta=2E-5)
 
         # check risk_by_event
         K = self.calc.datastore.get_attr('risk_by_event', 'K')
         df = self.calc.datastore.read_df('risk_by_event', 'event_id',
                                          {'agg_id': K})
         dmg = df.loc[1937]  # damage caused by the event 1937
-        self.assertEqual(dmg.dmg_1.sum(), 51)
-        self.assertEqual(dmg.dmg_2.sum(), 64)
-        self.assertEqual(dmg.dmg_3.sum(), 41)
-        self.assertEqual(dmg.dmg_4.sum(), 20)
+        self.assertEqual(dmg.dmg_1.sum(), 49)
+        self.assertEqual(dmg.dmg_2.sum(), 62)
+        self.assertEqual(dmg.dmg_3.sum(), 42)
+        self.assertEqual(dmg.dmg_4.sum(), 25)
 
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-4)
 
     def test_case_10(self):
         self.run_calc(case_10.__file__, 'job.ini')

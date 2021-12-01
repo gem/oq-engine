@@ -165,6 +165,30 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     return '\n'.join(lines)
 
 
+@view.add('worst_sources')
+def view_worst_sources(token, dstore):
+    """
+    Returns the sources with worst weights
+    """
+    info = dstore.read_df('source_info', 'source_id').sort_values(
+        'calc_time').tail(20)
+    del info['trti'], info['grp_id']
+    info['slow_rate'] = info.calc_time / info.weight
+    return info
+
+
+@view.add('worst_tasks')
+def view_worst_tasks(token, dstore):
+    """
+    Returns the sources with worst weights
+    """
+    info = dstore.read_df('task_info', 'task_no').sort_values(
+        'duration').tail(20)
+    del info['received'], info['mem_gb']
+    info['slow_rate'] = info.duration / info.weight
+    return info
+
+
 @view.add('slow_sources')
 def view_slow_sources(token, dstore, maxrows=20):
     """
@@ -233,7 +257,7 @@ def view_full_lt(token, dstore):
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
-    del df['grp_id'], df['trti'], df['task_no']
+    del df['grp_id'], df['trti']
     return text_table(df)
 
 
@@ -525,12 +549,12 @@ def stats(name, array, *extras):
     Returns statistics from an array of numbers.
 
     :param name: a descriptive string
-    :returns: (name, mean, rel_std, min, max, len)
+    :returns: (name, mean, rel_std, min, max, len) + extras
     """
     avg = numpy.mean(array)
     std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
-    return (name, len(array), avg, std,
-            numpy.min(array), numpy.max(array)) + extras
+    max_ = numpy.max(array)
+    return (name, len(array), avg, std, numpy.min(array), max_) + extras
 
 
 @view.add('num_units')
@@ -612,11 +636,11 @@ def view_task_info(token, dstore):
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):
-            data.append(stats(task, val))
+            data.append(stats(task, val, val.max() / val.mean()))
     if not data:
         return 'Not available'
     return numpy.array(
-        data, dt('operation-duration counts mean stddev min max'))
+        data, dt('operation-duration counts mean stddev min max slowfac'))
 
 
 @view.add('task_durations')
@@ -650,10 +674,15 @@ def view_task_hazard(token, dstore):
     taskno = rec['task_no']
     eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
     eff_sites = dstore['by_task/eff_sites'][taskno]
-    srcids = dstore['by_task/srcids'][taskno]
+    srcids = decode(dstore['by_task/srcids'][taskno])
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
                              srcids))
+    info = dstore.read_df('source_info', 'source_id')
+    rows = [info.loc[s] for s in dstore['by_task/srcids'][taskno].split()]
+    maxrow = max(rows, key=lambda row: row.calc_time)
+    res += '\nWorst source: %s, num_sites=%d, calc_time=%d' % (
+        maxrow.name, maxrow.num_sites, maxrow.calc_time)
     return res
 
 
@@ -782,8 +811,7 @@ def view_extreme_gmvs(token, dstore):
     err = binning_error(gmvs, eids)
     if err > .05:
         msg += ('Your results are expected to have a large dependency '
-                'from ses_seed (or the rupture seed in scenarios): %d%%'
-                % (err * 100))
+                'from the rupture seed: %d%%' % (err * 100))
     if imt0.startswith(('PGA', 'SA(')):
         gmpe = GmpeExtractor(dstore)
         df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
@@ -1213,3 +1241,13 @@ def view_src_groups(token, dstore):
     tbl.sort(key=operator.itemgetter(1), reverse=True)
     return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
                       ext='org')
+
+
+@view.add('rup_stats')
+def view_rup_stats(token, dstore):
+    """
+    Show the statistics of event based ruptures
+    """
+    rups = dstore['ruptures'][:]
+    out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
+    return numpy.array(out, dt('kind counts mean stddev min max'))

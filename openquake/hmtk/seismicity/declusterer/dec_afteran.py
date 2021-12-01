@@ -57,7 +57,7 @@ from openquake.hmtk.seismicity.declusterer.distance_time_windows import (
 @DECLUSTERER_METHODS.add(
     "decluster",
     time_distance_window=TIME_DISTANCE_WINDOW_FUNCTIONS,
-    time_window=np.float)
+    time_window=float)
 class Afteran(BaseCatalogueDecluster):
     """
     This implements the Afteran algorithm as described in this paper:

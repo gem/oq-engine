@@ -24,14 +24,55 @@ import gzip
 import zlib
 import numpy
 
-from openquake.baselib import parallel, general
+from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib.contexts import basename
+from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.lt import apply_uncertainties
 
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
+CALC_TIME, NUM_SITES, EFF_RUPTURES, WEIGHT = 3, 4, 5, 6
 
-CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
+source_info_dt = numpy.dtype([
+    ('source_id', hdf5.vstr),          # 0
+    ('grp_id', numpy.uint16),          # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('calc_time', numpy.float32),      # 3
+    ('num_sites', numpy.uint32),       # 4
+    ('eff_ruptures', numpy.uint32),    # 5
+    ('weight', numpy.float32),         # 6
+    ('trti', numpy.uint8),             # 7
+])
+
+
+def create_source_info(csm, calc_times, h5):
+    """
+    Creates source_info, source_wkt, trt_smrs, toms
+    """
+    data = {}  # src_id -> row
+    wkts = []
+    lens = []
+    for sg in csm.src_groups:
+        for src in sg:
+            srcid = basename(src)
+            trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
+            lens.append(len(src.trt_smrs))
+            row = [srcid, src.grp_id, src.code, 0, 0, 0, trti, 0]
+            wkts.append(getattr(src, '_wkt', ''))
+            data[srcid] = row
+            src.id = len(data) - 1
+
+    logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
+                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
+                 numpy.mean(lens))
+    csm.source_info = data  # src_id -> row
+    num_srcs = len(csm.source_info)
+    # avoid hdf5 damned bug by creating source_info in advance
+    h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
+    h5['source_info'].attrs['atomic'] = any(
+        grp.atomic for grp in csm.src_groups)
+    h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
 
 
 def trt_smrs(src):
@@ -86,7 +127,7 @@ def get_csm(oq, full_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
-            src.checksum = src.grp_id = src.id = src.trt_smr = grp_id
+            src.checksum = src.grp_id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
             planes = src.get_planes()
@@ -255,16 +296,6 @@ def _get_csm(full_lt, groups):
                 srcs = reduce_sources(srcs)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
-            # check if OQ_SAMPLE_SOURCES is set
-            ss = os.environ.get('OQ_SAMPLE_SOURCES')
-            if ss:
-                logging.info('Reducing the number of sources for %s', trt)
-                split = []
-                for src in sources:
-                    for s in src:
-                        s.trt_smr = src.trt_smr
-                        split.append(s)
-                sources = general.random_filter(split, float(ss)) or split[0]
             # set ._wkt attribute (for later storage in the source_wkt dataset)
             for src in sources:
                 src._wkt = src.wkt()
@@ -294,13 +325,10 @@ class CompositeSourceModel:
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
         self.src_groups = src_groups
-        idx = 0
         for grp_id, sg in enumerate(src_groups):
             assert len(sg)  # sanity check
             for src in sg:
-                src.id = idx
                 src.grp_id = grp_id
-                idx += 1
 
     def get_trt_smrs(self):
         """
@@ -348,14 +376,19 @@ class CompositeSourceModel:
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
-                if hasattr(src, 'mags'):  # UCERF
-                    srcmags = ['%.2f' % mag for mag in numpy.unique(
-                        numpy.round(src.mags, 2))]
+                if hasattr(src, 'mags'):  # MultiFaultSource
+                    srcmags = {magstr(mag) for mag in src.mags}
+                    if hasattr(src, 'source_file'):  # UcerfSource
+                        grid_key = "/".join(["Grid", src.ukey["grid_key"]])
+                        # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
+                        with hdf5.File(src.source_file, "r") as h5:
+                            srcmags.update(magstr(mag) for mag in
+                                           h5[grid_key + "/Magnitude"][:])
                 elif hasattr(src, 'data'):  # nonparametric
-                    srcmags = ['%.2f' % item[0].mag for item in src.data]
+                    srcmags = {magstr(item[0].mag) for item in src.data}
                 else:
-                    srcmags = ['%.2f' % item[0] for item in
-                               src.get_annual_occurrence_rates()]
+                    srcmags = {magstr(item[0]) for item in
+                               src.get_annual_occurrence_rates()}
                 mags[sg.trt].update(srcmags)
         return {trt: sorted(mags[trt]) for trt in mags}
 
@@ -374,18 +407,17 @@ class CompositeSourceModel:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
 
-    def update_source_info(self, calc_times, nsites=False):
+    def update_source_info(self, calc_times):
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         for src_id, arr in calc_times.items():
             row = self.source_info[src_id]
-            row[CALC_TIME] += arr[2]
+            row[CALC_TIME] = arr[2]
             if len(arr) == 4:  # after preclassical
-                row[TASK_NO] = arr[3]
-            if nsites:
-                row[EFF_RUPTURES] += arr[0]
-                row[NUM_SITES] += arr[1]
+                row[WEIGHT] = arr[3]
+            row[EFF_RUPTURES] = arr[0]
+            row[NUM_SITES] = arr[1]
 
     def count_ruptures(self):
         """
@@ -397,7 +429,7 @@ class CompositeSourceModel:
         return n
 
     def __toh5__(self):
-        data = gzip.compress(pickle.dumps(self))
+        data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL))
         logging.info(f'Storing {general.humansize(len(data))} '
                      'of CompositeSourceModel')
         return numpy.void(data), {}

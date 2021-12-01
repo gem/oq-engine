@@ -62,17 +62,6 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
 
-source_info_dt = numpy.dtype([
-    ('source_id', hdf5.vstr),          # 0
-    ('grp_id', numpy.uint16),          # 1
-    ('code', (numpy.string_, 1)),      # 2
-    ('calc_time', numpy.float32),      # 3
-    ('num_sites', numpy.uint32),       # 4
-    ('eff_ruptures', numpy.uint32),    # 5
-    ('trti', numpy.uint8),             # 6
-    ('task_no', numpy.uint16),         # 7
-])
-
 
 class DuplicatedPoint(Exception):
     """
@@ -604,7 +593,10 @@ def get_gsim_lt(oqparam, trts=('*',)):
             # but it is not an error, it is actually the most common case!
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             {StdDev.TOTAL}):
-                raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
+                modifications = list(gsim.kwargs.keys())
+                if not (type(gsim).__name__ == 'ModifiableGMPE' and
+                        'add_between_within_stds' in modifications):
+                    raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
         logging.error('IMT-dependent weights in the logic tree cannot work '
@@ -689,7 +681,7 @@ def get_full_lt(oqparam, branchID=None):
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
-    p = full_lt.get_num_paths()
+    p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
         logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
             oqparam.number_of_logic_tree_samples, p))
@@ -723,48 +715,6 @@ def get_logic_tree(oqparam):
     """
     flt = get_full_lt(oqparam)
     return logictree.compose(flt.source_model_lt, flt.gsim_lt)
-
-
-def save_source_info(csm, h5):
-    """
-    Creates source_info, source_wkt, trt_smrs, toms
-    """
-    data = {}  # src_id -> row
-    wkts = []
-    lens = []
-    for sg in csm.src_groups:
-        for src in sg:
-            trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
-            lens.append(len(src.trt_smrs))
-            row = [src.source_id, src.grp_id, src.code,
-                   0, 0, 0, trti, 0]
-            wkts.append(src._wkt)
-            data[src.id] = row
-    logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
-                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
-                 numpy.mean(lens))
-    csm.source_info = data  # src_id -> row
-    if h5:
-        num_srcs = len(csm.source_info)
-        # avoid hdf5 damned bug by creating source_info in advance
-        h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
-        h5['source_info'].attrs['atomic'] = any(
-            grp.atomic for grp in csm.src_groups)
-        h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['trt_smrs'] = csm.get_trt_smrs()
-        h5['toms'] = numpy.array(
-            [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
-
-
-def get_tom_name(sg):
-    """
-    :param sg: a source group instance
-    :returns: name of the associated temporal occurrence model
-    """
-    if sg.temporal_occurrence_model:
-        return sg.temporal_occurrence_model.__class__.__name__
-    else:
-        return 'PoissonTOM'
 
 
 def _check_csm(csm, oqparam, h5):
@@ -838,15 +788,11 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
             with open(fname, 'rb') as f:
                 csm = pickle.load(f)
                 csm.full_lt = full_lt
-            if h5:
-                # avoid errors with --reuse_hazard
-                save_source_info(csm, h5)
             _check_csm(csm, oqparam, h5)
             return csm
 
     # read and process the composite source model from the input files
     csm = get_csm(oqparam, full_lt, h5)
-    save_source_info(csm, h5)
     if oqparam.cachedir and not oqparam.is_ucerf():
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
@@ -886,6 +832,9 @@ def get_crmodel(oqparam):
     loss_types = oqparam.loss_dt().names
     consdict = {}
     if 'consequence' in oqparam.inputs:
+        if not risklist.limit_states:
+            raise InvalidFile('Missing fragility functions in %s' %
+                              oqparam.inputs['job_ini'])
         # build consdict of the form consequence_by_tagname -> tag -> array
         for by, fnames in oqparam.inputs['consequence'].items():
             if isinstance(fnames, str):  # single file

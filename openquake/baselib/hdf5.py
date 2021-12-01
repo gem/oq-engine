@@ -269,15 +269,19 @@ def extract_cols(datagrp, sel, slc, columns):
         slcs = [slc]
     acc = general.AccumDict(accum=[])  # col -> arrays
     for slc in slcs:
-        ok = slice(None)
-        dic = {col: datagrp[col][slc] for col in sel}
-        for col in sel:
-            if isinstance(ok, slice):  # first selection
-                ok = is_ok(dic[col], sel[col])
-            else:  # other selections
-                ok &= is_ok(dic[col], sel[col])
-        for col in columns:
-            acc[col].append(datagrp[col][slc][ok])
+        if sel:
+            ok = slice(None)
+            dic = {col: datagrp[col][slc] for col in sel}
+            for col in sel:
+                if isinstance(ok, slice):  # first selection
+                    ok = is_ok(dic[col], sel[col])
+                else:  # other selections
+                    ok &= is_ok(dic[col], sel[col])
+            for col in columns:
+                acc[col].append(datagrp[col][slc][ok])
+        else:  # avoid making unneeded copies
+            for col in columns:
+                acc[col].append(datagrp[col][slc])
     return {k: numpy.concatenate(vs) for k, vs in acc.items()}
 
 

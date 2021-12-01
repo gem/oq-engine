@@ -163,7 +163,7 @@ def RSD():
     return IMT('RSD')
 
 
-def RSD595(IMT):
+def RSD595():
     """
     Alias for RSD
     """

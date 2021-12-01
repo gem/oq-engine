@@ -90,8 +90,8 @@ def check_config(config, data):
        "input_mmax": lambda cat: cat.data['magnitude'][
            np.argmax(cat.data['magnitude'])],
        "input_mmax_uncertainty": lambda cat: cat.get_observed_mmax_sigma(0.2),
-       "b-value": np.float,
-       "sigma-b": np.float,
+       "b-value": float,
+       "sigma-b": float,
        "maximum_iterations": 1000,
        "tolerance": 1E-5})
 class KijkoSellevolBayes(BaseMaximumMagnitude):

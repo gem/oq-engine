@@ -135,6 +135,11 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(validator(''), None)
         self.assertEqual(validator('1'), 1)
 
+    def test_full_instantiation(self):
+        # test for https://github.com/gem/oq-engine/issues/7363
+        abr = valid.gsim("AbrahamsonEtAl2014")
+        self.assertIsNone(abr.region)
+
     def test_gsim(self):
         class FakeGsim(object):
             def __init__(self, arg):

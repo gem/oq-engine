@@ -16,14 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import getpass
 import logging
 import itertools
 import numpy
 import pandas
 
 from openquake.baselib import general, parallel, python3compat
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, logs
 from openquake.risklib import scientific
+from openquake.engine import engine
 from openquake.calculators import base, views
 
 U8 = numpy.uint8
@@ -266,6 +269,7 @@ class PostRiskCalculator(base.RiskCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
                 return
+        logging.info('Aggregating by %s', oq.aggregate_by)
         if 'source_info' in self.datastore and 'risk' in oq.calculation_mode:
             logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
@@ -321,3 +325,30 @@ class PostRiskCalculator(base.RiskCalculator):
                         'Due to rounding errors inherent in floating-point '
                         'arithmetic, agg_losses != sum(avg_losses) [%s]: '
                         '%s != %s\nsee %s', oq.loss_types[li], agg, avg, url)
+
+
+def post_aggregate(calc_id: int, aggregate_by):
+    """
+    Re-run the postprocessing after an event based risk calculation
+    """
+    parent = datastore.read(calc_id)
+    oqp = parent['oqparam']
+    aggby = aggregate_by.split(',')
+    for tagname in aggby:
+        if tagname not in oqp.aggregate_by:
+            raise ValueError('%r not in %s' % (tagname, oqp.aggregate_by))
+    dic = dict(
+        calculation_mode='reaggregate',
+        description=oqp.description + '[aggregate_by=%s]' % aggregate_by,
+        user_name=getpass.getuser(), is_running=1, status='executing',
+        pid=os.getpid(), hazard_calculation_id=calc_id)
+    log = logs.init('job', dic, logging.INFO)
+    if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+        os.environ['OQ_DISTRIBUTE'] = 'processpool'
+    with log:
+        oqp.hazard_calculation_id = parent.calc_id
+        parallel.Starmap.init()
+        prc = PostRiskCalculator(oqp, log.calc_id)
+        prc.assetcol = parent['assetcol']
+        prc.run(aggregate_by=aggby)
+        engine.expose_outputs(prc.datastore)

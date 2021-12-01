@@ -132,14 +132,14 @@ class BMaxLikelihood(SeismicityOccurrence):
         bval, sigma_b = self._average_parameters(
             gr_pars, neq, config['Average Type'])
         aval = self._calculate_a_value(bval,
-                                       np.float(np.sum(neq)),
+                                       float(np.sum(neq)),
                                        cmag,
                                        ctime,
                                        catalogue['magnitude'],
                                        end_year,
                                        dmag)
         sigma_a = self._calculate_a_value(bval + sigma_b,
-                                          np.float(np.sum(neq)),
+                                          float(np.sum(neq)),
                                           cmag,
                                           ctime,
                                           catalogue['magnitude'],
