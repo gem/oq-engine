@@ -787,7 +787,7 @@ class PmapMaker(object):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.split_less if self.N == 1
+        filt = (self.srcfilter.filter if not self.split_sources or self.N == 1
                 else self.srcfilter.split)
         cm = self.cmaker
         for src, sites in filt(self.group):
