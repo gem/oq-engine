@@ -282,8 +282,10 @@ class RuptureImporter(object):
         if oq.investigation_time:
             eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
                         len(self.datastore['weights']))
+            mag = numpy.average(rup_array['mag'], weights=rup_array['n_occ'])
             logging.info('There are {:_d} events and {:_d} ruptures in {:_d} '
-                         'years'.format(ne, nr, int(eff_time)))
+                         'years (mean mag={:.2f})'.format(
+                             ne, nr, int(eff_time), mag))
 
     def _save_events(self, rup_array, rgetters):
         # this is very fast compared to saving the ruptures
