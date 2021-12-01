@@ -656,6 +656,8 @@ class ContextMaker(object):
         Set the weight attribute on each source to the sum of the affected
         sites
         """
+        LG = len(self.imtls.array) * len(self.gsims)
+        npfactor = 1 + 200 / LG
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
@@ -681,7 +683,7 @@ class ContextMaker(object):
             if hasattr(src, 'pointsources'):
                 src.weight *= src.num_ruptures / len(rups)
             if not hasattr(src, 'location'):
-                src.weight *= 10
+                src.weight *= npfactor  # heavier if there are few levels
 
 
 # see contexts_tests.py for examples of collapse
