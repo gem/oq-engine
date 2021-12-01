@@ -498,7 +498,6 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     for i, idxs in enumerate(grid.values()):
         if len(idxs) > 1:
             cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
-            cps.id = ps[0].id
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
             out.append(cps)
