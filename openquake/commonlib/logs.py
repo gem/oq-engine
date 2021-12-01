@@ -166,7 +166,7 @@ class LogContext:
                  user_name=None, hc_id=None):
         self.log_level = log_level
         self.log_file = log_file
-        self.user_name = user_name
+        self.user_name = user_name or getpass.getuser()
         if isinstance(job_ini, dict):  # dictionary of parameters
             self.params = job_ini
         else:  # path to job.ini file

@@ -26,6 +26,36 @@ from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
     ModifiableGMPE, _dict_to_coeffs_table)
 
 
+class ModifiableGMPEAddWithBetweenTest(unittest.TestCase):
+
+    def setUp(self):
+        self.ctx = ctx = RuptureContext()
+        ctx.mag = 6.
+        ctx.rake = 0.
+        ctx.hypo_depth = 10.
+        ctx.occurrence_rate = .001
+        sites = Dummy.get_site_collection(4, vs30=760.)
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
+        ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.rjb = np.array([1., 10., 30., 70.])
+        self.imt = PGA()
+
+    def test_add_between_within_sigma(self):
+        """ Checks that the modified GMM has between and within std """
+        stds_types = [const.StdDev.TOTAL, const.StdDev.INTRA_EVENT,
+                      const.StdDev.INTER_EVENT]
+        gmm = ModifiableGMPE(gmpe={'Campbell2003': {}},
+                             add_between_within_stds={'with_betw_ratio': 0.6})
+        out = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                       self.imt, stds_types)
+        expected_with = np.ones(4) * 0.24381161
+        expected_betw = np.ones(4) * 0.40635268
+        aae = np.testing.assert_array_almost_equal
+        aae(expected_betw, out[1][2])
+        aae(expected_with, out[1][1])
+
+
 class ModifiableGMPETest(unittest.TestCase):
 
     def setUp(self):
@@ -44,7 +74,8 @@ class ModifiableGMPETest(unittest.TestCase):
     def test_set_between_epsilon_raises_error(self):
         """ Check that error is raised for GMPEs with only total std """
 
-        stds_types = [const.StdDev.TOTAL]
+        stds_types = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
+                      const.StdDev.INTRA_EVENT]
         gmm = ModifiableGMPE(gmpe={'Campbell2003': {}},
                              set_between_epsilon={'epsilon_tau': 0.5})
         with self.assertRaises(ValueError):

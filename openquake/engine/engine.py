@@ -301,12 +301,12 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                 for param, value in pars.items():
                     jobdic[param] = str(value)
                 jobdic['description'] = '%s %s' % (dic['description'], pars)
-                new = logs.init('job', jobdic, log_level, None,
+                new = logs.init('job', jobdic, log_level, log_file,
                                 user_name, hc_id)
                 jobs.append(new)
         else:
             jobs.append(
-                logs.init('job', dic, log_level, None, user_name, hc_id))
+                logs.init('job', dic, log_level, log_file, user_name, hc_id))
     if multi:
         for job in jobs:
             job.multi = True

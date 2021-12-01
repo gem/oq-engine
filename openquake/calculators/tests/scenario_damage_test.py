@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest
 import numpy
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.writers import write_csv
@@ -144,10 +143,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # this is a case with two gsims and one asset
         self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
-        tmpname = write_csv(None, dmg, fmt='%.5E')  # (T, R, D) == (1, 2, 5)
-        raise unittest.SkipTest("python3.9 issue")
-        self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname,
-                              delta=1E-5)
+        self.assertEqual(dmg.array.shape, (1, 2, 5))  # (T, R, D)
+        aac(dmg.array[0].sum(axis=0),
+            [0.72431, 0.599795, 0.292081, 0.15108, 0.232734], atol=1E-5)
 
     def test_case_6(self):
         # this is a case with 5 assets on the same point

@@ -465,14 +465,15 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
                 mags_by_trt = csm.get_mags_by_trt()
-                oq.maximum_distance.interp(mags_by_trt)
                 for trt in mags_by_trt:
                     self.datastore['source_mags/' + trt] = numpy.array(
                         mags_by_trt[trt])
-                    it = list(oq.maximum_distance.ddic[trt].items())
-                    if len(it) > 2:
+                    interp = oq.maximum_distance(trt)
+                    if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
-                            it[0] + it[-2] + it[-1])
+                            interp.x[0], interp.y[0],
+                            interp.x[-2], interp.y[-2],
+                            interp.x[-1], interp.y[-1])
                         logging.info('max_dist %s: %s', trt, md)
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
@@ -560,8 +561,10 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam.__class__.concurrent_tasks.default)
             params = {name: value for name, value in
                       vars(parent['oqparam']).items()
-                      if name not in vars(self.oqparam)}
-            self.save_params(**params)
+                      if name not in vars(self.oqparam)
+                      and name != 'ground_motion_fields'}
+            if params:
+                self.save_params(**params)
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
             oqp = parent['oqparam']
@@ -789,7 +792,11 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.add_tagname('site_id')
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
-            self.sitecol = haz_sitecol
+            if oq.hazard_calculation_id:  # read the sitecol of the child
+                self.sitecol = readinput.get_site_collection(oq)
+                self.datastore['sitecol'] = self.sitecol
+            else:
+                self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)
@@ -852,6 +859,8 @@ class HazardCalculator(BaseCalculator):
         sec_perils = oq.get_sec_perils()
         for sp in sec_perils:
             sp.prepare(self.sitecol)  # add columns as needed
+        if sec_perils:
+            self.datastore['sitecol'] = self.sitecol
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
@@ -919,6 +928,10 @@ class HazardCalculator(BaseCalculator):
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)
+        if 'trt_smrs' not in self.datastore:
+            self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
+            self.datastore['toms'] = numpy.array(
+                [sg.tom_name for sg in self.csm.src_groups], hdf5.vstr)
 
     def post_process(self):
         """For compatibility with the engine"""

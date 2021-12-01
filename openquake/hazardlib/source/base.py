@@ -58,7 +58,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
-    weight = 1
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -398,7 +397,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
             Number of standard deviations to be added or substracted
         """
         msr = self.magnitude_scaling_relationship
-        area = self.get_fault_surface_area() * 1e6  # area in m^2
+        area = self.get_fault_surface_area()  # area in km^2
         mag = msr.get_median_mag(area=area, rake=self.rake)
         std = msr.get_std_dev_mag(area=area, rake=self.rake)
         self.mfd.max_mag = mag + epsilon * std

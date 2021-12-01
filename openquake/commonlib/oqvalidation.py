@@ -55,6 +55,12 @@ aggregate_by:
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
 
+reaggregate_by:
+  Used to perform additional aggregations in risk calculations. Takes in
+  input a proper subset of the tags in the aggregate_by option.
+  Example: *reaggregate_by = region*.
+  Default: empty list
+
 amplification_method:
   Used in classical PSHA calculations to amplify the hazard curves with
   the convolution or kernel method.
@@ -395,7 +401,11 @@ max_sites_per_gmf:
   Default: 65536
 
 max_sites_per_tile:
-  INTERNAL
+  Used in classical calculations which are to big to run within the
+  available memory. This effectively splits the calculation in homogeneous
+  tiles with less than `max_sites_per_tile`. To be used as last resort.
+  Example: *max_sites_per_tile = 50_000*
+  Default: 500_000
 
 max_weight:
   INTERNAL
@@ -478,7 +488,7 @@ pointsource_distance:
   Used in classical calculations to collapse the point sources. Can also be
   used in conjunction with *ps_grid_spacing*.
   Example: *pointsource_distance = 50*.
-  Default: empty dictionary
+  Default: {'default': 1000}
 
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
@@ -753,6 +763,7 @@ class OqParam(valid.ParamSet):
                     'occupants_vulnerability'}
     hazard_imtls = {}
     aggregate_by = valid.Param(valid.namelist, [])
+    reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), None)
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
@@ -816,7 +827,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
-    maximum_distance = valid.Param(valid.MagDepDistance.new)  # km
+    maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
@@ -837,7 +848,8 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.MagDepDistance.new, None)
+    pointsource_distance = valid.Param(valid.IntegrationDistance.new,
+                                       valid.IntegrationDistance.new('1000'))
     ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)

@@ -32,7 +32,7 @@ from openquake.hazardlib.lt import apply_uncertainties
 
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
-CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
+CALC_TIME, NUM_SITES, EFF_RUPTURES, WEIGHT = 3, 4, 5, 6
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -41,20 +41,9 @@ source_info_dt = numpy.dtype([
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
     ('eff_ruptures', numpy.uint32),    # 5
-    ('trti', numpy.uint8),             # 6
-    ('task_no', numpy.uint16),         # 7
+    ('weight', numpy.float32),         # 6
+    ('trti', numpy.uint8),             # 7
 ])
-
-
-def get_tom_name(sg):
-    """
-    :param sg: a source group instance
-    :returns: name of the associated temporal occurrence model
-    """
-    if sg.temporal_occurrence_model:
-        return sg.temporal_occurrence_model.__class__.__name__
-    else:
-        return 'PoissonTOM'
 
 
 def create_source_info(csm, calc_times, h5):
@@ -82,9 +71,6 @@ def create_source_info(csm, calc_times, h5):
     h5['source_info'].attrs['atomic'] = any(
         grp.atomic for grp in csm.src_groups)
     h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-    h5['trt_smrs'] = csm.get_trt_smrs()
-    h5['toms'] = numpy.array(
-        [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
 
 
 def trt_smrs(src):
@@ -308,16 +294,6 @@ def _get_csm(full_lt, groups):
                 srcs = reduce_sources(srcs)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
-            # check if OQ_SAMPLE_SOURCES is set
-            ss = os.environ.get('OQ_SAMPLE_SOURCES')
-            if ss:
-                logging.info('Reducing the number of sources for %s', trt)
-                split = []
-                for src in sources:
-                    for s in src:
-                        s.trt_smr = src.trt_smr
-                        split.append(s)
-                sources = general.random_filter(split, float(ss)) or split[0]
             # set ._wkt attribute (for later storage in the source_wkt dataset)
             for src in sources:
                 src._wkt = src.wkt()
@@ -440,7 +416,7 @@ class CompositeSourceModel:
             row = self.source_info[src_id]
             row[CALC_TIME] = arr[2]
             if len(arr) == 4:  # after preclassical
-                row[TASK_NO] = arr[3]
+                row[WEIGHT] = arr[3]
             row[EFF_RUPTURES] = arr[0]
             row[NUM_SITES] = arr[1]
 
