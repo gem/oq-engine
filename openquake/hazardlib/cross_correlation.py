@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-import numpy.matlib
 from scipy import constants, stats
 from abc import ABC, abstractmethod
 from openquake.hazardlib.imt import IMT
@@ -72,26 +71,6 @@ class BakerJayaram2008(CrossCorrelation):
         else:
             corr = c4
         return corr  # a scalar
-
-
-def get_correlation_mtx(corr_model: CrossCorrelation,
-                        ref_imt: IMT, target_imts: list, num_sites):
-    """
-    :param corr_model:
-        An instance of a correlation model
-    :param ref_imt:
-        An :class:`openquake.hazardlib.imt.IMT` instance
-    :param target_imts:
-        A list of the target imts of size M
-    :param num_sites:
-        The number of involved sites
-    :returns:
-        A matrix of shape [<number of IMTs>, <number of sites>]
-    """
-    corr = np.array([corr_model.get_correlation(ref_imt, imt)
-                     for imt in target_imts])
-    corr = np.matlib.repmat(np.squeeze(corr), num_sites, 1).T
-    return corr
 
 
 # ######################## CrossCorrelationBetween ########################## #
