@@ -674,7 +674,7 @@ class ContextMaker(object):
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
-            src.weight = self.estimate_time(src, srcfilter) * 1000
+            src.weight = self.estimate_time(src, srcfilter)
 
 
 # see contexts_tests.py for examples of collapse
