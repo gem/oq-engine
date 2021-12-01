@@ -254,6 +254,7 @@ def split_source(src):
             split.source_id = '%s:%s' % (src.source_id, i)
             split.trt_smr = src.trt_smr
             split.grp_id = grp_id
+            split.id = src.id
             if has_samples:
                 split.samples = src.samples
             if has_scaling_rate:
@@ -263,6 +264,7 @@ def split_source(src):
         s.source_id = src.source_id
         s.trt_smr = src.trt_smr
         s.grp_id = grp_id
+        s.id = src.id
         if has_samples:
             s.samples = src.samples
         if has_scaling_rate:

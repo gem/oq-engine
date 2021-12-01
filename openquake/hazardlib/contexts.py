@@ -787,8 +787,7 @@ class PmapMaker(object):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.split_less
-                if not self.split_sources or self.N == 1
+        filt = (self.srcfilter.split_less if self.N == 1
                 else self.srcfilter.split)
         cm = self.cmaker
         for src, sites in filt(self.group):
@@ -825,7 +824,7 @@ class PmapMaker(object):
         return pmap
 
     def dictarray(self, ctxs):
-        dic = {}  # par -> array
+        dic = {'src_id': []}  # par -> array
         if not ctxs:
             return dic
         for par in self.cmaker.get_ctx_params():
