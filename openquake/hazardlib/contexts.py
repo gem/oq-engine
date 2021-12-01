@@ -834,7 +834,7 @@ class PmapMaker(object):
                 continue
             elif par.endswith('_'):
                 dic[par] = numpy.array(
-                    [getattr(ctx, pa) for ctx in ctxs])
+                    [getattr(ctx, pa) for ctx in ctxs], dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
         return dic
