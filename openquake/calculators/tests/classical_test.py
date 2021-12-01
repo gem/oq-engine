@@ -675,6 +675,7 @@ hazard_uhs-std.csv
                              [32.9537, 82.3458],
                              [32.7986, 82.2214]])
         dst = get_dists(self.calc.datastore)
+        import pdb; pdb.set_trace()
         aac(dst[0], exact[:, 0], atol=.5)  # site 0
         aac(dst[1], exact[:, 1], atol=.5)  # site 1
 

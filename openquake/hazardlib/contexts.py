@@ -787,7 +787,8 @@ class PmapMaker(object):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.split_less if self.N == 1
+        filt = (self.srcfilter.split_less
+                if not self.split_sources or self.N == 1
                 else self.srcfilter.split)
         cm = self.cmaker
         for src, sites in filt(self.group):
@@ -832,7 +833,7 @@ class PmapMaker(object):
             if pa not in vars(ctxs[0]):
                 continue
             elif par.endswith('_'):
-                dic[par] = numpy.concatenate(
+                dic[par] = numpy.array(
                     [getattr(ctx, pa) for ctx in ctxs])
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
