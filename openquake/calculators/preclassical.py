@@ -84,9 +84,10 @@ def run_preclassical(calc):
                 pointlike.append(src)
             else:
                 other.append(src)
-        if pointlike:
+        if pointlike and calc.oqparam.ps_grid_spacing:
             smap.submit((pointlike, sites, cmakers[grp_id]))
-        for src in other:
+            pointlike[:] = []
+        for src in other + pointlike:
             smap.submit(([src], sites, cmakers[grp_id]))
     normal = smap.reduce()
     if atomic_sources:  # case_35
