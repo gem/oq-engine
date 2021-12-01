@@ -651,39 +651,30 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
+    def estimate_time(self, src, srcfilter):
+        """
+        :returns: estimate the time taken to compute the pmap
+        """
+        t0 = time.time()
+        nr = 0
+        for split in src:
+            nr += 1
+            sites = srcfilter.get_close_sites(src)
+            if sites is not None:
+                rup = next(src.iter_ruptures())
+                ctxs = self.get_ctxs([rup], sites)
+                self.get_pmap(ctxs)
+        return (time.time() - t0) / nr * src.num_ruptures
+
     def set_weight(self, sources, sitecol):
         """
         Set the weight attribute on each source to the sum of the affected
         sites
         """
-        LG = len(self.imtls.array) * len(self.gsims)
-        npfactor = 1 + 200 / LG
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
-            src.weight = src.nsites = src.num_ruptures * .001
-            sids = srcfilter.close_sids(src)
-            if len(sids) == 0:
-                continue
-            elif 'UCERF' in src.__class__.__name__ or not sitecol:
-                src.weight = src.num_ruptures
-                src.nsites = src.num_ruptures * len(sids)
-                continue
-            if hasattr(src, 'iruptures'):
-                rups = list(src.iruptures(point_rup=True))
-            else:
-                rups = list(src.iter_ruptures())
-            maxmag = max(rup.mag for rup in rups)
-            if maxmag >= 10:
-                raise ValueError('%s produces a magnitude %d!' %
-                                 (src.source_id, maxmag))
-            ctxs = self.get_ctxs(rups, sitecol.filtered(sids))
-            src.weight += len(ctxs)
-            src.nsites = sum(len(ctx) for ctx in ctxs)
-            if hasattr(src, 'pointsources'):
-                src.weight *= src.num_ruptures / len(rups)
-            if not hasattr(src, 'location'):
-                src.weight *= npfactor  # heavier if there are few levels
+            src.weight = self.estimate_time(src, srcfilter) * 1000
 
 
 # see contexts_tests.py for examples of collapse
