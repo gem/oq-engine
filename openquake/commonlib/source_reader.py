@@ -61,6 +61,8 @@ def create_source_info(csm, calc_times, h5):
             row = [srcid, src.grp_id, src.code, 0, 0, 0, trti, 0]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
+            src.id = len(data) - 1
+
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
@@ -125,7 +127,7 @@ def get_csm(oq, full_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
-            src.checksum = src.grp_id = src.id = src.trt_smr = grp_id
+            src.checksum = src.grp_id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
             planes = src.get_planes()
@@ -323,13 +325,10 @@ class CompositeSourceModel:
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
         self.src_groups = src_groups
-        idx = 0
         for grp_id, sg in enumerate(src_groups):
             assert len(sg)  # sanity check
             for src in sg:
-                src.id = idx
                 src.grp_id = grp_id
-                idx += 1
 
     def get_trt_smrs(self):
         """
