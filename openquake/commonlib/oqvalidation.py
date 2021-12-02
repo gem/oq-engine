@@ -687,7 +687,7 @@ time_per_task:
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
-  Default: no default
+  Default: None
 
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes

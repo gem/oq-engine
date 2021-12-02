@@ -130,7 +130,7 @@ class GmfComputer(object):
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(
-            cmaker.trunclevel)
+            cmaker.truncation_level)
 
     def compute_all(self, sig_eps=None):
         """
@@ -228,7 +228,7 @@ class GmfComputer(object):
         return result, sig, eps
 
     def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
-        if self.cmaker.trunclevel == 0:
+        if self.cmaker.truncation_level == 0:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
