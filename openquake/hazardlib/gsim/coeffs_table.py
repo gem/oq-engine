@@ -192,7 +192,6 @@ class CoeffsTable(object):
         coeffs = []
         pof = []
         for imt in self._coeffs:
-            print(imt)
             if re.search('^(SA|EAS)', imt.string):
                 tmp = np.array(self._coeffs[imt])
                 coeffs.append([tmp[i] for i in coeff_list])
