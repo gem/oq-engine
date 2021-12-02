@@ -661,7 +661,7 @@ class ContextMaker(object):
         ctxs = []
         nr = 0
         for split in src:  # normally src is already split
-            nr += nr.num_ruptures
+            nr += split.num_ruptures
             rup = next(src.iter_ruptures())
             ctxs.extend(self.get_ctxs([rup], sites))
         self.get_pmap(ctxs)
