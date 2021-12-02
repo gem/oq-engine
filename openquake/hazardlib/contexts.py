@@ -167,7 +167,8 @@ class ContextMaker(object):
         return self.ctx_builder.dtype
 
     def __init__(self, trt, gsims, param, monitor=Monitor()):
-        param = param
+        if not isinstance(param, dict):  # OqParam
+            param = vars(param)
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -185,12 +186,11 @@ class ContextMaker(object):
             self.tom = registry['PoissonTOM'](self.investigation_time)
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
-        self.trunclevel = param.get('truncation_level')
+        self.truncation_level = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.cross_correl = param.get('cross_correl')
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
-        self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
         self.use_recarray = use_recarray(gsims)
         for req in self.REQUIRES:
@@ -619,7 +619,7 @@ class ContextMaker(object):
                 s = out[self.start + g]['_s']
                 for p in range(P):
                     eps = (imls[p] - mu[imti]) / sig[imti]  # shape C
-                    poes = _truncnorm_sf(self.trunclevel, eps)  # shape C
+                    poes = _truncnorm_sf(self.truncation_level, eps)  # shape C
                     ws = -numpy.log(
                         (1. - probs) ** poes) / self.investigation_time
                     s[n, p] = ws.sum()  # weights not summing up to 1
@@ -1230,11 +1230,11 @@ def read_cmakers(dstore, full_lt=None):
              'reqv': oq.get_reqv(),
              'shift_hypo': oq.shift_hypo,
              'cross_correl': oq.cross_correl,
-             'af': af,
-             'grp_id': grp_id})
+             'af': af})
         cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
         cmaker.trti = trti
         cmaker.start = start
+        cmaker.grp_id = grp_id
         start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
     return cmakers
@@ -1251,22 +1251,4 @@ def read_cmaker(dstore, trt_smr):
     trts = list(full_lt.gsim_lt.values)
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
     rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-    cmaker = ContextMaker(
-        trt, rlzs_by_gsim,
-        {'truncation_level': oq.truncation_level,
-         'collapse_level': int(oq.collapse_level),
-         'num_epsilon_bins': oq.num_epsilon_bins,
-         'investigation_time': oq.investigation_time,
-         'maximum_distance': oq.maximum_distance,
-         'minimum_distance': oq.minimum_distance,
-         'ses_seed': oq.ses_seed,
-         'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
-         'max_sites_disagg': oq.max_sites_disagg,
-         'max_sites_per_tile': oq.max_sites_per_tile,
-         'time_per_task': oq.time_per_task,
-         'disagg_by_src': oq.disagg_by_src,
-         'min_iml': oq.min_iml,
-         'imtls': oq.imtls,
-         'reqv': oq.get_reqv(),
-         'shift_hypo': oq.shift_hypo})
-    return cmaker
+    return ContextMaker(trt, rlzs_by_gsim, oq)
