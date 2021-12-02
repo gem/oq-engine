@@ -58,7 +58,7 @@ by using the following ``site_model.csv`` file::
 Notice that we are using a ``custom_site_id`` field to identify the cities.
 This is possible only in engine versions >= 3.13, where ``custom_site_id``
 has been extended to accept strings of at most 6 characters, while
-before only integers were accepted and we could have used a zip code instead.
+before only integers were accepted (we could have used a zip code instead).
 
 If no special approximations are used, the calculation is extremely
 slow, since the model is extremely large. On the the GEM cluster (320
@@ -127,3 +127,7 @@ tolerance of 10% or more. Internally ``oq compare`` calls the
 function ``numpy.allclose`` see
 https://numpy.org/doc/stable/reference/generated/numpy.allclose.html
 for a description of how the tolerances work.
+
+Increasing the ``pointsource_distance`` parameter and decreasing the
+``ps_grid_spacing`` parameter one can make the approximation as
+precise as wanted, at the expense of a larger runtime.
