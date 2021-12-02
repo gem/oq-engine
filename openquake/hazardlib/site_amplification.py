@@ -413,7 +413,7 @@ def get_poes_site(mean_std, cmaker, ctx):
     # C - Number of contexts
     # L - Number of intensity measure levels
     loglevels = cmaker.loglevels
-    trunclevel = cmaker.trunclevel
+    truncation_level = cmaker.truncation_level
     mean, stddev = mean_std  # shape (C, M)
     C, L = mean.shape[1], loglevels.size
     assert len(ctx.sids) == 1  # 1 site
@@ -452,7 +452,7 @@ def get_poes_site(mean_std, cmaker, ctx):
 
             # Set the arguments of the truncated normal distribution
             # function
-            if trunclevel == 0:
+            if truncation_level == 0:
                 out_l = iml_l <= mean[m]
                 out_u = iml_u <= mean[m]
             else:
@@ -460,8 +460,8 @@ def get_poes_site(mean_std, cmaker, ctx):
                 out_u = (iml_u - mean[m]) / stddev[m]
 
             # Probability of occurrence on rock
-            pocc_rock = (_truncnorm_sf(trunclevel, out_l) -
-                         _truncnorm_sf(trunclevel, out_u))  # shape C
+            pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
+                         _truncnorm_sf(truncation_level, out_u))  # shape C
 
             # Skipping cases where the pocc on rock is negligible
             if numpy.all(pocc_rock < 1e-10):

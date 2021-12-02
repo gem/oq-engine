@@ -76,14 +76,14 @@ class BakerJayaram2008(CrossCorrelation):
 # ######################## CrossCorrelationBetween ########################## #
 
 class CrossCorrelationBetween(ABC):
-    def __init__(self, trunclevel=None):
-        self.trunclevel = trunclevel
-        if self.trunclevel is None:
+    def __init__(self, truncation_level=None):
+        self.truncation_level = truncation_level
+        if self.truncation_level is None:
             self.distribution = stats.norm()
-        elif self.trunclevel == 0:
+        elif self.truncation_level == 0:
             self.distribution = None
         else:
-            self.distribution = stats.truncnorm(-trunclevel, trunclevel)
+            self.distribution = stats.truncnorm(-truncation_level, truncation_level)
 
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:

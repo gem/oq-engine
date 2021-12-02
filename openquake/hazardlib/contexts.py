@@ -167,7 +167,8 @@ class ContextMaker(object):
         return self.ctx_builder.dtype
 
     def __init__(self, trt, gsims, param, monitor=Monitor()):
-        param = param
+        if not isinstance(param, dict):  # OqParam
+            param = vars(param)
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -185,7 +186,7 @@ class ContextMaker(object):
             self.tom = registry['PoissonTOM'](self.investigation_time)
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
-        self.trunclevel = param.get('truncation_level')
+        self.truncation_level = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.cross_correl = param.get('cross_correl')
         self.ps_grid_spacing = param.get('ps_grid_spacing')
@@ -619,7 +620,7 @@ class ContextMaker(object):
                 s = out[self.start + g]['_s']
                 for p in range(P):
                     eps = (imls[p] - mu[imti]) / sig[imti]  # shape C
-                    poes = _truncnorm_sf(self.trunclevel, eps)  # shape C
+                    poes = _truncnorm_sf(self.truncation_level, eps)  # shape C
                     ws = -numpy.log(
                         (1. - probs) ** poes) / self.investigation_time
                     s[n, p] = ws.sum()  # weights not summing up to 1
