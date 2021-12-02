@@ -166,9 +166,33 @@ class ContextMaker(object):
         """
         return self.ctx_builder.dtype
 
-    def __init__(self, trt, gsims, param, monitor=Monitor()):
-        if not isinstance(param, dict):  # OqParam
-            param = vars(param)
+    def __init__(self, trt, gsims, oq, monitor=Monitor()):
+        if isinstance(oq, dict):
+            param = oq
+        else:  # OqParam
+            param = vars(oq)
+            param['truncation_level'] = oq.truncation_level
+            param['collapse_level'] = int(oq.collapse_level)
+            param['num_epsilon_bins'] = oq.num_epsilon_bins
+            param['investigation_time'] = oq.investigation_time
+            param['maximum_distance'] = oq.maximum_distance
+            param['pointsource_distance'] = oq.pointsource_distance
+            param['minimum_distance'] = oq.minimum_distance
+            param['ps_grid_spacing'] = oq.ps_grid_spacing
+            param['split_sources'] = oq.split_sources
+            param['ses_seed'] = oq.ses_seed
+            param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
+            param['max_sites_disagg'] = oq.max_sites_disagg
+            param['max_sites_per_tile'] = oq.max_sites_per_tile
+            param['time_per_task'] = oq.time_per_task
+            param['disagg_by_src'] = oq.disagg_by_src
+            param['min_iml'] = oq.min_iml
+            param['imtls'] = oq.imtls
+            param['reqv'] = oq.get_reqv()
+            param['shift_hypo'] = oq.shift_hypo
+            param['cross_correl'] = oq.cross_correl
+            param['af'] = getattr(oq, 'af', None)
+
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -1205,32 +1229,10 @@ def read_cmakers(dstore, full_lt=None):
         if ('amplification' in oq.inputs and
                 oq.amplification_method == 'kernel'):
             df = AmplFunction.read_df(oq.inputs['amplification'])
-            af = AmplFunction.from_dframe(df)
+            oq.af = AmplFunction.from_dframe(df)
         else:
-            af = None
-        cmaker = ContextMaker(
-            trt, rlzs_by_gsim,
-            {'truncation_level': oq.truncation_level,
-             'collapse_level': int(oq.collapse_level),
-             'num_epsilon_bins': oq.num_epsilon_bins,
-             'investigation_time': oq.investigation_time,
-             'maximum_distance': oq.maximum_distance,
-             'pointsource_distance': oq.pointsource_distance,
-             'minimum_distance': oq.minimum_distance,
-             'ps_grid_spacing': oq.ps_grid_spacing,
-             'split_sources': oq.split_sources,
-             'ses_seed': oq.ses_seed,
-             'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
-             'max_sites_disagg': oq.max_sites_disagg,
-             'max_sites_per_tile': oq.max_sites_per_tile,
-             'time_per_task': oq.time_per_task,
-             'disagg_by_src': oq.disagg_by_src,
-             'min_iml': oq.min_iml,
-             'imtls': oq.imtls,
-             'reqv': oq.get_reqv(),
-             'shift_hypo': oq.shift_hypo,
-             'cross_correl': oq.cross_correl,
-             'af': af})
+            oq.af = None
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
         cmaker.trti = trti
         cmaker.start = start
