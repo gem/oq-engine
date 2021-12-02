@@ -1,3 +1,6 @@
+  [Claudia Mascandola]
+  * Added a new class to the lanzano_luzi_2019 and skarlatoudis_2013 gmms.
+  
   [Giuseppina Tusa]
   * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs
     from Tusa et al. (2020).
