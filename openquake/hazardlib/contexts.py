@@ -41,7 +41,7 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, magdepdist, get_distances, getdefault, SourceFilter)
+    IntegrationDistance, magdepdist, get_distances, getdefault)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -166,14 +166,24 @@ class ContextMaker(object):
         """
         return self.ctx_builder.dtype
 
-    def __init__(self, trt, gsims, param, monitor=Monitor()):
-        param = param
+    def __init__(self, trt, gsims, oq, monitor=Monitor()):
+        if isinstance(oq, dict):
+            param = oq
+        else:  # OqParam
+            param = vars(oq)
+            param['split_sources'] = oq.split_sources
+            param['cross_correl'] = oq.cross_correl
+            param['min_iml'] = oq.min_iml
+            param['imtls'] = oq.imtls
+            param['reqv'] = oq.get_reqv()
+            param['af'] = getattr(oq, 'af', None)
+
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
         self.time_per_task = param.get('time_per_task', 60)
         self.disagg_by_src = param.get('disagg_by_src')
-        self.collapse_level = param.get('collapse_level', False)
+        self.collapse_level = int(param.get('collapse_level', 0))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
@@ -185,12 +195,11 @@ class ContextMaker(object):
             self.tom = registry['PoissonTOM'](self.investigation_time)
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
-        self.trunclevel = param.get('truncation_level')
+        self.truncation_level = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.cross_correl = param.get('cross_correl')
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
-        self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
         self.use_recarray = use_recarray(gsims)
         for req in self.REQUIRES:
@@ -388,6 +397,7 @@ class ContextMaker(object):
             except FarAwayRupture:
                 continue
             ctx = self.make_rctx(rup)
+            ctx.sites = r_sites
             for param in self.REQUIRES_DISTANCES - {'rrup'}:
                 distances = get_distances(rup, r_sites, param)
                 setattr(dctx, param, distances)
@@ -618,7 +628,7 @@ class ContextMaker(object):
                 s = out[self.start + g]['_s']
                 for p in range(P):
                     eps = (imls[p] - mu[imti]) / sig[imti]  # shape C
-                    poes = _truncnorm_sf(self.trunclevel, eps)  # shape C
+                    poes = _truncnorm_sf(self.truncation_level, eps)  # shape C
                     ws = -numpy.log(
                         (1. - probs) ** poes) / self.investigation_time
                     s[n, p] = ws.sum()  # weights not summing up to 1
@@ -651,39 +661,35 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def set_weight(self, sources, sitecol):
+    def estimate_time(self, src, srcfilter):
         """
-        Set the weight attribute on each source to the sum of the affected
-        sites
+        :param src: an already prefiltered source with attribute .sids
+        :returns: estimate the time taken to compute the pmap
         """
-        LG = len(self.imtls.array) * len(self.gsims)
-        npfactor = 1 + 200 / LG
-        srcfilter = SourceFilter(sitecol, self.maximum_distance)
+        # NB: normally src is already split
+        t0 = time.time()
+        for split, sites in srcfilter.filter(list(src)):
+            rup = next(split.iter_ruptures())
+            self.get_pmap(self.get_ctxs([rup], sites))
+        return (time.time() - t0) * sum(split.num_ruptures for split in src)
+
+    def set_weight(self, sources, srcfilter):
+        """
+        Set the weight attribute on each prefiltered source
+        """
         for src in sources:
             src.num_ruptures = src.count_ruptures()
-            src.weight = src.nsites = src.num_ruptures * .001
-            sids = srcfilter.close_sids(src)
-            if len(sids) == 0:
-                continue
-            elif 'UCERF' in src.__class__.__name__ or not sitecol:
-                src.weight = src.num_ruptures
-                src.nsites = src.num_ruptures * len(sids)
-                continue
-            if hasattr(src, 'iruptures'):
-                rups = list(src.iruptures(point_rup=True))
+            if src.nsites == 0:  # was discarded by the prefiltering
+                src.weight = .001
             else:
-                rups = list(src.iter_ruptures())
-            maxmag = max(rup.mag for rup in rups)
-            if maxmag >= 10:
-                raise ValueError('%s produces a magnitude %d!' %
-                                 (src.source_id, maxmag))
-            ctxs = self.get_ctxs(rups, sitecol.filtered(sids))
-            src.weight += len(ctxs)
-            src.nsites = sum(len(ctx) for ctx in ctxs)
-            if hasattr(src, 'pointsources'):
-                src.weight *= src.num_ruptures / len(rups)
-            if not hasattr(src, 'location'):
-                src.weight *= npfactor  # heavier if there are few levels
+                src.weight = self.estimate_time(src, srcfilter)
+
+
+def num_effrups(src):
+    if hasattr(src, 'count_nphc'):
+        return src.num_ruptures / src.count_nphc()
+    else:
+        return src.num_ruptures
 
 
 # see contexts_tests.py for examples of collapse
@@ -1208,36 +1214,14 @@ def read_cmakers(dstore, full_lt=None):
         if ('amplification' in oq.inputs and
                 oq.amplification_method == 'kernel'):
             df = AmplFunction.read_df(oq.inputs['amplification'])
-            af = AmplFunction.from_dframe(df)
+            oq.af = AmplFunction.from_dframe(df)
         else:
-            af = None
-        cmaker = ContextMaker(
-            trt, rlzs_by_gsim,
-            {'truncation_level': oq.truncation_level,
-             'collapse_level': int(oq.collapse_level),
-             'num_epsilon_bins': oq.num_epsilon_bins,
-             'investigation_time': oq.investigation_time,
-             'maximum_distance': oq.maximum_distance,
-             'pointsource_distance': oq.pointsource_distance,
-             'minimum_distance': oq.minimum_distance,
-             'ps_grid_spacing': oq.ps_grid_spacing,
-             'split_sources': oq.split_sources,
-             'ses_seed': oq.ses_seed,
-             'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
-             'max_sites_disagg': oq.max_sites_disagg,
-             'max_sites_per_tile': oq.max_sites_per_tile,
-             'time_per_task': oq.time_per_task,
-             'disagg_by_src': oq.disagg_by_src,
-             'min_iml': oq.min_iml,
-             'imtls': oq.imtls,
-             'reqv': oq.get_reqv(),
-             'shift_hypo': oq.shift_hypo,
-             'cross_correl': oq.cross_correl,
-             'af': af,
-             'grp_id': grp_id})
+            oq.af = None
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
         cmaker.trti = trti
         cmaker.start = start
+        cmaker.grp_id = grp_id
         start += len(rlzs_by_gsim)
         cmakers.append(cmaker)
     return cmakers
@@ -1254,22 +1238,4 @@ def read_cmaker(dstore, trt_smr):
     trts = list(full_lt.gsim_lt.values)
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
     rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-    cmaker = ContextMaker(
-        trt, rlzs_by_gsim,
-        {'truncation_level': oq.truncation_level,
-         'collapse_level': int(oq.collapse_level),
-         'num_epsilon_bins': oq.num_epsilon_bins,
-         'investigation_time': oq.investigation_time,
-         'maximum_distance': oq.maximum_distance,
-         'minimum_distance': oq.minimum_distance,
-         'ses_seed': oq.ses_seed,
-         'ses_per_logic_tree_path': oq.ses_per_logic_tree_path,
-         'max_sites_disagg': oq.max_sites_disagg,
-         'max_sites_per_tile': oq.max_sites_per_tile,
-         'time_per_task': oq.time_per_task,
-         'disagg_by_src': oq.disagg_by_src,
-         'min_iml': oq.min_iml,
-         'imtls': oq.imtls,
-         'reqv': oq.get_reqv(),
-         'shift_hypo': oq.shift_hypo})
-    return cmaker
+    return ContextMaker(trt, rlzs_by_gsim, oq)

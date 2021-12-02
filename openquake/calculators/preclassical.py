@@ -48,6 +48,52 @@ def zero_times(sources):
     return calc_times
 
 
+def preclassical(srcs, sites, cmaker, monitor):
+    """
+    Weight the sources. Also split them if split_sources is true. If
+    ps_grid_spacing is set, grid the point sources before weighting them.
+
+    NB: srcfilter can be on a reduced site collection for performance reasons
+    """
+    split_sources = []
+    spacing = cmaker.ps_grid_spacing
+    grp_id = srcs[0].grp_id
+    if sites is None:
+        # in csm2rup just split the sources and count the ruptures
+        for src in srcs:
+            ss = split_source(src)
+            if len(ss) > 1:
+                for ss_ in ss:
+                    ss_.nsites = 1
+            split_sources.extend(ss)
+            src.num_ruptures = src.count_ruptures()
+        dic = {grp_id: split_sources}
+        dic['before'] = len(srcs)
+        dic['after'] = len(dic[grp_id])
+        return dic
+
+    with monitor('splitting sources'):
+        sf = SourceFilter(sites, cmaker.maximum_distance)
+        for src in srcs:
+            # NB: this is approximate, since the sites are sampled
+            src.nsites = len(sf.close_sids(src))  # can be 0
+            # NB: it is crucial to split only the close sources, for
+            # performance reasons (think of Ecuador in SAM)
+            splits = split_source(src) if (
+                cmaker.split_sources and src.nsites) else [src]
+            split_sources.extend(splits)
+    dic = grid_point_sources(split_sources, spacing, monitor)
+    with monitor('weighting sources'):
+        # this is also prefiltering again, to have a good representative
+        # of what will be done during the classical phase
+        cmaker.set_weight(dic[grp_id], sf)
+    dic['before'] = len(split_sources)
+    dic['after'] = len(dic[grp_id])
+    if spacing:
+        dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
+    return dic
+
+
 def run_preclassical(calc):
     """
     :param csm: a CompositeSourceModel
@@ -145,51 +191,6 @@ def run_preclassical(calc):
 
     h5['full_lt'] = csm.full_lt
     return res
-
-
-def preclassical(srcs, sites, cmaker, monitor):
-    """
-    Weight the sources. Also split them if split_sources is true. If
-    ps_grid_spacing is set, grid the point sources before weighting them.
-
-    NB: srcfilter can be on a reduced site collection for performance reasons
-    """
-    split_sources = []
-    spacing = cmaker.ps_grid_spacing
-    grp_id = srcs[0].grp_id
-    if sites is None:
-        # in csm2rup just split the sources and count the ruptures
-        for src in srcs:
-            ss = split_source(src)
-            if len(ss) > 1:
-                for ss_ in ss:
-                    ss_.nsites = 1
-            split_sources.extend(ss)
-            src.num_ruptures = src.count_ruptures()
-        dic = {grp_id: split_sources}
-        dic['before'] = len(srcs)
-        dic['after'] = len(dic[grp_id])
-        return dic
-
-    with monitor('splitting sources'):
-        sf = SourceFilter(sites, cmaker.maximum_distance)
-        # this can be slow
-        for src in srcs:
-            # NB: this is approximate, since the sites are sampled
-            nsites = len(sf.close_sids(src))  # can be 0
-            # NB: it is crucial to split only the close sources, for
-            # performance reasons (think of Ecuador in SAM)
-            splits = split_source(src) if (
-                cmaker.split_sources and nsites) else [src]
-            split_sources.extend(splits)
-    dic = grid_point_sources(split_sources, spacing, monitor)
-    with monitor('weighting sources'):
-        cmaker.set_weight(dic[grp_id], sites)
-    dic['before'] = len(split_sources)
-    dic['after'] = len(dic[grp_id])
-    if spacing:
-        dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
-    return dic
 
 
 @base.calculators.add('preclassical')

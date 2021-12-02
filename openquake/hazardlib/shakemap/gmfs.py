@@ -244,7 +244,7 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
     return (Z.T * sig).T + mu
 
 
-def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
+def to_gmfs(shakemap, gmf_dict, site_effects, truncation_level,
             num_gmfs, seed, imts=None):
     """
     :param shakemap: site coordinates with shakemap values
@@ -267,8 +267,8 @@ def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
     N = len(shakemap)   # number of sites
 
     # generate standard normal random variables of shape (M*N, E)
-    if trunclevel:
-        Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
+    if truncation_level:
+        Z = truncnorm.rvs(-truncation_level, truncation_level, loc=0, scale=1,
                           size=(M * N, num_gmfs), random_state=seed)
     else:
         Z = norm.rvs(loc=0, scale=1, size=(

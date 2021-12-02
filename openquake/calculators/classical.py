@@ -51,6 +51,10 @@ disagg_grp_dt = numpy.dtype([
     ('nsites', U32)])
 
 
+class Set(set):
+    __iadd__ = set.__ior__
+
+
 def get_source_id(src):  # used in submit_tasks
     return src.source_id.split(':')[0]
 
@@ -275,7 +279,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         ctimes = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
         self.calc_times += ctimes
-        srcids = set()
+        srcids = Set()
         eff_rups = 0
         eff_sites = 0
         for srcid, rec in ctimes.items():
@@ -284,7 +288,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if rec[0]:
                 eff_sites += rec[1] / rec[0]
         self.by_task[dic['task_no']] += dict(
-            effrups=eff_rups, effsites=eff_sites, srcids=sorted(srcids))
+            effrups=eff_rups, effsites=eff_sites, srcids=srcids)
         grp_id = dic.pop('grp_id')
         self.rel_ruptures[grp_id] += eff_rups
 
@@ -316,7 +320,7 @@ class ClassicalCalculator(base.HazardCalculator):
                   'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
-            cm = ContextMaker(trt, gsims, dict(imtls=self.oqparam.imtls))
+            cm = ContextMaker(trt, gsims, self.oqparam)
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             for dparam in cm.REQUIRES_DISTANCES:
                 params.add(dparam + '_')
