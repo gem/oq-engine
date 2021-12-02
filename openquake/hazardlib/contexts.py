@@ -171,16 +171,10 @@ class ContextMaker(object):
             param = oq
         else:  # OqParam
             param = vars(oq)
-            param['minimum_distance'] = oq.minimum_distance
             param['split_sources'] = oq.split_sources
-            param['ses_seed'] = oq.ses_seed
-            param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
-            param['disagg_by_src'] = oq.disagg_by_src
             param['min_iml'] = oq.min_iml
             param['imtls'] = oq.imtls
             param['reqv'] = oq.get_reqv()
-            param['shift_hypo'] = oq.shift_hypo
-            param['cross_correl'] = oq.cross_correl
             param['af'] = getattr(oq, 'af', None)
 
         self.af = param.get('af', None)
