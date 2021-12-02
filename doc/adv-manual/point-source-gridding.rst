@@ -106,3 +106,24 @@ The following table collects the results:
 +--------------------+-----------+----------------------+---------+
 | computing mean_std | 35_974    | ps_grid_spacing      |     26x |
 +--------------------+-----------+----------------------+---------+
+
+It should be noticed that if you have 130,000 sites it is likely that
+there will be a few sites where the point source gridding
+approximation gives results quite different for the exact results.
+The commands ``oq compare`` allows you to figure out which are the
+problematic sites, where they are and how big is the difference from
+the exact results.
+
+You should take into account that even the "exact" results
+have uncertainties due to all kind of reasons, so even a large
+difference can be quite acceptable. In particular if the hazard is
+very low you can ignore any difference since it will have no impact on
+the risk.
+
+Points with low hazard are expected to have large differences, this is
+why by default `oq compare` use an absolute tolerance of 0.001g, but
+you can raise that to 0.01g or more.  You can also give a relative
+tolerance of 10% or more. Internally ``oq compare`` calls the
+function ``numpy.allclose`` see
+https://numpy.org/doc/stable/reference/generated/numpy.allclose.html
+for a description of how the tolerances work.
