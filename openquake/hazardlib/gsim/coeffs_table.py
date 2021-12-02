@@ -177,7 +177,7 @@ class CoeffsTable(object):
     @property
     def sa_coeffs(self):
         return {imt: self._coeffs[imt] for imt in self._coeffs
-                if imt.string[:2] in ['SA', 'EA']}
+                if imt.string[:2] == 'SA'}
 
     @property
     def non_sa_coeffs(self):
