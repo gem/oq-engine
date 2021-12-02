@@ -41,7 +41,7 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, magdepdist, get_distances, getdefault, SourceFilter)
+    IntegrationDistance, magdepdist, get_distances, getdefault)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -652,30 +652,28 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def estimate_time(self, src, sites):
+    def estimate_time(self, src, srcfilter):
         """
         :param src: an already prefiltered source with attribute .sids
         :returns: estimate the time taken to compute the pmap
         """
+        # NB: normally src is already split
         t0 = time.time()
-        # normally src is already split
-        rups = [next(split.iter_ruptures()) for split in src]
-        ctxs = self.get_ctxs(rups, sites)
-        self.get_pmap(ctxs)
+        for split, sites in srcfilter.filter(list(src)):
+            rup = next(split.iter_ruptures())
+            self.get_pmap(self.get_ctxs([rup], sites))
         return (time.time() - t0) * sum(split.num_ruptures for split in src)
 
-    def set_weight(self, sources, sitecol):
+    def set_weight(self, sources, srcfilter):
         """
         Set the weight attribute on each prefiltered source
         """
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
-                src.weight = .001 * num_effrups(src)
+                src.weight = .001
             else:
-                src.weight = self.estimate_time(
-                    src, sitecol.filtered(src.sids))
-                del src.sids
+                src.weight = self.estimate_time(src, srcfilter)
 
 
 def num_effrups(src):

@@ -74,11 +74,9 @@ def preclassical(srcs, sites, cmaker, monitor):
 
     with monitor('splitting sources'):
         sf = SourceFilter(sites, cmaker.maximum_distance)
-        # this can be slow
         for src in srcs:
             # NB: this is approximate, since the sites are sampled
-            src.sids = sf.close_sids(src)
-            src.nsites = len(src.sids)  # can be 0
+            src.nsites = len(sf.close_sids(src))  # can be 0
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (
@@ -86,7 +84,9 @@ def preclassical(srcs, sites, cmaker, monitor):
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        cmaker.set_weight(dic[grp_id], sites)
+        # this is also prefiltering again, to have a good representative
+        # of what will be done during the classical phase
+        cmaker.set_weight(dic[grp_id], sf)
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:

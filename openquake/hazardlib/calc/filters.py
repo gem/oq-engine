@@ -18,16 +18,14 @@
 
 import ast
 import sys
-import copy
 import operator
-import itertools
 from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib import site, mfd
+from openquake.hazardlib import site
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
