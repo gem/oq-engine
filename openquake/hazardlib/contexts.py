@@ -652,30 +652,31 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def estimate_time(self, src, srcfilter):
+    def estimate_time(self, src, sites):
         """
+        :param src: an already prefiltered source with attribute .nsites
         :returns: estimate the time taken to compute the pmap
         """
         t0 = time.time()
+        ctxs = []
         nr = 0
-        for split in src:
-            nr += 1
-            sites = srcfilter.get_close_sites(src)
-            if sites is not None:
-                rup = next(src.iter_ruptures())
-                ctxs = self.get_ctxs([rup], sites)
-                self.get_pmap(ctxs)
-        return (time.time() - t0) / nr * src.num_ruptures
+        for split in src:  # normally src is already split
+            nr += nr.num_ruptures
+            rup = next(src.iter_ruptures())
+            ctxs.extend(self.get_ctxs([rup], sites))
+        self.get_pmap(ctxs)
+        return (time.time() - t0) * src.num_ruptures / nr
 
     def set_weight(self, sources, sitecol):
         """
-        Set the weight attribute on each source to the sum of the affected
-        sites
+        Set the weight attribute on each prefiltered source
         """
-        srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
-            src.weight = self.estimate_time(src, srcfilter)
+            if src.nsites == 0:  # was discarded by the prefiltering
+                src.weight = .001 * src.num_ruptures
+            else:
+                src.weight = self.estimate_time(src, sitecol)
 
 
 # see contexts_tests.py for examples of collapse

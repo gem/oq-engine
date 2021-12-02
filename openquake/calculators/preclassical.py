@@ -176,11 +176,11 @@ def preclassical(srcs, sites, cmaker, monitor):
         # this can be slow
         for src in srcs:
             # NB: this is approximate, since the sites are sampled
-            nsites = len(sf.close_sids(src))  # can be 0
+            src.nsites = len(sf.close_sids(src))  # can be 0
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (
-                cmaker.split_sources and nsites) else [src]
+                cmaker.split_sources and src.nsites) else [src]
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
