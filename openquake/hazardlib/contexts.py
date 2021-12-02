@@ -654,18 +654,15 @@ class ContextMaker(object):
 
     def estimate_time(self, src, sites):
         """
-        :param src: an already prefiltered source with attribute .nsites
+        :param src: an already prefiltered source with attribute .sids
         :returns: estimate the time taken to compute the pmap
         """
         t0 = time.time()
-        ctxs = []
-        nr = 0
-        for split in src:  # normally src is already split
-            nr += split.num_ruptures
-            rup = next(src.iter_ruptures())
-            ctxs.extend(self.get_ctxs([rup], sites))
+        # normally src is already split
+        rups = [next(split.iter_ruptures()) for split in src]
+        ctxs = self.get_ctxs(rups, sites)
         self.get_pmap(ctxs)
-        return (time.time() - t0) * src.num_ruptures / nr
+        return (time.time() - t0) * sum(split.num_ruptures for split in src)
 
     def set_weight(self, sources, sitecol):
         """
@@ -674,11 +671,18 @@ class ContextMaker(object):
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
-                src.weight = .001 * src.num_ruptures
+                src.weight = .001 * num_effrups(src)
             else:
                 src.weight = self.estimate_time(
                     src, sitecol.filtered(src.sids))
                 del src.sids
+
+
+def num_effrups(src):
+    if hasattr(src, 'count_nphc'):
+        return src.num_ruptures / src.count_nphc()
+    else:
+        return src.num_ruptures
 
 
 # see contexts_tests.py for examples of collapse
