@@ -41,7 +41,7 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, magdepdist, get_distances, getdefault, SourceFilter)
+    IntegrationDistance, magdepdist, get_distances, getdefault)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -388,6 +388,7 @@ class ContextMaker(object):
             except FarAwayRupture:
                 continue
             ctx = self.make_rctx(rup)
+            ctx.sites = r_sites
             for param in self.REQUIRES_DISTANCES - {'rrup'}:
                 distances = get_distances(rup, r_sites, param)
                 setattr(dctx, param, distances)
@@ -651,39 +652,35 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def set_weight(self, sources, sitecol):
+    def estimate_time(self, src, srcfilter):
         """
-        Set the weight attribute on each source to the sum of the affected
-        sites
+        :param src: an already prefiltered source with attribute .sids
+        :returns: estimate the time taken to compute the pmap
         """
-        LG = len(self.imtls.array) * len(self.gsims)
-        npfactor = 1 + 200 / LG
-        srcfilter = SourceFilter(sitecol, self.maximum_distance)
+        # NB: normally src is already split
+        t0 = time.time()
+        for split, sites in srcfilter.filter(list(src)):
+            rup = next(split.iter_ruptures())
+            self.get_pmap(self.get_ctxs([rup], sites))
+        return (time.time() - t0) * sum(split.num_ruptures for split in src)
+
+    def set_weight(self, sources, srcfilter):
+        """
+        Set the weight attribute on each prefiltered source
+        """
         for src in sources:
             src.num_ruptures = src.count_ruptures()
-            src.weight = src.nsites = src.num_ruptures * .001
-            sids = srcfilter.close_sids(src)
-            if len(sids) == 0:
-                continue
-            elif 'UCERF' in src.__class__.__name__ or not sitecol:
-                src.weight = src.num_ruptures
-                src.nsites = src.num_ruptures * len(sids)
-                continue
-            if hasattr(src, 'iruptures'):
-                rups = list(src.iruptures(point_rup=True))
+            if src.nsites == 0:  # was discarded by the prefiltering
+                src.weight = .001
             else:
-                rups = list(src.iter_ruptures())
-            maxmag = max(rup.mag for rup in rups)
-            if maxmag >= 10:
-                raise ValueError('%s produces a magnitude %d!' %
-                                 (src.source_id, maxmag))
-            ctxs = self.get_ctxs(rups, sitecol.filtered(sids))
-            src.weight += len(ctxs)
-            src.nsites = sum(len(ctx) for ctx in ctxs)
-            if hasattr(src, 'pointsources'):
-                src.weight *= src.num_ruptures / len(rups)
-            if not hasattr(src, 'location'):
-                src.weight *= npfactor  # heavier if there are few levels
+                src.weight = self.estimate_time(src, srcfilter)
+
+
+def num_effrups(src):
+    if hasattr(src, 'count_nphc'):
+        return src.num_ruptures / src.count_nphc()
+    else:
+        return src.num_ruptures
 
 
 # see contexts_tests.py for examples of collapse
