@@ -90,14 +90,19 @@ a reasonable amount of time. Enters the point source gridding. By setting
 we can spectacularly reduce the calculation time to 35,974s, down by
 nearly an order of magnitude! This time ``oq compare hcurves``
 produces some differences on the last city but they are minor and not
-affecting the hazard maps:
+affecting the hazard maps::
 
-$ oq1 compare hmaps PGA <first_calc_id> <third_calc_id>
-There are no differences within the tolerances atol=0.001, rtol=0%, sids=[0 1 2 3 4 5 6]
+  $ oq compare hmaps PGA <first_calc_id> <third_calc_id>
+  There are no differences within the tolerances atol=0.001, rtol=0%, sids=[0 1 2 3 4 5 6]
 
-The following table collect the results:
+The following table collects the results:
 
++--------------------+-----------+----------------------+---------+
 | operation          | calc_time | approx               | speedup |
++--------------------+-----------+----------------------+---------+
 | computing mean_std | 925_777   | no approx            |      1x |
++--------------------+-----------+----------------------+---------+
 | computing mean_std | 324_241   | pointsource_distance |      3x |
++--------------------+-----------+----------------------+---------+
 | computing mean_std | 35_974    | ps_grid_spacing      |     26x |
++--------------------+-----------+----------------------+---------+
