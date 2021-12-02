@@ -167,8 +167,8 @@ def get_csm(oq, full_lt, h5=None):
     # checking the changes
     changes = sum(sg.changes for sg in groups)
     if changes:
-        logging.info('Applied %d changes to the composite source model',
-                     changes)
+        logging.info('Applied {:_d} changes to the composite source model'.
+                     format(changes))
     return _get_csm(full_lt, groups)
 
 
