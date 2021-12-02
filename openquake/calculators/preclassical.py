@@ -176,7 +176,8 @@ def preclassical(srcs, sites, cmaker, monitor):
         # this can be slow
         for src in srcs:
             # NB: this is approximate, since the sites are sampled
-            src.nsites = len(sf.close_sids(src))  # can be 0
+            src.sids = sf.close_sids(src)
+            src.nsites = len(src.sids)  # can be 0
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
             splits = split_source(src) if (

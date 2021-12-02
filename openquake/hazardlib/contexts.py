@@ -676,7 +676,9 @@ class ContextMaker(object):
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001 * src.num_ruptures
             else:
-                src.weight = self.estimate_time(src, sitecol)
+                src.weight = self.estimate_time(
+                    src, sitecol.filtered(src.sids))
+                del src.sids
 
 
 # see contexts_tests.py for examples of collapse
