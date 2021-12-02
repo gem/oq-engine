@@ -217,7 +217,7 @@ class LanzanoLuzi2019shallow_scaled(LanzanoLuzi2019shallow):
     """
     
     # Sigma values in log10
-	COEFFS = CoeffsTable(sa_damping=5, table="""
+    COEFFS = CoeffsTable(sa_damping=5, table="""
 	IMT		a				b		c1		c2		c3		sB		sC		tau		phiS2S	sigma0	phi		sigma
 	pga		-0.378174621	0.8146	-2.0926	-1.5694	-0.0062	0.088	0.3382	0.1892	0.2624	0.2215	0.3434	0.3921
 	0.05	-0.103901788	0.787	-2.1536	-1.5859	-0.0069	0.0863	0.3323	0.1955	0.2846	0.2284	0.3649	0.414
