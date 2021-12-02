@@ -132,7 +132,7 @@ def _get_stddevs(C, ctx):
     return sigma, tau, phi
 
 
-def _get_nl_site_response(C, ctx, ln_ir_outcrop, freq_nl, coeff_nl):
+def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
     """
     :param ln_ir_outcrop:
         The peak ground acceleration (PGA [g]) at rock outcrop
@@ -175,20 +175,13 @@ def _get_nl_site_response(C, ctx, ln_ir_outcrop, freq_nl, coeff_nl):
 
     fnl_0 = f2 * np.log((np.exp(ln_ir_outcrop) + f3) / f3)
     idxs = np.argmin(fnl_0, axis=0)
-    print(idxs, fnl_0[idxs[0]], np.min(fnl_0))
 
-    import matplotlib.pyplot as plt
+    fnl = []
     for i, j in enumerate(idxs):
-        print(j, freq_nl.shape, fnl_0[:, 0].shape)
-        fnl_0[0:j, i] = min(fnl_0[:, i])
-        if i == 0:
-            plt.plot(freq_nl, fnl_0[:, i], '+')
-            plt.plot(freq_nl, fnl_0[:, i], '-')
-            plt.plot(freq_nl[j], fnl_0[j, i], 'or')
-            plt.plot(freq_nl[0], fnl_0[0, i], 'sg')
-            plt.show()
-
-    return fnl_0
+        fnl_0[j:, i] = min(fnl_0[:, i])
+        tmp = numpy.interp(imt.frequency, freq_nl, fnl_0[:, i])
+        fnl.append(tmp)
+    return np.array(fnl)
 
 
 def _get_dimunition_factor(ctx, imt):
@@ -275,7 +268,7 @@ class BaylessAbrahamson2018(GMPE):
             C = self.COEFFS[imt]
             ln_ir_outcrop = _get_ln_ir_outcrop(self, ctx)
             lin_component = _get_mean(self, C, ctx, imt)
-            nl_component = _get_nl_site_response(C, ctx, ln_ir_outcrop,
+            nl_component = _get_nl_site_response(C, ctx, imt, ln_ir_outcrop,
                                                  freq_nl, coeff_nl)
             mean[m] = (lin_component + nl_component)
             sigma[m], tau[m], phi[m] = _get_stddevs(C, ctx)
