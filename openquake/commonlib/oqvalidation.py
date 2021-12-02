@@ -908,6 +908,17 @@ class OqParam(valid.ParamSet):
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
 
     @property
+    def no_pointsource_distance(self):
+        """
+        :returns: True if the pointsource_distance is 1000 km
+        """
+        dists = set()
+        for pairs in self.pointsource_distance.values():
+            for mag, dist in pairs:
+                dists.add(dist)
+        return dists == {1000}
+
+    @property
     def risk_files(self):
         try:
             return self._risk_files

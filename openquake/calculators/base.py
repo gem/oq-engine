@@ -433,7 +433,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Rupture floating factor = %s', f)
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
-        if (f * s >= 1.5 and self.oqparam.pointsource_distance is None
+        if (f * s >= 1.5 and self.oqparam.no_pointsource_distance
                 and 'classical' in self.oqparam.calculation_mode):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'

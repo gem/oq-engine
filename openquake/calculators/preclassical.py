@@ -78,15 +78,22 @@ def run_preclassical(calc):
         logging.info('Sending %s', sites)
     smap = parallel.Starmap(preclassical, h5=h5)
     for (grp_id, msr), srcs in sources_by_grp.items():
-        pointlike, other = [], []
+        pointsources, pointlike, others = [], [], []
         for src in srcs:
-            if hasattr(src, 'nodal_plane_distribution'):
+            if hasattr(src, 'location'):
+                pointsources.append(src)
+            elif hasattr(src, 'nodal_plane_distribution'):
                 pointlike.append(src)
             else:
-                other.append(src)
-        if pointlike:
-            smap.submit((pointlike, sites, cmakers[grp_id]))
-        for src in other:
+                others.append(src)
+        if calc.oqparam.ps_grid_spacing:
+            if pointsources or pointlike:
+                smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
+        else:
+            smap.submit_split((pointsources, sites, cmakers[grp_id]), 30, 10)
+            for src in pointlike:
+                smap.submit(([src], sites, cmakers[grp_id]))
+        for src in others:
             smap.submit(([src], sites, cmakers[grp_id]))
     normal = smap.reduce()
     if atomic_sources:  # case_35

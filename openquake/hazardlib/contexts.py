@@ -663,6 +663,8 @@ class ContextMaker(object):
         Set the weight attribute on each source to the sum of the affected
         sites
         """
+        LG = len(self.imtls.array) * len(self.gsims)
+        npfactor = 1 + 200 / LG
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
@@ -688,7 +690,7 @@ class ContextMaker(object):
             if hasattr(src, 'pointsources'):
                 src.weight *= src.num_ruptures / len(rups)
             if not hasattr(src, 'location'):
-                src.weight *= 10
+                src.weight *= npfactor  # heavier if there are few levels
 
 
 # see contexts_tests.py for examples of collapse
@@ -794,7 +796,7 @@ class PmapMaker(object):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.split_less if self.N == 1
+        filt = (self.srcfilter.filter if not self.split_sources or self.N == 1
                 else self.srcfilter.split)
         cm = self.cmaker
         for src, sites in filt(self.group):
