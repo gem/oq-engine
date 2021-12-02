@@ -388,6 +388,7 @@ class ContextMaker(object):
             except FarAwayRupture:
                 continue
             ctx = self.make_rctx(rup)
+            ctx.sites = r_sites
             for param in self.REQUIRES_DISTANCES - {'rrup'}:
                 distances = get_distances(rup, r_sites, param)
                 setattr(dctx, param, distances)
