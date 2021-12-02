@@ -192,6 +192,7 @@ class CoeffsTable(object):
         coeffs = []
         pof = []
         for imt in self._coeffs:
+            print(imt)
             if re.search('^(SA|EAS)', imt.string):
                 tmp = np.array(self._coeffs[imt])
                 coeffs.append([tmp[i] for i in coeff_list])
@@ -201,7 +202,12 @@ class CoeffsTable(object):
                     pof.append(imt.frequency)
                 else:
                     raise ValueError('Unknown IMT: {:s}'.format(imt.string))
-        return np.array(pof), np.array(coeffs)
+        pof = np.array(pof)
+        coeffs = np.array(coeffs)
+        idx = np.argsort(pof)
+        pof = pof[idx]
+        coeffs = coeffs[idx, :]
+        return pof, coeffs
 
     def __getitem__(self, imt):
         """
