@@ -35,8 +35,7 @@ class BaylessAbrahamson2018TestCase(BaseGSIMTestCase):
         fname_std_tot = 'BA18/BA18_STD_TOTAL_full.csv'
 
     def test_mean(self):
-        #self.check(self.fname_mean, max_discrep_percentage=1.0)
-        pass
+        self.check(self.fname_mean, max_discrep_percentage=30.0)
 
     def test_std_total(self):
         self.check(self.fname_std_tot, max_discrep_percentage=0.1)

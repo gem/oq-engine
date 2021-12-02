@@ -35,12 +35,9 @@ def _path_scaling(C, ctx):
 
 def _normal_fault_effect(C, ctx):
     """ Compute the correction coefficient for the normal faulting """
-
-    fnm = 0
     idx = (ctx.rake > -150) & (ctx.rake < -30)
     fnm = np.zeros_like(ctx.rake)
-    fnm[idx] = 1
-
+    fnm[idx] = 1.0
     return C['c10'] * fnm
 
 
@@ -77,7 +74,6 @@ def _linear_site_response(C, ctx):
 def _soil_depth_scaling(C, ctx):
     """ Compute the soil depth scaling term """
     # Set the c11 coefficient - See eq.13b at page 2093
-
     c11 = np.ones_like(ctx.vs30) * C['c11a']
     c11[(ctx.vs30 <= 300) & (ctx.vs30 > 200)] = C['c11b']
     c11[(ctx.vs30 <= 500) & (ctx.vs30 > 300)] = C['c11c']
@@ -85,8 +81,9 @@ def _soil_depth_scaling(C, ctx):
     # Compute the Z1ref parameter
     tmp = (ctx.vs30**4 + 610**4) / (1360**4 + 610**4)
     z1ref = 1/1000. * np.exp(-7.67/4*np.log(tmp))
-    # Return the fz1 parameter
-    tmp = np.minimum(ctx.z1pt0, np.ones_like(ctx.z1pt0)*2.0) + 0.01
+    # Return the fz1 parameter. The z1pt0 is converted from m (standard in OQ)
+    # to km as indicated in the paper
+    tmp = np.minimum(ctx.z1pt0/1000, np.ones_like(ctx.z1pt0)*2.0) + 0.01
     return c11 * np.log(tmp / (z1ref + 0.01))
 
 
@@ -123,25 +120,37 @@ def _get_stddevs(C, ctx):
 
 
 def _get_nl_site_response(C, ctx, ln_ir_outcrop):
+    """
+    :param ln_ir_outcrop:
+        The peak ground acceleration (PGA [g]) at rock outcrop
+    """
     vsref = 760.0
     t1 = np.exp(C['f5'] * (np.minimum(ctx.vs30, vsref)-360.))
     t2 = np.exp(C['f5'] * (vsref-360.))
     f2 = C['f4'] * (t1 - t2)
     fnl_0 = f2 * np.log((np.exp(ln_ir_outcrop)+C['f3']) / C['f3'])
-    val, index = min((v, i) for i, v in enumerate(fnl_0))
-    fnl_mod0 = np.concatenate((fnl_0[:index+1],
-                               np.ones(len(fnl_0)-index) * val))
-    return fnl_mod0[0]
+    #val, index = min((v, i) for i, v in enumerate(fnl_0))
+    #fnl_mod0 = np.concatenate((fnl_0[:index+1],
+    #                           np.ones(len(fnl_0)-index) * val))
+    return fnl_0
 
 
 def _get_dimunition_factor(ctx, imt):
     max_freq = 23.988321
     kappa = np.exp(-0.4*np.log(ctx.vs30/760)-3.5)
-    D = np.exp(-np.pi * kappa * (imt[1] - max_freq))
+    D = np.exp(-np.pi * kappa * (imt.frequency - max_freq))
     return D
 
 
 def _get_mean_linear(C, ctx):
+
+    #print(' ')
+    #print('Mag scaling', _magnitude_scaling(C, ctx))
+    #print('Path scaling', _path_scaling(C, ctx))
+    #print('Site linear scaling', _linear_site_response(C, ctx))
+    #print('Ztor scaling', _ztor_scaling(C, ctx))
+    #print('Soil depth scaling', _soil_depth_scaling(C, ctx))
+
     mean = (_magnitude_scaling(C, ctx) +
             _path_scaling(C, ctx) +
             _linear_site_response(C, ctx) +
@@ -205,12 +214,14 @@ class BaylessAbrahamson2018(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             ln_ir_outcrop = _get_ln_ir_outcrop(self, ctx)
             lin_component = _get_mean(self, C, ctx, imt)
             nl_component = _get_nl_site_response(C, ctx, ln_ir_outcrop)
-            mean[m] = (lin_component + nl_component)[0]
+            print('Site non lin', nl_component)
+            mean[m] = (lin_component + nl_component)
             sigma[m], tau[m], phi[m] = _get_stddevs(C, ctx)
 
     TMP = """
