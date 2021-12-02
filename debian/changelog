@@ -1,3 +1,7 @@
+  [Giuseppina Tusa]
+  * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs
+    from Tusa et al. (2020).
+
   [Michele Simionato]
   * `split_sources=false` is now honored in disaggregation calculations
   * Internal: rup/src_id now refers to the row in the source_info table

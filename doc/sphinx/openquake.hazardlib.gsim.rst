@@ -1106,6 +1106,14 @@ tusa_langer_2016
     :undoc-members:
     :show-inheritance:
 
+tusa_langer_azzaro_2019
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.tusa_langer_azzaro_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 utils
 -------------------------------------
 
