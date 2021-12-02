@@ -172,6 +172,7 @@ class ContextMaker(object):
         else:  # OqParam
             param = vars(oq)
             param['split_sources'] = oq.split_sources
+            param['cross_correl'] = oq.cross_correl
             param['min_iml'] = oq.min_iml
             param['imtls'] = oq.imtls
             param['reqv'] = oq.get_reqv()
