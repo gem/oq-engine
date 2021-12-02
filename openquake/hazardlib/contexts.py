@@ -171,9 +171,6 @@ class ContextMaker(object):
             param = oq
         else:  # OqParam
             param = vars(oq)
-            param['truncation_level'] = oq.truncation_level
-            param['collapse_level'] = int(oq.collapse_level)
-            param['num_epsilon_bins'] = oq.num_epsilon_bins
             param['investigation_time'] = oq.investigation_time
             param['maximum_distance'] = oq.maximum_distance
             param['pointsource_distance'] = oq.pointsource_distance
