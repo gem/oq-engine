@@ -337,9 +337,9 @@ class SourceFilter(object):
         Returns the sites within the integration distance from the source,
         or None.
         """
-        source_sites = list(self.filter([source]))
-        if source_sites:
-            return source_sites[0][1]
+        sids = self.close_sids(source)
+        if len(sids):
+            return self.sitecol.filtered(sids)
 
     def split(self, sources):
         """
@@ -350,33 +350,6 @@ class SourceFilter(object):
                 sites = self.get_close_sites(s)
                 if sites is not None:
                     yield s, sites
-
-    def split_less(self, sources):
-        """
-        :yields: pairs (split, sites)
-        """
-        for src, _sites in self.filter(sources):
-            if src.__class__.__name__.startswith(('Multi', 'Collapsed')):
-                # do not split
-                yield src, _sites
-            elif hasattr(src, 'get_annual_occurrence_rates'):
-                for mag, rate in src.get_annual_occurrence_rates():
-                    new = copy.copy(src)
-                    new.mfd = mfd.ArbitraryMFD([mag], [rate])
-                    new.num_ruptures = new.count_ruptures()
-                    sites = self.get_close_sites(new)
-                    if sites is not None:
-                        yield new, sites
-            else:  # nonparametric source
-                # data is a list of pairs (rup, pmf)
-                for mag, group in itertools.groupby(
-                        src.data, lambda pair: pair[0].mag):
-                    new = src.__class__(src.source_id, src.name,
-                                        src.tectonic_region_type, list(group))
-                    vars(new).update(vars(src))
-                    sites = self.get_close_sites(new)
-                    if sites is not None:
-                        yield new, sites
 
     # used in source and rupture prefiltering: it should not discard too much
     def close_sids(self, src_or_rec, trt=None, maxdist=None):

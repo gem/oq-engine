@@ -60,7 +60,6 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
         Z = oq.num_rlzs_disagg or 1
     else:
         Z = len(oq.rlz_index)
-    eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
     # build mag_edges
     mags = set()
