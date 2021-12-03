@@ -41,7 +41,7 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, magdepdist, get_distances, getdefault)
+    IntegrationDistance, magdepdist, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -133,7 +133,7 @@ def _interp(param, name, trt):
     try:
         mdd = param[name]
     except KeyError:
-        return magdepdist([(1, 1000), (10, 1000)])
+        return magdepdist([(MINMAG, 1000), (MAXMAG, 1000)])
     if isinstance(mdd, IntegrationDistance):
         return mdd(trt)
     elif isinstance(mdd, dict):
@@ -333,6 +333,8 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
+        if rup.mag > MAXMAG or rup.mag < MINMAG:
+            raise ValueError('Invalid magnitude %.2f' % rup.mag)
         distances = get_distances(rup, sites, 'rrup')
         mdist = self.maximum_distance(rup.mag)
         mask = distances <= mdist
