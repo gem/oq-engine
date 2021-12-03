@@ -31,7 +31,7 @@ from openquake.hazardlib.geo.utils import (
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
-MINMAG = 3.0
+MINMAG = 2.5
 MAXMAG = 10.1  # to avoid breaking PAC
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
