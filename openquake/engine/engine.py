@@ -334,7 +334,7 @@ def run_jobs(jobs):
             dic = {'status': 'executing', 'pid': _PID}
             logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if config.zworkers['host_cores'] and parallel.workers_status() == []:
+        if OQ_DISTRIBUTE == 'zmq' and parallel.workers_status() == []:
             print('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
@@ -347,7 +347,7 @@ def run_jobs(jobs):
     finally:
         # for serialize_jobs > 1 there could be something still running:
         # don't stop the zworkers in that case!
-        if config.zworkers['host_cores'] and sum(
+        if OQ_DISTRIBUTE == 'zmq' and sum(
                 r for h, r, t in parallel.workers_status()) == 0:
             print('Stopping the workers')
             parallel.workers_stop()

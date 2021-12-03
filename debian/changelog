@@ -3,6 +3,7 @@
     from Tusa et al. (2020).
 
   [Michele Simionato]
+  * Added command `oq compare uhs CALC_1 CALC_2`
   * `split_sources=false` is now honored in disaggregation calculations
   * Internal: rup/src_id now refers to the row in the source_info table
 

@@ -128,6 +128,6 @@ function ``numpy.allclose`` see
 https://numpy.org/doc/stable/reference/generated/numpy.allclose.html
 for a description of how the tolerances work.
 
-Increasing the ``pointsource_distance`` parameter and decreasing the
+By increasing the ``pointsource_distance`` parameter and decreasing the
 ``ps_grid_spacing`` parameter one can make the approximation as
 precise as wanted, at the expense of a larger runtime.
