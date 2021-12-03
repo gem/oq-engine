@@ -106,19 +106,19 @@ class Comparator(object):
     def getuhs(self, what, sids):
         oq0 = self.oq
         extractor = self.extractors[0]
-        poe_str = str(min(oq0.poes))
-        what += '?kind=mean'
-        imts = [imt.string for imt in oq0.imt_periods()]
-        arrays = [extractor.get(what).mean[sids][poe_str][imts]]
+        what = 'hmaps?kind=mean'  # shape (N, M, P)
+        midx = numpy.array([m for m, imt in enumerate(oq0.imtls)
+                            if imt.startswith(('PGA', 'SA'))])
+        shp = (len(sids), -1)
+        arrays = [extractor.get(what).mean[sids, midx].reshape(shp)]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
             numpy.testing.assert_array_equal(oq.imtls.array, oq0.imtls.array)
             numpy.testing.assert_array_equal(oq.poes, oq0.poes)
-            arrays.append(extractor.get(what).mean[sids][poe_str][imts])
+            arrays.append(extractor.get(what).mean[sids, midx].reshape(shp))
             extractor.close()
-        import pdb; pdb.set_trace()
-        return numpy.array(arrays)  # shape (C, N, L)
+        return numpy.array(arrays)  # shape (C, N, M*P)
 
     def getgmf(self, what, imt, sids):
         extractor = self.extractors[0]
