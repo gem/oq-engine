@@ -564,7 +564,7 @@ class ContextMaker(object):
         if not hasattr(self, 'imts'):
             tmp = []
             for im in self.imtls:
-                m = re.match(imt_module.EAS_PERIOD_PATTERN, im)
+                m = re.match(imt_module.EAS_FREQUENCY_PATTERN, im)
                 if m:
                     im = 'EAS({:.6f})'.format(1./float(m.group(1)))
                 tmp.append(imt_module.from_string(im))

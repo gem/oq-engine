@@ -24,7 +24,7 @@ import re
 import collections
 import numpy
 
-EAS_PERIOD_PATTERN = '^EAS\\((\\d+\\.*\\d*)\\)'
+EAS_FREQUENCY_PATTERN = '^EAS\\((\\d+\\.*\\d*)\\)'
 
 
 def positivefloat(val):
@@ -66,7 +66,7 @@ def from_string(imt, _damping=5.0):
     :param str imt:
         Intensity Measure Type.
     """
-    m = re.match(EAS_PERIOD_PATTERN, imt)
+    m = re.match(EAS_FREQUENCY_PATTERN, imt)
     if m:
         im = EAS(float(m.group(1)))
         return(im)
