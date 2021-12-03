@@ -103,6 +103,23 @@ class Comparator(object):
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, L)
 
+    def getuhs(self, what, sids):
+        oq0 = self.oq
+        extractor = self.extractors[0]
+        poe_str = str(min(oq0.poes))
+        what += '?kind=mean'
+        imts = [imt.string for imt in oq0.imt_periods()]
+        arrays = [extractor.get(what).mean[sids][poe_str][imts]]
+        extractor.close()
+        for extractor in self.extractors[1:]:
+            oq = extractor.oqparam
+            numpy.testing.assert_array_equal(oq.imtls.array, oq0.imtls.array)
+            numpy.testing.assert_array_equal(oq.poes, oq0.poes)
+            arrays.append(extractor.get(what).mean[sids][poe_str][imts])
+            extractor.close()
+        import pdb; pdb.set_trace()
+        return numpy.array(arrays)  # shape (C, N, L)
+
     def getgmf(self, what, imt, sids):
         extractor = self.extractors[0]
         imtls = self.oq.imtls
@@ -121,7 +138,9 @@ class Comparator(object):
 
     def compare(self, what, imt, files, samplesites, atol, rtol):
         sids = self.getsids(samplesites)
-        if what.startswith('avg_gmf'):
+        if what == 'uhs':
+            arrays = self.getuhs(what, sids)
+        elif what.startswith('avg_gmf'):
             arrays = self.getgmf(what, imt, sids)
         else:
             arrays = self.getdata(what, imt, sids)
@@ -130,6 +149,8 @@ class Comparator(object):
             header += ['%.5f' % lvl for lvl in self.oq.imtls[imt]]
         elif what == 'hmaps':
             header += [str(poe) for poe in self.oq.poes]
+        elif what == 'uhs':
+            pass
         else:  # avg_gmf
             header += ['gmf']
         rows = collections.defaultdict(list)
@@ -182,6 +203,21 @@ def compare_cumtime(calc1: int, calc2: int):
     return Comparator([calc1, calc2]).cumtime()
 
 
+def compare_uhs(calc_ids: int, files=False, *,
+                samplesites='', rtol: float = 0, atol: float = 1E-3):
+    """
+    Compare the uniform hazard spectra of two or more calculations.
+    """
+    c = Comparator(calc_ids)
+    arrays = c.compare('uhs', None, files, samplesites, atol, rtol)
+    if len(arrays) and len(calc_ids) == 2:
+        ms = numpy.mean((arrays[0] - arrays[1])**2, axis=0)  # P
+        maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
+        rows = [(str(poe), rms, md) for poe, rms, md in zip(
+            c.oq.poes, numpy.sqrt(ms), maxdiff)]
+        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff']))
+
+
 def compare_hmaps(imt, calc_ids: int, files=False, *,
                   samplesites='', rtol: float = 0, atol: float = 1E-3):
     """
@@ -221,12 +257,14 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
 
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
+            uhs=compare_uhs,
             hmaps=compare_hmaps,
             hcurves=compare_hcurves,
             avg_gmf=compare_avg_gmf)
 
-for f in (compare_hmaps, compare_hcurves, compare_avg_gmf):
-    f.imt = 'intensity measure type to compare'
+for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf):
+    if f is not compare_uhs:
+        f.imt = 'intensity measure type to compare'
     f.calc_ids = dict(help='calculation IDs', nargs='+')
     f.files = 'write the results in multiple files'
     f.samplesites = 'sites to sample (or fname with site IDs)'
