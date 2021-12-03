@@ -31,7 +31,7 @@ from openquake.hazardlib.geo.utils import (
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
-MINMAG = 3
+MINMAG = 3.0
 MAXMAG = 10.1  # to avoid breaking PAC
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
@@ -167,7 +167,7 @@ class IntegrationDistance(dict):
 
         >>> md = IntegrationDistance.new('50')
         >>> md
-        {'default': [(1.0, 50), (10.0, 50)]}
+        {'default': [(3.0, 50), (10.1, 50)]}
         >>> md.max()
         {'default': 50}
         """
@@ -177,14 +177,14 @@ class IntegrationDistance(dict):
             if isinstance(items, list):
                 pairs = unique_sorted([tuple(it) for it in items])
                 for mag, dist in pairs:
-                    if mag < 1 or mag > 10:
+                    if mag < MINMAG or mag > MAXMAG:
                         raise ValueError('Invalid magnitude %s' % mag)
-                if pairs[-1][0] < 10:  # extend the range to the right
-                    pairs.append((10, pairs[-1][1]))
+                if pairs[-1][0] < MAXMAG:  # extend the range to the right
+                    pairs.append((MAXMAG, pairs[-1][1]))
                 self[trt] = pairs
             else:  # assume scalar distance
                 assert items >= 0, items
-                self[trt] = [(1., items), (10., items)]
+                self[trt] = [(MINMAG, items), (MAXMAG, items)]
         return self
 
     def __call__(self, trt):
