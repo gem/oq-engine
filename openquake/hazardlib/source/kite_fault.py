@@ -134,6 +134,7 @@ class KiteFaultSource(ParametricSeismicSource):
         msr = self.magnitude_scaling_relationship
         tom = self.temporal_occurrence_model
         surface = self.surface
+        print(self.source_id)
 
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
 
@@ -149,29 +150,33 @@ class KiteFaultSource(ParametricSeismicSource):
             rup_len = int(np.round(lng/self.rupture_mesh_spacing)) + 1
             rup_wid = int(np.round(wdt/self.profiles_sampling)) + 1
 
+
+
             if self.floating_x_step == 0:
                 fstrike = 1 
             else:
-                fstrike = int(rup_len*self.floating_x_step)
-                if fstrike == 0:
+                fstrike = int(np.floor(rup_len*self.floating_x_step))
+                if fstrike == 0: #or (rup_len+fstrike > len(self.surface.mesh.lons)):
                     fstrike = 1
-                    msg = 'floating_x_step {} too '.format(self.floating_x_step)
-                    msg += 'small for rupture mesh spacing '
-                    msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
-                    msg += ' {}. Using traditional rupture floating.'.format(mag)
-                    logging.warning(msg)
+#                    msg = 'floating_x_step {} too '.format(self.floating_x_step)
+#                    msg += 'small for rupture mesh spacing '
+#                    msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
+#                    msg += ' {}. Using traditional rupture floating.'.format(mag)
+#                    logging.warning(msg)
 
             if self.floating_x_step == 0:
                 fdip = 1
             else:
-                fdip = int(rup_wid*self.floating_y_step)
+                fdip = int(np.floor(rup_wid*self.floating_y_step))
                 if fdip == 0:
                     fdip = 1
-                    msg = 'floating_y_step {} too '.format(self.floating_y_step)
-                    msg += 'small for rupture mesh spacing '
-                    msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
-                    msg += ' {}. Using traditional rupture floating.'.format(mag)
-                    logging.warning(msg)
+#                    msg = 'floating_y_step {} too '.format(self.floating_y_step)
+#                    msg += 'small for rupture mesh spacing '
+#                    msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
+#                    msg += ' {}. Using traditional rupture floating.'.format(mag)
+#                    logging.warning(msg)
+
+
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
@@ -227,8 +232,33 @@ class KiteFaultSource(ParametricSeismicSource):
                 f_dip = 1
 
         # Float the rupture on the mesh describing the surface of the fault
-        for i in np.arange(0, omsh.lons.shape[1] - rup_s + 1, f_strike):
-            for j in np.arange(0, omsh.lons.shape[0] - rup_d + 1, f_dip):
+        mesh_x_len = omsh.lons.shape[1] - rup_s + 1
+        mesh_y_len = omsh.lons.shape[0] - rup_d + 1
+        x_nodes = np.arange(0, mesh_x_len, f_strike)
+        y_nodes = np.arange(0, mesh_y_len, f_dip)
+        import pdb
+        pdb.set_trace()
+
+        while len(x_nodes) == 1 and f_strike > 1:
+            f_strike -= 1
+            x_nodes = np.arange(0, mesh_x_len, f_strike)
+
+        while len(y_nodes) == 1 and f_dip > 1:
+            f_dip -= 1
+            y_nodes = np.arange(0, mesh_y_len, f_dip)
+
+        if len(y_nodes) == 0:
+            print(y_nodes, x_nodes, f_dip, mesh_y_len)
+        if x_nodes[-1] != omsh.lons.shape[1] - rup_s:
+             x_nodes = np.append(x_nodes, omsh.lons.shape[1] - rup_s)
+        if y_nodes[-1] != omsh.lons.shape[0] - rup_d:
+             y_nodes = np.append(y_nodes, omsh.lons.shape[0] - rup_d)
+
+#        import pdb; pdb.set_trace()
+#        for i in np.arange(0, omsh.lons.shape[1] - rup_s + 1, f_strike):
+#            for j in np.arange(0, omsh.lons.shape[0] - rup_d + 1, f_dip):
+        for i in x_nodes:
+            for j in y_nodes:
                 nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
                 nna = np.sum(np.isfinite(omsh.lons[j:j + rup_d, i:i + rup_s]))
                 prc = nna/nel*100.
