@@ -19,7 +19,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.boraetal2019_FAS import Boraetal2019FAS
+from openquake.hazardlib.gsim.boraetal2019_FAS import \
+        Boraetal2019FAS
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -31,7 +32,7 @@ class Boraetal2019FASTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('BCS19/FAS_mean.csv',
-                   max_discrep_percentage=0.01)
+                   max_discrep_percentage=0.5)
 
     def test_std_intra(self):
         self.check('BCS19/FAS_intra.csv',
@@ -39,7 +40,7 @@ class Boraetal2019FASTestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('BCS19/FAS_total.csv',
-                  max_discrep_percentage=1)
+                  max_discrep_percentage=0.1)
 
 
 # In[ ]:

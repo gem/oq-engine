@@ -15,7 +15,7 @@ Module exports :class:`Boraetal2019FAS`
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import FAS
+from openquake.hazardlib.imt import SA
 
 
 # In[6]:
@@ -33,24 +33,21 @@ CONSTANTS = {"r0": 1,
 
 
 def _get_source_term(self, C, ctx):
-    fsource = C['c3']*(ctx.mag-CONSTANTS['Mh']) + C['c2']*(8.5-ctx.mag)**2
-    idx = ctx.mag <= CONSTANTS['Mh']
-    fsource[idx] = C['c1']*(ctx.mag-CONSTANTS['Mh']) + C['c2']*(8.5-ctx.mag)**2   
     
+    fsource = np.array(C['c3']*(ctx.mag-CONSTANTS['Mh']) + C['c2']*(8.5-ctx.mag)**2)
+    fsource[ctx.mag <= CONSTANTS['Mh']]= C['c1']*(ctx.mag-CONSTANTS['Mh']) + C['c2']*(8.5-ctx.mag)**2
+   
     return fsource
 
 
 # In[5]:
 
 def _get_finite_fault_factor(self, C, ctx):
+    
     h = np.ones_like(ctx.mag)
-    h[np.where(ctx.mag <= 4)] = 2
-    h[np.where((ctx.mag > 4) & (ctx.mag <= 5))] = C['c4'] - (C['c4'] - 1)*(5 - ctx.mag)
-    h[np.where(ctx.mag > 5)] = C['c4']
-    # 
-    # h[(ctx.mag <= 4)] = 2
-    # h[(ctx.mag > 4) & (ctx.mag <= 5)] = (C['c4'] - (C['c4'] - 1)*(5 - ctx.mag))
-    # h[(ctx.mag > 5)] = C['c4']
+    h[ctx.mag <= 4] = 2
+    h[(ctx.mag > 4) & (ctx.mag <= 5)] = C['c4'] - (C['c4'] - 1)*(5 - ctx.mag)
+    h[ctx.mag > 5] = C['c4']
     
     return h
 
@@ -59,16 +56,20 @@ def _get_finite_fault_factor(self, C, ctx):
 
 
 def _get_path_term(self, C, ctx):
+    
     t1 = np.sqrt(ctx.rrup**2 + _get_finite_fault_factor(self, C, ctx)**2)
     t2 = np.sqrt(CONSTANTS['r1']**2 + _get_finite_fault_factor(self, C, ctx)**2)
     m = ctx.mag - CONSTANTS['Mref']
-    if ctx.rrup <= CONSTANTS['r1']:
-        g = (C['b1'] + C['c7']*m)*np.log(t1/CONSTANTS['r0'])
-    else:
-        g = (C['b1'] + C['c7']*m)*np.log(t1/CONSTANTS['r0']) 
-        + (b2 + C['c7']*m)*np.log(ctx.rrup/CONSTANTS['r1'])
+
+    g = np.ones_like(ctx.rrup)
+
+    idx = ctx.rrup <= 50
+    g[idx] = (C['b1'] + C['c7']*m)*np.log(t1[idx]/CONSTANTS['r0'])
+
+    ix = ctx.rrup > 50
+    g[ix] = (C['b1'] + C['c7']*m)*np.log(t2/CONSTANTS['r0']) + (C['b2'] + C['c7']*m)*np.log(t1[ix]/t2)
     
-    f_path = g + C['c5']*(t1-CONSTANTS['r0'])
+    fpath = g + C['c5']*(t1-CONSTANTS['r0'])
     
     return fpath
 
@@ -77,10 +78,15 @@ def _get_path_term(self, C, ctx):
 
 
 def _get_site_term(self, C, ctx):
-    if ctx.vs30 < CONSTANTS['Vc']:
-        f_site = C['c6']*np.log(ctx.vs30/CONSTANTS['Vref'])
-    else:
-        f_site = C['c6']*np.log(CONSTANTS['Vc']/CONSTANTS['Vref'])
+    
+    fsite = np.ones_like(ctx.vs30)
+  
+    idx = ctx.vs30 < CONSTANTS['Vc']
+    fsite[idx] = C['c6']*np.log(ctx.vs30[idx]/CONSTANTS['Vref'])
+
+    ix = ctx.vs30 >= CONSTANTS['Vc']
+    fsite[ix] = C['c6']*np.log(CONSTANTS['Vc']/CONSTANTS['Vref'])
+
         
     return fsite
 
@@ -89,10 +95,11 @@ def _get_site_term(self, C, ctx):
 
 
 def _get_mean_stddevs(self, C, ctx):
+    
     mean  = C['c0'] + _get_source_term(self, C, ctx) + _get_path_term(self, C, ctx) + _get_site_term(self, C, ctx) ##lnFAS
-    phi = np.sqrt(C['phi_ss']**2 + C['phi_s2s']**2)
+    phi = np.sqrt(C['phiss']**2 + C['phis2s']**2)
     tau = C['tau']
-    sigma = np.sqrt(C['phi_ss']**2 + C['tau']**2 + C['phi_s2s']**2)
+    sigma = np.sqrt(C['phiss']**2 + C['tau']**2 + C['phis2s']**2)
     
     return mean, sigma, tau, phi
 
@@ -114,7 +121,7 @@ class Boraetal2019FAS(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {FAS}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA}
 
     #: Supported intensity measure component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
@@ -134,11 +141,12 @@ class Boraetal2019FAS(GMPE):
     #: Required distance measures
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+    def compute(self, ctx, imts, mean, sigma, tau, phi):
+        
         for m, imt in enumerate(imts):
             
             C = self.COEFFS[imt]
-            mean[m],sigma[m], tau[m], phi[m] = _get_mean_stddevs(self, C, ctx)
+            mean[m],sigma[m],tau[m], phi[m] = _get_mean_stddevs(self, C, ctx)
     
     TMP = """
 IMT	c0	c1	c2	c3	c5	c6	c7	b1	b2	c4	tau	phis2s	phiss
@@ -242,5 +250,5 @@ IMT	c0	c1	c2	c3	c5	c6	c7	b1	b2	c4	tau	phis2s	phiss
 39.77518983	-3.806548592	1.959988264	0.022933572	1.299714418	-0.008065145	-0.089600986	-0.108512471	-1.264876754	-1.641371473	9.212935618	0.792458414	1.081230389	0.937564372
 42.30701528	-4.201142708	2.173735129	0.047307967	1.433504745	-0.006942994	-0.038901772	-0.117509975	-1.296483426	-1.705301911	9.900439036	0.825831079	1.075435867	0.920789969
 45	        -4.20040869	    1.863641624	0.013109204	1.186467381	-0.006308702	-0.121036345	-0.088168799	-1.331613337	-1.723189435	9.846608307	0.864049413	1.123788785	0.962902228"""
-    COEFFS = CoeffsTable(table=TMP)            
+    COEFFS = CoeffsTable(sa_damping=5, table=TMP)            
 
