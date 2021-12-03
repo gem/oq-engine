@@ -1,11 +1,5 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[2]:
-
-
 # The Hazard Library
-# Copyright (C) 2020 GEM Foundation
+# Copyright (C) 2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,13 +13,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.boraetal2019_FAS import \
-        Boraetal2019FAS
+
+from openquake.hazardlib.gsim.bora_2019 import BoraEtAl2019
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class Boraetal2019FASTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = Boraetal2019FAS
+    GSIM_CLASS = BoraEtAl2019
 
     # Tables computed using the matlab script included in the supplement to
     # the BSSA paper
@@ -40,11 +34,4 @@ class Boraetal2019FASTestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('BCS19/FAS_total.csv',
-                  max_discrep_percentage=0.1)
-
-
-# In[ ]:
-
-
-
-
+                   max_discrep_percentage=0.1)
