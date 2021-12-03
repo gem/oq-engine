@@ -30,16 +30,11 @@ class BaylessAbrahamson2018TestCase(BaseGSIMTestCase):
     fname_mean = 'BA18/BA18_mean_reduced.csv'
     fname_std_tot = 'BA18/BA18_STD_TOTAL_reduced.csv'
 
-    if not REDUCED:
-        fname_mean = 'BA18/BA18_mean_full.csv'
-        fname_std_tot = 'BA18/BA18_STD_TOTAL_full.csv'
-
     def test_mean(self):
-        self.check(self.fname_mean, max_discrep_percentage=30.0)
+        self.check(self.fname_mean, max_discrep_percentage=0.8)
 
     def test_std_total(self):
-        #self.check(self.fname_std_tot, max_discrep_percentage=0.1)
-        pass
+        self.check(self.fname_std_tot, max_discrep_percentage=0.1)
 
     # def test_std_intra(self):
     #     self.check('BA18/BA18_STD_INTRA.csv',

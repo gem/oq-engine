@@ -105,29 +105,25 @@ def _get_stddevs(C, ctx):
     Compute the standard deviations
     """
     # Set components of std
-
-    tau = np.zeros_like(ctx.mag)
-    phi_s2s = np.zeros_like(ctx.mag)
-    phi_ss = np.zeros_like(ctx.mag)
-
-    tau[(ctx.mag < 4)] = C['s1']
-    phi_s2s[(ctx.mag < 4)] = C['s3']
-    phi_ss[(ctx.mag < 4)] = C['s5']
-
-    tau[(ctx.mag > 6)] = C['s2']
-    phi_s2s[(ctx.mag > 6)] = C['s4']
-    phi_ss[(ctx.mag > 6)] = C['s6']
-
-    tau[(ctx.mag >= 4) & (ctx.mag <= 6)] = (
-        C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag-4))
-    phi_s2s[(ctx.mag >= 4) & (ctx.mag <= 6)] = (
-        C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4))
-    phi_ss[(ctx.mag >= 4) & (ctx.mag <= 6)] = (
-        C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4))
+    tau = C['s1']
+    phi_s2s = C['s3']
+    phi_ss = C['s5']
+    if ctx.mag > 6:
+        tau = C['s2']
+        phi_s2s = C['s4']
+        phi_ss = C['s6']
+    elif ctx.mag > 4:
+        tau = C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag-4)
+        phi_s2s = C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4)
+        phi_ss = C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4)
 
     # Collect the requested stds
     sigma = np.sqrt(tau**2+phi_s2s**2+phi_ss**2+C['c1a']**2)
     phi = np.sqrt(phi_s2s**2+phi_ss**2)
+
+    sigma = np.ones_like(ctx.vs30) * sigma
+    tau = np.ones_like(ctx.vs30) * tau
+    phi = np.ones_like(ctx.vs30) * phi
 
     return sigma, tau, phi
 
@@ -143,14 +139,6 @@ def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
         A :class:`numpy.ndarray` instance of shape [# freq, 3] with the values
         of the coefficients f3, f4 and f5 which are used to compute the
         non-linear term
-    """
-
-    """ original - no smoothing
-    vsref = 760.0
-    t1 = np.exp(C['f5'] * (np.minimum(ctx.vs30, vsref)-360.))
-    t2 = np.exp(C['f5'] * (vsref-360.))
-    f2 = C['f4'] * (t1 - t2)
-    fnl_0 = f2 * np.log((np.exp(ln_ir_outcrop)+C['f3']) / C['f3'])
     """
 
     vsref = 760.0
@@ -176,6 +164,7 @@ def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
     fnl_0 = f2 * np.log((np.exp(ln_ir_outcrop) + f3) / f3)
     idxs = np.argmin(fnl_0, axis=0)
 
+    # Applying correction as described at page 2093 in BA18
     fnl = []
     for i, j in enumerate(idxs):
         fnl_0[j:, i] = min(fnl_0[:, i])
@@ -192,14 +181,6 @@ def _get_dimunition_factor(ctx, imt):
 
 
 def _get_mean_linear(C, ctx):
-
-    #print(' ')
-    #print('Mag scaling', _magnitude_scaling(C, ctx))
-    #print('Path scaling', _path_scaling(C, ctx))
-    #print('Site linear scaling', _linear_site_response(C, ctx))
-    #print('Ztor scaling', _ztor_scaling(C, ctx))
-    #print('Soil depth scaling', _soil_depth_scaling(C, ctx))
-
     mean = (_magnitude_scaling(C, ctx) +
             _path_scaling(C, ctx) +
             _linear_site_response(C, ctx) +
@@ -262,7 +243,7 @@ class BaylessAbrahamson2018(GMPE):
     #: Required distance measures
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+    def compute(self, ctx, imts, mean, sigma, tau, phi):
         freq_nl, coeff_nl = self.COEFFS.get_coeffs(['f3', 'f4', 'f5'])
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
