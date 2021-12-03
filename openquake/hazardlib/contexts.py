@@ -333,10 +333,11 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        if rup.mag > MAXMAG or rup.mag < MINMAG:
-            raise ValueError('Invalid magnitude %.2f' % rup.mag)
         distances = get_distances(rup, sites, 'rrup')
-        mdist = self.maximum_distance(rup.mag)
+        try:
+            mdist = self.maximum_distance(rup.mag)
+        except ValueError:
+            raise ValueError('Invalid magnitude %.2f' % rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
