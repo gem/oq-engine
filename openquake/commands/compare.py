@@ -22,6 +22,8 @@ from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
+P0 = 0  # first poe
+
 
 def get_diff_idxs(array, rtol, atol):
     """
@@ -103,6 +105,25 @@ class Comparator(object):
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, L)
 
+    def getuhs(self, what, sids):
+        # uhs for the first poe
+        oq0 = self.oq
+        extractor = self.extractors[0]
+        what = 'hmaps?kind=mean'  # shape (N, M, P)
+        midx = numpy.array([m for m, imt in enumerate(oq0.imtls)
+                            if imt.startswith(('PGA', 'SA'))])
+        shp = (len(sids), -1)
+        arrays = [extractor.get(what).mean[sids, midx, P0].reshape(shp)]
+        extractor.close()
+        for extractor in self.extractors[1:]:
+            oq = extractor.oqparam
+            numpy.testing.assert_array_equal(oq.imtls.array, oq0.imtls.array)
+            numpy.testing.assert_array_equal(oq.poes, oq0.poes)
+            arrays.append(
+                extractor.get(what).mean[sids, midx, P0].reshape(shp))
+            extractor.close()
+        return numpy.array(arrays)  # shape (C, N, M*P)
+
     def getgmf(self, what, imt, sids):
         extractor = self.extractors[0]
         imtls = self.oq.imtls
@@ -121,7 +142,9 @@ class Comparator(object):
 
     def compare(self, what, imt, files, samplesites, atol, rtol):
         sids = self.getsids(samplesites)
-        if what.startswith('avg_gmf'):
+        if what == 'uhs':
+            arrays = self.getuhs(what, sids)
+        elif what.startswith('avg_gmf'):
             arrays = self.getgmf(what, imt, sids)
         else:
             arrays = self.getdata(what, imt, sids)
@@ -130,6 +153,8 @@ class Comparator(object):
             header += ['%.5f' % lvl for lvl in self.oq.imtls[imt]]
         elif what == 'hmaps':
             header += [str(poe) for poe in self.oq.poes]
+        elif what == 'uhs':
+            header += self.oq.imt_periods()
         else:  # avg_gmf
             header += ['gmf']
         rows = collections.defaultdict(list)
@@ -182,6 +207,21 @@ def compare_cumtime(calc1: int, calc2: int):
     return Comparator([calc1, calc2]).cumtime()
 
 
+def compare_uhs(calc_ids: int, files=False, *,
+                samplesites='', rtol: float = 0, atol: float = 1E-3):
+    """
+    Compare the uniform hazard spectra of two or more calculations.
+    """
+    c = Comparator(calc_ids)
+    arrays = c.compare('uhs', None, files, samplesites, atol, rtol)
+    if len(arrays) and len(calc_ids) == 2:
+        # each array has shape (N, M)
+        ms = numpy.mean((arrays[0] - arrays[1])**2)
+        maxdiff = numpy.abs(arrays[0] - arrays[1]).max()
+        row = ('%.5f' % c.oq.poes[P0], numpy.sqrt(ms), maxdiff)
+        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff']))
+
+
 def compare_hmaps(imt, calc_ids: int, files=False, *,
                   samplesites='', rtol: float = 0, atol: float = 1E-3):
     """
@@ -221,12 +261,14 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
 
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
+            uhs=compare_uhs,
             hmaps=compare_hmaps,
             hcurves=compare_hcurves,
             avg_gmf=compare_avg_gmf)
 
-for f in (compare_hmaps, compare_hcurves, compare_avg_gmf):
-    f.imt = 'intensity measure type to compare'
+for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf):
+    if f is not compare_uhs:
+        f.imt = 'intensity measure type to compare'
     f.calc_ids = dict(help='calculation IDs', nargs='+')
     f.files = 'write the results in multiple files'
     f.samplesites = 'sites to sample (or fname with site IDs)'

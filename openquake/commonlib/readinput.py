@@ -654,7 +654,7 @@ def get_source_model_lt(oqparam, branchID=None):
         trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
         smlt.tectonic_region_types = smlt.tectonic_region_types - trts
-    if 'ucerf' in oqparam.calculation_mode:
+    if oqparam.is_ucerf():
         smlt.tectonic_region_types = {'Active Shallow Crust'}
     return smlt
 

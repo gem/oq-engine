@@ -35,7 +35,7 @@ from openquake.commonlib.datastore import read
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
-from openquake.qa_tests_data.classical import case_1, case_9, case_18
+from openquake.qa_tests_data.classical import case_1, case_9, case_18, case_56
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import (
@@ -529,14 +529,13 @@ class EngineRunJobTestCase(unittest.TestCase):
             run_jobs(create_jobs([job_ini]))
 
     def test_sensitivity(self):
-        job_ini = gettemp('''[general]
-description = sensitivity test
-calculation_mode = scenario
-sites = 0 0
-intensity_measure_types = PGA
-sensitivity_analysis = {
-  'maximum_distance': [100, 200]}''')
-        run_jobs(create_jobs([job_ini]))
+        # test the sensitivity of the UHS from the area_source_discretization
+        job_ini = os.path.join(os.path.dirname(case_56.__file__), 'job.ini')
+        sap.runline(f'openquake.commands engine --run {job_ini} -c 0')
+        with Print.patch() as p:
+            sap.runline('openquake.commands compare uhs -1 -2')
+        print(p)
+        self.assertIn('rms-diff', str(p))
 
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
