@@ -105,7 +105,7 @@ else:
             out[:, li] = (iml - mean_std[0]) / mean_std[1]
 
 
-def _get_poes(mean_std, loglevels, trunclevel):
+def _get_poes(mean_std, loglevels, truncation_level):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
     out = numpy.zeros((N, loglevels.size))  # shape (N, L)
@@ -114,12 +114,12 @@ def _get_poes(mean_std, loglevels, trunclevel):
         # loop needed to work on smaller matrices fitting the CPU cache
         slc = loglevels(imt)
         levels = loglevels.array[slc]
-        if trunclevel == 0:
+        if truncation_level == 0:
             for li, iml in enumerate(levels):
                 out[:, m * L1 + li] = iml <= mean_std[0, m]
         else:
             _compute_delta(mean_std[:, m], levels, out[:, slc])
-    return _truncnorm_sf(trunclevel, out)
+    return _truncnorm_sf(truncation_level, out)
 
 
 OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters'
@@ -481,12 +481,12 @@ class GMPE(GroundShakingIntensityModel):
             unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
         loglevels = cmaker.loglevels
-        trunclevel = cmaker.trunclevel
+        truncation_level = cmaker.truncation_level
         N = mean_std.shape[2]  # 2, M, N
         L = loglevels.size
         maxsize = int(numpy.ceil(ONE_MB / L / 8))
         arr = numpy.zeros((N, L))
-        if trunclevel is not None and trunclevel < 0:
+        if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
         if hasattr(self, 'weights_signs'):
@@ -496,18 +496,18 @@ class GMPE(GroundShakingIntensityModel):
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
                     ms[0, m] += s * ctx.adjustment
-                outs.append(_get_poes(ms, loglevels, trunclevel))
+                outs.append(_get_poes(ms, loglevels, truncation_level))
             arr[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):
                 mean_stdi = numpy.array(mean_std)  # a copy
                 mean_stdi[1] *= f  # multiply stddev by factor
-                arr[:] += w * _get_poes(mean_stdi, loglevels, trunclevel)
+                arr[:] += w * _get_poes(mean_stdi, loglevels, truncation_level)
         else:  # regular case
             # split large arrays in slices < 1 MB to fit inside the CPU cache
             for sl in gen_slices(0, N, maxsize):
-                arr[sl] = _get_poes(mean_std[:, :, sl], loglevels, trunclevel)
+                arr[sl] = _get_poes(mean_std[:, :, sl], loglevels, truncation_level)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for imt in loglevels:
             if imtweight and imtweight.dic.get(imt) == 0:

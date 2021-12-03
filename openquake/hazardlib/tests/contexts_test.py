@@ -206,7 +206,7 @@ class CollapseTestCase(unittest.TestCase):
             aac(c1, c2)  # the same
 
     def test_get_pmap(self):
-        trunclevel = 3
+        truncation_level = 3
         imtls = DictArray({'PGA': [0.01]})
         gsims = [valid.gsim('AkkarBommer2010')]
         ctxs = []
@@ -221,7 +221,7 @@ class CollapseTestCase(unittest.TestCase):
             ctx.rjb = numpy.array([99.])
             ctxs.append(ctx)
         cmaker = ContextMaker(
-            'TRT', gsims, dict(imtls=imtls, truncation_level=trunclevel))
+            'TRT', gsims, dict(imtls=imtls, truncation_level=truncation_level))
         cmaker.tom = PoissonTOM(time_span=50)
         pmap = cmaker.get_pmap(ctxs)
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)

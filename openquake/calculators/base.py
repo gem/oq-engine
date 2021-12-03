@@ -40,7 +40,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, datastore
+from openquake.commonlib import readinput, logictree, datastore, source_reader
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -433,7 +433,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Rupture floating factor = %s', f)
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
-        if (f * s >= 1.5 and self.oqparam.pointsource_distance is None
+        if (f * s >= 1.5 and self.oqparam.no_pointsource_distance
                 and 'classical' in self.oqparam.calculation_mode):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'
@@ -465,14 +465,15 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
                 mags_by_trt = csm.get_mags_by_trt()
-                oq.maximum_distance.interp(mags_by_trt)
                 for trt in mags_by_trt:
                     self.datastore['source_mags/' + trt] = numpy.array(
                         mags_by_trt[trt])
-                    it = list(oq.maximum_distance.ddic[trt].items())
-                    if len(it) > 2:
+                    interp = oq.maximum_distance(trt)
+                    if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
-                            it[0] + it[-2] + it[-1])
+                            interp.x[0], interp.y[0],
+                            interp.x[-2], interp.y[-2],
+                            interp.x[-1], interp.y[-1])
                         logging.info('max_dist %s: %s', trt, md)
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
@@ -560,8 +561,10 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam.__class__.concurrent_tasks.default)
             params = {name: value for name, value in
                       vars(parent['oqparam']).items()
-                      if name not in vars(self.oqparam)}
-            self.save_params(**params)
+                      if name not in vars(self.oqparam)
+                      and name != 'ground_motion_fields'}
+            if params:
+                self.save_params(**params)
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
             oqp = parent['oqparam']
@@ -789,7 +792,11 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.add_tagname('site_id')
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
-            self.sitecol = haz_sitecol
+            if oq.hazard_calculation_id:  # read the sitecol of the child
+                self.sitecol = readinput.get_site_collection(oq)
+                self.datastore['sitecol'] = self.sitecol
+            else:
+                self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)
@@ -816,13 +823,13 @@ class HazardCalculator(BaseCalculator):
                     for taxo, weight in items:
                         if taxo != '?':
                             taxonomies.add(taxo)
-            # check that we are covering all the taxonomies in the exposure
+            # check that we are covering all the taxonomy strings in the exposure
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
-                raise RuntimeError('The exposure contains the taxonomies %s '
+                raise RuntimeError('The exposure contains the taxonomy strings %s '
                                    'which are not in the risk model' % missing)
             if len(self.crmodel.taxonomies) > len(taxonomies):
-                logging.info('Reducing risk model from %d to %d taxonomies',
+                logging.info('Reducing risk model from %d to %d taxonomy strings',
                              len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
@@ -852,21 +859,15 @@ class HazardCalculator(BaseCalculator):
         sec_perils = oq.get_sec_perils()
         for sp in sec_perils:
             sp.prepare(self.sitecol)  # add columns as needed
+        if sec_perils:
+            self.datastore['sitecol'] = self.sitecol
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
-        self.param = dict(individual_rlzs=oq.individual_rlzs,
-                          ps_grid_spacing=oq.ps_grid_spacing,
-                          minimum_distance=oq.minimum_distance,
-                          min_iml=oq.min_iml,
-                          collapse_level=int(oq.collapse_level),
-                          split_sources=oq.split_sources,
-                          avg_losses=oq.avg_losses,
-                          amplifier=self.amplifier,
-                          sec_perils=sec_perils,
-                          ses_seed=oq.ses_seed)
+        oq._amplifier = self.amplifier
+        oq._sec_perils = sec_perils
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
@@ -916,15 +917,21 @@ class HazardCalculator(BaseCalculator):
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
-    def store_source_info(self, calc_times, nsites=False):
+    def store_source_info(self, calc_times):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        self.csm.update_source_info(calc_times, nsites)
+        if 'source_info' not in self.datastore:
+            source_reader.create_source_info(
+                self.csm, calc_times, self.datastore.hdf5)
+        self.csm.update_source_info(calc_times)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
-            recs, readinput.source_info_dt)
-        return [rec[0] for rec in recs]  # return source_ids
+            recs, source_reader.source_info_dt)
+        if 'trt_smrs' not in self.datastore:
+            self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
+            self.datastore['toms'] = numpy.array(
+                [sg.tom_name for sg in self.csm.src_groups], hdf5.vstr)
 
     def post_process(self):
         """For compatibility with the engine"""
@@ -997,7 +1004,7 @@ class RiskCalculator(HazardCalculator):
         smap.monitor.save('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
-            smap.submit((block, self.param))
+            smap.submit((block, self.oqparam))
         return smap.reduce(self.combine, self.acc)
 
     def combine(self, acc, res):

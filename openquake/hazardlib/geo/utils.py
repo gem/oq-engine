@@ -460,6 +460,9 @@ class OrthographicProjection(object):
     """
     @classmethod
     def from_lons_lats(cls, lons, lats):
+        idx = numpy.isfinite(lons)
+        lons = lons[idx]
+        lats = lats[idx]
         return cls(*get_spherical_bounding_box(lons, lats))
 
     def __init__(self, west, east, north, south):
@@ -474,6 +477,7 @@ class OrthographicProjection(object):
         self.sin_pi_over_4 = (2 ** 0.5) / 2
 
     def __call__(self, lons, lats, reverse=False):
+        assert not numpy.isnan(lons).any(), lons
         if not reverse:
             lambdas, phis = numpy.radians(lons), numpy.radians(lats)
             cos_phis = numpy.cos(phis)

@@ -258,13 +258,19 @@ def dask_submit(self, func, args, monitor):
         safely_call, func, args, self.task_no, monitor)
 
 
+@submit.add('ipp')
+def ipp_submit(self, func, args, monitor):
+    return self.executor.submit(
+        safely_call, func, args, self.task_no, monitor)
+
+
 def oq_distribute(task=None):
     """
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
     if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
-                    'dask'):
+                    'dask', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
@@ -514,6 +520,9 @@ if oq_distribute().startswith('celery'):
 elif oq_distribute() == 'dask':
     from dask.distributed import Client
 
+elif oq_distribute() == 'ipp':
+    from ipyparallel import Cluster
+
 
 class IterResult(object):
     """
@@ -651,17 +660,24 @@ class Starmap(object):
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            cls.pool = multiprocessing.get_context('spawn').Pool(
-                cls.num_cores, init_workers)
+            try:
+                from ray.util.multiprocessing import Pool
+                cls.pool = Pool(cls.num_cores, init_workers)
+            except ImportError:
+                cls.pool = multiprocessing.get_context('spawn').Pool(
+                    cls.num_cores, init_workers)
+                cls.pids = [proc.pid for proc in cls.pool._pool]
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
-            cls.pids = [proc.pid for proc in cls.pool._pool]
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
         elif cls.distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
+        elif cls.distribute == 'ipp' and not hasattr(cls, 'executor'):
+            rc = Cluster(n=cls.num_cores).start_and_connect_sync()
+            cls.executor = rc.executor()
 
     @classmethod
     def shutdown(cls):
@@ -675,9 +691,11 @@ class Starmap(object):
             cls.pids = []
         if hasattr(cls, 'dask_client'):
             del cls.dask_client
+        elif hasattr(cls, 'executor'):
+            cls.executor.shutdown()
 
     @classmethod
-    def apply(cls, task, args, concurrent_tasks=None,
+    def apply(cls, task, allargs, concurrent_tasks=None,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               distribute=None, progress=logging.info, h5=None):
@@ -698,7 +716,7 @@ class Starmap(object):
         :param h5: an open hdf5.File where to store the performance info
         :returns: an :class:`IterResult` object
         """
-        arg0, *args = args
+        arg0, *args = allargs
         if maxweight:  # block_splitter is lazy
             taskargs = ([blk] + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
@@ -709,8 +727,21 @@ class Starmap(object):
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, taskargs, distribute, progress, h5)
 
+    @classmethod
+    def apply_split(cls, task, allargs, concurrent_tasks=None,
+                    maxweight=None, weight=lambda item: 1,
+                    key=lambda item: 'Unspecified',
+                    distribute=None, progress=logging.info, h5=None,
+                    duration=300, split_level=5):
+        """
+        Same as Starmap.apply, but possibly produces subtasks
+        """
+        args = (allargs[0], task, allargs[1:], duration, split_level)
+        return cls.apply(split_task, args, concurrent_tasks or 2*cls.num_cores,
+                         maxweight, weight, key, distribute, progress, h5)
+
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, h5=None, slowdown=0):
+                 progress=logging.info, h5=None):
         self.__class__.init(distribute=distribute)
         self.task_func = task_func
         if h5:
@@ -723,11 +754,10 @@ class Starmap(object):
         self.monitor = Monitor(task_func.__name__)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
-        self.name = self.monitor.operation or task_func.__name__
+        self.name = self.monitor.operation
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
-        self.slowdown = slowdown
         self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
@@ -801,6 +831,13 @@ class Starmap(object):
         self.task_no += 1
         self.tasks.append(res)
 
+    def submit_split(self, args,  duration, split_level):
+        """
+        Submit the given arguments to the underlying task
+        """
+        self.submit((args[0], self.task_func, args[1:], duration, split_level),
+                    func=split_task)
+
     def submit_all(self):
         """
         :returns: an IterResult object
@@ -844,9 +881,6 @@ class Starmap(object):
             first_args = self.task_queue[:self.num_cores]
             self.task_queue[:] = self.task_queue[self.num_cores:]
             for func, args in first_args:
-                # possibly slow down the sending of the tasks
-                # to give time to the workers
-                time.sleep(self.slowdown)
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
@@ -905,32 +939,38 @@ def count(word):
     return collections.Counter(word)
 
 
-def split_task(func, *args, duration=1000,
-               weight=operator.attrgetter('weight')):
+class List(list):
+    weight = 0
+
+
+def split_task(elements, func, args, duration, split_level, monitor):
     """
     :param func: a task function with a monitor as last argument
-    :param args: arguments of the task function
+    :param args: arguments of the task function, with args[0] being a sequence
     :param duration: split the task if it exceeds the duration
-    :param weight: weight function for the elements in args[0]
-    :yields: a partial result, 0 or more task objects, 0 or 1 partial result
+    :param split_level: number of splits to try (ex. 5)
+    :yields: a partial result, 0 or more task objects
     """
-    elements = numpy.array(sorted(args[0], key=weight, reverse=True))
     n = len(elements)
-    # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
-    assert n > 0, 'Passed an empty sequence!'
-    if n == 1:
-        yield func(*args)
-        return
-    first, *other = elements
-    first_weight = weight(first)
+    if split_level > n:  # too many splits
+        split_level = n
+    elements = numpy.array(elements)  # from WeightedSequence to array
+    idxs = numpy.arange(n)
+    split_elems = [elements[idxs % split_level == i]
+                   for i in range(split_level)]
+    # see how long it takes to run the first slice
     t0 = time.time()
-    res = func(*([first],) + args[1:])
-    dt = (time.time() - t0) / first_weight  # time per unit of weight
-    yield res
-    blocks = list(block_splitter(other, duration, lambda el: weight(el) * dt))
-    for block in blocks[:-1]:
-        yield (func, block) + args[1:-1]
-    yield func(*(blocks[-1],) + args[1:])
+    for i, elems in enumerate(split_elems):
+        res = func(elems, *args, monitor=monitor)
+        dt = time.time() - t0
+        yield res
+        if dt > duration:
+            # spawn subtasks for the rest and exit
+            for els in split_elems[i + 1:]:
+                ls = List(els)
+                ls.weight = sum(getattr(el, 'weight', 1.) for el in els)
+                yield (func, ls) + args
+            break
 
 #                             start/stop workers                             #
 
@@ -1024,6 +1064,8 @@ def workers_status():
 
     elif OQDIST == 'zmq':
         return workerpool.WorkerMaster().status()
+
+    return []
 
 
 def workers_wait(seconds=30):

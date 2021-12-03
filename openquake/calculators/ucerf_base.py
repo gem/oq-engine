@@ -243,7 +243,8 @@ class UCERFSource(BaseSeismicSource):
             bg_locations = hdf5["Grid/Locations"][()]
             if hasattr(self, 'src_filter'):
                 # in event based
-                idist = self.src_filter.integration_distance(DEFAULT_TRT)
+                idist = self.src_filter.integration_distance[
+                    DEFAULT_TRT][-1][1]
             else:
                 # in classical
                 return numpy.arange(len(bg_locations))
@@ -327,6 +328,8 @@ class UCERFSource(BaseSeismicSource):
                 src_name = "|".join([self.ukey["total_key"], str(bg_idx)])
                 mag_idx = (self.min_mag <= mags) & (mags < mmax[i])
                 src_mags = mags[mag_idx]
+                if len(src_mags) == 1:  # too short
+                    continue
                 src_mfd = EvenlyDiscretizedMFD(
                     src_mags[0],
                     src_mags[1] - src_mags[0],

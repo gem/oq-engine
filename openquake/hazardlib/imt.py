@@ -25,6 +25,7 @@ import collections
 import numpy
 
 EAS_PERIOD_PATTERN = '^EAS\\((\\d+\\.*\\d*)\\)'
+EAS_PERIOD_PATTERN = '^(EAS|FAS)\\((\\d+\\.*\\d*)\\)'
 
 
 def positivefloat(val):
@@ -68,7 +69,10 @@ def from_string(imt, _damping=5.0):
     """
     m = re.match(EAS_PERIOD_PATTERN, imt)
     if m:
-        im = EAS(float(m.group(1)))
+        if m.group(1) == 'EAS':
+            im = EAS(float(m.group(2)))
+        elif m.group(1) == 'FAS':
+            im = FAS(float(m.group(2)))
         return(im)
     elif re.match(r'[ \+\d\.]+', imt):
         return SA(float(imt))
@@ -121,6 +125,14 @@ def EAS(frequency):
     return IMT('EAS(%s)' % period, period, 5.0)
 
 
+def FAS(frequency):
+    """
+    Fourier Amplitude Spectrum in terms of a frequency (in Hz).
+    """
+    period = 1. / frequency
+    return IMT('FAS(%s)' % period, period, 5.0)
+
+
 def SA(period, damping=5.0):
     """
     Spectral acceleration, defined as the maximum acceleration of a damped,
@@ -163,7 +175,7 @@ def RSD():
     return IMT('RSD')
 
 
-def RSD595(IMT):
+def RSD595():
     """
     Alias for RSD
     """

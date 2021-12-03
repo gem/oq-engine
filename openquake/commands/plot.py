@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import gzip
 import json
 import logging
@@ -22,15 +23,23 @@ import shapely
 import numpy
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
+from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
+
+
+def import_plt():
+    if os.environ.get('TEXT'):
+        import plotext as plt
+    else:
+        import matplotlib.pyplot as plt
+    return plt
 
 
 def make_figure_hcurves(extractors, what):
     """
     $ oq plot "hcurves?kind=mean&imt=PGA&site_id=0"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
@@ -60,7 +69,7 @@ def make_figure_uhs_cluster(extractors, what):
     """
     $ oq plot "uhs_cluster?k=12"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     import matplotlib.cm as cm
     kstr = what.split('?')[1]
     k = int(kstr.split('=')[1])
@@ -97,7 +106,7 @@ def make_figure_avg_gmf(extractors, what):
     """
     $ oq plot "avg_gmf?imt=PGA"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     imt = what.split('=')[1]
     ax = fig.add_subplot(1, 1, 1)
@@ -123,7 +132,7 @@ def make_figure_vs30(extractors, what):
     """
     $ oq plot "vs30?"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     [ex] = extractors
     sitecol = ex.get('sitecol')
@@ -140,7 +149,7 @@ def make_figure_hmaps(extractors, what):
     """
     $ oq plot "hmaps?kind=mean&imt=PGA"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     ncalcs = len(extractors)
     if ncalcs > 2:
@@ -199,7 +208,7 @@ def make_figure_uhs(extractors, what):
     """
     $ oq plot "uhs?kind=mean&site_id=0"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
@@ -243,7 +252,7 @@ def make_figure_disagg(extractors, what):
     """
     $ oq plot "disagg?kind=Mag&imt=PGA&poe_id=0"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     from matplotlib import cm
     fig = plt.figure()
     oq = extractors[0].oqparam
@@ -305,25 +314,34 @@ def make_figure_task_info(extractors, what):
     """
     $ oq plot "task_info?kind=classical"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
+    if plt.__name__ == 'plotext':
+        [ex] = extractors
+        [(task_name, task_info)] = ex.get(what).to_dict().items()
+        x = task_info['duration']
+        mean, std, med = x.mean(), x.std(ddof=1), numpy.median(x)
+        plt.hist(x, bins=50)
+        plt.title("mean=%d+-%d seconds, median=%d" % (mean, std, med))
+        return plt
     fig = plt.figure()
     [ex] = extractors
     [(task_name, task_info)] = ex.get(what).to_dict().items()
     x = task_info['duration']
-    ax = fig.add_subplot(1, 1, 1)
+    ax = fig.add_subplot(2, 1, 1)
     mean, std = x.mean(), x.std(ddof=1)
     ax.hist(x, bins=50, rwidth=0.9)
-    ax.set_xlabel("mean=%d+-%d seconds" % (mean, std))
+    ax.set_title("mean=%d+-%d seconds" % (mean, std))
     ax.set_ylabel("tasks=%d" % len(x))
-    #from scipy.stats import linregress
-    #ax = fig.add_subplot(2, 1, 2)
-    #arr = numpy.sort(task_info, order='duration')
-    #x, y = arr['duration'], arr['weight']
-    #reg = linregress(x, y)
-    #ax.plot(x, reg.intercept + reg.slope * x)
-    #ax.plot(x, y)
-    #ax.set_ylabel("weight")
-    #ax.set_xlabel("duration")
+
+    from scipy.stats import linregress
+    ax = fig.add_subplot(2, 1, 2)
+    arr = numpy.sort(task_info, order='duration')
+    x, y = arr['duration'], arr['weight']
+    reg = linregress(x, y)
+    ax.plot(x, reg.intercept + reg.slope * x)
+    ax.plot(x, y)
+    ax.set_ylabel("weight")
+    ax.set_xlabel("duration")
     return plt
 
 
@@ -332,7 +350,7 @@ def make_figure_memory(extractors, what):
     $ oq plot "memory?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
 
     [ex] = extractors
     task_info = ex.get('task_info').to_dict()
@@ -392,7 +410,7 @@ def make_figure_sources(extractors, what):
     $ oq plot "sources?code=A&code=N"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     info = ex.get(what)
     wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
@@ -440,7 +458,7 @@ def make_figure_gridded_sources(extractors, what):
     $ oq plot "gridded_sources?task_no=0"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     dic = json.loads(ex.get(what).json)  # id -> lonlats
     fig, ax = plt.subplots()
@@ -467,7 +485,7 @@ def make_figure_rupture_info(extractors, what):
     $ oq plot "rupture_info?min_mag=6"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     info = ex.get(what)
     fig, ax = plt.subplots()
@@ -497,7 +515,7 @@ def make_figure_effect(extractors, what):
     $ oq plot "effect?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     from matplotlib import cm
     [ex] = extractors
     effect = ex.get(what)
@@ -528,7 +546,7 @@ def make_figure_rups_by_mag_dist(extractors, what):
     $ oq plot "rups_by_mag_dist?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     from matplotlib import cm
     [ex] = extractors
     counts = ex.get(what)
@@ -559,7 +577,7 @@ def make_figure_dist_by_mag(extractors, what):
     $ oq plot "dist_by_mag?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     effect = ex.get('effect')
     mags = ['%.2f' % mag for mag in effect.mags]
@@ -592,7 +610,7 @@ def make_figure_effect_by_mag(extractors, what):
     $ oq plot "effect_by_mag?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     gsims_by_trt = ex.get('gsims_by_trt', asdict=True)
     mags = ex.get('source_mags').array
@@ -600,7 +618,7 @@ def make_figure_effect_by_mag(extractors, what):
         effect = ex.get('effect')
     except KeyError:
         onesite = ex.get('sitecol').one()
-        maximum_distance = MagDepDistance(ex.oqparam.maximum_distance)
+        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
         imtls = ex.oqparam.imtls
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)
@@ -621,7 +639,7 @@ def make_figure_agg_curves(extractors, what):
     """
     $ oq plot "agg_curves?kind=mean&loss_type=structural" -1
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
@@ -650,7 +668,7 @@ def make_figure_csq_curves(extractors, what):
     """
     $ oq plot "csq_curves?agg_id=0&loss_type=structural&consequence=losses" -1
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, limit_state) -> curve
     for i, ex in enumerate(extractors):
@@ -686,7 +704,7 @@ def plot_wkt(wkt_string):
     Plot a WKT string describing a polygon
     """
     from shapely import wkt
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     poly = wkt.loads(wkt_string)
     coo = numpy.array(poly.exterior.coords)
     plt.plot(coo[:, 0], coo[:, 1], '-')

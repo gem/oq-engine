@@ -77,7 +77,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         self.cmaker.loglevels = ll = DictArray(
             {'PGA': imls_soil, 'SA(1.0)': imls_soil})
         self.cmaker.af = AmplFunction.from_dframe(df)
-        self.cmaker.trunclevel = tl = 3
+        self.cmaker.truncation_level = tl = 3
 
         # The output in this case will be (1, x, 2) i.e. 1 site, number
         # intensity measure levels times 2 and 2 GMMs

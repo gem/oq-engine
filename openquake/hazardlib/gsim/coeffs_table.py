@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import math
+import numpy as np
 from openquake.baselib.general import RecordBuilder
 from openquake.hazardlib.imt import from_string
 
@@ -181,6 +183,30 @@ class CoeffsTable(object):
     def non_sa_coeffs(self):
         return {imt: self._coeffs[imt] for imt in self._coeffs
                 if imt.string[:2] != 'SA'}
+
+    def get_coeffs(self, coeff_list):
+        """
+        :param coeff_list:
+            A list with the names of the coefficients
+        """
+        coeffs = []
+        pof = []
+        for imt in self._coeffs:
+            if re.search('^(SA|EAS)', imt.string):
+                tmp = np.array(self._coeffs[imt])
+                coeffs.append([tmp[i] for i in coeff_list])
+                if re.search('^(SA)', imt.string):
+                    pof.append(imt.period)
+                elif re.search('^(EAS)', imt.string):
+                    pof.append(imt.frequency)
+                else:
+                    raise ValueError('Unknown IMT: {:s}'.format(imt.string))
+        pof = np.array(pof)
+        coeffs = np.array(coeffs)
+        idx = np.argsort(pof)
+        pof = pof[idx]
+        coeffs = coeffs[idx, :]
+        return pof, coeffs
 
     def __getitem__(self, imt):
         """

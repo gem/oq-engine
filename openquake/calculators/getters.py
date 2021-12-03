@@ -16,26 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
+import time
 import operator
 import numpy
-import pandas
-from openquake.baselib import general, performance, parallel, hdf5
+
+from openquake.baselib import general, hdf5
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import probability_map, stats
-from openquake.hazardlib.calc import filters, gmf
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, to_arrays)
-from openquake.risklib.riskinput import rsi2str
-from openquake.commonlib import calc, datastore
+from openquake.commonlib import datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
-weight = operator.attrgetter('weight')
+weight = operator.itemgetter('n_occ')
 
 
 class NotFound(Exception):
@@ -260,156 +257,6 @@ time_dt = numpy.dtype(
     [('rup_id', U32), ('nsites', U16), ('time', F32), ('task_no', U16)])
 
 
-class GmfGetter(object):
-    """
-    An hazard getter with methods .get_gmfdata and .get_hazard returning
-    ground motion values.
-    """
-    def __init__(self, rupgetter, srcfilter, oqparam, amplifier=None,
-                 sec_perils=()):
-        self.rlzs_by_gsim = rupgetter.rlzs_by_gsim
-        self.rupgetter = rupgetter
-        self.srcfilter = srcfilter
-        self.sitecol = srcfilter.sitecol.complete
-        self.oqparam = oqparam
-        self.amplifier = amplifier
-        self.sec_perils = sec_perils
-        self.N = len(self.sitecol)
-        self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
-        md = (filters.MagDepDistance(oqparam.maximum_distance)
-              if isinstance(oqparam.maximum_distance, dict)
-              else oqparam.maximum_distance)
-        param = {'imtls': oqparam.imtls,
-                 'min_iml': oqparam.min_iml,
-                 'maximum_distance': md,
-                 'minimum_distance': oqparam.minimum_distance,
-                 'truncation_level': oqparam.truncation_level}
-        self.cmaker = ContextMaker(
-            rupgetter.trt, rupgetter.rlzs_by_gsim, param)
-        self.correl_model = oqparam.correl_model
-
-    def gen_computers(self, mon):
-        """
-        Yield a GmfComputer instance for each non-discarded rupture
-        """
-        trt = self.rupgetter.trt
-        with mon:
-            proxies = self.rupgetter.get_proxies()
-        for proxy in proxies:
-            with mon:
-                ebr = proxy.to_ebr(trt)
-                sids = self.srcfilter.close_sids(proxy, trt)
-                if len(sids) == 0:  # filtered away
-                    continue
-                sitecol = self.sitecol.filtered(sids)
-                try:
-                    computer = gmf.GmfComputer(
-                        ebr, sitecol, self.cmaker, self.correl_model,
-                        self.amplifier, self.sec_perils)
-                except FarAwayRupture:
-                    continue
-                # due to numeric errors ruptures within the maximum_distance
-                # when written, can be outside when read; I found a case with
-                # a distance of 99.9996936 km over a maximum distance of 100 km
-            yield computer
-
-    @property
-    def sids(self):
-        return self.sitecol.sids
-
-    @property
-    def imtls(self):
-        return self.oqparam.imtls
-
-    @property
-    def imts(self):
-        return list(self.oqparam.imtls)
-
-    def get_gmfdata(self, mon=performance.Monitor()):
-        """
-        :returns: a DataFrame with fields eid, sid, gmv_X, ...
-        """
-        alldata = general.AccumDict(accum=[])
-        self.sig_eps = []
-        self.times = []  # rup_id, nsites, dt
-        for computer in self.gen_computers(mon):
-            data, dt = computer.compute_all(self.sig_eps)
-            self.times.append(
-                (computer.ebrupture.id, len(computer.ctx.sids), dt))
-            for key in data:
-                alldata[key].extend(data[key])
-        for key, val in sorted(alldata.items()):
-            if key in 'eid sid rlz':
-                alldata[key] = U32(alldata[key])
-            else:
-                alldata[key] = F32(alldata[key])
-        return pandas.DataFrame(alldata)
-
-    # not called by the engine
-    def get_hazard(self, gsim=None):
-        """
-        :param gsim: ignored
-        :returns: DataFrame
-        """
-        return self.get_gmfdata()
-
-    def compute_gmfs_curves(self, monitor):
-        """
-        :returns: a dict with keys gmfdata, hcurves
-        """
-        oq = self.oqparam
-        mon = monitor('getting ruptures', measuremem=True)
-        hcurves = {}  # key -> poes
-        if oq.hazard_curves_from_gmfs:
-            hc_mon = monitor('building hazard curves', measuremem=False)
-            gmfdata = self.get_gmfdata(mon)  # returned later
-            if len(gmfdata) == 0:
-                return dict(gmfdata=(), hcurves=hcurves)
-            for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
-                with hc_mon:
-                    poes = calc.gmvs_to_poes(
-                        df, oq.imtls, oq.ses_per_logic_tree_path)
-                    for m, imt in enumerate(oq.imtls):
-                        hcurves[rsi2str(rlz, sid, imt)] = poes[m]
-        if not oq.ground_motion_fields:
-            return dict(gmfdata=(), hcurves=hcurves)
-        if not oq.hazard_curves_from_gmfs:
-            gmfdata = self.get_gmfdata(mon)
-        if len(gmfdata) == 0:
-            return dict(gmfdata=[])
-        times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
-                            time_dt)
-        times.sort(order='rup_id')
-        res = dict(gmfdata=strip_zeros(gmfdata), hcurves=hcurves, times=times,
-                   sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt))
-        return res
-
-
-def strip_zeros(gmf_df):
-    # remove the rows with all zero values
-    df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
-    ok = df.to_numpy().sum(axis=1) > 0
-    return gmf_df[ok]
-
-
-def weight_ruptures(rup_array, srcfilter, trt_by, scenario):
-    """
-    :param rup_array: an array of ruptures
-    :param srcfilter: a SourceFilter
-    :param trt_by: a function trt_smr -> TRT
-    :param scenario: True for ruptures of kind scenario
-    :returns: list of RuptureProxies
-    """
-    proxies = []
-    for rec in rup_array:
-        proxy = RuptureProxy(rec, scenario=scenario)
-        sids = srcfilter.close_sids(proxy.rec, trt_by(rec['trt_smr']))
-        proxy.nsites = len(sids)
-        proxies.append(proxy)
-    return proxies
-
-
 def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
@@ -421,46 +268,20 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     rup_array = dstore['ruptures'][slc]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
-    rup_array.sort(order='trt_smr')  # avoid generating too many tasks
+    rup_array.sort(order=['trt_smr', 'n_occ'])
     scenario = 'scenario' in dstore['oqparam'].calculation_mode
-    if srcfilter is None:
-        proxies = [RuptureProxy(rec, None, scenario) for rec in rup_array]
-    elif len(rup_array) <= 1000:  # do not parallelize
-        proxies = weight_ruptures(
-            rup_array, srcfilter, full_lt.trt_by, scenario)
-    else:  # parallelize the weighting of the ruptures
-        proxies = parallel.Starmap.apply(
-            weight_ruptures, (rup_array, srcfilter, full_lt.trt_by, scenario),
-            concurrent_tasks=ct, progress=logging.debug
-        ).reduce(acc=[])
-    maxweight = sum(proxy.weight for proxy in proxies) / (ct or 1)
+    proxies = [RuptureProxy(rec, scenario) for rec in rup_array]
+    maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
     rgetters = []
     for block in general.block_splitter(
-            proxies, maxweight, operator.attrgetter('weight'),
+            proxies, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
-        if len(rlzs_by_gsim) == 1:
-            [rbg] = rlzs_by_gsim.values()
-        else:
-            rbg = rlzs_by_gsim[trt_smr]
+        rbg = rlzs_by_gsim[trt_smr]
         rg = RuptureGetter(block, dstore.filename, trt_smr,
                            full_lt.trt_by(trt_smr), rbg)
         rgetters.append(rg)
     return rgetters
-
-
-# NB: amplification is missing
-def get_gmfgetter(dstore, rup_id):
-    """
-    :returns: GmfGetter associated to the given rupture
-    """
-    oq = dstore['oqparam']
-    srcfilter = filters.SourceFilter(
-        dstore['sitecol'], oq.maximum_distance)
-    for rgetter in get_rupture_getters(dstore, slc=slice(rup_id, rup_id+1)):
-        gg = GmfGetter(rgetter, srcfilter, oq)
-        break
-    return gg
 
 
 def get_ebruptures(dstore):
@@ -506,7 +327,7 @@ class RuptureGetter(object):
     """
     def __init__(self, proxies, filename, trt_smr, trt, rlzs_by_gsim):
         self.proxies = proxies
-        self.weight = sum(proxy.weight for proxy in proxies)
+        self.weight = sum(proxy['n_occ'] for proxy in proxies)
         self.filename = filename
         self.trt_smr = trt_smr
         self.trt = trt
@@ -565,7 +386,6 @@ class RuptureGetter(object):
         for proxy in self.proxies:
             sids = srcfilter.close_sids(proxy.rec, self.trt)
             if len(sids):
-                proxy.nsites = len(sids)
                 proxies.append(proxy)
         rgetters = []
         for block in general.block_splitter(proxies, maxw, weight):

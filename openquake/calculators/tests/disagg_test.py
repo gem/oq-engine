@@ -63,6 +63,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         return out
 
     def test_case_1(self):
+        # case with split_source=false and collapse_level=2
         self.assert_curves_ok(
             ['Lon_Lat-0.csv', 'Mag-0.csv', 'Mag_Dist-0.csv'], case_1.__file__)
 
@@ -166,7 +167,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
-        self.assertEqual(haz[1], 0.18757115242025785)
+        self.assertAlmostEqual(haz[1], 0.1875711524)
 
         # test normal disaggregation
         [fname] = export(('disagg', 'csv'), self.calc.datastore)

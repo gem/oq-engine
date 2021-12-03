@@ -518,7 +518,7 @@ def _resample_profile(line, sampling_dist):
     :parameter line:
         An instance of :class:`openquake.hazardlib.geo.line.Line`
     :parameter sampling_dist:
-        A scalar definining the distance [km] used to sample the profile
+        A scalar defining the distance [km] used to sample the profile
     :returns:
         An instance of :class:`openquake.hazardlib.geo.line.Line`
     """
@@ -575,11 +575,12 @@ def _resample_profile(line, sampling_dist):
         # Compute the distance between the starting point and the next point
         # on the profile
         segment_len = distance(slo, sla, sde, lo[idx+1], la[idx+1], de[idx+1])
+        azim = azimuth(slo, sla, lo[idx+1], la[idx+1])
 
-        # Search for the point
+        # Search for the point along the profile
         if cdist+segment_len > sampling_dist:
 
-            # This is the lenght of the last segment-fraction needed to
+            # This is the length of the last segment-fraction needed to
             # obtain the sampling distance
             delta = sampling_dist - cdist
 
@@ -591,7 +592,7 @@ def _resample_profile(line, sampling_dist):
             else:
                 segment_slope = 90.
 
-            # Horizontal and vertical lenght of delta
+            # Horizontal and vertical length of delta
             delta_v = delta * np.sin(segment_slope)
             delta_h = delta * np.cos(segment_slope)
 
@@ -621,7 +622,18 @@ def _resample_profile(line, sampling_dist):
         dst = distance(coo[i, 0], coo[i, 1], coo[i, 2],
                        coo[i+1, 0], coo[i+1, 1], coo[i+1, 2])
         if abs(dst-sampling_dist) > 0.1*sampling_dist:
-            raise ValueError('Wrong distance between points along the profile')
+            msg = 'Distance between points along the profile larger than 10%'
+
+            fmt = '\n   Expected {:.2f} Computed {:.2f}'
+            msg += fmt.format(sampling_dist, dst)
+
+            fmt = '\n   Point {:.2f} {:.2f} {:.2f}'
+            msg += fmt.format(*[coo[i, j] for j in range(3)])
+            msg += fmt.format(*[coo[i+1, j] for j in range(3)])
+
+            msg += '\n   Please, change the sampling distance or the'
+            msg += ' points along the profile'
+            raise ValueError(msg)
 
     return Line(resampled_cs)
 
@@ -890,10 +902,10 @@ def get_mesh(pfs, rfi, sd, idl):
 
 
 def update_rdist(rdist, az12, angle, sd):
-    """
-    Here we adjust the residual distance to makje sure that the size
-    of the mesh is consistent with the sampling. This is particularly
-    needed when the mesh has a kink
+    r"""
+    Here we adjust the residual distance to make sure that the size of the
+    mesh is consistent with the sampling. This is particularly needed when the
+    mesh has a kink
 
     v1
     ------------------------------  angle[k]
