@@ -22,6 +22,8 @@ from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
+P0 = 0  # first poe
+
 
 def get_diff_idxs(array, rtol, atol):
     """
@@ -104,19 +106,21 @@ class Comparator(object):
         return numpy.array(arrays)  # shape (C, N, L)
 
     def getuhs(self, what, sids):
+        # uhs for the first poe
         oq0 = self.oq
         extractor = self.extractors[0]
         what = 'hmaps?kind=mean'  # shape (N, M, P)
         midx = numpy.array([m for m, imt in enumerate(oq0.imtls)
                             if imt.startswith(('PGA', 'SA'))])
         shp = (len(sids), -1)
-        arrays = [extractor.get(what).mean[sids, midx].reshape(shp)]
+        arrays = [extractor.get(what).mean[sids, midx, P0].reshape(shp)]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
             numpy.testing.assert_array_equal(oq.imtls.array, oq0.imtls.array)
             numpy.testing.assert_array_equal(oq.poes, oq0.poes)
-            arrays.append(extractor.get(what).mean[sids, midx].reshape(shp))
+            arrays.append(
+                extractor.get(what).mean[sids, midx, P0].reshape(shp))
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, M*P)
 
@@ -150,7 +154,7 @@ class Comparator(object):
         elif what == 'hmaps':
             header += [str(poe) for poe in self.oq.poes]
         elif what == 'uhs':
-            pass
+            header += self.oq.imt_periods()
         else:  # avg_gmf
             header += ['gmf']
         rows = collections.defaultdict(list)
@@ -211,11 +215,11 @@ def compare_uhs(calc_ids: int, files=False, *,
     c = Comparator(calc_ids)
     arrays = c.compare('uhs', None, files, samplesites, atol, rtol)
     if len(arrays) and len(calc_ids) == 2:
-        ms = numpy.mean((arrays[0] - arrays[1])**2, axis=0)  # P
-        maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
-        rows = [(str(poe), rms, md) for poe, rms, md in zip(
-            c.oq.poes, numpy.sqrt(ms), maxdiff)]
-        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff']))
+        # each array has shape (N, M)
+        ms = numpy.mean((arrays[0] - arrays[1])**2)
+        maxdiff = numpy.abs(arrays[0] - arrays[1]).max()
+        row = ('%.5f' % c.oq.poes[P0], numpy.sqrt(ms), maxdiff)
+        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff']))
 
 
 def compare_hmaps(imt, calc_ids: int, files=False, *,
