@@ -32,7 +32,7 @@ from openquake.hazardlib.geo.utils import (
 
 U32 = numpy.uint32
 MINMAG = 2.5
-MAXMAG = 10.1  # to avoid breaking PAC
+MAXMAG = 10.2  # to avoid breaking PAC
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
 
