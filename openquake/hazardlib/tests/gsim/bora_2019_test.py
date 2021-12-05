@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.bora_2019 import BoraEtAl2019
+from openquake.hazardlib.gsim.bora_2019 import BoraEtAl2019, BoraEtAl2019Drvt
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -27,9 +27,22 @@ class Boraetal2019FASTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
     def test_std_intra(self):
-        self.check('BCS19/FAS_intra.csv',
+        self.check('BCS19/FAS_std_intra.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('BCS19/FAS_total.csv',
+        self.check('BCS19/FAS_std_total.csv',
+                   max_discrep_percentage=0.1)
+
+
+class Boraetal2019DRVTTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = BoraEtAl2019Drvt
+
+    # Tables computed using a python script provided by S.S. Bora.
+    def test_mean(self):
+        self.check('BCS19/DRVT_log_mean.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check('BCS19/Drvt_log_std_total.csv',
                    max_discrep_percentage=0.1)

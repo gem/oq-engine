@@ -24,6 +24,8 @@ import numpy.matlib
 from openquake.baselib.general import RecordBuilder
 from openquake.hazardlib.imt import from_string
 
+SA_LIKE_PREFIXES = ['SA', 'EA', 'FA', 'DR']
+
 
 class CoeffsTable(object):
     r"""
@@ -195,12 +197,12 @@ class CoeffsTable(object):
     @property
     def sa_coeffs(self):
         return {imt: self._coeffs[imt] for imt in self._coeffs
-                if imt.string[:2] in ['SA', 'EA', 'FA']}
+                if imt.string[:2] in SA_LIKE_PREFIXES}
 
     @property
     def non_sa_coeffs(self):
         return {imt: self._coeffs[imt] for imt in self._coeffs
-                if imt.string[:2] != 'SA'}
+                if imt.string[:2] not in SA_LIKE_PREFIXES}
 
     def get_coeffs(self, coeff_list):
         """
@@ -210,12 +212,12 @@ class CoeffsTable(object):
         coeffs = []
         pof = []
         for imt in self._coeffs:
-            if re.search('^(SA|EAS|FAS)', imt.string):
+            if re.search('^(SA|EAS|FAS|DRVT)', imt.string):
                 tmp = np.array(self._coeffs[imt])
                 coeffs.append([tmp[i] for i in coeff_list])
                 if re.search('^(SA)', imt.string):
                     pof.append(imt.period)
-                elif re.search('^(EAS|FAS)', imt.string):
+                elif re.search('^(EAS|FAS|DRVT)', imt.string):
                     pof.append(imt.frequency)
                 else:
                     raise ValueError('Unknown IMT: {:s}'.format(imt.string))
