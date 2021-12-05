@@ -18,13 +18,13 @@
 
 
 """
-Module exports :class:`BoraEtAl2019`
+Module exports :class:`BoraEtAl2019`, :class:`BoraEtAl2019BoraEtAl2019Duration`
 """
 
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import SA
+from openquake.hazardlib.imt import FAS, DRVT
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
 
 CONSTANTS = {"r0": 1,
@@ -33,6 +33,31 @@ CONSTANTS = {"r0": 1,
              "Vc": 1100.,
              "Vref": 800.,
              "Mref": 4.5}
+
+CONST_DURATION = {"M": 5.3,
+                  "Vs30": 450}
+
+
+def _get_source_term_duration(C, ctx):
+    above = ctx.mag > CONST_DURATION['M']
+    fsource = np.zeros_like(ctx.mag)
+    fsource = C['d1'] * ctx.mag
+    if np.any(above):
+        fsource[above] += C['d2'] * (ctx.mag[above] - CONST_DURATION['M'])
+    return fsource
+
+
+def _get_path_term_duration(C, ctx):
+    return (C['d3'] + C['d4'] * (ctx.mag - 6)) * np.log(ctx.rrup)
+
+
+def _get_site_term_duration(C, ctx):
+    fsite = np.ones_like(ctx.vs30)
+    below = ctx.vs30 <= CONSTANTS['Vs30']
+    above = ctx.vs30 > CONSTANTS['Vs30']
+    fsite[below] = C['d5'] * np.log(ctx.vs30[below])
+    fsite[above] = C['d5'] * np.log(CONSTANTS['Vs30'])
+    return fsite
 
 
 def _get_source_term(C, ctx):
@@ -107,7 +132,7 @@ class BoraEtAl2019(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {FAS}
 
     #: Supported intensity measure component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
@@ -236,3 +261,17 @@ FAS(9.045014)	0.210092314951341980	0.858955393522459976	-0.047779697256899199	0.
 FAS(9.620759)	0.099842361640679500	0.875281258376868987	-0.042770492873562903	0.206747585550481006	-0.016143294093816003	-0.241093370336476015	0.133255376127781988	-1.068192253488890131	-0.611051323052614004	8.493482559735490156	0.517668051643455973	0.729219849154350896	0.476089175945325072
 """
     COEFFS = CoeffsTable(sa_damping=5, table=TMP, opt=1)
+
+
+
+class BoraEtAl2019Duration(BoraEtAl2019):
+    """
+    Implements the duration model proposed by Bora et al.,
+    2019 as described in Bora, S.S., Cotton, F., & Scherbaum, F. (2019).
+    NGA-West2 empirical Fourier and duration models to generate adjustable
+    response spectra.  Earthquake Spectra, 35(1), 61-93.
+    """
+
+    #: Supported intensity measure types
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {DRVT}
+

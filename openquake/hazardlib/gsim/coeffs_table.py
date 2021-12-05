@@ -141,12 +141,14 @@ class CoeffsTable(object):
         """
         :param ddic: a dictionary of dictionaries
         :param logratio: flag (default True)
+        :param opt: int (default 0)
         """
         firstdic = ddic[next(iter(ddic))]
         self = object.__new__(cls)
         self.rb = RecordBuilder(**firstdic)
         self._coeffs = {imt: self.rb(**dic) for imt, dic in ddic.items()}
         self.logratio = logratio
+        self.opt = opt
         return self
 
     def __init__(self, table, **kwargs):
