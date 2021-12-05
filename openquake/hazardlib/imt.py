@@ -73,7 +73,7 @@ def from_string(imt, _damping=5.0):
             im = EAS(float(m.group(2)))
         elif m.group(1) == 'FAS':
             im = FAS(float(m.group(2)))
-        return(im)
+        return im
     elif re.match(r'[ \+\d\.]+', imt):
         return SA(float(imt))
     return IMT(*imt2tup(imt))

@@ -21,12 +21,10 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class Boraetal2019FASTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BoraEtAl2019
 
-    # Tables computed using the matlab script included in the supplement to
-    # the BSSA paper
-
+    # Tables computed using a python script provided by S.S. Bora.
     def test_mean(self):
-        self.check('BCS19/FAS_mean.csv',
-                   max_discrep_percentage=0.5)
+        self.check('BCS19/FAS_log_mean.csv',
+                   max_discrep_percentage=0.1)
 
     def test_std_intra(self):
         self.check('BCS19/FAS_intra.csv',
