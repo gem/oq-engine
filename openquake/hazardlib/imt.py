@@ -24,8 +24,7 @@ import re
 import collections
 import numpy
 
-EAS_PERIOD_PATTERN = '^EAS\\((\\d+\\.*\\d*)\\)'
-EAS_PERIOD_PATTERN = '^(EAS|FAS)\\((\\d+\\.*\\d*)\\)'
+EAS_PERIOD_PATTERN = '^(EAS|FAS|DRVT)\\((\\d+\\.*\\d*)\\)'
 
 
 def positivefloat(val):
@@ -131,6 +130,14 @@ def FAS(frequency):
     """
     period = 1. / frequency
     return IMT('FAS(%s)' % period, period, 5.0)
+
+
+def DRVT(frequency):
+    """
+    Duration as defined in Bora et al. (2019)
+    """
+    period = 1. / frequency
+    return IMT('DRVT(%s)' % period, period, 5.0)
 
 
 def SA(period, damping=5.0):
