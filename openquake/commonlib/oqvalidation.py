@@ -896,10 +896,7 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     split_level = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    # NB: you cannot increase too much min_weight otherwise too few tasks will
-    # be generated in cases like Ecuador inside full South America
-    min_weight = valid.Param(valid.positiveint, 200)  # used in classical
-    max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
+    min_weight = valid.Param(valid.positiveint, 1)  # used in classical
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 300)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
