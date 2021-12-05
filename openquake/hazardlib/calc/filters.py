@@ -167,7 +167,7 @@ class IntegrationDistance(dict):
 
         >>> md = IntegrationDistance.new('50')
         >>> md
-        {'default': [(2.5, 50), (10.1, 50)]}
+        {'default': [(2.5, 50), (10.2, 50)]}
         >>> md.max()
         {'default': 50}
         """
