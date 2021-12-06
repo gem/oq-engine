@@ -63,6 +63,6 @@ jobs:
         source ~/openquake/bin/activate
         pip install pytest
         pip freeze
-        #pip install Shapely==1.8.0
+        pip install Shapely==1.7.0
         ~/openquake/bin/oq dbserver start
         pytest -vsx ~/work/oq-engine/oq-engine/openquake/calculators
