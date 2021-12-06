@@ -53,8 +53,6 @@ jobs:
         #https://pip.pypa.io/en/stable/user_guide/
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
-        sudo apt update 
-        sudo apt full-upgrade -y
         export PIP_DEFAULT_TIMEOUT=100
         #
         pip3 install --default-timeout=100 -U pip wheel setuptools
@@ -63,6 +61,9 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         pip install pytest
+        sudo find / -name libgeos\* -ls
+        sleep 3
+        sudo find / -name libgeos--no-undefined-b94097bf.so -ls
         #pip install Shapely==1.8.0
         oq dbserver start
         pytest -vsx ~/work/oq-engine/oq-engine/openquake/calculators
