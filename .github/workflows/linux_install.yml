@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         #python-version: [3.7, 3.8]
-        python-version: [3.9]
+        python-version: [3.9.2]
 
     steps:
   # This Checkout use git-ref keyword from dispatch
@@ -56,7 +56,7 @@ jobs:
         export PIP_DEFAULT_TIMEOUT=100
         #
         pip3 install --default-timeout=100 -U pip wheel setuptools
-        python install.py devel 
+        python3 install.py devel 
     - name: Run tests
       run: |
         set -x
