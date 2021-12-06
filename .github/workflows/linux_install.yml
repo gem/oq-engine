@@ -13,7 +13,7 @@ on:
 jobs:
 
   install_and_test:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
@@ -53,6 +53,8 @@ jobs:
         #https://pip.pypa.io/en/stable/user_guide/
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
+        sudo apt update 
+        sudo apt full-upgrade -y
         export PIP_DEFAULT_TIMEOUT=100
         #
         pip3 install --default-timeout=100 -U pip wheel setuptools
