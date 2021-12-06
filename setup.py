@@ -62,7 +62,7 @@ install_requires = [
     'pandas >=0.25, <1.3',
     'pyzmq <20.0',
     'psutil >=2.0, <5.7',
-    'shapely >=1.7, <1.8',
+    'shapely >=1.7',
     'docutils >=0.11',
     'decorator >=4.3',
     'django >=3.2',
