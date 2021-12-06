@@ -59,11 +59,10 @@ jobs:
         python install.py devel 
     - name: Run tests
       run: |
+        set -x
         source ~/openquake/bin/activate
         pip install pytest
-        sudo find / -name libgeos\* -ls
-        sleep 3
-        sudo find / -name libgeos--no-undefined-b94097bf.so -ls
+        pip freeze
         #pip install Shapely==1.8.0
-        oq dbserver start
+        ~/openquake/bin/oq dbserver start
         pytest -vsx ~/work/oq-engine/oq-engine/openquake/calculators
