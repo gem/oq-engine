@@ -56,8 +56,8 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'setuptools',
-    'h5py >=2.10, <3.2',
-    'numpy >=1.18, <1.20',
+    'h5py >=2.10',
+    'numpy >=1.20',
     'scipy >=1.3, <1.7',
     'pandas >=0.25, <1.3',
     'pyzmq <20.0',
@@ -74,7 +74,6 @@ install_requires = [
 ]
 
 extras_require = {
-    'celery':  ["celery >=4.0, <4.4"],
     'cluster': ["python-pam",
                 "django-pam",
                 "gunicorn",

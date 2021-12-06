@@ -1,8 +1,8 @@
 # Universal installation script
 
-Since version 3.11 there is a universal installation script that works on any platform, provided you have Python 3.6, 3.7, or 3.8 installed. 
+Since version 3.11 there is a universal installation script that works on any platform, provided you have Python 3.7, 3.8 or 3.9 installed.
 
-- **Note 1**: Python 3.9 and 3.10 are not yet supported.
+- **Note 1**: Python 3.6 may work but it is untested and deprecated; Python 3.10 is not supported yet.
 - **Note 2**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake engine should install those packages within this virtual environment.
 - **Note 3**: The virtual environment `openquake` and its corresponding folder will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts.
 - **Note 4**: Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html
@@ -13,6 +13,14 @@ The script allows the user to select between three different kinds of installati
 2. `user` installation (Windows, macOS, and Linux)
 3. `server` installation (only available for Linux)
 4. `devel_server` installation (only available for Linux)
+
+A few notes about macOS:
+
+- macOS 11 (Big Sur) is not officially supported but many people have
+managed to install the engine on it using the system Python (version
+3.8).
+- new Macs with the M1 CPU are unsupported
+- make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS).
 
 ## `devel` installation
 

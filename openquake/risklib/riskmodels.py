@@ -22,13 +22,13 @@ import logging
 import operator
 import functools
 import collections
+from scipy import sparse
 import numpy
 import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
-from openquake.baselib.general import (
-    AccumDict, cached_property, groupby, gen_slices)
+from openquake.baselib.general import AccumDict, cached_property, groupby
 from openquake.hazardlib import valid, nrml, stats, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
@@ -244,7 +244,7 @@ class RiskModel(object):
     def __call__(self, loss_type, assets, gmf_df, col=None, rndgen=None):
         meth = getattr(self, self.calcmode)
         res = meth(loss_type, assets, gmf_df, col, rndgen)
-        return res
+        return res  # for event_based_risk this is a DataFrame (eid, aid, loss)
 
     def __toh5__(self):
         return self.risk_functions, {'taxonomy': self.taxonomy}
@@ -408,21 +408,6 @@ def get_riskmodel(taxonomy, oqparam, **extra):
         extra['interest_rate'] = oqparam.interest_rate
         extra['asset_life_expectancy'] = oqparam.asset_life_expectancy
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
-
-
-def split_df(df, cond=True, maxsize=1000):
-    """
-    :param df: a large dataframe
-    :param cond: boolean condition for splitting
-    :param maxsize: split dataframes larger than maxsize
-    :yields: dataframes smaller than maxsize
-    """
-    n = len(df)
-    if n <= maxsize or not cond:
-        yield df
-    else:
-        for slc in gen_slices(0, len(df), maxsize):
-            yield df[slc]
 
 
 # ######################## CompositeRiskModel #########################
@@ -669,7 +654,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         :returns: a 1-dimensional composite array with loss ratios by loss type
         """
-        lst = [('user_provided', numpy.bool)]
+        lst = [('user_provided', bool)]
         for cp in self.curve_params:
             lst.append((cp.loss_type, F32, len(cp.ratios)))
         loss_ratios = numpy.zeros(1, numpy.dtype(lst))
@@ -714,55 +699,14 @@ class CompositeRiskModel(collections.abc.Mapping):
             for sec_loss in sec_losses:
                 sec_loss.update(lt, dic, assets)
             if hasattr(dic[lt], 'loss'):  # event_based_risk
-                if weights[0] != 1:
-                    dic[lt].loss *= weights[0]
-                for alt, w in zip(outs[1:], weights[1:]):
-                    dic[lt].loss += alt.loss * w
+                if len(outs) > 1:
+                    # computing the average dataframe
+                    df = pandas.concat(
+                        [out * w for out, w in zip(outs, weights)])
+                    dic[lt] = df.groupby(['eid', 'aid']).sum()
             elif len(weights) > 1:  # scenario_damage
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
         return dic
-
-    # called by event_based_risk fast, in case_miriam
-    def gen_outputs(self, taxo, asset_df, gmf_df, param):
-        """
-        :param taxo: a taxonomy index
-        :param asset_df: a DataFrame of assets of the given taxonomy
-        :param gmf_df: a DataFrame of GMVs on the sites
-        :param param: a dictionary of extra parameters
-        :yields: dictionaries keyed by the loss type
-        """
-        ratios = self.get_interp_ratios(taxo, gmf_df)  # fast
-        minimum_asset_loss = self.oqparam.minimum_asset_loss
-        for adf in split_df(asset_df):
-            assets_by_sid = adf.groupby('site_id')
-            dic = {}
-            for ln, ratio_df in ratios.items():
-                min_loss = minimum_asset_loss[ln]
-                d = dict(eid=[], aid=[], variance=[], loss=[])
-                n_oks = 0
-                for sid, adf in assets_by_sid:
-                    r = ratio_df[ratio_df.index == sid]
-                    if len(r) == 0:
-                        continue
-                    means = r['mean'].to_numpy()
-                    covs = r['cov'].to_numpy()
-                    eids = r['eid'].to_numpy()
-                    for aid, val in zip(adf.index, adf['value-' + ln]):
-                        losses = val * means
-                        ok = losses > min_loss
-                        n_ok = ok.sum()
-                        if n_ok:
-                            d['eid'].append(eids[ok])
-                            d['aid'].append(numpy.ones(n_ok, U32) * aid)
-                            d['variance'].append((losses[ok] * covs[ok])**2)
-                            d['loss'].append(losses[ok])
-                            n_oks += n_ok
-                if n_oks == 0:
-                    continue
-                for key, vals in d.items():
-                    d[key] = numpy.concatenate(vals)
-                dic[ln] = pandas.DataFrame(d).set_index(['eid', 'aid'])
-            yield dic
 
     def get_interp_ratios(self, taxo, gmf_df):
         """

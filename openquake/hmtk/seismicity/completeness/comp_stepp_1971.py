@@ -91,8 +91,8 @@ def get_bilinear_residuals_stepp(input_params, xvals, yvals, slope1_fit):
 
 @COMPLETENESS_METHODS.add(
     'completeness',
-    magnitude_bin=np.float,
-    time_bin=np.float,
+    magnitude_bin=float,
+    time_bin=float,
     increment_lock=bool)
 class Stepp1971(BaseCatalogueCompleteness):
     '''

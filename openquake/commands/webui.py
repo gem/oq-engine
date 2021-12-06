@@ -22,7 +22,7 @@ import subprocess
 import webbrowser
 
 from openquake.baselib import config
-from openquake.server import dbserver
+from openquake.server import dbserver, db
 from openquake.server.utils import check_webserver_running
 
 commands = ['start', 'migrate', 'createsuperuser', 'collectstatic']
@@ -58,6 +58,8 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
                  'see the documentation for details')
     if cmd == 'start':
         dbserver.ensure_on()  # start the dbserver in a subprocess
+        # reset any computation left in the 'executing' state
+        db.actions.reset_is_running(dbserver.db)
         rundjango('runserver', hostport, skip_browser)
     elif cmd in commands:
         rundjango(cmd)

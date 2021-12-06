@@ -130,18 +130,16 @@ class BozorgniaCampbell2016VH(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        V, H = contexts.get_mean_stds(
-            [self.VGMPE, self.HGMPE], ctx, imts, const.StdDev.EVENT)
+        mean_, sig_, tau_, phi_ = contexts.get_mean_stds(
+            [self.VGMPE, self.HGMPE], ctx, imts)
         for m, imt in enumerate(imts):
             # V/H model, Equation 1 and 12 (in natural log units)
-            mean_v, tau_v, phi_v = V[:, m]
-            mean_h, tau_h, phi_h = H[:, m]
-            mean[m] = mean_v - mean_h
+            mean[m] = mean_[0, m] - mean_[1, m]
 
             # Get standard deviations
             C = self.COEFFS[imt]
-            t = _get_tau_vh(C, ctx.mag, tau_v, tau_h)
-            p = _get_phi_vh(C, ctx.mag, phi_v, phi_h)
+            t = _get_tau_vh(C, ctx.mag, tau_[0, m], tau_[1, m])
+            p = _get_phi_vh(C, ctx.mag, phi_[0, m], phi_[1, m])
             sig[m] = np.sqrt(t ** 2 + p ** 2)
             tau[m] = t
             phi[m] = p

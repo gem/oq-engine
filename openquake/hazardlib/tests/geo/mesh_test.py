@@ -68,15 +68,15 @@ class MeshCreationTestCase(unittest.TestCase):
         mesh = Mesh.from_points_list(points)
         self.assertTrue((mesh.lons == [0, 2, 5]).all())
         self.assertTrue((mesh.lats == [1, 3, 7]).all())
-        self.assertEqual(mesh.lons.dtype, numpy.float)
-        self.assertEqual(mesh.lats.dtype, numpy.float)
+        self.assertEqual(mesh.lons.dtype, float)
+        self.assertEqual(mesh.lats.dtype, float)
         self.assertEqual(mesh.depths.sum(), 0)
 
     def test_from_points_list_with_depth(self):
         points = [Point(0, 1, 2), Point(2, 3, 4), Point(5, 7, 10)]
         mesh = Mesh.from_points_list(points)
         self.assertTrue((mesh.depths == [2, 4, 10]).all())
-        self.assertEqual(mesh.depths.dtype, numpy.float)
+        self.assertEqual(mesh.depths.dtype, float)
 
 
 class MeshIterTestCase(unittest.TestCase):

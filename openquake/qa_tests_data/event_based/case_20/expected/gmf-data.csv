@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.11.0-gitb352194d52', start_date='2021-02-15T06:59:44', checksum=857888332"
+#,,,,"generated_by='OpenQuake engine 3.13.0-gitfd10c012c5', start_date='2021-11-10T11:26:46', checksum=3013036632"
 site_id,event_id,gmv_SA(0.3),gmv_SA(0.6),gmv_SA(1.0)
 1,5,2.94872E-04,1.49985E-03,7.55570E-04
 1,12,9.64673E-04,1.23634E-03,3.05125E-04

@@ -55,6 +55,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         ctx = self.ctx(4, vs30=760.)
         ctx.hypo_depth = 10.
         ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.occurrence_rate = 0.0001
         imtype = PGA()
         stdt = [const.StdDev.TOTAL]
         # Computes results

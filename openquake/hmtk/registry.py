@@ -94,7 +94,7 @@ class CatalogueFunctionRegistry(dict):
             a dictionary of field spec corresponding to the
             keys expected to be present in the config dictionary
             for the decorated method, e.g.
-            time_bin=numpy.float,
+            time_bin=float,
             b_value=1E-6
         """
         def class_decorator(class_obj):
@@ -129,7 +129,7 @@ class CatalogueFunctionRegistry(dict):
 
         :param fields:
             a dictionary of field spec, e.g.
-            time_bin=numpy.float,
+            time_bin=float,
             b_value=1E-6
         """
         def dec(fn):

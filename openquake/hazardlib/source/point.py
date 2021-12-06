@@ -26,7 +26,8 @@ from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import (
+    ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
@@ -116,6 +117,20 @@ def calc_average(pointsources):
     dic['lon'] = numpy.round(dic['lon'], 6)
     dic['lat'] = numpy.round(dic['lat'], 6)
     return dic
+
+
+def _rupture_by_mag(src, np, hc, point_rup):
+    # generate one (point)rupture for each magnitude
+    for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+        if point_rup:
+            yield PointRupture(
+                mag, src.tectonic_region_type, hc,
+                0, 0, np.rake, mag_occ_rate, src.temporal_occurrence_model)
+        else:
+            surface, nhc = src._get_rupture_surface(mag, np, hc)
+            yield ParametricProbabilisticRupture(
+                mag, np.rake, src.tectonic_region_type,
+                nhc, surface, mag_occ_rate, src.temporal_occurrence_model)
 
 
 class PointSource(ParametricSeismicSource):
@@ -226,19 +241,15 @@ class PointSource(ParametricSeismicSource):
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
 
-    def avg_ruptures(self):
+    # PointSource
+    def iruptures(self, point_rup=False):
         """
-        Generate one rupture for each magnitude
+        Generate one rupture for each magnitude, called only if nphc > 1
         """
-        avg = calc_average([self])
+        avg = calc_average([self])  # over nodal planes and hypocenters
+        np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
-            surface, nhc = self._get_rupture_surface(mag, np, hc)
-            yield ParametricProbabilisticRupture(
-                mag, avg['rake'], self.tectonic_region_type,
-                nhc, surface, mag_occ_rate,
-                self.temporal_occurrence_model)
+        yield from _rupture_by_mag(self, np, hc, point_rup)
 
     def count_nphc(self):
         """
@@ -425,17 +436,13 @@ class CollapsedPointSource(PointSource):
         for src in self.pointsources:
             yield from src.iter_ruptures(**kwargs)
 
-    def avg_ruptures(self):
+    # CollapsedPointSource
+    def iruptures(self, point_rup=False):
         """
-        :yields: the underlying point ruptures
+        :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            np = Mock(strike=self.strike, dip=self.dip, rake=self.rake)
-            surface, nhc = self._get_rupture_surface(mag, np, self.location)
-            yield ParametricProbabilisticRupture(
-                mag, self.rake, self.tectonic_region_type,
-                nhc, surface, mag_occ_rate,
-                self.temporal_occurrence_model)
+        np = Mock(strike=self.strike, dip=self.dip, rake=self.rake)
+        yield from _rupture_by_mag(self, np, self.location, point_rup)
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """
@@ -461,15 +468,6 @@ class CollapsedPointSource(PointSource):
         return sum(src.count_ruptures() for src in self.pointsources)
 
 
-def _coords(psources):
-    arr = numpy.zeros((len(psources), 3))
-    for p, psource in enumerate(psources):
-        arr[p, 0] = psource.location.x
-        arr[p, 1] = psource.location.y
-        arr[p, 2] = psource.location.z
-    return arr
-
-
 def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     """
     :param sources:
@@ -488,7 +486,11 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse
         return {grp_id: out + list(ps)}
-    coords = _coords(ps)
+    coords = numpy.zeros((len(ps), 3))
+    for p, psource in enumerate(ps):
+        coords[p, 0] = psource.location.x
+        coords[p, 1] = psource.location.y
+        coords[p, 2] = psource.location.z
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
@@ -496,7 +498,6 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     for i, idxs in enumerate(grid.values()):
         if len(idxs) > 1:
             cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
-            cps.id = ps[0].id
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
             out.append(cps)

@@ -28,7 +28,6 @@ import pickle
 import socket
 import random
 import atexit
-import pprint
 import zipfile
 import builtins
 import operator
@@ -37,6 +36,7 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import collections
 import multiprocessing
 from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
@@ -55,9 +55,10 @@ mp = multiprocessing.get_context('spawn')
 
 def duplicated(items):
     """
-    :returns: True if the items are duplicated, False otherwise
+    :returns: the list of duplicated keys, possibly empty
     """
-    return len(items) > len(set(items))
+    counter = collections.Counter(items)
+    return [key for key, counts in counter.items() if counts > 1]
 
 
 def cached_property(method):
@@ -897,12 +898,12 @@ def groupby_grid(xs, ys, deltax, deltay):
     xbins = get_bins(xs, nx, None, xmin, xmax)[0]
     ybins = get_bins(ys, ny, None, ymin, ymax)[0]
     acc = AccumDict(accum=[])
-    for p, ij in enumerate(zip(xbins, ybins)):
-        acc[ij].append(p)
+    for k, ij in enumerate(zip(xbins, ybins)):
+        acc[ij].append(k)
     dic = {}
-    for (i, j), ps in acc.items():
-        idxs = numpy.array(ps)
-        dic[xs[idxs].mean(), ys[idxs].mean()] = idxs
+    for ks in acc.values():
+        ks = numpy.array(ks)
+        dic[xs[ks].mean(), ys[ks].mean()] = ks
     return dic
 
 
@@ -1190,26 +1191,6 @@ def random_histogram(counts, nbins, seed):
         return numpy.array([counts])
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
-
-
-def get_indices(integers):
-    """
-    :param integers: a sequence of integers (with repetitions)
-    :returns: a dict integer -> [(start, stop), ...]
-
-    >>> pprint.pprint(get_indices([0, 0, 3, 3, 3, 2, 2, 0]))
-    {0: array([[0, 2],
-           [7, 8]], dtype=uint32),
-     2: array([[5, 7]], dtype=uint32),
-     3: array([[2, 5]], dtype=uint32)}
-    """
-    indices = AccumDict(accum=[])  # idx -> [(start, stop), ...]
-    start = 0
-    for i, vals in itertools.groupby(integers):
-        n = sum(1 for val in vals)
-        indices[i].append((start, start + n))
-        start += n
-    return {i: numpy.uint32(indices[i]) for i in indices}
 
 
 def safeprint(*args, **kwargs):

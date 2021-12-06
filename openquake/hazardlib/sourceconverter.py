@@ -178,6 +178,16 @@ class SourceGroup(collections.abc.Sequence):
                     assert rup.weight is not None
 
     @property
+    def tom_name(self):
+        """
+        :returns: name of the associated temporal occurrence model
+        """
+        if self.temporal_occurrence_model:
+            return self.temporal_occurrence_model.__class__.__name__
+        else:
+            return 'PoissonTOM'
+
+    @property
     def atomic(self):
         """
         :returns: True if the group cannot be split

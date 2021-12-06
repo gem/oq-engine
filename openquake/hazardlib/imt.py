@@ -82,6 +82,7 @@ IMT.__gt__ = lambda self, other: self[1] > other[1]
 IMT.__le__ = lambda self, other: self[1] <= other[1]
 IMT.__ge__ = lambda self, other: self[1] >= other[1]
 IMT.__repr__ = repr
+IMT.frequency = property(lambda self: 1. / self.period)
 
 
 def PGA():
@@ -104,6 +105,14 @@ def PGD():
     Peak ground displacement during an earthquake measured in units of ``cm``.
     """
     return IMT('PGD')
+
+
+def EAS(frequency):
+    """
+    Effective Amplitude Spectrum in terms of a frequency (in Hz).
+    """
+    period = 1. / frequency
+    return IMT('EAS(%s)' % period, period, 5.0)
 
 
 def SA(period, damping=5.0):
@@ -145,10 +154,10 @@ def RSD():
     Relative significant duration, 5-95% of :class:`Arias intensity<IA>`,
     in seconds.
     """
-    return IMT('RDS')
+    return IMT('RSD')
 
 
-def RSD595(IMT):
+def RSD595():
     """
     Alias for RSD
     """

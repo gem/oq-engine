@@ -81,7 +81,7 @@ class ScenarioTestCase(CalculatorTestCase):
         medians_pga = medians_dict['PGA']
         medians_sa = medians_dict['SA(0.1)']
         aae(medians_pga, [0.48155582, 0.21123045, 0.14484586], decimal=2)
-        aae(medians_sa, [0.93913177, 0.40880148, 0.2692668], decimal=2)
+        aae(medians_sa, [0.92, 0.41, 0.27], decimal=2)
 
     def test_case_4(self):
         medians = self.medians(case_4)['PGA']

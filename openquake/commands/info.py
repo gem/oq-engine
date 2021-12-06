@@ -25,11 +25,13 @@ import operator
 import collections
 import numpy
 from decorator import FunctionMaker
-from openquake.baselib.general import groupby, gen_subclasses
+from openquake.baselib import config
+from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.calc.disagg import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.risklib import scientific
@@ -86,7 +88,7 @@ def do_build_reports(directory):
                     logging.error(str(e))
 
 
-choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
+choices = ['calculators', 'gsims', 'imts', 'views', 'exports', 'disagg',
            'extracts', 'parameters', 'sources', 'mfds', 'venv']
 
 
@@ -155,9 +157,16 @@ def main(what, report=False):
             print(cls.__name__)
     elif what == 'venv':
         print(sys.prefix)
+    elif what == 'cfg':
+        print('Looking at the following paths (the last wins)')
+        for path in config.paths:
+            print(path)
     elif what == 'sources':
         for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)
+    elif what == 'disagg':
+        for out in pmf_map:
+            print(out)
     elif what == 'consequences':
         known = scientific.KNOWN_CONSEQUENCES
         print('The following %d consequences are implemented:' % len(known))
@@ -190,7 +199,14 @@ def main(what, report=False):
             if report:
                 print('Generated', reportwriter.build_report(what))
             else:
-                print(readinput.get_oqparam(what).json())
+                oq = readinput.get_oqparam(what)
+                lt = readinput.get_logic_tree(oq)
+                size = humansize(oq.get_input_size())
+                print('calculation_mode: %s' % oq.calculation_mode)
+                print('description: %s' % oq.description)
+                print('input size: %s' % size)
+                for i, bset in enumerate(lt.branchsets):
+                    print('branchset%d: %r' % (i, bset))
         if mon.duration > 1:
             print(mon)
     elif what:

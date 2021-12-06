@@ -837,6 +837,24 @@ class MultiEventRNG(object):
                 ddd[a, e] = numpy.bincount(states, minlength=D)
         return ddd
 
+    def boolean_dist(self, probs, num_sims):
+        """
+        Convert E probabilities into an array of (E, S)
+        booleans, being S the number of secondary simulations.
+
+        >>> rng = MultiEventRNG(master_seed=42, eids=[0, 1, 2])
+        >>> dist = rng.boolean_dist(probs=[.1, .2, 0.], num_sims=100)
+        >>> dist.sum(axis=1)  # around 10% and 20% respectively
+        array([12., 17.,  0.])
+        """
+        E = len(self.rng)
+        assert len(probs) == E, (len(probs), E)
+        booldist = numpy.zeros((E, num_sims))
+        for e, eid, prob in zip(range(E), self.rng, probs):
+            if prob > 0:
+                booldist[e] = self.rng[eid].random(num_sims) < prob
+        return booldist
+
 
 #
 # Event Based
@@ -877,9 +895,8 @@ def annual_frequency_of_exceedence(poe, t_haz):
     :param t_haz: hazard investigation time
     :returns: array of frequencies (with +inf values where poe=1)
     """
-    arr = 1. - poe
-    arr[arr == 0] = 1E-16  # cutoff to avoid log(0)
-    return - numpy.log(arr) / t_haz
+    assert not (poe == 1).any()  # avoid log(0)
+    return - numpy.log(1-poe) / t_haz
 
 
 def classical_damage(

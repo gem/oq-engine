@@ -100,8 +100,8 @@ def classical(group, sitecol, cmaker):
             src.temporal_occurrence_model = FatedTOM(time_span=1)
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
-    assert trt == cmaker.trt, (trt, cmaker.trt)
-    cmaker.maximum_distance = src_filter.integration_distance
+    if cmaker.trt != '*':
+        assert trt == cmaker.trt, (trt, cmaker.trt)
     try:
         cmaker.tom = group.temporal_occurrence_model
     except AttributeError:  # got a list of sources, not a group
@@ -166,6 +166,7 @@ def calc_hazard_curves(
             tom = getattr(src, 'temporal_occurrence_model', None)
             if tom:
                 span = tom.time_span
+            src.weight = src.count_ruptures()
             src.grp_id = i
             src.id = idx
             idx += 1
@@ -178,14 +179,11 @@ def calc_hazard_curves(
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
-    if sitecol is not srcfilter:
-        param['maximum_distance'] = srcfilter.integration_distance
     for group in groups:
         trt = group.trt
+        if sitecol is not srcfilter:
+            param['maximum_distance'] = srcfilter.integration_distance(trt)
         cmaker = ContextMaker(trt, [gsim_by_trt[trt]], param, mon)
-        for src in group:
-            if not src.nsites:  # not set
-                src.nsites = 1
         if group.atomic:  # do not split
             it = [classical(group, sitecol, cmaker)]
         else:  # split the group and apply `classical` in parallel

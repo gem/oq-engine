@@ -22,6 +22,7 @@ import os
 import re
 import socket
 import getpass
+import sqlite3
 import logging
 import traceback
 from datetime import datetime
@@ -145,9 +146,13 @@ class LogDatabaseHandler(logging.Handler):
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
-                  '%s/%s' % (record.processName, record.process),
-                  record.getMessage())
+            try:
+                dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
+                      '%s/%s' % (record.processName, record.process),
+                      record.getMessage())
+            except sqlite3.OperationalError:
+                # do not log when "database is locked"
+                print('could not log %s' % record.getMessage())
 
 
 class LogContext:
@@ -155,19 +160,19 @@ class LogContext:
     Context manager managing the logging functionality
     """
     multi = False
+    oqparam = None
 
-    def __init__(self, job_ini, job=True, log_level='info', log_file=None,
+    def __init__(self, job_ini, calc_id, log_level='info', log_file=None,
                  user_name=None, hc_id=None):
-        self.job = job
         self.log_level = log_level
         self.log_file = log_file
-        self.user_name = user_name
+        self.user_name = user_name or getpass.getuser()
         if isinstance(job_ini, dict):  # dictionary of parameters
             self.params = job_ini
         else:  # path to job.ini file
             self.params = readinput.get_params(job_ini)
         self.params['hazard_calculation_id'] = hc_id
-        if job:
+        if calc_id == 0:
             self.calc_id = dbcmd(
                 'create_job',
                 get_datadir(),
@@ -175,14 +180,19 @@ class LogContext:
                 self.params['description'],
                 user_name,
                 hc_id)
-        else:
+        elif calc_id == -1:
             # only works in single-user situations
             self.calc_id = get_last_calc_id() + 1
+        else:
+            # assume the calc_id was alreay created in the db
+            self.calc_id = calc_id
 
     def get_oqparam(self):
         """
         :returns: a validated OqParam instance
         """
+        if self.oqparam:  # set by submit_job
+            return self.oqparam
         return readinput.get_oqparam(self.params)
 
     def __enter__(self):
@@ -193,9 +203,7 @@ class LogContext:
         for handler in logging.root.handlers:
             fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
             handler.setFormatter(fmt)
-        self.handlers = []
-        if self.job:
-            self.handlers.append(LogDatabaseHandler(self.calc_id))
+        self.handlers = [LogDatabaseHandler(self.calc_id)]
         if self.log_file is None:
             # add a StreamHandler if not already there
             if not any(h for h in logging.root.handlers
@@ -208,21 +216,20 @@ class LogContext:
         return self
 
     def __exit__(self, etype, exc, tb):
-        if self.job:
-            if tb:
-                logging.critical(traceback.format_exc())
-                dbcmd('finish', self.calc_id, 'failed')
-            else:
-                dbcmd('finish', self.calc_id, 'complete')
+        if tb:
+            logging.critical(traceback.format_exc())
+            dbcmd('finish', self.calc_id, 'failed')
+        else:
+            dbcmd('finish', self.calc_id, 'complete')
         for handler in self.handlers:
             logging.root.removeHandler(handler)
         parallel.Starmap.shutdown()
 
     def __getstate__(self):
         # ensure pickleability
-        return dict(calc_id=self.calc_id, job=self.job, params=self.params,
+        return dict(calc_id=self.calc_id, params=self.params,
                     log_level=self.log_level, log_file=self.log_file,
-                    user_name=self.user_name)
+                    user_name=self.user_name, oqparam=self.oqparam)
 
     def __repr__(self):
         hc_id = self.params.get('hazard_calculation_id')
@@ -233,7 +240,7 @@ class LogContext:
 def init(job_or_calc, job_ini, log_level='info', log_file=None,
          user_name=None, hc_id=None):
     """
-    :param job_or_calc: the string "job" or "calc"
+    :param job_or_calc: the string "job" or "calcXXX"
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param log_level: the log level as a string or number
     :param log_file: path to the log file (if any)
@@ -246,6 +253,12 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     3. create a job in the database if job_or_calc == "job"
     4. return a LogContext instance associated to a calculation ID
     """
-    assert job_or_calc in {"job", "calc"}, job_or_calc
-    return LogContext(job_ini, job_or_calc == "job",
-                      log_level, log_file, user_name, hc_id)
+    if job_or_calc == "job":
+        calc_id = 0
+    elif job_or_calc == "calc":
+        calc_id = -1
+    elif job_or_calc.startswith("calc"):
+        calc_id = int(job_or_calc[4:])
+    else:
+        raise ValueError(job_or_calc)
+    return LogContext(job_ini, calc_id, log_level, log_file, user_name, hc_id)

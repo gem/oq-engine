@@ -31,7 +31,6 @@ PLOTTING = False
 
 
 def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
-
     """
     Plots the 3D mesh
 
@@ -193,6 +192,49 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         # https://www.movable-type.co.uk/scripts/latlong.html
         expected = np.array([13.61, 0.0])
         np.testing.assert_almost_equal(np.array(dsts), expected, decimal=2)
+
+
+class KinkedKiteSurfaceTestCase(unittest.TestCase):
+    """ Test the construction of a kinked kite fault surface. """
+
+    def setUp(self):
+        """ This creates a fault dipping to north """
+
+        self.profiles1 = []
+        tmp = [Point(0.0, 0.00, 0.0),
+               Point(0.0, 0.05, 5.0),
+               Point(0.0, 0.10, 10.0),
+               Point(0.0, 0.20, 20.0)]
+        self.profiles1.append(Line(tmp))
+
+        tmp = [Point(0.17, 0.00, 0.0),
+               Point(0.17, 0.05, 5.0),
+               Point(0.17, 0.10, 10.0),
+               Point(0.17, 0.15, 15.0)]
+        self.profiles1.append(Line(tmp))
+
+        tmp = [Point(0.20, 0.00, 0.0),
+               Point(0.20, 0.05, 5.0),
+               Point(0.20, 0.10, 10.0),
+               Point(0.20, 0.15, 15.0)]
+
+        tmp = [Point(0.23, 0.13, 0.0),
+               Point(0.23, 0.18, 5.0),
+               Point(0.23, 0.23, 10.0),
+               Point(0.23, 0.28, 15.0)]
+        self.profiles1.append(Line(tmp))
+
+    def test_build_kinked_mesh_01(self):
+        # Trivial case - Fault dipping at about 45 degrees
+
+        # Build the fault surface
+        p_sd = 5.0
+        e_sd = 15.0
+        msh = KiteSurface.from_profiles(self.profiles1, p_sd, e_sd)
+
+        if PLOTTING:
+            title = 'Trivial case - Fault dipping at about 45 degrees'
+            ppp(self.profiles1, msh, title)
 
 
 class KiteSurfaceTestCase(unittest.TestCase):
@@ -393,7 +435,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
             title += '(IdealisedSimpleDisalignedMeshTest)'
             ppp(self.profiles, srfc, title)
 
-    def test__spacing(self):
+    def test_spacing(self):
         # Check v-spacing: two misaligned profiles - no top alignment
         srfc = self.smsh
         smsh = srfc.mesh
@@ -467,7 +509,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
         width = srfc.get_width()
-        np.testing.assert_almost_equal(37.2982758, width)
+        np.testing.assert_almost_equal(38.13112131, width)
 
 
 class IdealizedATest(unittest.TestCase):
@@ -519,7 +561,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         smsh = KiteSurface.from_profiles(self.profiles, sampling,
                                          sampling, idl, alg)
         idx = np.isfinite(smsh.mesh.lons[:, :])
-        self.assertEqual(np.sum(np.sum(idx)), 202)
+        self.assertEqual(np.sum(np.sum(idx)), 205)
 
         if PLOTTING:
             title = 'Top of the slab'

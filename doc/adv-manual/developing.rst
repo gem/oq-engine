@@ -275,38 +275,31 @@ by the rupture associated to the context:
 array([0], dtype=uint32)
 
 Once you have the contexts, the ``ContextMaker`` is able to compute
-means and standard deviations from the underlying GMPEs on each context.
-For instance, suppose you are only interested in the total standard
-deviation:
+means and standard deviations from the underlying GMPEs as follows
+(for engine version >= 3.13):
 
->>> from openquake.hazardlib.const import StdDev
+>>> mean, sig, tau, phi = cmaker.get_mean_stds(ctxs)
 
-Then you can get a list of arrays containing mean and total standard
-deviation, with an array for each underlying gsim:
+Since in this example there is a single gsim and a single IMT you will get:
 
->>> all_mean_std = cmaker.get_mean_stds(ctxs, StdDev.TOTAL)
-
-Since in this example there is a single gsim you can do the following:
-
->>> mean, std = all_mean_std[0]
 >>> mean.shape
-(1, 705)
->>> std.shape
-(1, 705)
+(1, 1, 705)
+>>> sig.shape
+(1, 1, 705)
 
-The shape of the arrays is (M, C) where M is the number of intensity
-measure types (in this example there is only one, PGA) and C is the
+The shape of the arrays in general is (G, M, N) where G is the number of GSIMs,
+M the number of intensity measure types and N the
 total size of the contexts. Since this is an example with a single
-site, each context has size 1, therefore C = 705 * 1 = 705. In general
-if there are multiple sites a context C is the total number of affected
+site, each context has size 1, therefore N = 705 * 1 = 705. In general
+if there are multiple sites a context M is the total number of affected
 sites. For instance if there are two contexts and the first affect
-1 sites and the second 2 sites then C would be 1 + 2 = 3. This
+1 sites and the second 2 sites then N would be 1 + 2 = 3. This
 example correspond to 1 + 1 + ... + 1 = 705.
 
 From the mean and standard deviation is possible to compute the
 probabilities of exceedence. The ``ContextMaker`` provides a method
 to compute directly the probability map, which internally calls
-``cmaker.get_mean_stds(ctxs, StdDev.TOTAL)``:
+``cmaker.get_mean_stds(ctxs)``:
 
 >>> cmaker.get_pmap(ctxs)
 {0: <ProbabilityCurve
@@ -317,3 +310,63 @@ This is exactly the result provided by
 
 If you want to know exactly how ``get_pmap`` works you are invited to
 look at the source code in ``openquake.hazardlib.contexts``.
+
+
+Working with verification tables
+---------------------------------------------------
+
+Hazard scientists implementing a new GMPE must provide verification
+tables, i.e. CSV files containing inputs and expected outputs.
+
+For instance, for the Atkinson2015 GMPE (chosen simply because is
+the first GMPE in lexicographic order in hazardlib) the verification
+table has a structure like this::
+
+ rup_mag,dist_rhypo,result_type,pgv,pga,0.03,0.05,0.1,0.2,0.3,0.5
+ 2.0,1.0,MEAN,5.50277734e-02,3.47335058e-03,4.59601700e-03,7.71361460e-03,9.34624779e-03,4.33207607e-03,1.75322233e-03,3.44695521e-04
+ 2.0,5.0,MEAN,6.43850933e-03,3.61047741e-04,4.57949482e-04,7.24558049e-04,9.44495571e-04,5.11252304e-04,2.21076069e-04,4.73435138e-05
+ ...
+
+The columns starting with ``rup_`` contains rupture parameters (the
+magnitude in this example) while the columns starting with ``dist_``
+contains distance parameters. The column ``result_type`` is a string
+in the set {"MEAN", "INTER_EVENT_STDDEV", "INTRA_EVENT_STDDEV",
+"TOTAL_STDDEV"}. The remaining columns are the expected results for
+each intensity measure type; in the the example the IMTs are PGV, PGA,
+SA(0.03), SA(0.05), SA(0.1), SA(0.2), SA(0.3), SA(0.5).
+
+Starting from engine version 3.13, it is possible to instantiate a
+ContextMaker and the associated contexts from a GMPE and its
+verification tables with a few simple steps. First of all one
+must instantiate the GMPE:
+
+>>> from openquake.hazardlib import valid
+>>> gsim = valid.gsim("Atkinson2015")
+
+Second, one can determine the path names to the verification tables
+as follows (they are in a subdirectory of *hazardlib/tests/gsim/data*):
+
+>>> import os
+>>> from openquake.hazardlib.tests.gsim import data
+>>> datadir = os.path.join(data.__path__[0], 'ATKINSON2015')
+>>> fnames = [os.path.join(datadir, f) for f in ["ATKINSON2015_MEAN.csv",
+...           "ATKINSON2015_STD_INTER.csv", "ATKINSON2015_STD_INTRA.csv",
+...           "ATKINSON2015_STD_TOTAL.csv"]]
+
+Then it is possible to instantiate the ContextMaker associated to the GMPE
+and a pandas DataFrame associated to the verification tables in a single step:
+
+>>> from openquake.hazardlib.tests.gsim.utils import read_cmaker_df, gen_ctxs
+>>> cmaker, df = read_cmaker_df(gsim, fnames)
+>>> list(df.columns)
+['rup_mag', 'dist_rhypo', 'result_type', 'damping', 'PGV', 'PGA', 'SA(0.03)', 'SA(0.05)', 'SA(0.1)', 'SA(0.2)', 'SA(0.3)', 'SA(0.5)', 'SA(1.0)', 'SA(2.0)', 'SA(3.0)', 'SA(5.0)']
+
+Then you can immediately compute mean and standard deviations and
+compare with the values in the verification table:
+
+>>> mean, sig, tau, phi = cmaker.get_mean_stds(gen_ctxs(df))
+
+*sig* refers to the "TOTAL_STDDEV", *tau* to the "INTER_EVENT_STDDEV"
+and *phi* to the "INTRA_EVENT_STDDEV". This is how the tests
+in hazardlib are implemented. Interested users should look at the
+code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/gsim/utils.py.

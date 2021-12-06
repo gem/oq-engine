@@ -18,14 +18,13 @@
 
 import os
 import sys
-import numpy
-import scipy
-import pandas
 import configparser
-
 # disable OpenBLAS threads before the first numpy import
 # see https://github.com/numpy/numpy/issues/11826
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
+import numpy
+import scipy
+import pandas
 from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
@@ -129,6 +128,7 @@ config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
+    os.environ['NUMBA_CACHE_DIR'] = config.directory.custom_tmp
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute

@@ -5,6 +5,9 @@ if [ ! -d "$1" ]; then
     exit 1
 fi
 
+oq info venv
+oq info cfg
+
 # run demos with job_hazard.ini and job_risk.ini
 for demo_dir in $(find "$1" -type d | sort); do
    if [ -f $demo_dir/job_hazard.ini ]; then
@@ -32,14 +35,10 @@ MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' 9
 MPLBACKEND=Agg oq plot 'hmaps?kind=mean&imt=PGA' 9
 MPLBACKEND=Agg oq plot 'uhs?kind=stats' 9
 MPLBACKEND=Agg oq plot 'disagg?kind=Mag&imt=PGA&poe_id=1&rlz=0' 14
-MPLBACKEND=Agg oq plot 'task_info?kind=classical' 9
+MPLBACKEND=Agg oq plot 'task_info?kind=split_task' 9
 MPLBACKEND=Agg oq plot_assets -1
 MPLBACKEND=Agg oq plot memory? -1
 MPLBACKEND=Agg oq plot sources? 9
-
-# fake a failed/executing calculation to check that it is not exported
-oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquake/engine/openquake.cfg
-oq db set_status -1 executing
 
 # run multi_risk test
 oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
@@ -58,6 +57,9 @@ oq show agg_values
 # recompute losses
 oq reaggregate -1 NAME_1
 oq engine --list-outputs -1
+
+echo "Testing csm2rup"
+OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
 
 # display the calculations
 oq db find %

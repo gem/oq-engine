@@ -126,7 +126,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
         for (s, z), r in numpy.ndenumerate(hmap4.rlzs):
             if r in rlzs:
                 g_by_z[s][z] = g
-    eps3 = disagg._eps3(cmaker.trunclevel, cmaker.num_epsilon_bins)
+    eps3 = disagg._eps3(cmaker.truncation_level, cmaker.num_epsilon_bins)
     imts = [from_string(im) for im in cmaker.imtls]
     for magi, ctxs in groupby(allctxs, operator.attrgetter('magi')).items():
         res = {'trti': cmaker.trti, 'magi': magi}
@@ -256,8 +256,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
+        nrows = len(dstore['_poes/sid'])
         self.pgetter = getters.PmapGetter(
-            dstore, ws, self.sitecol.sids, oq.imtls, oq.poes)
+            dstore, ws, [(0, nrows + 1)], oq.imtls, oq.poes)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
