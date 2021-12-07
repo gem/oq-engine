@@ -18,8 +18,6 @@ from openquake.hazardlib.gsim.bayless_abrahamson_2018 import \
         BaylessAbrahamson2018
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-REDUCED = True
-
 
 class BaylessAbrahamson2018TestCase(BaseGSIMTestCase):
     GSIM_CLASS = BaylessAbrahamson2018
