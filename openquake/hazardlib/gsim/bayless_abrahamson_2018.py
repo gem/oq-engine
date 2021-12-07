@@ -19,7 +19,6 @@
 """
 Module exports :class:`BaylessAbrahamson2018`
 """
-import numpy.matlib
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -146,13 +145,15 @@ def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
 
     # Updating the matrix with the coefficients. This has shape (number of
     # frequencies) x (number of coeffs) x (number of sites)
-    coeff_nl = numpy.expand_dims(coeff_nl, 2)
-    coeff_nl = numpy.repeat(coeff_nl, NSITES, 2)
+    coeff_nl = np.expand_dims(coeff_nl, 2)
+    coeff_nl = np.repeat(coeff_nl, NSITES, 2)
 
     # Updating the matrix with Vs30 values. This has shape (number of
     # frequencies) x (number of sites)
-    vs30 = np.matlib.repmat(ctx.vs30, NFREQS, 1)
-    ln_ir_outcrop = np.matlib.repmat(ln_ir_outcrop, NFREQS, 1)
+    #vs30 = np.matlib.repmat(ctx.vs30, NFREQS, 1)
+    #ln_ir_outcrop = np.matlib.repmat(ln_ir_outcrop, NFREQS, 1)
+    vs30 = np.tile(ctx.vs30, (NFREQS, 1))
+    ln_ir_outcrop = np.tile(ln_ir_outcrop, (NFREQS, 1))
 
     # Computing
     t1 = np.exp(coeff_nl[:, 2] * (np.minimum(vs30, vsref)-360.))
@@ -167,7 +168,7 @@ def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
     fnl = []
     for i, j in enumerate(idxs):
         fnl_0[j:, i] = min(fnl_0[:, i])
-        tmp = numpy.interp(imt.frequency, freq_nl, fnl_0[:, i])
+        tmp = np.interp(imt.frequency, freq_nl, fnl_0[:, i])
         fnl.append(tmp)
     return np.array(fnl)
 
