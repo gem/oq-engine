@@ -18,7 +18,7 @@
 
 
 """
-Module exports :class:`BoraEtAl2019`, :class:`BoraEtAl2019BoraEtAl2019Duration`
+Module exports :class:`BoraEtAl2019`, :class:`BoraEtAl2019Drvt`
 """
 
 import numpy as np
