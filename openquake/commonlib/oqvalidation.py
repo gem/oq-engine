@@ -1193,7 +1193,16 @@ class OqParam(valid.ParamSet):
         imts = set()
         for imt in self.imtls:
             im = from_string(imt)
-            imts.add("SA" if imt.startswith("SA") else im.string)
+            if imt.startswith("SA"):
+                imts.add("SA")
+            elif imt.startswith("EAS"):
+                imts.add("EAS")
+            elif imt.startswith("FAS"):
+                imts.add("FAS")
+            elif imt.startswith("DRVT"):
+                imts.add("DRVT")
+            else:
+                imts.add(im.string)
         for gsim in gsims:
             if hasattr(gsim, 'weight'):  # disable the check
                 continue

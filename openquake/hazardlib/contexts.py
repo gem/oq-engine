@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import abc
 import copy
 import time
@@ -558,7 +559,13 @@ class ContextMaker(object):
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         if not hasattr(self, 'imts'):
-            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
+            tmp = []
+            for im in self.imtls:
+                m = re.match(imt_module.EAS_FREQUENCY_PATTERN, im)
+                if m:
+                    im = 'EAS({:.6f})'.format(1./float(m.group(1)))
+                tmp.append(imt_module.from_string(im))
+            self.imts = tuple(tmp)
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)

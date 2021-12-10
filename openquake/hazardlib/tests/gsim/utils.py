@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import csv
 import logging
 import unittest
@@ -201,7 +202,6 @@ class BaseGSIMTestCase(unittest.TestCase):
         for sdt in contexts.STD_TYPES:
             if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
                 out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
-
         cmaker, df = read_cmaker_df(gsim, fnames)
         for ctx in gen_ctxs(df):
             ctx.occurrence_rate = 0
