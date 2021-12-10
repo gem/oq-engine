@@ -105,9 +105,5 @@ class StdDev(object):
     ALL = 'All'
     #: Compute all the standard deviations for which the GMPE is defined
 
-    SINGLE_STATION = 'Single station'
-    #: Standard deviation representing ground shaking variability
-    #: within a single site.
 
-
-StdDev.idx = {StdDev.TOTAL: 0, StdDev.INTER_EVENT: 1, StdDev.INTRA_EVENT: 2, StdDev.SINGLE_STATION: 3}
+StdDev.idx = {StdDev.TOTAL: 0, StdDev.INTER_EVENT: 1, StdDev.INTRA_EVENT: 2}
