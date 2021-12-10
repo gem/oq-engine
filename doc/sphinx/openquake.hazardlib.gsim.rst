@@ -180,6 +180,13 @@ atkinson_macias_2009
     :undoc-members:
     :show-inheritance:
 
+bahrampouri_2021_Arias_Intensity
+----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bahrampouri_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 bahrampouri_2021_duration
 ----------------------------------------------------
