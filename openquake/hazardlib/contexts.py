@@ -561,9 +561,10 @@ class ContextMaker(object):
         if not hasattr(self, 'imts'):
             tmp = []
             for im in self.imtls:
-                m = re.match(imt_module.EAS_FREQUENCY_PATTERN, im)
+                m = re.match(imt_module.FREQUENCY_PATTERN, im)
                 if m:
-                    im = 'EAS({:.6f})'.format(1./float(m.group(1)))
+                    im = '{:s}({:.6f})'.format(
+                        m.group(1), 1./float(m.group(2)))
                 tmp.append(imt_module.from_string(im))
             self.imts = tuple(tmp)
         N = sum(len(ctx) for ctx in ctxs)

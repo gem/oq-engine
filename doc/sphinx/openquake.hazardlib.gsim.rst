@@ -333,6 +333,14 @@ boore_atkinson_2011
     :undoc-members:
     :show-inheritance:
 
+bora_2019
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bora_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 bozorgnia_campbell_2016
 -----------------------------------------------------------
 

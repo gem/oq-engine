@@ -1,3 +1,6 @@
+  [Marco Pagani, Shreyasvi]
+  * Added GMM from Bora et al. (2019)
+
   [Giuseppina Tusa]
   * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs
     from Tusa et al. (2020).
@@ -16,6 +19,7 @@
     GMM only provides the total standard deviation.
   * Fixed a bug in the `modify_recompute_mmax`
   * Added a `get_coeffs` method to the CoeffTable class
+  * Added support for EAS, FAS, DRVT intensitity measure types
 
   [Michele Simionato]
   * Extended the mag-dependent filtering to the event based calculator

@@ -24,7 +24,7 @@ import re
 import collections
 import numpy
 
-EAS_FREQUENCY_PATTERN = '^EAS\\((\\d+\\.*\\d*)\\)'
+FREQUENCY_PATTERN = '^(EAS|FAS|DRVT)\\((\\d+\\.*\\d*)\\)'
 
 
 def positivefloat(val):
@@ -66,10 +66,15 @@ def from_string(imt, _damping=5.0):
     :param str imt:
         Intensity Measure Type.
     """
-    m = re.match(EAS_FREQUENCY_PATTERN, imt)
+    m = re.match(FREQUENCY_PATTERN, imt)
     if m:
-        im = EAS(float(m.group(1)))
-        return(im)
+        if m.group(1) == 'EAS':
+            im = EAS(float(m.group(2)))
+        elif m.group(1) == 'FAS':
+            im = FAS(float(m.group(2)))
+        elif m.group(1) == 'DRVT':
+            im = DRVT(float(m.group(2)))
+        return im
     elif re.match(r'[ \+\d\.]+', imt):
         return SA(float(imt))
     return IMT(*imt2tup(imt))
@@ -119,6 +124,22 @@ def EAS(frequency):
     """
     period = 1. / frequency
     return IMT('EAS(%s)' % period, period, 5.0)
+
+
+def FAS(frequency):
+    """
+    Fourier Amplitude Spectrum in terms of a frequency (in Hz).
+    """
+    period = 1. / frequency
+    return IMT('FAS(%s)' % period, period, 5.0)
+
+
+def DRVT(frequency):
+    """
+    Duration as defined in Bora et al. (2019)
+    """
+    period = 1. / frequency
+    return IMT('DRVT(%s)' % period, period, 5.0)
 
 
 def SA(period, damping=5.0):
