@@ -1,13 +1,24 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2021 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
 Module exports :class:`BaylessAbrahamson2018`
 """
-
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -35,12 +46,9 @@ def _path_scaling(C, ctx):
 
 def _normal_fault_effect(C, ctx):
     """ Compute the correction coefficient for the normal faulting """
-
-    fnm = 0
     idx = (ctx.rake > -150) & (ctx.rake < -30)
     fnm = np.zeros_like(ctx.rake)
-    fnm[idx] = 1
-
+    fnm[idx] = 1.0
     return C['c10'] * fnm
 
 
@@ -77,7 +85,6 @@ def _linear_site_response(C, ctx):
 def _soil_depth_scaling(C, ctx):
     """ Compute the soil depth scaling term """
     # Set the c11 coefficient - See eq.13b at page 2093
-
     c11 = np.ones_like(ctx.vs30) * C['c11a']
     c11[(ctx.vs30 <= 300) & (ctx.vs30 > 200)] = C['c11b']
     c11[(ctx.vs30 <= 500) & (ctx.vs30 > 300)] = C['c11c']
@@ -85,8 +92,9 @@ def _soil_depth_scaling(C, ctx):
     # Compute the Z1ref parameter
     tmp = (ctx.vs30**4 + 610**4) / (1360**4 + 610**4)
     z1ref = 1/1000. * np.exp(-7.67/4*np.log(tmp))
-    # Return the fz1 parameter
-    tmp = np.minimum(ctx.z1pt0, np.ones_like(ctx.z1pt0)*2.0) + 0.01
+    # Return the fz1 parameter. The z1pt0 is converted from m (standard in OQ)
+    # to km as indicated in the paper
+    tmp = np.minimum(ctx.z1pt0/1000, np.ones_like(ctx.z1pt0)*2.0) + 0.01
     return c11 * np.log(tmp / (z1ref + 0.01))
 
 
@@ -95,49 +103,80 @@ def _get_stddevs(C, ctx):
     Compute the standard deviations
     """
     # Set components of std
-
-    tau = np.zeros_like(ctx.mag)
-    phi_s2s = np.zeros_like(ctx.mag)
-    phi_ss = np.zeros_like(ctx.mag)
-
-    tau[(ctx.mag < 4)] = C['s1']
-    phi_s2s[(ctx.mag < 4)] = C['s3']
-    phi_ss[(ctx.mag < 4)] = C['s5']
-
-    tau[(ctx.mag > 6)] = C['s2']
-    phi_s2s[(ctx.mag > 6)] = C['s4']
-    phi_ss[(ctx.mag > 6)] = C['s6']
-
-    tau[(ctx.mag >= 4) & (ctx.mag <= 6)] = (
-        C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag-4))
-    phi_s2s[(ctx.mag >= 4) & (ctx.mag <= 6)] = (
-        C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4))
-    phi_ss[(ctx.mag >= 4) & (ctx.mag <= 6)] = (
-        C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4))
+    tau = C['s1']
+    phi_s2s = C['s3']
+    phi_ss = C['s5']
+    if ctx.mag > 6:
+        tau = C['s2']
+        phi_s2s = C['s4']
+        phi_ss = C['s6']
+    elif ctx.mag > 4:
+        tau = C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag-4)
+        phi_s2s = C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4)
+        phi_ss = C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4)
 
     # Collect the requested stds
     sigma = np.sqrt(tau**2+phi_s2s**2+phi_ss**2+C['c1a']**2)
     phi = np.sqrt(phi_s2s**2+phi_ss**2)
 
+    sigma = np.ones_like(ctx.vs30) * sigma
+    tau = np.ones_like(ctx.vs30) * tau
+    phi = np.ones_like(ctx.vs30) * phi
+
     return sigma, tau, phi
 
 
-def _get_nl_site_response(C, ctx, ln_ir_outcrop):
+def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
+    """
+    :param ln_ir_outcrop:
+        The peak ground acceleration (PGA [g]) at rock outcrop
+    :param freq_nl:
+        Frequencies for the coefficients f3, f4 and f5 used to compute the
+        non-linear term
+    :param coeff_nl:
+        A :class:`numpy.ndarray` instance of shape [# freq, 3] with the values
+        of the coefficients f3, f4 and f5 which are used to compute the
+        non-linear term
+    """
+
     vsref = 760.0
-    t1 = np.exp(C['f5'] * (np.minimum(ctx.vs30, vsref)-360.))
-    t2 = np.exp(C['f5'] * (vsref-360.))
-    f2 = C['f4'] * (t1 - t2)
-    fnl_0 = f2 * np.log((np.exp(ln_ir_outcrop)+C['f3']) / C['f3'])
-    val, index = min((v, i) for i, v in enumerate(fnl_0))
-    fnl_mod0 = np.concatenate((fnl_0[:index+1],
-                               np.ones(len(fnl_0)-index) * val))
-    return fnl_mod0[0]
+    NSITES = len(ctx.vs30)
+    NFREQS = coeff_nl.shape[0]
+
+    # Updating the matrix with the coefficients. This has shape (number of
+    # frequencies) x (number of coeffs) x (number of sites)
+    coeff_nl = np.expand_dims(coeff_nl, 2)
+    coeff_nl = np.repeat(coeff_nl, NSITES, 2)
+
+    # Updating the matrix with Vs30 values. This has shape (number of
+    # frequencies) x (number of sites)
+    #vs30 = np.matlib.repmat(ctx.vs30, NFREQS, 1)
+    #ln_ir_outcrop = np.matlib.repmat(ln_ir_outcrop, NFREQS, 1)
+    vs30 = np.tile(ctx.vs30, (NFREQS, 1))
+    ln_ir_outcrop = np.tile(ln_ir_outcrop, (NFREQS, 1))
+
+    # Computing
+    t1 = np.exp(coeff_nl[:, 2] * (np.minimum(vs30, vsref)-360.))
+    t2 = np.exp(coeff_nl[:, 2] * (vsref-360.))
+    f2 = coeff_nl[:, 1] * (t1 - t2)
+    f3 = coeff_nl[:, 0]
+
+    fnl_0 = f2 * np.log((np.exp(ln_ir_outcrop) + f3) / f3)
+    idxs = np.argmin(fnl_0, axis=0)
+
+    # Applying correction as described at page 2093 in BA18
+    fnl = []
+    for i, j in enumerate(idxs):
+        fnl_0[j:, i] = min(fnl_0[:, i])
+        tmp = np.interp(imt.frequency, freq_nl, fnl_0[:, i])
+        fnl.append(tmp)
+    return np.array(fnl)
 
 
 def _get_dimunition_factor(ctx, imt):
     max_freq = 23.988321
     kappa = np.exp(-0.4*np.log(ctx.vs30/760)-3.5)
-    D = np.exp(-np.pi * kappa * (imt[1] - max_freq))
+    D = np.exp(-np.pi * kappa * (imt.frequency - max_freq))
     return D
 
 
@@ -204,13 +243,15 @@ class BaylessAbrahamson2018(GMPE):
     #: Required distance measures
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+    def compute(self, ctx, imts, mean, sigma, tau, phi):
+        freq_nl, coeff_nl = self.COEFFS.get_coeffs(['f3', 'f4', 'f5'])
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             ln_ir_outcrop = _get_ln_ir_outcrop(self, ctx)
             lin_component = _get_mean(self, C, ctx, imt)
-            nl_component = _get_nl_site_response(C, ctx, ln_ir_outcrop)
-            mean[m] = (lin_component + nl_component)[0]
+            nl_component = _get_nl_site_response(C, ctx, imt, ln_ir_outcrop,
+                                                 freq_nl, coeff_nl)
+            mean[m] = (lin_component + nl_component)
             sigma[m], tau[m], phi[m] = _get_stddevs(C, ctx)
 
     TMP = """
