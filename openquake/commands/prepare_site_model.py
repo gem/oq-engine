@@ -95,7 +95,15 @@ def associate(sitecol, vs30fnames, assoc_distance):
     if vs30fnames[0].endswith('.hdf5'):
         geohashes = numpy.unique(sitecol.geohash(2))
         with hdf5.File(vs30fnames[0]) as f:
-            data = numpy.concatenate([f[gh][:] for gh in geohashes])
+            data = []
+            for gh in geohashes:
+                try:
+                    arr = f[gh][:]
+                except KeyError:
+                    logging.error('Missing data for geohash %s' % gh)
+                else:
+                    data.append(arr)
+            data = numpy.concatenate(data)
             vs30orig = numpy.zeros(len(data), vs30_dt)
             vs30orig['lon'] = data[:, 0]
             vs30orig['lat'] = data[:, 1]

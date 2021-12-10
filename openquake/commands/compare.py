@@ -22,8 +22,6 @@ from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
-P0 = 0  # first poe
-
 
 def get_diff_idxs(array, rtol, atol):
     """
@@ -105,7 +103,7 @@ class Comparator(object):
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, L)
 
-    def getuhs(self, what, sids):
+    def getuhs(self, what, p, sids):
         # uhs for the first poe
         oq0 = self.oq
         extractor = self.extractors[0]
@@ -113,14 +111,14 @@ class Comparator(object):
         midx = numpy.array([m for m, imt in enumerate(oq0.imtls)
                             if imt.startswith(('PGA', 'SA'))])
         shp = (len(sids), -1)
-        arrays = [extractor.get(what).mean[sids, midx, P0].reshape(shp)]
+        arrays = [extractor.get(what).mean[sids, midx, p].reshape(shp)]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
             numpy.testing.assert_array_equal(oq.imtls.array, oq0.imtls.array)
             numpy.testing.assert_array_equal(oq.poes, oq0.poes)
             arrays.append(
-                extractor.get(what).mean[sids, midx, P0].reshape(shp))
+                extractor.get(what).mean[sids, midx, p].reshape(shp))
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, M*P)
 
@@ -143,7 +141,7 @@ class Comparator(object):
     def compare(self, what, imt, files, samplesites, atol, rtol):
         sids = self.getsids(samplesites)
         if what == 'uhs':
-            arrays = self.getuhs(what, sids)
+            arrays = self.getuhs(what, imt, sids)
         elif what.startswith('avg_gmf'):
             arrays = self.getgmf(what, imt, sids)
         else:
@@ -207,18 +205,18 @@ def compare_cumtime(calc1: int, calc2: int):
     return Comparator([calc1, calc2]).cumtime()
 
 
-def compare_uhs(calc_ids: int, files=False, *,
+def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
                 samplesites='', rtol: float = 0, atol: float = 1E-3):
     """
     Compare the uniform hazard spectra of two or more calculations.
     """
     c = Comparator(calc_ids)
-    arrays = c.compare('uhs', None, files, samplesites, atol, rtol)
+    arrays = c.compare('uhs', poe_id, files, samplesites, atol, rtol)
     if len(arrays) and len(calc_ids) == 2:
         # each array has shape (N, M)
         ms = numpy.mean((arrays[0] - arrays[1])**2)
         maxdiff = numpy.abs(arrays[0] - arrays[1]).max()
-        row = ('%.5f' % c.oq.poes[P0], numpy.sqrt(ms), maxdiff)
+        row = ('%.5f' % c.oq.poes[poe_id], numpy.sqrt(ms), maxdiff)
         print(views.text_table([row], ['poe', 'rms-diff', 'max-diff']))
 
 
@@ -267,7 +265,9 @@ main = dict(rups=compare_rups,
             avg_gmf=compare_avg_gmf)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf):
-    if f is not compare_uhs:
+    if f is compare_uhs:
+        f.poe_id = 'index of the PoE (or return period)'
+    else:
         f.imt = 'intensity measure type to compare'
     f.calc_ids = dict(help='calculation IDs', nargs='+')
     f.files = 'write the results in multiple files'

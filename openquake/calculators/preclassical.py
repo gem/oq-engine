@@ -106,7 +106,7 @@ def run_preclassical(calc):
         [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
     h5 = calc.datastore.hdf5
-    sites = csm.sitecol.reduce(2000) if csm.sitecol else None
+    sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
     atomic_sources = []
     normal_sources = []

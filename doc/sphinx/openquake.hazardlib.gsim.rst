@@ -180,6 +180,13 @@ atkinson_macias_2009
     :undoc-members:
     :show-inheritance:
 
+bahrampouri_2021_Arias_Intensity
+----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bahrampouri_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 bahrampouri_2021_duration
 ----------------------------------------------------
@@ -194,6 +201,13 @@ baumont_2018
 ------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.baumont_2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bayless_abrahamson_2018
+------------------------------------
+.. automodule:: openquake.hazardlib.gsim.bayless_abrahamson_2018
     :members:
     :undoc-members:
     :show-inheritance:
@@ -315,6 +329,14 @@ boore_atkinson_2011
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.boore_atkinson_2011
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bora_2019
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bora_2019
     :members:
     :undoc-members:
     :show-inheritance:

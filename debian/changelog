@@ -1,9 +1,13 @@
+
    [Claudia Mascandola]
   * Added a new class to the abrahamson_2015 gmm. 
   
   [Claudia Mascandola]
-  * Added a new class to the lanzano_luzi_2019 and skarlatoudis_2013 gmms.
-  
+  * Added a new class to the lanzano_luzi_2019 and skarlatoudis_2013 gmms
+
+  [Marco Pagani, Shreyasvi]
+  * Added GMM from Bora et al. (2019)
+
   [Giuseppina Tusa]
   * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs
     from Tusa et al. (2020).
@@ -17,10 +21,12 @@
   * Added the GMPE Arroyo et al. (2010) for Mexican subduction interface events
 
   [Marco Pagani]
-  * Adds a new method to the modifiable GMPE with which is possible to
+  * Added a new method to the modifiable GMPE with which is possible to
     compute spatially correlated ground-motion fields even when the initial
     GMM only provides the total standard deviation.
   * Fixed a bug in the `modify_recompute_mmax`
+  * Added a `get_coeffs` method to the CoeffTable class
+  * Added support for EAS, FAS, DRVT intensitity measure types
 
   [Michele Simionato]
   * Extended the mag-dependent filtering to the event based calculator
