@@ -16,7 +16,11 @@ Requirements are:
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 
-**Windows 7** and "Windows 8" are not supported.
+**Windows 7** and **Windows 8** are not supported. That means that we do
+not test such platforms and they engine may or may not work there. Also, it
+may work for small calculations and hang for large calculations, as it has
+been reported by a few users. For large calculations (i.e. any calculation
+in the hazard or risk mosaic) you are recommended to use a Linux server.
 
 ## Install or upgrade packages from the OpenQuake website
 

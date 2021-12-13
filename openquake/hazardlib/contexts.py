@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import abc
 import copy
 import time
@@ -334,10 +335,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rup, sites, 'rrup')
-        try:
-            mdist = self.maximum_distance(rup.mag)
-        except ValueError:
-            raise ValueError('Invalid magnitude %.2f' % rup.mag)
+        mdist = self.maximum_distance(rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
@@ -561,7 +559,14 @@ class ContextMaker(object):
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         if not hasattr(self, 'imts'):
-            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
+            tmp = []
+            for im in self.imtls:
+                m = re.match(imt_module.FREQUENCY_PATTERN, im)
+                if m:
+                    im = '{:s}({:.6f})'.format(
+                        m.group(1), 1./float(m.group(2)))
+                tmp.append(imt_module.from_string(im))
+            self.imts = tuple(tmp)
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
@@ -673,7 +678,13 @@ class ContextMaker(object):
         t0 = time.time()
         for split, sites in srcfilter.filter(list(src)):
             rup = next(split.iter_ruptures())
-            self.get_pmap(self.get_ctxs([rup], sites))
+            try:
+                ctxs = self.get_ctxs([rup], sites)
+            except ValueError:
+                raise ValueError('Invalid magnitude %.2f in source %s' %
+                                 (rup.mag, src.source_id))
+            else:
+                self.get_pmap(ctxs)
         return (time.time() - t0) * sum(split.num_ruptures for split in src)
 
     def set_weight(self, sources, srcfilter):
