@@ -146,6 +146,7 @@ class MultiFaultSource(BaseSeismicSource):
                 self.mags[slc],
                 self.rakes[slc])
             src.set_sections(self.sections)
+            src.num_ruptures = src.count_ruptures()
             yield src
 
     def count_ruptures(self):
