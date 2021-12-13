@@ -270,8 +270,7 @@ def split_source(src):
         if has_scaling_rate:
             s.scaling_rate = src.scaling_rate
     for split in splits:
-        if not split.num_ruptures:
-            split.num_ruptures = split.count_ruptures()
+        split.nsites = src.nsites
     return splits
 
 

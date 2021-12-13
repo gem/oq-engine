@@ -677,6 +677,7 @@ class ContextMaker(object):
         # NB: normally src is already split
         t0 = time.time()
         for split, sites in srcfilter.filter(list(src)):
+            split.nsites = len(sites)
             rup = next(split.iter_ruptures())
             try:
                 ctxs = self.get_ctxs([rup], sites)
@@ -696,7 +697,7 @@ class ContextMaker(object):
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
             else:
-                src.weight = self.estimate_time(src, srcfilter)
+                src.weight = .001 + self.estimate_time(src, srcfilter)
 
 
 def num_effrups(src):
