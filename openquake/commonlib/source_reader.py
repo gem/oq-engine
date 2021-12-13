@@ -301,8 +301,10 @@ def _get_csm(full_lt, groups):
                 # check on MultiFaultSources and NonParametricSources
                 mesh_size = getattr(src, 'mesh_size', 0)
                 if mesh_size > 1E6:
-                    msg = 'src "{}" has an underlying mesh with {:_d} points!'
-                    logging.warning(msg.format(src.source_id, mesh_size))
+                    msg = ('src "{}" has {:_d} underlying meshes with a total '
+                           'of {:_d} points!').format(
+                               src.source_id, src.count_ruptures(), mesh_size)
+                    logging.warning(msg)
                 src._wkt = src.wkt()
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
     for ag in atomic:

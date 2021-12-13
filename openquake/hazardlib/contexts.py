@@ -677,6 +677,7 @@ class ContextMaker(object):
         # NB: normally src is already split
         t0 = time.time()
         for split, sites in srcfilter.filter(list(src)):
+            split.nsites = len(sites)
             rup = next(split.iter_ruptures())
             try:
                 ctxs = self.get_ctxs([rup], sites)
@@ -685,7 +686,8 @@ class ContextMaker(object):
                                  (rup.mag, src.source_id))
             else:
                 self.get_pmap(ctxs)
-        return (time.time() - t0) * sum(split.num_ruptures for split in src)
+        dt = (time.time() - t0) * src.num_ruptures
+        return dt
 
     def set_weight(self, sources, srcfilter):
         """
