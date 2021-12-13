@@ -700,7 +700,7 @@ class ContextMaker(object):
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
             else:
-                src.weight = .001 + self.estimate_time(src, srcfilter)
+                src.weight = self.estimate_time(src, srcfilter)
 
 
 def num_effrups(src):
