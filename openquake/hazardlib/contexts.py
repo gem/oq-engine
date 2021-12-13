@@ -170,7 +170,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor()):
         if isinstance(oq, dict):
             param = oq
-            self.cross_correl = param.get('cross_correl')
+            self.cross_correl = param.get('cross_correl')  # in cond_spectra_test
         else:  # OqParam
             param = vars(oq)
             param['split_sources'] = oq.split_sources
