@@ -413,7 +413,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         self.build_aggcurves()
         if oq.reaggregate_by:
-            post_aggregate(self.datastore.calc_id,  ','.join(oq.reaggregate_by))
+            post_aggregate(self.datastore.calc_id,
+                           ','.join(oq.reaggregate_by))
 
     def build_aggcurves(self):
         prc = PostRiskCalculator(self.oqparam, self.datastore.calc_id)
