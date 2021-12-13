@@ -99,16 +99,12 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
             dstore['sitecol'], oqparam.maximum_distance(trt))
         rupgeoms = dstore['rupgeoms']
         rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-        param = vars(oqparam).copy()
-        param['imtls'] = oqparam.imtls
-        param['min_iml'] = oqparam.min_iml
-        param['maximum_distance'] = oqparam.maximum_distance(trt)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, param)
-        min_mag = getdefault(oqparam.minimum_magnitude, trt)
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam)
+        cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
             t0 = time.time()
             with fmon:
-                if proxy['mag'] < min_mag:
+                if proxy['mag'] < cmaker.min_mag:
                     continue
                 sids = srcfilter.close_sids(proxy, trt)
                 if len(sids) == 0:  # filtered away
@@ -243,8 +239,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if not sg.sources:
                 continue
             logging.info('Sending %s', sg)
-            params['maximum_distance'] = oq.maximum_distance(sg.trt)
-            cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], params)
+            cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
         smap = parallel.Starmap(
@@ -336,12 +331,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     '%s for a scenario calculation must contain a single '
                     'branchset, found %d!' % (oq.inputs['job_ini'], bsets))
             [(trt, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_trt().items()
-            self.cmaker = ContextMaker(
-                trt, rlzs_by_gsim,
-                {'maximum_distance': oq.maximum_distance(trt),
-                 'minimum_distance': oq.minimum_distance,
-                 'truncation_level': oq.truncation_level,
-                 'imtls': oq.imtls})
+            self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             rup = readinput.get_rupture(oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),

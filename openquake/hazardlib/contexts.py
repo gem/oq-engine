@@ -170,14 +170,15 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor()):
         if isinstance(oq, dict):
             param = oq
+            self.cross_correl = param.get('cross_correl')  # in cond_spectra_test
         else:  # OqParam
             param = vars(oq)
             param['split_sources'] = oq.split_sources
-            param['cross_correl'] = oq.cross_correl
             param['min_iml'] = oq.min_iml
-            param['imtls'] = oq.imtls
             param['reqv'] = oq.get_reqv()
             param['af'] = getattr(oq, 'af', None)
+            self.cross_correl = oq.cross_correl
+            self.imtls = oq.imtls
 
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
@@ -198,7 +199,6 @@ class ContextMaker(object):
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
-        self.cross_correl = param.get('cross_correl')
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
         self.effect = param.get('effect')
@@ -212,7 +212,7 @@ class ContextMaker(object):
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
             self.imtls = DictArray(param['hazard_imtls'])
-        else:
+        elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         try:
             self.min_iml = param['min_iml']
