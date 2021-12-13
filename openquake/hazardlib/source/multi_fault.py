@@ -154,3 +154,4 @@ class MultiFaultSource(BaseSeismicSource):
 
     polygon = NP.polygon
     wkt = NP.wkt
+    mesh_size = NP.mesh_size
