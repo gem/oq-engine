@@ -23,7 +23,7 @@ from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, groupby, get_nbytes_msg)
-from openquake.hazardlib.contexts import basename, read_cmakers
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -38,13 +38,13 @@ TWO32 = 2 ** 32
 
 
 def zero_times(sources):
-    # src.id -> nrups, nsites, time, weight
-    calc_times = AccumDict(accum=numpy.zeros(4, F32))
+    calc_times = AccumDict(accum=[])
     for src in sources:
-        row = calc_times[basename(src)]
-        row[0] += src.num_ruptures
-        row[1] += src.nsites
-        row[3] += src.weight
+        calc_times['srcids'].append(src.source_id)
+        calc_times['nsites'].append(src.nsites)
+        calc_times['nrupts'].append(src.num_ruptures)
+        calc_times['weight'].append(src.weight)
+        calc_times['ctimes'].append(0)
     return calc_times
 
 

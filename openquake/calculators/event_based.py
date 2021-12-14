@@ -224,7 +224,7 @@ class EventBasedCalculator(base.HazardCalculator):
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
-        calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
+        calc_times = AccumDict(accum=[])
         allargs = []
         if self.oqparam.is_ucerf():
             # manage the filtering in a special way

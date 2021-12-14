@@ -174,7 +174,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     numpy.random.seed(sources[0].serial(ses_seed))
     [trt_smr] = set(src.trt_smr for src in sources)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+    calc_times = AccumDict(accum=[])
     # Set the parameters required to compute the number of occurrences
     # of the group of sources
     #  assert param['oqparam'].number_of_logic_tree_samples > 0
@@ -215,8 +215,12 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_counter[src_id][rup.idx] += 1
                 # Store info
                 dt = time.time() - t0
-                calc_times[basename(src)] += numpy.array(
-                    [len(rup_data[src_id]), src.nsites, dt])
+                calc_times['srcids'].append(src.source_id)
+                calc_times['nsites'].append(src.nsites)
+                calc_times['nrups'].append(len(rup_data[src_id]))
+                calc_times['ctimes'].append(dt)
+                calc_times['weight'].append(src.weight)
+                calc_times['taskno'].append(param['task_no'])
         elif param['src_interdep'] == 'mutex':
             raise NotImplementedError('src_interdep == mutex')
     # Create event based ruptures
@@ -245,10 +249,10 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
         dictionaries with keys rup_array, calc_times
     """
     srcfilter = SourceFilter(sitecol, cmaker.maximum_distance)
-    # AccumDict of arrays with 3 elements num_ruptures, num_sites, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+    calc_times = AccumDict(accum=[])
     # Compute and save stochastic event sets
     num_ses = cmaker.ses_per_logic_tree_path
+    cmaker.task_no = monitor.task_no
     grp_id = sources[0].grp_id
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
@@ -264,8 +268,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
     else:
         eb_ruptures = []
         eff_ruptures = 0
-        # AccumDict of arrays with 2 elements weight, calc_time
-        calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+        calc_times = AccumDict(accum=[])
         for src, _ in srcfilter.filter(sources):
             nr = src.num_ruptures
             eff_ruptures += nr
@@ -282,7 +285,12 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
                 ebr = EBRupture(rup, src.source_id, trt_smr, n_occ)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
-            calc_times[basename(src)] += numpy.array([nr, src.nsites, dt])
+            calc_times['srcids'].append(src.source_id)
+            calc_times['nsites'].append(src.nsites)
+            calc_times['nrups'].append(nr)
+            calc_times['ctimes'].append(dt)
+            calc_times['weight'].append(src.weight)
+            calc_times['taskno'].append(monitor.task_no)
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(dict(rup_array=rup_array, calc_times=calc_times,
                              eff_ruptures={grp_id: eff_ruptures}))

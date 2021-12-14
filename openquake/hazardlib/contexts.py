@@ -823,7 +823,12 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
-            self.calc_times[basename(src)] += numpy.array([nctxs, nsites, dt])
+            self.calc_times['srcids'].append(src.source_id)
+            self.calc_times['nsites'].append(nsites)
+            self.calc_times['nrupts'].append(nctxs)
+            self.calc_times['weight'].append(src.weight)
+            self.calc_times['ctimes'].append(dt)
+            self.calc_times['taskno'].append(cm.task_no)
             timer.save(src, nctxs, nsites, dt, cm.task_no)
         return ~pmap if cm.rup_indep else pmap
 
@@ -843,7 +848,12 @@ class PmapMaker(object):
             p *= src.mutex_weight
             pmap += p
             dt = time.time() - t0
-            self.calc_times[basename(src)] += numpy.array([nctxs, nsites, dt])
+            self.calc_times['srcids'].append(src.source_id)
+            self.calc_times['nsites'].append(nsites)
+            self.calc_times['nrupts'].append(nctxs)
+            self.calc_times['weight'].append(src.weight)
+            self.calc_times['ctimes'].append(dt)
+            self.calc_times['taskno'].append(cm.task_no)
             timer.save(src, nctxs, nsites, dt, cm.task_no)
         return pmap
 
@@ -864,8 +874,7 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
-        # AccumDict of arrays with 3 elements nrups, nsites, calc_time
-        self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+        self.calc_times = AccumDict(accum=[])
         if self.src_mutex:
             pmap = self._make_src_mutex()
         else:

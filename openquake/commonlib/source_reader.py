@@ -418,13 +418,15 @@ class CompositeSourceModel:
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        for src_id, arr in calc_times.items():
-            row = self.source_info[src_id]
-            row[CALC_TIME] = arr[2]
-            if len(arr) == 4:  # after preclassical
-                row[WEIGHT] = arr[3]
-            row[EFF_RUPTURES] = arr[0]
-            row[NUM_SITES] = arr[1]
+        for src_id, nsites, nrupts, weight, ctimes in zip(
+                calc_times['srcids'], calc_times['nsites'],
+                calc_times['nrupts'], calc_times['weight'],
+                calc_times['ctimes']):
+            row = self.source_info[src_id.split(':')[0]]
+            row[CALC_TIME] += ctimes
+            row[WEIGHT] += weight
+            row[EFF_RUPTURES] += nrupts
+            row[NUM_SITES] += nsites
 
     def count_ruptures(self):
         """
