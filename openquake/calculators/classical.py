@@ -21,6 +21,7 @@ import psutil
 import logging
 import operator
 import numpy
+import pandas
 try:
     from PIL import Image
 except ImportError:
@@ -270,27 +271,17 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys pmap, calc_times, rup_data
+        :param dic: dict with keys pmap, source_data, rup_data
         """
         # NB: dic should be a dictionary, but when the calculation dies
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
-        ctimes = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
-        self.calc_times += ctimes
-        srcids = Set()
-        eff_rups = 0
-        eff_sites = 0
-        for srcid, rec in ctimes.items():
-            srcids.add(srcid)
-            eff_rups += rec[0]
-            if rec[0]:
-                eff_sites += rec[1] / rec[0]
-        self.by_task[dic['task_no']] += dict(
-            effrups=eff_rups, effsites=eff_sites, srcids=srcids)
+        ctimes = dic['source_data']
+        self.source_data += ctimes
         grp_id = dic.pop('grp_id')
-        self.rel_ruptures[grp_id] += eff_rups
+        self.rel_ruptures[grp_id] += sum(ctimes['nrups'])
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']['src_id']):
@@ -345,8 +336,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
-        self.by_task = AccumDict(accum=AccumDict())
-        # task_no => effrups, effsites, srcids
         self.Ns = len(self.csm.source_info)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
@@ -445,7 +434,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
             for size in sizes:
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
-        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        self.source_data = AccumDict(accum=numpy.zeros(3, F32))
         self.n_outs = AccumDict(accum=0)
         acc = {}
         for t, tile in enumerate(tiles, 1):
@@ -463,34 +452,13 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def store_info(self):
         """
-        Store full_lt, source_info and by_task
+        Store full_lt, source_info and source_data
         """
         self.store_rlz_info(self.rel_ruptures)
-        self.store_source_info(self.calc_times)
-        if self.by_task:
-            logging.info('Storing by_task information')
-            num_tasks = max(self.by_task) + 1,
-            er = self.datastore.create_dset('by_task/eff_ruptures',
-                                            U32, num_tasks)
-            es = self.datastore.create_dset('by_task/eff_sites',
-                                            U32, num_tasks)
-            si = self.datastore.create_dset('by_task/srcids',
-                                            hdf5.vstr, num_tasks,
-                                            fillvalue=None)
-            for task_no, dic in self.by_task.items():
-                er[task_no] = dic['effrups']
-                es[task_no] = dic['effsites']
-                si[task_no] = ' '.join(dic['srcids'])
-            self.by_task.clear()
-        if self.calc_times:  # can be empty in case of errors
-            self.numctxs = sum(arr[0] for arr in self.calc_times.values())
-            numsites = sum(arr[1] for arr in self.calc_times.values())
-            logging.info('Total number of contexts: {:_d}'.
-                         format(int(self.numctxs)))
-            if self.numctxs:
-                logging.info('Average number of sites per context: %d',
-                             numsites / self.numctxs)
-        self.calc_times.clear()  # save a bit of memory
+        self.store_source_info(self.source_data)
+        self.datastore.create_df(
+            'source_data', pandas.DataFrame(self.source_data))
+        self.source_data.clear()  # save a bit of memory
 
     def submit(self, sids, grp_ids, cmakers):
         """

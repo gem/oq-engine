@@ -59,6 +59,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
+    weight = 1  # set in contexts
 
     @abc.abstractproperty
     def MODIFICATIONS(self):

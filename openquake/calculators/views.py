@@ -664,25 +664,21 @@ def view_task_hazard(token, dstore):
      $ oq show task:classical:-1  # the slowest task
     """
     _, name, index = token.split(':')
-    if 'by_task' not in dstore:
-        return 'Missing by_task'
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
     data = get_array(dstore['task_info'][()], taskname=encode(name))
     if len(data) == 0:
         raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
-    eff_sites = dstore['by_task/eff_sites'][taskno]
-    srcids = decode(dstore['by_task/srcids'][taskno])
+    sdata = dstore.read_df('source_data', 'taskno')
+    eff_ruptures = sdata.loc[taskno].nrupts.sum()
+    eff_sites = sdata.loc[taskno].nrupts.sum()
+    srcids = decode(sdata.loc[taskno].srcids)
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
                              srcids))
-    info = dstore.read_df('source_info', 'source_id')
-    rows = [info.loc[s] for s in dstore['by_task/srcids'][taskno].split()]
-    maxrow = max(rows, key=lambda row: row.calc_time)
-    res += '\nWorst source: %s, num_sites=%d, calc_time=%d' % (
-        maxrow.name, maxrow.num_sites, maxrow.calc_time)
     return res
 
 
