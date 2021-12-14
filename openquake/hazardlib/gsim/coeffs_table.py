@@ -20,7 +20,6 @@ import re
 import math
 import scipy
 import numpy as np
-import numpy.matlib
 from openquake.baselib.general import RecordBuilder
 from openquake.hazardlib.imt import from_string
 
