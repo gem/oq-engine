@@ -480,8 +480,8 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         assert not isgenfunc, func
         return Result.new(func, args, mon)
 
-    if mon.operation.endswith('_split'):
-        name = mon.operation
+    if mon.operation.endswith('_'):
+        name = mon.operation[:-1]
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)
@@ -839,7 +839,7 @@ class Starmap(object):
         """
         Submit the given arguments to the underlying task
         """
-        self.monitor.operation = '%s_split' % self.task_func.__name__
+        self.monitor.operation = self.task_func.__name__ + '_'
         self.submit((args[0], self.task_func, args[1:], duration, split_level),
                     split_task)
 
