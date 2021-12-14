@@ -675,7 +675,7 @@ def view_task_hazard(token, dstore):
     sdata = dstore.read_df('source_data', 'taskno')
     eff_ruptures = sdata.loc[taskno].nrupts.sum()
     eff_sites = sdata.loc[taskno].nrupts.sum()
-    srcids = decode(sdata.loc[taskno].srcids)
+    srcids = decode(b' '.join(sdata.loc[taskno].srcids))
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
                              srcids))

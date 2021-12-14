@@ -551,7 +551,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
-            dur = task_info.loc[b'split_task'].duration
+            dur = task_info.loc[b'classical'].duration
         except KeyError:  # no data
             pass
         else:

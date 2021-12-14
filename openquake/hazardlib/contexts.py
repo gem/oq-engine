@@ -686,7 +686,7 @@ class ContextMaker(object):
                                  (rup.mag, src.source_id))
             else:
                 self.get_pmap(ctxs)
-        dt = (time.time() - t0) * src.num_ruptures
+        dt = (time.time() - t0) * num_effrups(src)
         return dt
 
     def set_weight(self, sources, srcfilter):
