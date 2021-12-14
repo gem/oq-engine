@@ -184,6 +184,7 @@ import os
 import re
 import ast
 import sys
+import copy
 import time
 import socket
 import signal
@@ -479,7 +480,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
-    mon = mon.new(operation='total ' + func.__name__, measuremem=True)
+    mon = mon.new(operation='total ' + mon.operation, measuremem=True)
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
     if mon.inject:
@@ -796,20 +797,19 @@ class Starmap(object):
             self.prev_percent = percent
         return done
 
-    def submit(self, args, func=None, monitor=None):
+    def submit(self, args, func=None):
         """
         Submit the given arguments to the underlying task
         """
-        monitor = monitor or self.monitor
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # first time
             self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
-            monitor.backurl = 'tcp://%s:%s' % (
+            self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-            monitor.version = version
-            monitor.config = config
+            self.monitor.version = version
+            self.monitor.config = config
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
         if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
             self.task_no += 1
@@ -827,7 +827,7 @@ class Starmap(object):
                 fname = func.__name__
                 argnames = getargnames(func)[:-1]
             self.sent[fname] += {a: len(p) for a, p in zip(argnames, args)}
-        res = submit[dist](self, func, args, monitor)
+        res = submit[dist](self, func, args, self.monitor)
         self.task_no += 1
         self.tasks.append(res)
 
@@ -835,8 +835,9 @@ class Starmap(object):
         """
         Submit the given arguments to the underlying task
         """
+        self.monitor.operation = '%s_split' % self.task_func.__name__
         self.submit((args[0], self.task_func, args[1:], duration, split_level),
-                    func=split_task)
+                    split_task)
 
     def submit_all(self):
         """
