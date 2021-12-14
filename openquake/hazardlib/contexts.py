@@ -676,17 +676,21 @@ class ContextMaker(object):
         """
         # NB: normally src is already split
         t0 = time.time()
+        ctxs = []
         for split, sites in srcfilter.filter(list(src)):
             split.nsites = len(sites)
             rup = next(split.iter_ruptures())
             try:
-                ctxs = self.get_ctxs([rup], sites)
+                ctxs.extend(self.get_ctxs([rup], sites))
             except ValueError:
                 raise ValueError('Invalid magnitude %.2f in source %s' %
                                  (rup.mag, src.source_id))
-            else:
-                self.get_pmap(ctxs)
-        dt = (time.time() - t0) * num_effrups(src)
+        if ctxs:
+            self.get_pmap(ctxs)
+            sitesfactor = sum(len(ctx) for ctx in ctxs) / src.nsites
+        else:
+            sitesfactor = 1.
+        dt = (time.time() - t0) * num_effrups(src) * sitesfactor
         return dt
 
     def set_weight(self, sources, srcfilter):
