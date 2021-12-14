@@ -265,6 +265,7 @@ class ClassicalCalculator(base.HazardCalculator):
     core_task = classical
     precalc = 'preclassical'
     accept_precalc = ['preclassical', 'classical']
+    SLOW_TASK_ERROR = False
 
     def agg_dicts(self, acc, dic):
         """
@@ -556,8 +557,11 @@ class ClassicalCalculator(base.HazardCalculator):
             pass
         else:
             slow_tasks = len(dur[dur > 3 * dur.mean()])
-            if slow_tasks:
-                logging.info('There were %d slow tasks', slow_tasks)
+            msg = 'There were %d slow tasks' % slow_tasks
+            if slow_tasks and self.SLOW_TASK_ERROR:
+                raise RuntimeError(msg)
+            elif slow_tasks:
+                logging.info(msg)
         nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
               if name.startswith('rup_')}
         if nr:  # few sites, log the number of ruptures per magnitude
