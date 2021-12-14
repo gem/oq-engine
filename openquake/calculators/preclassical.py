@@ -52,8 +52,6 @@ def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
-
-    NB: srcfilter can be on a reduced site collection for performance reasons
     """
     split_sources = []
     spacing = cmaker.ps_grid_spacing
@@ -113,7 +111,8 @@ def run_preclassical(calc):
     for sg in csm.src_groups:
         grp_id = sg.sources[0].grp_id
         if sg.atomic:
-            cmakers[grp_id].set_weight(sg, sites)
+            sf = SourceFilter(sites, cmakers[grp_id].maximum_distance)
+            cmakers[grp_id].set_weight(sg, sf)
             atomic_sources.extend(sg)
         else:
             normal_sources.extend(sg)
