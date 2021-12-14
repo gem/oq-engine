@@ -54,8 +54,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     id = -1  # to be set
     trt_smr = 0  # set by the engine
-    nsites = 0  # set when filtering the source
-
+    nsites = 1  # set when filtering the source
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
