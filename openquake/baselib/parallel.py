@@ -479,7 +479,12 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
-    mon = mon.new(operation='total ' + mon.operation, measuremem=True)
+
+    if mon.operation.startswith(func.__name__):
+        name = mon.operation
+    else:
+        name = func.__name__
+    mon = mon.new(operation='total ' + name, measuremem=True)
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
     if mon.inject:
