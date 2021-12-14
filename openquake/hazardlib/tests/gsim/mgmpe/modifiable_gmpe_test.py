@@ -228,6 +228,15 @@ class ModifiableGMPETest(unittest.TestCase):
         # Original tau for PGA is 0.6201
         np.testing.assert_almost_equal(stddev[0], 0.5701491121, decimal=6)
 
+    def test_horiz_comp_to_geom_mean(self):
+        """ Checks the horizontal component conversion """
+        gmpe_name = 'AkkarEtAlRjb2014'
+        gmm = ModifiableGMPE(gmpe={gmpe_name: {}}, horiz_comp_to_geom_mean={})
+        stddevs = [const.StdDev.TOTAL]
+        imt = PGA()
+        [stddev] = gmm.get_mean_and_stddevs(
+            self.ctx, self.ctx, self.ctx, imt, stddevs)[1]
+
 
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """

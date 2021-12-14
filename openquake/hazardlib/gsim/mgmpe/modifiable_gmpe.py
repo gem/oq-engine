@@ -23,10 +23,28 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.const import IMC
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
+
+
+COEFF = {IMC.MEDIAN_HORIZONTAL: [0.1, 0.2, 0.3]}
+
+
+def horiz_comp_to_geom_mean(self, ctx, imt):
+    """
+    """
+    horcom = getattr(self.gmpe, 'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT')
+    print('Component >>>>', horcom)
+    coeff= COEFF[horcom]
+
+
+
+
+
+
 
 
 def add_between_within_stds(self, ctx, imt, with_betw_ratio):
