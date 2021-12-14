@@ -102,7 +102,7 @@ class CollapseTestCase(unittest.TestCase):
             srcs[0].tectonic_region_type, self.gsims, params)
         res = classical(srcs, self.sitecol, cmaker)
         pmap = res['pmap']
-        effrups = sum(nr for nr, ns, dt in res['source_data'].values())
+        effrups = sum(res['source_data']['nrupts'])
         curve = pmap.array(N)[0, :, 0]
         return curve, srcs, effrups, weights
 
