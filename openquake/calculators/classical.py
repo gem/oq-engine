@@ -271,15 +271,15 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys pmap, calc_times, rup_data
+        :param dic: dict with keys pmap, source_data, rup_data
         """
         # NB: dic should be a dictionary, but when the calculation dies
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
-        ctimes = dic['calc_times']
-        self.calc_times += ctimes
+        ctimes = dic['source_data']
+        self.source_data += ctimes
         grp_id = dic.pop('grp_id')
         self.rel_ruptures[grp_id] += sum(ctimes['nrups'])
 
@@ -434,7 +434,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
             for size in sizes:
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
-        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        self.source_data = AccumDict(accum=numpy.zeros(3, F32))
         self.n_outs = AccumDict(accum=0)
         acc = {}
         for t, tile in enumerate(tiles, 1):
@@ -455,10 +455,10 @@ class ClassicalCalculator(base.HazardCalculator):
         Store full_lt, source_info and source_data
         """
         self.store_rlz_info(self.rel_ruptures)
-        self.store_source_info(self.calc_times)
+        self.store_source_info(self.source_data)
         self.datastore.create_df(
-            'source_data', pandas.DataFrame(self.calc_times))
-        self.calc_times.clear()  # save a bit of memory
+            'source_data', pandas.DataFrame(self.source_data))
+        self.source_data.clear()  # save a bit of memory
 
     def submit(self, sids, grp_ids, cmakers):
         """

@@ -41,7 +41,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         cmaker = contexts.ContextMaker('*', [SiMidorikawa1999SInter()], param)
         dic = sum(sample_ruptures(group, cmaker), {})
         self.assertEqual(len(dic['rup_array']), 8)
-        self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
+        self.assertEqual(len(dic['source_data']), 15)  # mutex sources
 
         # test no filtering 1
         ruptures = list(stochastic_event_set(group))

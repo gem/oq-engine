@@ -38,14 +38,14 @@ TWO32 = 2 ** 32
 
 
 def zero_times(sources):
-    calc_times = AccumDict(accum=[])
+    source_data = AccumDict(accum=[])
     for src in sources:
-        calc_times['srcids'].append(src.source_id)
-        calc_times['nsites'].append(src.nsites)
-        calc_times['nrupts'].append(src.num_ruptures)
-        calc_times['weight'].append(src.weight)
-        calc_times['ctimes'].append(0)
-    return calc_times
+        source_data['srcids'].append(src.source_id)
+        source_data['nsites'].append(src.nsites)
+        source_data['nrupts'].append(src.num_ruptures)
+        source_data['weight'].append(src.weight)
+        source_data['ctimes'].append(0)
+    return source_data
 
 
 def preclassical(srcs, sites, cmaker, monitor):
@@ -175,8 +175,8 @@ def run_preclassical(calc):
         cls = code2cls[key].__name__
         logging.info('{} ruptures: {:_d}'.format(cls, val))
 
-    calc_times = zero_times(csm.get_sources())
-    calc.store_source_info(calc_times)
+    source_data = zero_times(csm.get_sources())
+    calc.store_source_info(source_data)
     # store ps_grid data, if any
     for key, sources in res.items():
         if isinstance(key, str) and key.startswith('ps_grid/'):

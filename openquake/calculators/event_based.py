@@ -224,7 +224,7 @@ class EventBasedCalculator(base.HazardCalculator):
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
-        calc_times = AccumDict(accum=[])
+        source_data = AccumDict(accum=[])
         allargs = []
         if self.oqparam.is_ucerf():
             # manage the filtering in a special way
@@ -254,8 +254,8 @@ class EventBasedCalculator(base.HazardCalculator):
             rup_array = dic['rup_array']
             if len(rup_array) == 0:
                 continue
-            if dic['calc_times']:
-                calc_times += dic['calc_times']
+            if dic['source_data']:
+                source_data += dic['source_data']
             if dic['eff_ruptures']:
                 eff_ruptures += dic['eff_ruptures']
             with mon:
@@ -270,7 +270,7 @@ class EventBasedCalculator(base.HazardCalculator):
                                'investigation time is too short')
 
         # don't change the order of the 3 things below!
-        self.store_source_info(calc_times)
+        self.store_source_info(source_data)
         self.store_rlz_info(eff_ruptures)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):

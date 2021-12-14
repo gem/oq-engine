@@ -917,14 +917,14 @@ class HazardCalculator(BaseCalculator):
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
-    def store_source_info(self, calc_times):
+    def store_source_info(self, source_data):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         if 'source_info' not in self.datastore:
             source_reader.create_source_info(
-                self.csm, calc_times, self.datastore.hdf5)
-        self.csm.update_source_info(calc_times)
+                self.csm, source_data, self.datastore.hdf5)
+        self.csm.update_source_info(source_data)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)

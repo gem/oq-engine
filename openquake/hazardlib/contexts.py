@@ -823,12 +823,12 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
-            self.calc_times['srcids'].append(src.source_id)
-            self.calc_times['nsites'].append(nsites)
-            self.calc_times['nrupts'].append(nctxs)
-            self.calc_times['weight'].append(src.weight)
-            self.calc_times['ctimes'].append(dt)
-            self.calc_times['taskno'].append(cm.task_no)
+            self.source_data['srcids'].append(src.source_id)
+            self.source_data['nsites'].append(nsites)
+            self.source_data['nrupts'].append(nctxs)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(dt)
+            self.source_data['taskno'].append(cm.task_no)
             timer.save(src, nctxs, nsites, dt, cm.task_no)
         return ~pmap if cm.rup_indep else pmap
 
@@ -848,12 +848,12 @@ class PmapMaker(object):
             p *= src.mutex_weight
             pmap += p
             dt = time.time() - t0
-            self.calc_times['srcids'].append(src.source_id)
-            self.calc_times['nsites'].append(nsites)
-            self.calc_times['nrupts'].append(nctxs)
-            self.calc_times['weight'].append(src.weight)
-            self.calc_times['ctimes'].append(dt)
-            self.calc_times['taskno'].append(cm.task_no)
+            self.source_data['srcids'].append(src.source_id)
+            self.source_data['nsites'].append(nsites)
+            self.source_data['nrupts'].append(nctxs)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(dt)
+            self.source_data['taskno'].append(cm.task_no)
             timer.save(src, nctxs, nsites, dt, cm.task_no)
         return pmap
 
@@ -874,14 +874,14 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
-        self.calc_times = AccumDict(accum=[])
+        self.source_data = AccumDict(accum=[])
         if self.src_mutex:
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
         dic = {'pmap': pmap,
                'rup_data': self.dictarray(self.rupdata),
-               'calc_times': self.calc_times,
+               'source_data': self.source_data,
                'task_no': self.task_no,
                'grp_id': self.group[0].grp_id}
         if self.disagg_by_src:

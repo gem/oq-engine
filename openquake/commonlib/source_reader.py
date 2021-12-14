@@ -46,7 +46,7 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def create_source_info(csm, calc_times, h5):
+def create_source_info(csm, source_data, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
     """
@@ -414,14 +414,14 @@ class CompositeSourceModel:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
 
-    def update_source_info(self, calc_times):
+    def update_source_info(self, source_data):
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         for src_id, nsites, nrupts, weight, ctimes in zip(
-                calc_times['srcids'], calc_times['nsites'],
-                calc_times['nrupts'], calc_times['weight'],
-                calc_times['ctimes']):
+                source_data['srcids'], source_data['nsites'],
+                source_data['nrupts'], source_data['weight'],
+                source_data['ctimes']):
             row = self.source_info[src_id.split(':')[0]]
             row[CALC_TIME] += ctimes
             row[WEIGHT] += weight
