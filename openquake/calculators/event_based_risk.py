@@ -25,7 +25,7 @@ import pandas
 from scipy import sparse
 
 from openquake.baselib import hdf5, parallel, general
-from openquake.hazardlib import stats, InvalidFile
+from openquake.hazardlib import contexts, calc, stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import datastore
@@ -159,23 +159,24 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
     return dict(avg=loss_by_AR, alt=df)
 
 
-def event_based_risk(df, oqparam, monitor):
+def event_based_risk(df, oqparam, extra, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param oqparam: parameters coming from the job.ini
+    :param cmaker: parameters coming from the job.ini
+    :param extra: extra parameters, like hdf5path, parentdir, M, N, K, D
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
+    dstore = datastore.read(extra['hdf5path'], parentdir=extra['parentdir'])
     with dstore, monitor('reading gmf_data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = dstore['assetcol/kids'][:] if oqparam.K else ()
+        kids = dstore['assetcol/kids'][:] if extra['K'] else ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
-    ARKD = len(assets_df), len(weights), oqparam.K, oqparam.D
+    ARKD = len(assets_df), len(weights), extra['K'], extra['D']
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -197,19 +198,20 @@ def event_based_risk(df, oqparam, monitor):
     return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
 
 
-def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
+def ebrisk(proxies, cmaker, oqparam, extra, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
-    :param full_lt: a FullLogicTree instance
-    :param oqparam: input parameters
+    :param cmaker: a ContextMaker instance
+    :param oqparam: an OqParam instance
+    :param extra: dictionary of extra parameters
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    oqparam.ground_motion_fields = True
-    dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
+    cmaker.ground_motion_fields = True
+    dic = event_based.event_based(proxies, cmaker, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    return event_based_risk(dic['gmfdata'], oqparam, monitor)
+    return event_based_risk(dic['gmfdata'], oqparam, extra, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -247,24 +249,24 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         super().pre_execute()
         parentdir = (os.path.dirname(self.datastore.ppath)
                      if self.datastore.ppath else None)
-        oq.hdf5path = self.datastore.filename
-        oq.parentdir = parentdir
         logging.info(
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
-        oq.D = 2
+        self.extra = dict(hdf5path=self.datastore.filename,
+                          parentdir=parentdir,
+                          M=len(oq.all_imts()),
+                          N=self.N)
+        self.extra['D'] = 2
         if self.policy_dict:
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
-            self.oqparam.D = 3
+            self.extra['D'] = 3
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
+        self.extra['K'] = len(self.aggkey)
         oq._sec_losses = sec_losses
-        oq.M = len(oq.all_imts())
-        oq.N = self.N
-        oq.K = len(self.aggkey)
         ct = oq.concurrent_tasks or 1
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
@@ -315,20 +317,29 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                   % oq.inputs['job_ini'])
             srcfilter = self.src_filter()
             scenario = 'scenario' in oq.calculation_mode
-            proxies = [RuptureProxy(rec, scenario)
-                       for rec in self.datastore['ruptures'][:]]
+            allproxies = [RuptureProxy(rec, scenario)
+                          for rec in self.datastore['ruptures'][:]]
             full_lt = self.datastore['full_lt']
             self.datastore.swmr_on()  # must come before the Starmap
-            smap = parallel.Starmap.apply_split(
-                ebrisk, (proxies, full_lt, oq, self.datastore),
-                key=operator.itemgetter('trt_smr'),
-                weight=operator.itemgetter('n_occ'),
-                h5=self.datastore.hdf5,
-                duration=oq.time_per_task,
-                split_level=5)
+            smap = parallel.Starmap(ebrisk, h5=self.datastore.hdf5)
             smap.monitor.save('srcfilter', srcfilter)
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
+            dic = general.groupby(allproxies, operator.itemgetter('trt_smr'))
+            for trt_smr, proxies in dic.items():
+                trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+                rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
+                cmaker = contexts.ContextMaker(trt, rlzs_by_gsim, oq)
+                cmaker.min_mag = calc.filters.getdefault(
+                    oq.minimum_magnitude, trt)
+                cmaker.ground_motion_fields = oq.ground_motion_fields
+                cmaker.hazard_curves_from_gmfs = oq.hazard_curves_from_gmfs
+                cmaker.correl_model = oq.correl_model
+                cmaker._amplifier = oq._amplifier
+                cmaker._sec_perils = oq._sec_perils
+            smap.submit_split(
+                (proxies, cmaker, oq, self.extra, self.datastore),
+                oq.time_per_task, oq.split_level)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(
@@ -356,7 +367,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         E = len(numpy.unique(eids))
-        K = self.oqparam.K
+        K = self.extra['K']
         names = {'loss', 'variance'}
         for sec_loss in self.oqparam._sec_losses:
             names.update(sec_loss.sec_names)
@@ -442,8 +453,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stop += nsites
             weight += nsites
             if weight > maxweight:
-                yield slice(start, stop), self.oqparam
+                yield slice(start, stop), self.oqparam, self.extra
                 weight = 0
                 start = stop
         if weight:
-            yield slice(start, stop), self.oqparam
+            yield slice(start, stop), self.oqparam, self.extra
