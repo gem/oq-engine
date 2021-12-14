@@ -480,7 +480,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         assert not isgenfunc, func
         return Result.new(func, args, mon)
 
-    if mon.operation.startswith(func.__name__):
+    if mon.operation.endswith('_split'):
         name = mon.operation
     else:
         name = func.__name__
