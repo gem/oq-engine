@@ -24,7 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, parallel
-from openquake.baselib.general import AccumDict, copyobj, humansize
+from openquake.baselib.general import AccumDict, copyobj, humansize, groupby
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -82,7 +82,7 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
-def event_based(proxies, full_lt, oqparam, dstore, monitor):
+def event_based(proxies, cmaker, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -90,23 +90,17 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     sig_eps = []
     times = []  # rup_id, nsites, dt
     hcurves = {}  # key -> poes
-    trt_smr = proxies[0]['trt_smr']
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     with dstore:
-        trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
-        srcfilter = SourceFilter(
-            dstore['sitecol'], oqparam.maximum_distance(trt))
+        srcfilter = SourceFilter(dstore['sitecol'], cmaker.maximum_distance)
         rupgeoms = dstore['rupgeoms']
-        rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam)
-        cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
             t0 = time.time()
             with fmon:
                 if proxy['mag'] < cmaker.min_mag:
                     continue
-                sids = srcfilter.close_sids(proxy, trt)
+                sids = srcfilter.close_sids(proxy, cmaker.trt)
                 if len(sids) == 0:  # filtered away
                     continue
                 proxy.geom = rupgeoms[proxy['geom_id']]
@@ -114,8 +108,8 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                 try:
                     computer = GmfComputer(
                         ebr, srcfilter.sitecol.filtered(sids), cmaker,
-                        oqparam.correl_model, oqparam.cross_correl,
-                        oqparam._amplifier, oqparam._sec_perils)
+                        cmaker.correl_model, cmaker.cross_correl,
+                        cmaker._amplifier, cmaker._sec_perils)
                 except FarAwayRupture:
                     continue
             with cmon:
@@ -131,20 +125,20 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
         else:
             alldata[key] = F32(alldata[key])
     gmfdata = strip_zeros(pandas.DataFrame(alldata))
-    if len(gmfdata) and oqparam.hazard_curves_from_gmfs:
+    if len(gmfdata) and cmaker.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
             with hc_mon:
                 poes = calc.gmvs_to_poes(
-                    df, oqparam.imtls, oqparam.ses_per_logic_tree_path)
-                for m, imt in enumerate(oqparam.imtls):
+                    df, cmaker.imtls, cmaker.ses_per_logic_tree_path)
+                for m, imt in enumerate(cmaker.imtls):
                     hcurves[rsi2str(rlz, sid, imt)] = poes[m]
     times = numpy.array([tup + (monitor.task_no,) for tup in times], time_dt)
     times.sort(order='rup_id')
-    if not oqparam.ground_motion_fields:
+    if not cmaker.ground_motion_fields:
         gmfdata = ()
     return dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
-                sig_eps=numpy.array(sig_eps, sig_eps_dt(oqparam.imtls)))
+                sig_eps=numpy.array(sig_eps, sig_eps_dt(cmaker.imtls)))
 
 
 def compute_avg_gmf(gmf_df, weights, min_iml):
@@ -205,9 +199,6 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        params = dict(imtls=oq.imtls,
-                      ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-                      ses_seed=oq.ses_seed)
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         sources = self.csm.get_sources()
         # weighting the heavy sources
@@ -414,18 +405,23 @@ class EventBasedCalculator(base.HazardCalculator):
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
         scenario = 'scenario' in oq.calculation_mode
-        proxies = [RuptureProxy(rec, scenario)
-                   for rec in dstore['ruptures'][:]]
+        allproxies = [RuptureProxy(r, scenario) for r in dstore['ruptures'][:]]
         full_lt = self.datastore['full_lt']
         dstore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap.apply_split(
-            self.core_task.__func__, (proxies, full_lt, oq, self.datastore),
-            key=operator.itemgetter('trt_smr'),
-            weight=operator.itemgetter('n_occ'),
-            h5=dstore.hdf5,
-            concurrent_tasks=oq.concurrent_tasks or 1,
-            duration=oq.time_per_task,
-            split_level=oq.split_level)
+        smap = parallel.Starmap(self.core_task.__func__, h5=dstore.hdf5)
+        items = groupby(allproxies, operator.itemgetter('trt_smr')).items()
+        for trt_smr, proxies in items:
+            trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+            rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
+            cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+            cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+            cmaker.ground_motion_fields = oq.ground_motion_fields
+            cmaker.hazard_curves_from_gmfs = oq.hazard_curves_from_gmfs
+            cmaker.correl_model = oq.correl_model
+            cmaker._amplifier = oq._amplifier
+            cmaker._sec_perils = oq._sec_perils
+            smap.submit_split((proxies, cmaker, self.datastore),
+                              oq.time_per_task, oq.split_level)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
             return acc
