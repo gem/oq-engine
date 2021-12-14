@@ -1485,9 +1485,10 @@ class OqParam(valid.ParamSet):
         Return a cross correlation object (or None). See
         :mod:`openquake.hazardlib.cross_correlation` for more info.
         """
-        cls = getattr(cross_correlation, self.cross_correlation, None)
-        if cls is None:
-            return cross_correlation.NoCrossCorrelation(self.truncation_level)
+        try:
+            cls = getattr(cross_correlation, self.cross_correlation)
+        except AttributeError:
+            return None
         return cls()
 
     def get_kinds(self, kind, R):
