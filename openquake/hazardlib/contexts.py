@@ -699,12 +699,13 @@ class ContextMaker(object):
         """
         Set the weight attribute on each prefiltered source
         """
+        N = len(srcfilter.sitecol.complete)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
             elif fewsites:
-                src.weight = .01 * src.num_ruptures
+                src.weight = .01 * src.num_ruptures * src.nsites / N
             else:
                 src.weight = self.estimate_time(src, srcfilter)
 

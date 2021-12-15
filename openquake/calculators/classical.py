@@ -557,9 +557,9 @@ class ClassicalCalculator(base.HazardCalculator):
             pass
         else:
             slow_tasks = len(dur[dur > 3 * dur.mean()])
-            msg = 'There were %d slow tasks' % slow_tasks
-            if slow_tasks and self.SLOW_TASK_ERROR and self.N > 1:
-                raise RuntimeError(msg)
+            msg = 'There were %d slow task(s)' % slow_tasks
+            if slow_tasks and self.SLOW_TASK_ERROR and not self.few_sites:
+                raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
         nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
