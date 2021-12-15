@@ -435,7 +435,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
             for size in sizes:
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
-        self.source_data = AccumDict(accum=numpy.zeros(3, F32))
+        self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = {}
         for t, tile in enumerate(tiles, 1):
@@ -558,7 +558,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             slow_tasks = len(dur[dur > 3 * dur.mean()])
             msg = 'There were %d slow tasks' % slow_tasks
-            if slow_tasks and self.SLOW_TASK_ERROR:
+            if slow_tasks and self.SLOW_TASK_ERROR and self.N > 1:
                 raise RuntimeError(msg)
             elif slow_tasks:
                 logging.info(msg)

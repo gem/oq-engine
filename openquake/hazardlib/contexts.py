@@ -676,18 +676,21 @@ class ContextMaker(object):
         """
         # NB: normally src is already split
         t0 = time.time()
-        ctxs = []
-        for split, sites in srcfilter.filter(list(src)):
-            split.nsites = len(sites)
-            rup = next(split.iter_ruptures())
-            try:
-                ctxs.extend(self.get_ctxs([rup], sites))
-            except ValueError:
-                raise ValueError('Invalid magnitude %.2f in source %s' %
-                                 (rup.mag, src.source_id))
+        sites = srcfilter.get_close_sites(src)
+        if sites is None:
+            # may happen for CollapsedPointSources
+            return .001
+        src.nsites = len(sites)
+        rup = next(src.iter_ruptures())
+        try:
+            ctxs = self.get_ctxs([rup], sites)
+        except ValueError:
+            raise ValueError('Invalid magnitude %.2f in source %s' %
+                             (rup.mag, src.source_id))
         if ctxs:
             self.get_pmap(ctxs)
             sitesfactor = sum(len(ctx) for ctx in ctxs) / src.nsites
+            #print(f'{sitesfactor=}, {src.nsites=}')
         else:
             sitesfactor = 1.
         dt = (time.time() - t0) * num_effrups(src) * sitesfactor
