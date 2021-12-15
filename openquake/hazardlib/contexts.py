@@ -674,14 +674,20 @@ class ContextMaker(object):
         :param src: an already prefiltered source with attribute .sids
         :returns: estimate the time taken to compute the pmap
         """
-        t0 = time.time()
         # NB: normally src is already split
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return .001
+            return 0
         src.nsites = len(sites)
+        t0 = time.time()
         rup = next(src.iter_ruptures())
+        t1 = time.time()
+        if src.code in b'SC':  # simple or complex fault
+            # avoid counting .from_fault_data too much
+            dt = (t1 - t0) / src.num_ruptures
+        else:
+            dt = t1 - t0
         try:
             ctxs = self.get_ctxs([rup], sites)
         except ValueError:
@@ -689,10 +695,10 @@ class ContextMaker(object):
                              (rup.mag, src.source_id))
         if ctxs:
             self.get_pmap(ctxs)
-            factor = sum(len(c) for c in ctxs) / src.nsites
+            factor = numpy.mean([len(ctx) for ctx in ctxs]) / src.nsites
         else:
-            factor = 0.1
-        dt = (time.time() - t0) * factor * num_effrups(src)
+            factor = 1
+        dt += (time.time() - t0) * factor * num_effrups(src)
         return dt
 
     def set_weight(self, sources, srcfilter, fewsites):
@@ -707,7 +713,7 @@ class ContextMaker(object):
             elif fewsites:
                 src.weight = .01 * src.num_ruptures * src.nsites / N
             else:
-                src.weight = self.estimate_time(src, srcfilter)
+                src.weight = .001 + num_effrups(src) * src.nsites / N
 
 
 def num_effrups(src):
