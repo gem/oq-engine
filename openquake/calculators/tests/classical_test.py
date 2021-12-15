@@ -97,7 +97,6 @@ class ClassicalTestCase(CalculatorTestCase):
             slow = view('task:classical:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
             self.assertIn('duration', slow)
-            self.assertIn('sources', slow)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)

@@ -675,11 +675,25 @@ def view_task_hazard(token, dstore):
     sdata = dstore.read_df('source_data', 'taskno')
     eff_ruptures = sdata.loc[taskno].nrupts.sum()
     eff_sites = sdata.loc[taskno].nrupts.sum()
-    srcids = [decode(s) for s in sdata.loc[taskno].srcids]
-    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
-           'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
-                             ' '.join(srcids)))
+    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s'
+           % (taskno, eff_ruptures, eff_sites, rec['duration']))
     return res
+
+
+@view.add('source_data')
+def view_source_data(token, dstore):
+    """
+    Display info about a given task. Here is an example::
+
+     $ oq show source_data:42
+    """
+    _, taskno = token.split(':')
+    taskno = int(taskno)
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
+    df = dstore.read_df('source_data', 'taskno').loc[taskno]
+    df['slowrate'] = df['ctimes'] / df['weight']
+    return df.sort_values('ctimes')
 
 
 @view.add('task_ebrisk')
