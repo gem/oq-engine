@@ -669,17 +669,12 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def estimate_time(self, src, srcfilter):
-        """
-        :param src: an already prefiltered source with attribute .sids
-        :returns: estimate the time taken to compute the pmap
-        """
-        t0 = time.time()
-        # NB: normally src is already split
+    def estimate_weight(self, src, srcfilter):
+        N = len(srcfilter.sitecol.complete)
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return .001
+            return 0
         src.nsites = len(sites)
         rup = next(src.iter_ruptures())
         try:
@@ -687,13 +682,10 @@ class ContextMaker(object):
         except ValueError:
             raise ValueError('Invalid magnitude %.2f in source %s' %
                              (rup.mag, src.source_id))
-        if ctxs:
-            self.get_pmap(ctxs)
-            factor = sum(len(c) for c in ctxs) / src.nsites
-        else:
-            factor = 0.1
-        dt = (time.time() - t0) * factor * num_effrups(src)
-        return dt
+        if not ctxs:
+            return .1
+        [ctx] = ctxs
+        return num_effrups(src) * len(ctx) / N
 
     def set_weight(self, sources, srcfilter, fewsites):
         """
@@ -707,7 +699,7 @@ class ContextMaker(object):
             elif fewsites:
                 src.weight = .01 * src.num_ruptures * src.nsites / N
             else:
-                src.weight = self.estimate_time(src, srcfilter)
+                src.weight = .001 + self.estimate_weight(src, srcfilter)
 
 
 def num_effrups(src):
