@@ -691,8 +691,9 @@ def view_source_data(token, dstore):
     taskno = int(taskno)
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
-    return sdata.sort_values('ctimes')
+    df = dstore.read_df('source_data', 'taskno').loc[taskno]
+    df['slowrate'] = df['ctimes'] / df['weight']
+    return df.sort_values('ctimes')
 
 
 @view.add('task_ebrisk')

@@ -674,8 +674,8 @@ class ContextMaker(object):
         :param src: an already prefiltered source with attribute .sids
         :returns: estimate the time taken to compute the pmap
         """
-        # NB: normally src is already split
         t0 = time.time()
+        # NB: normally src is already split
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
@@ -689,14 +689,13 @@ class ContextMaker(object):
                              (rup.mag, src.source_id))
         if ctxs:
             self.get_pmap(ctxs)
-            sitesfactor = sum(len(ctx) for ctx in ctxs) / src.nsites
-            #print(f'{sitesfactor=}, {src.nsites=}')
+            factor = sum(len(c) for c in ctxs) / src.nsites
         else:
-            sitesfactor = 1.
-        dt = (time.time() - t0) * num_effrups(src) * sitesfactor
+            factor = 0.1
+        dt = (time.time() - t0) * factor * num_effrups(src)
         return dt
 
-    def set_weight(self, sources, srcfilter):
+    def set_weight(self, sources, srcfilter, fewsites):
         """
         Set the weight attribute on each prefiltered source
         """
@@ -704,6 +703,8 @@ class ContextMaker(object):
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
+            elif fewsites:
+                src.weight = .01 * src.num_ruptures
             else:
                 src.weight = self.estimate_time(src, srcfilter)
 
