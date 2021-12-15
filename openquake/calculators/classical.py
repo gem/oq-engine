@@ -279,10 +279,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
-        ctimes = dic['source_data']
-        self.source_data += ctimes
+        sdata = dic['source_data']
+        self.source_data += sdata
         grp_id = dic.pop('grp_id')
-        self.rel_ruptures[grp_id] += sum(ctimes['nrups'])
+        self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']['src_id']):
