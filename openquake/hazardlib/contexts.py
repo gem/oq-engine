@@ -676,16 +676,18 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        rup = next(src.iter_ruptures())
+        kw = {}
+        if src.code in b'pP':
+            kw['point_rup'] = True
+        rups = list(src.iruptures(**kw))
         try:
-            ctxs = self.get_ctxs([rup], sites)
+            ctxs = self.get_ctxs(rups, sites)
         except ValueError:
-            raise ValueError('Invalid magnitude %.2f in source %s' %
-                             (rup.mag, src.source_id))
+            raise ValueError('Invalid magnitude %s in source %s' %
+                             ({r.mag for r in rups}, src.source_id))
         if not ctxs:
             return .1
-        [ctx] = ctxs
-        return num_effrups(src) * len(ctx) / N
+        return num_effrups(src) * numpy.mean([len(ctx) / N for ctx in ctxs])
 
     def set_weight(self, sources, srcfilter, fewsites):
         """
