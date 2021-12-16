@@ -680,10 +680,7 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        kw = {}
-        if src.code in b'pP':
-            kw['point_rup'] = True
-        rups = list(src.iruptures(**kw))
+        rups = list(src.few_ruptures())
         try:
             ctxs = self.get_ctxs(rups, sites)
         except ValueError:

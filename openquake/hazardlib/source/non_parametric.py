@@ -76,7 +76,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
                     rup.mag, rup.rake, self.tectonic_region_type,
                     rup.hypocenter, rup.surface, pmf, weight=rup.weight)
 
-    def iruptures(self, **kwargs):
+    def few_ruptures(self):
         """
         Fast version of iter_ruptures used in estimate_weight
         """

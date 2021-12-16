@@ -96,7 +96,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
                 mag, self.rake, self.tectonic_region_type, hypocenter,
                 self.surface, occurrence_rate, self.temporal_occurrence_model)
 
-    def iruptures(self, **kwargs):
+    def few_ruptures(self):
         """
         Fast version of iter_ruptures used in estimate_weight
         """

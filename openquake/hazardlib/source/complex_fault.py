@@ -215,13 +215,11 @@ class ComplexFaultSource(ParametricSeismicSource):
                 rup.mag_occ_rate = mag_occ_rate
                 yield rup
 
-    def iruptures(self, **kwargs):
+    def few_ruptures(self):
         """
         Fast version of iter_ruptures used in estimate_weight
         """
-        kw = kwargs.copy()
-        kw['slc'] = slice(None, None, 25)
-        yield from self.iter_ruptures(**kw)
+        yield from self.iter_ruptures(slc=slice(None, None, 25))
 
     def count_ruptures(self):
         """
