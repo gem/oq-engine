@@ -505,26 +505,30 @@ class ContextMaker(object):
         elif bigps and self.pointsource_distance != self.maximum_distance:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            cdist = sites.get_cdist(src.location)
-            for ar in src.iruptures():
-                pdist = self.pointsource_distance(ar.mag)
-                close = sites.filter(cdist <= pdist)
-                far = sites.filter(cdist > pdist)
-                if fewsites:
-                    if close is None:  # all is far, common for small mag
-                        yield from rups([ar], sites)
-                    else:  # something is close
-                        yield from rups(self._ruptures(src, ar.mag), sites)
-                else:  # many sites
-                    if close is None:  # all is far
-                        yield from rups([ar], far)
-                    elif far is None:  # all is close
-                        yield from rups(self._ruptures(src, ar.mag), close)
-                    else:  # some sites are far, some are close
-                        yield from rups([ar], far)
-                        yield from rups(self._ruptures(src, ar.mag), close)
+            for r, s in self._cps_rups(src, sites, fewsites):
+                yield from rups(r, s)
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
+
+    def _cps_rups(self, src, sites, fewsites):
+        cdist = sites.get_cdist(src.location)
+        for ar in src.iruptures():
+            pdist = self.pointsource_distance(ar.mag)
+            close = sites.filter(cdist <= pdist)
+            far = sites.filter(cdist > pdist)
+            if fewsites:
+                if close is None:  # all is far, common for small mag
+                    yield [ar], sites
+                else:  # something is close
+                    yield self._ruptures(src, ar.mag), sites
+            else:  # many sites
+                if close is None:  # all is far
+                    yield [ar], far
+                elif far is None:  # all is close
+                    yield self._ruptures(src, ar.mag), close
+                else:  # some sites are far, some are close
+                    yield [ar], far
+                    yield self._ruptures(src, ar.mag), close
 
     def get_pmap(self, ctxs, probmap=None):
         """
