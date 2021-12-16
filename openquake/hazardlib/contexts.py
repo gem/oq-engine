@@ -680,10 +680,10 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        kw = {}
         if src.code in b'pP':
-            kw['point_rup'] = True
-        rups = list(src.iruptures(**kw))
+            rups = list(self._gen_rups(src, sites))
+        else:
+            rups = list(src.iruptures())
         try:
             ctxs = self.get_ctxs(rups, sites)
         except ValueError:
@@ -691,11 +691,14 @@ class ContextMaker(object):
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
             return .1
-        if hasattr(src, 'count_nphc'):
-            nr = src.num_ruptures / src.count_nphc()
+        if src.code in b'pP':
+            nr = sum(len(ctx) / N for ctx in ctxs)
         else:
-            nr = src.num_ruptures
-        return nr * numpy.mean([len(ctx) / N for ctx in ctxs])
+            nr = src.num_ruptures * numpy.mean([len(ctx) / N for ctx in ctxs])
+        #if src.code == b'p':
+        #    nr2 = src.num_ruptures * numpy.mean([len(ctx) / N for ctx in ctxs])
+        #    import pdb; pdb.set_trace()
+        return nr
 
     def set_weight(self, sources, srcfilter, fewsites):
         """
