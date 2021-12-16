@@ -138,8 +138,7 @@ def run_preclassical(calc):
             smap.submit_split((pointsources, sites, cmakers[grp_id]), 30, 10)
             for src in pointlike:
                 smap.submit(([src], sites, cmakers[grp_id]))
-        for src in others:
-            smap.submit(([src], sites, cmakers[grp_id]))
+        smap.submit_split((others, sites, cmakers[grp_id]), 30, 10)
     normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
