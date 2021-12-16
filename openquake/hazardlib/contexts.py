@@ -673,7 +673,7 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def estimate_weight(self, src, srcfilter, fewsites):
+    def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
         sites = srcfilter.get_close_sites(src)
         if sites is None:
@@ -697,7 +697,7 @@ class ContextMaker(object):
             nr = src.num_ruptures * numpy.mean([len(ctx) / N for ctx in ctxs])
         return nr
 
-    def set_weight(self, sources, srcfilter, fewsites):
+    def set_weight(self, sources, srcfilter):
         """
         Set the weight attribute on each prefiltered source
         """
@@ -706,7 +706,7 @@ class ContextMaker(object):
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
             else:
-                src.weight = .1 + self.estimate_weight(src, srcfilter, fewsites)
+                src.weight = .1 + self.estimate_weight(src, srcfilter)
 
 
 # see contexts_tests.py for examples of collapse
