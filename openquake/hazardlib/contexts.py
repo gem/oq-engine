@@ -486,11 +486,11 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None):
+    def _ruptures(self, src, filtermag=None, point_rup=False):
         return src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag)
+            shift_hypo=self.shift_hypo, mag=filtermag, point_rup=point_rup)
 
-    def _gen_rups(self, src, sites):
+    def _gen_rups(self, src, sites, point_rup=False):
         fewsites = len(sites) <= self.max_sites_disagg
 
         # yield ruptures, each one with a .sites attribute
@@ -505,12 +505,12 @@ class ContextMaker(object):
         elif bigps and self.pointsource_distance != self.maximum_distance:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites, fewsites):
+            for r, s in self._cps_rups(src, sites, fewsites, point_rup):
                 yield from rups(r, s)
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
 
-    def _cps_rups(self, src, sites, fewsites):
+    def _cps_rups(self, src, sites, fewsites, point_rup):
         cdist = sites.get_cdist(src.location)
         for ar in src.iruptures():
             pdist = self.pointsource_distance(ar.mag)
@@ -520,15 +520,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [ar], sites
                 else:  # something is close
-                    yield self._ruptures(src, ar.mag), sites
+                    yield self._ruptures(src, ar.mag, point_rup), sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [ar], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, ar.mag), close
+                    yield self._ruptures(src, ar.mag, point_rup), close
                 else:  # some sites are far, some are close
                     yield [ar], far
-                    yield self._ruptures(src, ar.mag), close
+                    yield self._ruptures(src, ar.mag, point_rup), close
 
     def get_pmap(self, ctxs, probmap=None):
         """
@@ -681,7 +681,7 @@ class ContextMaker(object):
             return 0
         src.nsites = len(sites)
         if src.code in b'pP':
-            rups = list(self._gen_rups(src, sites))
+            rups = list(self._gen_rups(src, sites, point_rup=True))
         else:
             rups = list(src.iruptures())
         try:
@@ -695,9 +695,6 @@ class ContextMaker(object):
             nr = sum(len(ctx) / N for ctx in ctxs)
         else:
             nr = src.num_ruptures * numpy.mean([len(ctx) / N for ctx in ctxs])
-        #if src.code == b'p':
-        #    nr2 = src.num_ruptures * numpy.mean([len(ctx) / N for ctx in ctxs])
-        #    import pdb; pdb.set_trace()
         return nr
 
     def set_weight(self, sources, srcfilter, fewsites):
