@@ -76,6 +76,16 @@ class NonParametricSeismicSource(BaseSeismicSource):
                     rup.mag, rup.rake, self.tectonic_region_type,
                     rup.hypocenter, rup.surface, pmf, weight=rup.weight)
 
+    def iruptures(self, **kwargs):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        for i, (rup, pmf) in enumerate(self.data):
+            if i % 25 == 0 and rup.mag >= self.min_mag:
+                yield NonParametricProbabilisticRupture(
+                    rup.mag, rup.rake, self.tectonic_region_type,
+                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
+
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split
             yield self

@@ -134,6 +134,23 @@ class MultiFaultSource(BaseSeismicSource):
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 self.pmfs[i])
 
+    def iruptures(self, **kwargs):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        s = self.sections
+        for i in range(0, len(self.mags), 25):
+            idxs = self.rupture_idxs[i]
+            if len(idxs) == 1:
+                sfc = self.sections[idxs[0]].surface
+            else:
+                sfc = MultiSurface([s[idx].surface for idx in idxs])
+            rake = self.rakes[i]
+            hypo = self.sections[idxs[0]].surface.get_middle_point()
+            yield NonParametricProbabilisticRupture(
+                self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
+                self.pmfs[i])
+
     def __iter__(self):
         # split in blocks of 100 ruptures each
         for i, slc in enumerate(gen_slices(0, len(self.mags), 100)):

@@ -137,6 +137,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         rate of each of those ruptures is the magnitude occurrence rate
         divided by the number of ruptures that can be placed in a fault.
         """
+        slc = kwargs.get('slc', slice(None))
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing)
@@ -152,8 +153,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_width = mesh_rows - rup_rows + 1
             num_rup = num_rup_along_length * num_rup_along_width
             occurrence_rate = mag_occ_rate / float(num_rup)
-            for first_row in range(num_rup_along_width):
-                for first_col in range(num_rup_along_length):
+            for first_row in range(num_rup_along_width)[slc]:
+                for first_col in range(num_rup_along_length)[slc]:
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 
@@ -182,6 +183,14 @@ class SimpleFaultSource(ParametricSeismicSource):
                                     hypocenter, surface, occurrence_rate_hypo,
                                     self.temporal_occurrence_model,
                                     rupture_slip_direction)
+
+    def iruptures(self, **kwargs):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        kw = kwargs.copy()
+        kw['slc'] = slice(None, None, 5)
+        yield from self.iter_ruptures(**kw)
 
     def get_fault_surface_area(self):
         """
