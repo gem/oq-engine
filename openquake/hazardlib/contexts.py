@@ -680,19 +680,22 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        rups = list(src.few_ruptures())
+        if src.code in b'pP':
+            rups = list(self._gen_rups(src, sites))
+        else:
+            rups = list(src.few_ruptures())
         try:
             ctxs = self.get_ctxs(rups, sites)
         except ValueError:
             raise ValueError('Invalid magnitude %s in source %s' %
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
-            return .1
-        if hasattr(src, 'count_nphc'):
-            nr = src.num_ruptures / src.count_nphc()
+            return 0
+        if src.code in b'pP':
+            nr = sum(len(ctx) / N for ctx in ctxs)
         else:
-            nr = src.num_ruptures
-        return nr * numpy.mean([len(ctx) / N for ctx in ctxs])
+            nr = src.num_ruptures * numpy.mean([len(ctx) / N for ctx in ctxs])
+        return nr
 
     def set_weight(self, sources, srcfilter, fewsites):
         """
@@ -703,8 +706,7 @@ class ContextMaker(object):
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
             else:
-                src.weight = .001 + (
-                    self.estimate_weight(src, srcfilter, fewsites))
+                src.weight = .1 + self.estimate_weight(src, srcfilter, fewsites)
 
 
 # see contexts_tests.py for examples of collapse
