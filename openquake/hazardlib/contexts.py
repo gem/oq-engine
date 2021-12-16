@@ -691,7 +691,11 @@ class ContextMaker(object):
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
             return .1
-        return num_effrups(src) * numpy.mean([len(ctx) / N for ctx in ctxs])
+        if hasattr(src, 'count_nphc'):
+            nr = src.num_ruptures / src.count_nphc()
+        else:
+            nr = src.num_ruptures
+        return nr * numpy.mean([len(ctx) / N for ctx in ctxs])
 
     def set_weight(self, sources, srcfilter, fewsites):
         """
@@ -704,13 +708,6 @@ class ContextMaker(object):
             else:
                 src.weight = .001 + (
                     self.estimate_weight(src, srcfilter, fewsites))
-
-
-def num_effrups(src):
-    if hasattr(src, 'count_nphc'):
-        return src.num_ruptures / src.count_nphc()
-    else:
-        return src.num_ruptures
 
 
 # see contexts_tests.py for examples of collapse
