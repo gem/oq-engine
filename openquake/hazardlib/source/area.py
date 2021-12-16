@@ -131,9 +131,8 @@ class AreaSource(ParametricSeismicSource):
         Fast version of iter_ruptures used in estimate_weight
         """
         for i, ps in enumerate(self):
-            if i % 5 == 0:
-                for rupture in ps.iruptures(**kwargs, point_rup=True):
-                    yield rupture
+            if i % 10 == 0:
+                yield from ps.iruptures(**kwargs, point_rup=True)
 
     def count_ruptures(self):
         """
