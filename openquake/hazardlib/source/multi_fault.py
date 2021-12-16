@@ -134,7 +134,7 @@ class MultiFaultSource(BaseSeismicSource):
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 self.pmfs[i])
 
-    def iruptures(self, **kwargs):
+    def few_ruptures(self):
         """
         Fast version of iter_ruptures used in estimate_weight
         """

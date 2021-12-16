@@ -71,7 +71,6 @@ def preclassical(srcs, sites, cmaker, monitor):
         return dic
 
     sf = SourceFilter(sites, cmaker.maximum_distance)
-    fewsites = len(sites.complete) <= cmaker.max_sites_disagg
     with monitor('splitting sources'):
         for src in srcs:
             # NB: this is approximate, since the sites are sampled
@@ -84,7 +83,7 @@ def preclassical(srcs, sites, cmaker, monitor):
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
         # this is also prefiltering the split sources
-        cmaker.set_weight(dic[grp_id], sf, fewsites)
+        cmaker.set_weight(dic[grp_id], sf)
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:
@@ -112,7 +111,7 @@ def run_preclassical(calc):
         grp_id = sg.sources[0].grp_id
         if sg.atomic:
             sf = SourceFilter(sites, cmakers[grp_id].maximum_distance)
-            cmakers[grp_id].set_weight(sg, sf, calc.few_sites)
+            cmakers[grp_id].set_weight(sg, sf)
             atomic_sources.extend(sg)
         else:
             normal_sources.extend(sg)

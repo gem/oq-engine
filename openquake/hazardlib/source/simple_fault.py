@@ -184,13 +184,11 @@ class SimpleFaultSource(ParametricSeismicSource):
                                     self.temporal_occurrence_model,
                                     rupture_slip_direction)
 
-    def iruptures(self, **kwargs):
+    def few_ruptures(self):
         """
         Fast version of iter_ruptures used in estimate_weight
         """
-        kw = kwargs.copy()
-        kw['slc'] = slice(None, None, 5)
-        yield from self.iter_ruptures(**kw)
+        yield from self.iter_ruptures(slc=slice(None, None, 5))
 
     def get_fault_surface_area(self):
         """

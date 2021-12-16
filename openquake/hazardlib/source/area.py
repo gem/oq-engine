@@ -126,13 +126,13 @@ class AreaSource(ParametricSeismicSource):
                     surface, occ_rate, self.temporal_occurrence_model)
                 yield rupture
 
-    def iruptures(self, **kwargs):
+    def few_ruptures(self):
         """
         Fast version of iter_ruptures used in estimate_weight
         """
         for i, ps in enumerate(self):
             if i % 10 == 0:
-                yield from ps.iruptures(**kwargs, point_rup=True)
+                yield from ps.few_ruptures()
 
     def count_ruptures(self):
         """

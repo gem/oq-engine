@@ -164,13 +164,11 @@ class KiteFaultSource(ParametricSeismicSource):
                 yield ppr(mag, self.rake, self.tectonic_region_type,
                           hypocenter, rup[0], occurrence_rate, tom)
 
-    def iruptures(self, **kwargs):
+    def few_ruptures(self):
         """
         Fast version of iter_ruptures used in estimate_weight
         """
-        kw = kwargs.copy()
-        kw['slc'] = slice(None, None, 25)
-        yield from self.iter_ruptures(**kw)
+        yield from self.iter_ruptures(slc=slice(None, None, 25))
 
     def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
         """

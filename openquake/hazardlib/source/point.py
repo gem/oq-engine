@@ -251,6 +251,11 @@ class PointSource(ParametricSeismicSource):
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
         yield from _rupture_by_mag(self, np, hc, point_rup)
 
+    def few_ruptures(self):
+        for i, rup in enumerate(self.iruptures(point_rup=True)):
+            if i % 5 == 0:
+                yield rup
+
     def count_nphc(self):
         """
         :returns: the number of nodal planes times the number of hypocenters
@@ -441,8 +446,12 @@ class CollapsedPointSource(PointSource):
         """
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
-        np = Mock(strike=self.strike, dip=self.dip, rake=self.rake)
-        yield from _rupture_by_mag(self, np, self.location, point_rup)
+        yield from _rupture_by_mag(self, self, self.location, point_rup)
+
+    def few_ruptures(self):
+        for i, src in enumerate(self.pointsources):
+            if i % 10 == 0:
+                yield from src.few_ruptures()
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """

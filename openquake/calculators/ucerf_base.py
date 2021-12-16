@@ -293,7 +293,7 @@ class UCERFSource(BaseSeismicSource):
                 if rup:
                     yield rup
 
-    def iruptures(self, **kwargs):
+    def few_ruptures(self, **kwargs):
         """
         Fast version of iter_ruptures used in estimate_weight
         """
