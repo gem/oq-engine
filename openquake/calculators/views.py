@@ -691,7 +691,8 @@ def view_source_data(token, dstore):
     taskno = int(taskno)
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    df = dstore.read_df('source_data', 'taskno').loc[taskno]
+    df = dstore.read_df('source_data', 'srcids', sel={'taskno': taskno})
+    del df['taskno']
     df['slowrate'] = df['ctimes'] / df['weight']
     return df.sort_values('ctimes')
 
