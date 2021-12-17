@@ -347,7 +347,7 @@ def make_figure_task_info(extractors, what):
 
 def make_figure_source_data(extractors, what):
     """
-    $ oq plot "source_data"
+    $ oq plot "source_data?taskno=XX"
     """
     plt = import_plt()
     fig, ax = plt.subplots()
@@ -357,7 +357,7 @@ def make_figure_source_data(extractors, what):
     reg = linregress(x, y)
     ax.plot(x, reg.intercept + reg.slope * x)
     ax.plot(x, y)
-    ax.set_xlabel("time")
+    ax.set_xlabel("duration")
     ax.set_ylabel("weight")
     return plt
 

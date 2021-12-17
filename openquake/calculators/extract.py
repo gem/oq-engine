@@ -504,7 +504,12 @@ def extract_source_data(dstore, what):
     Extract performance information about the sources.
     Use it as /extract/source_data?
     """
-    df = dstore.read_df('source_data', 'srcids').sort_values('ctimes')
+    qdict = parse(what)
+    if 'taskno' in qdict:
+        sel = {'taskno': int(qdict['taskno'][0])}
+    else:
+        sel = {}
+    df = dstore.read_df('source_data', 'srcids', sel=sel).sort_values('ctimes')
     dic = {col: df[col].to_numpy() for col in df.columns}
     return ArrayWrapper(df.index.to_numpy(), dic)
 
