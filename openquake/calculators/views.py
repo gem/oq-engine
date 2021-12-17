@@ -170,23 +170,15 @@ def view_worst_sources(token, dstore):
     """
     Returns the sources with worst weights
     """
-    info = dstore.read_df('source_info', 'source_id').sort_values(
-        'calc_time').tail(20)
-    del info['trti'], info['grp_id']
-    info['slow_rate'] = info.calc_time / info.weight
-    return info
-
-
-@view.add('worst_tasks')
-def view_worst_tasks(token, dstore):
-    """
-    Returns the sources with worst weights
-    """
-    info = dstore.read_df('task_info', 'task_no').sort_values(
-        'duration').tail(20)
-    del info['received'], info['mem_gb']
-    info['slow_rate'] = info.duration / info.weight
-    return info
+    if ':' in token:
+        step = int(token.split(':')[1])
+    else:
+        step = 1
+    data = dstore.read_df('source_data', 'srcids')
+    data = data[data.ctimes > .01]
+    data['slow_rate'] = data.ctimes / data.weight
+    df = data.sort_values('slow_rate', ascending=False)
+    return df[slice(None, None, step)]
 
 
 @view.add('slow_sources')
