@@ -345,6 +345,23 @@ def make_figure_task_info(extractors, what):
     return plt
 
 
+def make_figure_source_data(extractors, what):
+    """
+    $ oq plot "source_data"
+    """
+    plt = import_plt()
+    fig, ax = plt.subplots()
+    [ex] = extractors
+    aw = ex.get(what)
+    x, y = aw.ctimes, aw.weight
+    reg = linregress(x, y)
+    ax.plot(x, reg.intercept + reg.slope * x)
+    ax.plot(x, y)
+    ax.set_xlabel("time")
+    ax.set_ylabel("weight")
+    return plt
+
+
 def make_figure_memory(extractors, what):
     """
     $ oq plot "memory?"
