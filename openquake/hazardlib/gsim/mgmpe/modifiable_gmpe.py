@@ -36,10 +36,12 @@ COEFF = {IMC.AVERAGE_HORIZONTAL: [1,1,0.01,0.02,1],
          IMC.GREATER_OF_TWO_HORIZONTAL:[0.1,1.117,0.53,1.165,4.48,1.195,8.70,1.266,1.266],
          IMC.RotD50:[0.09,1.009,0.58,1.028,4.59,1.042,8.93,1.077,1.077]}
 
-COEFF_PGA={IMC.AVERAGE_HORIZONTAL: [1,0.01,1],
-           IMC.GMRotD50:    [1,0.02,1],
-           IMC.GMRotI50:    [1,0.02,1],
-           IMC.RANDOM_HORIZONTAL:    [1,0.07,1.03]}
+COEFF_PGA_PGV={IMC.AVERAGE_HORIZONTAL: [1,0.01,1,1,0.01,1],
+           IMC.GMRotD50:    [1,0.02,1,1,0.03,1],
+           IMC.GMRotI50:    [1,0.02,1,1,0.03,1],
+           IMC.RANDOM_HORIZONTAL:    [1,0.07,1.03],
+           IMC.GREATER_OF_TWO_HORIZONTAL:[1.117,0,1,1,0,1],
+           IMC.RotD50:[1.009,0,1,1,0,1]}
                
 def horiz_comp_to_geom_mean(self, ctx, imt):
     """
@@ -48,46 +50,49 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
     Boore and Kishida for RotD50
     """
     horcom = getattr(self.gmpe, 'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT')
-    T = getattr(IMT.period)
+    T = imt.period
     total_stddev = getattr(self, const.StdDev.TOTAL)
     print('Component >>>>', horcom)
     C= COEFF[horcom]
-    coeffPGA= COEFF_PGA[horcom]
+    C_PGA_PGV= COEFF_PGA_PGV[horcom]
 
-    it_PGA = np.where(T==0)
-    period[it_PGA]
-
-    if horcom == 'RotD50' or horcom == 'GREATER_OF_TWO_HORIZONTAL':
-        term1=C[1]+(C[3]-C[1])/np.log(C[2]/C[0])*np.log(T/C[0])
-        term2=C[3]+(C[5]-C[3])/np.log(C[4]/C[2])*np.log(T/C[2])
-        term3=C[5]+(C[7]-C[5])/np.log(C[6]/C[4])*np.log(T/C[4])
-        term3=C[5]+(C[7]-C[5])/np.log(C[6]/C[4])*np.log(T/C[4])
-        term4=C[8]
-        conv_median=np.maximum(C[1],np.maximum(np.minimum(term1,term2),np.minimum(term3,term4)))
-        conv_median[it_PGA]=np.minimum(conv_median) 
-        conv_sigma=0;
-        Rstd=1;
+    if imt==PGA():
+        conv_median=C_PGA_PGV[0]                 
+        conv_sigma=C_PGA_PGV[1]
+        Rstd=C_PGA_PGV[2]
+    elif  imt==PGV():
+        conv_median=C_PGA_PGV[3]                 
+        conv_sigma=C_PGA_PGV[4]
+        Rstd=C_PGA_PGV[5]
     else:
-        it1=np.where(T<=0.15)
-        it2=np.where(T>0.15) and np.where(T<=0.8)
-        it3=np.where(T>0.8)
-        conv_median[it1]=C[0];
-        conv_median[it2]=C[0]+(C[1]-C[0])*np.log10(T[it2]/0.15)/np.log10(0.8/0.15);
-        conv_median[it3]=C[1];
-        conv_sigma[it1]=C[2];
-        conv_sigma[it2]=C[2]+(C[3]-C[2])*np.log10(T[i]/0.15)/np.log10(0.8/0.15)
-        conv_sigma[it3]=C[3]
-        Rstd=C[4]
- 
-        conv_median[it_PGA]=coeffPGA[0]                 
-        conv_sigma[it_PGA]=coeffPGA[1]
-   
-
-   sdt = ((total_stddev**2-conv_sigma**2)/Rstd**2
-   self.mean /= conv_median
+        conv_median=np.zeros((len(T),))
+        conv_sigma=np.zeros((len(T),))
+       if horcom == 'RotD50' or horcom == 'GREATER_OF_TWO_HORIZONTAL':
+           term1=C[1]+(C[3]-C[1])/np.log(C[2]/C[0])*np.log(T/C[0])
+           term2=C[3]+(C[5]-C[3])/np.log(C[4]/C[2])*np.log(T/C[2])
+           term3=C[5]+(C[7]-C[5])/np.log(C[6]/C[4])*np.log(T/C[4])
+           term3=C[5]+(C[7]-C[5])/np.log(C[6]/C[4])*np.log(T/C[4])
+           term4=C[8]
+           conv_median=np.maximum(C[1],np.maximum(np.minimum(term1,term2),np.minimum(term3,term4)))
+           conv_median[it_PGA]=np.minimum(conv_median) 
+           conv_sigma=0;
+           Rstd=1;
+       else:
+           it1=np.where(T<=0.15)
+           it2=np.where(T>0.15) or np.where(T<=0.8)
+           it3=np.where(T>0.8)
+           conv_median[it1]=C[0];
+           conv_median[it2]=C[0]+(C[1]-C[0])*np.log10(T[it2]/0.15)/np.log10(0.8/0.15);
+           conv_median[it3]=C[1];
+           conv_sigma[it1]=C[2];
+           conv_sigma[it2]=C[2]+(C[3]-C[2])*np.log10(T[it2]/0.15)/np.log10(0.8/0.15);
+           conv_sigma[it3]=C[3]
+           Rstd=C[4]
+    
+    sdt = ((total_stddev**2-conv_sigma**2)/Rstd**2
+    self.mean = np.log(exp(self.mean)/conv_median)
           
-              
-   setattr(self, const.StdDev.TOTAL, std)
+    setattr(self, const.StdDev.TOTAL, std)
 
 
 def add_between_within_stds(self, ctx, imt, with_betw_ratio):
