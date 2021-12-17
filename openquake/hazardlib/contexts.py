@@ -680,7 +680,7 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        if src.code in b'pP':
+        if src.code == b'p':
             rups = list(self._gen_rups(src, sites))
         else:
             rups = list(src.few_ruptures())
