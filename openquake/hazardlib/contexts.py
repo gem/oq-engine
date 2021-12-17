@@ -691,7 +691,7 @@ class ContextMaker(object):
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
             return 0
-        if src.code in b'pP':
+        if src.code == b'p':
             nr = sum(len(ctx) / N for ctx in ctxs)
         else:
             nr = src.num_ruptures * numpy.mean([len(ctx) / N for ctx in ctxs])
