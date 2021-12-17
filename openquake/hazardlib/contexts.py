@@ -701,7 +701,7 @@ class ContextMaker(object):
                     nhs.append(f * nh + 1 - f)
             else:
                 nhs.append(nh)
-        return src.num_ruptures * numpy.mean(nhs)
+        return src.num_ruptures / nh * numpy.mean(nhs)
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
