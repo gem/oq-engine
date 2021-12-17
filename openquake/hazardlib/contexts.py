@@ -710,10 +710,7 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        if src.code == b'p':
-            rups = list(self._gen_rups(src, sites))
-        else:
-            rups = list(src.few_ruptures())
+        rups = list(src.few_ruptures())
         try:
             ctxs = self.get_ctxs(rups, sites)
         except ValueError:
@@ -721,10 +718,8 @@ class ContextMaker(object):
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
             return 0
-        if src.code == b'p':
-            nr = sum(len(ctx) / N for ctx in ctxs)
-        else:
-            nr = src.num_ruptures * numpy.mean([len(ctx) / N for ctx in ctxs])
+        nr = self.count_effrups(src, sites) * numpy.mean(
+            [len(ctx) / N for ctx in ctxs])
         return nr
 
     def set_weight(self, sources, srcfilter):
