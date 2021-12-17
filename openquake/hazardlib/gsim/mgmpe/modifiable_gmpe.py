@@ -36,19 +36,19 @@ COEFF = {IMC.AVERAGE_HORIZONTAL: [1,1,0.01,0.02,1],
          IMC.GREATER_OF_TWO_HORIZONTAL:[0.1,1.117,0.53,1.165,4.48,1.195,8.70,1.266,1.266],
          IMC.RotD50:[0.09,1.009,0.58,1.028,4.59,1.042,8.93,1.077,1.077]}
 
-COEFF_PGA={'AVERAGE_HORIZONTAL': [1,0.01,1],
-           'GMRotD50':    [1,0.02,1],
-           'GMRotI50':    [1,0.02,1],
-           'RANDOM_HORIZONTAL':    [1,0.07,1.03]}
+COEFF_PGA={IMC.AVERAGE_HORIZONTAL: [1,0.01,1],
+           IMC.GMRotD50:    [1,0.02,1],
+           IMC.GMRotI50:    [1,0.02,1],
+           IMC.RANDOM_HORIZONTAL:    [1,0.07,1.03]}
                
 def horiz_comp_to_geom_mean(self, ctx, imt):
     """
-    Only for SA now
+    Only for SA and PGA now
     Beyer and Bommer for Arithmetic mean, GMRot and random
     Boore and Kishida for RotD50
     """
     horcom = getattr(self.gmpe, 'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT')
-    T = getattr(self.period)
+    T = getattr(IMT.period)
     total_stddev = getattr(self, const.StdDev.TOTAL)
     print('Component >>>>', horcom)
     C= COEFF[horcom]
