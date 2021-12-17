@@ -687,6 +687,8 @@ def view_source_data(token, dstore):
 
      $ oq show source_data:42
     """
+    if ':' not in token:
+        return dstore.read_df(token, 'srcids')
     _, taskno = token.split(':')
     taskno = int(taskno)
     if 'source_data' not in dstore:

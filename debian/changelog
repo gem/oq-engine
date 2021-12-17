@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: added command `oq plot source_data?`
   * The engine is now splitting the MultiFaultSources, thus improving the task
     distribution
 
