@@ -673,6 +673,36 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
+    def count_effrups(self, src, sites):
+        """
+        :returns: the number of effective ruptures in the source
+        """
+        if src.code not in b'pP':
+            return src.num_ruptures
+        nh = src.count_nphc()
+        if hasattr(src, 'pointsources'):
+            nh /= len(src.pointsources)
+        if nh == 1:
+            return src.num_ruptures  # no nodal_planes/hypocenters
+        cdist = sites.get_cdist(src.location)
+        nhs = []
+        for rup in src.iruptures(point_rup=True):
+            psd = self.pointsource_distance(rup.mag)
+            md = self.maximum_distance(rup.mag)
+            if psd < md:
+                close = sites.filter(cdist <= psd)
+                far = sites.filter(cdist > psd)
+                if close is None:
+                    nhs.append(1)
+                elif far is None:
+                    nhs.append(nh)
+                else:
+                    f = len(close) / len(sites)  # fraction of close sites
+                    nhs.append(f * nh + 1 - f)
+            else:
+                nhs.append(nh)
+        return src.num_ruptures * numpy.mean(nhs)
+
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
         sites = srcfilter.get_close_sites(src)
