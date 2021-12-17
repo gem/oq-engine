@@ -29,22 +29,65 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
 
+COEFF = {IMC.AVERAGE_HORIZONTAL: [1,1,0.01,0.02,1],
+         IMC.GMRotD50:[1,1,0.02,0.03,1],
+         IMC.GMRotI50:[1,1,0.03,0.04,1],
+         IMC.RANDOM_HORIZONTAL:[1,1,0.07,0.11,1.05],
+         IMC.GREATER_OF_TWO_HORIZONTAL:[0.1,1.117,0.53,1.165,4.48,1.195,8.70,1.266,1.266],
+         IMC.RotD50:[0.09,1.009,0.58,1.028,4.59,1.042,8.93,1.077,1.077]}
 
-COEFF = {IMC.MEDIAN_HORIZONTAL: [0.1, 0.2, 0.3]}
-
-
+COEFF_PGA={'AVERAGE_HORIZONTAL': [1,0.01,1],
+           'GMRotD50':    [1,0.02,1],
+           'GMRotI50':    [1,0.02,1],
+           'RANDOM_HORIZONTAL':    [1,0.07,1.03]}
+               
 def horiz_comp_to_geom_mean(self, ctx, imt):
     """
+    Only for SA now
+    Beyer and Bommer for Arithmetic mean, GMRot and random
+    Boore and Kishida for RotD50
     """
     horcom = getattr(self.gmpe, 'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT')
+    T = getattr(self.period)
+    total_stddev = getattr(self, const.StdDev.TOTAL)
     print('Component >>>>', horcom)
-    coeff= COEFF[horcom]
+    C= COEFF[horcom]
+    coeffPGA= COEFF_PGA[horcom]
 
+    it_PGA = np.where(T==0)
+    period[it_PGA]
 
+    if horcom == 'RotD50' or horcom == 'GREATER_OF_TWO_HORIZONTAL':
+        term1=C[1]+(C[3]-C[1])/np.log(C[2]/C[0])*np.log(T/C[0])
+        term2=C[3]+(C[5]-C[3])/np.log(C[4]/C[2])*np.log(T/C[2])
+        term3=C[5]+(C[7]-C[5])/np.log(C[6]/C[4])*np.log(T/C[4])
+        term3=C[5]+(C[7]-C[5])/np.log(C[6]/C[4])*np.log(T/C[4])
+        term4=C[8]
+        conv_median=np.maximum(C[1],np.maximum(np.minimum(term1,term2),np.minimum(term3,term4)))
+        conv_median[it_PGA]=np.minimum(conv_median) 
+        conv_sigma=0;
+        Rstd=1;
+    else:
+        it1=np.where(T<=0.15)
+        it2=np.where(T>0.15) and np.where(T<=0.8)
+        it3=np.where(T>0.8)
+        conv_median[it1]=C[0];
+        conv_median[it2]=C[0]+(C[1]-C[0])*np.log10(T[it2]/0.15)/np.log10(0.8/0.15);
+        conv_median[it3]=C[1];
+        conv_sigma[it1]=C[2];
+        conv_sigma[it2]=C[2]+(C[3]-C[2])*np.log10(T[i]/0.15)/np.log10(0.8/0.15)
+        conv_sigma[it3]=C[3]
+        Rstd=C[4]
+ 
+        conv_median[it_PGA]=coeffPGA[0]                 
+        conv_sigma[it_PGA]=coeffPGA[1]
+   
 
-
-
-
+   sdt = ((total_stddev**2-conv_sigma**2)/Rstd**2
+   self.mean /= conv_median
+          
+              
+   setattr(self, const.StdDev.TOTAL, std)
 
 
 def add_between_within_stds(self, ctx, imt, with_betw_ratio):
