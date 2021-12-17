@@ -502,7 +502,7 @@ def extract_rups_by_mag_dist(dstore, what):
 def extract_source_data(dstore, what):
     """
     Extract performance information about the sources.
-    Use it as /extract/source_data?limit=10
+    Use it as /extract/source_data?
     """
     df = dstore.read_df('source_data', 'srcids').sort_values('ctimes')
     dic = {col: df[col].to_numpy() for col in df.columns}
