@@ -230,13 +230,20 @@ class ModifiableGMPETest(unittest.TestCase):
 
     def test_horiz_comp_to_geom_mean(self):
         """ Checks the horizontal component conversion """
-        gmpe_name = 'AkkarEtAlRjb2014'
+        gmpe_name = 'BooreEtAl2014'
+        gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
         gmm = ModifiableGMPE(gmpe={gmpe_name: {}}, horiz_comp_to_geom_mean={})
         stddevs = [const.StdDev.TOTAL]
-        imt = PGA()
-        [stddev] = gmm.get_mean_and_stddevs(
-            self.ctx, self.ctx, self.ctx, imt, stddevs)[1]
+        expected=[1.009,1.009, 1.0100744,1.01714271,1.0264865,1.03168663,1.04649942,1.077]
+        results=[]
+        for imt in ([PGA(), SA(0.01), SA(0.1), SA(0.2), SA(0.5), SA(1), SA(5), SA(10) ]):
+            mean_unscaled = gmm_unscaled.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, imt, stddevs)[0]
+            mean = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                            imt, stddevs)[0]
+            results.append(exp(mean[0])/exp(mean_unscaled[0]))
 
+        np.testing.assert_almost_equal(results,expected)
 
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """
