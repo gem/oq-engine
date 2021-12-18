@@ -494,7 +494,7 @@ class ClassicalCalculator(base.HazardCalculator):
                      format(int(tot_weight), int(max_weight), nsources))
         heavy_sources = [src for src in self.csm.get_sources()
                          if src.weight > max_weight]
-        for src in heavy_sources:
+        for src in sorted(heavy_sources, key=get_weight, reverse=True):
             logging.info('%s has weight %d', src, src.weight)
         for grp_id in grp_ids:
             sg = src_groups[grp_id]
