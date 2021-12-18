@@ -484,7 +484,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         split_level = oq.split_level
-        max_weight = max(tot_weight / (oq.concurrent_tasks * .75 or 1),
+        max_weight = max(tot_weight / (oq.concurrent_tasks * .6 or 1),
                          oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), nsources))

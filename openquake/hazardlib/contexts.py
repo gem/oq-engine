@@ -689,8 +689,8 @@ class ContextMaker(object):
             psd = self.pointsource_distance(rup.mag)
             md = self.maximum_distance(rup.mag)
             if psd < md:
-                close = sites.filter(cdist <= psd)
-                far = sites.filter(cdist > psd)
+                close = sites.filter(cdist + rup.mag <= psd)
+                far = sites.filter(cdist + rup.mag > psd)
                 if close is None:
                     nphcs.append(1)
                 elif far is None:
