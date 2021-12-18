@@ -679,10 +679,9 @@ class ContextMaker(object):
         """
         if src.code not in b'pP':
             return src.num_ruptures
+        num_ps = len(getattr(src, 'pointsources', [0]))
         nh = src.count_nphc()
-        if hasattr(src, 'pointsources'):
-            nh /= len(src.pointsources)
-        if nh == 1:
+        if nh == num_ps:
             return src.num_ruptures  # no nodal_planes/hypocenters
         cdist = sites.get_cdist(src.location)
         nhs = []
@@ -701,7 +700,7 @@ class ContextMaker(object):
                     nhs.append(f * nh + 1 - f)
             else:
                 nhs.append(nh)
-        return src.num_ruptures / src.count_nphc() * numpy.mean(nhs)
+        return src.num_ruptures / nh * numpy.mean(nhs)
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
