@@ -492,6 +492,10 @@ class ClassicalCalculator(base.HazardCalculator):
                          oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), nsources))
+        heavy_sources = [src for src in self.csm.get_sources()
+                         if src.weight > max_weight]
+        for src in heavy_sources:
+            logging.info('%s has weight %d', src, src.weight)
         for grp_id in grp_ids:
             sg = src_groups[grp_id]
             if sg.atomic:
