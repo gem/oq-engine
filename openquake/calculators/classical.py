@@ -422,7 +422,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
-        grp_ids = numpy.arange(len(self.csm.src_groups))
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
@@ -441,7 +440,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
             sids = tile.sids if len(tiles) > 1 else None
-            smap = self.submit(sids, grp_ids, self.haz.cmakers)
+            smap = self.submit(sids, self.haz.cmakers)
             for cm in self.haz.cmakers:
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
@@ -461,7 +460,7 @@ class ClassicalCalculator(base.HazardCalculator):
             'source_data', pandas.DataFrame(self.source_data))
         self.source_data.clear()  # save a bit of memory
 
-    def submit(self, sids, grp_ids, cmakers):
+    def submit(self, sids, cmakers):
         """
         :returns: a Starmap instance for the current tile
         """
@@ -473,13 +472,10 @@ class ClassicalCalculator(base.HazardCalculator):
         src_groups = self.csm.src_groups
         tot_weight = 0
         nsources = 0
-        for grp_id in grp_ids:
-            cmaker = cmakers[grp_id]
-            gsims = cmaker.gsims
+        for grp_id in self.grp_ids:
             sg = src_groups[grp_id]
             for src in sg:
                 nsources += 1
-                src.ngsims = len(gsims)
                 tot_weight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
@@ -496,7 +492,7 @@ class ClassicalCalculator(base.HazardCalculator):
                          if src.weight > max_weight]
         for src in sorted(heavy_sources, key=get_weight, reverse=True):
             logging.info('%s has weight %d', src, src.weight)
-        for grp_id in grp_ids:
+        for grp_id in self.grp_ids:
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
