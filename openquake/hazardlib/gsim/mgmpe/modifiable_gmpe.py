@@ -56,38 +56,38 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
     C= COEFF[horcom]
     C_PGA_PGV= COEFF_PGA_PGV[horcom]
 
-    if imt==PGA():
-        conv_median=C_PGA_PGV[0]                 
-        conv_sigma=C_PGA_PGV[1]
-        Rstd=C_PGA_PGV[2]
-    elif  imt==PGV():
-        conv_median=C_PGA_PGV[3]                 
-        conv_sigma=C_PGA_PGV[4]
-        Rstd=C_PGA_PGV[5]
-    else:
-        conv_median=np.zeros((len(T),))
-        conv_sigma=np.zeros((len(T),))
-       if horcom == 'RotD50' or horcom == 'GREATER_OF_TWO_HORIZONTAL':
-           term1=C[1]+(C[3]-C[1])/np.log(C[2]/C[0])*np.log(T/C[0])
-           term2=C[3]+(C[5]-C[3])/np.log(C[4]/C[2])*np.log(T/C[2])
-           term3=C[5]+(C[7]-C[5])/np.log(C[6]/C[4])*np.log(T/C[4])
-           term3=C[5]+(C[7]-C[5])/np.log(C[6]/C[4])*np.log(T/C[4])
-           term4=C[8]
-           conv_median=np.maximum(C[1],np.maximum(np.minimum(term1,term2),np.minimum(term3,term4)))
-           conv_median[it_PGA]=np.minimum(conv_median) 
-           conv_sigma=0;
-           Rstd=1;
+    if horcom in ('AVERAGE_HORIZONTAL','GMRotD50','GMRotI50','RANDOM_HORIZONTAL','GREATER_OF_TWO_HORIZONTAL','RotD50'):
+       if imt==PGA():
+           conv_median=C_PGA_PGV[0]                 
+           conv_sigma=C_PGA_PGV[1]
+           Rstd=C_PGA_PGV[2]
+       elif  imt==PGV():
+           conv_median=C_PGA_PGV[3]                 
+           conv_sigma=C_PGA_PGV[4]
+           Rstd=C_PGA_PGV[5]
        else:
-           it1=np.where(T<=0.15)
-           it2=np.where(T>0.15) or np.where(T<=0.8)
-           it3=np.where(T>0.8)
-           conv_median[it1]=C[0];
-           conv_median[it2]=C[0]+(C[1]-C[0])*np.log10(T[it2]/0.15)/np.log10(0.8/0.15);
-           conv_median[it3]=C[1];
-           conv_sigma[it1]=C[2];
-           conv_sigma[it2]=C[2]+(C[3]-C[2])*np.log10(T[it2]/0.15)/np.log10(0.8/0.15);
-           conv_sigma[it3]=C[3]
-           Rstd=C[4]
+           conv_median=np.zeros((len(T),))
+           conv_sigma=np.zeros((len(T),))
+          if horcom == 'RotD50' or horcom == 'GREATER_OF_TWO_HORIZONTAL':
+              term1=C[1]+(C[3]-C[1])/np.log(C[2]/C[0])*np.log(T/C[0])
+              term2=C[3]+(C[5]-C[3])/np.log(C[4]/C[2])*np.log(T/C[2])
+              term3=C[5]+(C[7]-C[5])/np.log(C[6]/C[4])*np.log(T/C[4])
+              term4=C[8]
+              conv_median=np.maximum(C[1],np.maximum(np.minimum(term1,term2),np.minimum(term3,term4)))
+              conv_median[it_PGA]=np.minimum(conv_median) 
+              conv_sigma=0;
+              Rstd=1;
+          else:
+              it1=np.where(T<=0.15)
+              it2=np.where(T>0.15 and T<=0.8)
+              it3=np.where(T>0.8)
+              conv_median[it1]=C[0];
+              conv_median[it2]=C[0]+(C[1]-C[0])*np.log10(T[it2]/0.15)/np.log10(0.8/0.15);
+              conv_median[it3]=C[1];
+              conv_sigma[it1]=C[2];
+              conv_sigma[it2]=C[2]+(C[3]-C[2])*np.log10(T[it2]/0.15)/np.log10(0.8/0.15);
+              conv_sigma[it3]=C[3]
+              Rstd=C[4]
     
     sdt = ((total_stddev**2-conv_sigma**2)/Rstd**2
     self.mean = np.log(exp(self.mean)/conv_median)
