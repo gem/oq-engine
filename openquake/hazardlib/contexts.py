@@ -679,13 +679,12 @@ class ContextMaker(object):
         """
         if src.code not in b'pP':
             return src.num_ruptures
-        nh = src.count_nphc()
-        if hasattr(src, 'pointsources'):
-            nh /= len(src.pointsources)
-        if nh == 1:
+        num_ps = len(getattr(src, 'pointsources', [0]))
+        nphc = src.count_nphc()  # np * hc * num_ps
+        if nphc == num_ps:
             return src.num_ruptures  # no nodal_planes/hypocenters
         cdist = sites.get_cdist(src.location)
-        nhs = []
+        nphcs = []
         for rup in src.iruptures(point_rup=True):
             psd = self.pointsource_distance(rup.mag)
             md = self.maximum_distance(rup.mag)
@@ -693,15 +692,15 @@ class ContextMaker(object):
                 close = sites.filter(cdist <= psd)
                 far = sites.filter(cdist > psd)
                 if close is None:
-                    nhs.append(1)
+                    nphcs.append(1)
                 elif far is None:
-                    nhs.append(nh)
+                    nphcs.append(nphc)
                 else:
                     f = len(close) / len(sites)  # fraction of close sites
-                    nhs.append(f * nh + 1 - f)
+                    nphcs.append(f * nphc + 1 - f)
             else:
-                nhs.append(nh)
-        return src.num_ruptures / src.count_nphc() * numpy.mean(nhs)
+                nphcs.append(nphc)
+        return src.num_ruptures / nphc * numpy.mean(nphcs)
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
@@ -710,10 +709,7 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        if src.code == b'p':
-            rups = list(self._gen_rups(src, sites))
-        else:
-            rups = list(src.few_ruptures())
+        rups = list(src.few_ruptures())
         try:
             ctxs = self.get_ctxs(rups, sites)
         except ValueError:
@@ -721,10 +717,8 @@ class ContextMaker(object):
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
             return 0
-        if src.code == b'p':
-            nr = sum(len(ctx) / N for ctx in ctxs)
-        else:
-            nr = src.num_ruptures * numpy.mean([len(ctx) / N for ctx in ctxs])
+        nr = self.count_effrups(src, sites) * numpy.mean(
+            [len(ctx) / N for ctx in ctxs])
         return nr
 
     def set_weight(self, sources, srcfilter):
