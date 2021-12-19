@@ -468,32 +468,11 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
+        tot, max_weight = self.csm.get_tot_max(oq)
         triples = []
-        src_groups = self.csm.src_groups
-        tot_weight = 0
-        nsources = 0
-        for grp_id in self.grp_ids:
-            sg = src_groups[grp_id]
-            for src in sg:
-                nsources += 1
-                tot_weight += src.weight
-                if src.code == b'C' and src.num_ruptures > 20_000:
-                    msg = ('{} is suspiciously large, containing {:_d} '
-                           'ruptures with complex_fault_mesh_spacing={} km')
-                    spc = oq.complex_fault_mesh_spacing
-                    logging.info(msg.format(src, src.num_ruptures, spc))
-        assert tot_weight
         split_level = oq.split_level
-        max_weight = max(tot_weight / (oq.concurrent_tasks * .6 or 1),
-                         oq.min_weight)
-        logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
-                     format(int(tot_weight), int(max_weight), nsources))
-        heavy_sources = [src for src in self.csm.get_sources()
-                         if src.weight > max_weight]
-        for src in sorted(heavy_sources, key=get_weight, reverse=True):
-            logging.info('%s has weight %d', src, src.weight)
         for grp_id in self.grp_ids:
-            sg = src_groups[grp_id]
+            sg = self.csm.src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
                 trip = (sg, sids, cmakers[grp_id])

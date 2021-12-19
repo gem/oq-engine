@@ -437,6 +437,32 @@ class CompositeSourceModel:
             n += src.count_ruptures()
         return n
 
+    def get_tot_max(self, oq):  # used in preclassical
+        """
+        :param oq: an OqParam instance
+        :returns: total weight and max weight of the sources
+        """
+        tot_weight = 0
+        nsources = 0
+        for sg in self.src_groups:
+            for src in sg:
+                nsources += 1
+                tot_weight += src.weight
+                if src.code == b'C' and src.num_ruptures > 20_000:
+                    msg = ('{} is suspiciously large, containing {:_d} '
+                           'ruptures with complex_fault_mesh_spacing={} km')
+                    spc = oq.complex_fault_mesh_spacing
+                    logging.info(msg.format(src, src.num_ruptures, spc))
+        assert tot_weight
+        max_weight = max(tot_weight / (oq.concurrent_tasks * .6 or 1),
+                         oq.min_weight)
+        logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
+                     format(int(tot_weight), int(max_weight), nsources))
+        heavy = [src for src in self.get_sources() if src.weight > max_weight]
+        for src in sorted(heavy, key=lambda s: s.weight, reverse=True):
+            logging.info('%s has weight %d', src, src.weight)
+        return tot_weight, max_weight
+
     def __toh5__(self):
         data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL))
         logging.info(f'Storing {general.humansize(len(data))} '
