@@ -437,10 +437,11 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = {}
+        tot, max_weight = self.csm.get_tot_max(oq)
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
             sids = tile.sids if len(tiles) > 1 else None
-            smap = self.submit(sids, self.haz.cmakers)
+            smap = self.submit(sids, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
@@ -460,7 +461,7 @@ class ClassicalCalculator(base.HazardCalculator):
             'source_data', pandas.DataFrame(self.source_data))
         self.source_data.clear()  # save a bit of memory
 
-    def submit(self, sids, cmakers):
+    def submit(self, sids, cmakers, max_weight):
         """
         :returns: a Starmap instance for the current tile
         """
@@ -468,7 +469,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
-        tot, max_weight = self.csm.get_tot_max(oq)
         triples = []
         split_level = oq.split_level
         for grp_id in self.grp_ids:
