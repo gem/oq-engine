@@ -421,6 +421,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.csm = parent['_csm']
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
+                tot, max_weight = self.csm.get_tot_max(oq)
+        else:
+            max_weight = self.max_weight
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
@@ -437,7 +440,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = {}
-        tot, max_weight = self.csm.get_tot_max(oq)
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
             sids = tile.sids if len(tiles) > 1 else None
