@@ -230,7 +230,12 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
 
 
-class CountEffRupsTextCase(unittest.TestCase):
+class SetWeightTestCase(unittest.TestCase):
     def test(self):
-        read_input()
-        
+        inp = read_input(JOB)
+        [[trt, cmaker]] = inp.cmakerdict.items()
+        [[area]] = inp.groups  # there is a single AreaSource
+        srcs = list(area)  # split in 3+3 PointSources
+        cmaker.set_weight(srcs, inp.sitecol)
+        weights = [src.weight for src in srcs]  # 3 within, 3 outside
+        self.assertEqual(weights, [10.1, 10.1, 10.1, 0.1, 0.1, 0.1])

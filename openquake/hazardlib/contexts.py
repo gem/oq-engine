@@ -42,7 +42,8 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, magdepdist, get_distances, getdefault, MINMAG, MAXMAG)
+    SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
+    MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -727,6 +728,8 @@ class ContextMaker(object):
         """
         Set the weight attribute on each prefiltered source
         """
+        if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
+            srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering

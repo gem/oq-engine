@@ -110,8 +110,7 @@ def run_preclassical(calc):
     for sg in csm.src_groups:
         grp_id = sg.sources[0].grp_id
         if sg.atomic:
-            sf = SourceFilter(sites, cmakers[grp_id].maximum_distance)
-            cmakers[grp_id].set_weight(sg, sf)
+            cmakers[grp_id].set_weight(sg, sites)
             atomic_sources.extend(sg)
         else:
             normal_sources.extend(sg)

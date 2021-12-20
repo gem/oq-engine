@@ -18,14 +18,17 @@
 """
 hazardlib stands for Hazard Library.
 """
+import os
+import ast
 import operator
 import itertools
 import unittest
 import collections
+import configparser
 import numpy
 from openquake.baselib import hdf5, general, InvalidFile
 from openquake.hazardlib import (
-    geo, site, nrml, sourceconverter, gsim_lt, contexts)
+    geo, site, nrml, sourceconverter, gsim_lt, contexts, valid)
 from openquake.hazardlib.source.rupture import (
     EBRupture, get_ruptures, _get_rupture)
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -100,6 +103,38 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
     return ebrs
 
 
+def read_hparams(job_ini):
+    """
+    :param job_ini: path to a job.ini file
+    :returns: dictionary of hazard parameters
+    """
+    jobdir = os.path.dirname(job_ini)
+    cp = configparser.ConfigParser()
+    cp.read([job_ini], encoding='utf8')
+    params = {}
+    for sect in cp.sections():
+        for key, val in cp.items(sect):
+            if key == 'intensity_measure_types_and_levels':
+                key = 'imtls'
+                val = valid.intensity_measure_types_and_levels(val)
+            elif key == 'maximum_distance':
+                val = IntegrationDistance.new(val)
+            elif key == 'sites':
+                val = valid.coordinates(val)
+            elif key.endswith('_file'):
+                val = os.path.join(jobdir, val)
+            else:
+                try:
+                    val = ast.literal_eval(val)
+                except (SyntaxError, ValueError):
+                    if val == 'true':
+                        val = True
+                    elif val == 'false':
+                        val = False
+            params[key] = val
+    return params
+
+
 def read_input(hparams, **extra):
     """
     :param hparams: a dictionary of hazard parameters
@@ -131,12 +166,13 @@ def read_input(hparams, **extra):
     - "number_of_logic_tree_samples" (default 0)
     - "ses_per_logic_tree_path" (default 1)
     """
+    if isinstance(hparams, str):
+        hparams = read_hparams(hparams)
     if extra:
         hparams = hparams.copy()
         hparams.update(extra)
     assert 'imts' in hparams or 'imtls' in hparams
-    idistance = hparams['maximum_distance']
-    assert isinstance(idistance, IntegrationDistance)
+    assert isinstance(hparams['maximum_distance'], IntegrationDistance)
     smfname = hparams.get('source_model_file')
     if smfname:  # nonscenario
         itime = hparams['investigation_time']
