@@ -40,7 +40,7 @@ TWO32 = 2 ** 32
 def zero_times(sources):
     source_data = AccumDict(accum=[])
     for src in sources:
-        source_data['srcids'].append(src.source_id)
+        source_data['src_id'].append(src.source_id)
         source_data['nsites'].append(src.nsites)
         source_data['nrupts'].append(src.num_ruptures)
         source_data['weight'].append(src.weight)

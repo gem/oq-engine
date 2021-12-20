@@ -242,8 +242,8 @@ def _build_groups(full_lt, smdict):
 
         # check applyToSources
         sm_branch = rlz.lt_path[0]
-        srcids = full_lt.source_model_lt.info.applytosources[sm_branch]
-        for srcid in srcids:
+        src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
+        for srcid in src_id:
             if srcid not in source_ids:
                 raise ValueError(
                     "The source %s is not in the source model,"
@@ -419,7 +419,7 @@ class CompositeSourceModel:
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         for src_id, nsites, nrupts, weight, ctimes in zip(
-                source_data['srcids'], source_data['nsites'],
+                source_data['src_id'], source_data['nsites'],
                 source_data['nrupts'], source_data['weight'],
                 source_data['ctimes']):
             row = self.source_info[src_id.split(':')[0]]
