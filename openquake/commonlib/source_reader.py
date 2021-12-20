@@ -437,7 +437,7 @@ class CompositeSourceModel:
             n += src.count_ruptures()
         return n
 
-    def get_tot_max(self, oq):  # used in preclassical
+    def get_max_weight(self, oq):  # used in preclassical
         """
         :param oq: an OqParam instance
         :returns: total weight and max weight of the sources
@@ -454,14 +454,15 @@ class CompositeSourceModel:
                     spc = oq.complex_fault_mesh_spacing
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        max_weight = max(tot_weight / (oq.concurrent_tasks * .6 or 1),
-                         oq.min_weight)
+        max_weight = tot_weight / (oq.concurrent_tasks or 1)
+        if parallel.Starmap.num_cores > 64:  # if many cores less tasks
+            max_weight *= 2
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), nsources))
         heavy = [src for src in self.get_sources() if src.weight > max_weight]
         for src in sorted(heavy, key=lambda s: s.weight, reverse=True):
             logging.info('%s has weight %d', src, src.weight)
-        return tot_weight, max_weight
+        return max_weight
 
     def __toh5__(self):
         data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL))

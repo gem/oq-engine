@@ -896,7 +896,6 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     split_level = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    min_weight = valid.Param(valid.positiveint, 1)  # used in classical
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 600)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)

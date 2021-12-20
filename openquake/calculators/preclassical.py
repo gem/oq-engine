@@ -244,7 +244,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         run_preclassical(self)
-        tot, self.max_weight = self.csm.get_tot_max(self.oqparam)
+        self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
     def post_execute(self, csm):
