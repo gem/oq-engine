@@ -509,7 +509,7 @@ def extract_source_data(dstore, what):
         sel = {'taskno': int(qdict['taskno'][0])}
     else:
         sel = {}
-    df = dstore.read_df('source_data', 'srcids', sel=sel).sort_values('ctimes')
+    df = dstore.read_df('source_data', 'src_id', sel=sel).sort_values('ctimes')
     dic = {col: df[col].to_numpy() for col in df.columns}
     return ArrayWrapper(df.index.to_numpy(), dic)
 

@@ -174,11 +174,12 @@ def view_worst_sources(token, dstore):
         step = int(token.split(':')[1])
     else:
         step = 1
-    data = dstore.read_df('source_data', 'srcids')
+    data = dstore.read_df('source_data', 'src_id')
     ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
     [[taskno, maxtime]] = ser.to_dict().items()
-    print('Sources in the slowest task (%d seconds)' % maxtime)
     data = data[data.taskno == taskno]
+    print('Sources in the slowest task (%d seconds, weight=%d)'
+          % (maxtime, data['weight'].sum()))
     data['slow_rate'] = data.ctimes / data.weight
     df = data.sort_values('slow_rate', ascending=False)
     return df[slice(None, None, step)]
@@ -683,12 +684,12 @@ def view_source_data(token, dstore):
      $ oq show source_data:42
     """
     if ':' not in token:
-        return dstore.read_df(token, 'srcids')
+        return dstore.read_df(token, 'src_id')
     _, taskno = token.split(':')
     taskno = int(taskno)
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    df = dstore.read_df('source_data', 'srcids', sel={'taskno': taskno})
+    df = dstore.read_df('source_data', 'src_id', sel={'taskno': taskno})
     del df['taskno']
     df['slowrate'] = df['ctimes'] / df['weight']
     return df.sort_values('ctimes')

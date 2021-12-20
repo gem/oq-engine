@@ -42,7 +42,8 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, magdepdist, get_distances, getdefault, MINMAG, MAXMAG)
+    SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
+    MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -190,7 +191,11 @@ class ContextMaker(object):
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
-        self.pointsource_distance = _interp(param, 'pointsource_distance', trt)
+        if 'pointsource_distance' not in param:
+            self.pointsource_distance = 1000.
+        else:
+            self.pointsource_distance = getdefault(
+                param['pointsource_distance'], trt)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         if self.investigation_time:
@@ -499,10 +504,10 @@ class ContextMaker(object):
                 rup.sites = sites
                 yield rup
         bigps = getattr(src, 'location', None) and src.count_nphc() > 1
-        if bigps and (self.pointsource_distance.y == 0).all():
+        if bigps and self.pointsource_distance == 0:
             # finite size effects are averaged always
             yield from rups(src.iruptures(), sites)
-        elif bigps and self.pointsource_distance != self.maximum_distance:
+        elif bigps:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             for r, s in self._cps_rups(src, sites, fewsites):
@@ -513,9 +518,8 @@ class ContextMaker(object):
     def _cps_rups(self, src, sites, fewsites):
         cdist = sites.get_cdist(src.location)
         for ar in src.iruptures():
-            pdist = self.pointsource_distance(ar.mag)
-            close = sites.filter(cdist <= pdist)
-            far = sites.filter(cdist > pdist)
+            close = sites.filter(cdist <= self.pointsource_distance)
+            far = sites.filter(cdist > self.pointsource_distance)
             if fewsites:
                 if close is None:  # all is far, common for small mag
                     yield [ar], sites
@@ -686,11 +690,10 @@ class ContextMaker(object):
         cdist = sites.get_cdist(src.location)
         nphcs = []
         for rup in src.iruptures(point_rup=True):
-            psd = self.pointsource_distance(rup.mag)
             md = self.maximum_distance(rup.mag)
-            if psd < md:
-                close = sites.filter(cdist + rup.mag <= psd)
-                far = sites.filter(cdist + rup.mag > psd)
+            if self.pointsource_distance < md:
+                close = sites.filter(cdist <= self.pointsource_distance)
+                far = sites.filter(cdist > self.pointsource_distance)
                 if close is None:
                     nphcs.append(1)
                 elif far is None:
@@ -725,6 +728,8 @@ class ContextMaker(object):
         """
         Set the weight attribute on each prefiltered source
         """
+        if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
+            srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
@@ -848,7 +853,7 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
-            self.source_data['srcids'].append(src.source_id)
+            self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
             self.source_data['nrupts'].append(nctxs)
             self.source_data['weight'].append(src.weight)
@@ -873,7 +878,7 @@ class PmapMaker(object):
             p *= src.mutex_weight
             pmap += p
             dt = time.time() - t0
-            self.source_data['srcids'].append(src.source_id)
+            self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
             self.source_data['nrupts'].append(nctxs)
             self.source_data['weight'].append(src.weight)

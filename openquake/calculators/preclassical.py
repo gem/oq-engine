@@ -40,7 +40,7 @@ TWO32 = 2 ** 32
 def zero_times(sources):
     source_data = AccumDict(accum=[])
     for src in sources:
-        source_data['srcids'].append(src.source_id)
+        source_data['src_id'].append(src.source_id)
         source_data['nsites'].append(src.nsites)
         source_data['nrupts'].append(src.num_ruptures)
         source_data['weight'].append(src.weight)
@@ -110,8 +110,7 @@ def run_preclassical(calc):
     for sg in csm.src_groups:
         grp_id = sg.sources[0].grp_id
         if sg.atomic:
-            sf = SourceFilter(sites, cmakers[grp_id].maximum_distance)
-            cmakers[grp_id].set_weight(sg, sf)
+            cmakers[grp_id].set_weight(sg, sites)
             atomic_sources.extend(sg)
         else:
             normal_sources.extend(sg)
@@ -244,7 +243,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         run_preclassical(self)
-        tot, self.max_weight = self.csm.get_tot_max(self.oqparam)
+        self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
     def post_execute(self, csm):

@@ -421,7 +421,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.csm = parent['_csm']
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
-                tot, max_weight = self.csm.get_tot_max(oq)
+                max_weight = self.csm.get_max_weight(oq)
         else:
             max_weight = self.max_weight
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()

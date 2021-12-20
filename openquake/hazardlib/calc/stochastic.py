@@ -215,7 +215,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_counter[src_id][rup.idx] += 1
                 # Store info
                 dt = time.time() - t0
-                source_data['srcids'].append(src.source_id)
+                source_data['src_id'].append(src.source_id)
                 source_data['nsites'].append(src.nsites)
                 source_data['nrups'].append(len(rup_data[src_id]))
                 source_data['ctimes'].append(dt)
@@ -285,7 +285,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
                 ebr = EBRupture(rup, src.source_id, trt_smr, n_occ)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
-            source_data['srcids'].append(src.source_id)
+            source_data['src_id'].append(src.source_id)
             source_data['nsites'].append(src.nsites)
             source_data['nrups'].append(nr)
             source_data['ctimes'].append(dt)
