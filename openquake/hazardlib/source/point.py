@@ -468,7 +468,7 @@ class CollapsedPointSource(PointSource):
         rup_width = rup_width * math.cos(math.radians(self.dip))
         # the projection radius is half of the rupture diagonal
         self.radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
-        return self.radius
+        return self.radius + self.ps_grid_spacing
 
     def count_ruptures(self):
         """
@@ -509,6 +509,7 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
             cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
+            cps.ps_grid_spacing = ps_grid_spacing
             out.append(cps)
         else:  # there is a single source
             out.append(ps[idxs[0]])
