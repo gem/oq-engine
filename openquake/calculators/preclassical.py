@@ -85,6 +85,9 @@ def preclassical(srcs, sites, cmaker, monitor):
             else:
                 split_sources.append(src)
     dic = grid_point_sources(split_sources, spacing, monitor)
+    for src in dic[grp_id]:
+        if hasattr(src, 'pointsources'):  # CollapsedPointSource
+            src.nsites = len(sf.close_sids(src))
     with monitor('weighting sources'):
         cmaker.set_weight(dic[grp_id], sites)
     dic['before'] = len(split_sources)
