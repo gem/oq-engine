@@ -77,13 +77,16 @@ def preclassical(srcs, sites, cmaker, monitor):
             src.nsites = len(sf.close_sids(src))  # can be 0
             # NB: it is crucial to split only the close sources, for
             # performance reasons (think of Ecuador in SAM)
-            splits = split_source(src) if (
-                cmaker.split_sources and src.nsites) else [src]
-            split_sources.extend(splits)
+            if cmaker.split_sources and src.nsites:
+                for ss, sites in sf.filter(split_source(src)):
+                    if sites is not None:
+                        ss.nsites = len(sites)
+                        split_sources.append(ss)
+            else:
+                split_sources.append(src)
     dic = grid_point_sources(split_sources, spacing, monitor)
     with monitor('weighting sources'):
-        # this is also prefiltering the split sources
-        cmaker.set_weight(dic[grp_id], sf)
+        cmaker.set_weight(dic[grp_id], sites)
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:

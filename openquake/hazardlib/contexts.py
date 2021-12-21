@@ -705,13 +705,8 @@ class ContextMaker(object):
                 nphcs.append(nphc)
         return src.num_ruptures / nphc * numpy.mean(nphcs)
 
-    def estimate_weight(self, src, srcfilter):
-        N = len(srcfilter.sitecol.complete)
-        sites = srcfilter.get_close_sites(src)
-        if sites is None:
-            # may happen for CollapsedPointSources
-            return 0
-        src.nsites = len(sites)
+    def estimate_weight(self, src, sites):
+        N = len(sites.complete)
         rups = list(src.few_ruptures())
         try:
             ctxs = self.get_ctxs(rups, sites)
@@ -724,18 +719,16 @@ class ContextMaker(object):
             [len(ctx) / N for ctx in ctxs])
         return nr
 
-    def set_weight(self, sources, srcfilter):
+    def set_weight(self, sources, sites):
         """
         Set the weight attribute on each prefiltered source
         """
-        if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
-            srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
             else:
-                src.weight = .1 + self.estimate_weight(src, srcfilter)
+                src.weight = .1 + self.estimate_weight(src, sites)
             if src.code == b'C':
                 src.weight += 1
 
