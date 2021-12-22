@@ -496,8 +496,6 @@ class ContextMaker(object):
             shift_hypo=self.shift_hypo, mag=filtermag)
 
     def _gen_rups(self, src, sites):
-        fewsites = len(sites) <= self.max_sites_disagg
-
         # yield ruptures, each one with a .sites attribute
         def rups(rupiter, sites):
             for rup in rupiter:
@@ -510,12 +508,13 @@ class ContextMaker(object):
         elif bigps:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites, fewsites):
+            for r, s in self._cps_rups(src, sites):
                 yield from rups(r, s)
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
 
-    def _cps_rups(self, src, sites, fewsites):
+    def _cps_rups(self, src, sites):
+        fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         for ar in src.iruptures():
             close = sites.filter(cdist <= self.pointsource_distance)
@@ -714,7 +713,17 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        rups = list(src.few_ruptures())
+        if src.code in b'pP':
+            rups = []
+            for irups, r_sites in self._cps_rups(src, sites):
+                for rup in irups:
+                    rup.sites = r_sites
+                    rups.append(rup)
+            nrups = len(rups)
+            rups = rups[slice(None, None, 5)]
+        else:
+            rups = list(src.few_ruptures())
+            nrups = src.num_ruptures
         try:
             ctxs = self.get_ctxs(rups, sites)
         except ValueError:
@@ -722,11 +731,7 @@ class ContextMaker(object):
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
             return 0
-        if src.code in b'pP':
-            nrups, impact = self.get_nrups_impact(src, sites)
-        else:
-            nrups = src.num_ruptures
-            impact = numpy.mean([len(ctx) / N for ctx in ctxs])
+        impact = numpy.mean([len(ctx) / N for ctx in ctxs])
         return nrups * impact
 
     def set_weight(self, sources, srcfilter):
