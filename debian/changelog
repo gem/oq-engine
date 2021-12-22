@@ -1,3 +1,6 @@
+  [Miguel Leonardo-Suárez]
+  * Added GMPE from Jaimes et al. (2020) for Mexican intraslab earthquakes
+  
   [Michele Simionato]
   * Enforced ps_grid_spacing <= pointsource_distance
   * Internal: added command `oq plot source_data?`
