@@ -508,15 +508,15 @@ class ContextMaker(object):
         elif bigps:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites):
+            for r, s in self._cps_rups(src, sites, point_rup=True):
                 yield from rups(r, s)
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
 
-    def _cps_rups(self, src, sites):
+    def _cps_rups(self, src, sites, point_rup):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for ar in src.iruptures():
+        for ar in src.iruptures(point_rup):
             close = sites.filter(cdist <= self.pointsource_distance)
             far = sites.filter(cdist > self.pointsource_distance)
             if fewsites:
@@ -676,36 +676,6 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def get_nrups_impact(self, src, sites):
-        """
-        :returns: (number of effective ruptures, impact on the sites)
-        """
-        N = len(sites.complete)
-        nphc = src.count_nphc()  # np * hc * num_ps
-        cdist = sites.get_cdist(src.location)
-        nphcs = []
-        impact = []
-        for rup in src.iruptures(point_rup=True):
-            md = self.maximum_distance(rup.mag)
-            if self.pointsource_distance < md:
-                close = sites.filter(cdist <= self.pointsource_distance)
-                far = sites.filter(cdist > self.pointsource_distance)
-                if close is None:
-                    impact.append(len(far))
-                    nphcs.append(1)
-                elif far is None:
-                    impact.append(len(close))
-                    nphcs.append(nphc)
-                else:
-                    impact.append(len(close) + len(far) / nphc)
-                    f = len(close) / len(sites)  # fraction of close sites
-                    nphcs.append(f * nphc + 1 - f)
-            else:
-                impact.append(len(sites))
-                nphcs.append(nphc)
-        return src.num_ruptures / nphc * numpy.mean(nphcs), numpy.mean(
-            impact) / N
-
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
         sites = srcfilter.get_close_sites(src)
@@ -715,7 +685,7 @@ class ContextMaker(object):
         src.nsites = len(sites)
         if src.code in b'pP':
             rups = []
-            for irups, r_sites in self._cps_rups(src, sites):
+            for irups, r_sites in self._cps_rups(src, sites, point_rup=True):
                 for rup in irups:
                     rup.sites = r_sites
                     rups.append(rup)
