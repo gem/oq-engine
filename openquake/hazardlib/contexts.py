@@ -508,12 +508,12 @@ class ContextMaker(object):
         elif bigps:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites, point_rup=True):
+            for r, s in self._cps_rups(src, sites):
                 yield from rups(r, s)
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
 
-    def _cps_rups(self, src, sites, point_rup):
+    def _cps_rups(self, src, sites, point_rup=False):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         for ar in src.iruptures(point_rup):
