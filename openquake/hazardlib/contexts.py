@@ -677,33 +677,35 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def count_effrups(self, src, sites):
+    def get_nrups_impact(self, src, sites):
         """
-        :returns: the number of effective ruptures in the source
+        :returns: (number of effective ruptures, impact on the sites)
         """
-        if src.code not in b'pP':
-            return src.num_ruptures
-        num_ps = len(getattr(src, 'pointsources', [0]))
+        N = len(sites.complete)
         nphc = src.count_nphc()  # np * hc * num_ps
-        if nphc == num_ps:
-            return src.num_ruptures  # no nodal_planes/hypocenters
         cdist = sites.get_cdist(src.location)
         nphcs = []
+        impact = []
         for rup in src.iruptures(point_rup=True):
             md = self.maximum_distance(rup.mag)
             if self.pointsource_distance < md:
                 close = sites.filter(cdist <= self.pointsource_distance)
                 far = sites.filter(cdist > self.pointsource_distance)
                 if close is None:
+                    impact.append(len(far))
                     nphcs.append(1)
                 elif far is None:
+                    impact.append(len(close))
                     nphcs.append(nphc)
                 else:
+                    impact.append(len(close) + len(far) / nphc)
                     f = len(close) / len(sites)  # fraction of close sites
                     nphcs.append(f * nphc + 1 - f)
             else:
+                impact.append(len(sites))
                 nphcs.append(nphc)
-        return src.num_ruptures / nphc * numpy.mean(nphcs)
+        return src.num_ruptures / nphc * numpy.mean(nphcs), numpy.mean(
+            impact) / N
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
@@ -720,9 +722,12 @@ class ContextMaker(object):
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
             return 0
-        nr = self.count_effrups(src, sites) * numpy.mean(
-            [len(ctx) / N for ctx in ctxs])
-        return nr
+        if src.code in b'pP':
+            nrups, impact = self.get_nrups_impact(src, sites)
+        else:
+            nrups = src.num_ruptures
+            impact = numpy.mean([len(ctx) / N for ctx in ctxs])
+        return nrups * impact
 
     def set_weight(self, sources, srcfilter):
         """
