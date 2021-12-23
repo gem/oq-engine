@@ -19,10 +19,14 @@
 """
 Module :mod:`openquake.hazardlib.geo.line` defines :class:`Line`.
 """
-import numpy
+import copy
+import numpy as np
 
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
+from openquake.hazardlib.geo import Point
+
+TOLERANCE = 0.1
 
 
 class Line(object):
@@ -43,6 +47,8 @@ class Line(object):
 
         if len(self.points) < 1:
             raise ValueError("One point needed to create a line!")
+
+        self.coo = np.array([[p.longitude, p.latitude] for p in self.points])
 
     def __eq__(self, other):
         """
@@ -70,6 +76,24 @@ class Line(object):
     def __getitem__(self, key):
         return self.points.__getitem__(key)
 
+    def flip(self):
+        """
+        Inverts the order of the points composing the line
+        """
+        self.points.reverse()
+        self.coo = np.flip(self.coo, axis=0)
+
+    @classmethod
+    def from_vectors(cls, lons, lats, deps=None):
+        """
+        Creates a line from three :numpy:`numpy.ndarray` instances containing
+        longitude, latitude and depths values
+        """
+        arrs = lons, lats
+        if deps is not None:
+            arrs = lons, lats, deps
+        return cls([Point(*coo) for coo in zip(*arrs)])
+
     def on_surface(self):
         """
         Check if this line is defined on the surface (i.e. all points
@@ -90,6 +114,16 @@ class Line(object):
         """
         return all(p.depth == self[0].depth for p in self)
 
+    def get_azimuths(self):
+        """
+        Return the azimuths of all the segments omposing the polyline
+        """
+        if len(self.points) == 2:
+            return self.points[0].azimuth(self.points[1])
+        lons = self.coo[:, 0]
+        lats = self.coo[:, 1]
+        return geodetic.azimuth(lons[:-1], lats[:-1], lons[1:], lats[1:])
+
     def average_azimuth(self):
         """
         Calculate and return weighted average azimuth of all line's segments
@@ -107,23 +141,12 @@ class Line(object):
         >>> '%.1f' % line.average_azimuth()
         '300.0'
         """
-        if len(self.points) == 2:
-            return self.points[0].azimuth(self.points[1])
-        lons = numpy.array([point.longitude for point in self.points])
-        lats = numpy.array([point.latitude for point in self.points])
-        azimuths = geodetic.azimuth(lons[:-1], lats[:-1], lons[1:], lats[1:])
+        azimuths = self.get_azimuths()
+        lons = self.coo[:, 0]
+        lats = self.coo[:, 1]
         distances = geodetic.geodetic_distance(lons[:-1], lats[:-1],
                                                lons[1:], lats[1:])
-        azimuths = numpy.radians(azimuths)
-        # convert polar coordinates to Cartesian ones and calculate
-        # the average coordinate of each component
-        avg_x = numpy.mean(distances * numpy.sin(azimuths))
-        avg_y = numpy.mean(distances * numpy.cos(azimuths))
-        # find the mean azimuth from that mean vector
-        azimuth = numpy.degrees(numpy.arctan2(avg_x, avg_y))
-        if azimuth < 0:
-            azimuth += 360
-        return azimuth
+        return get_average_azimuth(azimuths, distances)
 
     def resample(self, section_length):
         """
@@ -188,19 +211,57 @@ class Line(object):
 
         return Line(resampled_points)
 
-    def get_length(self):
+    def get_lengths(self) -> np.ndarray:
         """
-        Calculate and return the length of the line as a sum of lengths
-        of all its segments.
+        Calculate a :class:`numpy.ndarray` instance with the length
+        of the segments composing the polyline
+
+        :returns:
+            Segments length in km.
+        """
+        lengths = []
+        for i, point in enumerate(self.points):
+            if i != 0:
+                lengths.append(point.distance(self.points[i - 1]))
+        return np.array(lengths)
+
+    def get_length(self) -> float:
+        """
+        Calculate the length of the line as a sum of lengths of all its
+        segments.
 
         :returns:
             Total length in km.
         """
-        length = 0
-        for i, point in enumerate(self.points):
-            if i != 0:
-                length += point.distance(self.points[i - 1])
-        return length
+        return np.sum(self.get_lengths())
+
+    def keep_corners(self, delta):
+        """
+        Removes the points where the change in direction is lower than a
+        tolerance value.
+
+        :param delta:
+            An angle in decimal degrees
+        """
+        coo = np.array([[p.longitude, p.latitude, p.depth] for p in
+                        self.points])
+        # Compute the azimuth of all the segments but the last one that must
+        # stay
+        azim = geodetic.azimuth(coo[:-1, 0], coo[:-1, 1],
+                                coo[1:, 0], coo[1:, 1])
+        if len(azim) > 2:
+            azim = azim[:-1]
+            idx = np.nonzero(np.abs(np.diff(azim)) < delta)
+            idx = np.array(idx[0])+1
+        elif len(azim) == 2:
+            if abs(azim[0] - azim[1]) < delta:
+                idx = np.array([1])
+        else:
+            return
+        # Purging
+        coo = np.delete(coo, idx, axis=0)
+        self.points = [Point(*c) for c in coo]
+        self.coo = coo
 
     def resample_to_num_points(self, num_points):
         """
@@ -241,3 +302,221 @@ class Line(object):
             resampled_points.append(resampled)
 
         return Line(resampled_points)
+
+    def get_tu(self, sitec):
+        """
+        Computes the U and T coordinates of the GC2 method for a collection of
+        sites.
+
+        :param sitec:
+            An instance of :class:`openquake.hazardlib.site.SiteCollection`
+        """
+
+        # Sites
+        scoo = [[p.location.longitude, p.location.latitude] for p in sitec]
+        scoo = np.array(scoo)
+
+        # Projection
+        lons = list(scoo[:, 0]) + list(self.coo[:, 0])
+        lats = list(scoo[:, 1]) + list(self.coo[:, 1])
+        west, east, north, south = utils.get_spherical_bounding_box(lons, lats)
+        proj = utils.OrthographicProjection(west, east, north, south)
+
+        # Projected coordinates for the trace
+        tcoo = self.coo[:, 0], self.coo[:, 1]
+        txy = np.zeros_like(self.coo)
+        txy[:, 0], txy[:, 1] = proj(*tcoo)
+
+        # Projected coordinates for the sites
+        sxy = np.zeros_like(scoo)
+        sxy[:, 0], sxy[:, 1] = proj(scoo[:, 0], scoo[:, 1])
+
+        # Compute u hat and t hat for each segment. tmp has shape
+        # (num_segments x 3)
+        slen, uhat, that = self.get_tu_hat()
+
+        # Lengths of the segments
+        segments_len = slen
+
+        # Get local coordinates for the sites
+        ui, ti = self.get_ui_ti(sitec, uhat, that)
+
+        # Compute the weights
+        weights, iot = get_ti_weights(ui, ti, segments_len)
+
+        # Now compute T and U
+        t_upp, u_upp = get_tu(ui, ti, segments_len, weights)
+        t_upp[iot] = 0.0
+
+        return t_upp, u_upp, weights
+
+    def get_ui_ti(self, sitec, uhat, that):
+        """
+        Compute the t and u coordinates. ti and ui have shape (num_segments x
+        num_sites)
+        """
+
+        # Creating the projection
+        if not hasattr(self, 'proj'):
+            oprj = utils.OrthographicProjection
+            proj = oprj.from_lons_lats(self.coo[:, 0], self.coo[:, 1])
+            self.proj = proj
+        proj = self.proj
+
+        # Sites projected coordinates
+        scoo = [[p.location.longitude, p.location.latitude] for p in sitec]
+        scoo = np.array(scoo)
+        sxy = np.zeros_like(scoo)
+        sxy[:, 0], sxy[:, 1] = proj(scoo[:, 0], scoo[:, 1])
+
+        # Polyline projected coordinates
+        txy = np.zeros_like(self.coo)
+        txy[:, 0], txy[:, 1] = proj(self.coo[:, 0], self.coo[:, 1])
+
+        # Initializing ti and ui coordinates
+        ui = np.zeros((txy.shape[0]-1, sxy.shape[0]))
+        ti = np.zeros((txy.shape[0]-1, sxy.shape[0]))
+
+        # For each section
+        for i in range(ui.shape[0]):
+            tmp = copy.copy(sxy)
+            tmp[:, 0] -= txy[i, 0]
+            tmp[:, 1] -= txy[i, 1]
+            ui[i, :] = np.dot(tmp, uhat[i, 0:2])
+            ti[i, :] = np.dot(tmp, that[i, 0:2])
+        return ui, ti
+
+    def get_tu_hat(self):
+        """
+        Return the unit vectors defining the local origin for each segment of
+        the trace.
+
+        :param sx:
+            The vector with the x coordinates of the trace
+        :param sy:
+            The vector with the y coordinates of the trace
+        :returns:
+            Two arrays of size n x 3 (when n is the number of segments
+            composing the trace
+        """
+
+        # Creating the projection
+        if not hasattr(self, 'proj'):
+            oprj = utils.OrthographicProjection
+            proj = oprj.from_lons_lats(self.coo[:, 0], self.coo[:, 1])
+            self.proj = proj
+
+        # Projected coordinates
+        sx, sy = proj(self.coo[:, 0], self.coo[:, 1])
+
+        slen = ((sx[1:]-sx[:-1])**2 + (sy[1:]-sy[:-1])**2)**0.5
+        sg = np.zeros((len(sx)-1, 3))
+        sg[:, 0] = sx[1:]-sx[:-1]
+        sg[:, 1] = sy[1:]-sy[:-1]
+        uhat = get_versor(sg)
+        that = get_versor(np.cross(sg, np.array([0, 0, 1])))
+        return slen, uhat, that
+
+
+def get_average_azimuth(azimuths, distances) -> float:
+    """
+    Computes the average azimuth
+
+    :param azimuths:
+        A :class:`numpy.ndarray` instance
+    :param distances:
+        A :class:`numpy.ndarray` instance
+    :return:
+        A float with the mean azimuth in decimal degrees
+    """
+    azimuths = np.radians(azimuths)
+    # convert polar coordinates to Cartesian ones and calculate
+    # the average coordinate of each component
+    avg_x = np.mean(distances * np.sin(azimuths))
+    avg_y = np.mean(distances * np.cos(azimuths))
+    # find the mean azimuth from that mean vector
+    azimuth = np.degrees(np.arctan2(avg_x, avg_y))
+    if azimuth < 0:
+        azimuth += 360
+    return azimuth
+
+
+def get_tu(ui, ti, sl, weights):
+    """
+    Compute the T and U quantitities
+
+    :param ui:
+        A :class:`numpy.ndarray` instance of cardinality (num segments x num
+        sites)
+    :param ti:
+        A :class:`numpy.ndarray` instance of cardinality (num segments x num
+        sites)
+    :param sl:
+        A :class:`numpy.ndarray` instance with the segments' length
+    :param weights:
+        A :class:`numpy.ndarray` instance of cardinality (num segments x num
+        sites)
+    """
+    assert ui.shape == ti.shape == weights.shape
+
+    # Sum of weights - This has shape equal to the number of sites
+    weight_sum = np.sum(weights, axis=0)
+
+    # Compute T
+    t_upp = ti * weights
+    t_upp = np.divide(t_upp, weight_sum.T).T
+    t_upp = np.sum(t_upp, axis=1)
+
+    # Compute U
+    u_upp = ui[0] * weights[0]
+    for i in range(1, len(sl)):
+        delta = np.sum(sl[:i])
+        u_upp += ((ui[i] + delta) * weights[i])
+    u_upp = np.divide(u_upp, weight_sum.T).T
+    return t_upp, u_upp
+
+
+def get_ti_weights(ui, ti, segments_len):
+    """
+    Compute the weights
+    """
+    weights = np.zeros_like(ui)
+    terma = np.zeros_like(ui)
+    term1 = np.zeros_like(ui)
+    term2 = np.zeros_like(ui)
+    idx_on_trace = np.zeros_like(ui[0, :], dtype=bool)
+
+    for i in range(ti.shape[0]):
+
+        # More general case
+        cond0 = np.abs(ti[i, :]) >= TOLERANCE
+        if len(cond0):
+            terma[i, cond0] = segments_len[i] - ui[i, cond0]
+            term1[i, cond0] = np.arctan(terma[i, cond0] / ti[i, cond0])
+            term2[i, cond0] = np.arctan(-ui[i, cond0] / ti[i, cond0])
+            weights[i, cond0] = ((term1[i, cond0] - term2[i, cond0]) /
+                                 ti[i, cond0])
+
+        # Case for sites on the extension of one segment
+        cond1 = np.abs(ti[i, :]) < TOLERANCE
+        cond2 = np.logical_or(ui[i, :] < (0. - TOLERANCE),
+                              ui[i, :] > (segments_len[i] + TOLERANCE))
+        iii = np.logical_and(cond1, cond2)
+        if len(iii):
+            weights[i, iii] = 1./(ui[i, iii] - segments_len[i]) - 1./ui[i, iii]
+
+        # Case for sites on one segment
+        cond3 = np.logical_and(ui[i, :] >= (0. - TOLERANCE),
+                               ui[i, :] <= (segments_len[i] + TOLERANCE))
+        jjj = np.logical_and(cond1, cond3)
+        weights[i, jjj] = 1/(-0.01-segments_len[i])+1/0.01
+        idx_on_trace[jjj] = 1.0
+
+    return weights, idx_on_trace
+
+
+def get_versor(arr):
+    """
+    Returns the versor (i.e. a unit vector) of a vector
+    """
+    return np.divide(arr.T, np.linalg.norm(arr, axis=1)).T
