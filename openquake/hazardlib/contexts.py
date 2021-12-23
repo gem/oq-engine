@@ -684,13 +684,13 @@ class ContextMaker(object):
             return 0
         src.nsites = len(sites)
         if src.code in b'pP':
+            pairs = list(self._cps_rups(src, sites, point_rup=True))
             rups = []
-            for irups, r_sites in self._cps_rups(src, sites, point_rup=True):
+            for irups, r_sites in pairs[::8]:
                 for rup in irups:
                     rup.sites = r_sites
                     rups.append(rup)
-            nrups = len(rups)
-            rups = rups[slice(None, None, 5)]
+            nrups = len(pairs)
         else:
             rups = list(src.few_ruptures())
             nrups = src.num_ruptures
