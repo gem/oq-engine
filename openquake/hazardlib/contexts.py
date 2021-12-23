@@ -701,8 +701,8 @@ class ContextMaker(object):
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
             return 0
-        impact = numpy.mean([len(ctx) / N for ctx in ctxs])
-        return nrups * impact
+        nsites = numpy.array([len(ctx) for ctx in ctxs])
+        return nrups * numpy.mean(nsites / N + .001)
 
     def set_weight(self, sources, srcfilter):
         """
