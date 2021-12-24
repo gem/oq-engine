@@ -23,7 +23,6 @@ import copy
 import numpy as np
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.site import SiteCollection
 
 
 class MultiLine(object):
@@ -70,20 +69,34 @@ class MultiLine(object):
 
         # Get lenghts and average azimuths
         llenghts = self.get_lengths()
-        avgazims = self.get_average_azimuths()
+        avgaz = self.get_average_azimuths()
+
+        # Find general trend
+        tmp = copy.copy(avgaz)
+        idx = tmp > 180
+        tmp[idx] = tmp[idx] - 180.
+        ave = geo.line.get_average_azimuth(tmp, llenghts)
 
         # Computing the azimuth direction (i.e. towards east or west)
+        #idx = (avgaz >= 0) & (avgaz < 180)
         revert = np.zeros((len(self.lines)), dtype=bool)
-        idx = (avgazims >= 0) & (avgazims < 180)
-        ratio = np.sum(llenghts[idx]) / sum(llenghts)
-        strike_to_east = True if ratio > 0 else False
+        if (ave > 90) & (ave < 270):
+            idx = (avgaz >= (ave - 90) % 360) & (avgaz < (ave + 90) % 360)
+        else:
+            idx = (avgaz >= (ave - 90) % 360) | (avgaz < (ave + 90) % 360)
+        delta = abs(avgaz - ave)
+        scale = np.abs(np.cos(np.radians(delta)))
+        ratio = np.sum(llenghts[idx] * scale[idx]) / np.sum(llenghts * scale)
+
+        # ratio = np.sum(llenghts[idx]) / sum(llenghts)
+        strike_to_east = True if ratio > 0.5 else False
         if strike_to_east:
             revert[np.invert(idx)] = True
         else:
             revert[idx] = True
 
         # Compute the prevalent azimuth
-        avgazims_corr = copy.copy(avgazims)
+        avgazims_corr = copy.copy(avgaz)
         for i in np.nonzero(revert)[0]:
             self.lines[i].flip()
             avgazims_corr[i] = self.lines[i].average_azimuth()
@@ -91,7 +104,7 @@ class MultiLine(object):
 
         # Update info
         self.strike_to_east = strike_to_east
-        self.overall_azimuth = azimuth
+        self.overall_strike = azimuth
 
         return revert
 
@@ -114,7 +127,7 @@ class MultiLine(object):
 
         # If missing, set the overall strike direction
         if not hasattr(self, 'strike_to_east'):
-            _, _ = self.set_overall_strike()
+            _ = self.set_overall_strike()
 
         # Find the index of the eastmost (or westmost) point depending on the
         # prevalent direction of the strike
@@ -123,7 +136,7 @@ class MultiLine(object):
         else:
             idx = np.argmax(px)
 
-        # Set the origin to be used later on for the calculation of the
+        # Set the origin to be used later for the calculation of the
         # coordinate shift
         x = np.array([px[idx]])
         y = np.array([py[idx]])
@@ -143,19 +156,22 @@ class MultiLine(object):
 
         # For each line in the multi line, get the distance along the average
         # strike between the origin of the multiline and the first endnode
-        ggdst = geo.geodetic.geodetic_distance
         origins = np.array([[l.coo[0, 0], l.coo[0, 1]] for l in self.lines])
 
-        # Calculate the shift along the average strike direction
+        # Distances and azimuths between the origin of the multiline and the
+        # first endpoint
+        ggdst = geo.geodetic.geodetic_distance
+        ggazi = geo.geodetic.azimuth
         distances = ggdst(self.olon, self.olat, origins[:, 0], origins[:, 1])
-        azimuths = self.get_average_azimuths()
-        shift = np.cos(np.radians(self.overall_azimuth - azimuths))*distances
+        azimuths = ggazi(self.olon, self.olat, origins[:, 0], origins[:, 1])
+
+        # Calculate the shift along the average strike direction
+        shift = np.cos(np.radians(self.overall_strike - azimuths))*distances
         self.shift = shift
 
-    def get_TU(self, sitec: SiteCollection):
+    def get_tu(self, mesh: geo.Mesh):
         """
-        Given a site collection, computes the T and U coordinates for the
-        multiline
+        Given a mesh, computes the T and U coordinates for the multiline
         """
 
         # Set the coordinate shift
@@ -163,13 +179,13 @@ class MultiLine(object):
         shift = self.shift
 
         # Processing
-        for i,line in enumerate(self.lines):
+        for i, line in enumerate(self.lines):
 
             # Compute (or retrieve) the T and U coordinates. T and U have
             # cardinality <number_sites>. The weights have cardinality equal
             # to <number_of_segments> x <number of_sites>
             if not hasattr(self, 'tupp'):
-                tupp, uupp, wei = line.get_TU(sitec)
+                tupp, uupp, wei = line.get_tu(mesh)
                 wei_sum = np.sum(wei, axis=0)
             else:
                 tupp = self.tupp

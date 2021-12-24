@@ -303,22 +303,21 @@ class Line(object):
 
         return Line(resampled_points)
 
-    def get_tu(self, sitec):
+    def get_tu(self, mesh):
         """
-        Computes the U and T coordinates of the GC2 method for a collection of
-        sites.
+        Computes the U and T coordinates of the GC2 method for a mesh of points
 
-        :param sitec:
-            An instance of :class:`openquake.hazardlib.site.SiteCollection`
+        :param mesh:
+            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
 
         # Sites
-        scoo = [[p.location.longitude, p.location.latitude] for p in sitec]
-        scoo = np.array(scoo)
+        mlo = mesh.lons
+        mla = mesh.lats
 
         # Projection
-        lons = list(scoo[:, 0]) + list(self.coo[:, 0])
-        lats = list(scoo[:, 1]) + list(self.coo[:, 1])
+        lons = list(mlo.flatten()) + list(self.coo[:, 0])
+        lats = list(mla.flatten()) + list(self.coo[:, 1])
         west, east, north, south = utils.get_spherical_bounding_box(lons, lats)
         proj = utils.OrthographicProjection(west, east, north, south)
 
@@ -328,8 +327,8 @@ class Line(object):
         txy[:, 0], txy[:, 1] = proj(*tcoo)
 
         # Projected coordinates for the sites
-        sxy = np.zeros_like(scoo)
-        sxy[:, 0], sxy[:, 1] = proj(scoo[:, 0], scoo[:, 1])
+        sxy = np.zeros((len(mla), 2))
+        sxy[:, 0], sxy[:, 1] = proj(mlo, mla)
 
         # Compute u hat and t hat for each segment. tmp has shape
         # (num_segments x 3)
@@ -339,7 +338,7 @@ class Line(object):
         segments_len = slen
 
         # Get local coordinates for the sites
-        ui, ti = self.get_ui_ti(sitec, uhat, that)
+        ui, ti = self.get_ui_ti(mesh, uhat, that)
 
         # Compute the weights
         weights, iot = get_ti_weights(ui, ti, segments_len)
@@ -350,7 +349,7 @@ class Line(object):
 
         return t_upp, u_upp, weights
 
-    def get_ui_ti(self, sitec, uhat, that):
+    def get_ui_ti(self, mesh, uhat, that):
         """
         Compute the t and u coordinates. ti and ui have shape (num_segments x
         num_sites)
@@ -364,10 +363,8 @@ class Line(object):
         proj = self.proj
 
         # Sites projected coordinates
-        scoo = [[p.location.longitude, p.location.latitude] for p in sitec]
-        scoo = np.array(scoo)
-        sxy = np.zeros_like(scoo)
-        sxy[:, 0], sxy[:, 1] = proj(scoo[:, 0], scoo[:, 1])
+        sxy = np.zeros((len(mesh.lons), 2))
+        sxy[:, 0], sxy[:, 1] = proj(mesh.lons, mesh.lats)
 
         # Polyline projected coordinates
         txy = np.zeros_like(self.coo)
@@ -407,7 +404,7 @@ class Line(object):
             self.proj = proj
 
         # Projected coordinates
-        sx, sy = proj(self.coo[:, 0], self.coo[:, 1])
+        sx, sy = self.proj(self.coo[:, 0], self.coo[:, 1])
 
         slen = ((sx[1:]-sx[:-1])**2 + (sy[1:]-sy[:-1])**2)**0.5
         sg = np.zeros((len(sx)-1, 3))

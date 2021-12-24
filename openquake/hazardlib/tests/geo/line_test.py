@@ -17,7 +17,6 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib import geo
-from openquake.hazardlib.site import Site, SiteCollection
 
 PLOTTING = True
 
@@ -220,17 +219,16 @@ class ComputeTUTest(unittest.TestCase):
         line = geo.Line.from_vectors(lons, lats)
         line.keep_corners(4.0)
 
-        # Prepare the site
-        pnt = geo.Point(0.2, 0.1)
-        site1 = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-        sitecol = SiteCollection([site1])
+        # Prepare the mesh
+        coo = np.array([[0.2, 0.1]])
+        mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tu(sitecol)
+        tupp, uupp, wei = line.get_tu(mesh)
         expected_t = geo.geodetic.distance(0.2, 0.0, 0.0,
-                                           pnt.longitude, pnt.latitude, 0.0)
+                                           coo[0, 0], coo[0, 1], 0.0)
         expected_u = geo.geodetic.distance(0.0, 0.0, 0.0,
-                                           pnt.longitude, 0.0, 0.0)
+                                           coo[0, 0], 0.0, 0.0)
 
         # Test
         self.assertAlmostEqual(-expected_t, tupp[0], places=4)
@@ -245,17 +243,12 @@ class ComputeTUTest(unittest.TestCase):
         line = geo.Line.from_vectors(lons, lats)
         line.keep_corners(4.0)
 
-        # Prepare the sites
-        pnt = geo.Point(0.3, 0.0)
-        site1 = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-        pnt = geo.Point(0.2, -0.1)
-        site2 = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-        pnt = geo.Point(0.4, 0.3)
-        site3 = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-        sitecol = SiteCollection([site1, site2, site3])
+        # Prepare the mesh
+        coo = np.array([[0.3, 0.0], [0.2, -0.1], [0.4, 0.3]])
+        mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, u_upp, wei = line.get_tu(sitecol)
+        tupp, u_upp, wei = line.get_tu(mesh)
 
         # TODO add test
 
@@ -269,10 +262,10 @@ class ComputeTUTest(unittest.TestCase):
         line.keep_corners(4.0)
 
         # Get the site collection
-        sitec, plons, plats = get_sitec(-0.5, 1.0, -0.5, 1.0, 0.005)
+        mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.005)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tu(sitec)
+        tupp, uupp, wei = line.get_tu(mesh)
 
         # Plotting results
         if PLOTTING:
@@ -289,11 +282,11 @@ class ComputeTUTest(unittest.TestCase):
         # Get line
         lons, lats, line = get_figure04_line()
 
-        # Get the site collection
-        sitec, plons, plats = get_sitec(-0.6, 0.6, -1.0, 0.4, 0.01)
+        # Get the mesh
+        mesh, plons, plats = get_mesh(-0.6, 0.6, -1.0, 0.4, 0.01)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tu(sitec)
+        tupp, uupp, wei = line.get_tu(mesh)
 
         if PLOTTING:
             num = 10
@@ -320,25 +313,17 @@ class ComputeUiTiTest(unittest.TestCase):
         lats = np.array([0.0, 0.0])
         line = geo.Line([geo.Point(lo, la) for lo, la in zip(lons, lats)])
 
-        # Prepare the sites
-        pnt = geo.Point(0.0, 0.05)
-        site0 = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-        pnt = geo.Point(0.2, 0.0)
-        site1 = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-        pnt = geo.Point(0.3, -0.05)
-        site2 = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-        pnt = geo.Point(0.1, -0.1)
-        site3 = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-        pnt = geo.Point(0.3, 0.05)
-        site4 = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-        sitec = SiteCollection([site0, site1, site2, site3, site4])
+        # Prepare the mesh
+        coo = np.array([[0.0, 0.05], [0.2, 0.0], [0.3, -0.05],
+                        [0.1, -0.1], [0.3, 0.05]])
+        mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # slen, uhat and that as expected
         slen, uhat, that = line.get_tu_hat()
         np.testing.assert_almost_equal(np.array([[1, 0, 0]]), uhat, decimal=5)
 
         # Now computing ui and ti
-        ui, ti = line.get_ui_ti(sitec, uhat, that)
+        ui, ti = line.get_ui_ti(mesh, uhat, that)
 
         self.assertEqual((1, 5), ui.shape)
         self.assertEqual((1, 5), ti.shape)
@@ -350,31 +335,14 @@ class ComputeUiTiTest(unittest.TestCase):
         lats = np.array([0.0, 0.0, 0.05])
         line = geo.Line([geo.Point(lo, la) for lo, la in zip(lons, lats)])
 
-        # Prepare the sites
-        sites = []
-        step = 0.005
-        plons = []
-        plats = []
-        for lo in np.arange(-0.4, 0.6, step):
-            tlo = []
-            tla = []
-            for la in np.arange(-0.2, 0.3, step):
-                pnt = geo.Point(lo, la)
-                site = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-                sites.append(site)
-                tlo.append(lo)
-                tla.append(la)
-            plons.append(tlo)
-            plats.append(tla)
-        plons = np.array(plons)
-        plats = np.array(plats)
-        sitec = SiteCollection(sites)
+        # Get the mesh
+        mesh, plons, plats = get_mesh(-0.4, 0.6, -0.2, 0.3, 0.005)
 
         # slen, uhat and that as expected
         slen, uhat, that = line.get_tu_hat()
 
         # Now computing ui and ti
-        ui, ti = line.get_ui_ti(sitec, uhat, that)
+        ui, ti = line.get_ui_ti(mesh, uhat, that)
 
         # TODO add test
 
@@ -440,13 +408,13 @@ class ComputeWeightsTest(unittest.TestCase):
         line.keep_corners(4.0)
 
         # Get the site collection
-        sitec, plons, plats = get_sitec(-0.5, 1.0, -0.5, 1.0, 0.01)
+        mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.01)
 
         # slen, uhat and that
         slen, uhat, that = line.get_tu_hat()
 
         # Compute ui and ti
-        ui, ti = line.get_ui_ti(sitec, uhat, that)
+        ui, ti = line.get_ui_ti(mesh, uhat, that)
 
         # Compute weights
         wei, iot = geo.line.get_ti_weights(ui, ti, slen)
@@ -465,13 +433,13 @@ class ComputeWeightsTest(unittest.TestCase):
         lons, lats, line = get_figure04_line()
 
         # Get the site collection
-        sitec, plons, plats = get_sitec(-0.2, 0.6, -0.8, 0.1, 0.0025)
+        mesh, plons, plats = get_mesh(-0.2, 0.6, -0.8, 0.1, 0.0025)
 
         # slen, uhat and that
         slen, uhat, that = line.get_tu_hat()
 
         # Compute ui and ti
-        ui, ti = line.get_ui_ti(sitec, uhat, that)
+        ui, ti = line.get_ui_ti(mesh, uhat, that)
 
         # Compute weights
         wei, iot = geo.line.get_ti_weights(ui, ti, slen)
@@ -510,40 +478,35 @@ def get_figure04_line():
     py = np.array([0.0, -40.0, -67.19, -86.47])
     lons, lats = proj(px, py, reverse=True)
     line = geo.Line.from_vectors(lons, lats)
-
     return lons, lats, line
 
 
-def get_sitec(lomin, lomax, lamin, lamax, step):
+def get_mesh(lomin, lomax, lamin, lamax, step):
     """
     Create a site collection
     """
-    sites = []
     plons = []
     plats = []
     for lo in np.arange(lomin, lomax, step):
         tlo = []
         tla = []
         for la in np.arange(lamin, lamax, step):
-            pnt = geo.Point(lo, la)
-            site = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-            sites.append(site)
             tlo.append(lo)
             tla.append(la)
         plons.append(tlo)
         plats.append(tla)
-    sitec = SiteCollection(sites)
     plons = np.array(plons)
     plats = np.array(plats)
-    return sitec, plons, plats
+    mesh = geo.Mesh(plons.flatten(), plats.flatten())
+    return mesh, plons, plats
 
 
 def plot_pattern(lons, lats, z, plons, plats, label, num=5):
     """
     :param lons:
-        Trace longitudes
+        Traces longitudes
     :param lats:
-        Trace latitudes
+        Traces latitudes
     :param z:
         Grid scalar quantity
     :param plons:
@@ -573,6 +536,8 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5):
     ax.clabel(cs, inline=True, fontsize=10)
     for los, las in zip(lons, lats):
         ax.plot(los, las, '-r')
+        ax.plot(los[0], las[0], 'or')
+        ax.plot(los[-1], las[-1], 'xb')
     ax.scatter(plons.flatten(), plats.flatten(), c=z.flatten(), marker='.',
                s=0.5, cmap=cmap)
     ax.set_title(f'Test: {label}')

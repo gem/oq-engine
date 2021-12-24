@@ -388,9 +388,8 @@ class KiteSurface(BaseSurface):
         """
         los = self.mesh.lons
         las = self.mesh.lats
-        idx = np.isifinite(los[0, :])
+        idx = np.isfinite(los[0, :])
         return los[0, idx], las[0, idx]
-
 
     def get_TUB(self, sites, shift):
         pass

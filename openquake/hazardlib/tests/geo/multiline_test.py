@@ -20,8 +20,7 @@ import matplotlib.pyplot as plt
 
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.multiline import MultiLine
-from openquake.hazardlib.tests.geo.line_test import plot_pattern
-from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.tests.geo.line_test import plot_pattern, get_mesh
 
 
 PLOTTING = True
@@ -93,17 +92,18 @@ class MultiLineTestCase(unittest.TestCase):
         la = ml.lines[1].points[0].latitude
         dst = ggdst(0, 0, lo, la)
 
-        # Set the origin and compute the overall azimuth and the azimuths of
+        # Set the origin and compute the overall strike and the azimuths of
         # the polylines composing the multiline instance
         _ = ml._set_origin()
-        azim = ml.get_average_azimuths()
-        delta = abs(ml.overall_azimuth - azim[1])
+        ggazi = geo.geodetic.azimuth
+        azim = ggazi(0, 0, lo, la)
+        delta = abs(ml.overall_strike - azim)
         computed = dst * np.cos(np.radians(delta))
 
         # Testing
         np.testing.assert_almost_equal([0, computed], ml.shift)
 
-    def test_getTU(self):
+    def test_get_tu(self):
 
         # Get the coords of the lines composing the multiline
         lons = []
@@ -113,36 +113,143 @@ class MultiLineTestCase(unittest.TestCase):
             lats.append(line.coo[:, 1])
 
         # Create the site collection
-        sites = []
-        plons = []
-        plats = []
-        step = 0.005
-        for lo in np.arange(-0.3, 0.8, step):
-            tlo = []
-            tla = []
-            for la in np.arange(-0.3, 0.8, step):
-                pnt = geo.Point(lo, la)
-                site = Site(pnt, vs30=800, z1pt0=30, z2pt5=1.0)
-                sites.append(site)
-                tlo.append(lo)
-                tla.append(la)
-            plons.append(tlo)
-            plats.append(tla)
-        plons = np.array(plons)
-        plats = np.array(plats)
-        sitec = SiteCollection(sites)
+        mesh, plons, plats = get_mesh(-0.3, 0.8, -0.3, 0.8, 0.005)
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(self.lines)
-        uupp, tupp = ml.get_TU(sitec)
+        uupp, tupp = ml.get_tu(mesh)
 
         if PLOTTING:
             num = 10
             # U
             z = np.reshape(uupp, plons.shape)
-            label = 'test_getTU - U'
+            label = 'test_get_tu - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
             z = np.reshape(tupp, plons.shape)
-            label = 'test_getTU - T'
+            label = 'test_get_tu - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
+
+    def test_get_tu_figure09(self):
+
+        # Get the multiline
+        lons, lats, lines = get_lines_figure09()
+
+        # Create the site collection
+        mesh, plons, plats = get_mesh(-0.2, 0.2, -0.2, 0.2, 0.0025)
+
+        # Create the multiline and calculate the T and U coordinates
+        ml = MultiLine(lines)
+        uupp, tupp = ml.get_tu(mesh)
+
+        if PLOTTING:
+            num = 10
+            # U
+            z = np.reshape(uupp, plons.shape)
+            label = 'test_get_tu_figure09 - U'
+            plot_pattern(lons, lats, z, plons, plats, label, num)
+            # T
+            z = np.reshape(tupp, plons.shape)
+            label = 'test_get_tu_figure09 - T'
+            plot_pattern(lons, lats, z, plons, plats, label, num)
+
+    def test_get_tu_figure08(self):
+
+        # Get the multiline
+        lons, lats, lines = get_lines_figure08()
+
+        # Create the site collection
+        mesh, plons, plats = get_mesh(-0.6, 0.6, -0.6, 0.6, 0.005)
+
+        # Create the multiline and calculate the T and U coordinates
+        ml = MultiLine(lines)
+        uupp, tupp = ml.get_tu(mesh)
+
+        if PLOTTING:
+            num = 10
+            # U
+            z = np.reshape(uupp, plons.shape)
+            label = 'test_get_tu_figure08 - U'
+            plot_pattern(lons, lats, z, plons, plats, label, num)
+            # T
+            z = np.reshape(tupp, plons.shape)
+            label = 'test_get_tu_figure08 - T'
+            plot_pattern(lons, lats, z, plons, plats, label, num)
+
+
+def get_lines_figure09():
+    """
+    Returns the lines describing the rupture traces in Figure 9 of Spudich and
+    Chiou (2015).
+
+    :returns:
+        A tuple with two lists of :class:`numpy.ndarray` instances (longitudes
+        and latitudes of the points defining the trace) and a list of
+        :class:`openquake.hazardlib.geo.line.Line` instances
+    """
+    lons = []
+    lats = []
+    lines = []
+
+    # Projection
+    oprj = geo.utils.OrthographicProjection
+    proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
+
+    # Section trace 1
+    px = np.array([8, -9])
+    py = np.array([-15, -11])
+    los, las, line = _get_lola(px, py, proj)
+    lons.append(los)
+    lats.append(las)
+    lines.append(line)
+
+    # Section trace 2
+    px = np.array([6, -9])
+    py = np.array([-10, -5])
+    los, las, line = _get_lola(px, py, proj)
+    lons.append(los)
+    lats.append(las)
+    lines.append(line)
+
+    return lons, lats, lines
+
+
+def _get_lola(px, py, proj):
+    los, las = proj(px, py, reverse=True)
+    line = geo.Line.from_vectors(los, las)
+    return los, las, line
+
+
+def get_lines_figure08():
+    # Digitized using https://automeris.io/WebPlotDigitizer/
+
+    lons = []
+    lats = []
+    lines = []
+
+    # Projection
+    oprj = geo.utils.OrthographicProjection
+    proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
+
+    px = np.array([-2.1416918, -40.01534, -43.44729])
+    py = np.array([13.50913, 47.34280, 55.86207])
+    los, las, line = _get_lola(px, py, proj)
+    lons.append(los)
+    lats.append(las)
+    lines.append(line)
+
+    px = np.array([-0.1617771, -1.663781])
+    py = np.array([-0.6085193, 18.37728])
+    los, las, line = _get_lola(px, py, proj)
+    lons.append(los)
+    lats.append(las)
+    lines.append(line)
+
+    px = np.array([-2.386583, 47.70247])
+    py = np.array([13.99594, -29.81744])
+    los, las, line = _get_lola(px, py, proj)
+    lons.append(los)
+    lats.append(las)
+    lines.append(line)
+
+    return lons, lats, lines
