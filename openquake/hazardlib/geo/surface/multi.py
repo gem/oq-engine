@@ -184,7 +184,7 @@ class MultiSurface(BaseSurface):
                     if numpy.all(numpy.isnan(lons[:, icol])):
                         continue
                     tmp = numpy.nonzero(numpy.isfinite(lons[:, icol]))[0]
-                    irow = tmp.argmax(axis=0)
+                    irow = tmp.argmin(axis=0)
                     edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
                                  mesh.depths[irow, icol]])
                 edges.append(numpy.array(edge))
