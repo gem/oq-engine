@@ -19,6 +19,7 @@
 import os
 import unittest
 import numpy as np
+import matplotlib.pyplot as plt
 from openquake.hazardlib.geo.geodetic import geodetic_distance, npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
@@ -28,6 +29,7 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+PLOTTING = False
 
 aae = np.testing.assert_almost_equal
 
@@ -84,7 +86,6 @@ class MultiSurfaceOneTestCase(unittest.TestCase):
         aae(expected, computed, decimal=-1, err_msg=msg)
 
 
-
 class MultiSurfaceTwoTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -116,11 +117,12 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
         self.mesh = Mesh(self.coo[:, 0], self.coo[:, 1])
 
     def test_areas(self):
+        """ Compute the areas of surfaces """
         length = geodetic_distance(0.0, 0.0, 0.3, 0.0)
         expected = np.array([length * 20.0, 10 * 14.14])
         computed = self.msrf._get_areas()
         msg = 'Multi fault surface: areas are wrong'
-        np.testing.assert_almost_equal(expected, computed, decimal=-1)
+        np.testing.assert_almost_equal(expected, computed, msg=msg, decimal=-1)
 
     def test_width(self):
         """ Compute the width of a multifault surface with 2 sections"""
@@ -185,17 +187,24 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         self.mesh = mesh
 
     def test_get_edge_set(self):
-        expected = [np.array([[-70.33365959,  19.71037733,  18.85108915],
-                           [-70.38106033,  19.71535823,  18.804094],
-                           [-70.42846401,  19.72032659,  18.75709885],
-                           [-70.47587061,  19.72528241,  18.7101037],
-                           [-70.52328014,  19.73022569,  18.66310854],
-                           [-70.57069257,  19.73515644,  18.61611339]]),
-                    np.array([[-70.14910201,  19.7287277 ,  19.03202724],
-                           [-70.19665637,  19.7253538 ,  18.9280474 ],
-                           [-70.24420873,  19.72196728,  18.82406756],
-                           [-70.29175909,  19.71856815,  18.72008771],
-                           [-70.33930743,  19.71515642,  18.61610787]])]
+
+        # The vertexes of the expected edges are the first and last vertexes of
+        # the topmost row of the mesh
+        expected = [np.array([[-70.33, 19.65, 0. ],
+                              [-70.57722702, 19.6697801 , 0.0]]),
+                    np.array([[-70.10327766, 19.67957463, 0.0],
+                              [-70.33, 19.65, 0.0]])]
+
+        if PLOTTING:
+            _, ax = plt.subplots(1, 1)
+            for sfc in self.msrf.surfaces:
+                col = np.random.rand(3)
+                mesh = sfc.mesh
+                ax.plot(mesh.lons, mesh.lats, '.', color=col)
+                ax.plot(mesh.lons[0, :],  mesh.lats[0, :], lw=3)
+            for edge in self.msrf.edge_set:
+                ax.plot(edge[:, 0], edge[:, 1], 'x-r')
+            plt.show()
 
         # Note that method is executed when the object is initialized
         ess = self.msrf.edge_set
@@ -211,7 +220,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         # toward W
         msg = 'Multi fault surface: strike is wrong'
         strike = self.msrf.get_strike()
-        self.assertAlmostEqual(269.20, strike, places=2)
+        self.assertAlmostEqual(268.878, strike, places=2)
 
     def test_get_dip(self):
         dip = self.msrf.get_dip()

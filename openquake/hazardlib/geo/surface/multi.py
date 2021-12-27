@@ -25,7 +25,7 @@ from copy import deepcopy
 from scipy.spatial.distance import pdist, squareform
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.geo.surface.base import BaseSurface, downsample_trace
-from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
@@ -113,8 +113,7 @@ class MultiSurface(BaseSurface):
         """
         if type(self.surfaces[0]).__name__ == 'PlanarSurface':
             return [surf.surface_nodes[0] for surf in self.surfaces]
-        else:
-            return [surf.surface_nodes for surf in self.surfaces]
+        return [surf.surface_nodes for surf in self.surfaces]
 
     @property
     def mesh(self):
@@ -187,7 +186,13 @@ class MultiSurface(BaseSurface):
                     irow = tmp.argmin(axis=0)
                     edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
                                  mesh.depths[irow, icol]])
-                edges.append(numpy.array(edge))
+                edge = numpy.array(edge)
+                mesh = RectangularMesh(numpy.tile(edge[:, 0], (2, 1)),
+                                       numpy.tile(edge[:, 1], (2, 1)),
+                                       numpy.tile(edge[:, 2], (2, 1)))
+                #edges.append(numpy.array(edge))
+                edges.append(downsample_trace(mesh, tol))
+                print('Edges', edges)
             elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points
                 edge = []
@@ -200,7 +205,7 @@ class MultiSurface(BaseSurface):
                 # overall size
                 edges.append(downsample_trace(surface.mesh, tol))
             else:
-                raise ValueError("Surface %s not recognised" % str(surface))
+                raise ValueError(f"Surface {str(surface)} not recognised")
         return edges
 
     def get_min_distance(self, mesh):
