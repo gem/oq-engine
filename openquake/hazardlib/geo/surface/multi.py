@@ -316,7 +316,6 @@ class MultiSurface(BaseSurface):
         dips = dips[ok]
         areas = areas[ok]
         dip = numpy.sum(areas * dips) / numpy.sum(areas)
-        import pdb; pdb.set_trace()
         return dip
 
     def get_width(self):
