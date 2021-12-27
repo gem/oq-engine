@@ -190,9 +190,7 @@ class MultiSurface(BaseSurface):
                 mesh = RectangularMesh(numpy.tile(edge[:, 0], (2, 1)),
                                        numpy.tile(edge[:, 1], (2, 1)),
                                        numpy.tile(edge[:, 2], (2, 1)))
-                #edges.append(numpy.array(edge))
                 edges.append(downsample_trace(mesh, tol))
-                print('Edges', edges)
             elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points
                 edge = []
