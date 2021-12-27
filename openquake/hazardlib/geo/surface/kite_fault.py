@@ -73,15 +73,40 @@ class KiteSurface(BaseSurface):
     composed by several disaligned segments. Thrust faults and listric faults
     can be easily implemented.
     """
+
     def __init__(self, mesh, profiles=None):
         self.mesh = mesh
+        self._clean()
         self.profiles = profiles
         assert 1 not in self.mesh.shape, (
-            "Mesh must have at least 2 nodes along both length and width.")
+            "Mesh must have at least 2 nodes along strike and dip.")
         # Make sure the mesh respects the right hand rule
         self._fix_right_hand()
         self.strike = self.dip = None
         self.width = None
+
+    def _clean(self):
+        """
+        Removes from the mesh the rows and columns containing just NaNs
+        """
+        # Rows
+        rm = []
+        for i in range(0, self.mesh.lons.shape[0]):
+            if np.all(np.isnan(self.mesh.lons[i, :])):
+                rm.append(i)
+        lons = np.delete(self.mesh.lons, rm, axis=0)
+        lats = np.delete(self.mesh.lats, rm, axis=0)
+        deps = np.delete(self.mesh.depths, rm, axis=0)
+        # Cols
+        rm = []
+        for i in range(0, lons.shape[1]):
+            if np.all(np.isnan(lons[:, i])):
+                rm.append(i)
+        lons = np.delete(lons, rm, axis=1)
+        lats = np.delete(lats, rm, axis=1)
+        deps = np.delete(deps, rm, axis=1)
+        mesh = RectangularMesh(lons, lats, deps)
+        self.mesh = mesh
 
     @property
     def surface_nodes(self):
@@ -92,23 +117,65 @@ class KiteSurface(BaseSurface):
         # from the mesh
         return kite_surface_node(self.profiles)
 
-    def get_joyner_boore_distance(self, mesh):
+    def _get_external_boundary(self):
+        idxs = self._get_external_boundary_indexes()
+        lo = []
+        la = []
+        for i in idxs:
+            lo.append(self.mesh.lons[i[0], i[1]])
+            la.append(self.mesh.lats[i[0], i[1]])
+        return np.array(lo), np.array(la)
 
-        # Get indexes of the finite points composing the edges
-        iupp = np.nonzero(np.isfinite(self.mesh.lons[0, :]))[0]
-        ilow = np.flipud(np.nonzero(np.isfinite(self.mesh.lons[-1, :]))[0])
-        irig = np.nonzero(np.isfinite(self.mesh.lons[:, -1]))[0]
-        ilef = np.flipud(np.nonzero(np.isfinite(self.mesh.lons[:, 0]))[0])
+    def _get_external_boundary_indexes(self):
+        """
+        Computes the indexes of the points composing the boundary of the
+        surface
+        """
+        iul = []
+        ilr = []
+        for i in range(0, self.mesh.lons.shape[1]):
+            idx = np.where(np.isfinite(self.mesh.lons[:, i]))[0]
+            if len(idx) == 0:
+                continue
+                # raise ValueError(f'Column {i} does not contain finite values')
+            iul.append([min(idx), max(idx)])
+        for i in range(0, self.mesh.lons.shape[0]):
+            idx = np.where(np.isfinite(self.mesh.lons[i, :]))[0]
+            if len(idx) == 0:
+                continue
+            ilr.append([min(idx), max(idx)])
+        iul = np.array(iul)
+        ilr = np.array(ilr)
+        bnd = []
+        # Top
+        for i in range(0, self.mesh.lons.shape[1]):
+            bnd.append([iul[i, 0], i])
+        # Right
+        for i in range(iul[-1, 0]+1, iul[-1, 1]):
+            bnd.append([i, ilr[i, 1]])
+        # Bottom
+        for i in range(self.mesh.lons.shape[1]-1, -1, -1):
+            bnd.append([iul[i, 1], i])
+        # Left
+        for i in range(iul[0, 1]-1, iul[0, 0], -1):
+            bnd.append([i, ilr[i, 0]])
+        return bnd
 
-        # Building the polygon
-        pnts = []
-        for corner in [(0, iupp), (irig, -1), (-1, ilow), (ilef, 0)]:
-            pnts.extend(zip(self.mesh.lons[corner], self.mesh.lats[corner],
-                            self.mesh.depths[corner]))
-        perimeter = np.array(pnts)
 
+    def get_joyner_boore_distance(self, mesh) -> np.ndarray:
+        """
+        Computes the Rjb distance between the rupture and the points included
+        in the mesh provided.
+
+        :param mesh:
+            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
+        :returns:
+            A :class:`numpy.ndarray` instance with the Rjb values
+        """
+
+        blo, bla = self._get_external_boundary()
         distances = geodetic.min_geodetic_distance(
-            (perimeter[:, 0], perimeter[:, 1]), (mesh.lons, mesh.lats))
+            (blo, bla), (mesh.lons, mesh.lats))
 
         idxs = (distances < 40).nonzero()[0]  # indices on the first dimension
         if not len(idxs):
@@ -117,14 +184,13 @@ class KiteSurface(BaseSurface):
 
         # Get the projection
         proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(perimeter[:, 0],
-                                                  perimeter[:, 1]))
+            *geo_utils.get_spherical_bounding_box(blo, bla))
 
         # Mesh projected coordinates
         mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
 
         # Create the shapely Polygon using projected coordinates
-        xp, yp = proj(perimeter[:, 0], perimeter[:, 1])
+        xp, yp = proj(blo, bla)
         polygon = Polygon([[x, y] for x, y in zip(xp, yp)])
 
         # Calculate the distances
@@ -134,8 +200,10 @@ class KiteSurface(BaseSurface):
         return distances
 
     def _fix_right_hand(self):
-        # This method fixes the mesh used to represent the grid surface so
-        # that it complies with the right hand rule.
+        """
+        This method fixes the mesh used to represent the grid surface so
+        that it complies with the right hand rule.
+        """
         found = False
         irow = 0
         icol = 0
@@ -170,6 +238,11 @@ class KiteSurface(BaseSurface):
             raise ValueError(msg)
 
     def get_width(self) -> float:
+        """
+        Compute the width of the kite surface. This corresponds to the mean
+        width computed for all the columns of the mesh that define the kite
+        surface.
+        """
         if self.width is None:
             widths = []
             for col_idx in range(self.mesh.lons.shape[1]):
@@ -388,39 +461,19 @@ class KiteSurface(BaseSurface):
             Two lists with the coordinates of the longitude and latitude
         """
 
-        los = self.mesh.lons
-        las = self.mesh.lats
-        ro, co = np.mgrid[0:los.shape[0], 0:los.shape[1]]
+        return self._get_external_boundary()
 
-        plos = []
-        plas = []
-
-        tmp = np.amax(ro, where=~np.isnan(los), initial=np.amin(ro)-1, axis=0)
-        for j, i in enumerate(tmp):
-            if i >= np.amin(ro):
-                plos.append(los[i, j])
-                plas.append(las[i, j])
-
-        tlo = []
-        tla = []
-        tmp = np.amin(ro, where=~np.isnan(los), initial=len(los)+1, axis=0)
-        for j, i in enumerate(tmp):
-            if i <= len(los):
-                tlo.append(los[i, j])
-                tla.append(las[i, j])
-
-        plos.extend(tlo[::-1])
-        plas.extend(tla[::-1])
-
-        return plos, plas
+    def get_area(self):
+        _, _, _, cell_area = self.get_cell_dimensions()
+        return np.sum(cell_area)
 
     def get_cell_dimensions(self):
         """
         Calculate centroid, width, length and area of each mesh cell.
 
-        NOTE: The original verison of this method is in the class
+        NOTE: The original version of this method is in the class
         :class:`openquake.hazardlib.geo.mesh.Mesh`. It is duplicated here
-        because it required ad-hoc modifications to support kite fault
+        because it requires ad-hoc modifications to support kite fault
         surfaces
 
         :returns:

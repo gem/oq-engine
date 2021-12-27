@@ -311,15 +311,12 @@ class MultiSurface(BaseSurface):
         formula for weighted mean is used.
         """
         areas = self._get_areas()
-        dips = numpy.array([numpy.mean(surf.get_dip()) for surf in
-                            self.surfaces])
-
-        ok = numpy.logical_and(numpy.isfinite(dips), numpy.isfinite(areas))
+        dips = numpy.array([surf.get_dip() for surf in self.surfaces])
+        ok = numpy.logical_and(numpy.isfinite(dips), numpy.isfinite(areas))[0]
         dips = dips[ok]
         areas = areas[ok]
-
         dip = numpy.sum(areas * dips) / numpy.sum(areas)
-        assert numpy.isfinite(dip).all()
+        import pdb; pdb.set_trace()
         return dip
 
     def get_width(self):
@@ -329,7 +326,6 @@ class MultiSurface(BaseSurface):
         """
         areas = self._get_areas()
         widths = numpy.array([surf.get_width() for surf in self.surfaces])
-
         return numpy.sum(areas * widths) / numpy.sum(areas)
 
     def get_area(self):
