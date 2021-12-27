@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import pathlib
 import unittest
 import numpy
@@ -41,9 +42,12 @@ class MultiSurfaceTestCase(unittest.TestCase):
 
     def test_rjb(self):
         mesh = Mesh(numpy.array([-118.]), numpy.array([33]))   # 1 point
-        surf18 = MultiSurface.from_csv(cd / 'msurface18.csv')  # 2 planes
-        surf19 = MultiSurface.from_csv(cd / 'msurface19.csv')  # 2 planes
-        surf20 = MultiSurface.from_csv(cd / 'msurface20.csv')  # 1 plane
+        tmp = os.path.join('data', 'msurface18.csv')
+        surf18 = MultiSurface.from_csv(cd / tmp)  # 2 planes
+        tmp = os.path.join('data', 'msurface19.csv')
+        surf19 = MultiSurface.from_csv(cd / tmp)  # 2 planes
+        tmp = os.path.join('data', 'msurface20.csv')
+        surf20 = MultiSurface.from_csv(cd / tmp)  # 1 plane
         rjb18 = surf18.get_joyner_boore_distance(mesh)[0]
         rjb19 = surf19.get_joyner_boore_distance(mesh)[0]
         rjb20 = surf20.get_joyner_boore_distance(mesh)[0]
@@ -57,9 +61,12 @@ class MultiSurfaceTestCase(unittest.TestCase):
 
     def test_rx(self):
         mesh = Mesh(numpy.array([-118.]), numpy.array([33]))   # 1 point
-        surf18 = MultiSurface.from_csv(cd / 'msurface18.csv')  # 2 planes
-        surf19 = MultiSurface.from_csv(cd / 'msurface19.csv')  # 2 planes
-        surf20 = MultiSurface.from_csv(cd / 'msurface20.csv')  # 1 plane
+        tmp = os.path.join('data', 'msurface18.csv')
+        surf18 = MultiSurface.from_csv(cd / tmp)  # 2 planes
+        tmp = os.path.join('data', 'msurface19.csv')
+        surf19 = MultiSurface.from_csv(cd / tmp)  # 2 planes
+        tmp = os.path.join('data', 'msurface20.csv')
+        surf20 = MultiSurface.from_csv(cd / tmp)  # 1 plane
         rx18 = surf18.get_rx_distance(mesh)[0]
         rx19 = surf19.get_rx_distance(mesh)[0]
         rx20 = surf20.get_rx_distance(mesh)[0]

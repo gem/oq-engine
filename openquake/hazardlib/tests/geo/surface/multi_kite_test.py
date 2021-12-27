@@ -20,6 +20,8 @@ import os
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
+from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.geo.geodetic import geodetic_distance, npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
@@ -270,3 +272,35 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
     # TODO fix the error
     def test_get_ry0(self):
         dsts = self.msrf.get_ry0_distance(self.mesh)
+
+
+class MultiSurfaceTestCase65(unittest.TestCase):
+
+    def setUp(self):
+        path_qa = os.path.join('..', '..', '..', '..', 'qa_tests_data')
+        path = os.path.join(path_qa, 'classical', 'case_65')
+        fname = os.path.join(path, 'ssm.xml')
+        fname_sections = os.path.join(path, 'sections.xml')
+
+        sc = SourceConverter(investigation_time=1.0,
+                             rupture_mesh_spacing=2,
+                             complex_fault_mesh_spacing=5,
+                             width_of_mfd_bin=0.1,
+                             area_source_discretization=10.)
+
+        ssm = to_python(fname)
+        self.src = ssm[0][0]
+        gsm = to_python(fname_sections, sc)
+        self.src.set_sections(gsm.sections)
+
+    def test01(self):
+        mesh = Mesh(np.array([9.85]), np.array([45.0]))
+        for i, rup in enumerate(self.src.iter_ruptures()):
+            print(i)
+            rup.surface.get_joyner_boore_distance(mesh)
+            rup.surface.get_min_distance(mesh)
+            rup.surface.get_ry0_distance(mesh)
+            rup.surface.get_rx_distance(mesh)
+            rup.surface.get_width()
+            rup.surface.get_dip()
+            rup.surface.get_top_edge_depth()

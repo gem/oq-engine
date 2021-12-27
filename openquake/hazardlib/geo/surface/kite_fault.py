@@ -272,14 +272,21 @@ class KiteSurface(BaseSurface):
             lens = []
             for col_idx in range(self.mesh.lons.shape[1]):
 
-                hdists = distance(self.mesh.lons[:-1, col_idx],
-                                  self.mesh.lats[:-1, col_idx],
-                                  np.zeros_like(self.mesh.depths[1:, col_idx]),
-                                  self.mesh.lons[1:, col_idx],
-                                  self.mesh.lats[1:, col_idx],
-                                  np.zeros_like(self.mesh.depths[1:, col_idx]))
-                vdists = (self.mesh.depths[1:, col_idx] -
-                          self.mesh.depths[:-1, col_idx])
+                # For the calculation of the overall dip we use just the dip
+                # values of contigous points along a profile
+                iii = np.where(np.isfinite(self.mesh.lons[:, col_idx]))[0]
+                dff = np.diff(iii)
+                jjj = np.where(abs(dff-1) < 1e-5)[0]
+
+                zeros = np.zeros_like(self.mesh.depths[jjj, col_idx])
+                hdists = distance(self.mesh.lons[jjj+1, col_idx],
+                                  self.mesh.lats[jjj+1, col_idx],
+                                  zeros,
+                                  self.mesh.lons[jjj, col_idx],
+                                  self.mesh.lats[jjj, col_idx],
+                                  zeros)
+                vdists = (self.mesh.depths[jjj+1, col_idx] -
+                          self.mesh.depths[jjj, col_idx])
 
                 ok = np.logical_and(np.isfinite(hdists), np.isfinite(vdists))
                 hdists = hdists[ok]

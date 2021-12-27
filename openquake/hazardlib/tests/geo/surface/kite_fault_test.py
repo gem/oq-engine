@@ -79,14 +79,12 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
     plt.show()
 
 
-class KiteSurfaceExternalBoundaryTest(unittest.TestCase):
+class KiteSurfaceFromMeshTest(unittest.TestCase):
     """
     Tests the method that creates the external boundary of the rupture.
     """
 
-    def test01(self):
-        # This mesh does not comply with the right hand rule. In the init it
-        # will be adjusted
+    def setUp(self):
         lons = [[np.nan, 0.05, 0.1, 0.15, 0.20],
                 [0.00, 0.05, 0.1, 0.15, 0.20],
                 [0.00, 0.05, 0.1, 0.15, 0.20],
@@ -102,10 +100,15 @@ class KiteSurfaceExternalBoundaryTest(unittest.TestCase):
                 [10, 10, 10, 10, 10],
                 [15, 15, 15, 15, np.nan],
                 [20, np.nan, 20, 20, np.nan]]
-        lons = np.array(lons)
-        lats = np.array(lats)
-        deps = np.array(deps)
-        mesh = Mesh(lons, lats, deps)
+        self.lons = np.array(lons)
+        self.lats = np.array(lats)
+        self.deps = np.array(deps)
+
+    def test_get_external_boundary(self):
+        # This mesh does not comply with the right hand rule. In the init it
+        # will be adjusted
+
+        mesh = Mesh(self.lons, self.lats, self.deps)
         ksfc = KiteSurface(mesh)
         idxs = ksfc._get_external_boundary_indexes()
 
@@ -116,11 +119,17 @@ class KiteSurfaceExternalBoundaryTest(unittest.TestCase):
 
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
-            ax.plot(lons.flatten(), lats.flatten(), 'o')
+            ax.plot(self.lons.flatten(), self.lats.flatten(), 'o')
             lo, la = ksfc._get_external_boundary()
             ax.plot(lo, la, '-r')
             ax.invert_yaxis()
             plt.show()
+
+    def test_get_dip(self):
+        mesh = Mesh(self.lons, self.lats, self.deps)
+        ksfc = KiteSurface(mesh)
+        ksfc.get_dip()
+
 
 
 class KiteSurfaceWithNaNs(unittest.TestCase):
