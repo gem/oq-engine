@@ -122,7 +122,8 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
         expected = np.array([length * 20.0, 10 * 14.14])
         computed = self.msrf._get_areas()
         msg = 'Multi fault surface: areas are wrong'
-        np.testing.assert_almost_equal(expected, computed, msg=msg, decimal=-1)
+        np.testing.assert_almost_equal(expected, computed, err_msg=msg,
+                                       decimal=-1)
 
     def test_width(self):
         """ Compute the width of a multifault surface with 2 sections"""

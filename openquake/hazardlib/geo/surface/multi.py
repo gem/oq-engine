@@ -20,8 +20,8 @@
 Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 :class:`MultiSurface`.
 """
-import numpy
 from copy import deepcopy
+import numpy
 from scipy.spatial.distance import pdist, squareform
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.geo.surface.base import BaseSurface, downsample_trace
