@@ -686,7 +686,7 @@ class ContextMaker(object):
                 for rup in irups:
                     rup.sites = r_sites
                     allrups.append(rup)
-            rups = allrups[::10]
+            rups = allrups[::20]
             nrups = len(allrups)
         else:
             rups = list(src.few_ruptures())
