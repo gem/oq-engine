@@ -147,8 +147,6 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         swid = distance(self.lons[iul], self.lats[iul], self.deps[iul],
                         self.lons[ill], self.lats[ill], self.deps[ill])
 
-        print(areas.size, np.sum(idx))
-
         # Computing the surface area as the total area minus the area of 4
         # cells. Note that here we assume that cells have approx the same area
         expected = slen * swid / areas.size * (np.sum(idx))
@@ -259,9 +257,9 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             plt.title(f'{self.NAME} - Ry0')
             plt.show()
 
+    # TODO
     def test_get_dip(self):
         dip = self.srfc.get_dip()
-        print(dip)
 
 
 class KiteSurfaceSimpleTests(unittest.TestCase):
