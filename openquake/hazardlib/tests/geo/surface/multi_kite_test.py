@@ -20,18 +20,20 @@ import os
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
-from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.hazardlib.nrml import to_python
-from openquake.hazardlib.geo.geodetic import geodetic_distance, npoints_towards
+from openquake.hazardlib.geo.geodetic import (
+    geodetic_distance, npoints_towards)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
     _read_profiles)
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
+from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
-BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+BASE_PATH = os.path.dirname(__file__)
+BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
+OVERWRITE = False
 
 aae = np.testing.assert_almost_equal
 
@@ -139,15 +141,6 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
         msg = f'Multi fault surface: width is wrong. % diff {perc_diff}'
         self.assertTrue(perc_diff < 0.2, msg=msg)
 
-    # TODO
-    def test_rx(self):
-        """  Compute Rx for a multifault surface with 2 sections """
-        # Test Rx - Both must be negative. The Rx for the first surface is 0
-        # while the Rx for the second one is
-        expected = np.array([-3.416027, -13.276342])
-        computed = self.msrf.get_rx_distance(self.mesh)
-        #np.testing.assert_allclose(computed, expected)
-
     def test_get_area(self):
         computed = self.msrf.get_area()
         length = geodetic_distance(0.0, 0.0, 0.3, 0.0)
@@ -158,6 +151,8 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
 
 
 class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
+
+    NAME = 'MultiSurfaceWithNaNsTestCase'
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles08')
@@ -177,24 +172,39 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         prf, _ = _read_profiles(path, 'cs_51')
         srfc51 = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
 
-        coo = []
-        step = 0.5
-        for lo in np.arange(-74, -68, step):
-            for la in np.arange(17, 20, step):
-                coo.append([lo, la])
-        coo = np.array(coo)
-        mesh = Mesh(coo[:, 0], coo[:, 1])
+        clo = []
+        cla = []
+        step = 0.01
+        for lo in np.arange(-71.8, -69, step):
+            tlo = []
+            tla = []
+            for la in np.arange(19.25, 20.25, step):
+                tlo.append(lo)
+                tla.append(la)
+            clo.append(tlo)
+            cla.append(tla)
+        self.clo = np.array(clo)
+        self.cla = np.array(cla)
+        mesh = Mesh(lons=self.clo.flatten(), lats=self.cla.flatten())
 
         # Define multisurface and mesh of sites
+        self.srfc50 = srfc50
+        self.srfc51 = srfc51
+
         self.msrf = MultiSurface([srfc50, srfc51])
         self.mesh = mesh
+
+        self.los = [self.msrf.surfaces[0].mesh.lons,
+                    self.msrf.surfaces[1].mesh.lons]
+        self.las = [self.msrf.surfaces[0].mesh.lats,
+                    self.msrf.surfaces[1].mesh.lats]
 
     def test_get_edge_set(self):
 
         # The vertexes of the expected edges are the first and last vertexes of
         # the topmost row of the mesh
-        expected = [np.array([[-70.33, 19.65, 0. ],
-                              [-70.57722702, 19.6697801 , 0.0]]),
+        expected = [np.array([[-70.33, 19.65, 0.],
+                              [-70.57722702, 19.6697801, 0.0]]),
                     np.array([[-70.10327766, 19.67957463, 0.0],
                               [-70.33, 19.65, 0.0]])]
 
@@ -214,16 +224,12 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         for es, expct in zip(ess, expected):
             np.testing.assert_array_almost_equal(es, expct, decimal=2)
 
-    # TODO
-    def test_get_cartesian_edge_set(self):
-        es = self.msrf._get_cartesian_edge_set()
-
     def test_get_strike(self):
-        # Since the two surf aces dip to the north we expect the strike to point
-        # toward W
+        # Since the two surfaces dip to the north, we expect the strike to
+        # point toward W
         msg = 'Multi fault surface: strike is wrong'
         strike = self.msrf.get_strike()
-        self.assertAlmostEqual(268.878, strike, places=2)
+        self.assertAlmostEqual(268.878, strike, places=2, msg=msg)
 
     def test_get_dip(self):
         dip = self.msrf.get_dip()
@@ -231,76 +237,112 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         msg = 'Multi fault surface: dip is wrong'
         aae(dip, expected, err_msg=msg, decimal=2)
 
+    #TODO
     def test_get_width(self):
         width = self.msrf.get_width()
         print(width)
 
-    # TODO
     def test_get_area(self):
+        # The area is computed by summing the areas of each section.
+        a1 = self.msrf.surfaces[0].get_area()
+        a2 = self.msrf.surfaces[1].get_area()
         area = self.msrf.get_area()
+        aae(a1 + a2, area)
 
-    # TODO
     def test_get_bounding_box(self):
         bb = self.msrf.get_bounding_box()
 
-    # TODO
+        if PLOTTING:
+            _, ax = plt.subplots(1, 1)
+            ax.plot([bb.west, bb.east, bb.east, bb.west],
+                    [bb.south, bb.south, bb.north, bb.north], '-')
+            ax.plot(self.los[0], self.las[0], '.')
+            ax.plot(self.los[1], self.las[1], '.')
+            plt.show()
+
+        aae([bb.west, bb.east, bb.south, bb.north],
+            [-70.5772, -70.1032, 19.650, 19.7405], decimal=2)
+
     def test_get_middle_point(self):
+        # The computed middle point is the mid point of the first surface
         midp = self.msrf.get_middle_point()
+        expected = [-70.453372, 19.695377, 10.2703]
+        computed = [midp.longitude, midp.latitude, midp.depth]
+        aae(expected, computed, decimal=4)
 
-    # TODO remove NaNs
+    def test_get_surface_boundaries01(self):
+        # This checks the boundary of the first surface. The result is checked
+        # visually
+        blo, bla = self.srfc50.get_surface_boundaries()
+
+        # Saving data
+        fname = os.path.join(BASE_PATH, 'results', 'results_t01.npz')
+        if OVERWRITE:
+            np.savez_compressed(fname, blo=blo, bla=bla)
+
+        # Load expected results
+        er = np.load(fname)
+
+        if PLOTTING:
+            _, ax = plt.subplots(1, 1)
+            ax.plot(er['blo'], er['bla'], '-r')
+            plt.show()
+
+        # Testing
+        aae(er['blo'], blo)
+        aae(er['bla'], bla)
+
     def test_get_surface_boundaries(self):
-        bnd = self.msrf.get_surface_boundaries()
+        # The result is checked visually
+        blo, bla = self.msrf.get_surface_boundaries()
 
-    # TODO test the updated attributes
-    def test_setup_gc2_framework(self):
-        gc2f = self.msrf._setup_gc2_framework()
+        # Saving data
+        fname = os.path.join(BASE_PATH, 'results', 'results_t02.npz')
+        if OVERWRITE:
+            np.savez_compressed(fname, blo=blo, bla=bla)
 
-    # TODO
-    def test_get_gc2_coordinates_for_rupture(self):
-        es = self.msrf._get_cartesian_edge_set()
-        gc2c = self.msrf._get_gc2_coordinates_for_rupture(es)
+        # Load expected results
+        er = np.load(fname)
 
-    # TODO
-    def test_get_generalised_coordinates(self):
-        gcoo = self.msrf.get_generalised_coordinates(self.mesh.lons,
-                                                     self.mesh.lats)
+        if PLOTTING:
+            _, ax = plt.subplots(1, 1)
+            ax.plot(blo, bla, '-r')
+            ax.plot(self.los[0], self.las[0], '.')
+            ax.plot(self.los[1], self.las[1], '.')
+            plt.show()
 
-    # TODO fix the error
+        # Testing
+        aae(er['blo'], blo)
+        aae(er['bla'], bla)
+
     def test_get_rx(self):
-        dsts = self.msrf.get_rx_distance(self.mesh)
+        # Results visually inspected
+        dst = self.msrf.get_rx_distance(self.mesh)
 
-    # TODO fix the error
+        if PLOTTING:
+            title = f'{self.NAME} - Rx'
+            _plt_results(self.clo, self.cla, dst, self.msrf, title)
+
     def test_get_ry0(self):
-        dsts = self.msrf.get_ry0_distance(self.mesh)
+        # Results visually inspected
+        dst = self.msrf.get_ry0_distance(self.mesh)
+
+        if PLOTTING:
+            title = f'{self.NAME} - Rx'
+            _plt_results(self.clo, self.cla, dst, self.msrf, title)
 
 
-class MultiSurfaceTestCase65(unittest.TestCase):
-
-    def setUp(self):
-        path_qa = os.path.join('..', '..', '..', '..', 'qa_tests_data')
-        path = os.path.join(path_qa, 'classical', 'case_65')
-        fname = os.path.join(path, 'ssm.xml')
-        fname_sections = os.path.join(path, 'sections.xml')
-
-        sc = SourceConverter(investigation_time=1.0,
-                             rupture_mesh_spacing=2,
-                             complex_fault_mesh_spacing=5,
-                             width_of_mfd_bin=0.1,
-                             area_source_discretization=10.)
-
-        ssm = to_python(fname)
-        self.src = ssm[0][0]
-        gsm = to_python(fname_sections, sc)
-        self.src.set_sections(gsm.sections)
-
-    def test01(self):
-        mesh = Mesh(np.array([9.85]), np.array([45.0]))
-        for i, rup in enumerate(self.src.iter_ruptures()):
-            print(i)
-            rup.surface.get_joyner_boore_distance(mesh)
-            rup.surface.get_min_distance(mesh)
-            rup.surface.get_ry0_distance(mesh)
-            rup.surface.get_rx_distance(mesh)
-            rup.surface.get_width()
-            rup.surface.get_dip()
-            rup.surface.get_top_edge_depth()
+def _plt_results(clo, cla, dst, msrf, title):
+    """ Plot results """
+    _ = plt.figure()
+    ax = plt.gca()
+    plt.scatter(clo, cla, c=dst, edgecolors='none', s=15)
+    plot_mesh_2d(ax, msrf.surfaces[0])
+    plot_mesh_2d(ax, msrf.surfaces[1])
+    lo, la = msrf.get_surface_boundaries()
+    plt.plot(lo, la, '-r')
+    z = np.reshape(dst, clo.shape)
+    cs = plt.contour(clo, cla, z, 10, colors='k')
+    _ = plt.clabel(cs)
+    plt.title(title)
+    plt.show()

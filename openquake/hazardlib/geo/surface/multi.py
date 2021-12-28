@@ -22,6 +22,7 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 """
 from copy import deepcopy
 import numpy
+from shapely.geometry import Polygon
 from scipy.spatial.distance import pdist, squareform
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.geo.surface.base import BaseSurface, downsample_trace
@@ -387,9 +388,19 @@ class MultiSurface(BaseSurface):
         return numpy.array(self.surfaces)[idx][0].get_middle_point()
 
     def get_surface_boundaries(self):
+        los, las = self.surfaces[0].get_surface_boundaries()
+        poly = Polygon((lo, la) for lo, la in zip(los, las))
+        for i in range(1, len(self.surfaces)):
+            los, las = self.surfaces[i].get_surface_boundaries()
+            polyt = Polygon([(lo, la) for lo, la in zip(los, las)])
+            poly = poly.union(polyt)
+        coo = numpy.array([[lo, la] for lo, la in list(poly.exterior.coords)])
+        return coo[:, 0], coo[:, 1]
+
+    def old_get_surface_boundaries(self):
         lons = []
         lats = []
-        for surf in self.surfaces:
+        for surf in enumerate(self.surfaces):
             lons_surf, lats_surf = surf.get_surface_boundaries()
             lons.extend(lons_surf)
             lats.extend(lats_surf)

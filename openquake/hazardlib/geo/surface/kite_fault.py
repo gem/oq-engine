@@ -117,6 +117,9 @@ class KiteSurface(BaseSurface):
         # from the mesh
         return kite_surface_node(self.profiles)
 
+    def get_surface_boundaries(self):
+        return self._get_external_boundary()
+
     def _get_external_boundary(self):
         idxs = self._get_external_boundary_indexes()
         lo = []
@@ -137,7 +140,6 @@ class KiteSurface(BaseSurface):
             idx = np.where(np.isfinite(self.mesh.lons[:, i]))[0]
             if len(idx) == 0:
                 continue
-                # raise ValueError(f'Column {i} does not contain finite values')
             iul.append([min(idx), max(idx)])
         for i in range(0, self.mesh.lons.shape[0]):
             idx = np.where(np.isfinite(self.mesh.lons[i, :]))[0]
@@ -467,7 +469,6 @@ class KiteSurface(BaseSurface):
         :returns:
             Two lists with the coordinates of the longitude and latitude
         """
-
         return self._get_external_boundary()
 
     def get_area(self):
