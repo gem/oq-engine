@@ -130,7 +130,33 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         ksfc = KiteSurface(mesh)
         ksfc.get_dip()
 
+    def test_get_cell_dimensions(self):
+        mesh = Mesh(self.lons, self.lats, self.deps)
+        ksfc = KiteSurface(mesh)
+        _, _, _, areas = ksfc.get_cell_dimensions()
+        idx = np.isfinite(areas)
+        _, _, _, old = ksfc.old_get_cell_dimensions()
 
+        # Computing the lenght and the width of the rectangle representing the
+        # rupture surface. This includes the cells which are empty
+        iul = (1, 0)
+        iur = (1, -1)
+        slen = distance(self.lons[iul], self.lats[iul], self.deps[iul],
+                        self.lons[iur], self.lats[iur], self.deps[iur])
+        iul = (0, 2)
+        ill = (-1, 2)
+        swid = distance(self.lons[iul], self.lats[iul], self.deps[iul],
+                        self.lons[ill], self.lats[ill], self.deps[ill])
+
+        print(areas.size, np.sum(idx))
+
+        # Computing the surface area as the total area minus the area of 4
+        # cells. Note that here we assume that cells have approx the same area
+        expected = slen * swid / areas.size * (np.sum(idx))
+
+        perc_diff = abs(expected - np.sum(areas[idx])) / expected * 100
+        print(perc_diff, expected, np.sum(areas[idx]), np.sum(old))
+        self.assertTrue(perc_diff < 1.)
 
 class KiteSurfaceWithNaNs(unittest.TestCase):
     """
