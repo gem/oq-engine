@@ -514,8 +514,9 @@ class ContextMaker(object):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         for ar in src.iruptures(point_rup):
-            close = sites.filter(cdist <= self.pointsource_distance)
-            far = sites.filter(cdist > self.pointsource_distance)
+            delta = 0 if ar.surface else ar.mag * 5  # PointRupture
+            close = sites.filter(cdist <= self.pointsource_distance + delta)
+            far = sites.filter(cdist > self.pointsource_distance + delta)
             if fewsites:
                 if close is None:  # all is far, common for small mag
                     yield [ar], sites
