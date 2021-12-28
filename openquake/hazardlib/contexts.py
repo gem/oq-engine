@@ -491,9 +491,9 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None):
+    def _ruptures(self, src, filtermag=None, point_rup=False):
         return src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag)
+            shift_hypo=self.shift_hypo, mag=filtermag, point_rup=point_rup)
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
@@ -520,15 +520,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [ar], sites
                 else:  # something is close
-                    yield self._ruptures(src, ar.mag), sites
+                    yield self._ruptures(src, ar.mag, point_rup), sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [ar], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, ar.mag), close
+                    yield self._ruptures(src, ar.mag, point_rup), close
                 else:  # some sites are far, some are close
                     yield [ar], far
-                    yield self._ruptures(src, ar.mag), close
+                    yield self._ruptures(src, ar.mag, point_rup), close
 
     def get_pmap(self, ctxs, probmap=None):
         """
