@@ -697,7 +697,7 @@ class ContextMaker(object):
             raise ValueError('Invalid magnitude %s in source %s' %
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
-            return 0
+            return nrups if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
         return nrups * numpy.mean(nsites / N + .001)
 
