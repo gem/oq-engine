@@ -715,7 +715,7 @@ class ContextMaker(object):
             else:
                 src.weight = .1 + self.estimate_weight(src, srcfilter)
             if src.code == b'C':
-                src.weight += 1
+                src.weight += 2
 
 
 # see contexts_tests.py for examples of collapse
