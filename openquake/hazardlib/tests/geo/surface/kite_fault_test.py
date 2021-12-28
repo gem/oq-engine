@@ -135,7 +135,6 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         ksfc = KiteSurface(mesh)
         _, _, _, areas = ksfc.get_cell_dimensions()
         idx = np.isfinite(areas)
-        _, _, _, old = ksfc.old_get_cell_dimensions()
 
         # Computing the lenght and the width of the rectangle representing the
         # rupture surface. This includes the cells which are empty
@@ -155,8 +154,7 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         expected = slen * swid / areas.size * (np.sum(idx))
 
         perc_diff = abs(expected - np.sum(areas[idx])) / expected * 100
-        print(perc_diff, expected, np.sum(areas[idx]), np.sum(old))
-        self.assertTrue(perc_diff < 1.)
+        self.assertTrue(perc_diff < 0.5)
 
 class KiteSurfaceWithNaNs(unittest.TestCase):
     """
@@ -294,7 +292,7 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         alg = False
         srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
         area = srfc.get_area()
-        self.assertAlmostEqual(269.4955, area, places=2)
+        self.assertAlmostEqual(271.3134, area, places=2)
 
     def test_ztor(self):
         # Create the mesh: two parallel profiles - no top alignment
