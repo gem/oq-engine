@@ -289,8 +289,8 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             plt.show()
 
         # Testing
-        aae(er['blo'], blo)
-        aae(er['bla'], bla)
+        aae(er['blo'], blo, decimal=4)
+        aae(er['bla'], bla, decimal=4)
 
     def test_get_surface_boundaries(self):
         # The result is checked visually
@@ -312,8 +312,8 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             plt.show()
 
         # Testing
-        aae(er['blo'], blo)
-        aae(er['bla'], bla)
+        aae(er['blo'], blo, decimal=4)
+        aae(er['bla'], bla, decimal=4)
 
     def test_get_rx(self):
         # Results visually inspected
