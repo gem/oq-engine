@@ -502,10 +502,7 @@ class ContextMaker(object):
                 rup.sites = sites
                 yield rup
         bigps = getattr(src, 'location', None) and src.count_nphc() > 1
-        if bigps and self.pointsource_distance == 0:
-            # finite size effects are averaged always
-            yield from rups(src.iruptures(), sites)
-        elif bigps:
+        if bigps:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             for r, s in self._cps_rups(src, sites):
