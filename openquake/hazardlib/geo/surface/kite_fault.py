@@ -495,23 +495,8 @@ class KiteSurface(BaseSurface):
         return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
                      mesh.depths[irow, icol])
 
-    def get_tor(self):
-        """
-        Provides the longitude and latitude coordinates of the top of rupture.
-
-        :returns:
-            Two :class:`numpy.ndarray` instances with the longitudes and
-            latitudes
-        """
-        los = self.mesh.lons
-        las = self.mesh.lats
-        idx = np.isfinite(los[0, :])
-        return los[0, idx], las[0, idx]
-
     def get_TUB(self, sites, shift):
         pass
-
-
 
     @property
     def surface_projection(self):

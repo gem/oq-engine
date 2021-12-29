@@ -501,7 +501,7 @@ def get_mesh(lomin, lomax, lamin, lamax, step):
     return mesh, plons, plats
 
 
-def plot_pattern(lons, lats, z, plons, plats, label, num=5):
+def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
     """
     :param lons:
         Traces longitudes
@@ -542,4 +542,6 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5):
                s=0.5, cmap=cmap)
     ax.set_title(f'Test: {label}')
     ax.axis('equal')
-    plt.show()
+    if show:
+        plt.show()
+    return ax
