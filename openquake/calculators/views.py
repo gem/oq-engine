@@ -1260,3 +1260,14 @@ def view_rup_stats(token, dstore):
     rups = dstore['ruptures'][:]
     out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
     return numpy.array(out, dt('kind counts mean stddev min max'))
+
+
+@view.add('weight_by_src')
+def view_weight_by_src(token, dstore):
+    """
+    Show the total weight per source typology
+    """
+    info = dstore.read_df('source_info')
+    ser = info.groupby('code').weight.sum()
+    return pandas.DataFrame(dict(weight=ser.to_numpy()),
+                            index=decode(ser.index.to_numpy()))
