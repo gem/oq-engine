@@ -714,7 +714,7 @@ class ContextMaker(object):
                 src.weight = .001
             else:
                 src.weight = .1 + self.estimate_weight(src, srcfilter)
-            if src.code == b'C':
+            if src.code in b'CS':
                 src.weight += 2
 
 
