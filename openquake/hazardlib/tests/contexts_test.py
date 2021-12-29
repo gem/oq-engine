@@ -239,6 +239,5 @@ class SetWeightTestCase(unittest.TestCase):
         srcs = list(area)  # split in 3+3 PointSources
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
-        print(weights)
         expected = [10.101, 10.101, 10.101, 0.1, 0.1, 0.1]
         numpy.testing.assert_almost_equal(weights, expected, decimal=2)
