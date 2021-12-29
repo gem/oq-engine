@@ -421,9 +421,6 @@ mean:
   Example: *mean = false*.
   Default: True
 
-min_weight:
-  INTERNAL
-
 minimum_asset_loss:
   Used in risk calculations. If set, losses smaller than the
   *minimum_asset_loss* are consider zeros.
@@ -848,8 +845,7 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.IntegrationDistance.new,
-                                       valid.IntegrationDistance.new('1000'))
+    pointsource_distance = valid.Param(valid.floatdict, {'default': 1000})
     ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -896,9 +892,8 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     split_level = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    min_weight = valid.Param(valid.positiveint, 1)  # used in classical
     time_event = valid.Param(str, None)
-    time_per_task = valid.Param(valid.positivefloat, 300)
+    time_per_task = valid.Param(valid.positivefloat, 600)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -909,11 +904,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: True if the pointsource_distance is 1000 km
         """
-        dists = set()
-        for pairs in self.pointsource_distance.values():
-            for mag, dist in pairs:
-                dists.add(dist)
-        return dists == {1000}
+        return set(self.pointsource_distance.values()) == {1000}
 
     @property
     def risk_files(self):
@@ -1686,6 +1677,15 @@ class OqParam(valid.ParamSet):
             self.hazard_curves_from_gmfs or self.calculation_mode in
             ('classical', 'disaggregation'))
         return not invalid
+
+    def is_valid_ps_grid_spacing(self):
+        """
+        `ps_grid_spacing` must be smaller than the `pointsource_distance`
+        """
+        if self.ps_grid_spacing is None:
+            return True
+        return self.ps_grid_spacing <= calc.filters.getdefault(
+            self.pointsource_distance, 'default')
 
     def is_valid_soil_intensities(self):
         """

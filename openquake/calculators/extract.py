@@ -498,6 +498,22 @@ def extract_rups_by_mag_dist(dstore, what):
     return extract_effect(dstore, 'rups_by_mag_dist')
 
 
+@extract.add('source_data')
+def extract_source_data(dstore, what):
+    """
+    Extract performance information about the sources.
+    Use it as /extract/source_data?
+    """
+    qdict = parse(what)
+    if 'taskno' in qdict:
+        sel = {'taskno': int(qdict['taskno'][0])}
+    else:
+        sel = {}
+    df = dstore.read_df('source_data', 'src_id', sel=sel).sort_values('ctimes')
+    dic = {col: df[col].to_numpy() for col in df.columns}
+    return ArrayWrapper(df.index.to_numpy(), dic)
+
+
 @extract.add('sources')
 def extract_sources(dstore, what):
     """

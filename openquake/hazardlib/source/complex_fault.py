@@ -182,6 +182,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         Uses :func:`_float_ruptures` for finding possible rupture locations
         on the whole fault surface.
         """
+        slc = kwargs.get('slc', slice(None))
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.mesh
@@ -198,7 +199,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             rupture_slices = _float_ruptures(
                 rupture_area, rupture_length, cell_area, cell_length)
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
-            for rupture_slice in rupture_slices:
+            for rupture_slice in rupture_slices[slc]:
                 mesh = whole_fault_mesh[rupture_slice]
                 # XXX: use surface centroid as rupture's hypocenter
                 # XXX: instead of point with middle index
@@ -213,6 +214,12 @@ class ComplexFaultSource(ParametricSeismicSource):
                     surface, occurrence_rate, self.temporal_occurrence_model)
                 rup.mag_occ_rate = mag_occ_rate
                 yield rup
+
+    def few_ruptures(self):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        yield from self.iter_ruptures(slc=slice(None, None, 25))
 
     def count_ruptures(self):
         """

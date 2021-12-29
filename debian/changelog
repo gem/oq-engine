@@ -1,4 +1,9 @@
+  [Miguel Leonardo-Suárez]
+  * Added GMPE from Jaimes et al. (2020) for Mexican intraslab earthquakes
+  
   [Michele Simionato]
+  * Enforced ps_grid_spacing <= pointsource_distance
+  * Internal: added command `oq plot source_data?`
   * The engine is now splitting the MultiFaultSources, thus improving the task
     distribution
 
@@ -8,6 +13,7 @@
 
   [Marco Pagani, Shreyasvi]
   * Added GMM from Bora et al. (2019)
+  * Fixed bug in the multifault surface when defined using kite fault surfaces
 
   [Giuseppina Tusa]
   * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs

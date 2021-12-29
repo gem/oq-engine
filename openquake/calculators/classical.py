@@ -265,6 +265,7 @@ class ClassicalCalculator(base.HazardCalculator):
     core_task = classical
     precalc = 'preclassical'
     accept_precalc = ['preclassical', 'classical']
+    SLOW_TASK_ERROR = False
 
     def agg_dicts(self, acc, dic):
         """
@@ -278,10 +279,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
-        ctimes = dic['source_data']
-        self.source_data += ctimes
+        sdata = dic['source_data']
+        self.source_data += sdata
         grp_id = dic.pop('grp_id')
-        self.rel_ruptures[grp_id] += sum(ctimes['nrups'])
+        self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']['src_id']):
@@ -420,8 +421,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.csm = parent['_csm']
                 self.full_lt = parent['full_lt']
                 self.datastore['source_info'] = parent['source_info'][:]
+                max_weight = self.csm.get_max_weight(oq)
+        else:
+            max_weight = self.max_weight
         self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
-        grp_ids = numpy.arange(len(self.csm.src_groups))
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
@@ -434,13 +437,13 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('There are %d tiles of sizes %s', len(tiles), sizes)
             for size in sizes:
                 assert size > oq.max_sites_disagg, (size, oq.max_sites_disagg)
-        self.source_data = AccumDict(accum=numpy.zeros(3, F32))
+        self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = {}
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
             sids = tile.sids if len(tiles) > 1 else None
-            smap = self.submit(sids, grp_ids, self.haz.cmakers)
+            smap = self.submit(sids, self.haz.cmakers, max_weight)
             for cm in self.haz.cmakers:
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
@@ -460,7 +463,7 @@ class ClassicalCalculator(base.HazardCalculator):
             'source_data', pandas.DataFrame(self.source_data))
         self.source_data.clear()  # save a bit of memory
 
-    def submit(self, sids, grp_ids, cmakers):
+    def submit(self, sids, cmakers, max_weight):
         """
         :returns: a Starmap instance for the current tile
         """
@@ -469,30 +472,9 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
         triples = []
-        src_groups = self.csm.src_groups
-        tot_weight = 0
-        nsources = 0
-        for grp_id in grp_ids:
-            cmaker = cmakers[grp_id]
-            gsims = cmaker.gsims
-            sg = src_groups[grp_id]
-            for src in sg:
-                nsources += 1
-                src.ngsims = len(gsims)
-                tot_weight += src.weight
-                if src.code == b'C' and src.num_ruptures > 20_000:
-                    msg = ('{} is suspiciously large, containing {:_d} '
-                           'ruptures with complex_fault_mesh_spacing={} km')
-                    spc = oq.complex_fault_mesh_spacing
-                    logging.info(msg.format(src, src.num_ruptures, spc))
-        assert tot_weight
         split_level = oq.split_level
-        max_weight = max(tot_weight / (oq.concurrent_tasks * .75 or 1),
-                         oq.min_weight)
-        logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
-                     format(int(tot_weight), int(max_weight), nsources))
-        for grp_id in grp_ids:
-            sg = src_groups[grp_id]
+        for grp_id in self.grp_ids:
+            sg = self.csm.src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
                 trip = (sg, sids, cmakers[grp_id])
@@ -551,13 +533,17 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
-            dur = task_info.loc[b'split_task'].duration
+            dur = task_info.loc[b'classical'].duration
         except KeyError:  # no data
             pass
         else:
-            slow_tasks = len(dur[dur > 3 * dur.mean()])
-            if slow_tasks:
-                logging.info('There were %d slow tasks', slow_tasks)
+            slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 60
+            msg = 'There were %d slow task(s)' % slow_tasks
+            if (slow_tasks and self.SLOW_TASK_ERROR and
+                    not self.oqparam.disagg_by_src):
+                raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
+            elif slow_tasks:
+                logging.info(msg)
         nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
               if name.startswith('rup_')}
         if nr:  # few sites, log the number of ruptures per magnitude

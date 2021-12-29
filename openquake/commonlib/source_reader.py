@@ -242,8 +242,8 @@ def _build_groups(full_lt, smdict):
 
         # check applyToSources
         sm_branch = rlz.lt_path[0]
-        srcids = full_lt.source_model_lt.info.applytosources[sm_branch]
-        for srcid in srcids:
+        src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
+        for srcid in src_id:
             if srcid not in source_ids:
                 raise ValueError(
                     "The source %s is not in the source model,"
@@ -419,7 +419,7 @@ class CompositeSourceModel:
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         for src_id, nsites, nrupts, weight, ctimes in zip(
-                source_data['srcids'], source_data['nsites'],
+                source_data['src_id'], source_data['nsites'],
                 source_data['nrupts'], source_data['weight'],
                 source_data['ctimes']):
             row = self.source_info[src_id.split(':')[0]]
@@ -436,6 +436,34 @@ class CompositeSourceModel:
         for src in self.get_sources():
             n += src.count_ruptures()
         return n
+
+    def get_max_weight(self, oq):  # used in preclassical
+        """
+        :param oq: an OqParam instance
+        :returns: total weight and max weight of the sources
+        """
+        srcs = self.get_sources()
+        tot_weight = 0
+        for src in srcs:
+            tot_weight += src.weight
+            if src.code == b'C' and src.num_ruptures > 20_000:
+                msg = ('{} is suspiciously large, containing {:_d} '
+                       'ruptures with complex_fault_mesh_spacing={} km')
+                spc = oq.complex_fault_mesh_spacing
+                logging.info(msg.format(src, src.num_ruptures, spc))
+        assert tot_weight
+        max_weight = tot_weight / (oq.concurrent_tasks or 1)
+        if parallel.Starmap.num_cores > 64:  # if many cores less tasks
+            max_weight *= 1.5
+        logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
+                     format(int(tot_weight), int(max_weight), len(srcs)))
+        heavy = [src for src in srcs if src.weight > max_weight]
+        for src in sorted(heavy, key=lambda s: s.weight, reverse=True):
+            logging.info('%s', src)
+        if not heavy:
+            maxsrc = max(srcs, key=lambda s: s.weight)
+            logging.info('Heaviest: %s', maxsrc)
+        return max_weight
 
     def __toh5__(self):
         data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL))

@@ -96,6 +96,14 @@ class MultiPointSource(ParametricSeismicSource):
             for rupture in ps.iter_ruptures(**kwargs):
                 yield rupture
 
+    def few_ruptures(self):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        for i, ps in enumerate(self):
+            if i % 10 == 0:
+                yield from ps.few_ruptures()
+
     def count_ruptures(self):
         """
         See

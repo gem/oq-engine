@@ -225,6 +225,7 @@ class PointSource(ParametricSeismicSource):
         and hypocenter depth.
         """
         filtermag = kwargs.get('mag')
+        point_rup = kwargs.get('point_rup')
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             if filtermag and mag != filtermag:
                 continue  # yield only ruptures of magnitude filtermag
@@ -234,12 +235,18 @@ class PointSource(ParametricSeismicSource):
                                longitude=self.location.longitude,
                                depth=hc_depth)
                     occurrence_rate = mag_occ_rate * np_prob * hc_prob
-                    surface, nhc = self._get_rupture_surface(mag, np, hc)
-                    yield ParametricProbabilisticRupture(
-                        mag, np.rake, self.tectonic_region_type,
-                        nhc if kwargs.get('shift_hypo') else hc,
-                        surface, occurrence_rate,
-                        self.temporal_occurrence_model)
+                    if point_rup:
+                        yield PointRupture(
+                            mag, self.tectonic_region_type, hc,
+                            0, 0, np.rake, occurrence_rate,
+                            self.temporal_occurrence_model)
+                    else:
+                        surface, nhc = self._get_rupture_surface(mag, np, hc)
+                        yield ParametricProbabilisticRupture(
+                            mag, np.rake, self.tectonic_region_type,
+                            nhc if kwargs.get('shift_hypo') else hc,
+                            surface, occurrence_rate,
+                            self.temporal_occurrence_model)
 
     # PointSource
     def iruptures(self, point_rup=False):
@@ -250,6 +257,11 @@ class PointSource(ParametricSeismicSource):
         np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
         yield from _rupture_by_mag(self, np, hc, point_rup)
+
+    def few_ruptures(self):
+        for i, rup in enumerate(self.iruptures(point_rup=True)):
+            if i % 5 == 0:
+                yield rup
 
     def count_nphc(self):
         """
@@ -441,8 +453,12 @@ class CollapsedPointSource(PointSource):
         """
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
-        np = Mock(strike=self.strike, dip=self.dip, rake=self.rake)
-        yield from _rupture_by_mag(self, np, self.location, point_rup)
+        yield from _rupture_by_mag(self, self, self.location, point_rup)
+
+    def few_ruptures(self):
+        for i, src in enumerate(self.pointsources):
+            if i % 10 == 0:
+                yield from src.few_ruptures()
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """

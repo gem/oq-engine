@@ -170,23 +170,19 @@ def view_worst_sources(token, dstore):
     """
     Returns the sources with worst weights
     """
-    info = dstore.read_df('source_info', 'source_id').sort_values(
-        'calc_time').tail(20)
-    del info['trti'], info['grp_id']
-    info['slow_rate'] = info.calc_time / info.weight
-    return info
-
-
-@view.add('worst_tasks')
-def view_worst_tasks(token, dstore):
-    """
-    Returns the sources with worst weights
-    """
-    info = dstore.read_df('task_info', 'task_no').sort_values(
-        'duration').tail(20)
-    del info['received'], info['mem_gb']
-    info['slow_rate'] = info.duration / info.weight
-    return info
+    if ':' in token:
+        step = int(token.split(':')[1])
+    else:
+        step = 1
+    data = dstore.read_df('source_data', 'src_id')
+    ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
+    [[taskno, maxtime]] = ser.to_dict().items()
+    data = data[data.taskno == taskno]
+    print('Sources in the slowest task (%d seconds, weight=%d)'
+          % (maxtime, data['weight'].sum()))
+    data['slow_rate'] = data.ctimes / data.weight
+    df = data.sort_values('slow_rate', ascending=False)
+    return df[slice(None, None, step)]
 
 
 @view.add('slow_sources')
@@ -674,12 +670,29 @@ def view_task_hazard(token, dstore):
     taskno = rec['task_no']
     sdata = dstore.read_df('source_data', 'taskno')
     eff_ruptures = sdata.loc[taskno].nrupts.sum()
-    eff_sites = sdata.loc[taskno].nrupts.sum()
-    srcids = decode(sdata.loc[taskno].srcids)
-    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
-           'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
-                             srcids))
+    eff_sites = sdata.loc[taskno].nsites.sum()
+    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, weight=%d, duration=%d s'
+           % (taskno, eff_ruptures, eff_sites, rec['weight'], rec['duration']))
     return res
+
+
+@view.add('source_data')
+def view_source_data(token, dstore):
+    """
+    Display info about a given task. Here is an example::
+
+     $ oq show source_data:42
+    """
+    if ':' not in token:
+        return dstore.read_df(token, 'src_id')
+    _, taskno = token.split(':')
+    taskno = int(taskno)
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
+    df = dstore.read_df('source_data', 'src_id', sel={'taskno': taskno})
+    del df['taskno']
+    df['slowrate'] = df['ctimes'] / df['weight']
+    return df.sort_values('ctimes')
 
 
 @view.add('task_ebrisk')
@@ -1247,3 +1260,14 @@ def view_rup_stats(token, dstore):
     rups = dstore['ruptures'][:]
     out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
     return numpy.array(out, dt('kind counts mean stddev min max'))
+
+
+@view.add('weight_by_src')
+def view_weight_by_src(token, dstore):
+    """
+    Show the total weight per source typology
+    """
+    info = dstore.read_df('source_info')
+    ser = info.groupby('code').weight.sum()
+    return pandas.DataFrame(dict(weight=ser.to_numpy()),
+                            index=decode(ser.index.to_numpy()))
