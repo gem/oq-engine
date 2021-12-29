@@ -539,7 +539,8 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 60
             msg = 'There were %d slow task(s)' % slow_tasks
-            if slow_tasks and self.SLOW_TASK_ERROR:
+            if (slow_tasks and self.SLOW_TASK_ERROR and
+                    not self.oqparam.disagg_by_src):
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)

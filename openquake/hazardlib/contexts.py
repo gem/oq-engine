@@ -491,48 +491,45 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None):
+    def _ruptures(self, src, filtermag=None, point_rup=False):
         return src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag)
+            shift_hypo=self.shift_hypo, mag=filtermag, point_rup=point_rup)
 
     def _gen_rups(self, src, sites):
-        fewsites = len(sites) <= self.max_sites_disagg
-
         # yield ruptures, each one with a .sites attribute
         def rups(rupiter, sites):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
         bigps = getattr(src, 'location', None) and src.count_nphc() > 1
-        if bigps and self.pointsource_distance == 0:
-            # finite size effects are averaged always
-            yield from rups(src.iruptures(), sites)
-        elif bigps:
+        if bigps:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for r, s in self._cps_rups(src, sites, fewsites):
+            for r, s in self._cps_rups(src, sites):
                 yield from rups(r, s)
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
 
-    def _cps_rups(self, src, sites, fewsites):
+    def _cps_rups(self, src, sites, point_rup=False):
+        fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for ar in src.iruptures():
-            close = sites.filter(cdist <= self.pointsource_distance)
-            far = sites.filter(cdist > self.pointsource_distance)
+        for ar in src.iruptures(point_rup):
+            delta = 0 if ar.surface else ar.mag * 5  # PointRupture
+            close = sites.filter(cdist <= self.pointsource_distance + delta)
+            far = sites.filter(cdist > self.pointsource_distance + delta)
             if fewsites:
                 if close is None:  # all is far, common for small mag
                     yield [ar], sites
                 else:  # something is close
-                    yield self._ruptures(src, ar.mag), sites
+                    yield self._ruptures(src, ar.mag, point_rup), sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [ar], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, ar.mag), close
+                    yield self._ruptures(src, ar.mag, point_rup), close
                 else:  # some sites are far, some are close
                     yield [ar], far
-                    yield self._ruptures(src, ar.mag), close
+                    yield self._ruptures(src, ar.mag, point_rup), close
 
     def get_pmap(self, ctxs, probmap=None):
         """
@@ -677,34 +674,6 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def count_effrups(self, src, sites):
-        """
-        :returns: the number of effective ruptures in the source
-        """
-        if src.code not in b'pP':
-            return src.num_ruptures
-        num_ps = len(getattr(src, 'pointsources', [0]))
-        nphc = src.count_nphc()  # np * hc * num_ps
-        if nphc == num_ps:
-            return src.num_ruptures  # no nodal_planes/hypocenters
-        cdist = sites.get_cdist(src.location)
-        nphcs = []
-        for rup in src.iruptures(point_rup=True):
-            md = self.maximum_distance(rup.mag)
-            if self.pointsource_distance < md:
-                close = sites.filter(cdist <= self.pointsource_distance)
-                far = sites.filter(cdist > self.pointsource_distance)
-                if close is None:
-                    nphcs.append(1)
-                elif far is None:
-                    nphcs.append(nphc)
-                else:
-                    f = len(close) / len(sites)  # fraction of close sites
-                    nphcs.append(f * nphc + 1 - f)
-            else:
-                nphcs.append(nphc)
-        return src.num_ruptures / nphc * numpy.mean(nphcs)
-
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
         sites = srcfilter.get_close_sites(src)
@@ -712,17 +681,26 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        rups = list(src.few_ruptures())
+        if src.code in b'pP':
+            allrups = []
+            for irups, r_sites in self._cps_rups(src, sites, point_rup=True):
+                for rup in irups:
+                    rup.sites = r_sites
+                    allrups.append(rup)
+            rups = allrups[::20]
+            nrups = len(allrups)
+        else:
+            rups = list(src.few_ruptures())
+            nrups = src.num_ruptures
         try:
             ctxs = self.get_ctxs(rups, sites)
         except ValueError:
             raise ValueError('Invalid magnitude %s in source %s' %
                              ({r.mag for r in rups}, src.source_id))
         if not ctxs:
-            return 0
-        nr = self.count_effrups(src, sites) * numpy.mean(
-            [len(ctx) / N for ctx in ctxs])
-        return nr
+            return nrups if N == 1 else 0
+        nsites = numpy.array([len(ctx) for ctx in ctxs])
+        return nrups * numpy.mean(nsites / N + .001)
 
     def set_weight(self, sources, srcfilter):
         """
@@ -736,8 +714,8 @@ class ContextMaker(object):
                 src.weight = .001
             else:
                 src.weight = .1 + self.estimate_weight(src, srcfilter)
-            if src.code == b'C':
-                src.weight += 1
+            if src.code in b'CS':
+                src.weight += 2
 
 
 # see contexts_tests.py for examples of collapse

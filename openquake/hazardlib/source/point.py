@@ -225,6 +225,7 @@ class PointSource(ParametricSeismicSource):
         and hypocenter depth.
         """
         filtermag = kwargs.get('mag')
+        point_rup = kwargs.get('point_rup')
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             if filtermag and mag != filtermag:
                 continue  # yield only ruptures of magnitude filtermag
@@ -234,12 +235,18 @@ class PointSource(ParametricSeismicSource):
                                longitude=self.location.longitude,
                                depth=hc_depth)
                     occurrence_rate = mag_occ_rate * np_prob * hc_prob
-                    surface, nhc = self._get_rupture_surface(mag, np, hc)
-                    yield ParametricProbabilisticRupture(
-                        mag, np.rake, self.tectonic_region_type,
-                        nhc if kwargs.get('shift_hypo') else hc,
-                        surface, occurrence_rate,
-                        self.temporal_occurrence_model)
+                    if point_rup:
+                        yield PointRupture(
+                            mag, self.tectonic_region_type, hc,
+                            0, 0, np.rake, occurrence_rate,
+                            self.temporal_occurrence_model)
+                    else:
+                        surface, nhc = self._get_rupture_surface(mag, np, hc)
+                        yield ParametricProbabilisticRupture(
+                            mag, np.rake, self.tectonic_region_type,
+                            nhc if kwargs.get('shift_hypo') else hc,
+                            surface, occurrence_rate,
+                            self.temporal_occurrence_model)
 
     # PointSource
     def iruptures(self, point_rup=False):
