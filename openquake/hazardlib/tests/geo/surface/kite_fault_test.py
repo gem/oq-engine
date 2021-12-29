@@ -130,7 +130,29 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         ksfc = KiteSurface(mesh)
         ksfc.get_dip()
 
+    def test_get_cell_dimensions(self):
+        mesh = Mesh(self.lons, self.lats, self.deps)
+        ksfc = KiteSurface(mesh)
+        _, _, _, areas = ksfc.get_cell_dimensions()
+        idx = np.isfinite(areas)
 
+        # Computing the lenght and the width of the rectangle representing the
+        # rupture surface. This includes the cells which are empty
+        iul = (1, 0)
+        iur = (1, -1)
+        slen = distance(self.lons[iul], self.lats[iul], self.deps[iul],
+                        self.lons[iur], self.lats[iur], self.deps[iur])
+        iul = (0, 2)
+        ill = (-1, 2)
+        swid = distance(self.lons[iul], self.lats[iul], self.deps[iul],
+                        self.lons[ill], self.lats[ill], self.deps[ill])
+
+        # Computing the surface area as the total area minus the area of 4
+        # cells. Note that here we assume that cells have approx the same area
+        expected = slen * swid / areas.size * (np.sum(idx))
+
+        perc_diff = abs(expected - np.sum(areas[idx])) / expected * 100
+        self.assertTrue(perc_diff < 0.5)
 
 class KiteSurfaceWithNaNs(unittest.TestCase):
     """
@@ -235,9 +257,9 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             plt.title(f'{self.NAME} - Ry0')
             plt.show()
 
+    # TODO
     def test_get_dip(self):
         dip = self.srfc.get_dip()
-        print(dip)
 
 
 class KiteSurfaceSimpleTests(unittest.TestCase):
@@ -268,7 +290,7 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         alg = False
         srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
         area = srfc.get_area()
-        self.assertAlmostEqual(269.4955, area, places=2)
+        self.assertAlmostEqual(271.3134, area, places=2)
 
     def test_ztor(self):
         # Create the mesh: two parallel profiles - no top alignment

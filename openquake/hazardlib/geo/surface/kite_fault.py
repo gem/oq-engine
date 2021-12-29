@@ -34,8 +34,8 @@ from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.geodetic import npoints_towards
-from openquake.hazardlib.geo.geodetic import distance, azimuth
+from openquake.hazardlib.geo.geodetic import (
+    npoints_towards, distance, azimuth)
 
 TOL = 0.4
 
@@ -163,7 +163,6 @@ class KiteSurface(BaseSurface):
             bnd.append([i, ilr[i, 0]])
         return bnd
 
-
     def get_joyner_boore_distance(self, mesh) -> np.ndarray:
         """
         Computes the Rjb distance between the rupture and the points included
@@ -242,8 +241,7 @@ class KiteSurface(BaseSurface):
     def get_width(self) -> float:
         """
         Compute the width of the kite surface. This corresponds to the mean
-        width computed for all the columns of the mesh that define the kite
-        surface.
+        width computed for all the columns of the mesh defining the surface.
         """
         if self.width is None:
             widths = []
@@ -264,7 +262,7 @@ class KiteSurface(BaseSurface):
 
     def get_dip(self) -> float:
         """
-        Return the fault dip as the average dip over the fault surface mesh.
+        Computes the fault dip as the average dip over the surface
 
         :returns:
             The average dip, in decimal degrees.
@@ -275,10 +273,10 @@ class KiteSurface(BaseSurface):
             for col_idx in range(self.mesh.lons.shape[1]):
 
                 # For the calculation of the overall dip we use just the dip
-                # values of contigous points along a profile
-                iii = np.where(np.isfinite(self.mesh.lons[:, col_idx]))[0]
-                dff = np.diff(iii)
-                jjj = np.where(abs(dff-1) < 1e-5)[0]
+                # values of contiguous points along a profile
+                iii = np.isfinite(self.mesh.lons[1:, col_idx])
+                kkk = np.isfinite(self.mesh.lons[:-1, col_idx])
+                jjj = np.where(np.logical_and(kkk, iii))[0]
 
                 zeros = np.zeros_like(self.mesh.depths[jjj, col_idx])
                 hdists = distance(self.mesh.lons[jjj+1, col_idx],
@@ -491,62 +489,68 @@ class KiteSurface(BaseSurface):
 
     def get_area(self):
         _, _, _, cell_area = self.get_cell_dimensions()
-        return np.sum(cell_area)
+        idx = np.isfinite(cell_area)
+        return np.sum(cell_area[idx])
 
     def get_cell_dimensions(self):
         """
-        Calculate centroid, width, length and area of each mesh cell.
-
-        NOTE: The original version of this method is in the class
-        :class:`openquake.hazardlib.geo.mesh.Mesh`. It is duplicated here
-        because it requires ad-hoc modifications to support kite fault
-        surfaces
-
-        :returns:
-            Tuple of four elements, each being 2d numpy array.
-            Each array has both dimensions less by one the dimensions
-            of the mesh, since they represent cells, not vertices.
-            Arrays contain the following cell information:
-
-            #. centroids, 3d vectors in a Cartesian space,
-            #. length (size along row of points) in km,
-            #. width (size along column of points) in km,
-            #. area in square km.
+        Compute the area [km2] of the cells representing the surface.
         """
-        points, along_azimuth, updip, diag = self.mesh.triangulate()
-        top = along_azimuth[:-1]
-        left = updip[:, :-1]
-        tl_area = geo_utils.triangle_area(top, left, diag)
-        top_length = np.sqrt(np.sum(top * top, axis=-1))
-        left_length = np.sqrt(np.sum(left * left, axis=-1))
+        lo = self.mesh.lons
+        la = self.mesh.lats
+        de = self.mesh.depths
 
-        bottom = along_azimuth[1:]
-        right = updip[:, 1:]
-        br_area = geo_utils.triangle_area(bottom, right, diag)
-        bottom_length = np.sqrt(np.sum(bottom * bottom, axis=-1))
-        right_length = np.sqrt(np.sum(right * right, axis=-1))
+        # Calculating cells dimensions
+        lo0 = lo[:-1, :]
+        la0 = la[:-1, :]
+        de0 = de[:-1, :]
+        lo1 = lo[1:, :]
+        la1 = la[1:, :]
+        de1 = de[1:, :]
+        idx = np.logical_and(np.isfinite(lo0), np.isfinite(lo1))
+        dy = np.full_like(lo0, np.nan)
+        dy[idx] = distance(lo0[idx], la0[idx], de0[idx],
+                           lo1[idx], la1[idx], de1[idx])
 
-        # Remove cells without a finite area
-        np.nan_to_num(tl_area, nan=0.0, copy=False)
-        np.nan_to_num(br_area, nan=0.0, copy=False)
-        cell_area = tl_area + br_area
+        lo0 = lo[:, 1:]
+        la0 = la[:, 1:]
+        de0 = de[:, 1:]
+        lo1 = lo[:, :-1]
+        la1 = la[:, :-1]
+        de1 = de[:, :-1]
+        idx = np.logical_and(np.isfinite(lo0), np.isfinite(lo1))
+        dx = np.full_like(lo0, np.nan)
+        dx[idx] = distance(lo0[idx], la0[idx], de0[idx],
+                           lo1[idx], la1[idx], de1[idx])
 
-        tl_center = (points[:-1, :-1] + points[:-1, 1:] + points[1:, :-1]) / 3
-        br_center = (points[:-1, 1:] + points[1:, :-1] + points[1:, 1:]) / 3
+        lo0 = lo[1:, 1:]
+        la0 = la[1:, 1:]
+        de0 = de[1:, 1:]
+        lo1 = lo[:-1, :-1]
+        la1 = la[:-1, :-1]
+        de1 = de[:-1, :-1]
+        idx = np.logical_and(np.isfinite(lo0), np.isfinite(lo1))
+        dd = np.full_like(lo0, np.nan)
+        dd[idx] = distance(lo0[idx], la0[idx], de0[idx],
+                           lo1[idx], la1[idx], de1[idx])
 
-        cell_center = ((tl_center * tl_area.reshape(tl_area.shape + (1, ))
-                        + br_center * br_area.reshape(br_area.shape + (1, )))
-                       / cell_area.reshape(cell_area.shape + (1, )))
+        # Compute the area of the upper left triangles in each cell
+        s = (dx[:-1, :] + dy[:, :-1] + dd) * 0.5
+        upp = (s * (s - dx[:-1, :]) * (s - dy[:, :-1]) * (s - dd))**0.5
 
-        cell_length = ((top_length * tl_area + bottom_length * br_area)
-                       / cell_area)
-        cell_width = ((left_length * tl_area + right_length * br_area)
-                      / cell_area)
+        # Compute the area of the lower right triangles in each cell
+        s = (dx[1:, :] + dy[:, 1:] + dd) * 0.5
+        low = (s * (s - dx[1:, :]) * (s - dy[:, 1:]) * (s - dd))**0.5
 
-        np.nan_to_num(cell_length, nan=0.0, copy=False)
-        np.nan_to_num(cell_width, nan=0.0, copy=False)
+        # Compute the area of each cell
+        area = np.full_like(dd, np.nan)
+        idx = np.logical_and(np.isfinite(upp), np.isfinite(low))
+        area[idx] = upp[idx] + low[idx]
 
-        return cell_center, cell_length, cell_width, cell_area
+        # Retain the same output of the original function which provided for
+        # each cell the centroid as 3d vector in a Cartesian space, the length
+        # width (size along column of points) in km and the area in km2.
+        return None, None, None, area
 
 
 def get_profiles_from_simple_fault_data(

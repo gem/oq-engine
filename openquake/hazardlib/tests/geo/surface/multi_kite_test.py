@@ -229,7 +229,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         # point toward W
         msg = 'Multi fault surface: strike is wrong'
         strike = self.msrf.get_strike()
-        self.assertAlmostEqual(268.878, strike, places=2, msg=msg)
+        self.assertAlmostEqual(268.867, strike, places=2, msg=msg)
 
     def test_get_dip(self):
         dip = self.msrf.get_dip()
