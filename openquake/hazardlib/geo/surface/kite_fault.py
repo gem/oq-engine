@@ -120,7 +120,35 @@ class KiteSurface(BaseSurface):
     def get_surface_boundaries(self):
         return self._get_external_boundary()
 
+    def get_tor(self):
+        """
+        Provides longitude and latitude coordinates of the vertical surface
+        projection of the top of rupture. This is used in the GC2 method to
+        compute the Rx and Ry0 distances.
+
+        One important note here. The kite fault surface uses a rectangular
+        mesh to describe the geometry of the rupture; some nodes can be NaN.
+
+        :returns:
+            Two :class:`numpy.ndarray` instances with the longitudes and
+            latitudes
+        """
+        chk = np.isfinite(self.mesh.lons)
+        iro = (chk).argmax(axis=0)
+        ico = np.arange(0, self.mesh.lons.shape[1])
+        ico = ico[iro <= 1]
+        iro = iro[iro <= 1]
+        return self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
+
     def _get_external_boundary(self):
+        """
+        Provides the surface projection of the external boundary of the
+        rupture surface.
+
+        :returns:
+            Two :class:`numpy.ndarray` instances containing longitudes and
+            latitudes, respectively
+        """
         idxs = self._get_external_boundary_indexes()
         lo = []
         la = []
@@ -179,7 +207,7 @@ class KiteSurface(BaseSurface):
             (blo, bla), (mesh.lons, mesh.lats))
 
         idxs = (distances < 40).nonzero()[0]  # indices on the first dimension
-        if not len(idxs):
+        if len(idxs) < 1:
             # no point is close enough, return distances as they are
             return distances
 
@@ -239,9 +267,15 @@ class KiteSurface(BaseSurface):
             raise ValueError(msg)
 
     def get_width(self) -> float:
+        # TODO this method is provisional.  It works correctly for simple and
+        # regular geometries defined using profiles parallel to the dip
+        # direction
         """
-        Compute the width of the kite surface. This corresponds to the mean
-        width computed for all the columns of the mesh defining the surface.
+        Compute the width of the kite surface.
+
+        Defining a width for a kite surface is quite difficult. At present we
+        compute it as the mean width for all the columns of the mesh defining
+        the surface.
         """
         if self.width is None:
             widths = []
@@ -261,8 +295,11 @@ class KiteSurface(BaseSurface):
         return self.width
 
     def get_dip(self) -> float:
+        # TODO this method is provisional. It works correctly for simple and
+        # regular geometries defined using profiles parallel to the dip
+        # direction
         """
-        Computes the fault dip as the average dip over the surface
+        Computes the fault dip as the average dip over the surface.
 
         :returns:
             The average dip, in decimal degrees.

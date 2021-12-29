@@ -28,7 +28,7 @@ from openquake.hazardlib.geo.surface import KiteSurface
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
-
+aae = np.testing.assert_almost_equal
 
 def plot_mesh_2d(ax, smsh):
     """
@@ -104,12 +104,14 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         self.lats = np.array(lats)
         self.deps = np.array(deps)
 
+        self.mesh = Mesh(self.lons, self.lats, self.deps)
+        self.ksfc = KiteSurface(self.mesh)
+
     def test_get_external_boundary(self):
         # This mesh does not comply with the right hand rule. In the init it
         # will be adjusted
 
-        mesh = Mesh(self.lons, self.lats, self.deps)
-        ksfc = KiteSurface(mesh)
+        ksfc = self.ksfc
         idxs = ksfc._get_external_boundary_indexes()
 
         # Checking
@@ -126,13 +128,10 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
             plt.show()
 
     def test_get_dip(self):
-        mesh = Mesh(self.lons, self.lats, self.deps)
-        ksfc = KiteSurface(mesh)
-        ksfc.get_dip()
+        self.ksfc.get_dip()
 
     def test_get_cell_dimensions(self):
-        mesh = Mesh(self.lons, self.lats, self.deps)
-        ksfc = KiteSurface(mesh)
+        ksfc = self.ksfc
         _, _, _, areas = ksfc.get_cell_dimensions()
         idx = np.isfinite(areas)
 
@@ -153,6 +152,15 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
 
         perc_diff = abs(expected - np.sum(areas[idx])) / expected * 100
         self.assertTrue(perc_diff < 0.5)
+
+    def test_get_tor(self):
+        """ test calculation of trace (i.e. surface projection of tor) """
+        lons = np.flipud([0.0, 0.05, 0.1, 0.15, 0.20])
+        lats = np.array([0.0, 0.0, 0.0, 0.0, 0.05])
+        tlo, tla = self.ksfc.get_tor()
+        aae(lons, tlo)
+        aae(lats, tla)
+
 
 class KiteSurfaceWithNaNs(unittest.TestCase):
     """
@@ -190,6 +198,23 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         self.mlats = np.array(plats)
         self.mesh = Mesh(lons=self.mlons.flatten(), lats=self.mlats.flatten())
 
+    def test_get_tor(self):
+        tlo, tla = self.srfc.get_tor()
+        # Expected results extracted manually from the mesh
+        elo = np.array([10.01157297, 10.04780614,
+                        10.09853744, 10.14926874, 10.2])
+        ela = np.array([44.99160022, 45.00003185,
+                        45.00004377, 45.00003315, 45.])
+        aae(elo, tlo)
+        aae(ela, tla)
+
+        if PLOTTING:
+            _, ax = plt.subplots(1, 1)
+            plot_mesh_2d(ax, self.srfc)
+            ax.plot(tlo, tla, '-g', lw=4)
+            plt.show()
+
+
     def test_rjb_calculation(self):
         # Test the calculation of the Rjb distance
         dst = self.srfc.get_joyner_boore_distance(self.mesh)
@@ -205,6 +230,8 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             z = np.reshape(dst, self.mlons.shape)
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             _ = plt.clabel(cs)
+            tlo, tla = self.srfc.get_tor()
+            ax.plot(tlo, tla, '-g', lw=4)
             plt.title(f'{self.NAME} - Rjb')
             plt.show()
 
@@ -216,7 +243,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         dst = self.srfc.get_min_distance(self.mesh)
 
         if PLOTTING:
-            _ = plt.figure()
+            _, ax = plt.subplots(1, 1)
             plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
                         edgecolors='none', s=15)
             lo, la = self.srfc._get_external_boundary()
@@ -224,6 +251,8 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             z = np.reshape(dst, self.mlons.shape)
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             _ = plt.clabel(cs)
+            tlo, tla = self.srfc.get_tor()
+            ax.plot(tlo, tla, '-g', lw=4)
             plt.title(f'{self.NAME} - Rrup')
             plt.show()
 
@@ -231,7 +260,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         dst = self.srfc.get_rx_distance(self.mesh)
 
         if PLOTTING:
-            _ = plt.figure()
+            _, ax = plt.subplots(1, 1)
             plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
                         edgecolors='none', s=15)
             lo, la = self.srfc._get_external_boundary()
@@ -239,6 +268,8 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             z = np.reshape(dst, self.mlons.shape)
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             _ = plt.clabel(cs)
+            tlo, tla = self.srfc.get_tor()
+            ax.plot(tlo, tla, '-g', lw=4)
             plt.title(f'{self.NAME} - Rx')
             plt.show()
 
@@ -246,7 +277,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         dst = self.srfc.get_ry0_distance(self.mesh)
 
         if PLOTTING:
-            _ = plt.figure()
+            _, ax = plt.subplots(1, 1)
             plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
                         edgecolors='none', s=15)
             lo, la = self.srfc._get_external_boundary()
@@ -254,6 +285,8 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             z = np.reshape(dst, self.mlons.shape)
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             _ = plt.clabel(cs)
+            tlo, tla = self.srfc.get_tor()
+            ax.plot(tlo, tla, '-g', lw=4)
             plt.title(f'{self.NAME} - Ry0')
             plt.show()
 
