@@ -246,6 +246,14 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         from openquake.hazardlib import nrml, sourcewriter
         return nrml.to_string(sourcewriter.obj_to_node(self))
 
+    def __repr__(self):
+        """
+        String representation of a source, displaying the source class name
+        and the source id.
+        """
+        return '<%s %s, weight=%.1f>' % (
+            self.__class__.__name__, self.source_id, self.weight)
+
 
 class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     """
@@ -327,14 +335,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         min_mag, max_mag = self.mfd.get_min_max_mag()
         return max(self.min_mag, min_mag), max_mag
-
-    def __repr__(self):
-        """
-        String representation of a source, displaying the source class name
-        and the source id.
-        """
-        return '<%s %s, weight=%.1f>' % (
-            self.__class__.__name__, self.source_id, self.weight)
 
     def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
