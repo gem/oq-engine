@@ -153,6 +153,9 @@ class MultiFaultSource(BaseSeismicSource):
                 self.pmfs[i])
 
     def __iter__(self):
+        if len(self.mags) <= BLOCKSIZE:  # already split
+            yield self
+            return
         # split in blocks of BLOCKSIZE ruptures each
         for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
             src = self.__class__(
