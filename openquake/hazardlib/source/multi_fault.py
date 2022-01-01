@@ -140,7 +140,7 @@ class MultiFaultSource(BaseSeismicSource):
         Fast version of iter_ruptures used in estimate_weight
         """
         s = self.sections
-        for i in range(0, len(self.mags), BLOCKSIZE // 2):
+        for i in range(0, len(self.mags), BLOCKSIZE // 5):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = self.sections[idxs[0]].surface
