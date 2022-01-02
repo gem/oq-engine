@@ -245,23 +245,14 @@ class Line(object):
         """
         coo = np.array([[p.longitude, p.latitude, p.depth] for p in
                         self.points])
-        # Compute the azimuth of all the segments but the last one that must
-        # stay
+        # Compute the azimuth of all the segments
         azim = geodetic.azimuth(coo[:-1, 0], coo[:-1, 1],
                                 coo[1:, 0], coo[1:, 1])
-        if len(azim) > 2:
-            azim = azim[:-1]
-            idx = np.nonzero(np.abs(np.diff(azim)) < delta)
-            idx = np.array(idx[0])+1
-        elif len(azim) == 2:
-            if abs(azim[0] - azim[1]) < delta:
-                idx = np.array([1])
-        else:
-            return
-        # Purging
-        coo = np.delete(coo, idx, axis=0)
-        self.points = [Point(*c) for c in coo]
-        self.coo = coo
+        pidx = set([0, coo.shape[0]-1])
+        idx = np.nonzero(np.abs(np.diff(azim)) > delta)[0]
+        pidx = sorted(list(pidx.union(set(idx+1))))
+        self.points = [Point(coo[c, 0], coo[c, 1]) for c in pidx]
+        self.coo = coo[pidx, :]
 
     def resample_to_num_points(self, num_points):
         """

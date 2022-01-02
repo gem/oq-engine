@@ -38,6 +38,23 @@ OVERWRITE = False
 aae = np.testing.assert_almost_equal
 
 
+def get_mesh(milo, malo, mila, mala, step=0.01):
+    clo = []
+    cla = []
+    for lo in np.arange(milo, malo, step):
+        tlo = []
+        tla = []
+        for la in np.arange(mila, mala, step):
+            tlo.append(lo)
+            tla.append(la)
+        clo.append(tlo)
+        cla.append(tla)
+    clo = np.array(clo)
+    cla = np.array(cla)
+    mesh = Mesh(lons=clo.flatten(), lats=cla.flatten())
+    return clo, cla, mesh
+
+
 class MultiSurfaceOneTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -172,20 +189,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         prf, _ = _read_profiles(path, 'cs_51')
         srfc51 = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
 
-        clo = []
-        cla = []
-        step = 0.01
-        for lo in np.arange(-71.8, -69, step):
-            tlo = []
-            tla = []
-            for la in np.arange(19.25, 20.25, step):
-                tlo.append(lo)
-                tla.append(la)
-            clo.append(tlo)
-            cla.append(tla)
-        self.clo = np.array(clo)
-        self.cla = np.array(cla)
-        mesh = Mesh(lons=self.clo.flatten(), lats=self.cla.flatten())
+        _, _, mesh = get_mesh(-71.8, -69, 19.25, 20.25, step=0.01)
 
         # Define multisurface and mesh of sites
         self.srfc50 = srfc50
@@ -220,9 +224,8 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             plt.show()
 
         # Note that method is executed when the object is initialized
-        ess = self.msrf.edge_set
-        for es, expct in zip(ess, expected):
-            np.testing.assert_array_almost_equal(es, expct, decimal=2)
+        for es, expct in zip(self.msrf.tors.lines, expected):
+            np.testing.assert_array_almost_equal(es.coo, expct, decimal=2)
 
     def test_get_strike(self):
         # Since the two surfaces dip to the north, we expect the strike to

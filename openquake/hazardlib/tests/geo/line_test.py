@@ -194,16 +194,27 @@ class RevertPointsTest(unittest.TestCase):
 
 class LineKeepCornersTest(unittest.TestCase):
     def test(self):
-        loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 10)
-        lob, lab = geo.geodetic.point_at(loa, laa, 55., 10)
-        loc, lac = geo.geodetic.point_at(lob, lab, 53., 10)
-        lod, lad = geo.geodetic.point_at(loc, lac, 53., 10)
+        #
+        #                  6 + d
+        #                   /
+        #                5 + c
+        #                 /
+        #              4 + b
+        #               /
+        #            3 + a
+        #             /
+        #  +----+----+
+        #  0    1    2
+        loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 10)  # 3
+        lob, lab = geo.geodetic.point_at(loa, laa, 55., 10)  # 4
+        loc, lac = geo.geodetic.point_at(lob, lab, 53., 10)  # 5
+        lod, lad = geo.geodetic.point_at(loc, lac, 53., 10)  # 6
         lons = np.array([0.0, 0.1, 0.2, loa, lob, loc, lod])
-        lats = np.array([0.0, 0.0, 0.0, laa, lab, lac, lod])
+        lats = np.array([0.0, 0.0, 0.0, laa, lab, lac, lad])
         line = geo.Line.from_vectors(lons, lats)
         line.keep_corners(4.0)
         coo = np.array([[p.longitude, p.latitude, p.depth] for p in line])
-        idxs = [0, 2, 3, 5, 6]
+        idxs = [0, 2, 3, 6]
         expected = lons[idxs]
         np.testing.assert_almost_equal(expected, coo[:, 0])
         expected = lats[idxs]

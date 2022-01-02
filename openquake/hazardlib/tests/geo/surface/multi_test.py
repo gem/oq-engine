@@ -76,7 +76,7 @@ class MultiSurfaceTestCase(unittest.TestCase):
         surfb = MultiSurface(surf19.surfaces + surf20.surfaces)
         rxa = surfa.get_rx_distance(mesh)[0]
         rxb = surfb.get_rx_distance(mesh)[0]
-        aac([rxa, rxb], [53.034889, -56.064366])
+        aac([rxa, rxb], [53.034889, -56.064366], rtol=1e-5)
 
     def test_rx_kite(self):
         spc = 2.0
