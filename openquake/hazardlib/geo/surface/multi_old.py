@@ -34,7 +34,7 @@ from openquake.hazardlib.geo.surface import (
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 
 
-class MultiSurface(BaseSurface):
+class MultiSurfaceOld(BaseSurface):
     """
     Represent a surface as a collection of independent surface elements.
 
