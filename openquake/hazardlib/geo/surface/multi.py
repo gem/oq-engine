@@ -91,6 +91,9 @@ class MultiSurface(BaseSurface):
         self.tol = tol
         self._set_tor()
         self.areas = None
+        self.tut = None
+        self.uut = None
+        self.site_mesh = None
 
     def _set_tor(self):
         """
@@ -345,13 +348,8 @@ class MultiSurface(BaseSurface):
             self.areas = np.array(self.areas)
         return self.areas
 
-    def get_rx_distance(self, mesh):
-        """
-        :param mesh:
-        :param tupp:
-        :param uupp:
-        :param wei:
-        """
+
+    def _set_tu(self, mesh):
 
         if not hasattr(self, 'tors'):
             self._set_tor()
@@ -368,12 +366,37 @@ class MultiSurface(BaseSurface):
             uupps.append(res[1])
             weis.append(res[2])
 
-        uut, tut = get_tu(mesh, self.tors.lines, self.tors.shift, tupps,
-                          uupps, weis)
+        uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
 
-        return tut
+        self.uut = uut
+        self.tut = tut
+        self.site_mesh = mesh
+
+    def get_rx_distance(self, mesh):
+        """
+        :param mesh:
+        """
+        condition2 = (self.site_mesh is not None and self.site_mesh != mesh)
+        if (self.uut is None) or condition2:
+            self._set_tu(mesh)
+        return self.tut
 
     def get_ry0_distance(self, mesh):
-        # TODO
-        pass
+        """
+        :param mesh:
+        """
+        if self.uut is None or self.site_mesh != mesh:
+            self._set_tu(mesh)
 
+        lengths = self.tors.get_lengths()
+        shifts = self.tors.shift
+        length = np.sum((lengths + shifts))
+        print(self.tors.get_lengths(), length)
+
+        ry0 = np.zeros_like(self.uut)
+        ry0[self.uut < 0] = self.uut[self.uut < 0]
+
+        condition = self.uut > length
+        ry0[condition] = self.uut[condition] - length
+
+        return ry0

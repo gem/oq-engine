@@ -38,14 +38,17 @@ class MultiLineTestCase(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 10)
         lob, lab = geo.geodetic.point_at(loa, laa, 45., 20)
         loc, lac = geo.geodetic.point_at(lob, lab, 90., 30)
+
         lonsa = np.array([0.0, 0.1, 0.2, loa])
         latsa = np.array([0.0, 0.0, 0.0, laa])
         linea = geo.Line.from_vectors(lonsa, latsa)
         linea.keep_corners(4.0)
+
         lonsb = np.array([loc, lob])
         latsb = np.array([lac, lab])
         lineb = geo.Line.from_vectors(lonsb, latsb)
         lineb.keep_corners(4.0)
+
         self.lines = [linea, lineb]
 
     def test_get_strike_01(self):
@@ -94,9 +97,9 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Set the origin and compute the overall strike and the azimuths of
         # the polylines composing the multiline instance
-        _ = ml._set_origin()
+        ml._set_origin()
         ggazi = geo.geodetic.azimuth
-        azim = ggazi(0, 0, lo, la)
+        azim = ggazi(ml.olon, ml.olat, lo, la)
         delta = abs(ml.overall_strike - azim)
         computed = dst * np.cos(np.radians(delta))
 
@@ -129,6 +132,13 @@ class MultiLineTestCase(unittest.TestCase):
             z = np.reshape(tupp, plons.shape)
             label = 'test_get_tu - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
+
+    def test_get_tu_spot_checks(self):
+
+        mesh = geo.Mesh(np.array([0.0]), np.array([0.0]))
+        ml = MultiLine(self.lines)
+        uupp, tupp = ml.get_tu(mesh)
+        np.testing.assert_almost_equal([0.0011659], uupp)
 
     def test_get_tu_figure09(self):
 

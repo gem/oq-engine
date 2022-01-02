@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib import geo
 
-PLOTTING = True
+PLOTTING = False
 
 
 class LineResampleTestCase(unittest.TestCase):

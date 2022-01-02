@@ -29,8 +29,8 @@ from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 class MultiLine():
     """
-    A collection of polylines with associated methods and attributes. These
-    are for the most part used to compute distances according to the GC2
+    A collection of polylines with associated methods and attributes. For the
+    most part, these are used to compute distances according to the GC2
     method.
     """
 
@@ -114,30 +114,31 @@ class MultiLine():
 
         # Set the coordinate shift
         self._set_coordinate_shift()
-        shift = self.shift
 
         # Processing
         uupps = []
         tupps = []
         weis = []
 
-        for i, line in enumerate(self.lines):
+        for line in self.lines:
 
             # Compute (or retrieve) the T and U coordinates. T and U have
             # cardinality <number_sites>. The weights have cardinality equal
             # to <number_of_segments> x <number of_sites>
             if not hasattr(self, 'tupp'):
                 tupp, uupp, wei = line.get_tu(mesh)
-                # wei_sum = np.sum(wei, axis=0)
-            else:
-                tupp = self.tupp
-                uupp = self.uupp
+                wei_sum = np.sum(wei, axis=0)
+                print(wei_sum)
+
+            # else:
+            #     tupp = self.tupp
+            #     uupp = self.uupp
 
             uupps.append(uupp)
             tupps.append(tupp)
-            weis.append(wei)
+            weis.append(wei_sum)
 
-        uut, tut = get_tu(mesh, self.lines, shift, tupps, uupps, weis)
+        uut, tut = get_tu(self.shift, tupps, uupps, weis)
 
         return uut, tut
 
@@ -270,25 +271,25 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     return np.cos(np.radians(overall_strike - azimuths))*distances
 
 
-def get_tu(mesh: Mesh, lines: list, shift, tupps, uupps, weis):
+def get_tu(shifts, tupps, uupps, weis):
     """
     Given a mesh, computes the T and U coordinates for the multiline
     """
 
     # Processing
-    arg = zip(lines, tupps, uupps, weis)
-    for i, (line, tupp, uupp, wei) in enumerate(arg):
+    arg = zip(shifts, tupps, uupps, weis)
+    for i, (shift, tupp, uupp, wei_sum) in enumerate(arg):
 
         # Weights
-        wei_sum = np.sum(wei, axis=0)
+        # wei_sum = np.sum(wei, axis=0)
 
         # Update the uupp values
         if i == 0:
-            uut = (uupp + shift[i]) * wei_sum
+            uut = (uupp + shift) * wei_sum
             tut = tupp * wei_sum
             wet = wei_sum
         else:
-            uut += (uupp + shift[i]) * wei_sum
+            uut += (uupp + shift) * wei_sum
             tut += tupp * wei_sum
             wet += wei_sum
 

@@ -189,7 +189,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         prf, _ = _read_profiles(path, 'cs_51')
         srfc51 = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
 
-        _, _, mesh = get_mesh(-71.8, -69, 19.25, 20.25, step=0.01)
+        self.clo, self.cla, mesh = get_mesh(-71.8, -69, 19.25, 20.25, 0.01)
 
         # Define multisurface and mesh of sites
         self.srfc50 = srfc50
@@ -219,8 +219,8 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
                 mesh = sfc.mesh
                 ax.plot(mesh.lons, mesh.lats, '.', color=col)
                 ax.plot(mesh.lons[0, :],  mesh.lats[0, :], lw=3)
-            for edge in self.msrf.edge_set:
-                ax.plot(edge[:, 0], edge[:, 1], 'x-r')
+            for line in self.msrf.tors.lines:
+                ax.plot(line.coo[:, 0], line.coo[:, 1], 'x-r')
             plt.show()
 
         # Note that method is executed when the object is initialized
@@ -326,6 +326,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
 
         if PLOTTING:
             title = f'{self.NAME} - Rx'
+            print(self.mesh.lons.shape)
             _plt_results(self.clo, self.cla, dst, self.msrf, title)
 
     def test_get_ry0(self):
@@ -333,7 +334,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         dst = self.msrf.get_ry0_distance(self.mesh)
 
         if PLOTTING:
-            title = f'{self.NAME} - Rx'
+            title = f'{self.NAME} - Ry0'
             _plt_results(self.clo, self.cla, dst, self.msrf, title)
 
 

@@ -70,22 +70,27 @@ class MultiSurfaceTestCase(unittest.TestCase):
         rx18 = surf18.get_rx_distance(mesh)[0]
         rx19 = surf19.get_rx_distance(mesh)[0]
         rx20 = surf20.get_rx_distance(mesh)[0]
-        aac([rx18, rx19, rx20], [51.610675, 54.441119, -60.205692])
+        aac([rx18[0], rx19[0], rx20[0]], [51.610675, 54.441119, -60.205692])
 
         surfa = MultiSurface(surf18.surfaces + surf19.surfaces)
         surfb = MultiSurface(surf19.surfaces + surf20.surfaces)
         rxa = surfa.get_rx_distance(mesh)[0]
         rxb = surfb.get_rx_distance(mesh)[0]
-        aac([rxa, rxb], [53.034889, -56.064366], rtol=1e-5)
+        aac([rxa[0], rxb[0]], [53.034889, -56.064366], rtol=1e-5)
 
-    def test_rx_kite(self):
+    def test_rx_ry0_kite(self):
+
+        # Define the surface that is a plane dipping towards north
         spc = 2.0
         pro1 = Line([Point(0.2, 0.0, 0.0), Point(0.2, 0.05, 15.0)])
         pro2 = Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.05, 15.0)])
         sfc1 = KiteSurface.from_profiles([pro1, pro2], spc, spc)
         msurf = MultiSurface([sfc1])
+
+        # Define the mesh of sites
         pcoo = numpy.array([[0.2, 0.1], [0.0, -0.1]])
         mesh = Mesh(pcoo[:, 0], pcoo[:, 1])
+
         # Compute expected distances
         lo = pro1.points[0].longitude
         la = pro1.points[0].longitude
@@ -93,7 +98,13 @@ class MultiSurfaceTestCase(unittest.TestCase):
         lo = pro2.points[0].longitude
         la = pro2.points[0].longitude
         tmp1 = geodetic_distance(lo, la, pcoo[1, 0], pcoo[1, 1])
-        # Checking
+
+        # Checking Rx
         rx = msurf.get_rx_distance(mesh)
         expected = numpy.array([tmp0, -tmp1])
-        numpy.testing.assert_almost_equal(expected, rx, decimal=5)
+        computed = numpy.squeeze(rx)
+        numpy.testing.assert_almost_equal(expected, computed, decimal=5)
+
+        # Checking Ry0
+        ry0 = msurf.get_ry0_distance(mesh)
+        print(ry0)
