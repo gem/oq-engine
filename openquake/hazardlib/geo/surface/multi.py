@@ -42,6 +42,16 @@ class MultiSurface(BaseSurface):
         each representing a surface geometry element.
     """
 
+    @property
+    def surface_nodes(self):
+        """
+        :returns:
+            a list of surface nodes from the underlying single node surfaces
+        """
+        if type(self.surfaces[0]).__name__ == 'PlanarSurface':
+            return [surf.surface_nodes[0] for surf in self.surfaces]
+        return [surf.surface_nodes for surf in self.surfaces]
+
     @classmethod
     def from_csv(cls, fname):
         """
