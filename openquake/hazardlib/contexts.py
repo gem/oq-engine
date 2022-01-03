@@ -511,25 +511,29 @@ class ContextMaker(object):
             yield from rups(self._ruptures(src), sites)
 
     def _cps_rups(self, src, sites, point_rup=False):
+        if src.count_nphc() == 1:  # nothing to collapse
+            for pr in src.iruptures(point_rup):
+                yield self._ruptures(src, pr.mag, point_rup), sites
+            return
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for ar in src.iruptures(point_rup):
-            delta = 0 if ar.surface else ar.mag * 5  # PointRupture
+        for pr in src.iruptures(point_rup):
+            delta = 0 if pr.surface else pr.mag * 10  # PointRupture
             close = sites.filter(cdist <= self.pointsource_distance + delta)
             far = sites.filter(cdist > self.pointsource_distance + delta)
             if fewsites:
                 if close is None:  # all is far, common for small mag
-                    yield [ar], sites
+                    yield [pr], sites
                 else:  # something is close
-                    yield self._ruptures(src, ar.mag, point_rup), sites
+                    yield self._ruptures(src, pr.mag, point_rup), sites
             else:  # many sites
                 if close is None:  # all is far
-                    yield [ar], far
+                    yield [pr], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, ar.mag, point_rup), close
+                    yield self._ruptures(src, pr.mag, point_rup), close
                 else:  # some sites are far, some are close
-                    yield [ar], far
-                    yield self._ruptures(src, ar.mag, point_rup), close
+                    yield [pr], far
+                    yield self._ruptures(src, pr.mag, point_rup), close
 
     def get_pmap(self, ctxs, probmap=None):
         """
@@ -700,7 +704,8 @@ class ContextMaker(object):
         if not ctxs:
             return nrups if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
-        return nrups * numpy.mean(nsites / N + .001)
+        mesh_size = getattr(src, 'mesh_size', 0)  # for NP and MF sources
+        return (nrups + mesh_size / 500) * numpy.mean(nsites / N + .001)
 
     def set_weight(self, sources, srcfilter):
         """
