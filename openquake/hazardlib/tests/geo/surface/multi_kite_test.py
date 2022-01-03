@@ -331,12 +331,6 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
 
     def test_get_ry0(self):
 
-        t_upp, dst, _ = self.msrf.tors.lines[0].get_tu(self.mesh)
-        _plt_results(self.clo, self.cla, dst, self.msrf, '0')
-
-        t_upp, dst, _ = self.msrf.tors.lines[1].get_tu(self.mesh)
-        _plt_results(self.clo, self.cla, dst, self.msrf, '1')
-
         # Results visually inspected
         dst = self.msrf.get_ry0_distance(self.mesh)
 

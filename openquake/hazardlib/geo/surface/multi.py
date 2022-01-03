@@ -400,14 +400,15 @@ class MultiSurface(BaseSurface):
         if self.uut is None or self.site_mesh != mesh:
             self._set_tu(mesh)
 
-        lengths = self.tors.get_lengths()
-        shifts = self.tors.shift
-        length = np.sum((lengths + shifts))
+        if self.tors.u_max is None:
+            self.tors.set_u_max()
 
+        ry0 = self.uut
         ry0 = np.zeros_like(self.uut)
-        ry0[self.uut < 0] = self.uut[self.uut < 0]
+        ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
 
-        condition = self.uut > length
-        ry0[condition] = self.uut[condition] - length
+        condition = self.uut > self.tors.u_max
+        print(self.tors.u_max)
+        ry0[condition] = self.uut[condition] - self.tors.u_max
 
         return ry0

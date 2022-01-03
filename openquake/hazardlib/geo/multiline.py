@@ -41,6 +41,10 @@ class MultiLine():
         self.olon = None
         self.olat = None
         self.shift = None
+        self.u_max = None
+        self.tupps = None
+        self.uupps = None
+        self.weis = None
 
     def get_lengths(self) -> np.ndarray:
         """
@@ -97,7 +101,7 @@ class MultiLine():
 
         # Reorder the lines and the shift according to the origin
         self.lines = [self.lines[i] for i in soidx]
-        if self.shift is None:
+        if self.shift is not None:
             self.shift = self.shift[soidx]
 
     def _set_coordinate_shift(self) -> np.ndarray:
@@ -118,36 +122,73 @@ class MultiLine():
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
+        if self.shift is None:
+            self._set_coordinate_shift()
 
-        # Set the coordinate shift
-        self._set_coordinate_shift()
-
-        # Processing
-        uupps = []
-        tupps = []
-        weis = []
-
-        for line in self.lines:
-
-            # Compute (or retrieve) the T and U coordinates. T and U have
-            # cardinality <number_sites>. The weights have cardinality equal
-            # to <number_of_segments> x <number of_sites>
-            if not hasattr(self, 'tupp'):
-                tupp, uupp, wei = line.get_tu(mesh)
-                wei_sum = np.sum(wei, axis=0)
-                print(wei_sum)
-
-            # else:
-            #     tupp = self.tupp
-            #     uupp = self.uupp
-
-            uupps.append(uupp)
-            tupps.append(tupp)
-            weis.append(wei_sum)
-
+        tupps, uupps, weis = get_uts(self.lines, mesh)
         uut, tut = get_tu(self.shift, tupps, uupps, weis)
 
         return uut, tut
+
+    def set_u_max(self):
+        """
+        This is needed to compute Ry0
+        """
+        if self.shift is None:
+            self._set_coordinate_shift()
+
+        # Get the mesh with the endpoints of each polyline
+        mesh = self.get_endpoints_mesh()
+
+        # TODO there could be cases where tupps, uupps, weis are already
+        # available
+        tupps, uupps, weis = get_uts(self.lines, mesh)
+        uut, tut = get_tu(self.shift, tupps, uupps, weis)
+
+        # Maximum U value
+        self.u_max = max(uut)
+
+    def get_endpoints_mesh(self) -> Mesh:
+        """
+        Build mesh with end points
+        """
+        lons = []
+        lats = []
+        for line in self.lines:
+            lons.extend([line.coo[0, 0], line.coo[-1, 0]])
+            lats.extend([line.coo[0, 1], line.coo[-1, 1]])
+        mesh = Mesh(np.array(lons), np.array(lats))
+        return mesh
+
+
+def get_uts(lines: list, mesh: Mesh):
+    """
+    Computes the T and U coordinates for all the polylines in `lines` and the
+    sites in the `mesh`
+
+    :param lines:
+        A list of :class:`openquake.hazardlib.geo.line.Line` instances
+    :param mesh:
+        An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
+        sites location.
+    """
+
+    # Initialising
+    uupps = []
+    tupps = []
+    weis = []
+
+    # Process lines and compute the T and U coordinates
+    for line in lines:
+
+        tupp, uupp, wei = line.get_tu(mesh)
+        wei_sum = np.sum(wei, axis=0)
+
+        uupps.append(uupp)
+        tupps.append(tupp)
+        weis.append(wei_sum)
+
+    return tupps, uupps, weis
 
 
 def get_lengths(lines: list) -> np.ndarray:
@@ -297,9 +338,6 @@ def get_tu(shifts, tupps, uupps, weis):
     # Processing
     arg = zip(shifts, tupps, uupps, weis)
     for i, (shift, tupp, uupp, wei_sum) in enumerate(arg):
-
-        # Weights
-        # wei_sum = np.sum(wei, axis=0)
 
         # Update the uupp values
         if i == 0:
