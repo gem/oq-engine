@@ -172,25 +172,13 @@ class MultiSurface(BaseSurface):
             if isinstance(surface, GriddedSurface):
                 return edges.append(surface.mesh)
             elif isinstance(surface, geo.surface.kite_fault.KiteSurface):
-                edge = []
-                mesh = surface.mesh
-                lons = mesh.lons
-                # We extract the top edge of the rupture from the
-                # corresponding 2D mesh.
-                # The calculation of indexes below is needed because we want
-                # on each 'profile' of the mesh the uppermost node that is
-                # finite (i.e. on the real grid)
-                for icol in range(lons.shape[1]):
-                    if numpy.all(numpy.isnan(lons[:, icol])):
-                        continue
-                    tmp = numpy.nonzero(numpy.isfinite(lons[:, icol]))[0]
-                    irow = tmp.argmin(axis=0)
-                    edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
-                                 mesh.depths[irow, icol]])
-                edge = numpy.array(edge)
-                mesh = RectangularMesh(numpy.tile(edge[:, 0], (2, 1)),
-                                       numpy.tile(edge[:, 1], (2, 1)),
-                                       numpy.tile(edge[:, 2], (2, 1)))
+                # The downsample_trace function will be replaced by a more
+                # appropriate function in a following PR
+                lo, la = surface.get_tor()
+                dep = numpy.tile(numpy.array([[0], [0.5]]), (1, len(lo)))
+                mesh = RectangularMesh(numpy.tile(lo, (2, 1)),
+                                       numpy.tile(la, (2, 1)),
+                                       dep)
                 edges.append(downsample_trace(mesh, tol))
             elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points
@@ -396,15 +384,6 @@ class MultiSurface(BaseSurface):
             poly = poly.union(polyt)
         coo = numpy.array([[lo, la] for lo, la in list(poly.exterior.coords)])
         return coo[:, 0], coo[:, 1]
-
-    def old_get_surface_boundaries(self):
-        lons = []
-        lats = []
-        for surf in enumerate(self.surfaces):
-            lons_surf, lats_surf = surf.get_surface_boundaries()
-            lons.extend(lons_surf)
-            lats.extend(lats_surf)
-        return lons, lats
 
     def get_surface_boundaries_3d(self):
         lons = []

@@ -229,7 +229,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         # point toward W
         msg = 'Multi fault surface: strike is wrong'
         strike = self.msrf.get_strike()
-        self.assertAlmostEqual(268.878, strike, places=2, msg=msg)
+        self.assertAlmostEqual(268.867, strike, places=2, msg=msg)
 
     def test_get_dip(self):
         dip = self.msrf.get_dip()
@@ -237,10 +237,11 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         msg = 'Multi fault surface: dip is wrong'
         aae(dip, expected, err_msg=msg, decimal=2)
 
-    #TODO
     def test_get_width(self):
+        """ check the width """
+        # Measuring the width
         width = self.msrf.get_width()
-        print(width)
+        np.testing.assert_allclose(width, 20.44854)
 
     def test_get_area(self):
         # The area is computed by summing the areas of each section.
