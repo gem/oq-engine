@@ -385,15 +385,6 @@ class MultiSurface(BaseSurface):
         coo = numpy.array([[lo, la] for lo, la in list(poly.exterior.coords)])
         return coo[:, 0], coo[:, 1]
 
-    def old_get_surface_boundaries(self):
-        lons = []
-        lats = []
-        for surf in enumerate(self.surfaces):
-            lons_surf, lats_surf = surf.get_surface_boundaries()
-            lons.extend(lons_surf)
-            lats.extend(lats_surf)
-        return lons, lats
-
     def get_surface_boundaries_3d(self):
         lons = []
         lats = []
