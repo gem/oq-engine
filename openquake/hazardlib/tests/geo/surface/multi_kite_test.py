@@ -32,7 +32,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
-PLOTTING = True
+PLOTTING = False
 OVERWRITE = False
 
 aae = np.testing.assert_almost_equal
