@@ -391,7 +391,7 @@ class MultiSurface(BaseSurface):
         condition2 = (self.site_mesh is not None and self.site_mesh != mesh)
         if (self.uut is None) or condition2:
             self._set_tu(mesh)
-        return self.tut
+        return self.tut[0]
 
     def get_ry0_distance(self, mesh):
         """
@@ -410,4 +410,4 @@ class MultiSurface(BaseSurface):
         condition = self.uut > self.tors.u_max
         ry0[condition] = self.uut[condition] - self.tors.u_max
 
-        return ry0
+        return ry0[0]
