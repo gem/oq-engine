@@ -244,7 +244,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         """ check the width """
         # Measuring the width
         width = self.msrf.get_width()
-        print(width)
+        np.testing.assert_allclose(width, 20.44854)
 
     def test_get_area(self):
         # The area is computed by summing the areas of each section.
