@@ -182,11 +182,13 @@ def get_uts(lines: list, mesh: Mesh):
     for line in lines:
 
         tupp, uupp, wei = line.get_tu(mesh)
-        wei_sum = np.sum(wei, axis=0)
+        wei_sum = np.squeeze(np.sum(wei, axis=0))
 
         uupps.append(uupp)
         tupps.append(tupp)
         weis.append(wei_sum)
+
+        assert uupp.shape == tupp.shape == wei_sum.shape
 
     return tupps, uupps, weis
 
@@ -338,6 +340,9 @@ def get_tu(shifts, tupps, uupps, weis):
     # Processing
     arg = zip(shifts, tupps, uupps, weis)
     for i, (shift, tupp, uupp, wei_sum) in enumerate(arg):
+
+        if len(wei_sum.shape) > 1:
+            wei_sum = np.squeeze(wei_sum)
 
         # Update the uupp values
         if i == 0:

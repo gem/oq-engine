@@ -374,12 +374,13 @@ class MultiSurface(BaseSurface):
         uupps = []
         weis = []
         for line in self.tors.lines:
-            res = line.get_tu(mesh)
-            tupps.append(res[0])
-            uupps.append(res[1])
-            weis.append(res[2])
+            tu, uu, we = line.get_tu(mesh)
+            tupps.append(tu)
+            uupps.append(uu)
+            weis.append(we)
 
         uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
+
         self.uut = uut
         self.tut = tut
         self.site_mesh = mesh
@@ -391,7 +392,9 @@ class MultiSurface(BaseSurface):
         condition2 = (self.site_mesh is not None and self.site_mesh != mesh)
         if (self.uut is None) or condition2:
             self._set_tu(mesh)
-        return self.tut[0]
+
+        rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
+        return rx
 
     def get_ry0_distance(self, mesh):
         """
@@ -403,11 +406,12 @@ class MultiSurface(BaseSurface):
         if self.tors.u_max is None:
             self.tors.set_u_max()
 
-        ry0 = self.uut
-        ry0 = np.zeros_like(self.uut)
+        ry0 = np.zeros_like(mesh.lons)
         ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
 
         condition = self.uut > self.tors.u_max
         ry0[condition] = self.uut[condition] - self.tors.u_max
 
-        return ry0[0]
+        out = ry0[0] if len(ry0.shape) > 1 else ry0
+
+        return out

@@ -70,13 +70,13 @@ class MultiSurfaceTestCase(unittest.TestCase):
         rx18 = surf18.get_rx_distance(mesh)[0]
         rx19 = surf19.get_rx_distance(mesh)[0]
         rx20 = surf20.get_rx_distance(mesh)[0]
-        aac([rx18[0], rx19[0], rx20[0]], [51.610675, 54.441119, -60.205692])
+        aac([rx18, rx19, rx20], [51.610675, 54.441119, -60.205692])
 
         surfa = MultiSurface(surf18.surfaces + surf19.surfaces)
         surfb = MultiSurface(surf19.surfaces + surf20.surfaces)
         rxa = surfa.get_rx_distance(mesh)[0]
         rxb = surfb.get_rx_distance(mesh)[0]
-        aac([rxa[0], rxb[0]], [53.034889, -56.064366], rtol=1e-5)
+        aac([rxa, rxb], [53.034889, -56.064366], rtol=1e-5)
 
     def test_rx_ry0_kite(self):
 
