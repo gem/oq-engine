@@ -408,7 +408,6 @@ class MultiSurface(BaseSurface):
         ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
 
         condition = self.uut > self.tors.u_max
-        print(self.tors.u_max)
         ry0[condition] = self.uut[condition] - self.tors.u_max
 
         return ry0
