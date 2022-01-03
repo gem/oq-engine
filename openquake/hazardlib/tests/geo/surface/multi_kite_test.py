@@ -32,7 +32,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
-PLOTTING = False
+PLOTTING = True
 OVERWRITE = False
 
 aae = np.testing.assert_almost_equal
@@ -330,18 +330,29 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             _plt_results(self.clo, self.cla, dst, self.msrf, title)
 
     def test_get_ry0(self):
+
+        t_upp, dst, _ = self.msrf.tors.lines[0].get_tu(self.mesh)
+        _plt_results(self.clo, self.cla, dst, self.msrf, '0')
+
+        t_upp, dst, _ = self.msrf.tors.lines[1].get_tu(self.mesh)
+        _plt_results(self.clo, self.cla, dst, self.msrf, '1')
+
         # Results visually inspected
         dst = self.msrf.get_ry0_distance(self.mesh)
 
         if PLOTTING:
             title = f'{self.NAME} - Ry0'
-            _plt_results(self.clo, self.cla, dst, self.msrf, title)
+            fig, ax = _plt_results(self.clo, self.cla, dst, self.msrf, title)
+            for line in self.msrf.tors.lines:
+                ax.plot(line.coo[:, 0], line.coo[:, 1], '-r', lw=3)
+            self.msrf.tors._set_origin()
+            ax.plot(self.msrf.tors.olon, self.msrf.tors.olat, 'o')
+            plt.show()
 
 
 def _plt_results(clo, cla, dst, msrf, title):
     """ Plot results """
-    _ = plt.figure()
-    ax = plt.gca()
+    fig, ax = plt.subplots(1, 1)
     plt.scatter(clo, cla, c=dst, edgecolors='none', s=15)
     plot_mesh_2d(ax, msrf.surfaces[0])
     plot_mesh_2d(ax, msrf.surfaces[1])
@@ -351,4 +362,4 @@ def _plt_results(clo, cla, dst, msrf, title):
     cs = plt.contour(clo, cla, z, 10, colors='k')
     _ = plt.clabel(cs)
     plt.title(title)
-    plt.show()
+    return fig, ax

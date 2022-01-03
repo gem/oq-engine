@@ -23,7 +23,7 @@ from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.tests.geo.line_test import plot_pattern, get_mesh
 
 
-PLOTTING = False
+PLOTTING = True
 
 
 class MultiLineTestCase(unittest.TestCase):

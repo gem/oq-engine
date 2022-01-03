@@ -62,7 +62,8 @@ class MultiLine():
 
     def set_overall_strike(self):
         """
-        Computes the overall strike direction for the multiline
+        Computes the overall strike direction for the multiline and revert the
+        lines with strike direction opposite to the prevalent one
 
         :param lines:
             A list of :class:`openquake.hazardlib.geo.line.Line` instances
@@ -81,17 +82,23 @@ class MultiLine():
 
     def _set_origin(self):
         """
-        Compute the origin necessary to calculate the coordinate shift
+        Compute the origin necessary to calculate the coordinate shift and sort
+        the information accordingly
         """
 
         # If missing, set the overall strike direction
         if not hasattr(self, 'strike_to_east') or self.strike_to_east is None:
             _ = self.set_overall_strike()
 
-        # Calculate the
-        olo, ola = get_origin(self.lines, self.strike_to_east)
+        # Calculate the origin
+        olo, ola, soidx = get_origin(self.lines, self.strike_to_east)
         self.olon = olo
         self.olat = ola
+
+        # Reorder the lines and the shift according to the origin
+        self.lines = [self.lines[i] for i in soidx]
+        if self.shift is None:
+            self.shift = self.shift[soidx]
 
     def _set_coordinate_shift(self) -> np.ndarray:
         """
@@ -240,13 +247,24 @@ def get_origin(lines: list, strike_to_east: bool):
     else:
         idx = np.argmax(px)
 
+    # Find for each 'line' the endpoint closest to the origin
+    eps = []
+    for i in range(0, len(px), 2):
+        eps.append(min([px[i], px[i+1]]))
+
+    # Find the indexes needed to sort the segments according to the prevalent
+    # direction of the strike
+    sort_idxs = np.argsort(eps)
+    if not strike_to_east:
+        sort_idxs = np.flipud(sort_idxs)
+
     # Set the origin to be used later for the calculation of the
     # coordinate shift
     x = np.array([px[idx]])
     y = np.array([py[idx]])
     olon, olat = proj(x, y, reverse=True)
 
-    return olon[0], olat[0]
+    return olon[0], olat[0], sort_idxs
 
 
 def get_coordinate_shift(lines: list, olon: float, olat: float,

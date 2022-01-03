@@ -367,6 +367,9 @@ class MultiSurface(BaseSurface):
         if self.tors.shift is None:
             self.tors._set_coordinate_shift()
 
+        self._set_tor()
+        self.tors._set_coordinate_shift()
+
         tupps = []
         uupps = []
         weis = []
@@ -377,7 +380,6 @@ class MultiSurface(BaseSurface):
             weis.append(res[2])
 
         uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
-
         self.uut = uut
         self.tut = tut
         self.site_mesh = mesh
@@ -401,7 +403,6 @@ class MultiSurface(BaseSurface):
         lengths = self.tors.get_lengths()
         shifts = self.tors.shift
         length = np.sum((lengths + shifts))
-        print(self.tors.get_lengths(), length)
 
         ry0 = np.zeros_like(self.uut)
         ry0[self.uut < 0] = self.uut[self.uut < 0]
