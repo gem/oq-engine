@@ -20,12 +20,13 @@
 Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 :class:`MultiSurface`.
 """
-import numpy
 from copy import deepcopy
+import numpy
+from shapely.geometry import Polygon
 from scipy.spatial.distance import pdist, squareform
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.geo.surface.base import BaseSurface, downsample_trace
-from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
@@ -113,8 +114,7 @@ class MultiSurface(BaseSurface):
         """
         if type(self.surfaces[0]).__name__ == 'PlanarSurface':
             return [surf.surface_nodes[0] for surf in self.surfaces]
-        else:
-            return [surf.surface_nodes for surf in self.surfaces]
+        return [surf.surface_nodes for surf in self.surfaces]
 
     @property
     def mesh(self):
@@ -184,10 +184,14 @@ class MultiSurface(BaseSurface):
                     if numpy.all(numpy.isnan(lons[:, icol])):
                         continue
                     tmp = numpy.nonzero(numpy.isfinite(lons[:, icol]))[0]
-                    irow = tmp.argmax(axis=0)
+                    irow = tmp.argmin(axis=0)
                     edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
                                  mesh.depths[irow, icol]])
-                edges.append(numpy.array(edge))
+                edge = numpy.array(edge)
+                mesh = RectangularMesh(numpy.tile(edge[:, 0], (2, 1)),
+                                       numpy.tile(edge[:, 1], (2, 1)),
+                                       numpy.tile(edge[:, 2], (2, 1)))
+                edges.append(downsample_trace(mesh, tol))
             elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points
                 edge = []
@@ -200,7 +204,7 @@ class MultiSurface(BaseSurface):
                 # overall size
                 edges.append(downsample_trace(surface.mesh, tol))
             else:
-                raise ValueError("Surface %s not recognised" % str(surface))
+                raise ValueError(f"Surface {str(surface)} not recognised")
         return edges
 
     def get_min_distance(self, mesh):
@@ -311,15 +315,11 @@ class MultiSurface(BaseSurface):
         formula for weighted mean is used.
         """
         areas = self._get_areas()
-        dips = numpy.array([numpy.mean(surf.get_dip()) for surf in
-                            self.surfaces])
-
-        ok = numpy.logical_and(numpy.isfinite(dips), numpy.isfinite(areas))
+        dips = numpy.array([surf.get_dip() for surf in self.surfaces])
+        ok = numpy.logical_and(numpy.isfinite(dips), numpy.isfinite(areas))[0]
         dips = dips[ok]
         areas = areas[ok]
-
         dip = numpy.sum(areas * dips) / numpy.sum(areas)
-        assert numpy.isfinite(dip).all()
         return dip
 
     def get_width(self):
@@ -329,7 +329,6 @@ class MultiSurface(BaseSurface):
         """
         areas = self._get_areas()
         widths = numpy.array([surf.get_width() for surf in self.surfaces])
-
         return numpy.sum(areas * widths) / numpy.sum(areas)
 
     def get_area(self):
@@ -389,9 +388,19 @@ class MultiSurface(BaseSurface):
         return numpy.array(self.surfaces)[idx][0].get_middle_point()
 
     def get_surface_boundaries(self):
+        los, las = self.surfaces[0].get_surface_boundaries()
+        poly = Polygon((lo, la) for lo, la in zip(los, las))
+        for i in range(1, len(self.surfaces)):
+            los, las = self.surfaces[i].get_surface_boundaries()
+            polyt = Polygon([(lo, la) for lo, la in zip(los, las)])
+            poly = poly.union(polyt)
+        coo = numpy.array([[lo, la] for lo, la in list(poly.exterior.coords)])
+        return coo[:, 0], coo[:, 1]
+
+    def old_get_surface_boundaries(self):
         lons = []
         lats = []
-        for surf in self.surfaces:
+        for surf in enumerate(self.surfaces):
             lons_surf, lats_surf = surf.get_surface_boundaries()
             lons.extend(lons_surf)
             lats.extend(lats_surf)

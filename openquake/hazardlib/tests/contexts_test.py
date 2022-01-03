@@ -231,6 +231,7 @@ class CollapseTestCase(unittest.TestCase):
 
 
 class SetWeightTestCase(unittest.TestCase):
+
     def test(self):
         inp = read_input(JOB)
         [[trt, cmaker]] = inp.cmakerdict.items()
