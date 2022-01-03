@@ -239,4 +239,4 @@ class SetWeightTestCase(unittest.TestCase):
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
-            weights, [10.11, 10.11, 10.11, 0.1, 0.1, 0.1])
+            weights, [2.102, 2.102, 2.102, 0.1, 0.1, 0.1])
