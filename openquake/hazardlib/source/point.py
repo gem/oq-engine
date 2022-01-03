@@ -120,17 +120,20 @@ def calc_average(pointsources):
 
 
 def _rupture_by_mag(src, np, hc, point_rup):
-    # generate one (point)rupture for each magnitude
-    for mag, mag_occ_rate in src.get_annual_occurrence_rates():
-        if point_rup:
+    # generate one rupture for each magnitude and one point rupture
+    # every 5 magnitudes
+    mag_rates = list(src.get_annual_occurrence_rates())
+    if point_rup:  # fast
+        for mag, rate in mag_rates[::5]:
             yield PointRupture(
                 mag, src.tectonic_region_type, hc,
-                0, 0, np.rake, mag_occ_rate, src.temporal_occurrence_model)
-        else:
+                0, 0, np.rake, rate, src.temporal_occurrence_model)
+    else:  # regular case
+        for mag, rate in mag_rates:
             surface, nhc = src._get_rupture_surface(mag, np, hc)
             yield ParametricProbabilisticRupture(
                 mag, np.rake, src.tectonic_region_type,
-                nhc, surface, mag_occ_rate, src.temporal_occurrence_model)
+                nhc, surface, rate, src.temporal_occurrence_model)
 
 
 class PointSource(ParametricSeismicSource):
@@ -259,9 +262,7 @@ class PointSource(ParametricSeismicSource):
         yield from _rupture_by_mag(self, np, hc, point_rup)
 
     def few_ruptures(self):
-        for i, rup in enumerate(self.iruptures(point_rup=True)):
-            if i % 5 == 0:
-                yield rup
+        yield from self.iruptures(point_rup=True)
 
     def count_nphc(self):
         """
