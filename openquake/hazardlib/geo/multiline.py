@@ -188,8 +188,6 @@ def get_uts(lines: list, mesh: Mesh):
         tupps.append(tupp)
         weis.append(wei_sum)
 
-        assert uupp.shape == tupp.shape == wei_sum.shape
-
     return tupps, uupps, weis
 
 
