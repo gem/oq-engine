@@ -360,6 +360,9 @@ class MultiSurface(BaseSurface):
 
 
     def _set_tu(self, mesh):
+        """
+        Set the values of T and U
+        """
 
         if not hasattr(self, 'tors'):
             self._set_tor()
@@ -377,7 +380,7 @@ class MultiSurface(BaseSurface):
             tu, uu, we = line.get_tu(mesh)
             tupps.append(tu)
             uupps.append(uu)
-            weis.append(we)
+            weis.append(np.squeeze(np.sum(we, axis=0)))
 
         uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
 

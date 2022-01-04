@@ -143,7 +143,7 @@ class MultiLine():
         # TODO there could be cases where tupps, uupps, weis are already
         # available
         tupps, uupps, weis = get_uts(self.lines, mesh)
-        uut, tut = get_tu(self.shift, tupps, uupps, weis)
+        uut, _ = get_tu(self.shift, tupps, uupps, weis)
 
         # Maximum U value
         self.u_max = max(uut)
@@ -348,6 +348,7 @@ def get_tu(shifts, tupps, uupps, weis):
             tut = tupp * wei_sum
             wet = wei_sum
         else:
+            print(uut.shape, uupp.shape, wei_sum.shape)
             uut += (uupp + shift) * wei_sum
             tut += tupp * wei_sum
             wet += wei_sum
