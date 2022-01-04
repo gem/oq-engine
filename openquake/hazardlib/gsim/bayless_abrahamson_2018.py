@@ -105,17 +105,17 @@ def _get_stddevs(C, ctx):
     Compute the standard deviations
     """
     # Set components of std
-    tau = C['s1']
-    phi_s2s = C['s3']
-    phi_ss = C['s5']
-    if ctx.mag > 6:
-        tau = C['s2']
-        phi_s2s = C['s4']
-        phi_ss = C['s6']
-    elif ctx.mag > 4:
-        tau = C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag-4)
-        phi_s2s = C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag-4)
-        phi_ss = C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag-4)
+    tau = np.ones_like(ctx.mag) * C['s1']
+    phi_s2s = np.ones_like(ctx.mag) * C['s3']
+    phi_ss = np.ones_like(ctx.mag) * C['s5']
+    above = ctx.mag > 6
+    tau[above] = C['s2']
+    phi_s2s[above] = C['s4']
+    phi_ss[above] = C['s6']
+    below = ctx.mag > 4
+    tau[below] = C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag[below]-4)
+    phi_s2s[below] = C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag[below]-4)
+    phi_ss[below] = C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag[below]-4)
 
     # Collect the requested stds
     sigma = np.sqrt(tau**2+phi_s2s**2+phi_ss**2+C['c1a']**2)
@@ -243,7 +243,7 @@ class BaylessAbrahamson2018(GMPE):
     #: Required distance measures
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sigma, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         freq_nl, coeff_nl = self.COEFFS.get_coeffs(['f3', 'f4', 'f5'])
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
