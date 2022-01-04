@@ -112,7 +112,7 @@ def _get_stddevs(C, ctx):
     tau[above] = C['s2']
     phi_s2s[above] = C['s4']
     phi_ss[above] = C['s6']
-    below = ctx.mag > 4
+    (ctx.mag > 4) & (ctx.mag <= 6)
     tau[below] = C['s1']+(C['s2']-C['s1'])/2.*(ctx.mag[below]-4)
     phi_s2s[below] = C['s3']+(C['s4']-C['s3'])/2.*(ctx.mag[below]-4)
     phi_ss[below] = C['s5']+(C['s6']-C['s5'])/2.*(ctx.mag[below]-4)
