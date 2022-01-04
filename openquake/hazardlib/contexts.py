@@ -505,8 +505,7 @@ class ContextMaker(object):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
-        bigps = getattr(src, 'location', None) and src.count_nphc() > 1
-        if bigps:
+        if getattr(src, 'location', None):
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             for r, s in self._cps_rups(src, sites):
@@ -695,8 +694,9 @@ class ContextMaker(object):
                 for rup in irups:
                     rup.sites = r_sites
                     allrups.append(rup)
-            rups = allrups[::20]
+            rups = allrups[::25]
             nrups = len(allrups)
+            # print(nrups, len(rups))
         else:
             rups = list(src.few_ruptures())
             nrups = src.num_ruptures
@@ -709,7 +709,7 @@ class ContextMaker(object):
             return nrups if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
         mesh_size = getattr(src, 'mesh_size', 0)  # for NP and MF sources
-        return (nrups + mesh_size / 500) * (nsites.mean() / N + .05)
+        return (nrups + mesh_size / 500) * (nsites.mean() / N + .02)
 
     def set_weight(self, sources, srcfilter):
         """
