@@ -39,12 +39,12 @@ MEAN_DISCREP = 0.1
 class BahrampouriEtAl2021IAAscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021Asc
    
-    MEAN_FILE = "BMG20/BMG20_AI_ASC_mean.csv"
-    TOTAL_FILE = "BMG20/BMG20_AI_ASC_TOTAL.csv"
-    INTRA_FILE = "BMG20/BMG20_AI_ASC_INTRA.csv"
+    MEAN_FILE = "BMG20/BMG20_AI_ASC_mean_new.csv"
+    TOTAL_FILE = "BMG20/BMG20_AI_ASC_TOTAL_new.csv"
+    INTRA_FILE = "BMG20/BMG20_AI_ASC_INTRA_new.csv"
 
     def test_all(self):
-        self.check(self.MEAN_FILE, self.TOTAL_FILE, self.INTRA_FILE,  max_discrep_percentage=MEAN_DISCREP) #  
+        self.check(self.MEAN_FILE,self.TOTAL_FILE,self.INTRA_FILE,   max_discrep_percentage=MEAN_DISCREP) # 
 
 
 # # In[2]:
@@ -60,15 +60,15 @@ MEAN_DISCREP = 0.1
 class BahrampouriEtAl2021IAInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021SInter
     
-    MEAN_FILE = "BMG20/BMG20_AI_SInter_mean.csv"
-    TOTAL_FILE = "BMG20/BMG20_AI_SInter_TOTAL.csv"
-    INTRA_FILE = "BMG20/BMG20_AI_SInter_INTRA.csv"
+    MEAN_FILE = "BMG20/BMG20_AI_SInter_mean_new.csv"
+    TOTAL_FILE = "BMG20/BMG20_AI_SInter_TOTAL_new.csv"
+    INTRA_FILE = "BMG20/BMG20_AI_SInter_INTRA_new.csv"
 
     def test_all(self):
         self.check(self.MEAN_FILE, self.TOTAL_FILE, self.INTRA_FILE, max_discrep_percentage=MEAN_DISCREP) # 
 
 
-# In[3]:
+# # In[3]:
 
 
 from openquake.hazardlib.gsim.bahrampouri_2021 import BahrampouriEtAl2021SSlab
@@ -81,9 +81,9 @@ MEAN_DISCREP = 0.1
 class BahrampouriEtAl2021IATestSlabCase(BaseGSIMTestCase):
     GSIM_CLASS = BahrampouriEtAl2021SSlab
  
-    MEAN_FILE = "BMG20/BMG20_AI_SSlab_mean.csv"
-    TOTAL_FILE = "BMG20/BMG20_AI_SSlab_TOTAL.csv"
-    INTRA_FILE = "BMG20/BMG20_AI_SSlab_INTRA.csv"
+    MEAN_FILE = "BMG20/BMG20_AI_SSlab_mean_new.csv"
+    TOTAL_FILE = "BMG20/BMG20_AI_SSlab_TOTAL_new.csv"
+    INTRA_FILE = "BMG20/BMG20_AI_SSlab_INTRA_new.csv"
 
     def test_all(self):
         self.check(self.MEAN_FILE, self.TOTAL_FILE,self.INTRA_FILE,  max_discrep_percentage=MEAN_DISCREP)
