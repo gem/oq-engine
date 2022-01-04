@@ -709,7 +709,7 @@ class ContextMaker(object):
             return nrups if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
         mesh_size = getattr(src, 'mesh_size', 0)  # for NP and MF sources
-        return (nrups + mesh_size / 500) * numpy.mean(nsites / N + .001)
+        return (nrups + mesh_size / 500) * (nsites.mean() / N + .05)
 
     def set_weight(self, sources, srcfilter):
         """

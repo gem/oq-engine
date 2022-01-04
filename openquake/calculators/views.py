@@ -1268,6 +1268,10 @@ def view_weight_by_src(token, dstore):
     Show the total weight per source typology
     """
     info = dstore.read_df('source_info')
-    ser = info.groupby('code').weight.sum()
-    return pandas.DataFrame(dict(weight=ser.to_numpy()),
-                            index=decode(ser.index.to_numpy()))
+    dic = dict(tot_weight=[], num_srcs=[])
+    codes = []
+    for code, weight in info.groupby('code').weight:
+        dic['tot_weight'].append(weight.sum())
+        dic['num_srcs'].append(len(weight))
+        codes.append(decode(code))
+    return pandas.DataFrame(dic, index=codes)
