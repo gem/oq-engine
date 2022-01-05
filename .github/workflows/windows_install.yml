@@ -51,7 +51,7 @@ jobs:
           set PIP_DEFAULT_TIMEOUT=100
           python -m pip install pip wheel setuptools --upgrade
           echo Branch to test %BRANCH%
-          if %BRANCH%=="master" (python install.py devel) else (python install.py devel --version %BRANCH%)
+          if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
         shell: cmd
       - name: Run demos to test installation
         run: |
