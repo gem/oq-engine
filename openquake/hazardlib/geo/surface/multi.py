@@ -78,12 +78,12 @@ class MultiSurface(BaseSurface):
         lats = []
         deps = []
         for m in [surface.mesh for surface in self.surfaces]:
-            ok = numpy.isfinite(m.lons) & numpy.isfinite(m.lats)
+            ok = np.isfinite(m.lons) & np.isfinite(m.lats)
             lons.append(m.lons[ok])
             lats.append(m.lats[ok])
             deps.append(m.depths[ok])
-        return Mesh(numpy.concatenate(lons), numpy.concatenate(lats),
-                    numpy.concatenate(deps))
+        return Mesh(np.concatenate(lons), np.concatenate(lats),
+                    np.concatenate(deps))
 
     def __init__(self, surfaces: list, tol: float = 1):
         """
