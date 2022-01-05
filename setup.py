@@ -60,7 +60,7 @@ install_requires = [
     'numpy >=1.20',
     'scipy >=1.3',
     'pandas >=0.25',
-    'pyzmq <20.0',
+    'pyzmq >20.0',
     'psutil >=2.0',
     'shapely >=1.7',
     'docutils >=0.11',
@@ -76,7 +76,7 @@ install_requires = [
 extras_require = {
     'cluster': ["python-pam",
                 "django-pam",
-                "gunicorn",
+                "gunicorn >20.0",
                 "setproctitle"],
     'osgeo':  [
         'GDAL >= 2.4',
