@@ -1,4 +1,4 @@
-name: Install OQ engine on Linux OS
+name: Install OQ engine on RockyLinux OS
 
 on:
   workflow_dispatch:
@@ -23,8 +23,9 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
-        container: ["rockylinux:8", "ubuntu:focal"]
+        python-version: [3.8, 3.9]
+        #container: ["rockylinux:8", "ubuntu:focal"]
+        container: ["rockylinux:8"]
 
     container:
       image: ${{ matrix.container }}
@@ -39,38 +40,35 @@ jobs:
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
-    - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    # You can test your matrix by printing the current Python version
-    #- name: Display Python version
-    #  run: python -c "import sys; print(sys.version)"
-    # Use script to install engine and not the pip install .
+    - name: Set up Python  ${{ matrix.python-version }} 
+      run: |
+        pyver=`echo ${{ matrix.python-version }} | tr -d .`
+        dnf update -y
+        dnf install -y python${pyver}
+        #check version of python
+        echo "check version of python"
+        pip3 -V
+        python3 -c "import sys; print(sys.version)"
+        #
     - name: Install engine with install script
-      env: 
+      env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
-        #git status
-        #grep setuptools requirements*
-        #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
-        #echo $PY_VER
-        #https://pip.pypa.io/en/stable/user_guide/
         export PIP_DEFAULT_TIMEOUT=100
         #
-        pip install --default-timeout=100 -U pip wheel setuptools
-        #pip3 install -r requirements-$PY_VER-linux64.txt
-        #pip3 install -e .\[osgeo\]
+        pip3 install --default-timeout=100 -U pip wheel setuptools
         echo "branch to test: ${BRANCH}"
-        if [[ "$BRANCH" != "" ]] 
+        if [[ "$BRANCH" != "" ]]
         then
-          python install.py devel --version ${BRANCH}
+          python3 install.py devel_server --version ${BRANCH}
         else
-          python install.py devel 
+          python3 install.py devel_server
         fi
     - name: Run tests
       run: |
-        source ~/openquake/bin/activate
+        source /opt/openquake/bin/activate
         pip install pytest
-        oq dbserver start
-        pytest -vsx ~/work/oq-engine/oq-engine/openquake/calculators
+        runuser -l openquake -c '/opt/openquake/bin/oq dbserver start &'
+        mkdir ~/oqdata
+        export PYTEST_ADDOPTS="--color=yes"
+        pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators
