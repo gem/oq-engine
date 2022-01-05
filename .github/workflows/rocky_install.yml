@@ -44,9 +44,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     # You can test your matrix by printing the current Python version
-    - name: Display Python version
-      run: python -c "import sys; print(sys.version)"
-   # Use script to install engine and not the pip install .
+    #- name: Display Python version
+    #  run: python -c "import sys; print(sys.version)"
+    # Use script to install engine and not the pip install .
     - name: Install engine with install script
       env: 
         BRANCH: ${{ github.event.inputs.git-ref }}
