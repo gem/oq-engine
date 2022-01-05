@@ -44,7 +44,7 @@ jobs:
       run: |
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
-        dnf install python${pyver}
+        dnf install -y python${pyver}
         #check version of python
         echo "check version of python"
         pip3 -V
