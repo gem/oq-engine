@@ -711,7 +711,7 @@ class ContextMaker(object):
         mesh_size = getattr(src, 'mesh_size', 0)  # for NP and MF sources
         return (nrups + mesh_size / 500) * (nsites.mean() / N + .02)
 
-    def set_weight(self, sources, srcfilter):
+    def set_weight(self, sources, srcfilter, mon=Monitor()):
         """
         Set the weight attribute on each prefiltered source
         """
@@ -722,7 +722,8 @@ class ContextMaker(object):
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
             else:
-                src.weight = .1 + self.estimate_weight(src, srcfilter)
+                with mon:
+                    src.weight = .1 + self.estimate_weight(src, srcfilter)
             if src.code in b'CS':
                 src.weight += 2
 

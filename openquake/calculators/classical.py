@@ -459,8 +459,9 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
-        self.datastore.create_df(
-            'source_data', pandas.DataFrame(self.source_data))
+        df = pandas.DataFrame(self.source_data)
+        df['impact'] = df.nsites / self.N
+        self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
 
     def submit(self, sids, cmakers, max_weight):
