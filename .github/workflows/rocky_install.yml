@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "0 4 * * *"
+    - cron: "0 3 * * *"
 
 jobs:
 
