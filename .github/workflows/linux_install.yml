@@ -44,6 +44,8 @@ jobs:
       run: python -c "import sys; print(sys.version)"
    # Use script to install engine and not the pip install .
     - name: Install engine with install script
+      env: 
+        BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
         #git status
         #grep setuptools requirements*
@@ -55,7 +57,13 @@ jobs:
         pip3 install --default-timeout=100 -U pip wheel setuptools
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
-        python install.py devel 
+        echo "branch to test: ${BRANCH}"
+        if [[ "$BRANCH" != "" ]] 
+        then
+          python install.py devel --version ${BRANCH}
+        else
+          python install.py devel 
+        fi
     - name: Run tests
       run: |
         source ~/openquake/bin/activate
