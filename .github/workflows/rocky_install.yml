@@ -41,7 +41,7 @@ jobs:
       with:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }}
-      run: 
+      run: |
         pyver=`echo py${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install python${pyver}
@@ -50,18 +50,18 @@ jobs:
         pip3 -V
         python3 -c "import sys; print(sys.version)"
     - name: Install engine with install script
-      env: 
+      env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
         export PIP_DEFAULT_TIMEOUT=100
         #
         pip3 install --default-timeout=100 -U pip wheel setuptools
         echo "branch to test: ${BRANCH}"
-        if [[ "$BRANCH" != "" ]] 
+        if [[ "$BRANCH" != "" ]]
         then
           python3 install.py devel --version ${BRANCH}
         else
-          python3 install.py devel 
+          python3 install.py devel
         fi
     - name: Run tests
       run: |
