@@ -40,7 +40,7 @@ jobs:
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
-    - name: Set up Python  ${{ matrix.python-version }}
+    - name: Set up Python  ${{ matrix.python-version }} 
       run: |
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
@@ -59,9 +59,9 @@ jobs:
         echo "branch to test: ${BRANCH}"
         if [[ "$BRANCH" != "" ]]
         then
-          python3 install.py devel --version ${BRANCH}
+          python3 install.py devel_server --version ${BRANCH}
         else
-          python3 install.py devel
+          python3 install.py devel_server
         fi
     - name: Run tests
       run: |
