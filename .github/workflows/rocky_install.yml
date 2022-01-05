@@ -70,4 +70,5 @@ jobs:
         pip install pytest
         runuser -l openquake -c '/opt/openquake/bin/oq dbserver start &'
         mkdir ~/oqdata
+        export PYTEST_ADDOPTS="--color=yes"
         pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators
