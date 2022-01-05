@@ -708,8 +708,7 @@ class ContextMaker(object):
         if not ctxs:
             return nrups if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
-        mesh_size = getattr(src, 'mesh_size', 0)  # for NP and MF sources
-        return (nrups + mesh_size / 500) * (nsites.mean() / N + .02)
+        return nrups * (nsites.mean() / N + .02)
 
     def set_weight(self, sources, srcfilter, mon=Monitor()):
         """
@@ -724,8 +723,12 @@ class ContextMaker(object):
             else:
                 with mon:
                     src.weight = .1 + self.estimate_weight(src, srcfilter)
-            if src.code in b'CS':
-                src.weight += 2
+            if src.code == b'S':
+                src.weight += 1
+            elif src.code == b'C':
+                src.weight += 5
+            elif src.code == b'F':
+                src.weight += 5
 
 
 # see contexts_tests.py for examples of collapse
