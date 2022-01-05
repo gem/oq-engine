@@ -24,6 +24,10 @@ jobs:
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9]
+        container: ["rockylinux:8", "ubuntu:focal"]
+
+    container:
+      image: ${{ matrix.container }}
 
     steps:
   # This Checkout use git-ref keyword from dispatch
