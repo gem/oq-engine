@@ -143,6 +143,10 @@ def _interp(param, name, trt):
     return mdd
 
 
+def _delta_pr(rup):
+    return 0 if rup.surface else rup.mag * 10  # PointRupture
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -340,7 +344,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rup, sites, 'rrup')
-        mdist = self.maximum_distance(rup.mag)
+        mdist = self.maximum_distance(rup.mag) + _delta_pr(rup)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
@@ -501,8 +505,7 @@ class ContextMaker(object):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
-        bigps = getattr(src, 'location', None) and src.count_nphc() > 1
-        if bigps:
+        if getattr(src, 'location', None):
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             for r, s in self._cps_rups(src, sites):
@@ -512,28 +515,28 @@ class ContextMaker(object):
 
     def _cps_rups(self, src, sites, point_rup=False):
         if src.count_nphc() == 1:  # nothing to collapse
-            for pr in src.iruptures(point_rup):
-                yield self._ruptures(src, pr.mag, point_rup), sites
+            for rup in src.iruptures(point_rup):
+                yield self._ruptures(src, rup.mag, point_rup), sites
             return
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for pr in src.iruptures(point_rup):
-            delta = 0 if pr.surface else pr.mag * 10  # PointRupture
-            close = sites.filter(cdist <= self.pointsource_distance + delta)
-            far = sites.filter(cdist > self.pointsource_distance + delta)
+        for rup in src.iruptures(point_rup):
+            psdist = self.pointsource_distance + _delta_pr(rup)
+            close = sites.filter(cdist <= psdist)
+            far = sites.filter(cdist > psdist)
             if fewsites:
                 if close is None:  # all is far, common for small mag
-                    yield [pr], sites
+                    yield [rup], sites
                 else:  # something is close
-                    yield self._ruptures(src, pr.mag, point_rup), sites
+                    yield self._ruptures(src, rup.mag, point_rup), sites
             else:  # many sites
                 if close is None:  # all is far
-                    yield [pr], far
+                    yield [rup], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, pr.mag, point_rup), close
+                    yield self._ruptures(src, rup.mag, point_rup), close
                 else:  # some sites are far, some are close
-                    yield [pr], far
-                    yield self._ruptures(src, pr.mag, point_rup), close
+                    yield [rup], far
+                    yield self._ruptures(src, rup.mag, point_rup), close
 
     def get_pmap(self, ctxs, probmap=None):
         """
@@ -691,8 +694,9 @@ class ContextMaker(object):
                 for rup in irups:
                     rup.sites = r_sites
                     allrups.append(rup)
-            rups = allrups[::20]
+            rups = allrups[::25]
             nrups = len(allrups)
+            # print(nrups, len(rups))
         else:
             rups = list(src.few_ruptures())
             nrups = src.num_ruptures
@@ -705,7 +709,7 @@ class ContextMaker(object):
             return nrups if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
         mesh_size = getattr(src, 'mesh_size', 0)  # for NP and MF sources
-        return (nrups + mesh_size / 500) * numpy.mean(nsites / N + .001)
+        return (nrups + mesh_size / 500) * (nsites.mean() / N + .02)
 
     def set_weight(self, sources, srcfilter):
         """

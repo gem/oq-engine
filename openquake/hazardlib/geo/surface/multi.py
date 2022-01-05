@@ -74,17 +74,16 @@ class MultiSurface(BaseSurface):
         """
         :returns: mesh corresponding to the whole multi surface
         """
-        meshes = [surface.mesh for surface in self.surfaces]
         lons = []
         lats = []
         deps = []
-        for m in meshes:
-            for lo, la, de in zip(m.lons, m.lats, m.depths):
-                if np.isfinite(lo) and np.isfinite(la):
-                    lons.append(lo)
-                    lats.append(la)
-                    deps.append(de)
-        return Mesh(np.array(lons), np.array(lats), np.array(deps))
+        for m in [surface.mesh for surface in self.surfaces]:
+            ok = numpy.isfinite(m.lons) & numpy.isfinite(m.lats)
+            lons.append(m.lons[ok])
+            lats.append(m.lats[ok])
+            deps.append(m.depths[ok])
+        return Mesh(numpy.concatenate(lons), numpy.concatenate(lats),
+                    numpy.concatenate(deps))
 
     def __init__(self, surfaces: list, tol: float = 1):
         """
