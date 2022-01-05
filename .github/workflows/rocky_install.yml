@@ -42,7 +42,7 @@ jobs:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }}
       run: |
-        pyver=`echo py${{ matrix.python-version }} | tr -d .`
+        pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install python${pyver}
         #check version of python
