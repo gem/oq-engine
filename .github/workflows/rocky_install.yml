@@ -1,4 +1,4 @@
-name: Install OQ engine on Linux OS
+name: Install OQ engine on RockyLinux OS
 
 on:
   workflow_dispatch:
