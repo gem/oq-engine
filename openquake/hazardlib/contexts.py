@@ -722,13 +722,7 @@ class ContextMaker(object):
                 src.weight = .001
             else:
                 with mon:
-                    src.weight = .1 + self.estimate_weight(src, srcfilter)
-            if src.code == b'S':
-                src.weight += 1
-            elif src.code == b'C':
-                src.weight += 5
-            elif src.code == b'F':
-                src.weight += 5
+                    src.weight = 1. + self.estimate_weight(src, srcfilter)
 
 
 # see contexts_tests.py for examples of collapse
