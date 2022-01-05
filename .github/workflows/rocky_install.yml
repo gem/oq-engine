@@ -50,9 +50,6 @@ jobs:
         pip3 -V
         python3 -c "import sys; print(sys.version)"
         #
-        echo "check folder of repository"
-        ls -lrt /__w/oq-engine/
-        find / -name calculators -ls
     - name: Install engine with install script
       env:
         BRANCH: ${{ github.event.inputs.git-ref }}
