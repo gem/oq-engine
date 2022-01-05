@@ -1,4 +1,48 @@
   [Michele Simionato]
+  * Fixed the case of continuous fragility functions with minIML=noDamageLimit
+
+  [Miguel Leonardo-Suárez]
+  * Added GMPE from Jaimes et al. (2020) for Mexican intraslab earthquakes
+
+  [Michele Simionato]
+  * Enforced ps_grid_spacing <= pointsource_distance
+  * Internal: added command `oq plot source_data?`
+  * The engine is now splitting the MultiFaultSources, thus improving the task
+    distribution
+
+  [Claudia Mascandola]
+  * Added a new class to the abrahamson_2015 gmm.
+  * Added a new class to the lanzano_luzi_2019 and skarlatoudis_2013 gmms
+
+  [Marco Pagani, Shreyasvi]
+  * Added GMM from Bora et al. (2019)
+  * Fixed bug in the multifault surface when defined using kite fault surfaces
+
+  [Giuseppina Tusa]
+  * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs
+    from Tusa et al. (2020).
+
+  [Michele Simionato]
+  * Added command `oq compare uhs CALC_1 CALC_2`
+  * `split_sources=false` is now honored in disaggregation calculations
+  * Internal: rup/src_id now refers to the row in the source_info table
+
+  [Miguel Leonardo-Suárez]
+  * Added the GMPE Arroyo et al. (2010) for Mexican subduction interface events
+
+  [Marco Pagani]
+  * Added a new method to the modifiable GMPE with which is possible to
+    compute spatially correlated ground-motion fields even when the initial
+    GMM only provides the total standard deviation.
+  * Fixed a bug in the `modify_recompute_mmax`
+  * Added a `get_coeffs` method to the CoeffTable class
+  * Added support for EAS, FAS, DRVT intensitity measure types
+
+  [Michele Simionato]
+  * Extended the mag-dependent filtering to the event based calculator
+  * The flag discrete_damage_distribution=true was incorrectly ignored when
+    computing the consequences
+  * Implemented `reaggregate_by` feature
   * Supported the `custom_site_id` in the GMF exporters
   * Bug fix: the site collection of the child calculation was ignored when
     using the --hazard-calculation-id option

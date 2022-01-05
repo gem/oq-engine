@@ -4,7 +4,7 @@ The OpenQuake Engine can be installed on Windows with the universal installer.
 For LTS releases we also offer a **self-installable binary distribution**.
 
 - this distribution includes its own distribution of the dependencies needed by the OpenQuake Engine
-    - Python 3.6
+    - Python 3.8
     - Python dependencies (pip, numpy, scipy, h5py, django, shapely, and few more)
 - multiple versions can be installed alongside
 
@@ -16,7 +16,11 @@ Requirements are:
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 
-**Windows 7** is **deprecated** as a platform for running the Engine since it is reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support). Compatibility with Windows 7 will be removed in next Engine releases.
+**Windows 7** and **Windows 8** are not supported. That means that we do
+not test such platforms and they engine may or may not work there. Also, it
+may work for small calculations and hang for large calculations, as it has
+been reported by a few users. For large calculations (i.e. any calculation
+in the hazard or risk mosaic) you are recommended to use a Linux server.
 
 ## Install or upgrade packages from the OpenQuake website
 

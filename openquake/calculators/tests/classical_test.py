@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import gzip
 import unittest
 import numpy
@@ -40,7 +39,7 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
-    case_66, case_67, case_68, case_70, case_71, case_72, case_73)
+    case_66, case_67, case_68, case_70, case_71, case_72, case_73, case_74)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -64,7 +63,7 @@ def get_dists(dstore):
     rup = dstore['rup']
     for sids, dsts in zip(rup['sids_'], rup['rrup_']):
         for sid, dst in zip(sids, dsts):
-            dic[sid].append(int(round(dst)))
+            dic[sid].append(round(dst, 1))
     return {sid: sorted(dsts, reverse=True) for sid, dsts in dic.items()}
 
 
@@ -97,7 +96,6 @@ class ClassicalTestCase(CalculatorTestCase):
             slow = view('task:classical:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
             self.assertIn('duration', slow)
-            self.assertIn('sources', slow)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
@@ -334,10 +332,6 @@ hazard_uhs-std.csv
             case_18.__file__, kind='stats', delta=1E-7)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
-
-        if os.environ.get('TRAVIS'):
-            raise unittest.SkipTest('Randomly broken on Travis')
-
         self.calc.datastore.close()
         self.calc.datastore.open('r')
 
@@ -442,8 +436,8 @@ hazard_uhs-std.csv
         self.assert_curves_ok(['hazard_curve.csv'],
                               case_23.__file__, delta=1e-5)
         attrs = dict(self.calc.datastore['/'].attrs)
-        self.assertEqual(attrs['checksum32'], 3098153713)
-        self.assertEqual(attrs['input_size'], 6631)
+        self.assertIn('checksum32', attrs)
+        self.assertIn('input_size', attrs)
 
     def test_case_24(self):  # UHS
         # this is a case with rjb and an hypocenter distribution
@@ -606,9 +600,18 @@ hazard_uhs-std.csv
 
     def test_case_43(self):
         # this is a test for pointsource_distance and ps_grid_spacing
-        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
-                               "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numctxs, 2986)  # number of contexts
+        # it also checks running a classical after a preclassical
+        self.run_calc(case_43.__file__, 'job.ini',
+                      calculation_mode='preclassical', concurrent_tasks='4')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_43.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id)
+        data = self.calc.datastore.read_df('source_data')
+        self.assertEqual(data.nrupts.sum(), 2986)  # number of contexts
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
+        [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles("expected/hazard_map-mean-PGA.csv", fname)
 
         # check CollapsedPointSources in source_info
         info = self.calc.datastore.read_df('source_info')
@@ -650,67 +653,50 @@ hazard_uhs-std.csv
         # (even if their true distances are around 109 km!)
         self.run_calc(case_48.__file__, 'job.ini')
         # 20 exact rrup distances for site 0 and site 1 respectively
-        exact = numpy.array([[54.1249, 109.704],
-                             [54.2632, 109.753],
-                             [53.7378, 109.321],
-                             [53.8517, 109.357],
-                             [53.2577, 108.842],
-                             [53.3404, 108.863],
-                             [52.6774, 108.255],
-                             [52.7076, 108.245],
-                             [51.9595, 107.525],
-                             [51.9044, 107.461],
-                             [50.5455, 106.076],
-                             [50.4445, 105.979],
-                             [47.7896, 103.201],
-                             [47.6827, 103.101],
-                             [43.7002, 98.7525],
-                             [43.5834, 98.6488],
-                             [38.1556, 92.0187],
-                             [38.0217, 91.9073],
-                             [32.9537, 82.3458],
-                             [32.7986, 82.2214]])
+        expect = numpy.array([[54.3, 109.8],
+                             [54.1, 109.7],
+                             [53.9, 109.4],
+                             [53.7, 109.3],
+                             [53.3, 108.9],
+                             [53.3, 108.8],
+                             [52.7, 108.3],
+                             [52.7, 108.2],
+                             [52.0, 107.5],
+                             [51.9, 107.5],
+                             [50.5, 106.1],
+                             [50.4, 106.0],
+                             [47.8, 103.2],
+                             [47.7, 103.1],
+                             [43.7, 98.8],
+                             [43.6, 98.6],
+                             [38.2, 92.0],
+                             [38.0, 91.9],
+                             [33.0, 82.3],
+                             [32.8, 82.2]])
         dst = get_dists(self.calc.datastore)
-        aac(dst[0], exact[:, 0], atol=.5)  # site 0
-        aac(dst[1], exact[:, 1], atol=.5)  # site 1
+        aac(dst[0], expect[:, 0], atol=.05)  # site 0
+        aac(dst[1], expect[:, 1], atol=.05)  # site 1
 
-        # This test shows in detail what happens to the distances in presence
-        # of a magnitude-dependent pointsource_distance.
-        self.run_calc(
-            case_48.__file__, 'job.ini', pointsource_distance=
-            '{"default": [(5.1, 42), (5.3, 47), (5.5, 52), (5.7, 58), '
-            '(5.9, 65), (6.1, 72), (6.3, 80), (6.5, 89), (6.7, 99), '
-            '(6.9, 110)]}')
+        # This test shows in detail what happens to the distances
+        # in presence of a pointsource_distance
+        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='50')
 
-        psdist = self.calc.oqparam.pointsource_distance
-        psd = psdist.ddic['active shallow crust']
-        dist_by_mag = {mag: int(psd[mag]) for mag in psd}
-        self.assertEqual(list(dist_by_mag.values()),
-                         [42, 47, 52, 58, 65, 72, 80, 89, 99, 110])
-
-        # 17 approx rrup distances for site 0 and site 1 respectively
-        approx = numpy.array([[54.1525, 109.711],
-                              [53.7572, 109.324],
-                              [53.2665, 108.84],
-                              [52.6774, 108.255],
-                              [52.7076, 108.245],
-                              [51.9595, 107.525],
-                              [51.9044, 107.461],
-                              [50.5455, 106.076],
-                              [50.4445, 105.979],
-                              [47.7896, 103.201],
-                              [47.6827, 103.101],
-                              [43.7002, 98.7525],
-                              [43.5834, 98.6488],
-                              [38.1556, 92.0187],
-                              [38.0217, 91.9073],
-                              [32.9537, 82.3458],
-                              [32.7986, 82.2214]])
+        # 10 approx rrup distances for site 0 and site 1 respectively
+        approx = numpy.array([[54.2, 109.7],
+                              [53.8, 109.3],
+                              [53.3, 108.8],
+                              [52.7, 108.2],
+                              [51.9, 107.5],
+                              [50.5, 106.0],
+                              [47.8, 103.2],
+                              [43.7, 98.7],
+                              [38.1, 92.0],
+                              [32.9, 82.3]])
 
         # approx distances from site 0 and site 1 respectively
         dst = get_dists(self.calc.datastore)
-        aac(dst[0], approx[:, 0], atol=.5)  # site 0
-        aac(dst[1], approx[:, 1], atol=.5)  # site 1
+        aac(dst[0], approx[:, 0], atol=.05)  # site 0
+        aac(dst[1], approx[:, 1], atol=.05)  # site 1
 
     def test_case_49(self):
         # serious test of amplification + uhs
@@ -992,5 +978,11 @@ hazard_uhs-std.csv
     def test_case_73(self):
         # test LT
         self.run_calc(case_73.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+    def test_case_74(self):
+        # test calculation with EAS
+        self.run_calc(case_74.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)

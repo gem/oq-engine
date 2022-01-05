@@ -29,7 +29,6 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod
-from openquake.hazardlib import const
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
@@ -61,7 +60,6 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
         Z = oq.num_rlzs_disagg or 1
     else:
         Z = len(oq.rlz_index)
-    eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
     # build mag_edges
     mags = set()
@@ -75,7 +73,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
         int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
 
     # build dist_edges
-    maxdist = max(oq.maximum_distance(trt) for trt in trts)
+    maxdist = max(oq.maximum_distance.max().values())
     dist_edges = oq.distance_bin_width * numpy.arange(
         0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
 
@@ -371,7 +369,7 @@ def disaggregation(
         cmaker[trt] = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': truncation_level,
-             'maximum_distance': source_filter.integration_distance,
+             'maximum_distance': source_filter.integration_distance(trt),
              'imtls': {str(imt): [iml]}})
         rups[trt].extend(cmaker[trt].from_srcs(srcs, sitecol))
     min_mag = min(r.mag for rs in rups.values() for r in rs)

@@ -7,10 +7,10 @@ wanting to do everything manually.
 
 ## Prerequisites
 
-Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
+Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.9/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
 Some software prerequisites are needed to build the development environment.
-Python 3.6, 3.7 and 3.8 are supported.
+Python 3.7, 3.8 and 3.9 are supported.
 
 ### Ubuntu
 

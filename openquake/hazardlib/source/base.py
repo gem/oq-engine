@@ -52,13 +52,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
+    id = -1  # to be set
     trt_smr = 0  # set by the engine
-    nsites = 0  # set when filtering the source
-
+    nsites = 1  # set when filtering the source
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
-    weight = 1
+    weight = 1  # set in contexts
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -246,6 +246,14 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         from openquake.hazardlib import nrml, sourcewriter
         return nrml.to_string(sourcewriter.obj_to_node(self))
 
+    def __repr__(self):
+        """
+        String representation of a source, displaying the source class name
+        and the source id.
+        """
+        return '<%s %s, weight=%.1f>' % (
+            self.__class__.__name__, self.source_id, self.weight)
+
 
 class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     """
@@ -328,13 +336,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         min_mag, max_mag = self.mfd.get_min_max_mag()
         return max(self.min_mag, min_mag), max_mag
 
-    def __repr__(self):
-        """
-        String representation of a source, displaying the source class name
-        and the source id.
-        """
-        return '<%s %s>' % (self.__class__.__name__, self.source_id)
-
     def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
         Yields one random rupture from a source. IMPORTANT: this method
@@ -398,7 +399,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
             Number of standard deviations to be added or substracted
         """
         msr = self.magnitude_scaling_relationship
-        area = self.get_fault_surface_area() * 1e6  # area in m^2
+        area = self.get_fault_surface_area()  # area in km^2
         mag = msr.get_median_mag(area=area, rake=self.rake)
         std = msr.get_std_dev_mag(area=area, rake=self.rake)
         self.mfd.max_mag = mag + epsilon * std

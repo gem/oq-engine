@@ -17,14 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest
 import numpy
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.writers import write_csv
 from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9, case_10, case_11, case_12)
+    case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -144,10 +143,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # this is a case with two gsims and one asset
         self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
-        tmpname = write_csv(None, dmg, fmt='%.5E')  # (T, R, D) == (1, 2, 5)
-        raise unittest.SkipTest("python3.9 issue")
-        self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname,
-                              delta=1E-5)
+        self.assertEqual(dmg.array.shape, (1, 2, 5))  # (T, R, D)
+        aac(dmg.array[0].sum(axis=0),
+            [0.72431, 0.599795, 0.292081, 0.15108, 0.232734], atol=1E-5)
 
     def test_case_6(self):
         # this is a case with 5 assets on the same point
@@ -242,6 +240,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id)
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk2.csv', fname)
+
+    def test_case_13(self):
+        # consequence recovery time
+        self.run_calc(case_13.__file__, 'job.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
 
 
 def losses(aid, alt):

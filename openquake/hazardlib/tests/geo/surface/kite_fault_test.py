@@ -28,6 +28,16 @@ from openquake.hazardlib.geo.surface import KiteSurface
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
+aae = np.testing.assert_almost_equal
+
+def plot_mesh_2d(ax, smsh):
+    """
+    Plots the mesh
+    """
+    for i in range(smsh.mesh.lons.shape[0]):
+        ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :], '-r', lw=0.5)
+    for i in range(smsh.mesh.lons.shape[1]):
+        ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i], '-r', lw=0.5)
 
 
 def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
@@ -69,9 +79,101 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
     plt.show()
 
 
-class KiteSurfaceWithNaNs(unittest.TestCase):
+class KiteSurfaceFromMeshTest(unittest.TestCase):
+    """
+    Tests the method that creates the external boundary of the rupture.
+    """
 
     def setUp(self):
+        lons = [[np.nan, 0.05, 0.1, 0.15, 0.20],
+                [0.00, 0.05, 0.1, 0.15, 0.20],
+                [0.00, 0.05, 0.1, 0.15, 0.20],
+                [0.00, 0.05, 0.1, 0.15, np.nan],
+                [0.00, np.nan, 0.1, 0.15, np.nan]]
+        lats = [[np.nan, 0.0, 0.0, 0.0, 0.0],
+                [0.05, 0.05, 0.05, 0.05, 0.05],
+                [0.10, 0.10, 0.10, 0.10, 0.10],
+                [0.15, 0.15, 0.15, 0.15, np.nan],
+                [0.20, np.nan, 0.20, 0.20, np.nan]]
+        deps = [[np.nan, 0.0, 0.0, 0.0, 0.0],
+                [5, 5, 5, 5, 5],
+                [10, 10, 10, 10, 10],
+                [15, 15, 15, 15, np.nan],
+                [20, np.nan, 20, 20, np.nan]]
+        self.lons = np.array(lons)
+        self.lats = np.array(lats)
+        self.deps = np.array(deps)
+
+        self.mesh = Mesh(self.lons, self.lats, self.deps)
+        self.ksfc = KiteSurface(self.mesh)
+
+    def test_get_external_boundary(self):
+        # This mesh does not comply with the right hand rule. In the init it
+        # will be adjusted
+
+        ksfc = self.ksfc
+        idxs = ksfc._get_external_boundary_indexes()
+
+        # Checking
+        expected = [[0, 0], [0, 1], [0, 2], [0, 3], [1, 4], [2, 4], [3, 4],
+                    [4, 4], [3, 3], [4, 2], [4, 1], [2, 0], [1, 0]]
+        np.testing.assert_almost_equal(expected, idxs)
+
+        if PLOTTING:
+            _, ax = plt.subplots(1, 1)
+            ax.plot(self.lons.flatten(), self.lats.flatten(), 'o')
+            lo, la = ksfc._get_external_boundary()
+            ax.plot(lo, la, '-r')
+            ax.invert_yaxis()
+            plt.show()
+
+    def test_get_dip(self):
+        self.ksfc.get_dip()
+
+    def test_get_cell_dimensions(self):
+        ksfc = self.ksfc
+        _, _, _, areas = ksfc.get_cell_dimensions()
+        idx = np.isfinite(areas)
+
+        # Computing the lenght and the width of the rectangle representing the
+        # rupture surface. This includes the cells which are empty
+        iul = (1, 0)
+        iur = (1, -1)
+        slen = distance(self.lons[iul], self.lats[iul], self.deps[iul],
+                        self.lons[iur], self.lats[iur], self.deps[iur])
+        iul = (0, 2)
+        ill = (-1, 2)
+        swid = distance(self.lons[iul], self.lats[iul], self.deps[iul],
+                        self.lons[ill], self.lats[ill], self.deps[ill])
+
+        # Computing the surface area as the total area minus the area of 4
+        # cells. Note that here we assume that cells have approx the same area
+        expected = slen * swid / areas.size * (np.sum(idx))
+
+        perc_diff = abs(expected - np.sum(areas[idx])) / expected * 100
+        self.assertTrue(perc_diff < 0.5)
+
+    def test_get_tor(self):
+        """ test calculation of trace (i.e. surface projection of tor) """
+        lons = np.flipud([0.0, 0.05, 0.1, 0.15, 0.20])
+        lats = np.array([0.0, 0.0, 0.0, 0.0, 0.05])
+        tlo, tla = self.ksfc.get_tor()
+        aae(lons, tlo)
+        aae(lats, tla)
+
+
+class KiteSurfaceWithNaNs(unittest.TestCase):
+    """
+    Test the creation of a surface which will contain NaNs. The
+    :method:`openquake.hazardlib.geo.surface.kite_fault.Kite.KiteSurface._clean`
+    removes rows and cols just containing NaNs.
+    """
+
+    NAME = 'KiteSurfaceWithNaNs'
+
+    def setUp(self):
+
+        # Read the profiles and create the surface
         path = os.path.join(BASE_DATA_PATH, 'profiles07')
         self.prf, _ = _read_profiles(path)
         hsmpl = 4
@@ -80,68 +182,123 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         alg = False
         self.srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
 
-        coo = []
-        step = 0.025
+        # Create the mesh of sites - No need to define their depth
+        step = 0.005
+        plons = []
+        plats = []
         for lo in np.arange(9.9, 10.4, step):
+            tlo = []
+            tla = []
             for la in np.arange(44.6, 45.3, step):
-                coo.append([lo, la])
-        coo = np.array(coo)
-        self.mesh = Mesh(lons=coo[:, 0], lats=coo[:, 1])
+                tlo.append(lo)
+                tla.append(la)
+            plons.append(tlo)
+            plats.append(tla)
+        self.mlons = np.array(plons)
+        self.mlats = np.array(plats)
+        self.mesh = Mesh(lons=self.mlons.flatten(), lats=self.mlats.flatten())
+
+    def test_get_tor(self):
+        tlo, tla = self.srfc.get_tor()
+        # Expected results extracted manually from the mesh
+        elo = np.array([10.01157297, 10.04780614,
+                        10.09853744, 10.14926874, 10.2])
+        ela = np.array([44.99160022, 45.00003185,
+                        45.00004377, 45.00003315, 45.])
+        aae(elo, tlo)
+        aae(ela, tla)
+
+        if PLOTTING:
+            _, ax = plt.subplots(1, 1)
+            plot_mesh_2d(ax, self.srfc)
+            ax.plot(tlo, tla, '-g', lw=4)
+            plt.show()
+
 
     def test_rjb_calculation(self):
+        # Test the calculation of the Rjb distance
         dst = self.srfc.get_joyner_boore_distance(self.mesh)
 
         if PLOTTING:
             _ = plt.figure()
+            ax = plt.gca()
             plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
                         edgecolors='none', s=15)
-            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
-                     color='red')
-            plt.title('Rjb')
+            plot_mesh_2d(ax, self.srfc)
+            lo, la = self.srfc._get_external_boundary()
+            plt.plot(lo, la, '-r')
+            z = np.reshape(dst, self.mlons.shape)
+            cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
+            _ = plt.clabel(cs)
+            tlo, tla = self.srfc.get_tor()
+            ax.plot(tlo, tla, '-g', lw=4)
+            plt.title(f'{self.NAME} - Rjb')
             plt.show()
 
-        if PLOTTING:
-            title = 'Test mesh with NaNs'
-            ppp(self.prf, self.srfc, title)
+        mesh = Mesh(np.array([10.06]), np.array([44.91]))
+        dst = self.srfc.get_joyner_boore_distance(mesh)
+        self.assertAlmostEqual(0.0, dst[0])
 
     def test_rrup_calculation(self):
         dst = self.srfc.get_min_distance(self.mesh)
 
         if PLOTTING:
-            _ = plt.figure()
+            _, ax = plt.subplots(1, 1)
             plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
                         edgecolors='none', s=15)
-            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
-                     color='red')
-            plt.title('Rrup')
+            lo, la = self.srfc._get_external_boundary()
+            plt.plot(lo, la, '-r')
+            z = np.reshape(dst, self.mlons.shape)
+            cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
+            _ = plt.clabel(cs)
+            tlo, tla = self.srfc.get_tor()
+            ax.plot(tlo, tla, '-g', lw=4)
+            plt.title(f'{self.NAME} - Rrup')
             plt.show()
 
     def test_rx_calculation(self):
         dst = self.srfc.get_rx_distance(self.mesh)
 
         if PLOTTING:
-            _ = plt.figure()
+            _, ax = plt.subplots(1, 1)
             plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
                         edgecolors='none', s=15)
-            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
-                     color='red')
-            plt.title('Rx')
+            lo, la = self.srfc._get_external_boundary()
+            plt.plot(lo, la, '-r')
+            z = np.reshape(dst, self.mlons.shape)
+            cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
+            _ = plt.clabel(cs)
+            tlo, tla = self.srfc.get_tor()
+            ax.plot(tlo, tla, '-g', lw=4)
+            plt.title(f'{self.NAME} - Rx')
             plt.show()
 
     def test_ry0_calculation(self):
         dst = self.srfc.get_ry0_distance(self.mesh)
 
         if PLOTTING:
-            _ = plt.figure()
+            _, ax = plt.subplots(1, 1)
             plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
                         edgecolors='none', s=15)
-            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
-                     color='red')
-            plt.title('Ry0')
+            lo, la = self.srfc._get_external_boundary()
+            plt.plot(lo, la, '-r')
+            z = np.reshape(dst, self.mlons.shape)
+            cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
+            _ = plt.clabel(cs)
+            tlo, tla = self.srfc.get_tor()
+            ax.plot(tlo, tla, '-g', lw=4)
+            plt.title(f'{self.NAME} - Ry0')
             plt.show()
+
+    # TODO
+    def test_get_dip(self):
+        dip = self.srfc.get_dip()
 
 
 class KiteSurfaceSimpleTests(unittest.TestCase):
+    """
+    Simple test for the creation of a KiteSurface
+    """
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles05')
@@ -159,6 +316,15 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
             title = 'Test mesh creation'
             ppp(self.prf, srfc, title)
 
+    def test_get_area(self):
+        hsmpl = 4
+        vsmpl = 2
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+        area = srfc.get_area()
+        self.assertAlmostEqual(271.3134, area, places=2)
+
     def test_ztor(self):
         # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 4
@@ -170,6 +336,7 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         self.assertAlmostEqual(20.0, ztor)
 
     def test_compute_joyner_boore_distance(self):
+
         # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 2
         vsmpl = 2
@@ -325,12 +492,12 @@ class KiteSurfaceTestCase(unittest.TestCase):
         self.assertTrue(np.all(np.abs(msh.lons[:, 0]-0.5) < 1e-2))
 
         dip = srfc.get_dip()
-        msg = "The value of dip computed is wrong: {:.3f}".format(dip)
+        msg = "The value of dip computed is wrong: {dip:.3f}"
         self.assertTrue(abs(dip-90) < 0.5, msg)
 
         strike = srfc.get_strike()
         msg = "The value of strike computed is wrong.\n"
-        msg += "computed: {:.3f} expected:".format(strike)
+        msg += "computed: {strike:.3f} expected:"
         self.assertTrue(abs(strike-270) < 0.01, msg)
 
         if PLOTTING:
@@ -358,7 +525,6 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
         smsh = srfc.mesh
 
-        #
         # Check the horizontal mesh spacing
         computed = []
         for i in range(0, smsh.lons.shape[0]):
@@ -373,7 +539,6 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         computed = np.array(computed)
         self.assertTrue(np.all(abs(computed-hsmpl)/vsmpl < 0.05))
 
-        #
         # Check the vertical mesh spacing
         computed = []
         for i in range(0, smsh.lons.shape[0]-1):
@@ -455,6 +620,10 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
 
 
 class IdealisedAsimmetricMeshTest(unittest.TestCase):
+    """
+    Tests the creation of a surface using profiles not 'aligned' at the top
+    (i.e. they do not start at the same depth) and with different lenghts
+    """
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles03')
@@ -513,6 +682,10 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
 
 
 class IdealizedATest(unittest.TestCase):
+    """
+    Tests the creation of a surface starting from profiles that are not
+    'aligned' at the top i.e. they do not start at the same depth.
+    """
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles04')
@@ -548,6 +721,10 @@ class IdealizedATest(unittest.TestCase):
 
 
 class SouthAmericaSegmentTest(unittest.TestCase):
+    """
+    Tests the creation using information for one of the slab segments included
+    in the hazard model for South America
+    """
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'sam_seg6_slab')
@@ -568,7 +745,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
             ppp(self.profiles, smsh, title)
 
 
-def _read_profiles(path, prefix='cs'):
+def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
     """
     Reads a set of files each one containing a profile
 
@@ -580,7 +757,7 @@ def _read_profiles(path, prefix='cs'):
         A tuple with two lists one containing the profiles and the other one
         with the names of the files
     """
-    path = os.path.join(path, '{:s}*.*'.format(prefix))
+    path = os.path.join(path, f'{prefix}*.*')
     profiles = []
     names = []
     for filename in sorted(glob.glob(path)):
@@ -589,7 +766,7 @@ def _read_profiles(path, prefix='cs'):
     return profiles, names
 
 
-def _read_profile(filename):
+def _read_profile(filename: str) -> Line:
     """
     Reads a file with one profile
 
@@ -600,9 +777,10 @@ def _read_profile(filename):
         An instance of :class:`openquake.hazardlib.geo.line.Line`
     """
     points = []
-    for line in open(filename, 'r'):
-        aa = re.split('\\s+', line)
-        points.append(Point(float(aa[0]),
-                            float(aa[1]),
-                            float(aa[2])))
+    with open(filename, 'r', encoding='utf-8') as f:
+        for line in f.readlines():
+            aa = re.split('\\s+', line)
+            points.append(Point(float(aa[0]),
+                                float(aa[1]),
+                                float(aa[2])))
     return Line(points)

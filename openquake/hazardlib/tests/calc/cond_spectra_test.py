@@ -23,7 +23,7 @@ import pandas
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib import read_input, valid, contexts
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
-from openquake.hazardlib.calc.filters import MagDepDistance
+from openquake.hazardlib.calc.filters import IntegrationDistance
 
 OVERWRITE_EXPECTED = False
 
@@ -36,7 +36,7 @@ PARAM = dict(source_model_file=SOURCES_XML,
              reference_vs30_value=600,
              reference_depth_to_2pt5km_per_sec=5,
              reference_depth_to_1pt0km_per_sec=100,
-             maximum_distance=MagDepDistance.new('200'),
+             maximum_distance=IntegrationDistance.new('200'),
              rupture_mesh_spacing=5.,
              width_of_mfd_bin=1.,
              investigation_time=1,

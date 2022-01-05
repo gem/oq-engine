@@ -535,7 +535,7 @@ class FragilityFunctionContinuous(object):
             imls[imls < self.minIML] = self.minIML
         result = stats.lognorm.cdf(imls, sigma, scale=mu)
         if self.no_damage_limit:
-            result[imls < self.no_damage_limit] = 0
+            result[imls <= self.no_damage_limit] = 0
         return result
 
     def __repr__(self):

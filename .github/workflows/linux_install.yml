@@ -2,10 +2,13 @@ name: Linux Install engine for 3.7, 3.8 and 3.9
 
 on:
   workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
   schedule:
     - cron: "0 4 * * *"
-#  push:
-#    branches: [ releases_python3.9 ]
 
 jobs:
 
@@ -23,7 +26,15 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
 
     steps:
-    - uses: actions/checkout@v2
+  # This Checkout use git-ref keyword from dispatch
+    - name: Clone Repository (Master)
+      uses: actions/checkout@v2
+      if: github.event.inputs.git-ref == ''
+    - name: Clone Repository (Custom Ref)
+      uses: actions/checkout@v2
+      if: github.event.inputs.git-ref != ''
+      with:
+        ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
@@ -45,8 +56,9 @@ jobs:
         #pip3 install -r requirements-$PY_VER-linux64.txt
         #pip3 install -e .\[osgeo\]
         python install.py devel 
-    - name: Run demos to test installation
+    - name: Run tests
       run: |
         source ~/openquake/bin/activate
-        oq --version
-        oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+        pip install pytest
+        oq dbserver start
+        pytest -vsx ~/work/oq-engine/oq-engine/openquake/calculators
