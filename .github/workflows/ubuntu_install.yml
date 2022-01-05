@@ -1,4 +1,4 @@
-name: Linux Install engine for 3.7, 3.8 and 3.9
+name: Install OQ engine on Ubuntu OS
 
 on:
   workflow_dispatch:
