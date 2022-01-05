@@ -73,7 +73,8 @@ rupture_dt = numpy.dtype([
     ('trt_smr', U16),
     ('code', U8),
     ('n_occ', U32),
-    ('mag', F32), ('rake', F32),
+    ('mag', F32),
+    ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32),
     ('minlat', F32),
@@ -766,22 +767,10 @@ class RuptureProxy(object):
     A proxy for a rupture record.
 
     :param rec: a record with the rupture parameters
-    :param nsites: approx number of sites affected by the rupture
     """
-    def __init__(self, rec, nsites=None, scenario=False):
+    def __init__(self, rec, scenario=False):
         self.rec = rec
-        self.nsites = nsites
         self.scenario = scenario
-
-    @property
-    def weight(self):
-        """
-        :returns:
-            heuristic weight for the underlying rupture, depending on the
-            number of occurrences and number of presumably affected sites
-        """
-        return self['n_occ'] * (
-            10 if self.nsites is None else numpy.clip(self.nsites, 100, 2000))
 
     def __getitem__(self, name):
         return self.rec[name]
@@ -793,14 +782,14 @@ class RuptureProxy(object):
         """
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
-        ebr = EBRupture(rupture, self.rec['source_id'], self.rec['trt_smr'],
-                        self.rec['n_occ'], self.rec['id'], self.rec['e0'],
-                        self.scenario)
+        ebr = EBRupture(rupture, self['source_id'], self['trt_smr'],
+                        self['n_occ'], self['id'], self['e0'], self.scenario)
         return ebr
 
     def __repr__(self):
-        src = self.rec['source_id'].decode('ascii')
-        return '<%s[%s], w=%d>' % (self.__class__.__name__, src, self.weight)
+        src = self['source_id'].decode('ascii')
+        return '<%s#%d[%s], w=%d>' % (self.__class__.__name__,
+                                      self['id'], src, self['n_occ'])
 
 
 def get_ruptures(fname_csv):

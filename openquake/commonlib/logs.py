@@ -22,6 +22,7 @@ import os
 import re
 import socket
 import getpass
+import sqlite3
 import logging
 import traceback
 from datetime import datetime
@@ -145,9 +146,13 @@ class LogDatabaseHandler(logging.Handler):
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
-                  '%s/%s' % (record.processName, record.process),
-                  record.getMessage())
+            try:
+                dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
+                      '%s/%s' % (record.processName, record.process),
+                      record.getMessage())
+            except sqlite3.OperationalError:
+                # do not log when "database is locked"
+                print('could not log %s' % record.getMessage())
 
 
 class LogContext:
@@ -161,7 +166,7 @@ class LogContext:
                  user_name=None, hc_id=None):
         self.log_level = log_level
         self.log_file = log_file
-        self.user_name = user_name
+        self.user_name = user_name or getpass.getuser()
         if isinstance(job_ini, dict):  # dictionary of parameters
             self.params = job_ini
         else:  # path to job.ini file

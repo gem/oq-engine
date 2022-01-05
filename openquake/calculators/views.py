@@ -165,6 +165,26 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     return '\n'.join(lines)
 
 
+@view.add('worst_sources')
+def view_worst_sources(token, dstore):
+    """
+    Returns the sources with worst weights
+    """
+    if ':' in token:
+        step = int(token.split(':')[1])
+    else:
+        step = 1
+    data = dstore.read_df('source_data', 'src_id')
+    ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
+    [[taskno, maxtime]] = ser.to_dict().items()
+    data = data[data.taskno == taskno]
+    print('Sources in the slowest task (%d seconds, weight=%d)'
+          % (maxtime, data['weight'].sum()))
+    data['slow_rate'] = data.ctimes / data.weight
+    df = data.sort_values('slow_rate', ascending=False)
+    return df[slice(None, None, step)]
+
+
 @view.add('slow_sources')
 def view_slow_sources(token, dstore, maxrows=20):
     """
@@ -233,7 +253,7 @@ def view_full_lt(token, dstore):
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
-    del df['grp_id'], df['trti'], df['task_no']
+    del df['grp_id'], df['trti']
     return text_table(df)
 
 
@@ -525,7 +545,7 @@ def stats(name, array, *extras):
     Returns statistics from an array of numbers.
 
     :param name: a descriptive string
-    :returns: (name, mean, rel_std, min, max, len, slowfac)
+    :returns: (name, mean, rel_std, min, max, len) + extras
     """
     avg = numpy.mean(array)
     std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
@@ -640,21 +660,39 @@ def view_task_hazard(token, dstore):
      $ oq show task:classical:-1  # the slowest task
     """
     _, name, index = token.split(':')
-    if 'by_task' not in dstore:
-        return 'Missing by_task'
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
     data = get_array(dstore['task_info'][()], taskname=encode(name))
     if len(data) == 0:
         raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
-    eff_sites = dstore['by_task/eff_sites'][taskno]
-    srcids = decode(dstore['by_task/srcids'][taskno])
-    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
-           'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
-                             srcids))
+    sdata = dstore.read_df('source_data', 'taskno')
+    eff_ruptures = sdata.loc[taskno].nrupts.sum()
+    eff_sites = sdata.loc[taskno].nsites.sum()
+    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, weight=%d, duration=%d s'
+           % (taskno, eff_ruptures, eff_sites, rec['weight'], rec['duration']))
     return res
+
+
+@view.add('source_data')
+def view_source_data(token, dstore):
+    """
+    Display info about a given task. Here is an example::
+
+     $ oq show source_data:42
+    """
+    if ':' not in token:
+        return dstore.read_df(token, 'src_id')
+    _, taskno = token.split(':')
+    taskno = int(taskno)
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
+    df = dstore.read_df('source_data', 'src_id', sel={'taskno': taskno})
+    del df['taskno']
+    df['slowrate'] = df['ctimes'] / df['weight']
+    return df.sort_values('ctimes')
 
 
 @view.add('task_ebrisk')
@@ -1212,3 +1250,28 @@ def view_src_groups(token, dstore):
     tbl.sort(key=operator.itemgetter(1), reverse=True)
     return text_table(tbl, header=['grp_id', 'contrib', 'sources'],
                       ext='org')
+
+
+@view.add('rup_stats')
+def view_rup_stats(token, dstore):
+    """
+    Show the statistics of event based ruptures
+    """
+    rups = dstore['ruptures'][:]
+    out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
+    return numpy.array(out, dt('kind counts mean stddev min max'))
+
+
+@view.add('weight_by_src')
+def view_weight_by_src(token, dstore):
+    """
+    Show the total weight per source typology
+    """
+    info = dstore.read_df('source_info')
+    dic = dict(tot_weight=[], num_srcs=[])
+    codes = []
+    for code, weight in info.groupby('code').weight:
+        dic['tot_weight'].append(weight.sum())
+        dic['num_srcs'].append(len(weight))
+        codes.append(decode(code))
+    return pandas.DataFrame(dic, index=codes)

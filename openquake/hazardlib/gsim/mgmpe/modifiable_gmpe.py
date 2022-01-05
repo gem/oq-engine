@@ -30,6 +30,25 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_fixed_total_sigma"]
 
 
+def add_between_within_stds(self, ctx, imt, with_betw_ratio):
+    """
+    This adds the between and within standard deviations to a model which has
+    only the total standatd deviation. This function requires a ratio between
+    the within-event standard deviation and the between-event one.
+
+    :param with_betw_ratio:
+        The ratio between the within and between-event standard deviations
+    """
+    sdt = const.StdDev
+    total = getattr(self, sdt.TOTAL)
+    between = ((total**2) / (1+with_betw_ratio))**0.5
+    within = with_betw_ratio * between
+    tmp = {sdt.TOTAL, sdt.INTRA_EVENT, sdt.INTER_EVENT}
+    setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES', tmp)
+    setattr(self, sdt.INTER_EVENT, between)
+    setattr(self, sdt.INTRA_EVENT, within)
+
+
 def apply_swiss_amplification(self, ctx, imt):
     """
     Adds amplfactor to mean

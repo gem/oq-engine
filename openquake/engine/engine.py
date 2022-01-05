@@ -31,7 +31,6 @@ import logging
 import itertools
 import platform
 from os.path import getsize
-import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -73,7 +72,7 @@ def set_concurrent_tasks_default(calc):
     OqParam.concurrent_tasks.default. Abort the calculations if no
     workers are available. Do nothing for trivial distributions.
     """
-    if OQ_DISTRIBUTE in 'no processpool':  # do nothing
+    if OQ_DISTRIBUTE in 'no processpool ipp':  # do nothing
         num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.Starmap.CT // 2
         logging.warning('Using %d cores on %s', num_workers, platform.node())
         return
@@ -218,7 +217,7 @@ def poll_queue(job_id, poll_time):
                                {'status': 'submitted', 'pid': _PID})
                     first_time = False
                     # the logging is not yet initialized, so use a print
-                    print('Waiting for jobs %s', previous)
+                    print('Waiting for jobs %s' % [p.id for p in previous])
                 time.sleep(poll_time)
             else:
                 break
@@ -302,12 +301,12 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                 for param, value in pars.items():
                     jobdic[param] = str(value)
                 jobdic['description'] = '%s %s' % (dic['description'], pars)
-                new = logs.init('job', jobdic, log_level, None,
+                new = logs.init('job', jobdic, log_level, log_file,
                                 user_name, hc_id)
                 jobs.append(new)
         else:
             jobs.append(
-                logs.init('job', dic, log_level, None, user_name, hc_id))
+                logs.init('job', dic, log_level, log_file, user_name, hc_id))
     if multi:
         for job in jobs:
             job.multi = True
@@ -335,7 +334,7 @@ def run_jobs(jobs):
             dic = {'status': 'executing', 'pid': _PID}
             logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if config.zworkers['host_cores'] and parallel.workers_status() == []:
+        if OQ_DISTRIBUTE == 'zmq' and parallel.workers_status() == []:
             print('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
@@ -346,7 +345,10 @@ def run_jobs(jobs):
             for job in jobs:
                 run_calc(job)
     finally:
-        if config.zworkers['host_cores']:
+        # for serialize_jobs > 1 there could be something still running:
+        # don't stop the zworkers in that case!
+        if OQ_DISTRIBUTE == 'zmq' and sum(
+                r for h, r, t in parallel.workers_status()) == 0:
             print('Stopping the workers')
             parallel.workers_stop()
     return jobs

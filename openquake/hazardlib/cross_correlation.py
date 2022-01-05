@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-import numpy.matlib
 from scipy import constants, stats
 from abc import ABC, abstractmethod
 from openquake.hazardlib.imt import IMT
@@ -74,37 +73,17 @@ class BakerJayaram2008(CrossCorrelation):
         return corr  # a scalar
 
 
-def get_correlation_mtx(corr_model: CrossCorrelation,
-                        ref_imt: IMT, target_imts: list, num_sites):
-    """
-    :param corr_model:
-        An instance of a correlation model
-    :param ref_imt:
-        An :class:`openquake.hazardlib.imt.IMT` instance
-    :param target_imts:
-        A list of the target imts of size M
-    :param num_sites:
-        The number of involved sites
-    :returns:
-        A matrix of shape [<number of IMTs>, <number of sites>]
-    """
-    corr = np.array([corr_model.get_correlation(ref_imt, imt)
-                     for imt in target_imts])
-    corr = np.matlib.repmat(np.squeeze(corr), num_sites, 1).T
-    return corr
-
-
 # ######################## CrossCorrelationBetween ########################## #
 
 class CrossCorrelationBetween(ABC):
-    def __init__(self, trunclevel=None):
-        self.trunclevel = trunclevel
-        if self.trunclevel is None:
+    def __init__(self, truncation_level=None):
+        self.truncation_level = truncation_level
+        if self.truncation_level is None:
             self.distribution = stats.norm()
-        elif self.trunclevel == 0:
+        elif self.truncation_level == 0:
             self.distribution = None
         else:
-            self.distribution = stats.truncnorm(-trunclevel, trunclevel)
+            self.distribution = stats.truncnorm(-truncation_level, truncation_level)
 
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
@@ -159,8 +138,8 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        return numpy.random.multivariate_normal(
-            numpy.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
+        return np.random.multivariate_normal(
+            np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
 
     def _get_correlation_matrix(self, imts):
         # cached on the periods
@@ -190,7 +169,7 @@ class NoCrossCorrelation(CrossCorrelationBetween):
 
         NB: the user must specify the random seed first
         """
-        return numpy.array([self.distribution.rvs(num_events) for imt in imts])
+        return np.array([self.distribution.rvs(num_events) for imt in imts])
 
 
 class FullCrossCorrelation(CrossCorrelationBetween):
@@ -209,4 +188,4 @@ class FullCrossCorrelation(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         eps = self.distribution.rvs(num_events)
-        return numpy.array([eps for imt in imts])
+        return np.array([eps for imt in imts])

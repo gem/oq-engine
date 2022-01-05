@@ -55,6 +55,12 @@ aggregate_by:
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
 
+reaggregate_by:
+  Used to perform additional aggregations in risk calculations. Takes in
+  input a proper subset of the tags in the aggregate_by option.
+  Example: *reaggregate_by = region*.
+  Default: empty list
+
 amplification_method:
   Used in classical PSHA calculations to amplify the hazard curves with
   the convolution or kernel method.
@@ -395,7 +401,11 @@ max_sites_per_gmf:
   Default: 65536
 
 max_sites_per_tile:
-  INTERNAL
+  Used in classical calculations which are to big to run within the
+  available memory. This effectively splits the calculation in homogeneous
+  tiles with less than `max_sites_per_tile`. To be used as last resort.
+  Example: *max_sites_per_tile = 50_000*
+  Default: 500_000
 
 max_weight:
   INTERNAL
@@ -410,9 +420,6 @@ mean:
   Flag to enable/disable the calculation of mean curves.
   Example: *mean = false*.
   Default: True
-
-min_weight:
-  INTERNAL
 
 minimum_asset_loss:
   Used in risk calculations. If set, losses smaller than the
@@ -478,7 +485,7 @@ pointsource_distance:
   Used in classical calculations to collapse the point sources. Can also be
   used in conjunction with *ps_grid_spacing*.
   Example: *pointsource_distance = 50*.
-  Default: empty dictionary
+  Default: {'default': 1000}
 
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
@@ -647,6 +654,11 @@ specific_assets:
 split_sources:
   INTERNAL
 
+split_level:
+  How many outputs per task to generate (honored in some calculators)
+  Example: *split_level = 5*
+  Default: 4
+
 std:
   Compute the standard deviation  across realizations. Akin to mean and max.
   Example: *std = true*.
@@ -664,15 +676,15 @@ time_event:
   Default: None
 
 time_per_task:
-  Used in classical calculatins with tiling. If running a tile takes longer
-  then time_per_task seconds, use subtasks for the other tiles in the task.
-  Example: *time_per_task=300*
-  Default: 600
+  Used in calculatins with task splitting. If a task slice takes longer
+  then *time_per_task* seconds, then spawn subtasks for the other slices.
+  Example: *time_per_task=600*
+  Default: 300
 
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
-  Default: no default
+  Default: None
 
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
@@ -748,6 +760,7 @@ class OqParam(valid.ParamSet):
                     'occupants_vulnerability'}
     hazard_imtls = {}
     aggregate_by = valid.Param(valid.namelist, [])
+    reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), None)
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
@@ -811,7 +824,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
-    maximum_distance = valid.Param(valid.MagDepDistance.new)  # km
+    maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
@@ -832,7 +845,7 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.MagDepDistance.new, None)
+    pointsource_distance = valid.Param(valid.floatdict, {'default': 1000})
     ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -877,17 +890,21 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
+    split_level = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    # NB: you cannot increase too much min_weight otherwise too few tasks will
-    # be generated in cases like Ecuador inside full South America
-    min_weight = valid.Param(valid.positiveint, 200)  # used in classical
-    max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 600)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
+
+    @property
+    def no_pointsource_distance(self):
+        """
+        :returns: True if the pointsource_distance is 1000 km
+        """
+        return set(self.pointsource_distance.values()) == {1000}
 
     @property
     def risk_files(self):
@@ -1167,7 +1184,16 @@ class OqParam(valid.ParamSet):
         imts = set()
         for imt in self.imtls:
             im = from_string(imt)
-            imts.add("SA" if imt.startswith("SA") else im.string)
+            if imt.startswith("SA"):
+                imts.add("SA")
+            elif imt.startswith("EAS"):
+                imts.add("EAS")
+            elif imt.startswith("FAS"):
+                imts.add("FAS")
+            elif imt.startswith("DRVT"):
+                imts.add("DRVT")
+            else:
+                imts.add(im.string)
         for gsim in gsims:
             if hasattr(gsim, 'weight'):  # disable the check
                 continue
@@ -1450,9 +1476,10 @@ class OqParam(valid.ParamSet):
         Return a cross correlation object (or None). See
         :mod:`openquake.hazardlib.cross_correlation` for more info.
         """
-        cls = getattr(cross_correlation, self.cross_correlation, None)
-        if cls is None:
-            return cross_correlation.NoCrossCorrelation(self.truncation_level)
+        try:
+            cls = getattr(cross_correlation, self.cross_correlation)
+        except AttributeError:
+            return None
         return cls()
 
     def get_kinds(self, kind, R):
@@ -1650,6 +1677,15 @@ class OqParam(valid.ParamSet):
             self.hazard_curves_from_gmfs or self.calculation_mode in
             ('classical', 'disaggregation'))
         return not invalid
+
+    def is_valid_ps_grid_spacing(self):
+        """
+        `ps_grid_spacing` must be smaller than the `pointsource_distance`
+        """
+        if self.ps_grid_spacing is None:
+            return True
+        return self.ps_grid_spacing <= calc.filters.getdefault(
+            self.pointsource_distance, 'default')
 
     def is_valid_soil_intensities(self):
         """

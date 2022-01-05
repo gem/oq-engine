@@ -142,6 +142,13 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         tiles = cll.split_in_tiles(1)  # 2 tiles of 1 site each
         self.assertEqual(len(tiles), 2)
 
+        # test split_max
+        tiles = cll.split_max(2)  # there are 2 sites, 1 tile
+        self.assertEqual(len(tiles), 1)
+
+        tiles = cll.split_max(1)  # 2 tiles of 1 site each
+        self.assertEqual(len(tiles), 2)
+
         # test geohash
         assert_eq(cll.geohash(4), numpy.array([b's5x1', b'7zrh']))
 
@@ -235,7 +242,7 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         col = SiteCollection(self.SITES)
         self.assertEqual(len(col.reduce(1)), 1)
         self.assertEqual(len(col.reduce(2)), 2)
-        self.assertEqual(len(col.reduce(3)), 2)
+        self.assertEqual(len(col.reduce(3)), 4)
 
 
 class WithinBBoxTestCase(unittest.TestCase):

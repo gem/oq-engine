@@ -130,7 +130,7 @@ class GmfComputer(object):
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(
-            cmaker.trunclevel)
+            cmaker.truncation_level)
 
     def compute_all(self, sig_eps=None):
         """
@@ -138,7 +138,6 @@ class GmfComputer(object):
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        t0 = time.time()
         sids = self.ctx.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
@@ -185,7 +184,7 @@ class GmfComputer(object):
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
-        return data, time.time() - t0
+        return data
 
     def compute(self, gsim, num_events, mean_stds):
         """
@@ -229,7 +228,7 @@ class GmfComputer(object):
         return result, sig, eps
 
     def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
-        if self.cmaker.trunclevel == 0:
+        if self.cmaker.truncation_level == 0:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '

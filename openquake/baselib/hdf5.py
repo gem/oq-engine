@@ -253,6 +253,16 @@ def is_ok(value, expected):
     return value == expected
 
 
+def decode_lol(lol):
+    """
+    :returns: a list of lists of decoded values
+    """
+    if len(lol) and len(lol[0]) and isinstance(lol[0][0], bytes):
+        return [decode(lst) for lst in lol]
+    else:
+        return lol
+
+
 def extract_cols(datagrp, sel, slc, columns):
     """
     :param datagrp: something like and HDF5 data group
@@ -269,16 +279,20 @@ def extract_cols(datagrp, sel, slc, columns):
         slcs = [slc]
     acc = general.AccumDict(accum=[])  # col -> arrays
     for slc in slcs:
-        ok = slice(None)
-        dic = {col: datagrp[col][slc] for col in sel}
-        for col in sel:
-            if isinstance(ok, slice):  # first selection
-                ok = is_ok(dic[col], sel[col])
-            else:  # other selections
-                ok &= is_ok(dic[col], sel[col])
-        for col in columns:
-            acc[col].append(datagrp[col][slc][ok])
-    return {k: numpy.concatenate(vs) for k, vs in acc.items()}
+        if sel:
+            ok = slice(None)
+            dic = {col: datagrp[col][slc] for col in sel}
+            for col in sel:
+                if isinstance(ok, slice):  # first selection
+                    ok = is_ok(dic[col], sel[col])
+                else:  # other selections
+                    ok &= is_ok(dic[col], sel[col])
+            for col in columns:
+                acc[col].append(datagrp[col][slc][ok])
+        else:  # avoid making unneeded copies
+            for col in columns:
+                acc[col].append(datagrp[col][slc])
+    return {k: numpy.concatenate(decode_lol(vs)) for k, vs in acc.items()}
 
 
 class File(h5py.File):

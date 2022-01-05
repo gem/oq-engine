@@ -76,6 +76,16 @@ class NonParametricSeismicSource(BaseSeismicSource):
                     rup.mag, rup.rake, self.tectonic_region_type,
                     rup.hypocenter, rup.surface, pmf, weight=rup.weight)
 
+    def few_ruptures(self):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        for i, (rup, pmf) in enumerate(self.data):
+            if i % 25 == 0 and rup.mag >= self.min_mag:
+                yield NonParametricProbabilisticRupture(
+                    rup.mag, rup.rake, self.tectonic_region_type,
+                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
+
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split
             yield self
@@ -179,7 +189,22 @@ class NonParametricSeismicSource(BaseSeismicSource):
             i += 1
 
     def __repr__(self):
-        return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
+        return '<%s %s gridded=%s>' % (
+            self.__class__.__name__, self.source_id, self.is_gridded())
+
+    @property
+    def mesh_size(self):
+        """
+        :returns: the number of points in the underlying mesh
+        """
+        n = 0
+        for rup, pmf in self.data:
+            if isinstance(rup.surface, MultiSurface):
+                for sfc in rup.surface.surfaces:
+                    n += len(sfc.mesh)
+            else:
+                n += len(rup.surface.mesh)
+        return n
 
     @property
     def polygon(self):

@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.skarlatoudis_2013 import (
-    SkarlatoudisEtAlSSlab2013)
+    SkarlatoudisEtAlSSlab2013, SkarlatoudisEtAlSSlab2013_scaled)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -35,4 +35,17 @@ class SkarlatoudisEtAlSSlab2013TestCase(BaseGSIMTestCase):
     def test_all(self):
         self.check(self.MEAN_FILE, self.TOTAL_FILE,
                    self.INTER_FILE, self.INTRA_FILE,
+                   max_discrep_percentage=0.1)
+
+
+class SkarlatoudisEtAlSSlab2013scaledTestCase(BaseGSIMTestCase):
+    """
+    Tests the Skarlatoudis et al. (2013) model for subduction
+    intraslab earthquakes
+    """
+    GSIM_CLASS = SkarlatoudisEtAlSSlab2013_scaled
+    MEAN_FILE = "SKARL13/SKARL13_SSLAB_CENTRAL_scaled_MEAN.csv"
+
+    def test_all(self):
+        self.check(self.MEAN_FILE,
                    max_discrep_percentage=0.1)
