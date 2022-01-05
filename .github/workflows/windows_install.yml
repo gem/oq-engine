@@ -50,8 +50,8 @@ jobs:
         run: |
           set PIP_DEFAULT_TIMEOUT=100
           python -m pip install pip wheel setuptools --upgrade
-          type "Branch to test %BRANCH%"
-          IF "%BRANCH%"!="" (
+          echo Branch to test %BRANCH%
+          IF "%BRANCH%" != "" (
             python install.py devel --version %BRANCH%
           ) ELSE (
             python install.py devel 
