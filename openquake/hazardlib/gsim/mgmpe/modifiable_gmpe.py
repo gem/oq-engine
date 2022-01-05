@@ -39,14 +39,13 @@ def add_between_within_stds(self, ctx, imt, with_betw_ratio):
     :param with_betw_ratio:
         The ratio between the within and between-event standard deviations
     """
-    sdt = const.StdDev
-    total = getattr(self, sdt.TOTAL)
-    between = ((total**2) / (1+with_betw_ratio))**0.5
+    total = getattr(self, StdDev.TOTAL)
+    between = (total**2 / (1 + with_betw_ratio))**0.5
     within = with_betw_ratio * between
-    tmp = {sdt.TOTAL, sdt.INTRA_EVENT, sdt.INTER_EVENT}
-    setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES', tmp)
-    setattr(self, sdt.INTER_EVENT, between)
-    setattr(self, sdt.INTRA_EVENT, within)
+    setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
+            {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
+    setattr(self, StdDev.INTER_EVENT, between)
+    setattr(self, StdDev.INTRA_EVENT, within)
 
 
 def apply_swiss_amplification(self, ctx, imt):
