@@ -49,6 +49,10 @@ jobs:
         echo "check version of python"
         pip3 -V
         python3 -c "import sys; print(sys.version)"
+        #
+        echo "check folder of repository"
+        ls -lrt /__w/oq-engine/
+        find / -name calculators -ls
     - name: Install engine with install script
       env:
         BRANCH: ${{ github.event.inputs.git-ref }}
@@ -65,7 +69,7 @@ jobs:
         fi
     - name: Run tests
       run: |
-        source ~/openquake/bin/activate
+        source /opt/openquake/bin/activate
         pip install pytest
         oq dbserver start
-        pytest -vsx ~/work/oq-engine/oq-engine/openquake/calculators
+        pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators
