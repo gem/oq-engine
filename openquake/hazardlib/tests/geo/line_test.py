@@ -18,10 +18,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib import geo
 
-PLOTTING = False
+PLOTTING = True
 
 
 class LineResampleTestCase(unittest.TestCase):
+
     def test_resample(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
         p2 = geo.Point(0.0, 0.127183341091, 14.1421356237)
@@ -339,6 +340,8 @@ class ComputeUiTiTest(unittest.TestCase):
         self.assertEqual((1, 5), ui.shape)
         self.assertEqual((1, 5), ti.shape)
 
+        # TODO add test
+
     def test_uiti_02(self):
 
         # Prepare the trace
@@ -532,7 +535,7 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
 
     # If necessary, make lons and lats iterable
     from collections.abc import Iterable
-    if not isinstance(lons[0], Iterable):
+    if len(lons) and not isinstance(lons[0], Iterable):
         lons = [lons]
         lats = [lats]
 
@@ -545,10 +548,11 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
     z = np.reshape(z, plons.shape)
     cs = plt.contour(plons, plats, z, num, colors='k')
     ax.clabel(cs, inline=True, fontsize=10)
-    for los, las in zip(lons, lats):
-        ax.plot(los, las, '-r')
-        ax.plot(los[0], las[0], '^r')
-        ax.plot(los[-1], las[-1], 'xb')
+    if len(lons):
+        for los, las in zip(lons, lats):
+            ax.plot(los, las, '-r')
+            ax.plot(los[0], las[0], 'g', marker='$s$', mfc='none', ms=5)
+            ax.plot(los[-1], las[-1], 'r', marker='$e$', mfc='none', ms=5)
     ax.scatter(plons.flatten(), plats.flatten(), c=z.flatten(), marker='.',
                s=0.5, cmap=cmap)
     ax.set_title(f'Test: {label}')

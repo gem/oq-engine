@@ -63,9 +63,10 @@ class MultiSurface(BaseSurface):
             a MultiSurface made of P planar surfaces
         """
         surfaces = []
-        array = read_csv(fname).array.reshape(4, -1)  # shape (4, P)
-        for plane in array.T:
-            arr = plane.view((float, 3))  # shape (4, 3)
+        tmp = np.genfromtxt(fname, delimiter=',', comments='#', skip_header=1)
+        tmp = tmp.reshape(-1, 4, 3, order='A')
+        for i in range(tmp.shape[0]):
+            arr = tmp[i, :, :]
             surfaces.append(PlanarSurface.from_ucerf(arr))
         return cls(surfaces)
 
@@ -394,7 +395,7 @@ class MultiSurface(BaseSurface):
             self._set_tu(mesh)
 
         rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
-        return rx
+        return -rx
 
     def get_ry0_distance(self, mesh):
         """

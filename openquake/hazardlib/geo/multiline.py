@@ -126,7 +126,9 @@ class MultiLine():
         if self.shift is None:
             self._set_coordinate_shift()
 
-        tupps, uupps, weis = get_uts(self.lines, mesh)
+        if self.tupps is None:
+            tupps, uupps, weis = get_tus(self.lines, mesh)
+
         uut, tut = get_tu(self.shift, tupps, uupps, weis)
 
         return uut, tut
@@ -141,9 +143,9 @@ class MultiLine():
         # Get the mesh with the endpoints of each polyline
         mesh = self.get_endpoints_mesh()
 
-        # TODO there could be cases where tupps, uupps, weis are already
-        # available
-        tupps, uupps, weis = get_uts(self.lines, mesh)
+        if self.tupps is None:
+            tupps, uupps, weis = get_tus(self.lines, mesh)
+
         uut, _ = get_tu(self.shift, tupps, uupps, weis)
 
         # Maximum U value
@@ -162,7 +164,7 @@ class MultiLine():
         return mesh
 
 
-def get_uts(lines: list, mesh: Mesh):
+def get_tus(lines: list, mesh: Mesh):
     """
     Computes the T and U coordinates for all the polylines in `lines` and the
     sites in the `mesh`
