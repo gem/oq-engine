@@ -250,12 +250,12 @@ def view_full_lt(token, dstore):
     return numpy.array(rows, dt(header))
 
 
-@view.add('eff_ruptures')
+@view.add('weight_by_src')
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     del df['grp_id'], df['trti']
-    return text_table(df)
+    return df
 
 
 @view.add('short_source_info')
@@ -1261,18 +1261,3 @@ def view_rup_stats(token, dstore):
     rups = dstore['ruptures'][:]
     out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
     return numpy.array(out, dt('kind counts mean stddev min max'))
-
-
-@view.add('weight_by_src')
-def view_weight_by_src(token, dstore):
-    """
-    Show the total weight per source typology
-    """
-    info = dstore.read_df('source_info')
-    dic = dict(tot_weight=[], num_srcs=[])
-    codes = []
-    for code, weight in info.groupby('code').weight:
-        dic['tot_weight'].append(weight.sum())
-        dic['num_srcs'].append(len(weight))
-        codes.append(decode(code))
-    return pandas.DataFrame(dic, index=codes)
