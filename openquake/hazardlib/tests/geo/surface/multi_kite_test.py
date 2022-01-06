@@ -211,6 +211,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
                               [-70.57722702, 19.6697801, 0.0]]),
                     np.array([[-70.10327766, 19.67957463, 0.0],
                               [-70.33, 19.65, 0.0]])]
+        self.msrf._set_tor()
 
         if PLOTTING:
             _, ax = plt.subplots(1, 1)

@@ -16,11 +16,104 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 import numpy as np
+import matplotlib.pyplot as plt
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.geodetic import point_at
-from openquake.hazardlib.geo.surface import SimpleFaultSurface, MultiSurface
+from openquake.hazardlib.geo.surface import (SimpleFaultSurface, MultiSurface,
+                                             KiteSurface)
+from openquake.hazardlib.tests.geo.line_test import get_mesh, plot_pattern
+from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
+
+BASE_PATH = os.path.dirname(__file__)
+BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
+PLOTTING = True
+OVERWRITE = False
+
+aae = np.testing.assert_almost_equal
+
+
+class Ry0TestCase(unittest.TestCase):
+
+    def _test_ry0(self, sfc):
+        msurf = MultiSurface([sfc])
+        mesh, mlons, mlats = get_mesh(-0.2, 0.6, -0.2, 0.3, 0.0025)
+        ry0 = msurf.get_ry0_distance(mesh)
+        # msurf._set_tu(mesh)
+        # ry0 = msurf.uut
+
+        if PLOTTING:
+            lons = []
+            lats = []
+            for sfc in [sfc]:
+                trace = sfc.get_tor()
+                lons.append(trace[0])
+                lats.append(trace[1])
+            label = 'test_ry0'
+            num = 10
+            ax = plot_pattern(lons, lats, np.reshape(ry0, mlons.shape),
+                              mlons, mlats, label, num, show=False)
+            plot_mesh_2d(ax, msurf.surfaces[0])
+            ax.plot(msurf.tors.olon, msurf.tors.olat, 'sg', mfc='none',
+                    mec='green')
+            plt.show()
+
+        return ry0
+
+    def test_ry0a(self):
+        spc = 2.0
+        pro1 = Line([Point(0.2, 0.05, 0.0), Point(0.2, 0.0, 15.0)])
+        pro2 = Line([Point(0.0, 0.05, 0.0), Point(0.0, 0.0, 15.0)])
+        sfc = KiteSurface.from_profiles([pro1, pro2], spc, spc)
+        ry0 = self._test_ry0(sfc)
+
+        # Saving data
+        fname = 'results_multi_simple_ry0a.npz'
+        fname = os.path.join(BASE_PATH, 'results', fname)
+        if OVERWRITE:
+            np.savez_compressed(fname, ry0=ry0)
+
+        # Load expected results and test
+        er = np.load(fname)
+        aae(er['ry0'], ry0, decimal=1)
+
+    def test_ry0b(self):
+        spc = 2.0
+        pro1 = Line([Point(0.2, 0.0, 0.0), Point(0.2, 0.05, 15.0)])
+        pro2 = Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.05, 15.0)])
+        sfc = KiteSurface.from_profiles([pro1, pro2], spc, spc)
+        ry0 = self._test_ry0(sfc)
+
+        # Saving data
+        fname = 'results_multi_simple_ry0b.npz'
+        fname = os.path.join(BASE_PATH, 'results', fname)
+        if OVERWRITE:
+            np.savez_compressed(fname, ry0=ry0)
+
+        # Load expected results and test
+        er = np.load(fname)
+        aae(er['ry0'], ry0, decimal=1)
+
+    def test_ry0c(self):
+        spc = 2.0
+        pro1 = Line([Point(0.5, 0.05, 0.0), Point(0.5, 0.1, 15.0)])
+        pro2 = Line([Point(0.4, 0.05, 0.0), Point(0.4, 0.1, 15.0)])
+        pro3 = Line([Point(0.35, 0.0, 0.0), Point(0.3, 0.05, 15.0)])
+        sfc = KiteSurface.from_profiles([pro1, pro2, pro3], spc, spc)
+        ry0 = self._test_ry0(sfc)
+
+        # Saving data
+        fname = 'results_multi_simple_ry0c.npz'
+        fname = os.path.join(BASE_PATH, 'results', fname)
+        if OVERWRITE:
+            np.savez_compressed(fname, ry0=ry0)
+
+        # Load expected results and test
+        #er = np.load(fname)
+        #aae(er['ry0'], ry0, decimal=1)
+
 
 
 class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
@@ -63,6 +156,3 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
 
     def _set_tu(self):
         uut, tut = self.msfc.lines.get_tu
-
-    def test_rx_calculation(self):
-        dst = self.msfc.get_rx_distance(self.mesh)

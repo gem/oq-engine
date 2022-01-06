@@ -77,10 +77,11 @@ class MultiLine():
         avgaz = self.get_average_azimuths()
 
         sos = get_overall_strike
-        revert, strike_to_east, avg_azim = sos(self.lines, llenghts, avgaz)
+        revert, strike_east, avg_azim, nl = sos(self.lines, llenghts, avgaz)
 
-        self.strike_to_east = strike_to_east
+        self.strike_to_east = strike_east
         self.overall_strike = avg_azim
+        self.lines = nl
 
         return revert
 
@@ -91,7 +92,7 @@ class MultiLine():
         """
 
         # If missing, set the overall strike direction
-        if not hasattr(self, 'strike_to_east') or self.strike_to_east is None:
+        if self.strike_to_east is None:
             _ = self.set_overall_strike()
 
         # Calculate the origin
@@ -111,7 +112,7 @@ class MultiLine():
         """
 
         # If not defined, compute the origin of the multiline
-        if not hasattr(self, 'olon') or self.olon is None:
+        if self.olon is None:
             self._set_origin()
 
         # Set the shift param
@@ -146,7 +147,7 @@ class MultiLine():
         uut, _ = get_tu(self.shift, tupps, uupps, weis)
 
         # Maximum U value
-        self.u_max = max(uut)
+        self.u_max = max(abs(uut))
 
     def get_endpoints_mesh(self) -> Mesh:
         """
@@ -217,7 +218,7 @@ def get_average_azimuths(lines: list) -> np.ndarray:
     return np.array(avgazims)
 
 
-def get_overall_strike(lines: list, llenghts: list = None, avgaz: list = None,
+def get_overall_strike(lines: list, llens: list = None, avgaz: list = None,
                        ):
     """
     Computes the overall strike direction for the multiline
@@ -227,26 +228,28 @@ def get_overall_strike(lines: list, llenghts: list = None, avgaz: list = None,
     """
 
     # Get lenghts and average azimuths
-    if llenghts is None:
-        llenghts = get_lengths(lines)
+    if llens is None:
+        llens = get_lengths(lines)
     if avgaz is None:
         avgaz = get_average_azimuths(lines)
 
-    # Find general trend
-    tmp = copy.copy(avgaz)
-    idx = tmp > 180
-    tmp[idx] = tmp[idx] - 180.
-    ave = get_average_azimuth(tmp, llenghts)
+    # Find general azimuth trend
+    ave = get_average_azimuth(avgaz, llens)
 
-    # Computing the azimuth direction (i.e. towards east or west)
-    revert = np.zeros((len(lines)), dtype=bool)
-    if (ave > 90) & (ave < 270):
+    # Find the sections whose azimuth direction is not consistent with the
+    # average one
+    revert = np.zeros((len(avgaz)), dtype=bool)
+    if (ave >= 90) & (ave <= 270):
+        # This is the case where the average azimuth in the second or third
+        # quadrant
         idx = (avgaz >= (ave - 90) % 360) & (avgaz < (ave + 90) % 360)
     else:
+        # In this case the average azimuth points toward the northern emisphere
         idx = (avgaz >= (ave - 90) % 360) | (avgaz < (ave + 90) % 360)
+
     delta = abs(avgaz - ave)
     scale = np.abs(np.cos(np.radians(delta)))
-    ratio = np.sum(llenghts[idx] * scale[idx]) / np.sum(llenghts * scale)
+    ratio = np.sum(llens[idx] * scale[idx]) / np.sum(llens * scale)
 
     strike_to_east = ratio > 0.5
     if strike_to_east:
@@ -259,9 +262,11 @@ def get_overall_strike(lines: list, llenghts: list = None, avgaz: list = None,
     for i in np.nonzero(revert)[0]:
         lines[i].flip()
         avgazims_corr[i] = lines[i].average_azimuth()
-    avg_azim = get_average_azimuth(avgazims_corr, llenghts)
+    avg_azim = get_average_azimuth(avgazims_corr, llens)
 
-    return revert, strike_to_east, avg_azim
+    strike_to_east = True if ((avg_azim > 0) & (avg_azim <= 180)) else False
+
+    return revert, strike_to_east, avg_azim, lines
 
 
 def get_origin(lines: list, strike_to_east: bool):
@@ -348,7 +353,6 @@ def get_tu(shifts, tupps, uupps, weis):
             tut = tupp * wei_sum
             wet = wei_sum
         else:
-            print(uut.shape, uupp.shape, wei_sum.shape)
             uut += (uupp + shift) * wei_sum
             tut += tupp * wei_sum
             wet += wei_sum

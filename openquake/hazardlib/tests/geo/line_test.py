@@ -547,7 +547,7 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
     ax.clabel(cs, inline=True, fontsize=10)
     for los, las in zip(lons, lats):
         ax.plot(los, las, '-r')
-        ax.plot(los[0], las[0], 'or')
+        ax.plot(los[0], las[0], '^r')
         ax.plot(los[-1], las[-1], 'xb')
     ax.scatter(plons.flatten(), plats.flatten(), c=z.flatten(), marker='.',
                s=0.5, cmap=cmap)

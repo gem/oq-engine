@@ -100,6 +100,7 @@ class MultiSurface(BaseSurface):
         self.tol = tol
         self._set_tor()
         self.areas = None
+        self.tors = None
         self.tut = None
         self.uut = None
         self.site_mesh = None
@@ -363,14 +364,11 @@ class MultiSurface(BaseSurface):
         Set the values of T and U
         """
 
-        if not hasattr(self, 'tors'):
+        if self.tors is None:
             self._set_tor()
 
         if self.tors.shift is None:
             self.tors._set_coordinate_shift()
-
-        self._set_tor()
-        self.tors._set_coordinate_shift()
 
         tupps = []
         uupps = []
