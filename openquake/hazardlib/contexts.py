@@ -723,6 +723,8 @@ class ContextMaker(object):
             else:
                 with mon:
                     src.weight = 1. + self.estimate_weight(src, srcfilter)
+                if src.code == b'F':   # hack for China model
+                    src.weight *= 10
 
 
 # see contexts_tests.py for examples of collapse
