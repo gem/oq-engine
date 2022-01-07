@@ -67,10 +67,8 @@ class CollapseTestCase(unittest.TestCase):
         bs0.branches[0].bset = bs1
 
         # setup sitecol, srcfilter, gsims, imtls
-        sitecol = site.SiteCollection(
+        self.sitecol = site.SiteCollection(
             [site.Site(Point(0, 0), numpy.array([760.]))])
-        self.srcfilter = calc.filters.SourceFilter(
-            sitecol, calc.filters.MagDepDistance.new('200'))
         self.gsims = [valid.gsim('ToroEtAl2002')]
         self.imtls = DictArray({'PGA': valid.logscale(.01, 1, 5)})
         self.sg = sourceconverter.SourceGroup(ps.tectonic_region_type, [ps])
@@ -94,15 +92,17 @@ class CollapseTestCase(unittest.TestCase):
             weights.append(weight)
         for i, src in enumerate(srcs):
             src.id = i
-        N = len(self.srcfilter.sitecol.complete)
+        N = len(self.sitecol.complete)
         time_span = srcs[0].temporal_occurrence_model.time_span
+        idist = calc.filters.IntegrationDistance.new('200')
         params = dict(imtls=self.imtls, truncation_level2=2,
-                      collapse_level=2, investigation_time=time_span)
+                      collapse_level=2, investigation_time=time_span,
+                      maximum_distance=idist('default'))
         cmaker = contexts.ContextMaker(
             srcs[0].tectonic_region_type, self.gsims, params)
-        res = classical(srcs, self.srcfilter, cmaker)
+        res = classical(srcs, self.sitecol, cmaker)
         pmap = res['pmap']
-        effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
+        effrups = sum(res['source_data']['nrupts'])
         curve = pmap.array(N)[0, :, 0]
         return curve, srcs, effrups, weights
 
@@ -140,3 +140,34 @@ class CollapseTestCase(unittest.TestCase):
         ax.loglog(self.imtls['PGA'], mean, label='mean')
         ax.loglog(self.imtls['PGA'], coll, label='coll')
         plt.show()
+
+
+class CompositeLogicTreeTestCase(unittest.TestCase):
+    def test(self):
+        # simple logic tree with 5 realizations
+        #        __/ AAA
+        #    bs1/  \ AAB
+        #   /   \__/ ABA
+        # bs0      \ ABB
+        #   \_______
+        #            B..
+        bs0 = lt.BranchSet('abGRAbsolute')
+        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
+                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
+
+        bs1 = lt.BranchSet('maxMagGRAbsolute',
+                           filters={'applyToBranches': 'A'})
+        bs1.branches = [lt.Branch('bs1', 'A', .5, 7.0),
+                        lt.Branch('bs1', 'B', .5, 7.6)]
+
+        bs2 = lt.BranchSet('applyToTRT',
+                           filters={'applyToBranches': 'A B'})
+        bs2.branches = [lt.Branch('bs2', 'A', .3, 'A'),
+                        lt.Branch('bs2', 'B', .7, 'B')]
+        for branch in bs1.branches:
+            branch.bset = bs2
+        clt = lt.CompositeLogicTree([bs0, bs1, bs2])
+        self.assertEqual(clt.get_all_paths(),
+                         ['AAA', 'AAB', 'ABA', 'ABB', 'B..'])
+        self.assertEqual(clt.basepaths,
+                         ['A**', 'B**', '*A*', '*B*', '**A', '**B'])

@@ -33,50 +33,23 @@ class Bradley2013TestCase(BaseGSIMTestCase):
 
     def test_mean_strike_slip(self):
         self.check('BRADLEY13/Bradley2013_MEAN_SS.csv',
+                   'BRADLEY13/Bradley2013_INTER_EVENT_STDDEV_SS.csv',
+                   'BRADLEY13/Bradley2013_INTRA_EVENT_STDDEV_SS.csv',
+                   'BRADLEY13/Bradley2013_TOTAL_STDDEV_SS.csv',
                    max_discrep_percentage=0.1)
 
     def test_mean_reverse(self):
         self.check('BRADLEY13/Bradley2013_MEAN_RV.csv',
+                   'BRADLEY13/Bradley2013_INTER_EVENT_STDDEV_RV.csv',
+                   'BRADLEY13/Bradley2013_INTRA_EVENT_STDDEV_RV.csv',
+                   'BRADLEY13/Bradley2013_TOTAL_STDDEV_RV.csv',
                    max_discrep_percentage=0.1)
 
     def test_mean_normal(self):
         self.check('BRADLEY13/Bradley2013_MEAN_NM.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_inter_event_stddev_strike_slip(self):
-        self.check('BRADLEY13/Bradley2013_INTER_EVENT_STDDEV_SS.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_inter_event_stddev_reverse(self):
-        self.check('BRADLEY13/Bradley2013_INTER_EVENT_STDDEV_RV.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_inter_event_stddev_normal(self):
-        self.check('BRADLEY13/Bradley2013_INTER_EVENT_STDDEV_NM.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_intra_event_stddev_strike_slip(self):
-        self.check('BRADLEY13/Bradley2013_INTRA_EVENT_STDDEV_SS.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_intra_event_stddev_reverse(self):
-        self.check('BRADLEY13/Bradley2013_INTRA_EVENT_STDDEV_RV.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_intra_event_stddev_normal(self):
-        self.check('BRADLEY13/Bradley2013_INTRA_EVENT_STDDEV_NM.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_total_stddev_strike_slip(self):
-        self.check('BRADLEY13/Bradley2013_TOTAL_STDDEV_SS.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_total_stddev_reverse(self):
-        self.check('BRADLEY13/Bradley2013_TOTAL_STDDEV_RV.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_total_stddev_normal(self):
-        self.check('BRADLEY13/Bradley2013_TOTAL_STDDEV_NM.csv',
+                   'BRADLEY13/Bradley2013_INTER_EVENT_STDDEV_NM.csv',
+                   'BRADLEY13/Bradley2013_INTRA_EVENT_STDDEV_NM.csv',
+                   'BRADLEY13/Bradley2013_TOTAL_STDDEV_NM.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -90,18 +63,9 @@ class Bradley2013VolcTestCase(BaseGSIMTestCase):
     # canterbury-earthquakes-data
     # Downloaded 26 March 2014.
 
-    def test_mean(self):
+    def test_all(self):
         self.check('BRADLEY13/Bradley2013Volc_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_total_stddev(self):
-        self.check('BRADLEY13/Bradley2013Volc_TOTAL_STDDEV.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_intra_event_stddev(self):
-        self.check('BRADLEY13/Bradley2013Volc_INTRA_EVENT_STDDEV.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_inter_event_stddev(self):
-        self.check('BRADLEY13/Bradley2013Volc_INTER_EVENT_STDDEV.csv',
+                   'BRADLEY13/Bradley2013Volc_TOTAL_STDDEV.csv',
+                   'BRADLEY13/Bradley2013Volc_INTRA_EVENT_STDDEV.csv',
+                   'BRADLEY13/Bradley2013Volc_INTER_EVENT_STDDEV.csv',
                    max_discrep_percentage=0.1)

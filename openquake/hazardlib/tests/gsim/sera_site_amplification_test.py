@@ -28,7 +28,7 @@ MAX_DISCREP = 0.01
 class PitilakisEtAl2018TestCase(BaseGSIMTestCase):
     GSIM_CLASS = PitilakisEtAl2018
 
-    def test_mean(self):
+    def test_all(self):
         self.check("sera_site/Pitilakis2018Amplification_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
@@ -37,7 +37,7 @@ class PitilakisEtAl2018TestCase(BaseGSIMTestCase):
 class PitilakisEtAl2020TestCase(BaseGSIMTestCase):
     GSIM_CLASS = PitilakisEtAl2020
 
-    def test_mean(self):
+    def test_all(self):
         self.check("sera_site/Pitilakis2020Amplification_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
@@ -46,7 +46,7 @@ class PitilakisEtAl2020TestCase(BaseGSIMTestCase):
 class Eurocode8AmplificationTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Eurocode8Amplification
 
-    def test_mean(self):
+    def test_all(self):
         self.check("sera_site/Eurocode8Amplification_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
@@ -55,7 +55,7 @@ class Eurocode8AmplificationTestCase(BaseGSIMTestCase):
 class Eurocode8AmplificationDefaultTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Eurocode8AmplificationDefault
 
-    def test_mean(self):
+    def test_all(self):
         self.check("sera_site/EurocodeDefaultAmplification_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
@@ -64,7 +64,7 @@ class Eurocode8AmplificationDefaultTestCase(BaseGSIMTestCase):
 class SandikkayaDinsever2018TestCase(BaseGSIMTestCase):
     GSIM_CLASS = SandikkayaDinsever2018
 
-    def test_mean(self):
+    def test_all(self):
         self.check("sera_site/SandikkayaDinsever2018_DEFAULT_PHI0_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
@@ -82,7 +82,7 @@ class SandikkayaDinsever2018RegionTestCase(BaseGSIMTestCase):
     """
     GSIM_CLASS = SandikkayaDinsever2018
 
-    def test_mean(self):
+    def test_all(self):
         self.check(
             "sera_site/SandikkayaDinsever2018_DEFAULT_PHI0_ckWA_MEAN.csv",
             max_discrep_percentage=MAX_DISCREP,

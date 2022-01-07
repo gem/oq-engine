@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import config
+from openquake.baselib import config, python3compat
 from openquake.commonlib import datastore
 
 F32 = numpy.float32
@@ -189,7 +189,7 @@ def get_assets(dstore):
     dtlist.extend([('lon', F32), ('lat', F32)])
     asset_data = []
     for a in assetcol.array:
-        tup = tuple(b'%s' % tag[t][a[t]].encode('utf-8') for t in tagnames)
+        tup = tuple(python3compat.encode(tag[t][a[t]]) for t in tagnames)
         asset_data.append((a['id'],) + tup + (a['lon'], a['lat']))
     return numpy.array(asset_data, dtlist)
 

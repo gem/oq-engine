@@ -119,6 +119,7 @@ class CalculatorTestCase(unittest.TestCase):
         oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
             base.calculators)
         oq = oqvalidation.OqParam(**params)
+        oq._input_files = readinput.get_input_files(oq)
         oq.validate()
         # change this when debugging the test
         log = logs.init('calc', params)
@@ -200,7 +201,8 @@ class CalculatorTestCase(unittest.TestCase):
                 actual_lines.append(line)
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
-            self.assertEqual(expected_lines[0], actual_lines[0])  # header
+            if expected_lines[0][0] != '+':  # header unless .rst table
+                self.assertEqual(expected_lines[0], actual_lines[0])
             for exp, got in zip(make_comparable(expected_lines),
                                 make_comparable(actual_lines)):
                 if delta:

@@ -18,10 +18,15 @@
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import numba, compile
 import numpy
+import pandas
 
+U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+poes_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'poe': F64}
+
 
 if numba:
     @compile("void(float64[:, :], float64[:], uint32[:])")
@@ -213,13 +218,28 @@ class ProbabilityMap(dict):
         """The ordered keys of the map as a numpy.uint32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
-    def array(self, N):
+    def array(self, N, g=slice(None)):
         """
-        An array of shape (N, L, I)
+        An array of shape (N, L, G) or (stop-start, L)
         """
-        arr = numpy.zeros((N, self.shape_y, self.shape_z))
-        for sid in self:
-            arr[sid] = self[sid].array
+        if isinstance(g, slice):
+            arr = numpy.zeros((N, self.shape_y, self.shape_z))
+        else:
+            arr = numpy.zeros((N, self.shape_y))
+        for sid in range(N):
+            try:
+                arr[sid] = self[sid].array[:, g]
+            except KeyError:
+                pass
+        # Physically, an extremely small intensity measure level can have an
+        # extremely large probability of exceedence, however that probability
+        # cannot be exactly 1 unless the level is exactly 0. Numerically, the
+        # PoE can be 1 and this give issues when calculating the damage (there
+        # is a log(0) in
+        # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
+        # Here we solve the issue by replacing the unphysical probabilities 1
+        # with .9999999999999999 (the float64 closest to 1).
+        arr[arr == 1.] = .9999999999999999
         return arr
 
     @property
@@ -274,6 +294,22 @@ class ProbabilityMap(dict):
             array = curve.array[:, inner_idx].reshape(-1, 1)
             out[sid] = ProbabilityCurve(array)
         return out
+
+    def to_dframe(self):
+        """
+        :returns: a DataFrame with fields sid, gid, lid, poe
+        """
+        dic = dict(sid=[], gid=[], lid=[], poe=[])
+        for sid in self:
+            for (lid, gid), poe in numpy.ndenumerate(self[sid].array):
+                dic['sid'].append(sid)
+                dic['gid'].append(gid)
+                dic['lid'].append(lid)
+                dic['poe'].append(poe)
+        for key, dt in poes_dt.items():
+            dic[key] = dt(dic[key])
+        dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
+        return pandas.DataFrame(dic)
 
     def combine(self, pmap, rlz_groups):
         """

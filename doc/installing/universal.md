@@ -1,8 +1,8 @@
 # Universal installation script
 
-Since version 3.11 there is a universal installation script that works on any platform, provided you have Python 3.6, 3.7, or 3.8 installed. 
+Since version 3.11 there is a universal installation script that works on any platform, provided you have Python 3.7, 3.8 or 3.9 installed.
 
-- **Note 1**: Python 3.9 and 3.10 are not yet supported.
+- **Note 1**: Python 3.6 may work but it is untested and deprecated; Python 3.10 is not supported yet.
 - **Note 2**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake engine should install those packages within this virtual environment.
 - **Note 3**: The virtual environment `openquake` and its corresponding folder will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts.
 - **Note 4**: Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html
@@ -13,6 +13,14 @@ The script allows the user to select between three different kinds of installati
 2. `user` installation (Windows, macOS, and Linux)
 3. `server` installation (only available for Linux)
 4. `devel_server` installation (only available for Linux)
+
+A few notes about macOS:
+
+- macOS 11 (Big Sur) is not officially supported but many people have
+managed to install the engine on it using the system Python (version
+3.8).
+- new Macs with the M1 CPU are unsupported
+- make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS).
 
 ## `devel` installation
 
@@ -48,7 +56,7 @@ It should now be possible to develop with the engine. Calculation data will be s
 
 ## `user` installation
 
-If you do not need to modify the engine codebase or develop new features with the engine, but intend to use it as an application, you should install the `user` installation (on Windows / macOS) or the `server` installation (on Linux). The `user` installation is also the recommended option for Linux, in the case where you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
+If you do not need to modify the engine codebase or develop new features with the engine, but intend to use it as an application, you should perform an `user` installation (on Windows / macOS) or a `server` installation (on Linux). The `user` installation is also the recommended option for Linux, in the case where you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
 
 on macOS and Linux:
 ```
@@ -92,16 +100,30 @@ Calculation data will be stored in `$HOME/oqdata`.
 
 ## `server` installation
 
-If you are on a Linux machine _and_ you have root permissions, the recommended installation method is `server`. In this case, the engine will work
-with multiple users and two system V services will be automatically installed and started: `openquake-dbserver` and `openquake-webui`.
+If you are on a Linux machine _and_ you have root permissions, the
+recommended installation method is `server`. In this case, the engine
+will work with multiple users and two system V services will be
+automatically installed and started: `openquake-dbserver` and
+`openquake-webui`.
 
 ```
 $ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ sudo -H /usr/bin/python3 install.py server
 ```
 
-The installation script will automatically create a user called `openquake` and will install the engine in the directory `/opt/openquake`.
-Calculation data will be stored in `/var/lib/openquake/oqdata`.
+The installation script will automatically create a user called
+`openquake` and will install the engine in the directory
+`/opt/openquake`.  Calculation data will be stored in
+`/var/lib/openquake/oqdata`.
+
+*NB*: if you already have an engine installation made with debian or rpm
+packages, before installing the new version you must uninstall the old
+version, make sure that the dbserver and webui services are actually
+stopped and then also remove the directory `/opt/openquake` and the
+configuration file `/etc/openquake/openquake.cfg`. If you want to
+preserve some configuration (like the [zworkers] section which is needed
+on a cluster) you should keep a copy of `/etc/openquake/openquake.cfg`
+and move it inside `/opt/openquake` once the new installation is finished.
 
 ## `devel_server` installation
 

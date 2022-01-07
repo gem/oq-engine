@@ -1,11 +1,19 @@
-name: Windows Install engine for 3.6, 3.7 and 3.8 
+name: Windows Install engine for 3.7, 3.8 and 3.9
 
 on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
   schedule:
-    - cron: "00 23 * * *"
+    - cron: "00 22 * * *"
+  push:
+    branches: [ test_os ]
 
 jobs:
-  install:
+  install_and_test:
     runs-on: windows-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
@@ -13,14 +21,22 @@ jobs:
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
-        #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+    # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -29,18 +45,21 @@ jobs:
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
       - name: Install engine on developer mode
+        env: 
+          BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
-          #git status
-          #$PY_VER="py${{ matrix.python-version }}"
-          #$py = $PY_VER.replace(".","")
           set PIP_DEFAULT_TIMEOUT=100
           python -m pip install pip wheel setuptools --upgrade
-          #python -m pip install install -r requirements-$py-win64.txt
-          #python -m pip install -e .
-          python install.py devel
+          echo Branch to test %BRANCH%
+          if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
         shell: cmd
       - name: Run demos to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          ls D:\a\oq-engine\oq-engine\openquake
+          ls C:\Users\runneradmin\openquake\Scripts
+          #
           oq --version
-          oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          python -m pip install pytest
+          pytest -vs D:\a\oq-engine\oq-engine\openquake\calculators

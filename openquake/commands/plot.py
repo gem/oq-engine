@@ -15,22 +15,32 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import gzip
 import json
 import logging
 import shapely
 import numpy
+from scipy.stats import linregress
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
+from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
+
+
+def import_plt():
+    if os.environ.get('TEXT'):
+        import plotext as plt
+    else:
+        import matplotlib.pyplot as plt
+    return plt
 
 
 def make_figure_hcurves(extractors, what):
     """
     $ oq plot "hcurves?kind=mean&imt=PGA&site_id=0"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
@@ -60,7 +70,7 @@ def make_figure_uhs_cluster(extractors, what):
     """
     $ oq plot "uhs_cluster?k=12"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     import matplotlib.cm as cm
     kstr = what.split('?')[1]
     k = int(kstr.split('=')[1])
@@ -95,20 +105,26 @@ def make_figure_uhs_cluster(extractors, what):
 
 def make_figure_avg_gmf(extractors, what):
     """
-    $ oq plot "avg_gmf?imt=gmv_0"
+    $ oq plot "avg_gmf?imt=PGA"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
-    [ex] = extractors
-    avg_gmf = ex.get(what)
     imt = what.split('=')[1]
     ax = fig.add_subplot(1, 1, 1)
     ax.grid(True)
     ax.set_title('Avg GMF for %s' % imt)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
-    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'],
-                      c=avg_gmf[imt], cmap='jet')
+    if len(extractors) == 2:  # compare two avg_gmf
+        ex1, ex2 = extractors
+        avg_gmf = ex1.get(what)
+        avg_gmf2 = ex2.get(what)
+        gmf = avg_gmf[imt] - avg_gmf2[imt]
+    else:  # plot a single avg_gmf
+        [ex] = extractors
+        avg_gmf = ex.get(what)
+        gmf = avg_gmf[imt]
+    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet')
     plt.colorbar(coll)
     return plt
 
@@ -117,7 +133,7 @@ def make_figure_vs30(extractors, what):
     """
     $ oq plot "vs30?"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     [ex] = extractors
     sitecol = ex.get('sitecol')
@@ -134,7 +150,7 @@ def make_figure_hmaps(extractors, what):
     """
     $ oq plot "hmaps?kind=mean&imt=PGA"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     ncalcs = len(extractors)
     if ncalcs > 2:
@@ -193,24 +209,25 @@ def make_figure_uhs(extractors, what):
     """
     $ oq plot "uhs?kind=mean&site_id=0"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
         uhs = ex.get(what)
         for kind in uhs.kind:
-            got[ex.calc_id, kind] = uhs[kind]
+            got[ex.calc_id, kind] = uhs[kind][0]  # 1 site
     oq = ex.oqparam
     n_poes = len(oq.poes)
     periods = [imt.period for imt in oq.imt_periods()]
+    imts = [imt.string for imt in oq.imt_periods()]
     [site] = uhs.site_id
     for j, poe in enumerate(oq.poes):
         ax = fig.add_subplot(n_poes, 1, j + 1)
         ax.set_xlabel('UHS on site %s, poe=%s, inv_time=%dy' %
                       (site, poe, oq.investigation_time))
-        ax.set_ylabel('SA')
+        ax.set_ylabel('g')
         for ck, arr in got.items():
-            curve = list(arr[site][str(poe)])
+            curve = list(arr[str(poe)][imts])
             ax.plot(periods, curve, '-', label='%s_%s' % ck)
             ax.plot(periods, curve, '.')
         ax.grid(True)
@@ -234,21 +251,22 @@ def stacked_bar(ax, x, ys, width):
 
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot "disagg?kind=Mag&imt=PGA"
+    $ oq plot "disagg?kind=Mag&imt=PGA&poe_id=0"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     from matplotlib import cm
     fig = plt.figure()
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
+    kind = disagg.kind  # ex. ('Mag', 'Dist')
+    ndims = len(kind)
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    y = disagg.array
+    poes = disagg.array[:, ndims:]  # from the right columns
+    y = numpy.average(poes, weights=disagg.weights, axis=-1)
     print(y)
-    ndims = len(y.shape)
-    axis = disagg.kind.split('_')
-    bins = getattr(disagg, axis[0])
+    bins = getattr(disagg, kind[0])
     ncalcs = len(extractors)
     width = (bins[1] - bins[0]) * 0.5
     x = middle(bins) if ncalcs == 1 else middle(bins) - width
@@ -256,7 +274,7 @@ def make_figure_disagg(extractors, what):
         ax = fig.add_subplot(1, 1, 1)
         ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
                       (disagg.kind, sid, imt, poe_id, oq.investigation_time))
-        ax.set_xlabel(axis[0])
+        ax.set_xlabel(kind[0])
         ax.set_xticks(bins)
         ax.bar(x, y, width)
         for ex in extractors[1:]:
@@ -264,28 +282,30 @@ def make_figure_disagg(extractors, what):
         return plt
     if ncalcs > 1:
         raise NotImplementedError('Comparison for %s' % disagg.kind)
+    shape = [len(getattr(disagg, ax)) - 1 for ax in kind]
     # 2D images
     if ndims == 2:
-        y = y.reshape(y.shape + (1,))
+        y = y.reshape(shape + [1])
         zbins = ['']
-    else:
-        zbins = getattr(disagg, axis[2])
+    else:  # ndims == 3
+        y = y.reshape(shape)
+        zbins = getattr(disagg, kind[2])
     Z = y.shape[-1]
     axes = []
     for z in range(Z):
         arr = y[:, :, z]
         ax = fig.add_subplot(Z, 1, z + 1)
         axes.append(ax)
-        ax.set_ylabel(axis[1])
-        ax.set_title(zbins[z])
-        vbins = getattr(disagg, axis[1])  # vertical bins
+        ax.set_xlabel('%s' % kind[0])
+        ax.set_ylabel(kind[1])
+        vbins = getattr(disagg, kind[1])  # vertical bins
         cmap = cm.get_cmap('jet', 100)
         extent = bins[0], bins[-1], vbins[0], vbins[-1]
         im = ax.imshow(arr, cmap=cmap, extent=extent,
                        aspect='auto', vmin=y.min(), vmax=y.max())
         # stacked bar chart
         # stacked_bar(ax, x, y.T, width)
-        # ys = ['%.1f' % y for y in getattr(disagg, axis[1])]
+        # ys = ['%.1f' % y for y in getattr(disagg, kind[1])]
         # ax.legend(ys)
     fig.colorbar(im, ax=axes)
     return plt
@@ -295,25 +315,50 @@ def make_figure_task_info(extractors, what):
     """
     $ oq plot "task_info?kind=classical"
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
+    if plt.__name__ == 'plotext':
+        [ex] = extractors
+        [(task_name, task_info)] = ex.get(what).to_dict().items()
+        x = task_info['duration']
+        mean, std, med = x.mean(), x.std(ddof=1), numpy.median(x)
+        plt.hist(x, bins=50)
+        plt.title("mean=%d+-%d seconds, median=%d" % (mean, std, med))
+        return plt
     fig = plt.figure()
     [ex] = extractors
     [(task_name, task_info)] = ex.get(what).to_dict().items()
     x = task_info['duration']
-    ax = fig.add_subplot(1, 1, 1)
+    ax = fig.add_subplot(2, 1, 1)
     mean, std = x.mean(), x.std(ddof=1)
     ax.hist(x, bins=50, rwidth=0.9)
-    ax.set_xlabel("mean=%d+-%d seconds" % (mean, std))
+    ax.set_title("mean=%d+-%d seconds" % (mean, std))
     ax.set_ylabel("tasks=%d" % len(x))
-    #from scipy.stats import linregress
-    #ax = fig.add_subplot(2, 1, 2)
-    #arr = numpy.sort(task_info, order='duration')
-    #x, y = arr['duration'], arr['weight']
-    #reg = linregress(x, y)
-    #ax.plot(x, reg.intercept + reg.slope * x)
-    #ax.plot(x, y)
-    #ax.set_ylabel("weight")
-    #ax.set_xlabel("duration")
+
+    ax = fig.add_subplot(2, 1, 2)
+    arr = numpy.sort(task_info, order='duration')
+    x, y = arr['duration'], arr['weight']
+    reg = linregress(x, y)
+    ax.plot(x, reg.intercept + reg.slope * x)
+    ax.plot(x, y)
+    ax.set_ylabel("weight")
+    ax.set_xlabel("duration")
+    return plt
+
+
+def make_figure_source_data(extractors, what):
+    """
+    $ oq plot "source_data?taskno=XX"
+    """
+    plt = import_plt()
+    fig, ax = plt.subplots()
+    [ex] = extractors
+    aw = ex.get(what)
+    x, y = aw.ctimes, aw.weight
+    reg = linregress(x, y)
+    ax.plot(x, reg.intercept + reg.slope * x)
+    ax.plot(x, y)
+    ax.set_xlabel("duration")
+    ax.set_ylabel("weight")
     return plt
 
 
@@ -322,7 +367,7 @@ def make_figure_memory(extractors, what):
     $ oq plot "memory?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
 
     [ex] = extractors
     task_info = ex.get('task_info').to_dict()
@@ -382,7 +427,7 @@ def make_figure_sources(extractors, what):
     $ oq plot "sources?code=A&code=N"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     info = ex.get(what)
     wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
@@ -430,7 +475,7 @@ def make_figure_gridded_sources(extractors, what):
     $ oq plot "gridded_sources?task_no=0"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     dic = json.loads(ex.get(what).json)  # id -> lonlats
     fig, ax = plt.subplots()
@@ -457,7 +502,7 @@ def make_figure_rupture_info(extractors, what):
     $ oq plot "rupture_info?min_mag=6"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     info = ex.get(what)
     fig, ax = plt.subplots()
@@ -487,7 +532,7 @@ def make_figure_effect(extractors, what):
     $ oq plot "effect?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     from matplotlib import cm
     [ex] = extractors
     effect = ex.get(what)
@@ -518,7 +563,7 @@ def make_figure_rups_by_mag_dist(extractors, what):
     $ oq plot "rups_by_mag_dist?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     from matplotlib import cm
     [ex] = extractors
     counts = ex.get(what)
@@ -549,7 +594,7 @@ def make_figure_dist_by_mag(extractors, what):
     $ oq plot "dist_by_mag?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     effect = ex.get('effect')
     mags = ['%.2f' % mag for mag in effect.mags]
@@ -582,7 +627,7 @@ def make_figure_effect_by_mag(extractors, what):
     $ oq plot "effect_by_mag?"
     """
     # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     [ex] = extractors
     gsims_by_trt = ex.get('gsims_by_trt', asdict=True)
     mags = ex.get('source_mags').array
@@ -590,7 +635,7 @@ def make_figure_effect_by_mag(extractors, what):
         effect = ex.get('effect')
     except KeyError:
         onesite = ex.get('sitecol').one()
-        maximum_distance = MagDepDistance(ex.oqparam.maximum_distance)
+        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
         imtls = ex.oqparam.imtls
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)
@@ -611,7 +656,7 @@ def make_figure_agg_curves(extractors, what):
     """
     $ oq plot "agg_curves?kind=mean&loss_type=structural" -1
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
@@ -640,7 +685,7 @@ def make_figure_csq_curves(extractors, what):
     """
     $ oq plot "csq_curves?agg_id=0&loss_type=structural&consequence=losses" -1
     """
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, limit_state) -> curve
     for i, ex in enumerate(extractors):
@@ -676,7 +721,7 @@ def plot_wkt(wkt_string):
     Plot a WKT string describing a polygon
     """
     from shapely import wkt
-    import matplotlib.pyplot as plt
+    plt = import_plt()
     poly = wkt.loads(wkt_string)
     coo = numpy.array(poly.exterior.coords)
     plt.plot(coo[:, 0], coo[:, 1], '-')

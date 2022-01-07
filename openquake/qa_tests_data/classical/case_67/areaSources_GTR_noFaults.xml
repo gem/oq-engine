@@ -1,0 +1,199 @@
+<?xml version='1.0' encoding='utf8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns:nrml="http://openquake.org/xmlns/nrml/0.5" xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <sourceModel name="GTR area source model (no faults)">
+    <sourceGroup name="Group for GTR area sources" tectonicRegion="Stable Shallow Crust">
+      <areaSource id="ACC" name="ALPILLE_CRAU_CAMARGUE" tectonicRegion="Stable Shallow Crust">
+        <areaGeometry>
+          <gml:Polygon>
+            <gml:exterior>
+              <gml:LinearRing>
+                <gml:posList>
+5.034808 43.527264
+4.932949 43.423787
+4.877433 43.066436
+4.876957 43.067026
+4.245606 43.795484
+4.707372 44.049206
+5.128317 44.257502
+5.157095 44.143928
+5.156977 43.974859
+5.088761 43.807165
+5.096335 43.687697
+5.034808 43.527264</gml:posList>
+              </gml:LinearRing>
+            </gml:exterior>
+          </gml:Polygon>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>20.0</lowerSeismoDepth>
+        </areaGeometry>
+        <magScaleRel>Leonard2014_SCR</magScaleRel>
+        <ruptAspectRatio>1.0</ruptAspectRatio>
+        <truncGutenbergRichterMFD aValue="1.3113400166519598" bValue="0.868974" minMag="5.0" maxMag="6.3"/>
+        <nodalPlaneDist>
+          <nodalPlane probability="0.08333333333333333" strike="0.0" dip="90" rake="0"/>
+          <nodalPlane probability="0.08333333333333333" strike="0.0" dip="90" rake="180"/>
+          <nodalPlane probability="0.08333333333333333" strike="90.0" dip="90" rake="0"/>
+          <nodalPlane probability="0.08333333333333333" strike="90.0" dip="90" rake="180"/>
+          <nodalPlane probability="0.08333333333333333" strike="180.0" dip="90" rake="0"/>
+          <nodalPlane probability="0.08333333333333333" strike="180.0" dip="90" rake="180"/>
+          <nodalPlane probability="0.041666666666666664" strike="0.0" dip="45" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="0.0" dip="60" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="0.0" dip="75" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="90.0" dip="45" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="90.0" dip="60" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="90.0" dip="75" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="180.0" dip="45" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="180.0" dip="60" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="180.0" dip="75" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="270.0" dip="45" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="270.0" dip="60" rake="-90"/>
+          <nodalPlane probability="0.041666666666666664" strike="270.0" dip="75" rake="-90"/>
+        </nodalPlaneDist>
+        <hypoDepthDist>
+          <hypoDepth probability="0.0312" depth="4.1"/>
+          <hypoDepth probability="0.0938" depth="6.2"/>
+          <hypoDepth probability="0.1563" depth="8.3"/>
+          <hypoDepth probability="0.2187" depth="10.4"/>
+          <hypoDepth probability="0.2187" depth="12.6"/>
+          <hypoDepth probability="0.1563" depth="14.7"/>
+          <hypoDepth probability="0.0938" depth="16.8"/>
+          <hypoDepth probability="0.0312" depth="18.9"/>
+        </hypoDepthDist>
+      </areaSource>
+      <areaSource id="ALS" name="ZONE_EXTERNE_ALPINE_SEPTENTRIONALE" tectonicRegion="Stable Shallow Crust">
+        <areaGeometry>
+          <gml:Polygon>
+            <gml:exterior>
+              <gml:LinearRing>
+                <gml:posList>
+5.987197 45.313174
+5.780633 45.127663
+5.495361 45.363917
+5.669321 45.530977
+5.843188 45.558596
+5.919492 45.613151
+5.952601 45.689555
+6.176393 45.930047
+6.238135 46.003296
+6.389353 46.079679
+6.573469 46.051780
+6.701006 45.943329
+6.435402 45.769345
+6.299373 45.561168
+6.159261 45.482381
+6.053581 45.404081
+5.987197 45.313174</gml:posList>
+              </gml:LinearRing>
+            </gml:exterior>
+          </gml:Polygon>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>17.0</lowerSeismoDepth>
+        </areaGeometry>
+        <magScaleRel>Leonard2014_SCR</magScaleRel>
+        <ruptAspectRatio>1.0</ruptAspectRatio>
+        <truncGutenbergRichterMFD aValue="1.1641098634420404" bValue="0.785629" minMag="5.0" maxMag="6.5"/>
+        <nodalPlaneDist>
+          <nodalPlane probability="0.024999999999999998" strike="0.0" dip="15" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="0.0" dip="30" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="0.0" dip="45" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="90.0" dip="15" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="90.0" dip="30" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="90.0" dip="45" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="180.0" dip="15" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="180.0" dip="30" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="180.0" dip="45" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="270.0" dip="15" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="270.0" dip="30" rake="90"/>
+          <nodalPlane probability="0.024999999999999998" strike="270.0" dip="45" rake="90"/>
+          <nodalPlane probability="0.11666666666666665" strike="0.0" dip="90" rake="0"/>
+          <nodalPlane probability="0.11666666666666665" strike="0.0" dip="90" rake="180"/>
+          <nodalPlane probability="0.11666666666666665" strike="90.0" dip="90" rake="0"/>
+          <nodalPlane probability="0.11666666666666665" strike="90.0" dip="90" rake="180"/>
+          <nodalPlane probability="0.11666666666666665" strike="180.0" dip="90" rake="0"/>
+          <nodalPlane probability="0.11666666666666665" strike="180.0" dip="90" rake="180"/>
+        </nodalPlaneDist>
+        <hypoDepthDist>
+          <hypoDepth probability="0.0312" depth="3.9"/>
+          <hypoDepth probability="0.0937" depth="5.6"/>
+          <hypoDepth probability="0.1563" depth="7.4"/>
+          <hypoDepth probability="0.2188" depth="9.1"/>
+          <hypoDepth probability="0.2188" depth="10.9"/>
+          <hypoDepth probability="0.1563" depth="12.6"/>
+          <hypoDepth probability="0.0937" depth="14.4"/>
+          <hypoDepth probability="0.0312" depth="16.1"/>
+        </hypoDepthDist>
+      </areaSource>
+      <areaSource id="BMS" name="BASSIN_MOLASSIQUE_SUISSE" tectonicRegion="Stable Shallow Crust">
+        <areaGeometry>
+          <gml:Polygon>
+            <gml:exterior>
+              <gml:LinearRing>
+                <gml:posList>
+7.220857 46.772445
+6.444209 46.456827
+6.691926 46.843567
+7.206929 47.120011
+7.202891 47.348158
+8.062000 47.387000
+8.327022 47.319007
+8.461046 47.085436
+8.339033 47.027069
+8.210520 47.019627
+7.970829 46.933055
+7.869028 46.822541
+7.220857 46.772445</gml:posList>
+              </gml:LinearRing>
+            </gml:exterior>
+          </gml:Polygon>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>17.0</lowerSeismoDepth>
+        </areaGeometry>
+        <magScaleRel>Leonard2014_SCR</magScaleRel>
+        <ruptAspectRatio>1.0</ruptAspectRatio>
+        <truncGutenbergRichterMFD aValue="2.4315134890532377" bValue="0.895882" minMag="5.0" maxMag="6.5"/>
+        <nodalPlaneDist>
+          <nodalPlane probability="0.020833333333333332" strike="0.0" dip="15" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="0.0" dip="30" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="0.0" dip="45" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="90.0" dip="15" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="90.0" dip="30" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="90.0" dip="45" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="180.0" dip="15" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="180.0" dip="30" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="180.0" dip="45" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="270.0" dip="15" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="270.0" dip="30" rake="90"/>
+          <nodalPlane probability="0.020833333333333332" strike="270.0" dip="45" rake="90"/>
+          <nodalPlane probability="0.08333333333333333" strike="0.0" dip="90" rake="0"/>
+          <nodalPlane probability="0.08333333333333333" strike="0.0" dip="90" rake="180"/>
+          <nodalPlane probability="0.08333333333333333" strike="90.0" dip="90" rake="0"/>
+          <nodalPlane probability="0.08333333333333333" strike="90.0" dip="90" rake="180"/>
+          <nodalPlane probability="0.08333333333333333" strike="180.0" dip="90" rake="0"/>
+          <nodalPlane probability="0.08333333333333333" strike="180.0" dip="90" rake="180"/>
+          <nodalPlane probability="0.020833333333333332" strike="0.0" dip="45" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="0.0" dip="60" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="0.0" dip="75" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="90.0" dip="45" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="90.0" dip="60" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="90.0" dip="75" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="180.0" dip="45" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="180.0" dip="60" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="180.0" dip="75" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="270.0" dip="45" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="270.0" dip="60" rake="-90"/>
+          <nodalPlane probability="0.020833333333333332" strike="270.0" dip="75" rake="-90"/>
+        </nodalPlaneDist>
+        <hypoDepthDist>
+          <hypoDepth probability="0.0312" depth="3.9"/>
+          <hypoDepth probability="0.0937" depth="5.6"/>
+          <hypoDepth probability="0.1563" depth="7.4"/>
+          <hypoDepth probability="0.2188" depth="9.1"/>
+          <hypoDepth probability="0.2188" depth="10.9"/>
+          <hypoDepth probability="0.1563" depth="12.6"/>
+          <hypoDepth probability="0.0937" depth="14.4"/>
+          <hypoDepth probability="0.0312" depth="16.1"/>
+        </hypoDepthDist>
+      </areaSource>
+    </sourceGroup>
+  </sourceModel>
+</nrml>

@@ -19,9 +19,7 @@
 from openquake.hazardlib.gsim.tavakoli_pezeshk_2005 import (
     TavakoliPezeshk2005MblgAB1987NSHMP2008,
     TavakoliPezeshk2005MblgJ1996NSHMP2008,
-    TavakoliPezeshk2005MwNSHMP2008
-)
-
+    TavakoliPezeshk2005MwNSHMP2008)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 

@@ -178,10 +178,10 @@ class GulerceAbrahamson2011(GMPE):
     This model follows the same functional form as in AS08 by Abrahamson &
     Silva (2008) with minor modifications to the underlying parameters.
 
-    **Reference:**
+    Reference:
 
-    Gulerce, Z. & Abrahamson, N. (2011). Site-Specific Design Spectra for
-    Vertical Ground Motion *Earthquake Spectra*, *27*(4), 1023-1047.
+    Gulerce, Z. & Abrahamson, N. (2011), "Site-Specific Design Spectra for
+    Vertical Ground Motion", Earthquake Spectra, 27(4), 1023-1047.
     """
     #: Supported tectonic region type is active shallow crust, as part of the
     #: NGA-West1 Database; re-defined here for clarity.
@@ -245,8 +245,8 @@ class GulerceAbrahamson2011(GMPE):
         """
         ctx_rock = copy.copy(ctx)
         ctx_rock.vs30 = np.full_like(ctx_rock.vs30, 1100.)
-        [mea] = contexts.get_mean_stds([self.gmpe], ctx_rock, [PGA()], None)
-        pga1100 = np.exp(mea[0, 0])  # from shape (G, O, M, N) -> N
+        mea = contexts.get_mean_stds(self.gmpe, ctx_rock, [PGA()])[0]
+        pga1100 = np.exp(mea[0])  # from shape (M, N) -> N
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = (_compute_base_term(C, ctx) +

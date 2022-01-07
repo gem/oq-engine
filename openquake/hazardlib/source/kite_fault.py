@@ -133,7 +133,7 @@ class KiteFaultSource(ParametricSeismicSource):
         msr = self.magnitude_scaling_relationship
         tom = self.temporal_occurrence_model
         surface = self.surface
-
+        slc = kwargs.get('slc', slice(None))
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
 
             # Compute the area, length and width of the ruptures
@@ -158,11 +158,17 @@ class KiteFaultSource(ParametricSeismicSource):
             occurrence_rate = mag_occ_rate / len(ruptures)
 
             # Rupture generator
-            for rup in ruptures:
+            for rup in ruptures[slc]:
                 hypocenter = rup[0].get_center()
                 # Yield an instance of a ParametricProbabilisticRupture
                 yield ppr(mag, self.rake, self.tectonic_region_type,
                           hypocenter, rup[0], occurrence_rate, tom)
+
+    def few_ruptures(self):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        yield from self.iter_ruptures(slc=slice(None, None, 25))
 
     def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
         """
@@ -266,7 +272,7 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
     :param sampling:
         The sampling distance [km] along the strike
     :param aspr:
-            The rupture aspect ratio [L/W]
+        The rupture aspect ratio [L/W]
     :param sampling_y:
         The sampling distance [km] along the dip
     :returns:
@@ -318,6 +324,9 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
         wdt = None
         lng = None
     elif area_error > 0.25 and lng > 1e-10 and wdt > 1e-10:
-        raise ValueError('Area discrepancy: ', area, lng*wdt, lng, wdt)
-
+        msg = '\nSampling along strike : {:f}\n'.format(sampling)
+        msg += 'Sampling along dip   : {:f}\n'.format(sampling_y)
+        msg += 'Area expected        : {:f}\n'.format(area)
+        msg += 'Area computed        : {:f}\n'.format(lng*wdt)
+        raise ValueError(msg)
     return lng, wdt

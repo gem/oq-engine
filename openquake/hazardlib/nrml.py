@@ -159,10 +159,10 @@ class SourceModel(collections.abc.Sequence):
 
 class GeometryModel(object):
     """
-    Contains a list of sections
+    Contains a dictionary of sections
     """
     def __init__(self, sections):
-        check_unique([sec.sec_id for sec in sections])
+        check_unique(sections)
         self.sections = sections
         self.src_groups = []
 
@@ -436,7 +436,7 @@ def get(xml, investigation_time=50., rupture_mesh_spacing=5.,
         width_of_mfd_bin=width_of_mfd_bin,
         area_source_discretization=area_source_discretization)
     src = conv.convert_node(node)
-    src.id = 0
+    src.grp_id = src.id = 0
     return src
 
 

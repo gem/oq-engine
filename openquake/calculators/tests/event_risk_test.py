@@ -75,8 +75,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         aae(totloss, 15911.156, decimal=2)
 
     def test_case_4(self):
-        # a simple test with 1 asset and two source models
-        # this is also a test with preimported exposure
+        # a simple test with 3 assets and two source models
+        # this is also a test with preimported exposure and aggr by site_id
         self.run_calc(case_4.__file__, 'job_haz.ini')
         calc0 = self.calc.datastore  # event_based
         self.run_calc(case_4.__file__, 'job_risk.ini',
@@ -86,11 +86,15 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 
-        # checking agg_curves-stats
-        fnames = export(('agg_curves-stats', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+        # checking aggrisk
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
+
+        # checking aggcurves
+        [fname] = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
 
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')

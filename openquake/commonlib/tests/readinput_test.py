@@ -24,9 +24,10 @@ from io import BytesIO
 
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
+from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
-from openquake.commonlib import readinput, logictree, datastore
-from openquake.qa_tests_data.classical import case_2, case_21
+from openquake.commonlib import readinput, datastore
+from openquake.qa_tests_data.classical import case_2, case_15, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
     case_2 as ebr2, case_caracas)
@@ -94,7 +95,7 @@ export_dir = %s
                 'complex_fault_mesh_spacing': 5.0,
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'maximum_distance': {'default': [(1, 1), (10, 1)]},
+                'maximum_distance': {'default': [(MINMAG, 1), (MAXMAG, 1)]},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -105,7 +106,8 @@ export_dir = %s
                 'minimum_asset_loss': {},
             }
             params = getparams(readinput.get_oqparam(source))
-            self.assertEqual(expected_params, params)
+            for key in expected_params:
+                self.assertEqual(expected_params[key], params[key])
         finally:
             os.unlink(sites_csv)
 
@@ -527,3 +529,15 @@ class SitecolAssetcolTestCase(unittest.TestCase):
                 oq.inputs['amplification'])
             site_amplification.Amplifier(oq.imtls, df)
         self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
+
+
+class LogicTreeTestCase(unittest.TestCase):
+    def test(self):
+        job_ini = os.path.join(os.path.dirname(case_15.__file__), 'job.ini')
+        oq = readinput.get_oqparam(job_ini)
+        lt = readinput.get_logic_tree(oq)
+        # (2+1) x 4 = 12 realizations
+        paths = [rlz.lt_path for rlz in lt]
+        self.assertEqual(paths, ['A.AA', 'A.AB', 'A.BA', 'A.BB',
+                                 'BAAA', 'BAAB', 'BABA', 'BABB',
+                                 'BBAA', 'BBAB', 'BBBA', 'BBBB'])

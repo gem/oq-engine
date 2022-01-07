@@ -29,7 +29,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class ParkerEtAl2020SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ParkerEtAl2020SInter
 
-    def test_mean(self):
+    def test_all(self):
         self.check('PARKER20/ParkerEtAl2020SInter_MEAN.csv',
                    max_discrep_percentage=0.1)
 
@@ -117,7 +117,7 @@ class ParkerEtAl2020SInterBTestCase(BaseGSIMTestCase):
 class ParkerEtAl2020SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ParkerEtAl2020SSlab
 
-    def test_mean(self):
+    def test_all(self):
         self.check('PARKER20/ParkerEtAl2020SSlab_MEAN.csv',
                    max_discrep_percentage=0.1)
 

@@ -19,6 +19,7 @@ Contents:
    hazard
    risk
    effective-realizations
+   sslt
    sampling
    rupture-sampling
    event-based-with-large-logic-tree
@@ -28,10 +29,12 @@ Contents:
    pandas
    parametric-gmpes
    multipoint
+   multifault
    parallelization
    special-features
    point-source-gridding
    asset-site-association
+   event-based-damage
    risk-features
    developing
    architecture

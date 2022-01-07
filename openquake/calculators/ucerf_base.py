@@ -243,10 +243,11 @@ class UCERFSource(BaseSeismicSource):
             bg_locations = hdf5["Grid/Locations"][()]
             if hasattr(self, 'src_filter'):
                 # in event based
-                idist = self.src_filter.integration_distance(DEFAULT_TRT)
+                idist = self.src_filter.integration_distance[
+                    DEFAULT_TRT][-1][1]
             else:
                 # in classical
-                return range(len(bg_locations))
+                return numpy.arange(len(bg_locations))
             distances = min_geodetic_distance(
                 self.src_filter.sitecol.xyz,
                 (bg_locations[:, 0], bg_locations[:, 1]))
@@ -292,6 +293,16 @@ class UCERFSource(BaseSeismicSource):
                 if rup:
                     yield rup
 
+    def few_ruptures(self, **kwargs):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        for ridx in range(self.start, self.stop, 25):
+            if self.rate[ridx - self.start]:  # may have have zero rate
+                rup = self.get_ucerf_rupture(ridx - self.start)
+                if rup:
+                    yield rup
+
     # called upfront, before start_classical
     def __iter__(self):
         if self.stop - self.start <= self.ruptures_per_block:  # already split
@@ -327,6 +338,8 @@ class UCERFSource(BaseSeismicSource):
                 src_name = "|".join([self.ukey["total_key"], str(bg_idx)])
                 mag_idx = (self.min_mag <= mags) & (mags < mmax[i])
                 src_mags = mags[mag_idx]
+                if len(src_mags) == 1:  # too short
+                    continue
                 src_mfd = EvenlyDiscretizedMFD(
                     src_mags[0],
                     src_mags[1] - src_mags[0],

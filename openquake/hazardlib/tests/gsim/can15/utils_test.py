@@ -94,4 +94,3 @@ class GetEquivalenDistanceEastTestCase(unittest.TestCase):
         self.assertAlmostEqual(comp_rrup, expected_rrup, places=2)
         expected_rjb = 12.36326
         self.assertAlmostEqual(comp_rjb, expected_rjb, places=2)
-

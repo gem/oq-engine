@@ -432,9 +432,7 @@ class KothaEtAl2020(GMPE):
             if self.dl2l:
                 # The source-region parameter is specified explicity
                 mean[m] += self.dl2l[imt]["dl2l"]
-                return
-
-            if self.sigma_mu_epsilon:
+            elif self.sigma_mu_epsilon:
                 # epistemic uncertainty factor (sigma_mu) multiplied by
                 # the number of standard deviations
                 sigma_mu = get_sigma_mu_adjustment(C, imt, ctx)

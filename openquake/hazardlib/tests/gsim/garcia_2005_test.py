@@ -17,10 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.garcia_2005 import (
-    GarciaEtAl2005SSlab,
-    GarciaEtAl2005SSlabVert,
-)
-
+    GarciaEtAl2005SSlab, GarciaEtAl2005SSlabVert)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -30,17 +27,13 @@ class GarciaEtAl2005SSlabTestCase(BaseGSIMTestCase):
     # Test data generated from Fortran implementation
     # provided by Daniel Garcia
 
-    def test_mean(self):
-        self.check('GA05/GA05SSlab_MEAN.csv', max_discrep_percentage=0.2)
-
-    def test_std_total(self):
-        self.check('GA05/GA05SSlab_STD_TOTAL.csv', max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('GA05/GA05SSlab_STD_INTRA.csv', max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('GA05/GA05SSlab_STD_INTER.csv', max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check('GA05/GA05SSlab_MEAN.csv',
+                   'GA05/GA05SSlab_STD_TOTAL.csv',
+                   'GA05/GA05SSlab_STD_INTRA.csv',
+                   'GA05/GA05SSlab_STD_INTER.csv',
+                   max_discrep_percentage=0.2,
+                   std_discrep_percentage=0.1)
 
 
 class GarciaEtAl2005SSlabVertTestCase(BaseGSIMTestCase):
@@ -49,14 +42,10 @@ class GarciaEtAl2005SSlabVertTestCase(BaseGSIMTestCase):
     # Test data generated from Fortran implementation
     # provided by Daniel Garcia
 
-    def test_mean(self):
-        self.check('GA05/GA05SSlabV_MEAN.csv', max_discrep_percentage=0.2)
-
-    def test_std_total(self):
-        self.check('GA05/GA05SSlabV_STD_TOTAL.csv', max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('GA05/GA05SSlabV_STD_INTRA.csv', max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('GA05/GA05SSlabV_STD_INTER.csv', max_discrep_percentage=0.1)
+    def test_all(self):
+        self.check('GA05/GA05SSlabV_MEAN.csv',
+                   'GA05/GA05SSlabV_STD_TOTAL.csv',
+                   'GA05/GA05SSlabV_STD_INTRA.csv',
+                   'GA05/GA05SSlabV_STD_INTER.csv',
+                   max_discrep_percentage=0.2,
+                   std_discrep_percentage=0.1)

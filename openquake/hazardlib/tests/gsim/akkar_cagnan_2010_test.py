@@ -24,18 +24,9 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class AkkarCagnan2010TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AkkarCagnan2010
 
-    def test_mean(self):
+    def test_all(self):
         self.check('AC10/AC10_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('AC10/AC10_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('AC10/AC10_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('AC10/AC10_STD_INTER.csv',
+                   'AC10/AC10_STD_TOTAL.csv',
+                   'AC10/AC10_STD_INTRA.csv',
+                   'AC10/AC10_STD_INTER.csv',
                    max_discrep_percentage=0.1)

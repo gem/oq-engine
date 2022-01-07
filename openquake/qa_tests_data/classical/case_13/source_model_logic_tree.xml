@@ -2,18 +2,16 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <logicTree logicTreeID="lt1">
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-            <logicTreeBranchSet uncertaintyType="sourceModel"
-                                branchSetID="bs1">
-                <logicTreeBranch branchID="aFault_aPriori_D2_1">
-                    <uncertaintyModel>aFault_aPriori_D2_1.xml</uncertaintyModel>
-                    <uncertaintyWeight>0.5</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="bFault_stitched_D2_1_Char">
-                    <uncertaintyModel>bFault_stitched_D2_1_Char.xml</uncertaintyModel>
-                    <uncertaintyWeight>0.5</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
+      <logicTreeBranchSet uncertaintyType="sourceModel"
+                          branchSetID="bs1">
+        <logicTreeBranch branchID="aFault_aPriori_D2_1">
+          <uncertaintyModel>aFault_aPriori_D2_1.xml</uncertaintyModel>
+          <uncertaintyWeight>0.5</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="bFault_stitched_D2_1_Char">
+          <uncertaintyModel>bFault_stitched_D2_1_Char.xml</uncertaintyModel>
+          <uncertaintyWeight>0.5</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
     </logicTree>
 </nrml>

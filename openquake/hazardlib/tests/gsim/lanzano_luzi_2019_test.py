@@ -22,7 +22,9 @@ of Lanzano and Luzi (2019). Test tables were created by an excel spreadsheet
 that calculates expected values provided by the original authors.
 """
 from openquake.hazardlib.gsim.lanzano_luzi_2019 import (LanzanoLuzi2019shallow,
-                                                        LanzanoLuzi2019deep)
+                                                        LanzanoLuzi2019deep,
+                                                        LanzanoLuzi2019shallow_scaled,
+                                                        LanzanoLuzi2019deep_scaled)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -39,12 +41,8 @@ class LanzanoLuzi2019shallowTestCase(BaseGSIMTestCase):
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "LL19/LanzanoLuzi2019shallow_STD_TOTAL.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
                    max_discrep_percentage=0.1)
 
 
@@ -56,10 +54,30 @@ class LanzanoLuzi2019deepTestCase(BaseGSIMTestCase):
     MEAN_FILE = "LL19/LanzanoLuzi2019deep_MEAN.csv"
     STD_FILE = "LL19/LanzanoLuzi2019deep_STD_TOTAL.csv"
 
-    def test_mean(self):
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=0.1)
+
+
+class LanzanoLuzi2019shallow_scaledTestCase(BaseGSIMTestCase):
+    """
+    Tests the Lanzano and Luzi (2019) GMPE for the case of shallow events.
+    """
+    GSIM_CLASS = LanzanoLuzi2019shallow_scaled
+    MEAN_FILE = "LL19/LanzanoLuzi2019shallow_scaled_MEAN.csv"
+
+    def test_all(self):
         self.check(self.MEAN_FILE,
                    max_discrep_percentage=0.1)
 
-    def test_std_total(self):
-        self.check(self.STD_FILE,
+
+class LanzanoLuzi2019deep_scaledTestCase(BaseGSIMTestCase):
+    """
+    Tests the Lanzano and Luzi (2019) GMPE for the case of deep events.
+    """
+    GSIM_CLASS = LanzanoLuzi2019deep_scaled
+    MEAN_FILE = "LL19/LanzanoLuzi2019deep_scaled_MEAN.csv"
+
+    def test_all(self):
+        self.check(self.MEAN_FILE,
                    max_discrep_percentage=0.1)

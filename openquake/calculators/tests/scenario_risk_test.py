@@ -34,14 +34,14 @@ aac = numpy.testing.assert_allclose
 
 
 def tot_loss(dstore):
-    return dstore.sel('agg_losses-rlzs').sum(axis=(0, 1))
+    return dstore.read_df('aggrisk').loss.sum() / 2
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
-        [fname] = out['agg_losses-rlzs', 'csv']
+        [fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
 
         # check the exported GMFs
@@ -54,7 +54,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
-        [fname] = out['agg_losses-rlzs', 'csv']
+        [fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
 
     def test_case_2d(self):
@@ -81,8 +81,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
-        [fname] = out['agg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_loss.csv', fname)
+        [fname] = out['aggrisk', 'csv']
+        self.assertEqualFiles('expected/agg_loss.csv', fname, delta=5E-6)
 
     def test_case_4(self):
         # this test is sensitive to the ordering of the epsilons
@@ -90,7 +90,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('totlosses', self.calc.datastore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
-        [fname] = out['agg_losses-rlzs', 'csv']
+        [fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
 
     def test_occupants(self):
@@ -99,8 +99,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
-        [fname] = out['agg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_loss.csv', fname)
+        [fname] = out['aggrisk', 'csv']
+        self.assertEqualFiles('expected/agg_loss.csv', fname, delta=1E-5)
 
     def test_case_5(self):
         # case with site model and 11 sites filled out of 17
@@ -117,18 +117,18 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # case with two gsims
         self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
-        [f0, f1] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_structural_0.csv', f0)
-        self.assertEqualFiles('expected/agg_structural_1.csv', f1)
+        [f] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', f, delta=5E-5)
 
         # testing the totlosses view
         dstore = self.calc.datastore
         fname = gettemp(view('totlosses', dstore))
-        self.assertEqualFiles('expected/totlosses.txt', fname)
+        self.assertEqualFiles('expected/totlosses.txt', fname, delta=5E-5)
 
         # testing portfolio_losses
         fname = gettemp(view('portfolio_losses', dstore))
-        self.assertEqualFiles('expected/portfolio_losses.txt', fname)
+        self.assertEqualFiles('expected/portfolio_losses.txt', fname,
+                              delta=5E-5)
 
         # two equal gsims
         with self.assertRaises(InvalidLogicTree):
@@ -138,7 +138,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        [fname] = out['agg_losses-rlzs', 'csv']
+        [fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
 
     def test_case_1h(self):
@@ -170,7 +170,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2786.1294]], atol=.001)  # from avg_losses-stats
+        aac(obj.array, [[2764.5]], atol=.02)  # from avg_losses-stats
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -192,14 +192,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         aac(tot10, tot20, atol=.0001)  # must be around 230.0107
 
         # check aggregate_by site_id
-        [fname] = export(('agg_losses-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
-        [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
@@ -224,7 +224,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (9,))
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
-        [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
@@ -242,7 +242,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (7,))
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'MMI'))
-        [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         [fname] = export(('realizations', 'csv'), self.calc.datastore)

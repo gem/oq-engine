@@ -18,7 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from openquake.baselib import performance, general
+from openquake.baselib import performance, general, python3compat
 from openquake.commonlib import readinput, datastore
 
 
@@ -44,8 +44,9 @@ def main(calc_id: int):
     num_ids = len(src_ids)
     bad_ids = info[info['eff_ruptures'] == 0]['source_id']
     logging.info('Found %d far away sources', len(bad_ids))
-    bad_ids = set(src_id.split(';')[0] for src_id in bad_ids)
-    bad_dupl = bad_ids & get_dupl(src_ids)
+    bad_ids = set(src_id.split(';')[0]
+                  for src_id in python3compat.decode(bad_ids))
+    bad_dupl = bad_ids & get_dupl(python3compat.decode(src_ids))
     if bad_dupl:
         logging.info('Duplicates %s not removed' % bad_dupl)
     ok = info['eff_ruptures'] > 0

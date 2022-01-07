@@ -1,0 +1,10 @@
+#,,,"generated_by='OpenQuake engine 3.13.0-gitc7648930bb', start_date='2021-09-27T17:03:42', checksum=641705409, risk_investigation_time=1.0, num_events=398, effective_time=10000.0, limit_states=''"
+return_period,loss_type,loss_value,loss_ratio
+50,occupants,8.73339E-03,3.15665E-04
+100,occupants,1.21999E-02,4.40959E-04
+200,occupants,1.56050E-02,5.64036E-04
+500,occupants,2.32722E-02,8.41166E-04
+1000,occupants,3.63877E-02,1.31522E-03
+2000,occupants,5.72888E-02,2.07068E-03
+5000,occupants,7.27197E-02,2.62842E-03
+10000,occupants,1.21606E-01,4.39540E-03

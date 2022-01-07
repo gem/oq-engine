@@ -158,4 +158,3 @@ main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
 main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
-main.calc_id = dict(help='calculation ID (if "calc" infer it)')

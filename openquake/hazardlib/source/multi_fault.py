@@ -20,6 +20,8 @@ defines :class:`MultiFaultSource`.
 
 import numpy as np
 from typing import Union
+
+from openquake.baselib.general import gen_slices
 from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
@@ -28,6 +30,7 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
+BLOCKSIZE = 500
 
 
 class FaultSection(object):
@@ -92,24 +95,19 @@ class MultiFaultSource(BaseSeismicSource):
         self.rakes = rakes
         super().__init__(source_id, name, tectonic_region_type)
 
-    def create_inverted_index(self, sections):
+    def set_sections(self, sections):
         """
-        Check sections and sreates an inverted index structure, i.e. a
-        dictionary sec_id->index
+        :param sections: a dictionary sec_id -> FaultSection
+
+        Set the attribute .sections to the passed dictionary
         """
         assert sections
         self.sections = sections
-        section_idxs = [s.sec_id for s in sections]
-        msg = 'Rupture #{:d}: section "{:s}" does not exists'
+        msg = 'Rupture #{:d}: section "{:s}" does not exist'
         for i in range(len(self.mags)):
             for idx in self.rupture_idxs[i]:
-                if idx not in section_idxs:
+                if idx not in sections:
                     raise ValueError(msg.format(i, idx))
-
-        # create the inverted index
-        self.invx = {}
-        for i, sec in enumerate(self.sections):
-            self.invx[sec.sec_id] = i
 
     def iter_ruptures(self, fromidx=0, untilidx=None, **kwargs):
         """
@@ -119,27 +117,58 @@ class MultiFaultSource(BaseSeismicSource):
         :param untilidx: stop
         """
         # check
-        if 'invx' not in self.__dict__:
-            raise RuntimeError(
-                'You forgot to call create_inverted_index in %s!' % self)
+        if 'sections' not in self.__dict__:
+            raise RuntimeError('You forgot to call set_sections in %s!' % self)
 
         # iter on the ruptures
         untilidx = len(self.mags) if untilidx is None else untilidx
+        s = self.sections
         for i in range(fromidx, untilidx):
             idxs = self.rupture_idxs[i]
-            if len(idxs) < 2:
-                sfc = self.sections[self.invx[idxs[0]]].surface
+            if len(idxs) == 1:
+                sfc = self.sections[idxs[0]].surface
             else:
-                s = self.sections
-                sfc = MultiSurface([s[self.invx[j]].surface for j in idxs])
+                sfc = MultiSurface([s[idx].surface for idx in idxs])
             rake = self.rakes[i]
-            hypo = self.sections[self.invx[idxs[0]]].surface.get_middle_point()
+            hypo = self.sections[idxs[0]].surface.get_middle_point()
             yield NonParametricProbabilisticRupture(
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 self.pmfs[i])
 
-    def __iter__(self):  # not splittable
-        yield self
+    def few_ruptures(self):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        s = self.sections
+        for i in range(0, len(self.mags), BLOCKSIZE // 5):
+            idxs = self.rupture_idxs[i]
+            if len(idxs) == 1:
+                sfc = self.sections[idxs[0]].surface
+            else:
+                sfc = MultiSurface([s[idx].surface for idx in idxs])
+            rake = self.rakes[i]
+            hypo = self.sections[idxs[0]].surface.get_middle_point()
+            yield NonParametricProbabilisticRupture(
+                self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
+                self.pmfs[i])
+
+    def __iter__(self):
+        if len(self.mags) <= BLOCKSIZE:  # already split
+            yield self
+            return
+        # split in blocks of BLOCKSIZE ruptures each
+        for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
+            src = self.__class__(
+                '%s:%d' % (self.source_id, i),
+                self.name,
+                self.tectonic_region_type,
+                self.rupture_idxs[slc],
+                self.pmfs[slc],
+                self.mags[slc],
+                self.rakes[slc])
+            src.set_sections(self.sections)
+            src.num_ruptures = src.count_ruptures()
+            yield src
 
     def count_ruptures(self):
         """
@@ -155,8 +184,10 @@ class MultiFaultSource(BaseSeismicSource):
 
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
-        for sec, pmf in zip(self.sections, self.pmfs):
-            yield sec, pmf
+        for i, rup in enumerate(self.iter_ruptures()):
+            yield rup, self.pmfs[i]
 
     polygon = NP.polygon
     wkt = NP.wkt
+    get_bounding_box = NP.get_bounding_box
+    mesh_size = NP.mesh_size

@@ -106,9 +106,8 @@ def main(
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
                     limit=int, soft_mem_limit=int, hard_mem_limit=int,
-                    port=int, multi_user=valid.boolean,
-                    serialize_jobs=valid.boolean, strict=valid.boolean,
-                    code=exec)
+                    port=int, serialize_jobs=valid.boolean,
+                    strict=valid.boolean, code=exec)
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'

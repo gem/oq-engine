@@ -122,7 +122,7 @@ def export_hcurves_by_imt_csv(
         lst.append(('poe-%.7f' % iml, F32))
     custom = 'custom_site_id' in sitecol.array.dtype.names
     if custom:
-        lst.insert(0, ('custom_site_id', U32))
+        lst.insert(0, ('custom_site_id', 'S6'))
     hcurves = numpy.zeros(nsites, lst)
     if custom:
         for sid, csi, lon, lat, dep in zip(
@@ -359,6 +359,33 @@ def export_hmaps_xml(ekey, dstore):
     return sorted(fnames)
 
 
+@export.add(('cs-stats', 'csv'))
+def export_cond_spectra(ekey, dstore):
+    sitecol = dstore['sitecol']
+    dset = dstore[ekey[0]]  # shape (1, M, N, 2, P)
+    periods = dset.attrs['periods']
+    imls = dset.attrs['imls']
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fnames = []
+    for n in sitecol.sids:
+        spe = dset[0, :, n, 0]  # shape M, P
+        std = dset[0, :, n, 1]  # shape M, P
+        fname = dstore.export_path('conditional-spectrum-%d.csv' % n)
+        dic = dict(sa_period=periods)
+        for p in range(len(imls)):
+            dic['val%d' % p] = spe[:, p]
+            dic['std%d' % p] = std[:, p]
+        df = pandas.DataFrame(dic)
+        comment = dstore.metadata.copy()
+        comment['imls'] = list(imls)
+        comment['site_id'] = n
+        comment['lon'] = sitecol.lons[n]
+        comment['lat'] = sitecol.lats[n]
+        writer.save(df, fname, comment=comment)
+        fnames.append(fname)
+    return fnames
+
+
 def _extract(hmap, imt, j):
     # hmap[imt] can be a tuple or a scalar if j=0
     tup = hmap[imt]
@@ -382,22 +409,38 @@ def export_hazard_npz(ekey, dstore):
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     imts = list(oq.imtls)
+
+    # exporting sitemesh
+    f = dstore.build_fname('sitemesh', '', 'csv')
+    sitecol = dstore['sitecol']
+    names = sitecol.array.dtype.names
+    arr = sitecol[['lon', 'lat']]
+    if 'custom_site_id' in names:
+        sites = util.compose_arrays(
+            sitecol.custom_site_id, arr, 'custom_site_id')
+    else:
+        sites = util.compose_arrays(sitecol.sids, arr, 'site_id')
+    writers.write_csv(f, sites, comment=dstore.metadata)
+
+    # exporting gmfs
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
-    ren = {'sid': 'site_id', 'eid': 'event_id'}
+    if 'custom_site_id' in names:
+        df['csi'] = decode(sitecol.custom_site_id[df.sid])
+        ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
+        del df['sid']
+    else:
+        ren = {'sid': 'site_id', 'eid': 'event_id'}
     for m, imt in enumerate(imts):
         ren[f'gmv_{m}'] = 'gmv_' + imt
     for imt in oq.get_sec_imts():
         ren[imt] = f'sep_{imt}'
     df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
-    f = dstore.build_fname('sitemesh', '', 'csv')
-    arr = dstore['sitecol'][['lon', 'lat']]
-    sids = numpy.arange(len(arr), dtype=U32)
-    sites = util.compose_arrays(sids, arr, 'site_id')
-    writers.write_csv(f, sites)
     fname = dstore.build_fname('gmf', 'data', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         df, fname, comment=dstore.metadata)
+
+    # exporting sigma_epsilon
     if 'sigma_epsilon' in dstore['gmf_data']:
         sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
         sig_eps = dstore['gmf_data/sigma_epsilon'][()]
@@ -405,7 +448,8 @@ def export_gmf_data_csv(ekey, dstore):
         sig_eps.sort(order='eid')
         header = list(sig_eps.dtype.names)
         header[0] = 'event_id'
-        writers.write_csv(sig_eps_csv, sig_eps, header=header)
+        writers.write_csv(sig_eps_csv, sig_eps, header=header,
+                          comment=dstore.metadata)
         return [fname, sig_eps_csv, f]
     else:
         return [fname, f]
@@ -424,8 +468,13 @@ def export_gmf_data_hdf5(ekey, dstore):
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol'].complete
+    if 'custom_site_id' in sitecol.array.dtype.names:
+        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
+    else:
+        dic = dict(site_id=sitecol.sids)
+    dic['lon'] = sitecol.lons
+    dic['lat'] = sitecol.lats
     data = dstore['avg_gmf'][:]  # shape (2, N, M)
-    dic = {'site_id': sitecol.sids, 'lon': sitecol.lons, 'lat': sitecol.lats}
     for m, imt in enumerate(oq.imtls):
         dic['gmv_' + imt] = data[0, :, m]
         dic['gsd_' + imt] = data[1, :, m]
@@ -468,69 +517,67 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'), ('disagg', 'xml'))
-def export_disagg_csv_xml(ekey, dstore):
+@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'))
+def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     hmap4 = dstore['hmap4']
+    rlzs = dstore['full_lt'].get_realizations()
+    best_rlzs = dstore['best_rlzs'][:]
     N, M, P, Z = hmap4.shape
     imts = list(oq.imtls)
-    rlzs = dstore['full_lt'].get_realizations()
     fnames = []
-    writercls = hazard_writers.DisaggXMLWriter
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
-    ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
+    ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d'
     if ekey[0] == 'disagg_traditional':
         ex += '&traditional=1'
         trad = '-traditional'
     else:
         trad = ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
-    for s, m, p, z in iproduct(N, M, P, Z):
-        dic = {k: dstore['disagg/' + k][s, m, p, ..., z]
-               for k in oq.disagg_outputs}
-        if sum(arr.sum() for arr in dic.values()) == 0:  # no data
-            continue
-        imt = from_string(imts[m])
-        r = hmap4.rlzs[s, z]
-        rlz = rlzs[r]
-        iml = hmap4[s, m, p, z]
-        poe_agg = dstore['poe4'][s, m, p, z]
-        fname = dstore.export_path(
-            'rlz-%d-%s-sid-%d-poe-%d.xml' % (r, imt, s, p))
+    metadata = dstore.metadata
+    poes_disagg = ['nan'] * P
+    for p in range(P):
+        try:
+            poes_disagg[p] = str(oq.poes_disagg[p])
+        except IndexError:
+            pass
+    for s in range(N):
+        rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
         lon, lat = sitecol.lons[s], sitecol.lats[s]
-        metadata = dstore.metadata
-        imt_name = 'SA' if imt.string.startswith('SA') else imt.string
+        weights = numpy.array([rlzs[r].weight['weight'] for r in best_rlzs[s]])
+        weights /= weights.sum()  # normalize to 1
         metadata.update(investigation_time=oq.investigation_time,
-                        imt=imt_name,
-                        smlt_path='_'.join(rlz.sm_lt_path),
-                        gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
                         mag_bin_edges=bins['Mag'].tolist(),
                         dist_bin_edges=bins['Dist'].tolist(),
                         lon_bin_edges=bins['Lon'][s].tolist(),
                         lat_bin_edges=bins['Lat'][s].tolist(),
                         eps_bin_edges=bins['Eps'].tolist(),
-                        tectonic_region_types=decode(bins['TRT'].tolist()))
-        if ekey[1] == 'xml':
-            metadata['sa_period'] = getattr(imt, 'period', None) or None
-            metadata['sa_damping'] = getattr(imt, 'damping', None)
-            writer = writercls(fname, **metadata)
-            data = []
-            for k in oq.disagg_outputs:
-                data.append(DisaggMatrix(poe_agg, iml, k.split('_'), dic[k]))
-            writer.serialize(data)
-            fnames.append(fname)
-        else:  # csv
-            metadata['poe'] = poe_agg
-            for k in oq.disagg_outputs:
-                header = k.lower().split('_') + ['poe']
+                        tectonic_region_types=decode(bins['TRT'].tolist()),
+                        rlz_ids=best_rlzs[s].tolist(),
+                        weights=weights.tolist(),
+                        lon=lon, lat=lat)
+        for k in oq.disagg_outputs:
+            splits = k.lower().split('_')
+            header = ['imt', 'poe'] + splits + rlzcols
+            values = []
+            nonzeros = []
+            for m, p in iproduct(M, P):
+                imt = imts[m]
+                aw = extract(dstore, ex % (k, imt, s, p))
+                # for instance for Mag_Dist [(mag, dist, poe0, poe1), ...]
+                poes = aw[:, len(splits):]
+                if 'trt' in header:
+                    nonzeros.append(True)
+                else:
+                    nonzeros.append(poes.any())  # nonzero poes
+                for row in aw:
+                    values.append([imt, poes_disagg[p]] + list(row))
+            if any(nonzeros):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}
                 com.update(metadata)
-                fname = dstore.export_path(
-                    'rlz-%d-%s-sid-%d-poe-%d%s_%s.csv' %
-                    (r, imt, s, p, trad, k))
-                values = extract(dstore, ex % (k, imt, s, p, z))
+                fname = dstore.export_path('%s%s-%d.csv' % (k, trad, s))
                 writers.write_csv(fname, values, header=header,
                                   comment=com, fmt='%.5E')
                 fnames.append(fname)
@@ -541,7 +588,7 @@ def export_disagg_csv_xml(ekey, dstore):
 def export_realizations(ekey, dstore):
     data = extract(dstore, 'realizations').array
     path = dstore.export_path('realizations.csv')
-    writers.write_csv(path, data, fmt='%.7e')
+    writers.write_csv(path, data, fmt='%.7e', comment=dstore.metadata)
     return [path]
 
 
@@ -549,7 +596,8 @@ def export_realizations(ekey, dstore):
 def export_events(ekey, dstore):
     events = dstore['events'][()]
     path = dstore.export_path('events.csv')
-    writers.write_csv(path, events, fmt='%s', renamedict=dict(id='event_id'))
+    writers.write_csv(path, events, fmt='%s', renamedict=dict(id='event_id'),
+                      comment=dstore.metadata)
     return [path]
 
 

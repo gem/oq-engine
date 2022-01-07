@@ -24,34 +24,28 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class ZhaoEtAl2006AscSWISS05TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS05
 
-    def test_mean(self):
+    def test_all(self):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-5.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_total(self):
-        self.check('ZHAO06Swiss/zh_2006_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.50)
+                   'ZHAO06Swiss/zh_2006_phis_ss_embeded.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.50)
 
 
 class ZhaoEtAl2006AscSWISS03TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS03
 
-    def test_mean(self):
+    def test_all(self):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-3.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_total(self):
-        self.check('ZHAO06Swiss/zh_2006_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.50)
+                   'ZHAO06Swiss/zh_2006_phis_ss_embeded.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.50)
 
 
 class ZhaoEtAl2006AscSWISS08TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS08
 
-    def test_mean(self):
+    def test_all(self):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-8.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_total(self):
-        self.check('ZHAO06Swiss/zh_2006_phis_ss_embeded.csv',
-                   max_discrep_percentage=0.50)
+                   'ZHAO06Swiss/zh_2006_phis_ss_embeded.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.50)

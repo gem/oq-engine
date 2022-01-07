@@ -1,17 +1,164 @@
   [Michele Simionato]
+  * Fixed the case of continuous fragility functions with minIML=noDamageLimit
+
+  [Miguel Leonardo-Suárez]
+  * Added GMPE from Jaimes et al. (2020) for Mexican intraslab earthquakes
+
+  [Michele Simionato]
+  * Enforced ps_grid_spacing <= pointsource_distance
+  * Internal: added command `oq plot source_data?`
+  * The engine is now splitting the MultiFaultSources, thus improving the task
+    distribution
+
+  [Claudia Mascandola]
+  * Added a new class to the abrahamson_2015 gmm.
+  * Added a new class to the lanzano_luzi_2019 and skarlatoudis_2013 gmms
+
+  [Marco Pagani, Shreyasvi]
+  * Added GMM from Bora et al. (2019)
+  * Fixed bug in the multifault surface when defined using kite fault surfaces
+
+  [Giuseppina Tusa]
+  * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs
+    from Tusa et al. (2020).
+
+  [Michele Simionato]
+  * Added command `oq compare uhs CALC_1 CALC_2`
+  * `split_sources=false` is now honored in disaggregation calculations
+  * Internal: rup/src_id now refers to the row in the source_info table
+
+  [Miguel Leonardo-Suárez]
+  * Added the GMPE Arroyo et al. (2010) for Mexican subduction interface events
+
+  [Marco Pagani]
+  * Added a new method to the modifiable GMPE with which is possible to
+    compute spatially correlated ground-motion fields even when the initial
+    GMM only provides the total standard deviation.
+  * Fixed a bug in the `modify_recompute_mmax`
+  * Added a `get_coeffs` method to the CoeffTable class
+  * Added support for EAS, FAS, DRVT intensitity measure types
+
+  [Michele Simionato]
+  * Extended the mag-dependent filtering to the event based calculator
+  * The flag discrete_damage_distribution=true was incorrectly ignored when
+    computing the consequences
+  * Implemented `reaggregate_by` feature
+  * Supported the `custom_site_id` in the GMF exporters
+  * Bug fix: the site collection of the child calculation was ignored when
+    using the --hazard-calculation-id option
+  * Supported Python 3.9 and deprecated Python 3.6
+  * Extended `oq prepare_site_model` to support .csv.gz files
+  * Solved the issue of "compute gmfs" slow tasks in event_based and used
+    the same approach in classical calculations too
+  * Made sure `valid.gsim` instantiates the GSIM
+  * ShakeMap calculations failing with a nonpositive definite correlation
+    matrix now point out to the manual for the solution of the problem
+  * Introduced the GodaAtkinson2009 cross correlation between event model
+  * Specifying consequence files without fragility files now raises an error
+  * Fixed a bug in event_based_risk with nontrivial taxonomy mapping producing
+    NaNs in the event loss table
+  * Internal: added kubernetes support from the WebUI
+
+  [Shreyasvi Chandrasekhar]
+  * Added a new GMPE for significant duration proposed by Bahrampouri et al
+    (2021).
+
+  [Claudia Mascandola]
+  * Added the computation of tau and phi stdevs to the sgobba_2020 GMPE
+  * Added a new class to the lanzano_2019 gmm.
+
+  [Michele Simionato]
+  * Changed completely the storage of the PoEs and reduced the memory
+    consumption in classical calculations (plus 4x speedup in "postclassical")
+  * Changed the behavior of `sites_slice`
+  * Changed `custom_site_id` to an ASCII string up to 6 characters
+  * Fixed the error raised in presence of a mag-dep distance for a tectonic
+    region type and a scalar distance for another one
+
+  [Yen-Shin Chen]
+  * Added the Thingbaijam et al. (2017) Magnitude Scaling Law for Strike-slip
+
+  [Michele Simionato]
+  * Changed the API of `ContextMaker.get_mean_stds`
+  * Extended the WebUI to run sensitivity analysis calculations
+  * Changed the string representation of logic tree paths and enforced a
+    maximum of 64 branches per branchset
+  * Added command `oq info disagg`
+  * Accepted site models with missing parameters by using the global site
+    parameters instead
+  * Supported the syntax
+    `source_model_logic_tree_file = ${mosaic}/XXX/in/ssmLT.xml`
+  * Fixed a performance bug with ignore_master_seed=true
+  * Added a command `oq info cfg` to show the configuration file paths
+  * Added a check on the intensity measure levels with `--hc` is used
+  * Bug fix: pointsource_distance = 0 was not honored
+  * Added a warning in case of global duplicated branch IDs in the gsim logic
+    tree file
+  * Fixed a small bug of `oq zip job_haz.ini -r job_risk.ini`
+  * Optimized the aggregation of losses in event_based_risk and made it possible
+    to aggregate by site_id for more than 65,536 sites
+  * Fixed the calculation of average insured losses with a nontrivial taxonomy
+    mapping: now the insured losses are computed before the average procedure,
+    not after
+  * Unified scenario_risk with event_based_risk, changing the numbers
+    when producing discrete damage distributions
+  * Added `aggrisk` output to event based damage calculation
+  * Added parameter `discrete_damage_distribution` in scenario damage
+    calculations and changed the default behavior
+  * Deprecated consequence models in XML format
+  * Event based damage calculations now explicitly require to specify
+    `number_of_logic_tree_samples` (before it assumed a default of 1)
+
+  [Elena Manea, Laurentiu Danciu]
+  * Added the GMPE Manea (2021)
+
+  [Michele Simionato]
+  * Added a check against duplicated branchset IDs
+  * Improved error checking when reading the taxonomy mapping file
+  * Renamed conversion -> risk_id in the header of the taxonomy mapping file
+
+  [Antonio Ettorre]
+  * Bumped h5py to version 3.1.0
+
+  [Michele Simionato]
+  * Renamed the parameter `individual_curves` -> `individual_rlzs`
+  * Reduced the number of disaggregation outputs and removed the long-time
+    deprecated XML exporters
+  * Fixed the ShakeMap calculator failing with a TypeError:
+    get_array_usgs_id() got an unexpected keyword argument 'id'
+  * Added `conseq_ratio` in the aggcurves exporter for event_based_damage
+  * Added a `conditional_spectrum` calculator
+  * Fixed an array<->scalar bug in abrahamson_gulerce_2020
+  * Restored the classical tiling calculator
+
+python3-oq-engine (3.12.0-1~xenial01) xenial; urgency=low
+
+  [Marco Pagani]
+  * Updated verification tables for Abrahamson et al. (2014) and checked
+    values with other public resources.
+
+  [Michele Simionato]
+  * Added command `oq info consequences`
+  * Improved error message for `area_source_discretization` too large
+  * Improved command `oq info exports`
+  * Internal: changed the signature of hazardlib.calc.hazard_curve.classical
+  * Extended the multi-rupture scenario calculator to multiple TRTs
+  * Removed the experimental feature `pointsource_distance=?`
+  * Refactored the GMPE tests, with a speedup of 1-14 times
+  * Added a script `utils/build_vtable` to build verification tables
   * `oq info gsim_logic_tree.xml` now displays the logic tree
   * Fixed a bug in the adjustment term in NSHMP2014 breaking the USA model
 
   [Graeme Weatherill]
   * Implements Abrahamson & Gulerce (2020) NGA Subduction GMPE
 
-  [Nico Kuehn/Graeme Weatherill]
+  [Nico Kuehn, Graeme Weatherill]
   * Implements Kuehn et al. (2020) NGA Subduction GMPE
 
-  [Chung-Han Chan/Jia-Cian Gao]
+  [Chung-Han Chan, Jia-Cian Gao]
   * Implements Lin et al. (2011)
 
-  [Graeme Weatherill/Nico Kuehn]
+  [Graeme Weatherill, Nico Kuehn]
   * Implements Si et al. (2020) NGA Subduction GMPE
 
   [Michele Simionato]
@@ -69,6 +216,7 @@
   [Marco Pagani, Michele Simionato]
   * Implemented MultiFaultSources
   * Added method for computing rjb to kite surfaces
+  * Added support for new epistemic uncertainties in the SSC LT
 
   [Michele Simionato]
   * Fixed newlines in the CSV exports on Windows
@@ -129,8 +277,6 @@
   * Added a check for the case of `aValue=-Inf` in the truncatedGR MFD
   * Extended the engine to read XML ShakeMaps from arbitrary sources (in
     particular local path names and web sites different from the USGS site)
-  * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
-    thus breaking the QGIS plugin on Windows
   * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11
     format
   * scenario_risk calculations starting from ruptures in CSV format now
@@ -146,7 +292,6 @@
     calculations
   * Weighted the heavy sources in parallel in event based calculations
   * Supported zero coefficient of variations with the beta distribution
-  * Fixed a bug in the agg_curves exporter with aggregate_by=id
   * Internal: changed how the agg_loss_table is stored
   * Fixed the avg_losses exporter when aggregate_by=id
   * Fully merged the calculators scenario_risk, event_based_risk and ebrisk and
@@ -155,6 +300,20 @@
   * Storing the agg_loss_table as 64 bit floats instead of 32 bit floats
   * Changed the algorithm used to generate the epsilons to avoid storing the
     epsilon matrix
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 06 Sep 2021 08:17:53 +0000
+
+python3-oq-engine (3.11.3-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
+    thus breaking the QGIS plugin on Windows
+  * Fix a bug when reusing a hazard calculation without `aggregate_by` for a
+    risk calculation with `aggregate_by`
+  * Fixed the aggregate curves exporter for `aggregate_by=id`: it was exporting
+    b'asset_id' instead of asset_id
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 22 Mar 2021 09:00:22 +0000
 
 python3-oq-engine (3.11.2-1~xenial01) xenial; urgency=low
 
@@ -3015,7 +3174,7 @@ python-oq-engine (2.0.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
   * Another export fix: made sure it is run by the current user
-  * Fixed the export: if the export directory does not exists, it is created
+  * Fixed the export: if the export directory does not exist, it is created
   * Introduced the configuration variable `multi_user`, false for source
     installations and true for package installations
   * Fixed the WebUI export

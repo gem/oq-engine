@@ -50,11 +50,12 @@ class ReportWriter(object):
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
+        'disagg_by_grp': 'Disaggregation by source group',
         'slow_sources': 'Slowest sources',
         'task:start_classical:0': 'Fastest task',
         'task:start_classical:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
-        'eff_ruptures': 'Computation times by source typology',
+        'weight_by_src': 'Computation times by source typology',
         'performance': 'Slowest operations',
     }
 
@@ -93,18 +94,18 @@ class ReportWriter(object):
             self.add(name)
         if 'full_lt' in ds:
             self.add('full_lt')
-            if ds['full_lt'].sm_rlzs[0].name != 'scenario':
-                # required_params_per_trt makes no sense for GMFs from file
-                self.add('required_params_per_trt')
+            self.add('required_params_per_trt')
         if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
             self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
+        if 'disagg_by_grp' in ds:
+            self.add('disagg_by_grp')
         if 'source_info' in ds:
             self.add('slow_sources')
-            self.add('eff_ruptures')
+            self.add('weight_by_src')
         if 'task_info' in ds:
             self.add('task_info')
             tasks = set(ds['task_info']['taskname'])
@@ -132,7 +133,7 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
-    with logs.init('calc', job_ini) as log:
+    with logs.init('job', job_ini) as log:
         oq = log.get_oqparam()
         if 'source_model_logic_tree' in oq.inputs:
             oq.calculation_mode = 'preclassical'

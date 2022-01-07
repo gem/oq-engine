@@ -21,13 +21,10 @@ Implements the tests for the set of GMPE classes included within the GMPE
 of Tusa and Langer (2016). Test tables were created by an excel spreadsheet
 that calculates expected values provided by the original authors.
 """
-from openquake.hazardlib.gsim.tusa_langer_2016 import (TusaLanger2016RepiBA08SE,
-                                                       TusaLanger2016RepiBA08DE,
-                                                       TusaLanger2016RepiSP87SE,
-                                                       TusaLanger2016RepiSP87DE,
-                                                       TusaLanger2016Rhypo)
-
-
+from openquake.hazardlib.gsim.tusa_langer_2016 import (
+    TusaLanger2016RepiBA08SE, TusaLanger2016RepiBA08DE,
+    TusaLanger2016RepiSP87SE, TusaLanger2016RepiSP87DE,
+    TusaLanger2016Rhypo)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Discrepancy percentages to be applied to all tests
@@ -46,13 +43,10 @@ class TusaLanger2016RepiBA08SETestCase(BaseGSIMTestCase):
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "TL16/TusaLanger2016BA08SE_STD_TOTAL.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class TusaLanger2016RepiBA08DETestCase(TusaLanger2016RepiBA08SETestCase):

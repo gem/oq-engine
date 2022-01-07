@@ -19,7 +19,7 @@
 """
 Implements SERA site amplification models
 class:`PitilakisEtAl2018`, `PitilakisEtAl2020`, `Eurocode8Amplification`,
-      `Eurocode8AmplificationDefault`,`SandikkayaDinsever2018`
+`Eurocode8AmplificationDefault`,`SandikkayaDinsever2018`
 """
 import numpy as np
 import copy
@@ -47,7 +47,7 @@ CONSTANTS = {
 
 IMLS = [0., 0.25, 0.5, 0.75, 1., 1.25]
 
-MEAN, INTER, INTRA = 0, 1, 2
+MEAN, SIGMA, INTER, INTRA = 0, 1, 2, 3
 
 get_amplification_factor = CallableDict()
 
@@ -228,14 +228,14 @@ class PitilakisEtAl2018(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
     #: Supported intensity measure types are not set
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set((PGA, SA))
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation type
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters are Vs30 and the Pitilakis et al (2018) site
     #: class (others will be added for the GMPE in question)
@@ -278,8 +278,7 @@ class PitilakisEtAl2018(GMPE):
         # Get PGA and Sa (1.0) from GMPE
         ctx_r = copy.copy(ctx)
         ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
-        [rock] = contexts.get_mean_stds(
-            [self.gmpe], ctx_r, [PGA(),  SA(1.0)], const.StdDev.ALL)
+        rock = contexts.get_mean_stds(self.gmpe, ctx_r, [PGA(),  SA(1.0)])
         pga_r = rock[0, 0]
         s_1_rp = rock[0, 1]
         s_s_rp = CONSTANTS["F0"] * np.exp(pga_r)
@@ -295,8 +294,7 @@ class PitilakisEtAl2018(GMPE):
         s_s = f_s * s_s_rp
 
         # NB: this is wasteful since means are computed and then discarded
-        [out] = contexts.get_mean_stds(
-            [self.gmpe], ctx_r, imts, const.StdDev.ALL)
+        out = contexts.get_mean_stds(self.gmpe, ctx_r, imts)
         for m, imt in enumerate(imts):
             # Get the mean ground motion using the design code spectrum
             mean[m] = get_amplified_mean(s_s, s_1, s_1_rp, imt)
@@ -502,7 +500,7 @@ class SandikkayaDinsever2018(GMPE):
     experimental = True
 
     #: Supported tectonic region type is undefined
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Shallow Crust"
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
     #: Supported intensity measure types are not set
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
@@ -573,8 +571,7 @@ class SandikkayaDinsever2018(GMPE):
         """
         ctx_r = copy.copy(ctx)
         ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
-        [rock] = contexts.get_mean_stds(
-            [self.gmpe], ctx_r, imts, const.StdDev.EVENT)
+        rock = contexts.get_mean_stds(self.gmpe, ctx_r, imts)
         for m, imt in enumerate(imts):
             psarock = np.exp(rock[MEAN][m])
             C = self.COEFFS_SITE[imt]

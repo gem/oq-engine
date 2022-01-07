@@ -28,7 +28,6 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class LanzanoEtAl2016_RJB_TestCase(BaseGSIMTestCase):
-
     GSIM_CLASS = LanzanoEtAl2016_RJB
 
     # Tables provided by original authors
@@ -38,23 +37,13 @@ class LanzanoEtAl2016_RJB_TestCase(BaseGSIMTestCase):
     INTER_FILE = "LAN2016/NI15_RJB_STD_INTER.csv"
     INTRA_FILE = "LAN2016/NI15_RJB_STD_INTRA.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=0.1)
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=0.1)
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
                    max_discrep_percentage=0.1)
 
 
-class LanzanoEtAl2016_Rhypo_TestCase(BaseGSIMTestCase):
-    
+class LanzanoEtAl2016_Rhypo_TestCase(BaseGSIMTestCase):   
     GSIM_CLASS = LanzanoEtAl2016_Rhypo
 
     # Tables provided by original authors
@@ -63,18 +52,7 @@ class LanzanoEtAl2016_Rhypo_TestCase(BaseGSIMTestCase):
     INTER_FILE = "LAN2016/NI15_Rhypo_STD_INTER.csv"
     INTRA_FILE = "LAN2016/NI15_Rhypo_STD_INTRA.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   self.INTER_FILE, self.INTRA_FILE,
                    max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=0.1)
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=0.1)
-

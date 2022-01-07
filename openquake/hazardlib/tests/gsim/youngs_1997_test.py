@@ -33,35 +33,28 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class YoungsEtAl1997SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YoungsEtAl1997SInter
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YOUNGS97/Y97SInter_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('YOUNGS97/Y97SInter_STD_TOTAL.csv',
+                   'YOUNGS97/Y97SInter_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
 
 class YoungsEtAl1997SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YoungsEtAl1997SSlab
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YOUNGS97/Y97SSlab_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('YOUNGS97/Y97SSlab_STD_TOTAL.csv',
+                   'YOUNGS97/Y97SSlab_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
 
 class YoungsEtAl1997GSCSSlabBestTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YoungsEtAl1997GSCSSlabBest
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YOUNGS97/YoungsEtAl1997GSCSSlabBest_MEAN.csv',
                    max_discrep_percentage=0.1)
 
-    def test_std_total(self):
         self.check('YOUNGS97/Y97SSlab_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
@@ -69,11 +62,9 @@ class YoungsEtAl1997GSCSSlabBestTestCase(BaseGSIMTestCase):
 class YoungsEtAl1997GSCSSlabUpperLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YoungsEtAl1997GSCSSlabUpperLimit
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YOUNGS97/YoungsEtAl1997GSCSSlabUpperLimit_MEAN.csv',
                    max_discrep_percentage=0.1)
-
-    def test_std_total(self):
         self.check('YOUNGS97/Y97SSlab_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
@@ -81,11 +72,9 @@ class YoungsEtAl1997GSCSSlabUpperLimitTestCase(BaseGSIMTestCase):
 class YoungsEtAl1997GSCSSlabLowerLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YoungsEtAl1997GSCSSlabLowerLimit
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YOUNGS97/YoungsEtAl1997GSCSSlabLowerLimit_MEAN.csv',
                    max_discrep_percentage=0.1)
-
-    def test_std_total(self):
         self.check('YOUNGS97/Y97SSlab_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
@@ -93,10 +82,8 @@ class YoungsEtAl1997GSCSSlabLowerLimitTestCase(BaseGSIMTestCase):
 class YoungsEtAl1997SInterNSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = YoungsEtAl1997SInterNSHMP2008
 
-    def test_mean(self):
+    def test_all(self):
         self.check('YOUNGS97/Y97SInterNSHMP2008_MEAN.csv',
-                   max_discrep_percentage=2.5)
-
-    def test_std_total(self):
-        self.check('YOUNGS97/Y97SInterNSHMP2008_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'YOUNGS97/Y97SInterNSHMP2008_STD_TOTAL.csv',
+                   max_discrep_percentage=2.5,
+                   std_discrep_percentage=0.1)

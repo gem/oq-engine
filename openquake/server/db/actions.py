@@ -281,16 +281,14 @@ DISPLAY_NAME = {
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
-    'agg_curves-rlzs': 'Aggregate Loss Curves',
-    'agg_curves-stats': 'Aggregate Loss Curves Statistics',
-    'agg_losses-rlzs': 'Aggregate Losses',
-    'agg_losses-stats': 'Aggregate Losses Statistics',
+    'aggrisk': 'Aggregate Risk',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
     'aggcurves': 'Aggregate Risk Curves',
     'avg_gmf': 'Average Ground Motion Field',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
+    'cs-stats': 'Mean Conditional Spectra',
     'ruptures': 'Earthquake Ruptures',
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
@@ -684,20 +682,16 @@ def get_executing_jobs(db):
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :returns:
-        (id, pid, user_name, start_time) tuples
+        (id, user_name, start_time) tuples
     """
     fields = 'id,pid,user_name,start_time'
     running = List()
     running._fields = fields.split(',')
-
     query = ('''-- executing jobs
-SELECT %s FROM job WHERE status='executing' ORDER BY id desc''' % fields)
-    rows = db(query)
-    for r in rows:
-        # if r.pid is 0 it means that such information
-        # is not available in the database
-        if r.pid and psutil.pid_exists(r.pid):
-            running.append(r)
+SELECT %s FROM job WHERE is_running=1
+AND start_time > datetime('now', '-2 days')
+ORDER BY id desc''' % fields)
+    running.extend(db(query))
     return running
 
 

@@ -42,7 +42,7 @@ def get_ctx(subset_df):
         rjb.append(row.dist_jb)
     sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
     rup = Dummy.get_rupture(
-        mag=row.rup_mag, ev_lat=row.lat_epi, ev_lon=row.lon_epi)
+        mag=row.rup_mag, hypo_lat=row.lat_epi, hypo_lon=row.lon_epi)
     rup.rjb = np.array(rjb)
     return contexts.full_context(sites, rup)
 
@@ -57,19 +57,27 @@ def get_epicenters(df):
     return epicenters
 
 
-def check(gmm, tags, ctx, subset_df, sigma):
+def chk(gmm, tags, ctx, subset_df, sigma):
     periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
                SA(period=1.0), SA(period=2.0)]
-    stdt = [const.StdDev.TOTAL]
+    stdt = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT]
     # Compute and check results for the NON ergodic model
     for i in range(len(periods)):
         imt = periods[i]
         tag = tags[i]
-        mean, [std] = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
-        if sigma:  # checking the total stddev
+        mean, stddevs = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
+        if sigma == "1":  # checking the Total stddev
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
-            computed = std  # in ln
+            computed = stddevs[0]  # in ln
+        elif sigma == "2":  # checking tau
+            expected = np.log(10.0**subset_df[tag].to_numpy())
+            # in VerifTable are in log10
+            computed = stddevs[1]  # in ln
+        elif sigma == "3":  # checking phi
+            expected = np.log(10.0**subset_df[tag].to_numpy())
+            # in VerifTable are in log10
+            computed = stddevs[2]  # in ln
         else:  # checking the mean
             expected = subset_df[tag].to_numpy()  # Verif Table in g unit
             computed = np.exp(mean)  # in OQ are computed in g Units in ln
@@ -121,18 +129,32 @@ class Sgobba2020Test(unittest.TestCase):
             subset_df = df.loc[idx]
             ctx = get_ctx(subset_df)
             tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
-            check(SgobbaEtAl2020(cluster=0), tags, ctx, subset_df, sigma=False)
+            chk(SgobbaEtAl2020(cluster=0), tags, ctx, subset_df, sigma="0")
 
     def test_NON_ERGODIC(self):
         fname = 'ValidationTable_MEAN_NERG_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
         for gmm, ctx, subset_df in gen_data(df):
-            check(gmm, tags, ctx, subset_df, sigma=False)
+            chk(gmm, tags, ctx, subset_df, sigma="0")
 
-    def test_SIGMA(self):
+    def test_SIGMAtot(self):
         fname = 'ValidationTable_STD_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
         for gmm, ctx, subset_df in gen_data(df):
-            check(gmm, tags, ctx, subset_df, sigma=True)
+            chk(gmm, tags, ctx, subset_df, sigma="1")
+
+    def test_tau(self):
+        fname = 'ValidationTable_STD_tau.csv'
+        df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
+        tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
+        for gmm, ctx, subset_df in gen_data(df):
+            chk(gmm, tags, ctx, subset_df, sigma="2")
+
+    def test_phi(self):
+        fname = 'ValidationTable_STD_phi.csv'
+        df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
+        tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
+        for gmm, ctx, subset_df in gen_data(df):
+            chk(gmm, tags, ctx, subset_df, sigma="3")

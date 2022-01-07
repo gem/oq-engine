@@ -259,6 +259,9 @@ class Polygon(object):
             # ... and by the same distance along meridian in outer one
             _, latitude = geodetic.point_at(west, latitude, 180, mesh_spacing)
 
+        if len(lons) == 0:
+            raise ValueError("The area_source_discretization is too large "
+                             "(%d km)" % mesh_spacing)
         return Mesh(numpy.array(lons), numpy.array(lats), depths=None)
 
 

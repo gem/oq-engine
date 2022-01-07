@@ -111,7 +111,6 @@ The following file (on all nodes) should be modified to enable
 oq_distribute = zmq
 
 [dbserver]
-multi_user = true
 file = /var/lib/openquake/oqdata/db.sqlite3
 # daemon bind address; must be a valid IP address
 listen = < IP address of master>

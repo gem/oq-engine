@@ -31,12 +31,9 @@ import numpy
 class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CauzziFaccioli2008
 
-    def test_mean(self):
+    def test_all(self):
         self.check('CF08/CF08_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('CF08/CF08_STD_TOTAL.csv',
+                   'CF08/CF08_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
     def test_rhypo_smaller_than_15(self):
@@ -49,6 +46,7 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         ctx.vs30 = numpy.array([800.0, 800.0, 800.0])
         ctx.mag = 5.0
         ctx.rake = 0
+        ctx.occurrence_rate = .0001
         ctx.rhypo = numpy.array([0.0, 10.0, 16.0])
         ctx.rhypo.flags.writeable = False
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
@@ -62,10 +60,7 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
 class FaccioliEtAl2010TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FaccioliEtAl2010
 
-    def test_mean(self):
+    def test_all(self):
         self.check('F10/F10_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('F10/F10_STD_TOTAL.csv',
+                   'F10/F10_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)

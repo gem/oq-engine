@@ -28,18 +28,9 @@ class HongGoda2007TestCase(BaseGSIMTestCase):
     """
     GSIM_CLASS = HongGoda2007
 
-    def test_mean(self):
+    def test_all(self):
         self.check("hg2007/HONG_GODA_2007_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_intra(self):
-        self.check("hg2007/HONG_GODA_2007_INTRA_STDDEV.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_inter(self):
-        self.check("hg2007/HONG_GODA_2007_INTER_STDDEV.csv",
-                   max_discrep_percentage=MAX_DISCREP)
-
-    def test_std_total(self):
-        self.check("hg2007/HONG_GODA_2007_TOTAL_STDDEV.csv",
+                   "hg2007/HONG_GODA_2007_INTRA_STDDEV.csv",
+                   "hg2007/HONG_GODA_2007_INTER_STDDEV.csv",
+                   "hg2007/HONG_GODA_2007_TOTAL_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP)

@@ -19,9 +19,7 @@
 from openquake.hazardlib.gsim.frankel_1996 import (
     FrankelEtAl1996MblgAB1987NSHMP2008,
     FrankelEtAl1996MblgJ1996NSHMP2008,
-    FrankelEtAl1996MwNSHMP2008
-)
-
+    FrankelEtAl1996MwNSHMP2008)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import SA
@@ -35,13 +33,11 @@ import numpy
 class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FrankelEtAl1996MblgAB1987NSHMP2008
 
-    def test_mean(self):
+    def test_all(self):
         self.check('FRANKEL1996/FRANKEL96MblgAB1987_MEAN.csv',
-                   max_discrep_percentage=1.9)
-
-    def test_std_total(self):
-        self.check('FRANKEL1996/FRANKEL96MblgAB1987_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'FRANKEL1996/FRANKEL96MblgAB1987_STD_TOTAL.csv',
+                   max_discrep_percentage=1.9,
+                   std_discrep_percentage=0.1)
 
     def test_non_supported_imt(self):
         ctx = RuptureContext()
@@ -103,20 +99,16 @@ class FrankelEtAl1996MblgJ1996NSHMP2008TestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('FRANKEL1996/FRANKEL96MblgJ1996_MEAN.csv',
-                   max_discrep_percentage=2.0)
-
-    def test_std_total(self):
-        self.check('FRANKEL1996/FRANKEL96MblgJ1996_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'FRANKEL1996/FRANKEL96MblgJ1996_STD_TOTAL.csv',
+                   max_discrep_percentage=2.0,
+                   std_discrep_percentage=0.1)
 
 
 class FrankelEtAl1996MwNSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FrankelEtAl1996MwNSHMP2008
 
-    def test_mean(self):
+    def test_all(self):
         self.check('FRANKEL1996/FRANKEL96Mw_MEAN.csv',
-                   max_discrep_percentage=1.8)
-
-    def test_std_total(self):
-        self.check('FRANKEL1996/FRANKEL96Mw_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'FRANKEL1996/FRANKEL96Mw_STD_TOTAL.csv',
+                   max_discrep_percentage=1.8,
+                   std_discrep_percentage=0.1)

@@ -53,7 +53,7 @@ def main(cmd, args=()):
         sys.exit('Wrong number of arguments, expected %s, got %s' % (
             commands[cmd], args))
     elif (cmd not in commands and not cmd.upper().startswith('SELECT') and
-          config.dbserver.multi_user and getpass.getuser() != 'openquake'):
+          config.multi_user and getpass.getuser() != 'openquake'):
         sys.exit('You have no permission to run %s' % cmd)
     dbserver.ensure_on()
     res = logs.dbcmd(cmd, *convert(args))

@@ -9,6 +9,7 @@ LOCKDOWN = True
 # Disable sharing of results across users
 ACL_ON = True
 
+
 INSTALLED_APPS += (
     'django_pam',
 )
@@ -16,3 +17,6 @@ INSTALLED_APPS += (
 AUTHENTICATION_BACKENDS += (
     'django_pam.auth.backends.PAMBackend',
 )
+
+#Static Folder
+STATIC_ROOT = ''

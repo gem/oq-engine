@@ -28,6 +28,10 @@ SOCKTYPE = {zmq.REQ: 'REQ', zmq.REP: 'REP',
             zmq.ROUTER: 'ROUTER', zmq.DEALER: 'DEALER'}
 
 
+class TimeoutError(RuntimeError):
+    pass
+
+
 def bind(end_point, socket_type):
     """
     Bind to a zmq URL; raise a proper error if the URL is invalid; return
@@ -155,6 +159,11 @@ class Socket(object):
             raise exc.__class__('%s: %r' % (exc, obj))
         self.num_sent += 1
         if self.socket_type == zmq.REQ:
+            ok = self.zsocket.poll(30000)  # 30 seconds
+            if not ok:
+                raise TimeoutError(
+                    'While sending %s; probably the DbServer is off' %
+                    repr(obj))
             return self.zsocket.recv_pyobj()
 
     def __repr__(self):

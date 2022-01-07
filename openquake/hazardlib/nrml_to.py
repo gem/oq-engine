@@ -99,7 +99,7 @@ def to_wkt(geom, coords):
 # https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
 def appendrow(row, rows, chatty, sections=()):
     if row.code == 'F':  # row.coords is a multiFaultSource
-        row.coords.create_inverted_index(sections)
+        row.coords.set_sections(sections)
         row.coords = [row.coords.polygon.coords]
     row.wkt = wkt = to_wkt(row.geom, row.coords)
     if wkt.startswith('POINT'):
@@ -140,7 +140,7 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
     t0 = time.time()
     if geometry:
         fnames = [geometry] + fnames
-    sections = []
+    sections = {}
     for fname in fnames:
         logging.info('Reading %s', fname)
         converter.fname = fname
@@ -149,7 +149,9 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
         srcs = collections.defaultdict(list)  # geom_index -> rows
         if fname == geometry:
             for srcnode in root.geometryModel:
-                sections.append(converter.convert_node(srcnode))
+                sec = converter.convert_node(srcnode)
+                sections[sec.sec_id] = sec
+            sections = {sid: sections[sid] for sid in sections}
         elif 'nrml/0.4' in root['xmlns']:
             for srcnode in root.sourceModel:
                 appendrow(converter.convert_node(srcnode),

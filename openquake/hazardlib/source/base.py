@@ -20,11 +20,23 @@ seismic sources.
 import abc
 import zlib
 import numpy
+from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 EPS = .01  # used for src.nsites outside the maximum_distance
+
+
+def get_code2cls():
+    """
+    :returns: a dictionary source code -> source class
+    """
+    dic = {}
+    for cls in general.gen_subclasses(BaseSeismicSource):
+        if hasattr(cls, 'code'):
+            dic[cls.code] = cls
+    return dic
 
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
@@ -40,31 +52,17 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
+    id = -1  # to be set
     trt_smr = 0  # set by the engine
-    nsites = 0  # set when filtering the source
-    ngsims = 1
+    nsites = 1  # set when filtering the source
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
+    weight = 1  # set in contexts
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
         pass
-
-    @property
-    def weight(self):
-        """
-        Determine the source weight from the number of ruptures
-        """
-        # NB: for point sources .num_ruptures is preset in preclassical,
-        # and it is less than the real number of ruptures if the
-        # pointsource_distance is set
-        if not self.num_ruptures:
-            self.num_ruptures = self.count_ruptures()
-        w = self.num_ruptures * self.ngsims * (.1 if self.nsites == EPS else 1)
-        if not hasattr(self, 'nodal_plane_distribution'):  # not pointlike
-            w *= 10  # increase weight of non point sources
-        return w
 
     @property
     def trt_smrs(self):
@@ -145,6 +143,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         elif hasattr(self, 'source_file'):
             # unbound UCERFSource
             mags.add(numpy.nan)
+        elif hasattr(self, 'mags'):  # MultiFaultSource
+            mags.update(mag for mag in self.mags if mag >= self.min_mag)
         else:  # nonparametric
             for rup, pmf in self.data:
                 if rup.mag >= self.min_mag:
@@ -246,6 +246,14 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         from openquake.hazardlib import nrml, sourcewriter
         return nrml.to_string(sourcewriter.obj_to_node(self))
 
+    def __repr__(self):
+        """
+        String representation of a source, displaying the source class name
+        and the source id.
+        """
+        return '<%s %s, weight=%.1f>' % (
+            self.__class__.__name__, self.source_id, self.weight)
+
 
 class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     """
@@ -328,13 +336,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         min_mag, max_mag = self.mfd.get_min_max_mag()
         return max(self.min_mag, min_mag), max_mag
 
-    def __repr__(self):
-        """
-        String representation of a source, displaying the source class name
-        and the source id.
-        """
-        return '<%s %s>' % (self.__class__.__name__, self.source_id)
-
     def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
         Yields one random rupture from a source. IMPORTANT: this method
@@ -359,10 +360,57 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
                 rup.idx = idx
                 return rup
 
-    def modify_adjust_mfd_from_slip(self, slip_rate, rigidity):
+    def modify_set_msr(self, new_msr):
+        """
+        Updates the MSR originally assigned to the source
+
+        :param new_msr:
+            An instance of the :class:`openquake.hazardlib.scalerel.BaseMSR`
+        """
+        self.magnitude_scaling_relationship = new_msr
+
+    def modify_set_slip_rate(self, slip_rate: float):
+        """
+        Updates the slip rate assigned to the source
+
+        :param slip_rate:
+            The value of slip rate [mm/yr]
+        """
+        self.slip_rate = slip_rate
+
+    def modify_set_mmax_truncatedGR(self, mmax: float):
+        """
+        Updates the mmax assigned. This works on for parametric MFDs.s
+
+        :param mmax:
+            The value of the new maximum magnitude
+        """
+        # Check that the current src has a TruncatedGRMFD MFD
+        msg = 'This modification works only when the source MFD is a '
+        msg += 'TruncatedGRMFD'
+        assert self.mfd.__class__.__name__ == 'TruncatedGRMFD', msg
+        self.mfd.max_mag
+
+    def modify_recompute_mmax(self, epsilon: float = 0):
+        """
+        Updates the value of mmax using the msr and the area of the fault
+
+        :param epsilon:
+            Number of standard deviations to be added or substracted
+        """
+        msr = self.magnitude_scaling_relationship
+        area = self.get_fault_surface_area()  # area in km^2
+        mag = msr.get_median_mag(area=area, rake=self.rake)
+        std = msr.get_std_dev_mag(area=area, rake=self.rake)
+        self.mfd.max_mag = mag + epsilon * std
+
+    def modify_adjust_mfd_from_slip(self, slip_rate: float, rigidity: float,
+                                    recompute_mmax: float = None):
         """
         :slip_rate:
             A float defining slip rate [in mm]
+        :rigidity:
+            A float defining material rigidity [in GPa]
         :rigidity:
             A float defining material rigidity [in GPa]
         """

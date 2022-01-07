@@ -53,7 +53,7 @@ def get_dmg_csq(crm, assets_by_site, gmf):
                 [rm], [w] = crm.get_rmodels_weights(loss_type, taxonomy)
                 fracs = rm.scenario_damage(loss_type, assets, df, 'peril')
                 for asset, frac in zip(assets, fracs):
-                    dmg = asset['number'] * frac  # shape (1, D)
+                    dmg = asset['value-number'] * frac  # shape (1, D)
                     csq = crm.compute_csq(asset, frac, loss_type)
                     out[asset['ordinal'], li, 0, :D] = dmg
                     out[asset['ordinal'], li, 0, D] = csq['losses']
@@ -104,7 +104,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
             for peril in binary_perils:
                 rec[occupant + '-' + peril] = haz[peril] * occ
         for peril in binary_perils:
-            rec['number-' + peril] = haz[peril] * rec['number']
+            rec['number-' + peril] = haz[peril] * rec['value-number']
     return arr
 
 

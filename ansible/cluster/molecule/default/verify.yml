@@ -8,22 +8,14 @@
   gather_facts: false
 
   tasks:
-  - name: Copy job.zip to instance
-    copy:
-      src: job.zip
-      dest: /home/openquake/
-      owner: openquake
-      group: openquake
-      mode: '0644'
-
-  - name: Run a Demo calc for EventBasedRisk
-    command: /usr/bin/oq engine --run job.zip
+  - name: Run a Demo calc for EventBasedRisk using https
+    command: /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
     args:
-      chdir: /home/openquake
+      chdir: /home.dev/openquake
   
   - name: Display outputs of last calculcation 
     command: /usr/bin/oq engine --list-outputs -1
     args:
-      chdir: /home/openquake
+      chdir: /home.dev/openquake
     register: calc
   - debug: msg="{{ calc.stdout }}"

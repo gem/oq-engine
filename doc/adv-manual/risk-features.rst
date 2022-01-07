@@ -67,58 +67,6 @@ Internally both the first usage and the second usage are treated in
 the same way, since the first usage is a special case of the second
 when all the weights are equal to 1.
 
-Currently, this taxonomy mapping feature has been tested only for the scenario
-and event based risk calculators.
-
-
-Extended consequences
-----------------------------------------------
-
-Scenario damage calculations produce the so called *asset damage table*,
-i.e. a set of damage distributions (the probability of being in each
-damage state listed in the fragility functions) per each asset, event
-and loss type. From the asset damage table it is possible to compute
-generic consequences by multiplying for known coefficients specified in
-what are called *consequence model*. For instance, from the probability
-of being in the collapsed damage state, one might estimate the number of
-fatalities, given the right multiplicative coefficient.
-
-By default the engine allows to compute economic losses; in that case the
-coefficients depends on the taxonomy and the consequence model can be
-represented as a CSV file like the following:
-
-===================	========	============	========	==========	===========	==========	
- taxonomy          	 consequence  	 loss_type  	 slight 	 moderate 	 extensive 	 complete 	
--------------------	--------	------------	--------	----------	-----------	----------	
- CR_LFINF-DUH_H2   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
- CR_LFINF-DUH_H4   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
- MCF_LWAL-DNO_H3   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
- MR_LWAL-DNO_H1    	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
- MR_LWAL-DNO_H2    	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
- MUR_LWAL-DNO_H1   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
- W-WS_LPB-DNO_H1   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
- W-WWD_LWAL-DNO_H1 	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
- MR_LWAL-DNO_H3    	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
-===================	========	============	========	==========	===========	==========	
-
-The first field in the header is the name of a tag in the exposure; in
-this case it is the taxonomy but it could be any other tag — for instance,
-for volcanic ash-fall consequences, the roof-type might be more relevant,
-and for recovery time estimates, the occupancy class might be more relevant.
-The framework is meant to be used for generic consequences,
-not necessarily limited to earthquakes, because since version 3.6 the engine
-provides a multi-hazard risk calculator.
-
-The second field of the header, the ``consequence``, is a string
-identifying the kind of consequence we are considering. It is
-important because it is associated to the name of the plugin function
-to use to compute the consequence.
-
-The other fields in the header are the loss_type and the damage states.
-For instance the coefficient 0.25 for "moderate" means that the cost to
-bring a structure in "moderate damage" back to its undamaged state is
-25% of the total replacement value of the asset.
-
 
 Scenarios from ShakeMaps
 --------------------------
@@ -305,17 +253,18 @@ grid is on the sea or on high mountains, so actually there are
 around ~500 effective sites. Computing a correlation matrix of size
 500 x 500 is feasible, so the risk computation can be performed.
 
-Clearly in situations in which the number of hazard sites is too large,
-approximations will have to be made such as using a larger `region_grid_spacing`.
-Disabling spatial AND cross correlation makes it possible run much larger 
-calculations. The performance can be further increased by not using a 
-``truncation_level``.
+Clearly in situations in which the number of hazard sites is too
+large, approximations will have to be made such as using a larger
+`region_grid_spacing`.  Disabling spatial AND cross correlation makes
+it possible run much larger calculations. The performance can be
+further increased by not using a ``truncation_level``.
 
-When applying correlation, a soft cap on the size of the calculations is 
-defined. This is done and modifiable through the parameter ``cholesky_limit`` which
-refers to the number of sites multiplied by the number of intensity measure types 
-used in the vulnerability model. Raising that limit is at your own peril, as you 
-might run out of memory during calculation or may encounter instabilities in the 
+When applying correlation, a soft cap on the size of the calculations
+is defined. This is done and modifiable through the parameter
+``cholesky_limit`` which refers to the number of sites multiplied by
+the number of intensity measure types used in the vulnerability
+model. Raising that limit is at your own peril, as you might run out
+of memory during calculation or may encounter instabilities in the
 calculations as described above.
 
 If the ground motion values or the standard deviations are particularly

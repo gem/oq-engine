@@ -106,7 +106,7 @@ def _get_magnitude_vector_properties(catalogue, config):
     only above the minimum magnitude - returns corresponding properties'''
 
     mmin = config.get('input_mmin', np.min(catalogue['magnitude']))
-    neq = np.float(np.sum(catalogue['magnitude'] >= mmin - 1.E-7))
+    neq = float(np.sum(catalogue['magnitude'] >= mmin - 1.E-7))
     return neq, mmin
 
 

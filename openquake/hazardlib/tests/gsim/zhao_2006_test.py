@@ -43,21 +43,13 @@ import numpy
 class ZhaoEtAl2006AscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006Asc
 
-    def test_mean(self):
+    def test_all(self):
         self.check('ZHAO06/Z06Asc_MEAN.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_intra(self):
-        self.check('ZHAO06/Z06Asc_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('ZHAO06/Z06Asc_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('ZHAO06/Z06Asc_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'ZHAO06/Z06Asc_STD_INTRA.csv',
+                   'ZHAO06/Z06Asc_STD_INTER.csv',
+                   'ZHAO06/Z06Asc_STD_TOTAL.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)
 
     def test_mean_vs30_greater_than_1100(self):
         self.check('ZHAO06/Z06Asc_MEAN_Vs30_1200.csv',
@@ -67,21 +59,13 @@ class ZhaoEtAl2006AscTestCase(BaseGSIMTestCase):
 class ZhaoEtAl2006SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006SInter
 
-    def test_mean(self):
+    def test_all(self):
         self.check('ZHAO06/Z06SInter_MEAN.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_intra(self):
-        self.check('ZHAO06/Z06SInter_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('ZHAO06/Z06SInter_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('ZHAO06/Z06SInter_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'ZHAO06/Z06SInter_STD_INTRA.csv',
+                   'ZHAO06/Z06SInter_STD_INTER.csv',
+                   'ZHAO06/Z06SInter_STD_TOTAL.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)
 
     def test_mean_vs30_greater_than_1100(self):
         self.check('ZHAO06/Z06SInter_MEAN_Vs30_1200.csv',
@@ -93,19 +77,11 @@ class ZhaoEtAl2006SSlabTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('ZHAO06/Z06SSlab_MEAN.csv',
-                   max_discrep_percentage=0.4)
-
-    def test_std_intra(self):
-        self.check('ZHAO06/Z06SSlab_STD_INTRA.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('ZHAO06/Z06SSlab_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_total(self):
-        self.check('ZHAO06/Z06SSlab_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'ZHAO06/Z06SSlab_STD_INTRA.csv',
+                   'ZHAO06/Z06SSlab_STD_INTER.csv',
+                   'ZHAO06/Z06SSlab_STD_TOTAL.csv',
+                   max_discrep_percentage=0.4,
+                   std_discrep_percentage=0.1)
 
     def test_mean_vs30_greater_than_1100(self):
         self.check('ZHAO06/Z06SSlab_MEAN_Vs30_1200.csv',
@@ -123,6 +99,7 @@ class ZhaoEtAl2006SSlabTestCase(BaseGSIMTestCase):
         ctx.rake = 0.0
         ctx.hypo_depth = 0.0
         ctx.rrup = numpy.array([0.0, 0.2])
+        ctx.occurrence_rate = .0001
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         ctx.rrup = numpy.array([0.1, 0.2])
@@ -135,13 +112,11 @@ class ZhaoEtAl2006SSlabTestCase(BaseGSIMTestCase):
 class ZhaoEtAl2006SInterNSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006SInterNSHMP2008
 
-    def test_mean(self):
+    def test_all(self):
         self.check('ZHAO06/Z06SInterNSHMP_MEAN.csv',
-                   max_discrep_percentage=0.52)
-
-    def test_std_total(self):
-        self.check('ZHAO06/Z06SInterNSHMP_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
+                   'ZHAO06/Z06SInterNSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.52,
+                   std_discrep_percentage=0.1)
 
 
 class ZhaoEtAl2006SSlabNSHMP2014TestCase(BaseGSIMTestCase):

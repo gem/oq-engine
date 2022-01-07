@@ -54,21 +54,13 @@ class GhofraniAtkinson2014TestCase(BaseGSIMTestCase):
     # File for the intra-event standard deviation
     INTRA_FILE = "GA2014/GA2014_INTRA.csv"
 
-    def test_mean(self):
+    def test_all(self):
         self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
-
-    def test_std_total(self):
-        self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_inter(self):
-        self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
-
-    def test_std_intra(self):
-        self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+                   self.STD_FILE,
+                   self.INTER_FILE,
+                   self.INTRA_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
 
 
 class GhofraniAtkinson2014CascadiaTestCase(GhofraniAtkinson2014TestCase):

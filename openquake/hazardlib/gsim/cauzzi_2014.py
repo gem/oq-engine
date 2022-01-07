@@ -496,6 +496,9 @@ class CauzziEtAl2014(GMPE):
     """)
 
 
+# NB: the implementation is really ugly and should be changed by using
+# parametric GMPEs: we will do that if the need to add subclasses will arise
+
 class CauzziEtAl2014NoSOF(CauzziEtAl2014):
     """
     Returns the Cauzzi et al (GMPE) for the case when no style-of-faulting is
@@ -524,14 +527,14 @@ class CauzziEtAl2014FixedVs30NoSOF(CauzziEtAl2014NoSOF):
 
 class CauzziEtAl2014Eurocode8(CauzziEtAl2014):
     """
-    Implmements the Cauzzi et al. (2014) GMPE for the case in which
+    Implemements the Cauzzi et al. (2014) GMPE for the case in which
     the Eurocode 8 site classification is preferred
     """
 
 
 class CauzziEtAl2014Eurocode8NoSOF(CauzziEtAl2014NoSOF):
     """
-    Implmements the Cauzzi et al. (2014) GMPE for the case in which
+    Implemements the Cauzzi et al. (2014) GMPE for the case in which
     the Eurocode 8 site classification is preferred and style of faulting
     is not specified.
     """

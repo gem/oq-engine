@@ -27,7 +27,8 @@ jobs:
         pip install -r requirements-py38-linux64.txt && pip install -e .
     - name: Test with pytest
       run: |
-        oq dbserver start && pytest openquake --doctest-modules -x -k "not gsim" --disable-warnings --color=yes --durations=10 && pytest doc/adv-manual/common-mistakes.rst doc/adv-manual/risk.rst doc/adv-manual/developing.rst doc/adv-manual/rupture-sampling.rst && oq dbserver stop
+        oq dbserver start
+        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/common-mistakes.rst doc/adv-manual/risk.rst doc/adv-manual/developing.rst doc/adv-manual/rupture-sampling.rst
 
   hazardlib:
     runs-on: ${{ matrix.os }}
@@ -49,4 +50,5 @@ jobs:
         pip install -r requirements-py38-linux64.txt && pip install -e .
     - name: hazardlib tests
       run: |
-        pytest -x openquake/hazardlib --doctest-modules -k gsim --disable-warnings --color=yes --durations=10
+        oq dbserver start
+        cd openquake && pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib commands engine hmtk risklib server commonlib baselib

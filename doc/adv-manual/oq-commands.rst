@@ -76,11 +76,11 @@ global information about the engine and its libraries. Try, for instance::
   $ oq info exports     # list available exports
   $ oq info parameters  # list all job.ini parameters
 
-The second most important command is `oq export`. It allows customization of
-the exports from the datastore with additional flexibility compared to
-the `oq engine` export commands. In the future the  `oq engine` exports commands 
-might be deprecated and `oq export` might become the official export command, but
-we are not there yet.
+The second most important command is `oq export`. It allows
+customization of the exports from the datastore with additional
+flexibility compared to the `oq engine` export commands. In the future
+the `oq engine` exports commands might be deprecated and `oq export`
+might become the official export command, but we are not there yet.
 
 Here is the usage message::
 
@@ -103,43 +103,42 @@ The list of available exports (i.e. the datastore keys and the available export
 formats) can be extracted with the `oq info exports`
 command; the number of exporters defined changes at each version::
 
-  $ oq info exports
-  agg_curves-rlzs ['csv']
-  agg_curves-stats ['csv']
-  agg_loss_table ['csv']
-  agg_losses-rlzs ['csv']
-  agg_losses-stats ['csv']
-  agg_risk ['csv']
-  aggcurves ['csv']
-  agglosses ['csv']
-  aggregate_by ['csv']
-  asset_risk ['csv']
-  avg_gmf ['csv']
-  avg_losses-rlzs ['csv']
-  avg_losses-stats ['csv']
-  bcr-rlzs ['csv']
-  bcr-stats ['csv']
-  damages-rlzs ['npz', 'csv']
-  damages-stats ['csv']
-  disagg ['csv', 'xml']
-  disagg_traditional ['csv']
-  events ['csv']
-  fullreport ['rst']
-  gmf_data ['csv', 'hdf5']
-  hcurves ['csv', 'xml', 'npz']
-  hmaps ['csv', 'xml', 'npz']
-  input ['zip']
-  loss_curves ['csv']
-  loss_curves-rlzs ['csv']
-  loss_curves-stats ['csv']
-  loss_maps-rlzs ['csv', 'npz']
-  loss_maps-stats ['csv', 'npz']
-  losses_by_asset ['npz']
-  realizations ['csv']
-  ruptures ['xml', 'csv']
-  src_loss_table ['csv']
-  uhs ['csv', 'xml', 'npz']
-  There are 47 exporters defined.
+  $ oq info exports$ oq info exports
+  ? "aggregate_by" ['csv']
+  ? "disagg_traditional" ['csv']
+  ? "loss_curves" ['csv']
+  ? "losses_by_asset" ['npz']
+  Aggregate Asset Losses "agglosses" ['csv']
+  Aggregate Loss Curves Statistics "agg_curves-stats" ['csv']
+  Aggregate Losses "aggrisk" ['csv']
+  Aggregate Risk Curves "aggcurves" ['csv']
+  Aggregated Risk By Event "risk_by_event" ['csv']
+  Asset Loss Curves "loss_curves-rlzs" ['csv']
+  Asset Loss Curves Statistics "loss_curves-stats" ['csv']
+  Asset Loss Maps "loss_maps-rlzs" ['csv', 'npz']
+  Asset Loss Maps Statistics "loss_maps-stats" ['csv', 'npz']
+  Asset Risk Distributions "damages-rlzs" ['npz', 'csv']
+  Asset Risk Statistics "damages-stats" ['csv']
+  Average Asset Losses "avg_losses-rlzs" ['csv']
+  Average Asset Losses Statistics "avg_losses-stats" ['csv']
+  Average Ground Motion Field "avg_gmf" ['csv']
+  Benefit Cost Ratios "bcr-rlzs" ['csv']
+  Benefit Cost Ratios Statistics "bcr-stats" ['csv']
+  Disaggregation Outputs "disagg" ['csv']
+  Earthquake Ruptures "ruptures" ['csv']
+  Events "events" ['csv']
+  Exposure + Risk "asset_risk" ['csv']
+  Full Report "fullreport" ['rst']
+  Ground Motion Fields "gmf_data" ['csv', 'hdf5']
+  Hazard Curves "hcurves" ['csv', 'xml', 'npz']
+  Hazard Maps "hmaps" ['csv', 'xml', 'npz']
+  Input Files "input" ['zip']
+  Mean Conditional Spectra "cs-stats" ['csv']
+  Realizations "realizations" ['csv']
+  Source Loss Table "src_loss_table" ['csv']
+  Total Risk "agg_risk" ['csv']
+  Uniform Hazard Spectra "uhs" ['csv', 'xml', 'npz']
+  There are 44 exporters defined.
 
 At the present the supported export types are `xml`, `csv`, `rst`, `npz` and 
 `hdf5`. `xml` has been deprecated for some outputs and is not the recommended 
@@ -269,6 +268,9 @@ will convert the sources in .csv format. Both are fully supported by QGIS.
 The CSV format has the advantage of being transparent and easily editable;
 it also can be imported in a geospatial database like Postgres, if needed.
 
+.. _prepare_site_model:
+
+
 prepare_site_model
 ------------------
 
@@ -367,28 +369,58 @@ Comparing hazard results
 
 If you are interested in sensitivity analysis, i.e. in how much the
 results of the engine change by tuning a parameter, the `oq compare`
-command is useful. For the moment it is able to compare hazard curves
-and hazard maps. Here is the help message::
+command is useful. It is able to compare many things, depending on
+the engine version. Here are a few examples::
 
-  $ oq compare --help
-  usage: oq compare [-h] [-f] [-s 100] [-r 0] [-a 0.001] [-t 0.01]
-                    {hcurves,hmaps} imt calc_ids [calc_ids ...]
+  $ oq compare hcurves --help
+  usage: oq compare hcurves [-h] [-f] [-s] [-r 0] [-a 0.001] imt calc_ids [calc_ids ...]
   
-  Compare the hazard curves or maps of two or more calculations
+  Compare the hazard curves of two or more calculations.
   
   positional arguments:
-    {hcurves,hmaps}       hmaps or hcurves
     imt                   intensity measure type to compare
     calc_ids              calculation IDs
   
   optional arguments:
     -h, --help            show this help message and exit
     -f, --files           write the results in multiple files
-    -s 100, --samplesites 100
-                          sites to sample (or fname with site IDs)
+    -s , --samplesites    sites to sample (or fname with site IDs)
     -r 0, --rtol 0        relative tolerance
     -a 0.001, --atol 0.001
                           absolute tolerance
-    -t 0.01, --threshold 0.01
-                          ignore the hazard curves below it
+  
+  $ oq compare hmaps --help
+  usage: oq compare hmaps [-h] [-f] [-s] [-r 0] [-a 0.001] imt calc_ids [calc_ids ...]
+  
+  Compare the hazard maps of two or more calculations.
+  
+  positional arguments:
+    imt                   intensity measure type to compare
+    calc_ids              calculation IDs
+  
+  optional arguments:
+    -h, --help            show this help message and exit
+    -f, --files           write the results in multiple files
+    -s , --samplesites    sites to sample (or fname with site IDs)
+    -r 0, --rtol 0        relative tolerance
+    -a 0.001, --atol 0.001
+                          absolute tolerance
+  
+  $ oq compare uhs --help
+  usage: oq compare uhs [-h] [-f] [-s] [-r 0] [-a 0.001] calc_ids [calc_ids ...]
+  
+  Compare the uniform hazard spectra of two or more calculations.
+  
+  positional arguments:
+    calc_ids              calculation IDs
+  
+  optional arguments:
+    -h, --help            show this help message and exit
+    -f, --files           write the results in multiple files
+    -s , --samplesites    sites to sample (or fname with site IDs)
+    -r 0, --rtol 0        relative tolerance
+    -a 0.001, --atol 0.001
+                          absolute tolerance
 
+Notice the ``compare uhs`` is able to compare all IMTs at once, so it
+is the most convenient to use if there are many IMTs.

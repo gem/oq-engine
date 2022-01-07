@@ -25,8 +25,6 @@ Each of the test tables is generated from the original GMPE tables, which are
 subsequently modified using the adjustment factors presented in the module
 openquake.hazardlib.gsim.armenia_2016
 """
-import unittest
-import numpy as np
 from openquake.hazardlib.gsim.armenia_2016 import (AkkarEtAlRjb2014Armenia,
                                                    BindiEtAl2014RjbArmenia,
                                                    BooreEtAl2014LowQArmenia,

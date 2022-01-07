@@ -58,7 +58,7 @@ class WesternCan15RjbHighTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_high.csv',
-                   max_discrep_percentage=80.)
+                       max_discrep_percentage=80.)
 
 
 class WesternCan15RjbMidTestCase(BaseGSIMTestCase):
@@ -66,7 +66,7 @@ class WesternCan15RjbMidTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_med.csv',
-                   max_discrep_percentage=80.)
+                       max_discrep_percentage=80.)
 
 
 class WesternCan15RjbLowTestCase(BaseGSIMTestCase):
@@ -74,4 +74,4 @@ class WesternCan15RjbLowTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_low.csv',
-                   max_discrep_percentage=80.)
+                       max_discrep_percentage=80.)

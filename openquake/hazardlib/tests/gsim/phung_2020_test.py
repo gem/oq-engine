@@ -28,51 +28,51 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class PhungEtAl2020AscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = PhungEtAl2020Asc
 
-    def test_mean(self):
+    def test_all(self):
         self.check('PHUNG20/PhungEtAl2020Asc_MEAN.csv',
                    max_discrep_percentage=0.1)
 
-    def test_mean_tw(self):
+    def test_all_tw(self):
         self.check('PHUNG20/PhungEtAl2020Asc_MEAN2.csv',
-                   max_discrep_percentage=0.1, aftershocks=True, d_dpp=1.8,
-                   region='tw')
+                   max_discrep_percentage=0.1,
+                   aftershocks=True, d_dpp=1.8, region='tw')
 
-    def test_mean_ca(self):
+    def test_all_ca(self):
         self.check('PHUNG20/PhungEtAl2020Asc_MEAN3.csv',
                    max_discrep_percentage=0.1, region='ca')
 
-    def test_mean_jp_stddevs(self):
-            self.check('PHUNG20/PhungEtAl2020Asc_MEAN4.csv',
+    def test_all_jp_stddevs(self):
+        self.check('PHUNG20/PhungEtAl2020Asc_MEAN4.csv',
                    max_discrep_percentage=0.1, region='jp')
 
 
 class PhungEtAl2020SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = PhungEtAl2020SInter
 
-    def test_mean(self):
+    def test_all(self):
         self.check('PHUNG20/PhungEtAl2020SInter_MEAN.csv',
                    max_discrep_percentage=0.1)
 
     def test_stddev(self):
-            self.check('PHUNG20/PhungEtAl2020SInter_STDDEV.csv',
+        self.check('PHUNG20/PhungEtAl2020SInter_STDDEV.csv',
                    max_discrep_percentage=0.1)
 
-    def test_mean2(self):
+    def test_all2(self):
         self.check('PHUNG20/PhungEtAl2020SInter_MEAN2.csv',
                    max_discrep_percentage=0.1, region='tw')
 
     def test_stddev2(self):
-            self.check('PHUNG20/PhungEtAl2020SInter_STDDEV2.csv',
+        self.check('PHUNG20/PhungEtAl2020SInter_STDDEV2.csv',
                    max_discrep_percentage=0.1, region='tw')
 
 
 class PhungEtAl2020SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = PhungEtAl2020SSlab
 
-    def test_mean(self):
+    def test_all(self):
         self.check('PHUNG20/PhungEtAl2020SSlab_MEAN.csv',
                    max_discrep_percentage=0.1)
 
-    def test_mean2(self):
+    def test_all2(self):
         self.check('PHUNG20/PhungEtAl2020SSlab_MEAN2.csv',
                    max_discrep_percentage=0.1, region='tw')

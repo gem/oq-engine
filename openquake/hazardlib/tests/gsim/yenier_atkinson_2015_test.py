@@ -26,6 +26,4 @@ class YenierAtkinson2015BSSA(BaseGSIMTestCase):
     GSIM_CLASS = YenierAtkinson2015BSSA
 
     def test_mean(self):
-
-       self.check('YA15/ya15_mean_cena.csv',
-                   max_discrep_percentage=0.3)
+        self.check('YA15/ya15_mean_cena.csv', max_discrep_percentage=0.3)

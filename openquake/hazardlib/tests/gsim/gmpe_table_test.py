@@ -508,8 +508,8 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                                              5)
         np.testing.assert_array_almost_equal(sigma[0], expected_sigma, 5)
 
-        # StdDev.ALL check
-        contexts.get_mean_stds([gsim], ctx, imts)
+        # check
+        contexts.get_mean_stds(gsim, ctx, imts)
 
     def test_get_mean_and_stddevs_good_amplified(self):
         """
@@ -698,10 +698,8 @@ class GSIMTableQATestCase(BaseGSIMTestCase):
     MEAN_FILE = "gsimtables/Wcrust_rjb_med_MEAN.csv"
     STD_TOTAL_FILE = "gsimtables/Wcrust_rjb_med_TOTAL.csv"
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.7,
-                   gmpe_table=GMPE_TABLE)
-
-    def test_std_total(self):
-        self.check(self.STD_TOTAL_FILE, max_discrep_percentage=0.7,
+    def test_all(self):
+        self.check(self.MEAN_FILE,
+                   self.STD_TOTAL_FILE,
+                   max_discrep_percentage=0.7,
                    gmpe_table=GMPE_TABLE)

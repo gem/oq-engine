@@ -16,9 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.climent_1994 import (
-    ClimentEtAl1994
-    )
+from openquake.hazardlib.gsim.climent_1994 import ClimentEtAl1994
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -29,10 +27,8 @@ class ClimentEtAl1994TestCase(BaseGSIMTestCase):
     # Alvaro Climent.
     # The tables have been modified according to the oq-engine test format
 
-    def test_mean_normal(self):
+    def test_all(self):
         self.check('CLI1994/CLI94_MEAN.csv',
-                   max_discrep_percentage=0.015)
-
-    def test_std_total(self):
-        self.check('CLI1994/CLI94_TOTAL.csv',
-                   max_discrep_percentage=0.010)
+                   'CLI1994/CLI94_TOTAL.csv',
+                   max_discrep_percentage=0.015,
+                   std_discrep_percentage=0.010)

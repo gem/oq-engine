@@ -131,19 +131,22 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.dtype, float)
-        for arr in (cll.vs30measured, cll.backarc):
-            self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.dtype, bool)
+        self.assertEqual(cll.vs30measured.dtype, numpy.bool_)
+        self.assertEqual(cll.backarc.dtype, numpy.uint8)
         self.assertEqual(len(cll), 2)
 
         # test split_in_tiles
-        tiles = cll.split_in_tiles(0)
+        tiles = cll.split_in_tiles(2)  # there are 2 sites, 1 tile
         self.assertEqual(len(tiles), 1)
 
-        tiles = cll.split_in_tiles(1)
+        tiles = cll.split_in_tiles(1)  # 2 tiles of 1 site each
+        self.assertEqual(len(tiles), 2)
+
+        # test split_max
+        tiles = cll.split_max(2)  # there are 2 sites, 1 tile
         self.assertEqual(len(tiles), 1)
 
-        tiles = cll.split_in_tiles(2)
+        tiles = cll.split_max(1)  # 2 tiles of 1 site each
         self.assertEqual(len(tiles), 2)
 
         # test geohash
@@ -239,7 +242,7 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         col = SiteCollection(self.SITES)
         self.assertEqual(len(col.reduce(1)), 1)
         self.assertEqual(len(col.reduce(2)), 2)
-        self.assertEqual(len(col.reduce(3)), 2)
+        self.assertEqual(len(col.reduce(3)), 4)
 
 
 class WithinBBoxTestCase(unittest.TestCase):

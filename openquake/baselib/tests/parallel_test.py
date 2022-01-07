@@ -24,7 +24,7 @@ import unittest
 import itertools
 import tempfile
 import numpy
-from openquake.baselib import parallel, general, hdf5, workerpool, performance
+from openquake.baselib import parallel, general, hdf5, performance
 
 try:
     import celery
@@ -122,7 +122,7 @@ class StarmapTestCase(unittest.TestCase):
         numchars = sum(len(arg) for arg, in allargs)  # 61
         tmpdir = tempfile.mkdtemp()
         tmp = os.path.join(tmpdir, 'calc_1.hdf5')
-        performance.init_performance(tmp, swmr=True)
+        performance.init_performance(tmp)
         smap = parallel.Starmap(supertask, allargs, h5=hdf5.File(tmp, 'a'))
         res = smap.reduce()
         smap.h5.close()
@@ -185,7 +185,7 @@ class SWMRTestCase(unittest.TestCase):
         cls.tmp = os.path.join(tmpdir, 'calc_1.hdf5')
         with hdf5.File(cls.tmp, 'w') as h:
             h['array'] = numpy.arange(100)
-        performance.init_performance(cls.tmp, swmr=True)
+        performance.init_performance(cls.tmp)
 
     def test(self):
         allargs = []
@@ -199,3 +199,37 @@ class SWMRTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(os.path.dirname(cls.tmp))
+
+
+def process_elements(elements, timefactor, monitor):
+    for el in elements:
+        time.sleep(el * timefactor)
+    return sum(elements)
+
+
+class SplitTaskTestCase(unittest.TestCase):
+    def test(self):
+        rng = numpy.random.default_rng(42)
+        elements = rng.random(size=100)
+        tmpdir = tempfile.mkdtemp()
+        tmp = os.path.join(tmpdir, 'calc_1.hdf5')
+        print('Creating', tmp)
+        duration = .5
+        split_level = 5
+        timefactor = .2
+        with hdf5.File(tmp, 'w') as h5:
+            performance.init_performance(h5)
+            smap = parallel.Starmap(process_elements, h5=h5)
+            smap.submit_split((elements, timefactor), duration, split_level)
+            res = smap.reduce(acc=0)
+        self.assertAlmostEqual(res, 48.6718458266)
+        """
+        with hdf5.File(tmp, 'w') as h5:
+            performance.init_performance(h5)
+            res = parallel.Starmap.apply_split(
+                process_elements, (elements, timefactor),
+                h5=h5, duration=duration
+            ).reduce(acc=0)
+        self.assertAlmostEqual(res, 48.6718458266)
+        """
+        shutil.rmtree(tmpdir)

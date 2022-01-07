@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 This module includes the scientific API of the oq-risklib
 """
@@ -35,7 +34,8 @@ F32 = numpy.float32
 U32 = numpy.uint32
 U16 = numpy.uint16
 U8 = numpy.uint8
-KNOWN_CONSEQUENCES = 'losses collapsed injured fatalities homeless'
+KNOWN_CONSEQUENCES = ['loss', 'ins_loss', 'losses', 'collapsed', 'injured',
+                      'fatalities', 'homeless']
 
 
 def pairwise(iterable):
@@ -265,7 +265,7 @@ class VulnerabilityFunction(object):
         else:
             variances = (losses * df['cov'].to_numpy())**2
         return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
-                                     loss=losses[ok], variance=variances[ok]))
+                                     variance=variances[ok], loss=losses[ok]))
 
     def strictly_increasing(self):
         """
@@ -535,7 +535,7 @@ class FragilityFunctionContinuous(object):
             imls[imls < self.minIML] = self.minIML
         result = stats.lognorm.cdf(imls, sigma, scale=mu)
         if self.no_damage_limit:
-            result[imls < self.no_damage_limit] = 0
+            result[imls <= self.no_damage_limit] = 0
         return result
 
     def __repr__(self):
@@ -791,6 +791,7 @@ class MultiEventRNG(object):
         div = numpy.sqrt(1 + covs ** 2)
         return means * numpy.exp(eps * sigma) / div
 
+    # NB: asset correlation is ignored
     def beta(self, eids, means, covs):
         """
         :param eids: event IDs
@@ -816,7 +817,7 @@ class MultiEventRNG(object):
     def discrete_dmg_dist(self, eids, fractions, numbers):
         """
         Converting fractions into discrete damage distributions using bincount
-        and rng.choice.
+        and random.choice.
 
         :param eids: E event IDs
         :param fractions: array of shape (A, E, D)
@@ -835,6 +836,24 @@ class MultiEventRNG(object):
                 # ex. [0, 0, 0, 1, 0, 0, 0, 1, 0, 0], 8 times 0, 2 times 1
                 ddd[a, e] = numpy.bincount(states, minlength=D)
         return ddd
+
+    def boolean_dist(self, probs, num_sims):
+        """
+        Convert E probabilities into an array of (E, S)
+        booleans, being S the number of secondary simulations.
+
+        >>> rng = MultiEventRNG(master_seed=42, eids=[0, 1, 2])
+        >>> dist = rng.boolean_dist(probs=[.1, .2, 0.], num_sims=100)
+        >>> dist.sum(axis=1)  # around 10% and 20% respectively
+        array([12., 17.,  0.])
+        """
+        E = len(self.rng)
+        assert len(probs) == E, (len(probs), E)
+        booldist = numpy.zeros((E, num_sims))
+        for e, eid, prob in zip(range(E), self.rng, probs):
+            if prob > 0:
+                booldist[e] = self.rng[eid].random(num_sims) < prob
+        return booldist
 
 
 #
@@ -876,9 +895,8 @@ def annual_frequency_of_exceedence(poe, t_haz):
     :param t_haz: hazard investigation time
     :returns: array of frequencies (with +inf values where poe=1)
     """
-    arr = 1. - poe
-    arr[arr == 0] = 1E-16  # cutoff to avoid log(0)
-    return - numpy.log(arr) / t_haz
+    assert not (poe == 1).any()  # avoid log(0)
+    return - numpy.log(1-poe) / t_haz
 
 
 def classical_damage(
@@ -906,8 +924,8 @@ def classical_damage(
         imls = numpy.array(fragility_functions._interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         assert min_val > 0, hazard_imls  # sanity check
-        numpy.putmask(imls, imls < min_val, min_val)
-        numpy.putmask(imls, imls > max_val, max_val)
+        imls[imls < min_val] = min_val
+        imls[imls > max_val] = max_val
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
         imls = hazard_imls
@@ -951,8 +969,8 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
-    numpy.putmask(imls, imls < min_val, min_val)
-    numpy.putmask(imls, imls > max_val, max_val)
+    imls[imls < min_val] = min_val
+    imls[imls > max_val] = max_val
 
     # interpolate the hazard curve
     poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
@@ -1342,7 +1360,7 @@ class InsuredLosses(object):
     def __init__(self, policy_name, policy_dict):
         self.policy_name = policy_name
         self.policy_dict = policy_dict
-        self.outputs = [lt + '_ins' for lt in policy_dict]
+        self.sec_names = ['ins_loss']
 
     def update(self, lt, out, asset_df):
         """
@@ -1351,22 +1369,16 @@ class InsuredLosses(object):
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
         o = out[lt]
+        o['ins_loss'] = numpy.zeros(len(o))
         if lt in self.policy_dict and len(o):
             policy = self.policy_dict[lt]
-            eid_aids, ilosses = [], []
-            for aid, df in o.groupby('aid'):
+            for (eid, aid), df in o.iterrows():
                 asset = asset_df.loc[aid]
                 avalue = asset['value-' + lt]
                 policy_idx = asset[self.policy_name]
                 ded, lim = policy[policy_idx]
-                ins = insured_losses(
-                    df.loss.to_numpy(), ded * avalue, lim * avalue)
-                eid_aids.extend(df.index)
-                ilosses.extend(ins)
-            eids, aids = zip(*eid_aids)
-            out[lt + '_ins'] = pandas.DataFrame(
-                dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
-                     variance=numpy.zeros_like(ilosses)))
+                ins = insured_losses(df.loss, ded * avalue, lim * avalue)
+                o.loc[eid, aid]['ins_loss'] = ins
 
 
 # not used anymore
@@ -1406,13 +1418,33 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     elif consequence == 'losses':
         return dmgdist @ coeffs * asset['value-' + loss_type]
     elif consequence == 'collapsed':
-        return dmgdist @ coeffs * asset['number']
+        return dmgdist @ coeffs * asset['value-number']
     elif consequence == 'injured':
         return dmgdist @ coeffs * asset['occupants_night']
     elif consequence == 'fatalities':
         return dmgdist @ coeffs * asset['occupants_night']
     elif consequence == 'homeless':
         return dmgdist @ coeffs * asset['occupants_night']
+
+
+def get_agg_value(consequence, agg_values, agg_id, loss_type):
+    """
+    :returns:
+        sum of the values corresponding to agg_id for the given consequence
+    """
+    aval = agg_values[agg_id]
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
+    elif consequence in ('loss', 'ins_loss', 'losses'):
+        return aval[loss_type]
+    elif consequence == 'collapsed':
+        return aval['number']
+    elif consequence == 'injured':
+        return aval['occupants_night']
+    elif consequence == 'fatalities':
+        return aval['occupants_night']
+    elif consequence == 'homeless':
+        return aval['occupants_night']
 
 
 if __name__ == '__main__':

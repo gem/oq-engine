@@ -3,7 +3,7 @@
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <logicTree logicTreeID="lt1">
 
-    <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+    <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs0">
         <logicTreeBranch branchID="b11">
             <uncertaintyModel>source_model.xml</uncertaintyModel>
             <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -11,7 +11,7 @@
     </logicTreeBranchSet>
 
     <logicTreeBranchSet uncertaintyType="simpleFaultGeometryAbsolute"
-                        branchSetID="bs2" applyToSources="src1">
+                        branchSetID="bs1" applyToSources="src1">
 
         <logicTreeBranch branchID="b21">
             <uncertaintyModel>
@@ -32,7 +32,8 @@
     </logicTreeBranchSet>
 
     <logicTreeBranchSet uncertaintyType="truncatedGRFromSlipAbsolute"
-                        branchSetID="bs2" applyToBranches="b21">
+        branchSetID="bs2" applyToBranches="b21"
+        applyToSources="src1">
 
         <logicTreeBranch branchID="b31">
             <uncertaintyModel>

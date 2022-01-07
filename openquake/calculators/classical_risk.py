@@ -24,21 +24,21 @@ from openquake.calculators import base
 F32 = numpy.float32
 
 
-def classical_risk(riskinputs, param, monitor):
+def classical_risk(riskinputs, oqparam, monitor):
     """
     Compute and return the average losses for each asset.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param param:
-        dictionary of extra parameters
+    :param oqparam:
+        input parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
     crmodel = monitor.read('crmodel')
     result = dict(loss_curves=[], stat_curves=[])
-    weights = [w['default'] for w in param['weights']]
-    statnames, stats = zip(*param['stats'])
+    weights = [w['default'] for w in oqparam._weights]
+    statnames, stats = zip(*oqparam._stats)
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         A = len(ri.asset_df)
@@ -99,8 +99,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.realizations = full_lt.get_realizations()
         weights = [rlz.weight for rlz in self.realizations]
         stats = list(oq.hazard_stats().items())
-        self.param = dict(stats=stats, weights=weights)
-        self.riskinputs = self.build_riskinputs('poe')
+        oq._stats = stats
+        oq._weights = weights
+        self.riskinputs = self.build_riskinputs()
         self.A = len(self.assetcol)
         self.L = len(self.crmodel.loss_types)
         self.S = len(oq.hazard_stats())
@@ -131,7 +132,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.datastore['avg_losses-stats'] = avg_losses
         self.datastore.set_shape_descr(
             'avg_losses-stats', asset_id=self.assetcol['id'],
-            stat=stats, loss_type=self.oqparam.loss_names)
+            stat=stats, loss_type=self.oqparam.loss_types)
         self.datastore['loss_curves-stats'] = stat_curves
         self.datastore.set_attrs('loss_curves-stats', stat=stats)
 
@@ -146,5 +147,5 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.datastore['avg_losses-rlzs'] = avg_losses
             self.datastore.set_shape_descr(
                 'avg_losses-rlzs', asset_id=self.assetcol['id'],
-                rlz=numpy.arange(self.R), loss_type=self.oqparam.loss_names)
+                rlz=numpy.arange(self.R), loss_type=self.oqparam.loss_types)
             self.datastore['loss_curves-rlzs'] = loss_curves
