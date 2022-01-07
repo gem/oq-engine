@@ -153,36 +153,19 @@ class KiteFaultSource(ParametricSeismicSource):
             if self.floating_x_step == 0:
                 fstrike = 1 
             else:
-                # use next line if ratio indicates what percentage of nodes to use
+                # ratio = the percentage of nodes to use
                 # as starting points of ruptures
                 fstrike = int(np.floor(1/self.floating_x_step))
-                # or use the next line if it indicates the amount of overlap between
-                # consecutive ruptures
-#                fstrike = int(np.floor(rup_len*self.floating_x_step))
                 if fstrike == 0: 
                     fstrike = 1
-#                    msg = 'floating_x_step {} too '.format(self.floating_x_step)
-#                    msg += 'small for rupture mesh spacing '
-#                    msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
-#                    msg += ' {}. Using traditional rupture floating.'.format(mag)
-#                    logging.warning(msg)
 
             if self.floating_x_step == 0:
                 fdip = 1
             else:
-                # as for strike: next line when ratio indicates percentage
+                # as for strike: ratio indicates percentage
                 fdip = int(np.floor(1/self.floating_y_step))
-                # as for strike: next line when ratio rupture overlap
-                #fdip = int(np.floor(rup_wid*self.floating_y_step))
                 if fdip == 0:
                     fdip = 1
-#                    msg = 'floating_y_step {} too '.format(self.floating_y_step)
-#                    msg += 'small for rupture mesh spacing '
-#                    msg += '{} and magnitude'.format(self.rupture_mesh_spacing)
-#                    msg += ' {}. Using traditional rupture floating.'.format(mag)
-#                    logging.warning(msg)
-
-
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
@@ -251,13 +234,6 @@ class KiteFaultSource(ParametricSeismicSource):
             f_dip -= 1
             y_nodes = np.arange(0, mesh_y_len, f_dip)
 
-        #if len(x_nodes)>0 and x_nodes[-1] != omsh.lons.shape[1] - rup_s:
-        #     x_nodes = np.append(x_nodes, omsh.lons.shape[1] - rup_s)
-        #if len(y_nodes)>0 and y_nodes[-1] != omsh.lons.shape[0] - rup_d:
-        #     y_nodes = np.append(y_nodes, omsh.lons.shape[0] - rup_d)
-
-#        for i in np.arange(0, omsh.lons.shape[1] - rup_s + 1, f_strike):
-#            for j in np.arange(0, omsh.lons.shape[0] - rup_d + 1, f_dip):
         for i in x_nodes:
             for j in y_nodes:
                 nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
