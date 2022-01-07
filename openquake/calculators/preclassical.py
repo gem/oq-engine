@@ -19,11 +19,11 @@
 import os
 import logging
 import numpy
-from openquake.baselib import general, parallel
+from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, block_splitter, groupby, get_nbytes_msg)
-from openquake.hazardlib.contexts import basename
+    AccumDict, groupby, get_nbytes_msg)
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -38,14 +38,57 @@ TWO32 = 2 ** 32
 
 
 def zero_times(sources):
-    # src.id -> nrups, nsites, time, weight
-    calc_times = AccumDict(accum=numpy.zeros(4, F32))
+    source_data = AccumDict(accum=[])
     for src in sources:
-        row = calc_times[basename(src)]
-        row[0] += src.num_ruptures
-        row[1] += src.nsites
-        row[3] += src.weight
-    return calc_times
+        source_data['srcids'].append(src.source_id)
+        source_data['nsites'].append(src.nsites)
+        source_data['nrupts'].append(src.num_ruptures)
+        source_data['weight'].append(src.weight)
+        source_data['ctimes'].append(0)
+    return source_data
+
+
+def preclassical(srcs, sites, cmaker, monitor):
+    """
+    Weight the sources. Also split them if split_sources is true. If
+    ps_grid_spacing is set, grid the point sources before weighting them.
+    """
+    split_sources = []
+    spacing = cmaker.ps_grid_spacing
+    grp_id = srcs[0].grp_id
+    if sites is None:
+        # in csm2rup just split the sources and count the ruptures
+        for src in srcs:
+            ss = split_source(src)
+            if len(ss) > 1:
+                for ss_ in ss:
+                    ss_.nsites = 1
+            split_sources.extend(ss)
+            src.num_ruptures = src.count_ruptures()
+        dic = {grp_id: split_sources}
+        dic['before'] = len(srcs)
+        dic['after'] = len(dic[grp_id])
+        return dic
+
+    sf = SourceFilter(sites, cmaker.maximum_distance)
+    with monitor('splitting sources'):
+        for src in srcs:
+            # NB: this is approximate, since the sites are sampled
+            src.nsites = len(sf.close_sids(src))  # can be 0
+            # NB: it is crucial to split only the close sources, for
+            # performance reasons (think of Ecuador in SAM)
+            splits = split_source(src) if (
+                cmaker.split_sources and src.nsites) else [src]
+            split_sources.extend(splits)
+    dic = grid_point_sources(split_sources, spacing, monitor)
+    with monitor('weighting sources'):
+        # this is also prefiltering the split sources
+        cmaker.set_weight(dic[grp_id], sf)
+    dic['before'] = len(split_sources)
+    dic['after'] = len(dic[grp_id])
+    if spacing:
+        dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
+    return dic
 
 
 def run_preclassical(calc):
@@ -55,32 +98,47 @@ def run_preclassical(calc):
     :param h5: a DataStore instance
     """
     csm = calc.csm
-    oqparam = calc.oqparam
+    calc.datastore['trt_smrs'] = csm.get_trt_smrs()
+    calc.datastore['toms'] = numpy.array(
+        [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
+    cmakers = read_cmakers(calc.datastore, csm.full_lt)
     h5 = calc.datastore.hdf5
-    srcfilter = SourceFilter(
-        csm.sitecol.reduce(10000) if csm.sitecol else None,
-        oqparam.maximum_distance)
+    calc.sitecol = sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
-    atomic_sources = csm.get_sources(atomic=True)
-    normal_sources = csm.get_sources(atomic=False)
-    srcfilter.set_weight(atomic_sources)
-
+    atomic_sources = []
+    normal_sources = []
+    for sg in csm.src_groups:
+        grp_id = sg.sources[0].grp_id
+        if sg.atomic:
+            sf = SourceFilter(sites, cmakers[grp_id].maximum_distance)
+            cmakers[grp_id].set_weight(sg, sf)
+            atomic_sources.extend(sg)
+        else:
+            normal_sources.extend(sg)
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
     if csm.sitecol:
-        logging.info('Sending %s', srcfilter.sitecol)
-    if oqparam.ps_grid_spacing:
-        # produce a preclassical task for each group
-        allargs = ((srcs, srcfilter, oqparam)
-                   for srcs in sources_by_grp.values())
-    else:
-        # produce many preclassical task
-        maxw = sum(len(srcs) for srcs in sources_by_grp.values()) / (
-            oqparam.concurrent_tasks or 1)
-        allargs = ((blk, srcfilter, oqparam)
-                   for srcs in sources_by_grp.values()
-                   for blk in block_splitter(srcs, maxw))
+        logging.info('Sending %s', sites)
+    smap = parallel.Starmap(preclassical, h5=h5)
+    for (grp_id, msr), srcs in sources_by_grp.items():
+        pointsources, pointlike, others = [], [], []
+        for src in srcs:
+            if hasattr(src, 'location'):
+                pointsources.append(src)
+            elif hasattr(src, 'nodal_plane_distribution'):
+                pointlike.append(src)
+            else:
+                others.append(src)
+        if calc.oqparam.ps_grid_spacing:
+            if pointsources or pointlike:
+                smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
+        else:
+            smap.submit_split((pointsources, sites, cmakers[grp_id]), 30, 10)
+            for src in pointlike:
+                smap.submit(([src], sites, cmakers[grp_id]))
+        smap.submit_split((others, sites, cmakers[grp_id]), 30, 10)
+    normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
         atomic = AccumDict({'before': n, 'after': n})
@@ -89,11 +147,7 @@ def run_preclassical(calc):
             atomic[grp_id] = srcs
     else:
         atomic = AccumDict()
-    normal = parallel.Starmap(
-        preclassical, allargs,  h5=h5,
-        distribute=None if len(sources_by_grp) > 1 else 'no'
-    ).reduce()
-    res = atomic + normal
+    res = normal + atomic
     if res['before'] != res['after']:
         logging.info('Reduced the number of point sources from {:_d} -> {:_d}'.
                      format(res['before'], res['after']))
@@ -105,26 +159,21 @@ def run_preclassical(calc):
             # check if OQ_SAMPLE_SOURCES is set
             ss = os.environ.get('OQ_SAMPLE_SOURCES')
             if ss:
-                logging.info('Reduced num_sources for group #%d', grp_id)
+                logging.info('Sampled sources for group #%d', grp_id)
                 srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
             newsg = SourceGroup(srcs[0].tectonic_region_type)
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
             for src in srcs:
+                assert src.weight
+                assert src.num_ruptures
                 acc[src.code] += int(src.num_ruptures)
     for val, key in sorted((val, key) for key, val in acc.items()):
         cls = code2cls[key].__name__
         logging.info('{} ruptures: {:_d}'.format(cls, val))
 
-    calc_times = zero_times(csm.get_sources())
-    calc.store_source_info(calc_times)
-
-    # sanity check
-    for sg in csm.src_groups:
-        for src in sg:
-            assert src.num_ruptures
-            assert src.weight
-
+    source_data = zero_times(csm.get_sources())
+    calc.store_source_info(source_data)
     # store ps_grid data, if any
     for key, sources in res.items():
         if isinstance(key, str) and key.startswith('ps_grid/'):
@@ -139,50 +188,6 @@ def run_preclassical(calc):
 
     h5['full_lt'] = csm.full_lt
     return res
-
-
-def preclassical(srcs, srcfilter, oqparam, monitor):
-    """
-    Weight the sources. Also split them if split_sources is true. If
-    ps_grid_spacing is set, grid the point sources before weighting them.
-
-    NB: srcfilter can be on a reduced site collection for performance reasons
-    """
-    split_sources = []
-    spacing = oqparam.ps_grid_spacing
-    grp_id = srcs[0].grp_id
-    if srcfilter.sitecol is None:
-        # in csm2rup just split the sources and count the ruptures
-        for src in srcs:
-            ss = split_source(src)
-            if len(ss) > 1:
-                for ss_ in ss:
-                    ss_.nsites = 1
-            split_sources.extend(ss)
-            src.num_ruptures = src.count_ruptures()
-        dic = {grp_id: split_sources}
-        dic['before'] = len(srcs)
-        dic['after'] = len(dic[grp_id])
-        return dic
-
-    with monitor('splitting sources'):
-        # this can be slow
-        for src in srcs:
-            # NB: this is approximate, since the sitecol is sampled!
-            nsites = len(srcfilter.close_sids(src))  # can be 0
-            # NB: it is crucial to split only the close sources, for
-            # performance reasons (think of Ecuador in SAM)
-            splits = split_source(src) if (
-                oqparam.split_sources and nsites) else [src]
-            split_sources.extend(splits)
-    dic = grid_point_sources(split_sources, spacing, monitor)
-    with monitor('weighting sources'):
-        srcfilter.set_weight(dic[grp_id])
-    dic['before'] = len(split_sources)
-    dic['after'] = len(dic[grp_id])
-    if spacing:
-        dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
-    return dic
 
 
 @base.calculators.add('preclassical')
@@ -238,33 +243,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        self.set_psd()  # set the pointsource_distance, needed for ps_grid_spc
         run_preclassical(self)
         return self.csm
-
-    def set_psd(self):
-        """
-        Set the pointsource_distance
-        """
-        oq = self.oqparam
-        mags = self.datastore['source_mags']  # by TRT
-        if len(mags) == 0:  # everything was discarded
-            raise RuntimeError('All sources were discarded!?')
-        mags_by_trt = {}
-        for trt in mags:
-            mags_by_trt[trt] = mags[trt][()]
-        psd = oq.pointsource_distance
-        if psd is not None:
-            psd.interp(mags_by_trt)
-            for trt, dic in psd.ddic.items():
-                # the sum is zero for {'default': [(1, 0), (10, 0)]}
-                if sum(dic.values()):
-                    it = list(dic.items())
-                    dists = {i[1] for i in it}
-                    if len(set(dists)) > 1:
-                        md = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                        logging.info('ps_dist %s: %s', trt, md)
-        return psd
 
     def post_execute(self, csm):
         """

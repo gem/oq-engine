@@ -86,7 +86,7 @@ def classical(group, sitecol, cmaker):
     for ``gsims``, which is a list of GSIM instances.
 
     :returns:
-        a dictionary with keys pmap, calc_times, rup_data, extra
+        a dictionary with keys pmap, source_data, rup_data, extra
     """
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
@@ -102,7 +102,6 @@ def classical(group, sitecol, cmaker):
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
         assert trt == cmaker.trt, (trt, cmaker.trt)
-    cmaker.maximum_distance = src_filter.integration_distance
     try:
         cmaker.tom = group.temporal_occurrence_model
     except AttributeError:  # got a list of sources, not a group
@@ -180,10 +179,10 @@ def calc_hazard_curves(
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
-    if sitecol is not srcfilter:
-        param['maximum_distance'] = srcfilter.integration_distance
     for group in groups:
         trt = group.trt
+        if sitecol is not srcfilter:
+            param['maximum_distance'] = srcfilter.integration_distance(trt)
         cmaker = ContextMaker(trt, [gsim_by_trt[trt]], param, mon)
         if group.atomic:  # do not split
             it = [classical(group, sitecol, cmaker)]

@@ -243,7 +243,8 @@ class UCERFSource(BaseSeismicSource):
             bg_locations = hdf5["Grid/Locations"][()]
             if hasattr(self, 'src_filter'):
                 # in event based
-                idist = self.src_filter.integration_distance(DEFAULT_TRT)
+                idist = self.src_filter.integration_distance[
+                    DEFAULT_TRT][-1][1]
             else:
                 # in classical
                 return numpy.arange(len(bg_locations))
@@ -287,6 +288,16 @@ class UCERFSource(BaseSeismicSource):
         Yield ruptures for the current set of indices
         """
         for ridx in range(self.start, self.stop):
+            if self.rate[ridx - self.start]:  # may have have zero rate
+                rup = self.get_ucerf_rupture(ridx - self.start)
+                if rup:
+                    yield rup
+
+    def few_ruptures(self, **kwargs):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        for ridx in range(self.start, self.stop, 25):
             if self.rate[ridx - self.start]:  # may have have zero rate
                 rup = self.get_ucerf_rupture(ridx - self.start)
                 if rup:

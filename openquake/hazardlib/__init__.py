@@ -28,7 +28,7 @@ from openquake.hazardlib import (
     geo, site, nrml, sourceconverter, gsim_lt, contexts)
 from openquake.hazardlib.source.rupture import (
     EBRupture, get_ruptures, _get_rupture)
-from openquake.hazardlib.calc.filters import MagDepDistance
+from openquake.hazardlib.calc.filters import IntegrationDistance
 
 bytrt = operator.attrgetter('tectonic_region_type')
 Input = collections.namedtuple('Input', 'groups sitecol gsim_lt cmakerdict')
@@ -135,7 +135,8 @@ def read_input(hparams, **extra):
         hparams = hparams.copy()
         hparams.update(extra)
     assert 'imts' in hparams or 'imtls' in hparams
-    assert isinstance(hparams['maximum_distance'], MagDepDistance)
+    idistance = hparams['maximum_distance']
+    assert isinstance(idistance, IntegrationDistance)
     smfname = hparams.get('source_model_file')
     if smfname:  # nonscenario
         itime = hparams['investigation_time']

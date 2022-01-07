@@ -69,7 +69,7 @@ A 64bit operating system **is required**. Please refer to each OS specific page 
 
 ### Unsupported operating systems
 
-- Windows 7 may or may not work and we will not provide support for it
+- Windows 8 may or may not work and we will not provide support for it
 Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
 - Ubuntu 16.04 (Xenial) packages work on **Mint Linux 18** and on **Debian 9.0** (Stretch)
 - Ubuntu 18.04 (Bionic) packages work on **Mint Linux 19** and on **Debian 10.0** (Buster)

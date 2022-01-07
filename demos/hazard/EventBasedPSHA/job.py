@@ -20,7 +20,7 @@ import pandas
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib import read_input
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.hazardlib.calc.filters import MagDepDistance
+from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.calc.stochastic import sample_ebruptures, get_ebr_df
 
 
@@ -43,7 +43,7 @@ def main(params):
 
 
 if __name__ == '__main__':
-    params = dict(maximum_distance=MagDepDistance.new('200'),
+    params = dict(maximum_distance=IntegrationDistance.new('200'),
                   imtls={'PGA': [0]},
                   source_model_file="source_model.xml",
                   area_source_discretization=10,

@@ -24,7 +24,7 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import (
     calc_hazard_curve, calc_hazard_curves)
-from openquake.hazardlib.calc.filters import SourceFilter, MagDepDistance
+from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -93,7 +93,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         gsims = {"Active Shallow Crust": SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
-        s_filter = SourceFilter(sitecol, MagDepDistance.new('30'))
+        s_filter = SourceFilter(sitecol, IntegrationDistance.new('30'))
         result = calc_hazard_curves(
             sources, s_filter, imts, gsims, truncation_level)['PGA']
         # there are two sources and four sites. The first source contains only
@@ -285,7 +285,7 @@ class NewApiTestCase(unittest.TestCase):
         assert len(imtls) == 13  # 13 periods
         oq = unittest.mock.Mock(
             imtls=DictArray(imtls),
-            maximum_distance=MagDepDistance.new('300'))
+            maximum_distance=IntegrationDistance.new('300'))
         mon = Monitor()
         hcurve = calc_hazard_curve(
             sitecol, asource, [ExampleA2021()], oq, mon)
@@ -303,7 +303,7 @@ class NewApiTestCase(unittest.TestCase):
         site2 = Site(Point(0, 0.5), vs30=760., z1pt0=48.0, z2pt5=0.607,
                      vs30measured=True)
         sitecol = SiteCollection([site1, site2])
-        srcfilter = SourceFilter(sitecol, MagDepDistance.new('200'))
+        srcfilter = SourceFilter(sitecol, IntegrationDistance.new('200'))
         imtls = {"PGA": [.123]}
         for period in numpy.arange(.1, .5, .1):
             imtls['SA(%.2f)' % period] = [.123]

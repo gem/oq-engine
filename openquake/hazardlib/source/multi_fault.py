@@ -20,6 +20,8 @@ defines :class:`MultiFaultSource`.
 
 import numpy as np
 from typing import Union
+
+from openquake.baselib.general import gen_slices
 from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
@@ -132,8 +134,37 @@ class MultiFaultSource(BaseSeismicSource):
                 self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                 self.pmfs[i])
 
-    def __iter__(self):  # not splittable
-        yield self
+    def few_ruptures(self):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        s = self.sections
+        for i in range(0, len(self.mags), 25):
+            idxs = self.rupture_idxs[i]
+            if len(idxs) == 1:
+                sfc = self.sections[idxs[0]].surface
+            else:
+                sfc = MultiSurface([s[idx].surface for idx in idxs])
+            rake = self.rakes[i]
+            hypo = self.sections[idxs[0]].surface.get_middle_point()
+            yield NonParametricProbabilisticRupture(
+                self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
+                self.pmfs[i])
+
+    def __iter__(self):
+        # split in blocks of 100 ruptures each
+        for i, slc in enumerate(gen_slices(0, len(self.mags), 100)):
+            src = self.__class__(
+                '%s:%d' % (self.source_id, i),
+                self.name,
+                self.tectonic_region_type,
+                self.rupture_idxs[slc],
+                self.pmfs[slc],
+                self.mags[slc],
+                self.rakes[slc])
+            src.set_sections(self.sections)
+            src.num_ruptures = src.count_ruptures()
+            yield src
 
     def count_ruptures(self):
         """
@@ -154,3 +185,5 @@ class MultiFaultSource(BaseSeismicSource):
 
     polygon = NP.polygon
     wkt = NP.wkt
+    get_bounding_box = NP.get_bounding_box
+    mesh_size = NP.mesh_size

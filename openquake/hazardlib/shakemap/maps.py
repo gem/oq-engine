@@ -137,7 +137,7 @@ def check_required_imts(required_imts, available_imts):
     if missing:
         msg = ('The IMT %s is required but not in the available set %s, '
                'please change the risk model otherwise you will have '
-               'incorrect zero losses for the associated taxonomies' %
+               'incorrect zero losses for the associated taxonomy strings' %
                (missing.pop(), ', '.join(available_imts)))
         raise RuntimeError(msg)
 

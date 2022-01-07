@@ -504,7 +504,7 @@ pointsource_distance:
   Used in classical calculations to collapse the point sources. Can also be
   used in conjunction with *ps_grid_spacing*.
   Example: *pointsource_distance = 50*.
-  Default: empty dictionary
+  Default: {'default': 1000}
 
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
@@ -703,7 +703,7 @@ time_per_task:
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
-  Default: no default
+  Default: None
 
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
@@ -845,7 +845,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
-    maximum_distance = valid.Param(valid.MagDepDistance.new)  # km
+    maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
@@ -866,7 +866,8 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.MagDepDistance.new, None)
+    pointsource_distance = valid.Param(valid.IntegrationDistance.new,
+                                       valid.IntegrationDistance.new('1000'))
     ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -913,16 +914,24 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     split_level = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    # NB: you cannot increase too much min_weight otherwise too few tasks will
-    # be generated in cases like Ecuador inside full South America
-    min_weight = valid.Param(valid.positiveint, 200)  # used in classical
-    max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
+    min_weight = valid.Param(valid.positiveint, 1)  # used in classical
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 300)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
+
+    @property
+    def no_pointsource_distance(self):
+        """
+        :returns: True if the pointsource_distance is 1000 km
+        """
+        dists = set()
+        for pairs in self.pointsource_distance.values():
+            for mag, dist in pairs:
+                dists.add(dist)
+        return dists == {1000}
 
     @property
     def risk_files(self):
@@ -1202,7 +1211,16 @@ class OqParam(valid.ParamSet):
         imts = set()
         for imt in self.imtls:
             im = from_string(imt)
-            imts.add("SA" if imt.startswith("SA") else im.string)
+            if imt.startswith("SA"):
+                imts.add("SA")
+            elif imt.startswith("EAS"):
+                imts.add("EAS")
+            elif imt.startswith("FAS"):
+                imts.add("FAS")
+            elif imt.startswith("DRVT"):
+                imts.add("DRVT")
+            else:
+                imts.add(im.string)
         for gsim in gsims:
             if hasattr(gsim, 'weight'):  # disable the check
                 continue
@@ -1485,9 +1503,10 @@ class OqParam(valid.ParamSet):
         Return a cross correlation object (or None). See
         :mod:`openquake.hazardlib.cross_correlation` for more info.
         """
-        cls = getattr(cross_correlation, self.cross_correlation, None)
-        if cls is None:
-            return cross_correlation.NoCrossCorrelation(self.truncation_level)
+        try:
+            cls = getattr(cross_correlation, self.cross_correlation)
+        except AttributeError:
+            return None
         return cls()
 
     def get_kinds(self, kind, R):

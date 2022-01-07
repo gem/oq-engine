@@ -46,18 +46,7 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def get_tom_name(sg):
-    """
-    :param sg: a source group instance
-    :returns: name of the associated temporal occurrence model
-    """
-    if sg.temporal_occurrence_model:
-        return sg.temporal_occurrence_model.__class__.__name__
-    else:
-        return 'PoissonTOM'
-
-
-def create_source_info(csm, calc_times, h5):
+def create_source_info(csm, source_data, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
     """
@@ -72,6 +61,8 @@ def create_source_info(csm, calc_times, h5):
             row = [srcid, src.grp_id, src.code, 0, 0, 0, trti, 0]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
+            src.id = len(data) - 1
+
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
@@ -82,9 +73,6 @@ def create_source_info(csm, calc_times, h5):
     h5['source_info'].attrs['atomic'] = any(
         grp.atomic for grp in csm.src_groups)
     h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-    h5['trt_smrs'] = csm.get_trt_smrs()
-    h5['toms'] = numpy.array(
-        [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
 
 
 def trt_smrs(src):
@@ -141,7 +129,7 @@ def get_csm(oq, full_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
-            src.checksum = src.grp_id = src.id = src.trt_smr = grp_id
+            src.checksum = src.grp_id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
             planes = src.get_planes()
@@ -181,8 +169,8 @@ def get_csm(oq, full_lt, h5=None):
     # checking the changes
     changes = sum(sg.changes for sg in groups)
     if changes:
-        logging.info('Applied %d changes to the composite source model',
-                     changes)
+        logging.info('Applied {:_d} changes to the composite source model'.
+                     format(changes))
     return _get_csm(full_lt, groups)
 
 
@@ -312,6 +300,13 @@ def _get_csm(full_lt, groups):
         for sources in general.groupby(lst, trt_smrs).values():
             # set ._wkt attribute (for later storage in the source_wkt dataset)
             for src in sources:
+                # check on MultiFaultSources and NonParametricSources
+                mesh_size = getattr(src, 'mesh_size', 0)
+                if mesh_size > 1E6:
+                    msg = ('src "{}" has {:_d} underlying meshes with a total '
+                           'of {:_d} points!').format(
+                               src.source_id, src.count_ruptures(), mesh_size)
+                    logging.warning(msg)
                 src._wkt = src.wkt()
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
     for ag in atomic:
@@ -339,13 +334,10 @@ class CompositeSourceModel:
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
         self.src_groups = src_groups
-        idx = 0
         for grp_id, sg in enumerate(src_groups):
             assert len(sg)  # sanity check
             for src in sg:
-                src.id = idx
                 src.grp_id = grp_id
-                idx += 1
 
     def get_trt_smrs(self):
         """
@@ -424,17 +416,19 @@ class CompositeSourceModel:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
 
-    def update_source_info(self, calc_times):
+    def update_source_info(self, source_data):
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        for src_id, arr in calc_times.items():
-            row = self.source_info[src_id]
-            row[CALC_TIME] = arr[2]
-            if len(arr) == 4:  # after preclassical
-                row[WEIGHT] = arr[3]
-            row[EFF_RUPTURES] = arr[0]
-            row[NUM_SITES] = arr[1]
+        for src_id, nsites, nrupts, weight, ctimes in zip(
+                source_data['srcids'], source_data['nsites'],
+                source_data['nrupts'], source_data['weight'],
+                source_data['ctimes']):
+            row = self.source_info[src_id.split(':')[0]]
+            row[CALC_TIME] += ctimes
+            row[WEIGHT] += weight
+            row[EFF_RUPTURES] += nrupts
+            row[NUM_SITES] += nsites
 
     def count_ruptures(self):
         """

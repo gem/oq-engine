@@ -593,7 +593,10 @@ def get_gsim_lt(oqparam, trts=('*',)):
             # but it is not an error, it is actually the most common case!
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             {StdDev.TOTAL}):
-                raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
+                modifications = list(gsim.kwargs.keys())
+                if not (type(gsim).__name__ == 'ModifiableGMPE' and
+                        'add_between_within_stds' in modifications):
+                    raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
         logging.error('IMT-dependent weights in the logic tree cannot work '
@@ -651,7 +654,7 @@ def get_source_model_lt(oqparam, branchID=None):
         trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
         smlt.tectonic_region_types = smlt.tectonic_region_types - trts
-    if 'ucerf' in oqparam.calculation_mode:
+    if oqparam.is_ucerf():
         smlt.tectonic_region_types = {'Active Shallow Crust'}
     return smlt
 

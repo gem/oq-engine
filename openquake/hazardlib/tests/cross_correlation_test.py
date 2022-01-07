@@ -95,7 +95,7 @@ class NoCrossCorrelationTest(unittest.TestCase):
     Tests the case of uncorrelated epsilons
     """
     def test(self):
-        cm = NoCrossCorrelation(trunclevel=3.)
+        cm = NoCrossCorrelation(truncation_level=3.)
         imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
         numpy.random.seed(42)
         eps = cm.get_inter_eps(imts, 2)  # a 4x2 matrix
@@ -111,7 +111,7 @@ class FullCrossCorrelationTest(unittest.TestCase):
     Tests the case of fully correlated epsilons
     """
     def test(self):
-        cm = FullCrossCorrelation(trunclevel=3.)
+        cm = FullCrossCorrelation(truncation_level=3.)
         imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
         numpy.random.seed(42)
         eps = cm.get_inter_eps(imts, 2)  # a 4x2 matrix with same eps per IMT

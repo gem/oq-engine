@@ -459,3 +459,62 @@ class AbrahamsonEtAl2015SSlabLow(AbrahamsonEtAl2015SSlab):
     table 8
     """
     delta_c1 = -0.5
+
+
+class AbrahamsonEtAl2015SInter_scaled(AbrahamsonEtAl2015SInter):
+    """
+    Implements the Subduction GMPE developed by Norman Abrahamson, Nicholas
+    Gregor and Kofi Addo, otherwise known as the "BC Hydro" Model, published
+    as "BC Hydro Ground Motion Prediction Equations For Subduction Earthquakes
+    (2015, Earthquake Spectra, in press), for subduction interface events.
+
+    Application of a scaling factor that converts the prediction of
+    AbrahamsonEtAl2015SInter to the corresponding
+    prediction for the Maximum value. 
+    """
+    
+    # Period-dependent coefficients
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+	IMT		vlin	b		theta1		theta2	theta6		theta7	theta8	theta10	theta11	theta12	theta13	theta14	theta15	theta16	phi	tau		sigma	sigma_ss
+	pga		865.1	-1.186	4.313152617	-1.35	-0.0012		1.0988	-1.42	3.12	0.013	0.98	-0.0135	-0.4	0.9969	-1		0.6	0.43	0.74	0.6
+	0.05	1053.5	-1.346	4.626666443	-1.4	-0.0012		1.2536	-1.65	3.37	0.013	1.288	-0.0138	-0.4	1.103	-1.18	0.6	0.43	0.74	0.6
+	0.1		1032.5	-1.624	5.38940726	-1.45	-0.0012		1.3997	-1.8	3.33	0.013	1.613	-0.0145	-0.4	1.3042	-1.36	0.6	0.43	0.74	0.6
+	0.15	877.6	-1.931	5.561740512	-1.45	-0.0014		1.3582	-1.69	3.25	0.013	1.882	-0.0153	-0.4	1.26	-1.3	0.6	0.43	0.74	0.6
+	0.2		748.2	-2.188	5.381371479	-1.4	-0.0018		1.1648	-1.49	3.03	0.0129	2.076	-0.0162	-0.35	1.223	-1.25	0.6	0.43	0.74	0.6
+	0.3		587.1	-2.518	4.914236682	-1.28	-0.0027		0.8821	-1.18	2.59	0.0128	2.348	-0.0183	-0.28	1.05	-1.06	0.6	0.43	0.74	0.6
+	0.4		503		-2.657	4.591825288	-1.18	-0.0035		0.7046	-0.98	2.2		0.0127	2.427	-0.0206	-0.23	0.8		-0.78	0.6	0.43	0.74	0.6
+	0.5		456.6	-2.669	4.142704163	-1.08	-0.0044		0.5799	-0.82	1.92	0.0125	2.399	-0.0231	-0.19	0.662	-0.62	0.6	0.43	0.74	0.6
+	0.75	410.5	-2.401	3.347462884	-0.91	-0.0058		0.3687	-0.54	1.42	0.012	1.993	-0.0296	-0.12	0.48	-0.34	0.6	0.43	0.74	0.6
+	1		400		-1.955	2.922350962	-0.85	-0.0062		0.1746	-0.34	1.1		0.0114	1.47	-0.0363	-0.07	0.33	-0.14	0.6	0.43	0.74	0.6
+	2		400		-0.299	1.539520753	-0.71	-0.0064		-0.2821	0.12	0.7		0.0085	-0.401	-0.061	0		0.3		0		0.6	0.43	0.74	0.6
+	3		400		0		0.776117425	-0.64	-0.0064		-0.4466	0.3		0.7		0.0054	-0.673	-0.0798	0		0.3		0		0.6	0.43	0.74	0.6
+	4		400		0		0.202413823	-0.58	-0.0064		-0.4344	0.3		0.7		0.0027	-0.627	-0.0935	0		0.3		0		0.6	0.43	0.74	0.6
+
+    """)
+
+
+class AbrahamsonEtAl2015SSlab_scaled(AbrahamsonEtAl2015SInter_scaled):
+    """
+    Implements the Subduction GMPE developed by Norman Abrahamson, Nicholas
+    Gregor and Kofi Addo, otherwise known as the "BC Hydro" Model, published
+    as "BC Hydro Ground Motion Prediction Equations For Subduction Earthquakes
+    (2013, Earthquake Spectra, in press).
+    This implements only the inslab GMPE. For inslab events the source is
+    considered to be a point source located at the hypocentre. Therefore
+    the hypocentral distance metric is used in place of the rupture distance,
+    and the hypocentral depth is used to scale the ground motion by depth
+    
+    Application of a scaling factor that converts the prediction of
+    AbrahamsonEtAl2015SSlab to the corresponding
+    prediction for the Maximum value. 
+    """
+    #: Supported tectonic region type is subduction in-slab
+    DEFINED_FOR_TECTONIC_REGION_TYPE = trt = const.TRT.SUBDUCTION_INTRASLAB
+
+    #: Required distance measure is hypocentral for in-slab events
+    REQUIRES_DISTANCES = {'rhypo'}
+
+    #: In-slab events require constraint of hypocentral depth and magnitude
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
+
+    delta_c1 = -0.3

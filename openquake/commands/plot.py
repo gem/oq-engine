@@ -21,9 +21,10 @@ import json
 import logging
 import shapely
 import numpy
+from scipy.stats import linregress
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
+from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
 
 
@@ -333,7 +334,6 @@ def make_figure_task_info(extractors, what):
     ax.set_title("mean=%d+-%d seconds" % (mean, std))
     ax.set_ylabel("tasks=%d" % len(x))
 
-    from scipy.stats import linregress
     ax = fig.add_subplot(2, 1, 2)
     arr = numpy.sort(task_info, order='duration')
     x, y = arr['duration'], arr['weight']
@@ -342,6 +342,23 @@ def make_figure_task_info(extractors, what):
     ax.plot(x, y)
     ax.set_ylabel("weight")
     ax.set_xlabel("duration")
+    return plt
+
+
+def make_figure_source_data(extractors, what):
+    """
+    $ oq plot "source_data?taskno=XX"
+    """
+    plt = import_plt()
+    fig, ax = plt.subplots()
+    [ex] = extractors
+    aw = ex.get(what)
+    x, y = aw.ctimes, aw.weight
+    reg = linregress(x, y)
+    ax.plot(x, reg.intercept + reg.slope * x)
+    ax.plot(x, y)
+    ax.set_xlabel("duration")
+    ax.set_ylabel("weight")
     return plt
 
 
@@ -618,7 +635,7 @@ def make_figure_effect_by_mag(extractors, what):
         effect = ex.get('effect')
     except KeyError:
         onesite = ex.get('sitecol').one()
-        maximum_distance = MagDepDistance(ex.oqparam.maximum_distance)
+        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
         imtls = ex.oqparam.imtls
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)

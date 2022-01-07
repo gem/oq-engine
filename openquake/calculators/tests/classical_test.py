@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
-    case_66, case_67, case_68, case_70, case_71, case_72, case_73)
+    case_66, case_67, case_68, case_70, case_71, case_72, case_73, case_74)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -97,7 +97,6 @@ class ClassicalTestCase(CalculatorTestCase):
             slow = view('task:classical:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
             self.assertIn('duration', slow)
-            self.assertIn('sources', slow)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
@@ -334,10 +333,6 @@ hazard_uhs-std.csv
             case_18.__file__, kind='stats', delta=1E-7)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
-
-        if os.environ.get('TRAVIS'):
-            raise unittest.SkipTest('Randomly broken on Travis')
-
         self.calc.datastore.close()
         self.calc.datastore.open('r')
 
@@ -612,7 +607,8 @@ hazard_uhs-std.csv
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
-        self.assertEqual(self.calc.numctxs, 2986)  # number of contexts
+        data = self.calc.datastore.read_df('source_data')
+        self.assertEqual(data.nrupts.sum(), 2986)  # number of contexts
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -688,13 +684,13 @@ hazard_uhs-std.csv
             case_48.__file__, 'job.ini', pointsource_distance=
             '{"default": [(5.1, 42), (5.3, 47), (5.5, 52), (5.7, 58), '
             '(5.9, 65), (6.1, 72), (6.3, 80), (6.5, 89), (6.7, 99), '
-            '(6.9, 110)]}')
+            '(6.900001, 110)]}')
 
-        psdist = self.calc.oqparam.pointsource_distance
-        psd = psdist.ddic['active shallow crust']
-        dist_by_mag = {mag: int(psd[mag]) for mag in psd}
-        self.assertEqual(list(dist_by_mag.values()),
-                         [42, 47, 52, 58, 65, 72, 80, 89, 99, 110])
+        psdist = self.calc.oqparam.pointsource_distance('default')
+        rup_df = self.calc.datastore.read_df('rup')
+        mags = rup_df.mag.unique()
+        dists = psdist(mags)
+        aac(dists, [42, 47, 52, 58, 65, 72, 80, 89, 99, 110], rtol=1E-6)
 
         # 17 approx rrup distances for site 0 and site 1 respectively
         approx = numpy.array([[54.1525, 109.711],
@@ -1000,5 +996,11 @@ hazard_uhs-std.csv
     def test_case_73(self):
         # test LT
         self.run_calc(case_73.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+    def test_case_74(self):
+        # test calculation with EAS
+        self.run_calc(case_74.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
