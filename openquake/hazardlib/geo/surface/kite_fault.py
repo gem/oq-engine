@@ -74,12 +74,20 @@ class KiteSurface(BaseSurface):
     can be easily implemented.
     """
 
-    def __init__(self, mesh, profiles=None):
+    def __init__(self, mesh, profiles=None, sid=''):
         self.mesh = mesh
-        self._clean()
+
+        # Clean the mesh
+        success = self._clean()
+        if not success:
+            print('Profiles', profiles)
+            raise ValueError(f'Error while initialising section (id: {sid})')
+
+        # Save profiles
         self.profiles = profiles
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along strike and dip.")
+
         # Make sure the mesh respects the right hand rule
         self._fix_right_hand()
         self.strike = self.dip = None
@@ -105,8 +113,16 @@ class KiteSurface(BaseSurface):
         lons = np.delete(lons, rm, axis=1)
         lats = np.delete(lats, rm, axis=1)
         deps = np.delete(deps, rm, axis=1)
+
+        success = True
+        if not lons.size > 0:
+            success = False
+            return success
+            # import pdb; pdb.set_trace()
+
         mesh = RectangularMesh(lons, lats, deps)
         self.mesh = mesh
+        return success
 
     @property
     def surface_nodes(self):
@@ -366,7 +382,7 @@ class KiteSurface(BaseSurface):
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
-                      align=False):
+                      align=False, sid=''):
         # TODO split this function into smaller components.
         """
         This method creates a quadrilateral mesh from a set of profiles. The
@@ -478,7 +494,7 @@ class KiteSurface(BaseSurface):
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
-                   profiles)
+                   profiles, sid)
 
     def get_center(self):
         """
@@ -494,6 +510,9 @@ class KiteSurface(BaseSurface):
         icol = int(np.round(mesh.shape[1]/2))
         return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
                      mesh.depths[irow, icol])
+
+    def get_TUB(self, sites, shift):
+        pass
 
     @property
     def surface_projection(self):
