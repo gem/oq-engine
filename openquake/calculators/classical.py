@@ -479,7 +479,6 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
         triples = []
-        split_level = oq.split_level
         for grp_id in self.grp_ids:
             sg = self.csm.src_groups[grp_id]
             if sg.atomic:
@@ -500,7 +499,10 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, sids, cmakers[grp_id])
                     triples.append(trip)
-                    if len(block) >= split_level and not oq.disagg_by_src:
+                    split_level = (oq.split_level
+                                   if len(block) >= oq.split_level
+                                   else len(block))
+                    if split_level > 1 and not oq.disagg_by_src:
                         smap.submit_split(trip, oq.time_per_task, split_level)
                         self.n_outs[grp_id] += split_level
                     else:
