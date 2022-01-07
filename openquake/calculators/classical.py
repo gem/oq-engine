@@ -502,7 +502,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     split_level = (oq.split_level
                                    if len(block) >= oq.split_level
                                    else len(block))
-                    if oq.disagg_by_src:
+                    if split_level > 1 and not oq.disagg_by_src:
                         smap.submit_split(trip, oq.time_per_task, split_level)
                         self.n_outs[grp_id] += split_level
                     else:
