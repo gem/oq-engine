@@ -499,12 +499,12 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, sids, cmakers[grp_id])
                     triples.append(trip)
-                    split_level = (oq.split_level
-                                   if len(block) >= oq.split_level
+                    outs_per_task = (oq.outs_per_task
+                                   if len(block) >= oq.outs_per_task
                                    else len(block))
-                    if split_level > 1 and not oq.disagg_by_src:
-                        smap.submit_split(trip, oq.time_per_task, split_level)
-                        self.n_outs[grp_id] += split_level
+                    if outs_per_task > 1 and not oq.disagg_by_src:
+                        smap.submit_split(trip, oq.time_per_task, outs_per_task)
+                        self.n_outs[grp_id] += outs_per_task
                     else:
                         smap.submit(trip)
                         self.n_outs[grp_id] += 1
