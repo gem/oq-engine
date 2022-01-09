@@ -196,8 +196,9 @@ class ScenarioTestCase(CalculatorTestCase):
         old = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
         self.run_calc(case_20.__file__, 'job.ini',
                       gsim_logic_tree_file='epsilon_tau.xml')
-        new = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
         aae(old.sig_inter_PGA.unique(), 0.3501)
-        aae(new.sig_inter_PGA.unique(), 0)
         aae(old.eps_inter_PGA.mean(), -0.025970912)
+        # `set_between_epsilon` sets `sig_inter` to zero
+        new = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
+        aae(new.sig_inter_PGA.unique(), 0)
         aae(new.eps_inter_PGA.mean(), -0.025970920)
