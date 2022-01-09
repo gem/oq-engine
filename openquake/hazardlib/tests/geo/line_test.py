@@ -540,7 +540,7 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
         lats = [lats]
 
     # Colormap
-    cmap = plt.get_cmap('PiYG', 11)
+    cmap = plt.get_cmap('coolwarm', 11)
 
     # Plot
     fig, ax = plt.subplots()
