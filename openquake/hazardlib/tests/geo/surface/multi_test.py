@@ -33,12 +33,16 @@ cd = pathlib.Path(__file__).parent
 aac = numpy.testing.assert_allclose
 aae = numpy.testing.assert_almost_equal
 
-PLOTTING = True
+PLOTTING = False
 
 
 class GetTorTestCase(unittest.TestCase):
+    """
+    Tests the extraction of the traces of the sections composing a rupture
+    """
 
     def test_planar_tor01(self):
+        """ Planar rupture """
         tmp = os.path.join(cd, 'data', 'msurface18.csv')
         surf = MultiSurface.from_csv(tmp)
         surf._set_tor()
@@ -79,10 +83,12 @@ class MultiSurfaceTestCase(unittest.TestCase):
         surfb = MultiSurface(surf19.surfaces + surf20.surfaces)
         rjba = surfa.get_joyner_boore_distance(mesh)[0]
         rjbb = surfb.get_joyner_boore_distance(mesh)[0]
+
+        # Test
         aac([rjba, rjbb], [85.676294, 89.225542])
 
     def test_rx(self):
-        meshtest = Mesh(numpy.array([-118.]), numpy.array([33]))   # 1 point
+        meshtest = Mesh(numpy.array([-118.]), numpy.array([33]))  # 1 point
         tmp = os.path.join('data', 'msurface18.csv')
         surf18 = MultiSurface.from_csv(cd / tmp)  # 2 planes
         tmp = os.path.join('data', 'msurface19.csv')
@@ -93,9 +99,13 @@ class MultiSurfaceTestCase(unittest.TestCase):
         rx19 = surf19.get_rx_distance(meshtest)[0]
         rx20 = surf20.get_rx_distance(meshtest)[0]
 
-        # Plotting -
-        mesh, mlons, mlats = get_mesh(-118.5, -117.5, 33.0, 34., 0.005)
+        # Plotting
         if PLOTTING:
+
+            # Creating the mesh
+            mesh, mlons, mlats = get_mesh(-118.5, -117.5, 33.0, 34., 0.005)
+
+            # Plots
             rx = surf18.get_rx_distance(mesh)
             _ = _plotting(surf18, rx, mlons, mlats, label='Rx - surf18')
             plt.show()
@@ -111,7 +121,7 @@ class MultiSurfaceTestCase(unittest.TestCase):
         # Test first set of surfaces
         aac([rx18, rx19, rx20], [64.328038, 64.288793, 60.205692])
 
-        # Test second set of surfaces
+        # Create surfaces and compute Rx
         surfa = MultiSurface(surf18.surfaces + surf19.surfaces)
         surfb = MultiSurface(surf19.surfaces + surf20.surfaces)
         rxa = surfa.get_rx_distance(meshtest)[0]
@@ -128,6 +138,7 @@ class MultiSurfaceTestCase(unittest.TestCase):
             _ = _plotting(surfb, rx, mlons, mlats, label='Rx - surfb')
             plt.show()
 
+        # Test second set of surfaces
         aac([rxa, rxb], [64.309214, 62.332508], rtol=1e-5)
 
     def test_rx_ry0_kite(self):
@@ -160,7 +171,6 @@ class MultiSurfaceTestCase(unittest.TestCase):
         # Checking Ry0
         expected = numpy.array([0.0, tmp1])
         ry0 = msurf.get_ry0_distance(mesh)
-        print(ry0)
 
         # Plotting
         if PLOTTING:
@@ -168,19 +178,22 @@ class MultiSurfaceTestCase(unittest.TestCase):
             rx = msurf.get_rx_distance(mesh)
             ax = _plotting(msurf, rx, mlons, mlats, label='Rx - Kite')
             ax.plot(pcoo[:, 0], pcoo[:, 1], 'o')
-            for srf in  msurf.surfaces:
+            for srf in msurf.surfaces:
                 plot_mesh_2d(ax, srf)
             plt.show()
 
             ry0 = msurf.get_ry0_distance(mesh)
             ax = _plotting(msurf, ry0, mlons, mlats, label='Ry0 - Kite')
             ax.plot(pcoo[:, 0], pcoo[:, 1], 'o')
-            for srf in  msurf.surfaces:
+            for srf in msurf.surfaces:
                 plot_mesh_2d(ax, srf)
             plt.show()
 
 
 def _plotting(surf, dst, mlons, mlats, lons=[], lats=[], label=''):
+    """
+    Plots mesh and surface
+    """
     num = 10
     ax = plot_pattern(lons, lats, numpy.reshape(dst, mlons.shape),
                       mlons, mlats, label, num, show=False)
