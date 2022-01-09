@@ -647,10 +647,10 @@ hazard_uhs-std.csv
     def test_case_48(self):
         # pointsource_distance effects on a simple point source.
         # This is case with 10 magnitudes and 2 hypodepths.
-        # The maximum_distance is 110 km and the second site
-        # was chosen very carefully, so that after the approximation
-        # 3 ruptures get distances around 111 km and are discarded
-        # (even if their true distances are around 109 km!)
+        # The maximum_distance is 110 km and the pointsource_distance 50 km.
+        # Originally the distances weew was chosen very carefully, so that
+        # after the approximation 3 ruptures got distances around 111 km and
+        # were discarded even if their true distances were around 109 km!
         self.run_calc(case_48.__file__, 'job.ini')
         # 20 exact rrup distances for site 0 and site 1 respectively
         expect = numpy.array([[54.3, 109.8],

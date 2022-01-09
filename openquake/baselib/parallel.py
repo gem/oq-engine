@@ -737,11 +737,11 @@ class Starmap(object):
                     maxweight=None, weight=lambda item: 1,
                     key=lambda item: 'Unspecified',
                     distribute=None, progress=logging.info, h5=None,
-                    duration=300, split_level=5):
+                    duration=300, outs_per_task=5):
         """
         Same as Starmap.apply, but possibly produces subtasks
         """
-        args = (allargs[0], task, allargs[1:], duration, split_level)
+        args = (allargs[0], task, allargs[1:], duration, outs_per_task)
         return cls.apply(split_task, args, concurrent_tasks or 2*cls.num_cores,
                          maxweight, weight, key, distribute, progress, h5)
 
@@ -835,12 +835,12 @@ class Starmap(object):
         self.task_no += 1
         self.tasks.append(res)
 
-    def submit_split(self, args,  duration, split_level):
+    def submit_split(self, args,  duration, outs_per_task):
         """
         Submit the given arguments to the underlying task
         """
         self.monitor.operation = self.task_func.__name__ + '_'
-        self.submit((args[0], self.task_func, args[1:], duration, split_level),
+        self.submit((args[0], self.task_func, args[1:], duration, outs_per_task),
                     split_task)
 
     def submit_all(self):
@@ -948,21 +948,21 @@ class List(list):
     weight = 0
 
 
-def split_task(elements, func, args, duration, split_level, monitor):
+def split_task(elements, func, args, duration, outs_per_task, monitor):
     """
     :param func: a task function with a monitor as last argument
     :param args: arguments of the task function, with args[0] being a sequence
     :param duration: split the task if it exceeds the duration
-    :param split_level: number of splits to try (ex. 5)
+    :param outs_per_task: number of splits to try (ex. 5)
     :yields: a partial result, 0 or more task objects
     """
     n = len(elements)
-    if split_level > n:  # too many splits
-        split_level = n
+    if outs_per_task > n:  # too many splits
+        outs_per_task = n
     elements = numpy.array(elements)  # from WeightedSequence to array
     idxs = numpy.arange(n)
-    split_elems = [elements[idxs % split_level == i]
-                   for i in range(split_level)]
+    split_elems = [elements[idxs % outs_per_task == i]
+                   for i in range(outs_per_task)]
     # see how long it takes to run the first slice
     t0 = time.time()
     for i, elems in enumerate(split_elems):

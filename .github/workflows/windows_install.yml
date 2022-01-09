@@ -45,10 +45,13 @@ jobs:
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
       - name: Install engine on developer mode
+        env: 
+          BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           set PIP_DEFAULT_TIMEOUT=100
           python -m pip install pip wheel setuptools --upgrade
-          python install.py devel
+          echo Branch to test %BRANCH%
+          if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
         shell: cmd
       - name: Run demos to test installation
         run: |

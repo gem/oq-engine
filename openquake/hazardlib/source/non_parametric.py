@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 import numpy
+from openquake.baselib.general import block_splitter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -90,11 +91,11 @@ class NonParametricSeismicSource(BaseSeismicSource):
         if len(self.data) == 1:  # there is nothing to split
             yield self
             return
-        for i, rup_pmf in enumerate(self.data):
+        for i, block in enumerate(block_splitter(self.data, 100)):
             source_id = '%s:%d' % (self.source_id, i)
             src = self.__class__(source_id, self.name,
-                                 self.tectonic_region_type, [rup_pmf])
-            src.num_ruptures = 1
+                                 self.tectonic_region_type, block)
+            src.num_ruptures = len(block)
             src.trt_smr = self.trt_smr
             yield src
 

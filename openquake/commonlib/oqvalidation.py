@@ -654,9 +654,9 @@ specific_assets:
 split_sources:
   INTERNAL
 
-split_level:
+outs_per_task:
   How many outputs per task to generate (honored in some calculators)
-  Example: *split_level = 5*
+  Example: *outs_per_task = 3*
   Default: 4
 
 std:
@@ -890,7 +890,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
-    split_level = valid.Param(valid.positiveint, 4)
+    outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 600)

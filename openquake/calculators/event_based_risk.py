@@ -325,7 +325,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 weight=operator.itemgetter('n_occ'),
                 h5=self.datastore.hdf5,
                 duration=oq.time_per_task,
-                split_level=5)
+                outs_per_task=5)
             smap.monitor.save('srcfilter', srcfilter)
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)

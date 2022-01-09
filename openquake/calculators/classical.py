@@ -459,8 +459,15 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
-        self.datastore.create_df(
-            'source_data', pandas.DataFrame(self.source_data))
+        df = pandas.DataFrame(self.source_data)
+        # NB: the impact factor is the number of effective ruptures;
+        # consider for instance a point source producing 200 ruptures
+        # for points within the pointsource_distance (n points) and
+        # producing 20 effective ruptures for the N-n points outside;
+        # then impact = (200 * n + 20 * (N-n)) / N; for n=1 and N=10
+        # it gives impact = 38, i.e. there are 38 effective ruptures
+        df['impact'] = df.nsites / self.N
+        self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
 
     def submit(self, sids, cmakers, max_weight):
@@ -472,7 +479,6 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         smap.monitor.save('sitecol', self.sitecol)
         triples = []
-        split_level = oq.split_level
         for grp_id in self.grp_ids:
             sg = self.csm.src_groups[grp_id]
             if sg.atomic:
@@ -493,9 +499,12 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, sids, cmakers[grp_id])
                     triples.append(trip)
-                    if len(block) >= split_level and not oq.disagg_by_src:
-                        smap.submit_split(trip, oq.time_per_task, split_level)
-                        self.n_outs[grp_id] += split_level
+                    outs_per_task = (oq.outs_per_task
+                                   if len(block) >= oq.outs_per_task
+                                   else len(block))
+                    if outs_per_task > 1 and not oq.disagg_by_src:
+                        smap.submit_split(trip, oq.time_per_task, outs_per_task)
+                        self.n_outs[grp_id] += outs_per_task
                     else:
                         smap.submit(trip)
                         self.n_outs[grp_id] += 1
