@@ -183,7 +183,9 @@ class FullCrossCorrelation(CrossCorrelationBetween):
         """
         :param imts: a list of M intensity measure types
         :param num_events: the number of events to consider (E)
-        :returns: an uncorrelated matrix of epsilons of shape (M, E)
+        :returns:
+            a matrix of epsilons of shape (M, E) with the same epsilons
+            for each IMT
 
         NB: the user must specify the random seed first
         """
