@@ -19,10 +19,13 @@
 import os
 import unittest
 import numpy as np
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from openquake.hazardlib.geo.geodetic import (
     geodetic_distance, npoints_towards)
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.nrml import to_python
+from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
     _read_profiles)
 from openquake.hazardlib.geo import Point, Line
@@ -132,7 +135,7 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
         prf4 = Line([tmp1, tmp2])
         sfcb = KiteSurface.from_profiles([prf3, prf4], 0.2, 0.2)
 
-        # Create surface and mesh needed for the test
+        # Create the surface and mesh needed for the test
         self.msrf = MultiSurface([sfca, sfcb])
         self.coo = np.array([[-0.1, 0.0], [0.0, 0.1]])
         self.mesh = Mesh(self.coo[:, 0], self.coo[:, 1])
@@ -297,7 +300,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         aae(er['blo'], blo, decimal=1)
         aae(er['bla'], bla, decimal=1)
 
-    @unittest.skip("skipping due to differences betweeen various architectures")
+    @unittest.skip("Differences betweeen various architectures")
     def test_get_surface_boundaries(self):
         # The result is checked visually
         blo, bla = self.msrf.get_surface_boundaries()
@@ -322,13 +325,24 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         aae(er['bla'], bla, decimal=2)
 
     def test_get_rx(self):
+
         # Results visually inspected
         dst = self.msrf.get_rx_distance(self.mesh)
 
         if PLOTTING:
-            title = f'{self.NAME} - Rx'
-            print(self.mesh.lons.shape)
+            title = f'{type(self).__name__} - Rx'
             _plt_results(self.clo, self.cla, dst, self.msrf, title)
+
+        # Saving data
+        fname = os.path.join(BASE_PATH, 'results', 'results_msf_nan_rx.npz')
+        if OVERWRITE:
+            np.savez_compressed(fname, rx=dst)
+
+        # Load expected results
+        er = np.load(fname)
+
+        # Testing
+        aae(er['rx'], dst, decimal=1)
 
     def test_get_ry0(self):
 
@@ -336,7 +350,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         dst = self.msrf.get_ry0_distance(self.mesh)
 
         if PLOTTING:
-            title = f'{self.NAME} - Ry0'
+            title = f'{type(self).__name__} - Ry0'
             fig, ax = _plt_results(self.clo, self.cla, dst, self.msrf, title)
             for line in self.msrf.tors.lines:
                 ax.plot(line.coo[:, 0], line.coo[:, 1], '-r', lw=3)
@@ -344,17 +358,110 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             ax.plot(self.msrf.tors.olon, self.msrf.tors.olat, 'o')
             plt.show()
 
+        # Saving data
+        fname = os.path.join(BASE_PATH, 'results', 'results_msf_nan_ry0.npz')
+        if OVERWRITE:
+            np.savez_compressed(fname, rx=dst)
 
-def _plt_results(clo, cla, dst, msrf, title):
+        # Load expected results
+        er = np.load(fname)
+
+        # Testing
+        aae(er['rx'], dst, decimal=1)
+
+
+class NZLTestCase(unittest.TestCase):
+
+    def setUp(self):
+
+        # Create converter
+        sconv = SourceConverter(investigation_time=1.,
+                                rupture_mesh_spacing=2.5)
+
+        # Read geometry model. It contains a list of sections (i.e. instances
+        # of :class:`openquake.hazardlib.source.multi_fault.FaultSection`).
+        # The surface of each section in this case is an instance of
+        # :class:`openquake.hazardlib.geo.surface.KiteFault`
+        fname = 'sections_rupture200_sections.xml'
+        fname = os.path.join(BASE_DATA_PATH, fname)
+        gmodel = to_python(fname, sconv)
+
+        # Create the surface
+        sfcs = []
+        for sec in gmodel.sections:
+            sfcs.append(gmodel.sections[sec].surface)
+        self.msrf = MultiSurface(sfcs)
+
+    def test_nzl_tors(self):
+
+        # Set the rupture traces
+        self.msrf._set_tor()
+
+        if PLOTTING:
+            # Plotting profiles and surfaces
+            _, ax = plt.subplots(1, 1)
+            for sfc in self.msrf.surfaces:
+                plot_mesh_2d(ax, sfc)
+                for pro in sfc.profiles:
+                    ax.plot(pro.coo[:, 0], pro.coo[:, 1], '--b')
+            # Plotting traces
+            for line in self.msrf.tors.lines:
+                col = np.random.rand(3)
+                coo = line.coo
+                ax.plot(coo[:, 0], coo[:, 1], color=col)
+                ax.plot(coo[0, 0], coo[0, 1], marker='$s$', color=col)
+            plt.show()
+
+    def test_nzl_get_rx(self):
+
+        # Mesh of sites
+        mlons = []
+        mlats = []
+        step = 0.01
+        for lo in np.arange(165, 168, step):
+            tlo = []
+            tla = []
+            for la in np.arange(-46.0, -44.5, step):
+                tlo.append(lo)
+                tla.append(la)
+            mlons.append(tlo)
+            mlats.append(tla)
+        mlons = np.array(mlons)
+        mlats = np.array(mlats)
+        mesh = Mesh(lons=mlons.flatten(), lats=mlats.flatten())
+
+        # Compute the Rx distance
+        msrf = self.msrf
+        dst = msrf.get_rx_distance(mesh)
+
+        if PLOTTING:
+            title = '- Rx'
+            _plt_results(mlons, mlats, dst, msrf, title, boundary=False)
+            plt.show()
+
+        # We did not have a way to compute these results independently
+        fname = os.path.join(BASE_PATH, 'results', 'results_nzl_01.npz')
+        if OVERWRITE:
+            np.savez_compressed(fname, rx=dst)
+
+        # Load expected results
+        er = np.load(fname)
+
+        # Testing
+        aae(er['rx'], dst, decimal=1)
+
+
+def _plt_results(clo, cla, dst, msrf, title, boundary=True):
     """ Plot results """
     fig, ax = plt.subplots(1, 1)
-    plt.scatter(clo, cla, c=dst, edgecolors='none', s=15)
-    plot_mesh_2d(ax, msrf.surfaces[0])
-    plot_mesh_2d(ax, msrf.surfaces[1])
-    lo, la = msrf.get_surface_boundaries()
-    plt.plot(lo, la, '-r')
+    plt.scatter(clo, cla, c=dst, edgecolors='none', s=15, cmap=cm.coolwarm)
+    for srf in msrf.surfaces:
+        plot_mesh_2d(ax, srf)
+    if boundary:
+        lo, la = msrf.get_surface_boundaries()
+        plt.plot(lo, la, '-r')
     z = np.reshape(dst, clo.shape)
-    cs = plt.contour(clo, cla, z, 10, colors='k')
+    cs = plt.contour(clo, cla, z, 10, colors='k', alpha=.5)
     _ = plt.clabel(cs)
     plt.title(title)
     return fig, ax

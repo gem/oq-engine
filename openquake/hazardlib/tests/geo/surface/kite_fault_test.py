@@ -38,6 +38,7 @@ def plot_mesh_2d(ax, smsh):
         ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :], '-r', lw=0.5)
     for i in range(smsh.mesh.lons.shape[1]):
         ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i], '-r', lw=0.5)
+    ax.plot(smsh.mesh.lons[0, :], smsh.mesh.lats[0, :], '-g', lw=1.0)
 
 
 def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):

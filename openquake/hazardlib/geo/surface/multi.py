@@ -22,7 +22,6 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 """
 import numpy as np
 from shapely.geometry import Polygon
-from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
@@ -53,7 +52,7 @@ class MultiSurface(BaseSurface):
         return [surf.surface_nodes for surf in self.surfaces]
 
     @classmethod
-    def from_csv(cls, fname):
+    def from_csv(cls, fname: str):
         """
         :param fname:
             path to a CSV file with header (lon, lat, dep) and 4 x P
@@ -359,18 +358,14 @@ class MultiSurface(BaseSurface):
             self.areas = np.array(self.areas)
         return self.areas
 
-
-    def _set_tu(self, mesh):
+    def _set_tu(self, mesh: Mesh):
         """
         Set the values of T and U
         """
-
         if self.tors is None:
             self._set_tor()
-
         if self.tors.shift is None:
             self.tors._set_coordinate_shift()
-
         tupps = []
         uupps = []
         weis = []
@@ -379,9 +374,7 @@ class MultiSurface(BaseSurface):
             tupps.append(tu)
             uupps.append(uu)
             weis.append(np.squeeze(np.sum(we, axis=0)))
-
         uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
-
         self.uut = uut
         self.tut = tut
         self.site_mesh = mesh
@@ -393,7 +386,6 @@ class MultiSurface(BaseSurface):
         condition2 = (self.site_mesh is not None and self.site_mesh != mesh)
         if (self.uut is None) or condition2:
             self._set_tu(mesh)
-
         rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
         return -rx
 

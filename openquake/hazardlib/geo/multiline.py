@@ -76,8 +76,8 @@ class MultiLine():
         llenghts = self.get_lengths()
         avgaz = self.get_average_azimuths()
 
-        sos = get_overall_strike
-        revert, strike_east, avg_azim, nl = sos(self.lines, llenghts, avgaz)
+        gos = get_overall_strike
+        revert, strike_east, avg_azim, nl = gos(self.lines, llenghts, avgaz)
 
         self.strike_to_east = strike_east
         self.overall_strike = avg_azim
@@ -220,8 +220,7 @@ def get_average_azimuths(lines: list) -> np.ndarray:
     return np.array(avgazims)
 
 
-def get_overall_strike(lines: list, llens: list = None, avgaz: list = None,
-                       ):
+def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
     """
     Computes the overall strike direction for the multiline
 

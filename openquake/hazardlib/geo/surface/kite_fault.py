@@ -249,14 +249,14 @@ class KiteSurface(BaseSurface):
         if found:
             azi_strike = azimuth(self.mesh.lons[irow, icol],
                                  self.mesh.lats[irow, icol],
-                                 self.mesh.lons[irow+1, icol],
-                                 self.mesh.lats[irow+1, icol])
+                                 self.mesh.lons[irow, icol+1],
+                                 self.mesh.lats[irow, icol+1])
             azi_dip = azimuth(self.mesh.lons[irow, icol],
                               self.mesh.lats[irow, icol],
-                              self.mesh.lons[irow, icol+1],
-                              self.mesh.lats[irow, icol+1])
+                              self.mesh.lons[irow+1, icol],
+                              self.mesh.lats[irow+1, icol])
 
-            if abs((azi_strike + 90) % 360 - azi_dip) < 10:
+            if abs((azi_strike - 90) % 360 - azi_dip) < 40:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
