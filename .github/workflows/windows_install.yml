@@ -59,7 +59,7 @@ jobs:
           }
           else
           {
-            python install.py devel --version ${BRANCH}
+            python install.py devel --version ${env:BRANCH}
           }
       - name: Run demos to test installation
         run: |
