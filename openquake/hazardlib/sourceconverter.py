@@ -963,12 +963,10 @@ class SourceConverter(RuptureConverter):
 
         msr = valid.SCALEREL[~node.magScaleRel]()
         mfd = self.convert_mfdist(node)
-        try:
-            xstep = valid.float_(~node.floating_x_step)
-            ystep = valid.float_(~node.floating_y_step)
-        except Exception:
-            xstep = self.floating_x_step
-            ystep = self.floating_y_step
+
+        # get rupture floating steps
+        xstep = self.floating_x_step
+        ystep = self.floating_y_step
 
         with context(self.fname, node):
             if as_kite:

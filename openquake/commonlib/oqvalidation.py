@@ -223,15 +223,25 @@ ebrisk_maxsize:
 floating_x_step:
   Float, used in rupture generation for kite faults. indicates the fraction
   of fault length used to float ruptures along strike by the given float
-  (i.e. "0.5" floats the ruptures at half the rupture length). The minimum
-  possible value depends on the rupture dimensions and the mesh spacing.
+  (i.e. "0.5" floats the ruptures at half the rupture length). Uniform 
+  distribution of the ruptures is maintained, such that if the mesh spacing
+  and rupture dimensions prohibit the defined overlap fraction, the fraction
+  is increased until uniform distribution is achieved. The minimum possible
+  value depends on the rupture dimensions and the mesh spacing.
+  If 0, standard rupture floating is used along-strike (i.e. no mesh nodes
+  are skipped). 
   Example: *floating_x_step = 0.5*
   Default: 0
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
   of fault width used to float ruptures down dip. (i.e. "0.5" floats the
-  ruptures at half the rupture length) The minimum possible value depends
+  ruptures at half the rupture length). Uniform distribution of the ruptures
+  is maintained, such that if the mesh spacing and rupture dimensions
+  prohibit the defined overlap fraction, the fraction is increased until
+  uniform distribution is achieved. The minimum possible value depends on
+  the rupture dimensions and the mesh spacing.
+  If 0, standard rupture floating is used along-strike (i.e. no mesh nodes
   on the rupture dimensions and the mesh spacing.
   Example: *floating_y_step = 0.5*
   Default: 0
