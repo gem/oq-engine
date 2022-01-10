@@ -74,14 +74,15 @@ class KiteSurface(BaseSurface):
     can be easily implemented.
     """
 
-    def __init__(self, mesh, profiles=None, sid=''):
+    def __init__(self, mesh, profiles=None, sec_id=''):
         self.mesh = mesh
 
         # Clean the mesh
         success = self._clean()
         if not success:
             print('Profiles', profiles)
-            raise ValueError(f'Error while initialising section (id: {sid})')
+            msg = f'Error while initialising section (id: {sec_id})'
+            raise ValueError(msg)
 
         # Save profiles
         self.profiles = profiles
