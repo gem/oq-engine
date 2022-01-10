@@ -479,7 +479,7 @@ class RuptureConverter(object):
         return geo.PlanarSurface.from_corner_points(
             top_left, top_right, bottom_right, bottom_left)
 
-    def convert_surfaces(self, surface_nodes, sid=''):
+    def convert_surfaces(self, surface_nodes, sec_id=''):
         """
         :param surface_nodes: surface nodes as described below
 
@@ -524,7 +524,7 @@ class RuptureConverter(object):
             if len(profs) < 2:
                 surface = geo.KiteSurface.from_profiles(
                     profs[0], self.rupture_mesh_spacing,
-                    self.rupture_mesh_spacing, sid=sid)
+                    self.rupture_mesh_spacing, sec_id=sec_id)
             else:
                 surfaces = []
                 for prof in profs:

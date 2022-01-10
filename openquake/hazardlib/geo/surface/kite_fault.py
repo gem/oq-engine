@@ -382,7 +382,7 @@ class KiteSurface(BaseSurface):
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
-                      align=False, sid=''):
+                      align=False, sec_id=''):
         # TODO split this function into smaller components.
         """
         This method creates a quadrilateral mesh from a set of profiles. The
@@ -494,7 +494,7 @@ class KiteSurface(BaseSurface):
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
-                   profiles, sid)
+                   profiles, sec_id)
 
     def get_center(self):
         """
