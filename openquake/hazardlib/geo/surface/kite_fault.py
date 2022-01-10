@@ -74,12 +74,21 @@ class KiteSurface(BaseSurface):
     can be easily implemented.
     """
 
-    def __init__(self, mesh, profiles=None):
+    def __init__(self, mesh, profiles=None, sec_id=''):
         self.mesh = mesh
-        self._clean()
+
+        # Clean the mesh
+        success = self._clean()
+        if not success:
+            print('Profiles', profiles)
+            msg = f'Error while initialising section (id: {sec_id})'
+            raise ValueError(msg)
+
+        # Save profiles
         self.profiles = profiles
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along strike and dip.")
+
         # Make sure the mesh respects the right hand rule
         self._fix_right_hand()
         self.strike = self.dip = None
@@ -105,8 +114,15 @@ class KiteSurface(BaseSurface):
         lons = np.delete(lons, rm, axis=1)
         lats = np.delete(lats, rm, axis=1)
         deps = np.delete(deps, rm, axis=1)
+
+        success = True
+        if not lons.size > 0:
+            success = False
+            return success
+
         mesh = RectangularMesh(lons, lats, deps)
         self.mesh = mesh
+        return success
 
     @property
     def surface_nodes(self):
@@ -366,7 +382,7 @@ class KiteSurface(BaseSurface):
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
-                      align=False):
+                      align=False, sec_id=''):
         # TODO split this function into smaller components.
         """
         This method creates a quadrilateral mesh from a set of profiles. The
@@ -478,7 +494,7 @@ class KiteSurface(BaseSurface):
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
-                   profiles)
+                   profiles, sec_id)
 
     def get_center(self):
         """
