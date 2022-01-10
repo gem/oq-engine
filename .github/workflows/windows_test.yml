@@ -1,16 +1,14 @@
-name: Windows Install engine for 3.7, 3.8 and 3.9
+name: TEST OQ calcs using GH
 
 on:
   workflow_dispatch:
     inputs:
       git-ref:
         description: Git Ref
-        default: master
+        default: engine-3.12
         required: true
-  schedule:
-    - cron: "00 22 * * *"
   push:
-    branches: [ test_os ]
+    branches: [ singapore ]
 
 jobs:
   install_and_test:
@@ -21,9 +19,10 @@ jobs:
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
+      BRANCH: ${{ github.event.inputs.git-ref }}
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8]
 
     steps:
       - name: Check out the codebase.
@@ -52,20 +51,25 @@ jobs:
           python -m pip install pip wheel setuptools --upgrade
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
-          write-Host "Branch to test ${env:BRANCH} " ${env:BRANCH}
-          if ( ${env:BRANCH} -eq $null)
-          {
-            python install.py devel
-          }
+          pwd 
+          ls
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
           else
-          {
-            python install.py devel --version ${env:BRANCH}
-          }
-      - name: Run demos to test installation
+            python install.py devel
+          fi
+        shell: bash
+      - name: Run Test using http method
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           #
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          python -m pip install pytest
-          pytest -vs D:\a\oq-engine\oq-engine\openquake\calculators
+          #
+          write-host "Classical Hazard"
+          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          #
+          write-host "Singapore"
+          oq engine --run "https://downloads.openquake.org/risk_test.zip"
