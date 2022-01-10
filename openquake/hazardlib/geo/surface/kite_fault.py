@@ -511,9 +511,6 @@ class KiteSurface(BaseSurface):
         return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
                      mesh.depths[irow, icol])
 
-    def get_TUB(self, sites, shift):
-        pass
-
     @property
     def surface_projection(self):
         """
