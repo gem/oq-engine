@@ -19,7 +19,6 @@ Module :mod:`openquake.hazardlib.source.kite_fault` defines
 """
 import copy
 import numpy as np
-import logging
 from typing import Tuple
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point, Polygon
@@ -149,21 +148,19 @@ class KiteFaultSource(ParametricSeismicSource):
             rup_len = int(np.round(lng/self.rupture_mesh_spacing)) + 1
             rup_wid = int(np.round(wdt/self.profiles_sampling)) + 1
 
-
             if self.floating_x_step == 0:
-                fstrike = 1 
+                fstrike = 1
             else:
-                # ratio = the percentage of nodes to use
-                # as starting points of ruptures
-                fstrike = int(np.floor(1/self.floating_x_step))
-                if fstrike == 0: 
+                # ratio = the amount of overlap between consecutive ruptures
+                fstrike = int(np.floor(rup_len*self.floating_x_step))
+                if fstrike == 0:
                     fstrike = 1
 
             if self.floating_x_step == 0:
                 fdip = 1
             else:
-                # as for strike: ratio indicates percentage
-                fdip = int(np.floor(1/self.floating_y_step))
+                # as for strike: ratio indicates percentage overlap
+                fdip = int(np.floor(rup_wid*self.floating_y_step))
                 if fdip == 0:
                     fdip = 1
 
@@ -232,11 +229,13 @@ class KiteFaultSource(ParametricSeismicSource):
         x_nodes = np.arange(0, mesh_x_len, f_strike)
         y_nodes = np.arange(0, mesh_y_len, f_dip)
 
-        while len(x_nodes) > 0 and f_strike > 1 and x_nodes[-1] != omsh.lons.shape[1] - rup_s:
+        while (len(x_nodes) > 0 and f_strike > 1
+                and x_nodes[-1] != omsh.lons.shape[1] - rup_s):
             f_strike -= 1
             x_nodes = np.arange(0, mesh_x_len, f_strike)
 
-        while len(y_nodes) > 0 and f_dip > 1 and y_nodes[-1] != omsh.lons.shape[0] - rup_d:
+        while (len(y_nodes) > 0 and f_dip > 1
+                and y_nodes[-1] != omsh.lons.shape[0] - rup_d):
             f_dip -= 1
             y_nodes = np.arange(0, mesh_y_len, f_dip)
 

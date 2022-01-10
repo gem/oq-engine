@@ -31,7 +31,7 @@ from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 
 # Movies are in /tmp
-MAKE_MOVIES = False 
+MAKE_MOVIES = False
 MAKE_PICTURES = False
 
 
@@ -183,8 +183,9 @@ class FromSimpleFaultDataTestCase(unittest.TestCase):
 class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
 
     def test01(self):
-        """ Simplest surface, tests for 0.5 floating (half overlap). only
-        impacts the strike sampling due to down-dip rupture width """
+        """ Simplest surface, 0.5 floating (half overlap). The sampler
+        decreases the number of nodes on the mesh surface that are skipped
+        such that the ruptures can be equally spaced"""
 
         # Create the magnitude-frequency distribution
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=6.2, max_mag=6.4,
@@ -219,7 +220,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(rup.surface.mesh.lons.shape[1], 8, msg)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 24, msg)
+        self.assertEqual(source.count_ruptures(), 12, msg)
 
         if MAKE_PICTURES:
             ppp(source.profiles, source.surface)
@@ -230,8 +231,9 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                                      source.profiles)
 
     def test02(self):
-        """ Increases the complexity of the surface; floating factor 
-        still impacts only the along-strike sampling """
+        """ Increases the complexity of the surface; because of the surface
+        geometry, the floating factor only impacts the along-strike sampling
+        and only for some magnitudes """
 
         profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.001, 15.0)]),
                     Line([Point(0.1, 0.0, 0.0), Point(0.1, 0.010, 12.0)]),
@@ -275,10 +277,10 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
             self._ruptures_animation('test03', source.surface, ruptures,
                                      source.profiles)
 
-
     def test04(self):
-        """ As in test01, but reduces M to demonstrate the down-dip
-        floating factor """
+        """ As in test01, but reduces M to deal with ruptures and surfaces
+        that have numbers of nodes that suitably scale with the floating
+        factor """
 
         # Create the magnitude-frequency distribution
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.5, max_mag=5.6,
@@ -321,4 +323,52 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         if MAKE_MOVIES:
             ruptures = [r for r in source.iter_ruptures()]
             self._ruptures_animation('test04', source.surface, ruptures,
+                                     source.profiles)
+
+    def test05(self):
+        """ Uses small rupture overlap fraction such that the mesh spacing
+        is used instead """
+
+        # Create the magnitude-frequency distribution
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.5, max_mag=5.6,
+                             bin_width=0.1)
+        source = self._make_source(mfd=mfd, aspect_ratio=1.5,
+                                   floating_x_step=0.1, floating_y_step=0.1)
+
+        # The fault surface created should contain 13 quadrilaterals along
+        # the strike and 9 quadrilaterals along the dip. The distance between
+        # the two profiles is 33 km. Given that we use a grid spacing of
+        # 2.5 km, 2.5 * 13 gives 32.5 km. The grid spacing along dip is scaled
+        # by the aspect ratio so that the sampling is proportional along
+        # strike and dip. In this case the sampling along strike is 1.66km
+
+        msg = 'Wrong surface mesh'
+        self.assertEqual(source.surface.mesh.lons.shape[1], 14, msg)
+        self.assertEqual(source.surface.mesh.lons.shape[0], 10, msg)
+
+        # Regarding ruptures, the lowest magnitude admitted by the MFD is 6.25
+        # hence - given that the corresponding area of the rupture is 178 km
+        # and the aspect ratio is 1.5 the mesh covered by this rupture must
+        # have the following dimensions:
+        # - width = 10.68 km i.e. 6 quadrilaterals and 7 vertexes
+        # - lenght = 16.02 km i.e. 7 quadrilaterals and 8 vertexes
+
+        for idx, tmp in enumerate(source.iter_ruptures()):
+            rup = tmp
+            if idx == 0:
+                break
+
+        msg = 'Wrong dimension of the rupture'
+        self.assertEqual(rup.surface.mesh.lons.shape[0], 4, msg)
+        self.assertEqual(rup.surface.mesh.lons.shape[1], 4, msg)
+
+        msg = 'Wrong number of ruptures'
+        self.assertEqual(source.count_ruptures(), 77, msg)
+
+        if MAKE_PICTURES:
+            ppp(source.profiles, source.surface)
+
+        if MAKE_MOVIES:
+            ruptures = [r for r in source.iter_ruptures()]
+            self._ruptures_animation('test05', source.surface, ruptures,
                                      source.profiles)
