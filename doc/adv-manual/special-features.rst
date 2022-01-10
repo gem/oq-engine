@@ -28,8 +28,8 @@ A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good
 potential sites across the globe.
 
 
-The `minimum_distance` parameter
---------------------------------
+The ``minimum_distance`` parameter
+----------------------------------
 
 GMPEs often have a prescribed range of validity. In particular they may 
 give unexpected results for points too close to ruptures. 
