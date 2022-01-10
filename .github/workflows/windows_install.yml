@@ -52,9 +52,8 @@ jobs:
           python -m pip install pip wheel setuptools --upgrade
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
-          Write-Host "Branch to test $BRANCH" $BRANCH
           write-Host "Branch to test ${env:BRANCH} " ${env:BRANCH}
-          if ( $BRANCH -eq $null)
+          if ( ${env:BRANCH} -eq $null)
           {
             python install.py devel
           }
@@ -65,8 +64,6 @@ jobs:
       - name: Run demos to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          ls D:\a\oq-engine\oq-engine\openquake
-          ls C:\Users\runneradmin\openquake\Scripts
           #
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
