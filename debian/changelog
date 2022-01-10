@@ -1,3 +1,7 @@
+  [Kendra Johnson]
+  * Implemented possibility of assigning the parameters floating_x_step and 
+  * floating_y_step for kite fault sources in the job configuration file
+
   [Michele Simionato]
   * Fixed the case of continuous fragility functions with minIML=noDamageLimit
 
