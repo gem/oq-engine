@@ -119,7 +119,6 @@ class KiteSurface(BaseSurface):
         if not lons.size > 0:
             success = False
             return success
-            # import pdb; pdb.set_trace()
 
         mesh = RectangularMesh(lons, lats, deps)
         self.mesh = mesh
