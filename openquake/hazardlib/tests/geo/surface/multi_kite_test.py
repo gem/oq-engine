@@ -451,7 +451,7 @@ class NZLTestCase(unittest.TestCase):
         dst = np.sort(dst.flatten())
 
         # Testing
-        aae(dst_expected, dst, decimal=3)
+        aae(dst_expected, dst, decimal=1)
 
 
 def _plt_results(clo, cla, dst, msrf, title, boundary=True):
