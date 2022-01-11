@@ -580,7 +580,7 @@ class HazardCalculator(BaseCalculator):
                     (hstats, rstats))
             sec_imts = set(oq.get_sec_imts())
             missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
-            if missing_imts:
+            if oqp.imtls and missing_imts:
                 raise ValueError(
                     'The parent calculation is missing the IMT(s) %s' %
                     ', '.join(missing_imts))
