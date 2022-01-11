@@ -35,6 +35,7 @@ Contents:
    point-source-gridding
    asset-site-association
    event-based-damage
+   cross-correlation
    risk-features
    developing
    architecture

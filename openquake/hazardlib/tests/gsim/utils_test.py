@@ -18,8 +18,7 @@ import os
 import numpy
 
 from openquake.hazardlib.gsim.utils import (
-    mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean
-)
+    mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean)
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import gsim, InvalidFile
 
