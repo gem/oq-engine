@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import gzip
 import unittest
 import numpy
@@ -510,7 +511,8 @@ hazard_uhs-std.csv
         if check:
             import pandas as pd
             df = pd.DataFrame({'geometry': [poly, expected]})
-            df.to_csv('/tmp/case_29.csv')
+            tmp = general.gettemp()
+            df.to_csv(os.path.join(tmp, 'case_29.csv'))
 
         # then perform a classical calculation
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
