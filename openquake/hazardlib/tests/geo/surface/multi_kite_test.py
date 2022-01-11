@@ -442,16 +442,16 @@ class NZLTestCase(unittest.TestCase):
         # We did not have a way to compute these results independently
         fname = os.path.join(BASE_PATH, 'results', 'results_nzl_rx.txt.gz')
         if OVERWRITE:
-            #np.savez_compressed(fname, rx=dst)
             np.savetxt(fname, dst)
 
         # Load expected results
-        # er = np.load(fname)
         dst_expected = np.loadtxt(fname)
 
+        dst_expected = np.sort(dst_expected.flatten())
+        dst = np.sort(dst.flatten())
+
         # Testing
-        #aae(er['rx'], dst, decimal=1)
-        aae(dst_expected, dst, decimal=1)
+        aae(dst_expected, dst, decimal=3)
 
 
 def _plt_results(clo, cla, dst, msrf, title, boundary=True):
