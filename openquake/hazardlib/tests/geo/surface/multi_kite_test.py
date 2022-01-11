@@ -387,10 +387,12 @@ class NZLTestCase(unittest.TestCase):
         gmodel = to_python(fname, sconv)
 
         # Create the surface
+        """
         sfcs = []
         for sec in gmodel.sections:
             sfcs.append(gmodel.sections[sec].surface)
         self.msrf = MultiSurface(sfcs)
+        """
 
         # Create second surface
         keys = [sec for sec in gmodel.sections]
