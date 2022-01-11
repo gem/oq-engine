@@ -73,4 +73,12 @@ Correlation is important because its presence normally causes the risk to
 increase, i.e. ignoring the correlation will under-estimate
 the risk. The best way to play with the correlation is to consider a
 scenario_risk calculation with a single rupture and to change the
-cross and spatial correlation models.
+cross and spatial correlation models. Possibilities are to specify
+in the job.ini all possible combinations of
+
+cross_correlation = FullCorrelation
+cross_correlation = GodaAtkinson2009
+ground_motion_correlation_model = JB2009
+ground_motion_correlation_model = HM2018
+
+including removing one or the other or all correlations.
