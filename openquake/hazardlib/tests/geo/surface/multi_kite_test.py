@@ -435,20 +435,23 @@ class NZLTestCase(unittest.TestCase):
         dst = msrf.get_rx_distance(mesh)
 
         if PLOTTING:
-            title = '- Rx'
+            title = f'{type(self).__name__} - Rx'
             _plt_results(mlons, mlats, dst, msrf, title, boundary=False)
             plt.show()
 
         # We did not have a way to compute these results independently
-        fname = os.path.join(BASE_PATH, 'results', 'results_nzl_01.npz')
+        fname = os.path.join(BASE_PATH, 'results', 'results_nzl_rx.txt.gz')
         if OVERWRITE:
-            np.savez_compressed(fname, rx=dst)
+            #np.savez_compressed(fname, rx=dst)
+            np.savetxt(fname, dst)
 
         # Load expected results
-        er = np.load(fname)
+        # er = np.load(fname)
+        dst_expected = np.loadtxt(fname)
 
         # Testing
-        aae(er['rx'], dst, decimal=1)
+        #aae(er['rx'], dst, decimal=1)
+        aae(dst_expected, dst, decimal=1)
 
 
 def _plt_results(clo, cla, dst, msrf, title, boundary=True):
