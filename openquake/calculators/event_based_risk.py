@@ -167,7 +167,7 @@ def event_based_risk(df, oqparam, monitor):
     :returns: a dictionary of arrays
     """
     dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
-    with dstore, monitor('reading gmf_data'):
+    with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
