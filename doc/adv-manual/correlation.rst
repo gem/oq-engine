@@ -76,7 +76,7 @@ scenario_risk calculation with a single rupture and to change the
 cross and spatial correlation models. Possibilities are to specify
 in the job.ini all possible combinations of
 
-cross_correlation = FullCorrelation
+cross_correlation = FullCrossCorrelation
 cross_correlation = GodaAtkinson2009
 ground_motion_correlation_model = JB2009
 ground_motion_correlation_model = HM2018
