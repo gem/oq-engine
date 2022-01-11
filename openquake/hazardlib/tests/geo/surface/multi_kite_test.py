@@ -392,6 +392,11 @@ class NZLTestCase(unittest.TestCase):
             sfcs.append(gmodel.sections[sec].surface)
         self.msrf = MultiSurface(sfcs)
 
+        # Create second surface
+        keys = [sec for sec in gmodel.sections]
+        sfcs2 = [gmodel.sections[keys[1]].surface]
+        self.msrf2 = MultiSurface(sfcs2)
+
     def test_nzl_tors(self):
 
         # Set the rupture traces
@@ -412,46 +417,54 @@ class NZLTestCase(unittest.TestCase):
                 ax.plot(coo[0, 0], coo[0, 1], marker='$s$', color=col)
             plt.show()
 
-    def test_nzl_get_rx(self):
-
-        # Mesh of sites
-        mlons = []
-        mlats = []
-        step = 0.01
-        for lo in np.arange(165, 168, step):
-            tlo = []
-            tla = []
-            for la in np.arange(-46.0, -44.5, step):
-                tlo.append(lo)
-                tla.append(la)
-            mlons.append(tlo)
-            mlats.append(tla)
-        mlons = np.array(mlons)
-        mlats = np.array(mlats)
-        mesh = Mesh(lons=mlons.flatten(), lats=mlats.flatten())
-
-        # Compute the Rx distance
-        msrf = self.msrf
-        dst = msrf.get_rx_distance(mesh)
-
-        if PLOTTING:
-            title = f'{type(self).__name__} - Rx'
-            _plt_results(mlons, mlats, dst, msrf, title, boundary=False)
-            plt.show()
-
-        # We did not have a way to compute these results independently
+    def test_nzl_get_rx_1(self):
+        title = f'{type(self).__name__} - Rx - Surface 1'
         fname = os.path.join(BASE_PATH, 'results', 'results_nzl_rx.txt.gz')
-        if OVERWRITE:
-            np.savetxt(fname, dst)
+        _test_nzl_get_rx(self.msrf, title, fname)
 
-        # Load expected results
-        dst_expected = np.loadtxt(fname)
+    def test_nzl_get_rx_2(self):
+        title = f'{type(self).__name__} - Rx - Surface 2'
+        fname = os.path.join(BASE_PATH, 'results', 'results_nzl_rx_2.txt.gz')
+        _test_nzl_get_rx(self.msrf2, title, fname)
 
-        dst_expected = np.sort(dst_expected.flatten())
-        dst = np.sort(dst.flatten())
 
-        # Testing
-        aae(dst_expected, dst, decimal=1)
+def _test_nzl_get_rx(msrf, title, fname):
+
+    # Mesh of sites
+    mlons = []
+    mlats = []
+    step = 0.01
+    for lo in np.arange(165, 168, step):
+        tlo = []
+        tla = []
+        for la in np.arange(-46.0, -44.5, step):
+            tlo.append(lo)
+            tla.append(la)
+        mlons.append(tlo)
+        mlats.append(tla)
+    mlons = np.array(mlons)
+    mlats = np.array(mlats)
+    mesh = Mesh(lons=mlons.flatten(), lats=mlats.flatten())
+
+    # Compute the Rx distance
+    dst = msrf.get_rx_distance(mesh)
+
+    if PLOTTING:
+        _plt_results(mlons, mlats, dst, msrf, title, boundary=False)
+        plt.show()
+
+    # We did not have a way to compute these results independently
+    if OVERWRITE:
+        np.savetxt(fname, dst)
+
+    # Load expected results
+    dst_expected = np.loadtxt(fname)
+
+    dst_expected = np.sort(dst_expected.flatten())
+    dst = np.sort(dst.flatten())
+
+    # Testing
+    aae(dst_expected, dst, decimal=1)
 
 
 def _plt_results(clo, cla, dst, msrf, title, boundary=True):
