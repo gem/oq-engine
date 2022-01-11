@@ -739,7 +739,11 @@ class HazardCalculator(BaseCalculator):
                               oq.inputs['job_ini'])
         elif oq.hazard_calculation_id:
             with datastore.read(oq.hazard_calculation_id) as dstore:
-                haz_sitecol = dstore['sitecol'].complete
+                if 'sitecol' in dstore:
+                    haz_sitecol = dstore['sitecol'].complete
+                else:
+                    haz_sitecol = readinput.get_site_collection(
+                        oq, self.datastore)
                 if ('amplification' in oq.inputs and
                         'ampcode' not in haz_sitecol.array.dtype.names):
                     haz_sitecol.add_col('ampcode', site.ampcode_dt)
