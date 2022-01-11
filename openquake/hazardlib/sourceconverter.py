@@ -479,7 +479,7 @@ class RuptureConverter(object):
         return geo.PlanarSurface.from_corner_points(
             top_left, top_right, bottom_right, bottom_left)
 
-    def convert_surfaces(self, surface_nodes):
+    def convert_surfaces(self, surface_nodes, sec_id=''):
         """
         :param surface_nodes: surface nodes as described below
 
@@ -524,7 +524,7 @@ class RuptureConverter(object):
             if len(profs) < 2:
                 surface = geo.KiteSurface.from_profiles(
                     profs[0], self.rupture_mesh_spacing,
-                    self.rupture_mesh_spacing)
+                    self.rupture_mesh_spacing, sec_id=sec_id)
             else:
                 surfaces = []
                 for prof in profs:
@@ -658,7 +658,8 @@ class SourceConverter(RuptureConverter):
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 source_id=None, discard_trts=''):
+                 source_id=None, discard_trts='',
+                 floating_x_step=0, floating_y_step=0):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -668,6 +669,8 @@ class SourceConverter(RuptureConverter):
         self.width_of_mfd_bin = width_of_mfd_bin
         self.source_id = source_id
         self.discard_trts = discard_trts
+        self.floating_x_step = floating_x_step
+        self.floating_y_step = floating_y_step
 
     def convert_node(self, node):
         """
@@ -714,7 +717,7 @@ class SourceConverter(RuptureConverter):
             else:
                 raise ValueError('Only planarSurfaces or kiteSurfaces ' +
                                  'supported')
-            surfs = self.convert_surfaces(surfaces)
+            surfs = self.convert_surfaces(surfaces, node['id'])
         return FaultSection(node['id'], surfs)
 
     def get_tom(self, node):
@@ -961,6 +964,10 @@ class SourceConverter(RuptureConverter):
         msr = valid.SCALEREL[~node.magScaleRel]()
         mfd = self.convert_mfdist(node)
 
+        # get rupture floating steps
+        xstep = self.floating_x_step
+        ystep = self.floating_y_step
+
         with context(self.fname, node):
             if as_kite:
                 outsrc = source.KiteFaultSource(
@@ -973,8 +980,8 @@ class SourceConverter(RuptureConverter):
                     rupture_aspect_ratio=~node.ruptAspectRatio,
                     temporal_occurrence_model=self.get_tom(node),
                     profiles=profiles,
-                    floating_x_step=1,
-                    floating_y_step=1,
+                    floating_x_step=xstep,
+                    floating_y_step=ystep,
                     rake=~node.rake,
                     profiles_sampling=None
                     )
@@ -993,8 +1000,8 @@ class SourceConverter(RuptureConverter):
                     dip=~geom.dip,
                     rake=~node.rake,
                     temporal_occurrence_model=self.get_tom(node),
-                    floating_x_step=1,
-                    floating_y_step=1)
+                    floating_x_step=xstep,
+                    floating_y_step=ystep)
         return outsrc
 
     def convert_complexFaultSource(self, node):

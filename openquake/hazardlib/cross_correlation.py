@@ -83,7 +83,8 @@ class CrossCorrelationBetween(ABC):
         elif self.truncation_level == 0:
             self.distribution = None
         else:
-            self.distribution = stats.truncnorm(-truncation_level, truncation_level)
+            self.distribution = stats.truncnorm(
+                -truncation_level, truncation_level)
 
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
@@ -183,7 +184,9 @@ class FullCrossCorrelation(CrossCorrelationBetween):
         """
         :param imts: a list of M intensity measure types
         :param num_events: the number of events to consider (E)
-        :returns: an uncorrelated matrix of epsilons of shape (M, E)
+        :returns:
+            a matrix of epsilons of shape (M, E) with the same epsilons
+            for each IMT
 
         NB: the user must specify the random seed first
         """

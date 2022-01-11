@@ -1242,7 +1242,8 @@ def get_checksum32(oqparam, h5=None):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'number_of_logic_tree_samples',
-                   'minimum_magnitude', 'source_id'):
+                   'minimum_magnitude', 'source_id',
+                   'floating_x_step', 'floating_y_step'):
             hazard_params.append('%s = %s' % (key, val))
     data = '\n'.join(hazard_params).encode('utf8')
     checksum = zlib.adler32(data, checksum)

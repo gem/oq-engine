@@ -20,7 +20,6 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
-import time
 import numpy
 
 from openquake.baselib.general import AccumDict

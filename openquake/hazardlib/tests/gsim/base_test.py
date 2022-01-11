@@ -19,7 +19,6 @@
 import unittest
 import collections
 import unittest.mock as mock
-
 import numpy
 
 from openquake.hazardlib import const, valid
