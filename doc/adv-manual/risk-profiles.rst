@@ -84,7 +84,7 @@ and filtered 13 times. This is inefficient. Also, hazard parameters like
  truncation_level = 3
  investigation_time = 1
  number_of_logic_tree_samples = 1000
- ses_per_logic_tree_path = 1
+ ses_per_logic_tree_path = 100
  maximum_distance = 300
 
 must be the same in all 13 files to ensure the consistency of the
