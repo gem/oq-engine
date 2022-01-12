@@ -57,7 +57,7 @@ Guillaume Daniel        April 2019
 Richard Styron          July 2019
 Kris Vanneste           September 2019
 Alberto Chiusole        November 2019
-‪Iason Grigoratos        April 2020
+Iason Grigoratos        April 2020
 Francis Jenner Bernales August 2020
 Athanasios Papadopoulos September 2020
 Thomas Chartier         December 2020
@@ -69,6 +69,7 @@ Elena Manea             August 2021
 Shreyasvi Chandrasekhar November 2021
 Giuseppina Tusa         December 2021
 Miguel Leonardo-Suárez  December 2021
+Manuela Villani         January 2022
 
 Project management
 ------------------

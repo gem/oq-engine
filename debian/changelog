@@ -1,3 +1,7 @@
+  [Manuela Villani]
+  * Added a function in the modifiable GMPE to covert ground-motion assuming
+    different representations of the horizontal component.
+
   [Marco Pagani, Shreyasvi]
   * Added GMM from Bora et al. (2019)
 
