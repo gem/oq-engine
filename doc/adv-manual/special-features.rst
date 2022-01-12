@@ -1,59 +1,61 @@
 Special features of the engine
-============================================
+===============================
 
-There are few rarely used feature of the engine that are not
-documented in the manual, since their usage is quite specific. They are
-documented here.
+There are a few less frequently used features of the engine that are not
+documented in the general user's manual, since their usage is quite specific. 
+They are documented here.
 
 The ``custom_site_id``
 ----------------------
 
-Since engine 3.13 it is possible to using a 6-characters ASCII string
-as an unique identifier for the sites. This can be convenient in various
+Since engine 3.13, it is possible to assign 6-character ASCII strings
+as unique identifiers for the sites. This can be convenient in various
 situations, especially when splitting a calculation in geographic regions.
-The way to enable it is to add a field called ``custom_sited_id`` to
-the site model file, which must be unique.
+The way to enable it is to add a field called ``custom_site_id`` to
+the site model file, which must be unique for each site.
 
 The hazard curve and ground motion field exporters have been modified
 to export the ``custom_site_id`` instead of the ``site_id`` (if present).
 
 We used this feature to split the ESHM20 model in two parts (Northern
-Europe and Southern Europe) and then creating the full hazard map
+Europe and Southern Europe). Then creating the full hazard map
 was as trivial as joining the generated CSV files. Without the
 ``custom_site_id`` the site IDs would overlap, thus making impossible to
 join the outputs.
 
 A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good
-``custom_site_id`` since it allows to identify uniquely all the sites
-in the world.
+``custom_site_id`` since it can enable the unique identification of all
+potential sites across the globe.
 
 
-The `minimum_distance` parameter
--------------------------------------------
+The ``minimum_distance`` parameter
+----------------------------------
 
-GMPEs have a range of validity. In particular they may give wrong
-results for points too close to the rupture. To avoid this problem the
-engine recognizes a ``minimum_distance`` parameter: if it is set, then
-for distances below the minimum the GMPEs return the value at the
-minimum distance. This avoids producing huge unphysical values
-of the hazard for small distances. The minimum distance is somewhat
+GMPEs often have a prescribed range of validity. In particular they may 
+give unexpected results for points too close to ruptures. 
+To avoid this problem the engine recognizes a ``minimum_distance`` parameter: 
+if it is set, then for distances below the specified minimum distance, 
+the GMPEs return the ground-motion value at the minimum distance. 
+This avoids producing extremely large (and physically unrealistic) 
+ground-motion values at small distances. The minimum distance is somewhat
 heuristic. It may be useful to experiment with different values of the
 ``minimum_distance``, to see how the hazard and risk change.
 
 GMPE logic trees with weighted IMTs
--------------------------------------------
+-----------------------------------
 
-Our Canadian users asked us to implement GMPE logic trees with a
-different weight per each IMT. For instance you could have a GMPE
-applicable to PGA with a certain level of uncertainty, to SA(0.1) with
-another and to SA(1.0) with still another one. The user may want to
-give an higher weight to the IMTs were the GMPE has a small
-uncertainty and a lower weight to the IMTs with a large
-uncertainty. Moreover the GMPE could not be applicable for some
-period, and in that case the user can assign to it a zero weight, to
-ignore it.  This is useful when you have a logic tree with multiple
-GMPEs per branchset, some of which are applicable for some IMTs and
-not for others.  Here is an example:
+In order to support Canada's 6th Generation seismic hazard model, the engine now
+has the ability to manage GMPE logic trees where the weight assigned to each
+GMPE may be different for each IMT. For instance you could have a particular
+GMPE applied to PGA with a certain weight, to SA(0.1) with a different weight,
+and to SA(1.0) with yet another weight. The user may want to assign a higher
+weight to the IMTs where the GMPE has a small uncertainty and a lower weight to
+the IMTs with a large uncertainty. Moreover a particular GMPE may not be
+applicable for some periods, and in that case the user can assign to a zero
+weight for those periods, in which case the engine will ignore it entirely for
+those IMTs. This is useful when you have a logic tree with multiple GMPEs per
+branchset, some of which are applicable for some IMTs and not for others.  Here
+is an example:
 
 .. code-block:: xml
 

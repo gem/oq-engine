@@ -1,9 +1,30 @@
+  [Kendra Johnson]
+  * Implemented possibility of assigning the parameters floating_x_step and 
+  * floating_y_step for kite fault sources in the job configuration file
+
+  [Michele Simionato]
+  * Fixed the case of continuous fragility functions with minIML=noDamageLimit
+
+  [Miguel Leonardo-Suárez]
+  * Added GMPE from Jaimes et al. (2020) for Mexican intraslab earthquakes
+
+  [Michele Simionato]
+  * Enforced ps_grid_spacing <= pointsource_distance
+  * Internal: added command `oq plot source_data?`
+  * The engine is now splitting the MultiFaultSources, thus improving the task
+    distribution
+
+  [Claudia Mascandola]
+  * Added a new class to the abrahamson_2015 gmm.
+  * Added a new class to the lanzano_luzi_2019 and skarlatoudis_2013 gmms
+
   [Manuela Villani]
   * Added a function in the modifiable GMPE to covert ground-motion assuming
     different representations of the horizontal component.
 
   [Marco Pagani, Shreyasvi]
   * Added GMM from Bora et al. (2019)
+  * Fixed bug in the multifault surface when defined using kite fault surfaces
 
   [Giuseppina Tusa]
   * Added a new gsim file tusa_langer_azzaro_2019.py to implement the GMMs

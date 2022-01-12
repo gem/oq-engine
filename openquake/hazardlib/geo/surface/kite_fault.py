@@ -34,8 +34,8 @@ from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.geodetic import npoints_towards
-from openquake.hazardlib.geo.geodetic import distance, azimuth
+from openquake.hazardlib.geo.geodetic import (
+    npoints_towards, distance, azimuth)
 
 TOL = 0.4
 
@@ -73,15 +73,56 @@ class KiteSurface(BaseSurface):
     composed by several disaligned segments. Thrust faults and listric faults
     can be easily implemented.
     """
-    def __init__(self, mesh, profiles=None):
+
+    def __init__(self, mesh, profiles=None, sec_id=''):
         self.mesh = mesh
+
+        # Clean the mesh
+        success = self._clean()
+        if not success:
+            print('Profiles', profiles)
+            msg = f'Error while initialising section (id: {sec_id})'
+            raise ValueError(msg)
+
+        # Save profiles
         self.profiles = profiles
         assert 1 not in self.mesh.shape, (
-            "Mesh must have at least 2 nodes along both length and width.")
+            "Mesh must have at least 2 nodes along strike and dip.")
+
         # Make sure the mesh respects the right hand rule
         self._fix_right_hand()
         self.strike = self.dip = None
         self.width = None
+
+    def _clean(self):
+        """
+        Removes from the mesh the rows and columns containing just NaNs
+        """
+        # Rows
+        rm = []
+        for i in range(0, self.mesh.lons.shape[0]):
+            if np.all(np.isnan(self.mesh.lons[i, :])):
+                rm.append(i)
+        lons = np.delete(self.mesh.lons, rm, axis=0)
+        lats = np.delete(self.mesh.lats, rm, axis=0)
+        deps = np.delete(self.mesh.depths, rm, axis=0)
+        # Cols
+        rm = []
+        for i in range(0, lons.shape[1]):
+            if np.all(np.isnan(lons[:, i])):
+                rm.append(i)
+        lons = np.delete(lons, rm, axis=1)
+        lats = np.delete(lats, rm, axis=1)
+        deps = np.delete(deps, rm, axis=1)
+
+        success = True
+        if not lons.size > 0:
+            success = False
+            return success
+
+        mesh = RectangularMesh(lons, lats, deps)
+        self.mesh = mesh
+        return success
 
     @property
     def surface_nodes(self):
@@ -92,39 +133,109 @@ class KiteSurface(BaseSurface):
         # from the mesh
         return kite_surface_node(self.profiles)
 
-    def get_joyner_boore_distance(self, mesh):
+    def get_surface_boundaries(self):
+        return self._get_external_boundary()
 
-        # Get indexes of the finite points composing the edges
-        iupp = np.nonzero(np.isfinite(self.mesh.lons[0, :]))[0]
-        ilow = np.flipud(np.nonzero(np.isfinite(self.mesh.lons[-1, :]))[0])
-        irig = np.nonzero(np.isfinite(self.mesh.lons[:, -1]))[0]
-        ilef = np.flipud(np.nonzero(np.isfinite(self.mesh.lons[:, 0]))[0])
+    def get_tor(self):
+        """
+        Provides longitude and latitude coordinates of the vertical surface
+        projection of the top of rupture. This is used in the GC2 method to
+        compute the Rx and Ry0 distances.
 
-        # Building the polygon
-        pnts = []
-        for corner in [(0, iupp), (irig, -1), (-1, ilow), (ilef, 0)]:
-            pnts.extend(zip(self.mesh.lons[corner], self.mesh.lats[corner],
-                            self.mesh.depths[corner]))
-        perimeter = np.array(pnts)
+        One important note here. The kite fault surface uses a rectangular
+        mesh to describe the geometry of the rupture; some nodes can be NaN.
 
+        :returns:
+            Two :class:`numpy.ndarray` instances with the longitudes and
+            latitudes
+        """
+        chk = np.isfinite(self.mesh.lons)
+        iro = (chk).argmax(axis=0)
+        ico = np.arange(0, self.mesh.lons.shape[1])
+        ico = ico[iro <= 1]
+        iro = iro[iro <= 1]
+        return self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
+
+    def _get_external_boundary(self):
+        """
+        Provides the surface projection of the external boundary of the
+        rupture surface.
+
+        :returns:
+            Two :class:`numpy.ndarray` instances containing longitudes and
+            latitudes, respectively
+        """
+        idxs = self._get_external_boundary_indexes()
+        lo = []
+        la = []
+        for i in idxs:
+            lo.append(self.mesh.lons[i[0], i[1]])
+            la.append(self.mesh.lats[i[0], i[1]])
+        return np.array(lo), np.array(la)
+
+    def _get_external_boundary_indexes(self):
+        """
+        Computes the indexes of the points composing the boundary of the
+        surface
+        """
+        iul = []
+        ilr = []
+        for i in range(0, self.mesh.lons.shape[1]):
+            idx = np.where(np.isfinite(self.mesh.lons[:, i]))[0]
+            if len(idx) == 0:
+                continue
+            iul.append([min(idx), max(idx)])
+        for i in range(0, self.mesh.lons.shape[0]):
+            idx = np.where(np.isfinite(self.mesh.lons[i, :]))[0]
+            if len(idx) == 0:
+                continue
+            ilr.append([min(idx), max(idx)])
+        iul = np.array(iul)
+        ilr = np.array(ilr)
+        bnd = []
+        # Top
+        for i in range(0, self.mesh.lons.shape[1]):
+            bnd.append([iul[i, 0], i])
+        # Right
+        for i in range(iul[-1, 0]+1, iul[-1, 1]):
+            bnd.append([i, ilr[i, 1]])
+        # Bottom
+        for i in range(self.mesh.lons.shape[1]-1, -1, -1):
+            bnd.append([iul[i, 1], i])
+        # Left
+        for i in range(iul[0, 1]-1, iul[0, 0], -1):
+            bnd.append([i, ilr[i, 0]])
+        return bnd
+
+    def get_joyner_boore_distance(self, mesh) -> np.ndarray:
+        """
+        Computes the Rjb distance between the rupture and the points included
+        in the mesh provided.
+
+        :param mesh:
+            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
+        :returns:
+            A :class:`numpy.ndarray` instance with the Rjb values
+        """
+
+        blo, bla = self._get_external_boundary()
         distances = geodetic.min_geodetic_distance(
-            (perimeter[:, 0], perimeter[:, 1]), (mesh.lons, mesh.lats))
+            (blo, bla), (mesh.lons, mesh.lats))
 
         idxs = (distances < 40).nonzero()[0]  # indices on the first dimension
-        if not len(idxs):
+        if len(idxs) < 1:
             # no point is close enough, return distances as they are
             return distances
 
         # Get the projection
         proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(perimeter[:, 0],
-                                                  perimeter[:, 1]))
+            *geo_utils.get_spherical_bounding_box(blo, bla))
 
         # Mesh projected coordinates
         mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
 
         # Create the shapely Polygon using projected coordinates
-        xp, yp = proj(perimeter[:, 0], perimeter[:, 1])
+        xp, yp = proj(blo, bla)
         polygon = Polygon([[x, y] for x, y in zip(xp, yp)])
 
         # Calculate the distances
@@ -134,8 +245,10 @@ class KiteSurface(BaseSurface):
         return distances
 
     def _fix_right_hand(self):
-        # This method fixes the mesh used to represent the grid surface so
-        # that it complies with the right hand rule.
+        """
+        This method fixes the mesh used to represent the grid surface so
+        that it complies with the right hand rule.
+        """
         found = False
         irow = 0
         icol = 0
@@ -170,6 +283,16 @@ class KiteSurface(BaseSurface):
             raise ValueError(msg)
 
     def get_width(self) -> float:
+        # TODO this method is provisional.  It works correctly for simple and
+        # regular geometries defined using profiles parallel to the dip
+        # direction
+        """
+        Compute the width of the kite surface.
+
+        Defining a width for a kite surface is quite difficult. At present we
+        compute it as the mean width for all the columns of the mesh defining
+        the surface.
+        """
         if self.width is None:
             widths = []
             for col_idx in range(self.mesh.lons.shape[1]):
@@ -188,8 +311,11 @@ class KiteSurface(BaseSurface):
         return self.width
 
     def get_dip(self) -> float:
+        # TODO this method is provisional. It works correctly for simple and
+        # regular geometries defined using profiles parallel to the dip
+        # direction
         """
-        Return the fault dip as the average dip over the fault surface mesh.
+        Computes the fault dip as the average dip over the surface.
 
         :returns:
             The average dip, in decimal degrees.
@@ -199,14 +325,21 @@ class KiteSurface(BaseSurface):
             lens = []
             for col_idx in range(self.mesh.lons.shape[1]):
 
-                hdists = distance(self.mesh.lons[:-1, col_idx],
-                                  self.mesh.lats[:-1, col_idx],
-                                  np.zeros_like(self.mesh.depths[1:, col_idx]),
-                                  self.mesh.lons[1:, col_idx],
-                                  self.mesh.lats[1:, col_idx],
-                                  np.zeros_like(self.mesh.depths[1:, col_idx]))
-                vdists = (self.mesh.depths[1:, col_idx] -
-                          self.mesh.depths[:-1, col_idx])
+                # For the calculation of the overall dip we use just the dip
+                # values of contiguous points along a profile
+                iii = np.isfinite(self.mesh.lons[1:, col_idx])
+                kkk = np.isfinite(self.mesh.lons[:-1, col_idx])
+                jjj = np.where(np.logical_and(kkk, iii))[0]
+
+                zeros = np.zeros_like(self.mesh.depths[jjj, col_idx])
+                hdists = distance(self.mesh.lons[jjj+1, col_idx],
+                                  self.mesh.lats[jjj+1, col_idx],
+                                  zeros,
+                                  self.mesh.lons[jjj, col_idx],
+                                  self.mesh.lats[jjj, col_idx],
+                                  zeros)
+                vdists = (self.mesh.depths[jjj+1, col_idx] -
+                          self.mesh.depths[jjj, col_idx])
 
                 ok = np.logical_and(np.isfinite(hdists), np.isfinite(vdists))
                 hdists = hdists[ok]
@@ -249,7 +382,7 @@ class KiteSurface(BaseSurface):
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
-                      align=False):
+                      align=False, sec_id=''):
         # TODO split this function into smaller components.
         """
         This method creates a quadrilateral mesh from a set of profiles. The
@@ -361,7 +494,7 @@ class KiteSurface(BaseSurface):
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
-                   profiles)
+                   profiles, sec_id)
 
     def get_center(self):
         """
@@ -387,87 +520,72 @@ class KiteSurface(BaseSurface):
         :returns:
             Two lists with the coordinates of the longitude and latitude
         """
+        return self._get_external_boundary()
 
-        los = self.mesh.lons
-        las = self.mesh.lats
-        ro, co = np.mgrid[0:los.shape[0], 0:los.shape[1]]
-
-        plos = []
-        plas = []
-
-        tmp = np.amax(ro, where=~np.isnan(los), initial=np.amin(ro)-1, axis=0)
-        for j, i in enumerate(tmp):
-            if i >= np.amin(ro):
-                plos.append(los[i, j])
-                plas.append(las[i, j])
-
-        tlo = []
-        tla = []
-        tmp = np.amin(ro, where=~np.isnan(los), initial=len(los)+1, axis=0)
-        for j, i in enumerate(tmp):
-            if i <= len(los):
-                tlo.append(los[i, j])
-                tla.append(las[i, j])
-
-        plos.extend(tlo[::-1])
-        plas.extend(tla[::-1])
-
-        return plos, plas
+    def get_area(self):
+        _, _, _, cell_area = self.get_cell_dimensions()
+        idx = np.isfinite(cell_area)
+        return np.sum(cell_area[idx])
 
     def get_cell_dimensions(self):
         """
-        Calculate centroid, width, length and area of each mesh cell.
-
-        NOTE: The original verison of this method is in the class
-        :class:`openquake.hazardlib.geo.mesh.Mesh`. It is duplicated here
-        because it required ad-hoc modifications to support kite fault
-        surfaces
-
-        :returns:
-            Tuple of four elements, each being 2d numpy array.
-            Each array has both dimensions less by one the dimensions
-            of the mesh, since they represent cells, not vertices.
-            Arrays contain the following cell information:
-
-            #. centroids, 3d vectors in a Cartesian space,
-            #. length (size along row of points) in km,
-            #. width (size along column of points) in km,
-            #. area in square km.
+        Compute the area [km2] of the cells representing the surface.
         """
-        points, along_azimuth, updip, diag = self.mesh.triangulate()
-        top = along_azimuth[:-1]
-        left = updip[:, :-1]
-        tl_area = geo_utils.triangle_area(top, left, diag)
-        top_length = np.sqrt(np.sum(top * top, axis=-1))
-        left_length = np.sqrt(np.sum(left * left, axis=-1))
+        lo = self.mesh.lons
+        la = self.mesh.lats
+        de = self.mesh.depths
 
-        bottom = along_azimuth[1:]
-        right = updip[:, 1:]
-        br_area = geo_utils.triangle_area(bottom, right, diag)
-        bottom_length = np.sqrt(np.sum(bottom * bottom, axis=-1))
-        right_length = np.sqrt(np.sum(right * right, axis=-1))
+        # Calculating cells dimensions
+        lo0 = lo[:-1, :]
+        la0 = la[:-1, :]
+        de0 = de[:-1, :]
+        lo1 = lo[1:, :]
+        la1 = la[1:, :]
+        de1 = de[1:, :]
+        idx = np.logical_and(np.isfinite(lo0), np.isfinite(lo1))
+        dy = np.full_like(lo0, np.nan)
+        dy[idx] = distance(lo0[idx], la0[idx], de0[idx],
+                           lo1[idx], la1[idx], de1[idx])
 
-        # Remove cells without a finite area
-        np.nan_to_num(tl_area, nan=0.0, copy=False)
-        np.nan_to_num(br_area, nan=0.0, copy=False)
-        cell_area = tl_area + br_area
+        lo0 = lo[:, 1:]
+        la0 = la[:, 1:]
+        de0 = de[:, 1:]
+        lo1 = lo[:, :-1]
+        la1 = la[:, :-1]
+        de1 = de[:, :-1]
+        idx = np.logical_and(np.isfinite(lo0), np.isfinite(lo1))
+        dx = np.full_like(lo0, np.nan)
+        dx[idx] = distance(lo0[idx], la0[idx], de0[idx],
+                           lo1[idx], la1[idx], de1[idx])
 
-        tl_center = (points[:-1, :-1] + points[:-1, 1:] + points[1:, :-1]) / 3
-        br_center = (points[:-1, 1:] + points[1:, :-1] + points[1:, 1:]) / 3
+        lo0 = lo[1:, 1:]
+        la0 = la[1:, 1:]
+        de0 = de[1:, 1:]
+        lo1 = lo[:-1, :-1]
+        la1 = la[:-1, :-1]
+        de1 = de[:-1, :-1]
+        idx = np.logical_and(np.isfinite(lo0), np.isfinite(lo1))
+        dd = np.full_like(lo0, np.nan)
+        dd[idx] = distance(lo0[idx], la0[idx], de0[idx],
+                           lo1[idx], la1[idx], de1[idx])
 
-        cell_center = ((tl_center * tl_area.reshape(tl_area.shape + (1, ))
-                        + br_center * br_area.reshape(br_area.shape + (1, )))
-                       / cell_area.reshape(cell_area.shape + (1, )))
+        # Compute the area of the upper left triangles in each cell
+        s = (dx[:-1, :] + dy[:, :-1] + dd) * 0.5
+        upp = (s * (s - dx[:-1, :]) * (s - dy[:, :-1]) * (s - dd))**0.5
 
-        cell_length = ((top_length * tl_area + bottom_length * br_area)
-                       / cell_area)
-        cell_width = ((left_length * tl_area + right_length * br_area)
-                      / cell_area)
+        # Compute the area of the lower right triangles in each cell
+        s = (dx[1:, :] + dy[:, 1:] + dd) * 0.5
+        low = (s * (s - dx[1:, :]) * (s - dy[:, 1:]) * (s - dd))**0.5
 
-        np.nan_to_num(cell_length, nan=0.0, copy=False)
-        np.nan_to_num(cell_width, nan=0.0, copy=False)
+        # Compute the area of each cell
+        area = np.full_like(dd, np.nan)
+        idx = np.logical_and(np.isfinite(upp), np.isfinite(low))
+        area[idx] = upp[idx] + low[idx]
 
-        return cell_center, cell_length, cell_width, cell_area
+        # Retain the same output of the original function which provided for
+        # each cell the centroid as 3d vector in a Cartesian space, the length
+        # width (size along column of points) in km and the area in km2.
+        return None, None, None, area
 
 
 def get_profiles_from_simple_fault_data(

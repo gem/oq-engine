@@ -552,7 +552,8 @@ class HazardCalculator(BaseCalculator):
                     raise ValueError(
                         'collect_rlzs=true can be specified only if '
                         'the realizations have identical weights')
-            check_imtls(self.oqparam.imtls, oqparent.imtls)
+            if oqparent.imtls:
+                check_imtls(self.oqparam.imtls, oqparent.imtls)
             self.check_precalc(oqparent.calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
@@ -579,7 +580,7 @@ class HazardCalculator(BaseCalculator):
                     (hstats, rstats))
             sec_imts = set(oq.get_sec_imts())
             missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
-            if missing_imts:
+            if oqp.imtls and missing_imts:
                 raise ValueError(
                     'The parent calculation is missing the IMT(s) %s' %
                     ', '.join(missing_imts))
@@ -592,8 +593,8 @@ class HazardCalculator(BaseCalculator):
             calc.run(remove=False)
             calc.datastore.close()
             for name in (
-                    'csm param sitecol assetcol crmodel realizations '
-                    'amplifier policy_name policy_dict full_lt exported'
+                'csm param sitecol assetcol crmodel realizations max_weight '
+                'amplifier policy_name policy_dict full_lt exported'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -738,7 +739,11 @@ class HazardCalculator(BaseCalculator):
                               oq.inputs['job_ini'])
         elif oq.hazard_calculation_id:
             with datastore.read(oq.hazard_calculation_id) as dstore:
-                haz_sitecol = dstore['sitecol'].complete
+                if 'sitecol' in dstore:
+                    haz_sitecol = dstore['sitecol'].complete
+                else:
+                    haz_sitecol = readinput.get_site_collection(
+                        oq, self.datastore)
                 if ('amplification' in oq.inputs and
                         'ampcode' not in haz_sitecol.array.dtype.names):
                     haz_sitecol.add_col('ampcode', site.ampcode_dt)
@@ -917,14 +922,14 @@ class HazardCalculator(BaseCalculator):
                        ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
-    def store_source_info(self, calc_times):
+    def store_source_info(self, source_data):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         if 'source_info' not in self.datastore:
             source_reader.create_source_info(
-                self.csm, calc_times, self.datastore.hdf5)
-        self.csm.update_source_info(calc_times)
+                self.csm, source_data, self.datastore.hdf5)
+        self.csm.update_source_info(source_data)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)

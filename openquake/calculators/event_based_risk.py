@@ -167,7 +167,7 @@ def event_based_risk(df, oqparam, monitor):
     :returns: a dictionary of arrays
     """
     dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
-    with dstore, monitor('reading gmf_data'):
+    with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
@@ -325,7 +325,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 weight=operator.itemgetter('n_occ'),
                 h5=self.datastore.hdf5,
                 duration=oq.time_per_task,
-                split_level=5)
+                outs_per_task=5)
             smap.monitor.save('srcfilter', srcfilter)
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
@@ -413,7 +413,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         self.build_aggcurves()
         if oq.reaggregate_by:
-            post_aggregate(self.datastore.calc_id,  ','.join(oq.reaggregate_by))
+            post_aggregate(self.datastore.calc_id,
+                           ','.join(oq.reaggregate_by))
 
     def build_aggcurves(self):
         prc = PostRiskCalculator(self.oqparam, self.datastore.calc_id)

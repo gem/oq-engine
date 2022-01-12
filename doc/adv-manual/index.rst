@@ -35,7 +35,9 @@ Contents:
    point-source-gridding
    asset-site-association
    event-based-damage
+   correlation
    risk-features
+   risk-profiles
    developing
    architecture
    oq-commands

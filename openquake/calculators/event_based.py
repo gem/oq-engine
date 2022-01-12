@@ -99,16 +99,12 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
             dstore['sitecol'], oqparam.maximum_distance(trt))
         rupgeoms = dstore['rupgeoms']
         rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-        param = vars(oqparam).copy()
-        param['imtls'] = oqparam.imtls
-        param['min_iml'] = oqparam.min_iml
-        param['maximum_distance'] = oqparam.maximum_distance(trt)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, param)
-        min_mag = getdefault(oqparam.minimum_magnitude, trt)
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam)
+        cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
             t0 = time.time()
             with fmon:
-                if proxy['mag'] < min_mag:
+                if proxy['mag'] < cmaker.min_mag:
                     continue
                 sids = srcfilter.close_sids(proxy, trt)
                 if len(sids) == 0:  # filtered away
@@ -228,7 +224,7 @@ class EventBasedCalculator(base.HazardCalculator):
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
-        calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
+        source_data = AccumDict(accum=[])
         allargs = []
         if self.oqparam.is_ucerf():
             # manage the filtering in a special way
@@ -243,8 +239,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if not sg.sources:
                 continue
             logging.info('Sending %s', sg)
-            params['maximum_distance'] = oq.maximum_distance(sg.trt)
-            cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], params)
+            cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
         smap = parallel.Starmap(
@@ -259,8 +254,8 @@ class EventBasedCalculator(base.HazardCalculator):
             rup_array = dic['rup_array']
             if len(rup_array) == 0:
                 continue
-            if dic['calc_times']:
-                calc_times += dic['calc_times']
+            if dic['source_data']:
+                source_data += dic['source_data']
             if dic['eff_ruptures']:
                 eff_ruptures += dic['eff_ruptures']
             with mon:
@@ -275,7 +270,7 @@ class EventBasedCalculator(base.HazardCalculator):
                                'investigation time is too short')
 
         # don't change the order of the 3 things below!
-        self.store_source_info(calc_times)
+        self.store_source_info(source_data)
         self.store_rlz_info(eff_ruptures)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
@@ -336,12 +331,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     '%s for a scenario calculation must contain a single '
                     'branchset, found %d!' % (oq.inputs['job_ini'], bsets))
             [(trt, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_trt().items()
-            self.cmaker = ContextMaker(
-                trt, rlzs_by_gsim,
-                {'maximum_distance': oq.maximum_distance(trt),
-                 'minimum_distance': oq.minimum_distance,
-                 'truncation_level': oq.truncation_level,
-                 'imtls': oq.imtls})
+            self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             rup = readinput.get_rupture(oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
@@ -435,7 +425,7 @@ class EventBasedCalculator(base.HazardCalculator):
             h5=dstore.hdf5,
             concurrent_tasks=oq.concurrent_tasks or 1,
             duration=oq.time_per_task,
-            split_level=oq.split_level)
+            outs_per_task=oq.outs_per_task)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in dstore:
             return acc

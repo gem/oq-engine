@@ -55,7 +55,7 @@ class ReportWriter(object):
         'task:start_classical:0': 'Fastest task',
         'task:start_classical:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
-        'eff_ruptures': 'Computation times by source typology',
+        'weight_by_src': 'Computation times by source typology',
         'performance': 'Slowest operations',
     }
 
@@ -105,7 +105,7 @@ class ReportWriter(object):
             self.add('disagg_by_grp')
         if 'source_info' in ds:
             self.add('slow_sources')
-            self.add('eff_ruptures')
+            self.add('weight_by_src')
         if 'task_info' in ds:
             self.add('task_info')
             tasks = set(ds['task_info']['taskname'])

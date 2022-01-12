@@ -220,6 +220,32 @@ distance_bin_width:
 ebrisk_maxsize:
   INTERNAL
 
+floating_x_step:
+  Float, used in rupture generation for kite faults. indicates the fraction
+  of fault length used to float ruptures along strike by the given float
+  (i.e. "0.5" floats the ruptures at half the rupture length). Uniform 
+  distribution of the ruptures is maintained, such that if the mesh spacing
+  and rupture dimensions prohibit the defined overlap fraction, the fraction
+  is increased until uniform distribution is achieved. The minimum possible
+  value depends on the rupture dimensions and the mesh spacing.
+  If 0, standard rupture floating is used along-strike (i.e. no mesh nodes
+  are skipped). 
+  Example: *floating_x_step = 0.5*
+  Default: 0
+
+floating_y_step:
+  Float, used in rupture generation for kite faults. indicates the fraction
+  of fault width used to float ruptures down dip. (i.e. "0.5" floats the
+  ruptures at half the rupture length). Uniform distribution of the ruptures
+  is maintained, such that if the mesh spacing and rupture dimensions
+  prohibit the defined overlap fraction, the fraction is increased until
+  uniform distribution is achieved. The minimum possible value depends on
+  the rupture dimensions and the mesh spacing.
+  If 0, standard rupture floating is used along-strike (i.e. no mesh nodes
+  on the rupture dimensions and the mesh spacing.
+  Example: *floating_y_step = 0.5*
+  Default: 0
+
 ignore_encoding_errors:
   If set, skip characters with non-UTF8 encoding
   Example: *ignore_encoding_errors = true*.
@@ -420,9 +446,6 @@ mean:
   Flag to enable/disable the calculation of mean curves.
   Example: *mean = false*.
   Default: True
-
-min_weight:
-  INTERNAL
 
 minimum_asset_loss:
   Used in risk calculations. If set, losses smaller than the
@@ -657,9 +680,9 @@ specific_assets:
 split_sources:
   INTERNAL
 
-split_level:
+outs_per_task:
   How many outputs per task to generate (honored in some calculators)
-  Example: *split_level = 5*
+  Example: *outs_per_task = 3*
   Default: 4
 
 std:
@@ -796,6 +819,8 @@ class OqParam(valid.ParamSet):
     discrete_damage_distribution = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
+    floating_x_step = valid.Param(valid.positivefloat, 0)
+    floating_y_step = valid.Param(valid.positivefloat, 0)
     ignore_encoding_errors = valid.Param(valid.boolean, False)
     ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
@@ -848,8 +873,7 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.IntegrationDistance.new,
-                                       valid.IntegrationDistance.new('1000'))
+    pointsource_distance = valid.Param(valid.floatdict, {'default': 1000})
     ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -894,11 +918,10 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
-    split_level = valid.Param(valid.positiveint, 4)
+    outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    min_weight = valid.Param(valid.positiveint, 1)  # used in classical
     time_event = valid.Param(str, None)
-    time_per_task = valid.Param(valid.positivefloat, 300)
+    time_per_task = valid.Param(valid.positivefloat, 600)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -909,11 +932,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: True if the pointsource_distance is 1000 km
         """
-        dists = set()
-        for pairs in self.pointsource_distance.values():
-            for mag, dist in pairs:
-                dists.add(dist)
-        return dists == {1000}
+        return set(self.pointsource_distance.values()) == {1000}
 
     @property
     def risk_files(self):
@@ -1485,9 +1504,10 @@ class OqParam(valid.ParamSet):
         Return a cross correlation object (or None). See
         :mod:`openquake.hazardlib.cross_correlation` for more info.
         """
-        cls = getattr(cross_correlation, self.cross_correlation, None)
-        if cls is None:
-            return cross_correlation.NoCrossCorrelation(self.truncation_level)
+        try:
+            cls = getattr(cross_correlation, self.cross_correlation)
+        except AttributeError:
+            return None
         return cls()
 
     def get_kinds(self, kind, R):
@@ -1685,6 +1705,15 @@ class OqParam(valid.ParamSet):
             self.hazard_curves_from_gmfs or self.calculation_mode in
             ('classical', 'disaggregation'))
         return not invalid
+
+    def is_valid_ps_grid_spacing(self):
+        """
+        `ps_grid_spacing` must be smaller than the `pointsource_distance`
+        """
+        if self.ps_grid_spacing is None:
+            return True
+        return self.ps_grid_spacing <= calc.filters.getdefault(
+            self.pointsource_distance, 'default')
 
     def is_valid_soil_intensities(self):
         """

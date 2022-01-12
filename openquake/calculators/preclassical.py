@@ -23,7 +23,7 @@ from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, groupby, get_nbytes_msg)
-from openquake.hazardlib.contexts import basename, read_cmakers
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -38,22 +38,20 @@ TWO32 = 2 ** 32
 
 
 def zero_times(sources):
-    # src.id -> nrups, nsites, time, weight
-    calc_times = AccumDict(accum=numpy.zeros(4, F32))
+    source_data = AccumDict(accum=[])
     for src in sources:
-        row = calc_times[basename(src)]
-        row[0] += src.num_ruptures
-        row[1] += src.nsites
-        row[3] += src.weight
-    return calc_times
+        source_data['src_id'].append(src.source_id)
+        source_data['nsites'].append(src.nsites)
+        source_data['nrupts'].append(src.num_ruptures)
+        source_data['weight'].append(src.weight)
+        source_data['ctimes'].append(0)
+    return source_data
 
 
 def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
-
-    NB: srcfilter can be on a reduced site collection for performance reasons
     """
     split_sources = []
     spacing = cmaker.ps_grid_spacing
@@ -72,8 +70,8 @@ def preclassical(srcs, sites, cmaker, monitor):
         dic['after'] = len(dic[grp_id])
         return dic
 
+    sf = SourceFilter(sites, cmaker.maximum_distance)
     with monitor('splitting sources'):
-        sf = SourceFilter(sites, cmaker.maximum_distance)
         for src in srcs:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -83,10 +81,9 @@ def preclassical(srcs, sites, cmaker, monitor):
                 cmaker.split_sources and src.nsites) else [src]
             split_sources.extend(splits)
     dic = grid_point_sources(split_sources, spacing, monitor)
-    with monitor('weighting sources'):
-        # this is also prefiltering again, to have a good representative
-        # of what will be done during the classical phase
-        cmaker.set_weight(dic[grp_id], sf)
+    # this is also prefiltering the split sources
+    mon = monitor('weighting sources', measuremem=False)
+    cmaker.set_weight(dic[grp_id], sf, mon)
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
     if spacing:
@@ -106,7 +103,7 @@ def run_preclassical(calc):
         [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
     h5 = calc.datastore.hdf5
-    sites = csm.sitecol if csm.sitecol else None
+    calc.sitecol = sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
     atomic_sources = []
     normal_sources = []
@@ -136,11 +133,10 @@ def run_preclassical(calc):
             if pointsources or pointlike:
                 smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
         else:
-            smap.submit_split((pointsources, sites, cmakers[grp_id]), 30, 10)
-            for src in pointlike:
+            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 100)
+            for src in pointlike:  # area, multipoint
                 smap.submit(([src], sites, cmakers[grp_id]))
-        for src in others:
-            smap.submit(([src], sites, cmakers[grp_id]))
+        smap.submit_split((others, sites, cmakers[grp_id]), 10, 100)
     normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
@@ -175,8 +171,8 @@ def run_preclassical(calc):
         cls = code2cls[key].__name__
         logging.info('{} ruptures: {:_d}'.format(cls, val))
 
-    calc_times = zero_times(csm.get_sources())
-    calc.store_source_info(calc_times)
+    source_data = zero_times(csm.get_sources())
+    calc.store_source_info(source_data)
     # store ps_grid data, if any
     for key, sources in res.items():
         if isinstance(key, str) and key.startswith('ps_grid/'):
@@ -247,12 +243,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         run_preclassical(self)
+        self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
     def post_execute(self, csm):
         """
         Store the CompositeSourceModel in binary format
         """
-        if self.oqparam.calculation_mode == 'preclassical' or os.environ.get(
-                'OQ_SAMPLE_SOURCES'):
-            self.datastore['_csm'] = csm
+        self.datastore['_csm'] = csm

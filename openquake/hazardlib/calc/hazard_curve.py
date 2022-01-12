@@ -86,7 +86,7 @@ def classical(group, sitecol, cmaker):
     for ``gsims``, which is a list of GSIM instances.
 
     :returns:
-        a dictionary with keys pmap, calc_times, rup_data, extra
+        a dictionary with keys pmap, source_data, rup_data, extra
     """
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)

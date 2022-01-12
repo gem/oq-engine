@@ -146,13 +146,9 @@ class LogDatabaseHandler(logging.Handler):
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            try:
-                dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
-                      '%s/%s' % (record.processName, record.process),
-                      record.getMessage())
-            except sqlite3.OperationalError:
-                # do not log when "database is locked"
-                print('could not log %s' % record.getMessage())
+            dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
+                  '%s/%s' % (record.processName, record.process),
+                  record.getMessage())
 
 
 class LogContext:
@@ -171,7 +167,8 @@ class LogContext:
             self.params = job_ini
         else:  # path to job.ini file
             self.params = readinput.get_params(job_ini)
-        self.params['hazard_calculation_id'] = hc_id
+        if hc_id:
+            self.params['hazard_calculation_id'] = hc_id
         if calc_id == 0:
             self.calc_id = dbcmd(
                 'create_job',

@@ -42,7 +42,8 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, magdepdist, get_distances, getdefault, MINMAG, MAXMAG)
+    SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
+    MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -142,6 +143,10 @@ def _interp(param, name, trt):
     return mdd
 
 
+def _delta_pr(rup):
+    return 0 if rup.surface else rup.mag * 10  # PointRupture
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -170,14 +175,15 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor()):
         if isinstance(oq, dict):
             param = oq
+            self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
             param = vars(oq)
             param['split_sources'] = oq.split_sources
-            param['cross_correl'] = oq.cross_correl
             param['min_iml'] = oq.min_iml
-            param['imtls'] = oq.imtls
             param['reqv'] = oq.get_reqv()
             param['af'] = getattr(oq, 'af', None)
+            self.cross_correl = oq.cross_correl
+            self.imtls = oq.imtls
 
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
@@ -189,7 +195,11 @@ class ContextMaker(object):
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
-        self.pointsource_distance = _interp(param, 'pointsource_distance', trt)
+        if 'pointsource_distance' not in param:
+            self.pointsource_distance = 1000.
+        else:
+            self.pointsource_distance = getdefault(
+                param['pointsource_distance'], trt)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         if self.investigation_time:
@@ -198,7 +208,6 @@ class ContextMaker(object):
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
-        self.cross_correl = param.get('cross_correl')
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
         self.effect = param.get('effect')
@@ -212,7 +221,7 @@ class ContextMaker(object):
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
             self.imtls = DictArray(param['hazard_imtls'])
-        else:
+        elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         try:
             self.min_iml = param['min_iml']
@@ -335,7 +344,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rup, sites, 'rrup')
-        mdist = self.maximum_distance(rup.mag)
+        mdist = self.maximum_distance(rup.mag) + _delta_pr(rup)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
@@ -486,45 +495,48 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None):
+    def _ruptures(self, src, filtermag=None, point_rup=False):
         return src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag)
+            shift_hypo=self.shift_hypo, mag=filtermag, point_rup=point_rup)
 
     def _gen_rups(self, src, sites):
-        fewsites = len(sites) <= self.max_sites_disagg
-
         # yield ruptures, each one with a .sites attribute
         def rups(rupiter, sites):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
-        bigps = getattr(src, 'location', None) and src.count_nphc() > 1
-        if bigps and (self.pointsource_distance.y == 0).all():
-            # finite size effects are averaged always
-            yield from rups(src.iruptures(), sites)
-        elif bigps and self.pointsource_distance != self.maximum_distance:
+        if getattr(src, 'location', None):
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            cdist = sites.get_cdist(src.location)
-            for ar in src.iruptures():
-                pdist = self.pointsource_distance(ar.mag)
-                close = sites.filter(cdist <= pdist)
-                far = sites.filter(cdist > pdist)
-                if fewsites:
-                    if close is None:  # all is far, common for small mag
-                        yield from rups([ar], sites)
-                    else:  # something is close
-                        yield from rups(self._ruptures(src, ar.mag), sites)
-                else:  # many sites
-                    if close is None:  # all is far
-                        yield from rups([ar], far)
-                    elif far is None:  # all is close
-                        yield from rups(self._ruptures(src, ar.mag), close)
-                    else:  # some sites are far, some are close
-                        yield from rups([ar], far)
-                        yield from rups(self._ruptures(src, ar.mag), close)
+            for r, s in self._cps_rups(src, sites):
+                yield from rups(r, s)
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
+
+    def _cps_rups(self, src, sites, point_rup=False):
+        if src.count_nphc() == 1:  # nothing to collapse
+            for rup in src.iruptures(point_rup):
+                yield self._ruptures(src, rup.mag, point_rup), sites
+            return
+        fewsites = len(sites) <= self.max_sites_disagg
+        cdist = sites.get_cdist(src.location)
+        for rup in src.iruptures(point_rup):
+            psdist = self.pointsource_distance + _delta_pr(rup)
+            close = sites.filter(cdist <= psdist)
+            far = sites.filter(cdist > psdist)
+            if fewsites:
+                if close is None:  # all is far, common for small mag
+                    yield [rup], sites
+                else:  # something is close
+                    yield self._ruptures(src, rup.mag, point_rup), sites
+            else:  # many sites
+                if close is None:  # all is far
+                    yield [rup], far
+                elif far is None:  # all is close
+                    yield self._ruptures(src, rup.mag, point_rup), close
+                else:  # some sites are far, some are close
+                    yield [rup], far
+                    yield self._ruptures(src, rup.mag, point_rup), close
 
     def get_pmap(self, ctxs, probmap=None):
         """
@@ -669,41 +681,50 @@ class ContextMaker(object):
             yield ctx, poes
             s += n
 
-    def estimate_time(self, src, srcfilter):
-        """
-        :param src: an already prefiltered source with attribute .sids
-        :returns: estimate the time taken to compute the pmap
-        """
-        # NB: normally src is already split
-        t0 = time.time()
-        for split, sites in srcfilter.filter(list(src)):
-            rup = next(split.iter_ruptures())
-            try:
-                ctxs = self.get_ctxs([rup], sites)
-            except ValueError:
-                raise ValueError('Invalid magnitude %.2f in source %s' %
-                                 (rup.mag, src.source_id))
-            else:
-                self.get_pmap(ctxs)
-        return (time.time() - t0) * sum(split.num_ruptures for split in src)
+    def estimate_weight(self, src, srcfilter):
+        N = len(srcfilter.sitecol.complete)
+        sites = srcfilter.get_close_sites(src)
+        if sites is None:
+            # may happen for CollapsedPointSources
+            return 0
+        src.nsites = len(sites)
+        if src.code in b'pP':
+            allrups = []
+            for irups, r_sites in self._cps_rups(src, sites, point_rup=True):
+                for rup in irups:
+                    rup.sites = r_sites
+                    allrups.append(rup)
+            rups = allrups[::25]
+            nrups = len(allrups)
+            # print(nrups, len(rups))
+        else:
+            rups = list(src.few_ruptures())
+            nrups = src.num_ruptures
+        try:
+            ctxs = self.get_ctxs(rups, sites)
+        except ValueError:
+            raise ValueError('Invalid magnitude %s in source %s' %
+                             ({r.mag for r in rups}, src.source_id))
+        if not ctxs:
+            return nrups if N == 1 else 0
+        nsites = numpy.array([len(ctx) for ctx in ctxs])
+        return nrups * (nsites.mean() / N + .02)
 
-    def set_weight(self, sources, srcfilter):
+    def set_weight(self, sources, srcfilter, mon=Monitor()):
         """
         Set the weight attribute on each prefiltered source
         """
+        if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
+            srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
             else:
-                src.weight = self.estimate_time(src, srcfilter)
-
-
-def num_effrups(src):
-    if hasattr(src, 'count_nphc'):
-        return src.num_ruptures / src.count_nphc()
-    else:
-        return src.num_ruptures
+                with mon:
+                    src.weight = 1. + self.estimate_weight(src, srcfilter)
+                if src.code == b'F':   # hack for China model
+                    src.weight *= 10
 
 
 # see contexts_tests.py for examples of collapse
@@ -821,7 +842,12 @@ class PmapMaker(object):
             nsites = sum(len(ctx) for ctx in ctxs)
             cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
-            self.calc_times[basename(src)] += numpy.array([nctxs, nsites, dt])
+            self.source_data['src_id'].append(src.source_id)
+            self.source_data['nsites'].append(nsites)
+            self.source_data['nrupts'].append(nctxs)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(dt)
+            self.source_data['taskno'].append(cm.task_no)
             timer.save(src, nctxs, nsites, dt, cm.task_no)
         return ~pmap if cm.rup_indep else pmap
 
@@ -841,7 +867,12 @@ class PmapMaker(object):
             p *= src.mutex_weight
             pmap += p
             dt = time.time() - t0
-            self.calc_times[basename(src)] += numpy.array([nctxs, nsites, dt])
+            self.source_data['src_id'].append(src.source_id)
+            self.source_data['nsites'].append(nsites)
+            self.source_data['nrupts'].append(nctxs)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(dt)
+            self.source_data['taskno'].append(cm.task_no)
             timer.save(src, nctxs, nsites, dt, cm.task_no)
         return pmap
 
@@ -862,15 +893,14 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
-        # AccumDict of arrays with 3 elements nrups, nsites, calc_time
-        self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+        self.source_data = AccumDict(accum=[])
         if self.src_mutex:
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
         dic = {'pmap': pmap,
                'rup_data': self.dictarray(self.rupdata),
-               'calc_times': self.calc_times,
+               'source_data': self.source_data,
                'task_no': self.task_no,
                'grp_id': self.group[0].grp_id}
         if self.disagg_by_src:

@@ -46,7 +46,7 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def create_source_info(csm, calc_times, h5):
+def create_source_info(csm, source_data, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
     """
@@ -117,7 +117,9 @@ def get_csm(oq, full_lt, h5=None):
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
-        oq.source_id, discard_trts=oq.discard_trts)
+        oq.source_id, discard_trts=oq.discard_trts,
+        floating_x_step=oq.floating_x_step,
+        floating_y_step=oq.floating_y_step)
     classical = not oq.is_event_based()
     full_lt.ses_seed = oq.ses_seed
     if oq.is_ucerf():
@@ -242,8 +244,8 @@ def _build_groups(full_lt, smdict):
 
         # check applyToSources
         sm_branch = rlz.lt_path[0]
-        srcids = full_lt.source_model_lt.info.applytosources[sm_branch]
-        for srcid in srcids:
+        src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
+        for srcid in src_id:
             if srcid not in source_ids:
                 raise ValueError(
                     "The source %s is not in the source model,"
@@ -298,6 +300,13 @@ def _get_csm(full_lt, groups):
         for sources in general.groupby(lst, trt_smrs).values():
             # set ._wkt attribute (for later storage in the source_wkt dataset)
             for src in sources:
+                # check on MultiFaultSources and NonParametricSources
+                mesh_size = getattr(src, 'mesh_size', 0)
+                if mesh_size > 1E6:
+                    msg = ('src "{}" has {:_d} underlying meshes with a total '
+                           'of {:_d} points!').format(
+                               src.source_id, src.count_ruptures(), mesh_size)
+                    logging.warning(msg)
                 src._wkt = src.wkt()
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
     for ag in atomic:
@@ -407,17 +416,19 @@ class CompositeSourceModel:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
 
-    def update_source_info(self, calc_times):
+    def update_source_info(self, source_data):
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        for src_id, arr in calc_times.items():
-            row = self.source_info[src_id]
-            row[CALC_TIME] = arr[2]
-            if len(arr) == 4:  # after preclassical
-                row[WEIGHT] = arr[3]
-            row[EFF_RUPTURES] = arr[0]
-            row[NUM_SITES] = arr[1]
+        for src_id, nsites, nrupts, weight, ctimes in zip(
+                source_data['src_id'], source_data['nsites'],
+                source_data['nrupts'], source_data['weight'],
+                source_data['ctimes']):
+            row = self.source_info[src_id.split(':')[0]]
+            row[CALC_TIME] += ctimes
+            row[WEIGHT] += weight
+            row[EFF_RUPTURES] += nrupts
+            row[NUM_SITES] += nsites
 
     def count_ruptures(self):
         """
@@ -427,6 +438,34 @@ class CompositeSourceModel:
         for src in self.get_sources():
             n += src.count_ruptures()
         return n
+
+    def get_max_weight(self, oq):  # used in preclassical
+        """
+        :param oq: an OqParam instance
+        :returns: total weight and max weight of the sources
+        """
+        srcs = self.get_sources()
+        tot_weight = 0
+        for src in srcs:
+            tot_weight += src.weight
+            if src.code == b'C' and src.num_ruptures > 20_000:
+                msg = ('{} is suspiciously large, containing {:_d} '
+                       'ruptures with complex_fault_mesh_spacing={} km')
+                spc = oq.complex_fault_mesh_spacing
+                logging.info(msg.format(src, src.num_ruptures, spc))
+        assert tot_weight
+        max_weight = tot_weight / (oq.concurrent_tasks or 1)
+        if parallel.Starmap.num_cores > 64:  # if many cores less tasks
+            max_weight *= 1.5
+        logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
+                     format(int(tot_weight), int(max_weight), len(srcs)))
+        heavy = [src for src in srcs if src.weight > max_weight]
+        for src in sorted(heavy, key=lambda s: s.weight, reverse=True):
+            logging.info('%s', src)
+        if not heavy:
+            maxsrc = max(srcs, key=lambda s: s.weight)
+            logging.info('Heaviest: %s', maxsrc)
+        return max_weight
 
     def __toh5__(self):
         data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL))

@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import gzip
 import unittest
 import numpy
@@ -64,7 +63,7 @@ def get_dists(dstore):
     rup = dstore['rup']
     for sids, dsts in zip(rup['sids_'], rup['rrup_']):
         for sid, dst in zip(sids, dsts):
-            dic[sid].append(int(round(dst)))
+            dic[sid].append(round(dst, 1))
     return {sid: sorted(dsts, reverse=True) for sid, dsts in dic.items()}
 
 
@@ -97,7 +96,6 @@ class ClassicalTestCase(CalculatorTestCase):
             slow = view('task:classical:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
             self.assertIn('duration', slow)
-            self.assertIn('sources', slow)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
@@ -608,7 +606,8 @@ hazard_uhs-std.csv
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
-        self.assertEqual(self.calc.numctxs, 2986)  # number of contexts
+        data = self.calc.datastore.read_df('source_data')
+        self.assertEqual(data.nrupts.sum(), 2986)  # number of contexts
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -648,73 +647,56 @@ hazard_uhs-std.csv
     def test_case_48(self):
         # pointsource_distance effects on a simple point source.
         # This is case with 10 magnitudes and 2 hypodepths.
-        # The maximum_distance is 110 km and the second site
-        # was chosen very carefully, so that after the approximation
-        # 3 ruptures get distances around 111 km and are discarded
-        # (even if their true distances are around 109 km!)
+        # The maximum_distance is 110 km and the pointsource_distance 50 km.
+        # Originally the distances weew was chosen very carefully, so that
+        # after the approximation 3 ruptures got distances around 111 km and
+        # were discarded even if their true distances were around 109 km!
         self.run_calc(case_48.__file__, 'job.ini')
         # 20 exact rrup distances for site 0 and site 1 respectively
-        exact = numpy.array([[54.1249, 109.704],
-                             [54.2632, 109.753],
-                             [53.7378, 109.321],
-                             [53.8517, 109.357],
-                             [53.2577, 108.842],
-                             [53.3404, 108.863],
-                             [52.6774, 108.255],
-                             [52.7076, 108.245],
-                             [51.9595, 107.525],
-                             [51.9044, 107.461],
-                             [50.5455, 106.076],
-                             [50.4445, 105.979],
-                             [47.7896, 103.201],
-                             [47.6827, 103.101],
-                             [43.7002, 98.7525],
-                             [43.5834, 98.6488],
-                             [38.1556, 92.0187],
-                             [38.0217, 91.9073],
-                             [32.9537, 82.3458],
-                             [32.7986, 82.2214]])
+        expect = numpy.array([[54.3, 109.8],
+                             [54.1, 109.7],
+                             [53.9, 109.4],
+                             [53.7, 109.3],
+                             [53.3, 108.9],
+                             [53.3, 108.8],
+                             [52.7, 108.3],
+                             [52.7, 108.2],
+                             [52.0, 107.5],
+                             [51.9, 107.5],
+                             [50.5, 106.1],
+                             [50.4, 106.0],
+                             [47.8, 103.2],
+                             [47.7, 103.1],
+                             [43.7, 98.8],
+                             [43.6, 98.6],
+                             [38.2, 92.0],
+                             [38.0, 91.9],
+                             [33.0, 82.3],
+                             [32.8, 82.2]])
         dst = get_dists(self.calc.datastore)
-        aac(dst[0], exact[:, 0], atol=.5)  # site 0
-        aac(dst[1], exact[:, 1], atol=.5)  # site 1
+        aac(dst[0], expect[:, 0], atol=.05)  # site 0
+        aac(dst[1], expect[:, 1], atol=.05)  # site 1
 
-        # This test shows in detail what happens to the distances in presence
-        # of a magnitude-dependent pointsource_distance.
-        self.run_calc(
-            case_48.__file__, 'job.ini', pointsource_distance=
-            '{"default": [(5.1, 42), (5.3, 47), (5.5, 52), (5.7, 58), '
-            '(5.9, 65), (6.1, 72), (6.3, 80), (6.5, 89), (6.7, 99), '
-            '(6.900001, 110)]}')
+        # This test shows in detail what happens to the distances
+        # in presence of a pointsource_distance
+        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='50')
 
-        psdist = self.calc.oqparam.pointsource_distance('default')
-        rup_df = self.calc.datastore.read_df('rup')
-        mags = rup_df.mag.unique()
-        dists = psdist(mags)
-        aac(dists, [42, 47, 52, 58, 65, 72, 80, 89, 99, 110], rtol=1E-6)
-
-        # 17 approx rrup distances for site 0 and site 1 respectively
-        approx = numpy.array([[54.1525, 109.711],
-                              [53.7572, 109.324],
-                              [53.2665, 108.84],
-                              [52.6774, 108.255],
-                              [52.7076, 108.245],
-                              [51.9595, 107.525],
-                              [51.9044, 107.461],
-                              [50.5455, 106.076],
-                              [50.4445, 105.979],
-                              [47.7896, 103.201],
-                              [47.6827, 103.101],
-                              [43.7002, 98.7525],
-                              [43.5834, 98.6488],
-                              [38.1556, 92.0187],
-                              [38.0217, 91.9073],
-                              [32.9537, 82.3458],
-                              [32.7986, 82.2214]])
+        # 10 approx rrup distances for site 0 and site 1 respectively
+        approx = numpy.array([[54.2, 109.7],
+                              [53.8, 109.3],
+                              [53.3, 108.8],
+                              [52.7, 108.2],
+                              [51.9, 107.5],
+                              [50.5, 106.0],
+                              [47.8, 103.2],
+                              [43.7, 98.7],
+                              [38.1, 92.0],
+                              [32.9, 82.3]])
 
         # approx distances from site 0 and site 1 respectively
         dst = get_dists(self.calc.datastore)
-        aac(dst[0], approx[:, 0], atol=.5)  # site 0
-        aac(dst[1], approx[:, 1], atol=.5)  # site 1
+        aac(dst[0], approx[:, 0], atol=.05)  # site 0
+        aac(dst[1], approx[:, 1], atol=.05)  # site 1
 
     def test_case_49(self):
         # serious test of amplification + uhs

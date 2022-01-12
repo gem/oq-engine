@@ -710,6 +710,14 @@ idriss_2014
     :undoc-members:
     :show-inheritance:
 
+jaimes_2020
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.jaimes_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 kale_2015
 -----------------------------------------
 

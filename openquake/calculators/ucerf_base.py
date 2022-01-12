@@ -293,6 +293,16 @@ class UCERFSource(BaseSeismicSource):
                 if rup:
                     yield rup
 
+    def few_ruptures(self, **kwargs):
+        """
+        Fast version of iter_ruptures used in estimate_weight
+        """
+        for ridx in range(self.start, self.stop, 25):
+            if self.rate[ridx - self.start]:  # may have have zero rate
+                rup = self.get_ucerf_rupture(ridx - self.start)
+                if rup:
+                    yield rup
+
     # called upfront, before start_classical
     def __iter__(self):
         if self.stop - self.start <= self.ruptures_per_block:  # already split

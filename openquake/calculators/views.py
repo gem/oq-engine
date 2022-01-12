@@ -170,23 +170,20 @@ def view_worst_sources(token, dstore):
     """
     Returns the sources with worst weights
     """
-    info = dstore.read_df('source_info', 'source_id').sort_values(
-        'calc_time').tail(20)
-    del info['trti'], info['grp_id']
-    info['slow_rate'] = info.calc_time / info.weight
-    return info
-
-
-@view.add('worst_tasks')
-def view_worst_tasks(token, dstore):
-    """
-    Returns the sources with worst weights
-    """
-    info = dstore.read_df('task_info', 'task_no').sort_values(
-        'duration').tail(20)
-    del info['received'], info['mem_gb']
-    info['slow_rate'] = info.duration / info.weight
-    return info
+    if ':' in token:
+        step = int(token.split(':')[1])
+    else:
+        step = 1
+    data = dstore.read_df('source_data', 'src_id')
+    del data['nsites']
+    ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
+    [[taskno, maxtime]] = ser.to_dict().items()
+    data = data[data.taskno == taskno]
+    print('Sources in the slowest task (%d seconds, weight=%d)'
+          % (maxtime, data['weight'].sum()))
+    data['slow_rate'] = data.ctimes / data.weight
+    df = data.sort_values('slow_rate', ascending=False)
+    return df[slice(None, None, step)]
 
 
 @view.add('slow_sources')
@@ -253,12 +250,12 @@ def view_full_lt(token, dstore):
     return numpy.array(rows, dt(header))
 
 
-@view.add('eff_ruptures')
+@view.add('weight_by_src')
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     del df['grp_id'], df['trti']
-    return text_table(df)
+    return df
 
 
 @view.add('short_source_info')
@@ -275,6 +272,7 @@ def view_params(token, dstore):
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
               'pointsource_distance',
+              'floating_x_step', 'floating_y_step',
               'ground_motion_correlation_model', 'minimum_intensity',
               'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
@@ -664,26 +662,39 @@ def view_task_hazard(token, dstore):
      $ oq show task:classical:-1  # the slowest task
     """
     _, name, index = token.split(':')
-    if 'by_task' not in dstore:
-        return 'Missing by_task'
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
     data = get_array(dstore['task_info'][()], taskname=encode(name))
     if len(data) == 0:
         raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
-    eff_sites = dstore['by_task/eff_sites'][taskno]
-    srcids = decode(dstore['by_task/srcids'][taskno])
-    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
-           'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
-                             srcids))
-    info = dstore.read_df('source_info', 'source_id')
-    rows = [info.loc[s] for s in dstore['by_task/srcids'][taskno].split()]
-    maxrow = max(rows, key=lambda row: row.calc_time)
-    res += '\nWorst source: %s, num_sites=%d, calc_time=%d' % (
-        maxrow.name, maxrow.num_sites, maxrow.calc_time)
+    sdata = dstore.read_df('source_data', 'taskno')
+    eff_ruptures = sdata.loc[taskno].nrupts.sum()
+    eff_sites = sdata.loc[taskno].nsites.sum()
+    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, weight=%d, duration=%d s'
+           % (taskno, eff_ruptures, eff_sites, rec['weight'], rec['duration']))
     return res
+
+
+@view.add('source_data')
+def view_source_data(token, dstore):
+    """
+    Display info about a given task. Here is an example::
+
+     $ oq show source_data:42
+    """
+    if ':' not in token:
+        return dstore.read_df(token, 'src_id')
+    _, taskno = token.split(':')
+    taskno = int(taskno)
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
+    df = dstore.read_df('source_data', 'src_id', sel={'taskno': taskno})
+    del df['taskno']
+    df['slowrate'] = df['ctimes'] / df['weight']
+    return df.sort_values('ctimes')
 
 
 @view.add('task_ebrisk')

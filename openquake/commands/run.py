@@ -25,7 +25,7 @@ import pstats
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
-from openquake.commonlib import oqvalidation, logs, datastore
+from openquake.commonlib import oqvalidation, logs, datastore, readinput
 from openquake.calculators import base, views
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.server import dbserver
@@ -90,9 +90,10 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
                     'retrieve the %s' % (len(calc_ids), hc_id))
         else:
             params['hazard_calculation_id'] = hc_id
+    dic = readinput.get_params(job_ini, params)
     # set the logs first of all
-    log = logs.init("job", job_ini, getattr(logging, loglevel.upper()))
-    log.params.update(params)
+    log = logs.init("job", dic, getattr(logging, loglevel.upper()))
+
     # disable gzip_input
     base.BaseCalculator.gzip_inputs = lambda self: None
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:

@@ -16,11 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 import numpy
+from openquake.baselib.general import DictArray
+from openquake.hazardlib import read_input
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
-from openquake.baselib.general import DictArray
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
     Effect, RuptureContext, _collapse, ContextMaker, get_distances,
@@ -45,6 +47,7 @@ intensities = {
     '5.5': numpy.array([1.5, 1.2, .89, .85, .82, .6]),
     '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
 tom = PoissonTOM(50.)
+JOB = os.path.join(os.path.dirname(__file__), 'data/context/job.ini')
 
 
 class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
@@ -225,3 +228,16 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.tom = PoissonTOM(time_span=50)
         pmap = cmaker.get_pmap(ctxs)
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
+
+
+class SetWeightTestCase(unittest.TestCase):
+
+    def test(self):
+        inp = read_input(JOB)
+        [[trt, cmaker]] = inp.cmakerdict.items()
+        [[area]] = inp.groups  # there is a single AreaSource
+        srcs = list(area)  # split in 3+3 PointSources
+        cmaker.set_weight(srcs, inp.sitecol)
+        weights = [src.weight for src in srcs]  # 3 within, 3 outside
+        numpy.testing.assert_allclose(
+            weights, [3.04, 3.04, 3.04, 1, 1, 1])

@@ -21,7 +21,7 @@ from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15,
-    case_16, case_17, case_18, case_19)
+    case_16, case_17, case_18, case_19, case_20)
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
@@ -189,3 +189,16 @@ class ScenarioTestCase(CalculatorTestCase):
         # reading CSV ruptures with missing TRTs
         self.run_calc(case_19.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['rupgeoms']), 1)
+
+    def test_case_20(self):
+        # epsilon_tau
+        self.run_calc(case_20.__file__, 'job.ini')
+        old = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
+        self.run_calc(case_20.__file__, 'job.ini',
+                      gsim_logic_tree_file='epsilon_tau.xml')
+        aae(old.sig_inter_PGA.unique(), 0.3501)
+        aae(old.eps_inter_PGA.mean(), -0.025970912)
+        # `set_between_epsilon` sets `sig_inter` to zero
+        new = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
+        aae(new.sig_inter_PGA.unique(), 0)
+        aae(new.eps_inter_PGA.mean(), -0.025970920)
