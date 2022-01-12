@@ -21,38 +21,38 @@ actually several different ways to do it.
    when all possible ruptures are samples, but in practice for finite
    investigation times there will always be different ruptures.
 
- 2. To avoid such issue the contry-specific calculation must all start
-    from the same set of ruptures, precomputed in advance. You can
-    compute the whole stochastic event set by running an event based
-    calculation without specifying the sites and with the parameter
-    ``ground_motion_fields`` set to false. Currently one must specify
-    a few global site parameters in the precalculation to make the
-    engine checker happy, but they will not be used since since the
-    ground motion fields will not be generated in the
-    precalculation. They will be generated in the subsequent
-    individual calculations, but on-the-fly and not stored in the file
-    system. This approach is fine if you do not have a lot of disk
-    space at your disposal, but it is still inefficient since it is
-    more prone to the slow task issue.
+2. To avoid such issue the contry-specific calculation must all start
+   from the same set of ruptures, precomputed in advance. You can
+   compute the whole stochastic event set by running an event based
+   calculation without specifying the sites and with the parameter
+   ``ground_motion_fields`` set to false. Currently one must specify
+   a few global site parameters in the precalculation to make the
+   engine checker happy, but they will not be used since since the
+   ground motion fields will not be generated in the
+   precalculation. They will be generated in the subsequent
+   individual calculations, but on-the-fly and not stored in the file
+   system. This approach is fine if you do not have a lot of disk
+   space at your disposal, but it is still inefficient since it is
+   more prone to the slow task issue.
 
- 3. If you have plenty of disk space it is better to generate the
-    ground motion fields in the precalculation and then run the
-    contry-specific calculations starting from there. This is
-    particularly convenient if you have to run the risk part of the
-    calculations multiple times. A typical use case is to use
-    different vulnerability functions (for instance to compare a
-    strong building code versus a weak building code). Having
-    precomputed the GMFs means that you do not have to recompute them
-    twice.
+3. If you have plenty of disk space it is better to generate the
+   ground motion fields in the precalculation and then run the
+   contry-specific calculations starting from there. This is
+   particularly convenient if you have to run the risk part of the
+   calculations multiple times. A typical use case is to use
+   different vulnerability functions (for instance to compare a
+   strong building code versus a weak building code). Having
+   precomputed the GMFs means that you do not have to recompute them
+   twice.
 
- 4. If you have a really powerful machine the most efficient way is to
-    run a single calculation considering all countries in a single job.ini
-    file. The risk profiles can be obtained by using the ``aggregate_by``
-    and ``reaggregate_by`` parameters. This approach can be much faster than the
-    previous ones. However, approaches #2 and #3 are cloud-friendly and
-    can be preferred if you have access to cloud-computing resources,
-    since then you can spawn a different machine for each country and
-    parallelize horizontally.
+4. If you have a really powerful machine the most efficient way is to
+   run a single calculation considering all countries in a single job.ini
+   file. The risk profiles can be obtained by using the ``aggregate_by``
+   and ``reaggregate_by`` parameters. This approach can be much faster than the
+   previous ones. However, approaches #2 and #3 are cloud-friendly and
+   can be preferred if you have access to cloud-computing resources,
+   since then you can spawn a different machine for each country and
+   parallelize horizontally.
 
 Here are some tips on how to prepare the required job.ini files.
 
