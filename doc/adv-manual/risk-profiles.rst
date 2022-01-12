@@ -158,6 +158,33 @@ the ``site_model_file`` as done in the approach #3, and also the
    Exposure_Bolivia.xml
    ...
 
+The engine will automatically build a single asset collection for the
+entire South America; the associations asset->country are normally
+encoded in a field in the exposure called ``ID_0`` and the aggregation
+by country can be done with the option
+
+::
+
+   aggregate_by = ID_0
+
+Sometimes one is interested in finer aggregations, for instance by country
+and also by occupancy (Residential, Industrial or Business); then you have
+to set
+
+::
+
+ aggregate_by = ID_0, OCCUPANCY
+ reaggregate_by = ID_0
+
+``reaggregate_by` is a new feature of engine 3.13 which allows to go
+from a fine aggregation (i.e. one with more tags, in this example 2)
+to a raw aggregation (i.e. one with less tags, in this example 1).
+Actually the command ``oq reaggregate`` has been there for more than one
+year; the new feature is that it is automatically called at the end of
+a calculation, by spawning a subcalculation to compute the reaggregation.
+Without ``reaggregate_by`` the aggregation by country would be lost,
+since only the result of the finer aggregation would be stored.
+
 Single-line commands
 --------------------
 
