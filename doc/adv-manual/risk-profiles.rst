@@ -46,13 +46,13 @@ actually several different ways to do it.
    twice.
 
 4. If you have a really powerful machine the most efficient way is to
-   run a single calculation considering all countries in a single job.ini
-   file. The risk profiles can be obtained by using the ``aggregate_by``
-   and ``reaggregate_by`` parameters. This approach can be much faster than the
-   previous ones. However, approaches #2 and #3 are cloud-friendly and
-   can be preferred if you have access to cloud-computing resources,
-   since then you can spawn a different machine for each country and
-   parallelize horizontally.
+   run a single calculation considering all countries in a single
+   job.ini file. The risk profiles can be obtained by using the
+   ``aggregate_by`` and ``reaggregate_by`` parameters. This approach
+   can be much faster than the previous ones. However, approaches #2
+   and #3 are cloud-friendly and can be preferred if you have access
+   to cloud-computing resources, since then you can spawn a different
+   machine for each country and parallelize horizontally.
 
 Here are some tips on how to prepare the required job.ini files.
 
@@ -159,9 +159,12 @@ the ``site_model_file`` as done in the approach #3, and also the
    ...
 
 The engine will automatically build a single asset collection for the
-entire South America; the associations asset->country are normally
-encoded in a field in the exposure called ``ID_0`` and the aggregation
-by country can be done with the option
+entire South America. In order to use this approach you need to
+collect all the vulnerability functions in a single file and the
+taxonomy mapping must cover entire exposure for all
+countries. Moreover the exposure must contain the associations
+asset->country; this normally encoded in a field called ``ID_0``.
+Then the aggregation by country can be done with the option
 
 ::
 
