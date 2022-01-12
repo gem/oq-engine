@@ -37,6 +37,7 @@ Contents:
    event-based-damage
    correlation
    risk-features
+   risk-profiles
    developing
    architecture
    oq-commands
