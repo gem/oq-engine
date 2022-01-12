@@ -38,6 +38,8 @@ from openquake.hazardlib.geo.geodetic import (
     npoints_towards, distance, azimuth)
 
 TOL = 0.4
+VERY_SMALL = 1e-20
+ALMOST_RIGHT_ANGLE = 89.9
 
 
 def profile_node(points):
@@ -156,6 +158,24 @@ class KiteSurface(BaseSurface):
         iro = iro[iro <= 1]
         return self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
 
+    @property
+    def is_vertical(self):
+        """ True if all the profiles, and hence the surface, are vertical """
+        mgd = geodetic.min_geodetic_distance
+        check = []
+        for icol in range(self.mesh.lons.shape[1]):
+            idx = np.isfinite(self.mesh.lons[:, icol])
+            lons = self.mesh.lons[idx, icol]
+            lats = self.mesh.lats[idx, icol]
+            deps = self.mesh.depths[idx, icol]
+            dve = deps[1:] - deps[:-1]
+            dho = mgd((lons[:-1], lats[:-1]), (lons[1:], lats[1:]))
+            tmp = np.ones_like(dve) * 90.0
+            idx = dho > VERY_SMALL
+            tmp[idx] = np.degrees(np.arctan(dve[idx] / dho[idx]))
+            check.append(np.all(tmp > ALMOST_RIGHT_ANGLE))
+        return np.all(check)
+
     def _get_external_boundary(self):
         """
         Provides the surface projection of the external boundary of the
@@ -165,12 +185,42 @@ class KiteSurface(BaseSurface):
             Two :class:`numpy.ndarray` instances containing longitudes and
             latitudes, respectively
         """
-        idxs = self._get_external_boundary_indexes()
-        lo = []
-        la = []
-        for i in idxs:
-            lo.append(self.mesh.lons[i[0], i[1]])
-            la.append(self.mesh.lats[i[0], i[1]])
+        if self.is_vertical:
+
+            lo = []
+            la = []
+            idx = np.min(np.where(np.isfinite(self.mesh.lons[:, 0])))
+            slo = self.mesh.lons[idx, 0]
+            sla = self.mesh.lats[idx, 0]
+            idx = np.min(np.where(np.isfinite(self.mesh.lons[:, -1])))
+            elo = self.mesh.lons[idx, -1]
+            ela = self.mesh.lats[idx, -1]
+            strike = azimuth(slo, sla, elo, ela)
+
+            npt = npoints_towards
+            dlt = 0.1
+            tmp = npt(slo, sla, 0.0, strike-90, dlt, 0, 2)
+            lo.append(tmp[0][1])
+            la.append(tmp[1][1])
+            tmp = npt(slo, sla, 0.0, strike+90, dlt, 0, 2)
+            lo.append(tmp[0][1])
+            la.append(tmp[1][1])
+            tmp = npt(elo, ela, 0.0, strike+90, dlt, 0, 2)
+            lo.append(tmp[0][1])
+            la.append(tmp[1][1])
+            tmp = npt(elo, ela, 0.0, strike-90, dlt, 0, 2)
+            lo.append(tmp[0][1])
+            la.append(tmp[1][1])
+
+        else:
+
+            idxs = self._get_external_boundary_indexes()
+            lo = []
+            la = []
+            for i in idxs:
+                lo.append(self.mesh.lons[i[0], i[1]])
+                la.append(self.mesh.lats[i[0], i[1]])
+
         return np.array(lo), np.array(la)
 
     def _get_external_boundary_indexes(self):
@@ -345,7 +395,10 @@ class KiteSurface(BaseSurface):
                 hdists = hdists[ok]
                 vdists = vdists[ok]
                 if len(vdists) > 0:
-                    dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
+                    tmp = np.ones_like(vdists) * 90.
+                    idx = hdists > VERY_SMALL
+                    tmp[idx] = np.degrees(np.arctan(vdists[idx]/hdists[idx]))
+                    dips.append(np.mean(tmp))
                     lens.append(np.sum((hdists**2 + vdists**2)**0.5))
             lens = np.array(lens)
             self.dip = np.sum(np.array(dips) * lens/np.sum(lens))
@@ -711,11 +764,21 @@ def _resample_profile(line, sampling_dist):
                 segment_slope = 90.
 
             # Horizontal and vertical length of delta
-            delta_v = delta * np.sin(segment_slope)
-            delta_h = delta * np.cos(segment_slope)
+            if segment_slope > ALMOST_RIGHT_ANGLE:
+                delta_v = delta
+                delta_h = 0.0
+            else:
+                delta_v = delta * np.sin(segment_slope)
+                delta_h = delta * np.cos(segment_slope)
 
             # Add a new point to the cross section
-            pnts = npoints_towards(slo, sla, sde, azim, delta_h, delta_v, 2)
+            if segment_slope > ALMOST_RIGHT_ANGLE:
+                pnts = [np.array([slo, slo]),
+                        np.array([sla, sla]),
+                        np.array([sde, sde+delta_v])]
+            else:
+                pnts = npoints_towards(slo, sla, sde,
+                                       azim, delta_h, delta_v, 2)
 
             # Update the starting point
             slo = pnts[0][-1]

@@ -20,6 +20,7 @@ import glob
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
+from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import distance
@@ -32,6 +33,7 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
 aae = np.testing.assert_almost_equal
 
+
 def plot_mesh_2d(ax, smsh):
     """
     Plots the mesh
@@ -40,6 +42,18 @@ def plot_mesh_2d(ax, smsh):
         ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :], '-r', lw=0.5)
     for i in range(smsh.mesh.lons.shape[1]):
         ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i], '-r', lw=0.5)
+
+
+def plot_mesh_3d(ax, smsh, zfa):
+    """
+    Plots the mesh
+    """
+    for i in range(smsh.mesh.lons.shape[0]):
+        ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
+                smsh.mesh.depths[i, :]/zfa, '-r', lw=0.5)
+    for i in range(smsh.mesh.lons.shape[1]):
+        ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
+                smsh.mesh.depths[:, i]/zfa, '-r', lw=0.5)
 
 
 def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
@@ -215,7 +229,6 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             plot_mesh_2d(ax, self.srfc)
             ax.plot(tlo, tla, '-g', lw=4)
             plt.show()
-
 
     def test_rjb_calculation(self):
         # Test the calculation of the Rjb distance
@@ -670,6 +683,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
         lons, lats = srfc.surface_projection
+        # TODO
 
     def test_get_width(self):
         # Test the calculation of the width
@@ -758,7 +772,46 @@ class VerticalProfilesTest(unittest.TestCase):
         profiles = src.surface.profiles
 
         # Create the surface from the profiles
-        # KiteSurface.from_profiles(profiles, 2., 2.)
+        sfc = KiteSurface.from_profiles(profiles, 2., 2.)
+
+        if PLOTTING:
+            import matplotlib.pyplot as plt
+            from mpl_toolkits.mplot3d import Axes3D
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            zfa = 50.
+            ax.plot(sfc.mesh.lons.flatten(), sfc.mesh.lats.flatten(),
+                    sfc.mesh.depths.flatten()/zfa, '.')
+            plot_mesh_3d(ax, sfc, zfa)
+            for pr in profiles:
+                coo = np.array([[p.longitude, p.latitude, p.depth/zfa]
+                                for p in pr])
+                ax.plot(coo[:, 0], coo[:, 1], coo[:, 2])
+            lo, la = sfc._get_external_boundary()
+            ax.plot(lo, la, np.zeros_like(lo))
+            ax.invert_zaxis()
+            ax.set_box_aspect([1,1,1])
+            plt.show()
+
+            fig, ax = plt.subplots(1,1)
+            lo, la = sfc.surface_projection
+            ax.plot(lo, la)
+            ax.axis('equal')
+            plt.show()
+
+        # Testing that the mesh is vertical
+        expected = [-75.03541, 19.85003, -75.03541, 19.85003]
+        computed = [sfc.mesh.lons[0, 0], sfc.mesh.lats[0, 0],
+                    sfc.mesh.lons[-1, 0], sfc.mesh.lats[-1, 0]]
+        np.testing.assert_allclose(expected, computed)
+
+        # Testing the calculation of the polygon
+        eblo, ebla = sfc._get_external_boundary()
+        mgd = geodetic.min_geodetic_distance
+        idx = np.min(np.where(np.isfinite(sfc.mesh.lons[:, 0])))
+        dst = mgd((sfc.mesh.lons[idx, 0], sfc.mesh.lats[idx, 0]),
+                  (eblo[:2], ebla[:2]))
+        self.assertTrue(np.all(dst < 0.1+0.01))
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
