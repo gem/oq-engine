@@ -1,3 +1,7 @@
+  [Manuela Villani]
+  * Added a function in the modifiable GMPE to covert ground-motion assuming
+    different representations of the horizontal component.
+
   [Kendra Johnson]
   * Implemented possibility of assigning the parameters floating_x_step and 
   * floating_y_step for kite fault sources in the job configuration file
@@ -17,10 +21,6 @@
   [Claudia Mascandola]
   * Added a new class to the abrahamson_2015 gmm.
   * Added a new class to the lanzano_luzi_2019 and skarlatoudis_2013 gmms
-
-  [Manuela Villani]
-  * Added a function in the modifiable GMPE to covert ground-motion assuming
-    different representations of the horizontal component.
 
   [Marco Pagani, Shreyasvi]
   * Added GMM from Bora et al. (2019)
