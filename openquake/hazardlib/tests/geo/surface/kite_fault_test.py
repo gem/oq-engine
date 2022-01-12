@@ -24,6 +24,8 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteSurface
+from openquake.hazardlib.nrml import to_python
+from openquake.hazardlib.sourceconverter import SourceConverter
 
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
@@ -743,6 +745,20 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         if PLOTTING:
             title = 'Top of the slab'
             ppp(self.profiles, smsh, title)
+
+
+class VerticalProfilesTest(unittest.TestCase):
+
+    def test_vertical_01(self):
+
+        fname = os.path.join(BASE_DATA_PATH, 'poly_problem.xml')
+        sconv = SourceConverter(1.0, 2.5)
+        ssm = to_python(fname, sconv)
+        src = ssm[0][0]
+        profiles = src.surface.profiles
+
+        # Create the surface from the profiles
+        # KiteSurface.from_profiles(profiles, 2., 2.)
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
