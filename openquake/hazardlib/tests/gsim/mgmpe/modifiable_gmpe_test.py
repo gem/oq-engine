@@ -228,7 +228,7 @@ class ModifiableGMPETest(unittest.TestCase):
         # Original tau for PGA is 0.6201
         np.testing.assert_almost_equal(stddev[0], 0.5701491121, decimal=6)
 
-    def test_horiz_comp_to_geom_mean(self):
+    def test_horiz_comp_to_geom_mean01(self):
         """ Checks the horizontal component conversion """
         gmpe_name = 'BooreEtAl2014'
         gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
@@ -236,15 +236,47 @@ class ModifiableGMPETest(unittest.TestCase):
         stddevs = [const.StdDev.TOTAL]
         expected = [1.009, 1.009, 1.0100744, 1.01714271, 1.0264865,
                     1.03168663, 1.04649942, 1.077]
-        results=[]
-        for imt in ([PGA(), SA(0.01), SA(0.1), SA(0.2), SA(0.5), SA(1), SA(5), SA(10) ]):
-            mean_unscaled = gmm_unscaled.get_mean_and_stddevs(
-                self.ctx, self.ctx, self.ctx, imt, stddevs)[0]
-            mean = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                            imt, stddevs)[0]
-            results.append(np.exp(mean[0])/np.exp(mean_unscaled[0]))
+        results = []
+        for imt in ([PGA(), SA(0.01), SA(0.1), SA(0.2), SA(0.5), SA(1), SA(5),
+                     SA(10)]):
+            res_unscaled = gmm_unscaled.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, imt, stddevs)
+            mean_unscaled = res_unscaled[0]
+            res_scaled = gmm.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, imt, stddevs)
+            mean = res_scaled[0]
+            results.append(np.exp(mean_unscaled[0]) / np.exp(mean[0]))
+        np.testing.assert_almost_equal(results, expected, decimal=5)
 
-        np.testing.assert_almost_equal(results,expected)
+    def test_horiz_comp_to_geom_mean02(self):
+        """ Checks the horizontal component conversion """
+        gmpe_name = 'BooreAtkinson2008'
+        gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
+        gmm = ModifiableGMPE(gmpe={gmpe_name: {}}, horiz_comp_to_geom_mean={})
+        stddevs = [const.StdDev.TOTAL]
+        expected = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        imts = [PGA(), SA(0.01), SA(0.1), SA(0.2), SA(0.5), SA(1), SA(5),
+                SA(10)]
+        convs = [0.02, 0.03, 0.03, 0.0317185550924273, 0.0371922924372184,
+                 0.04, 0.04, 0.04]
+
+        results = []
+        for imt, cnv in zip(imts, convs):
+            res_unscaled = gmm_unscaled.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, imt, stddevs)
+            mean_unscaled = res_unscaled[0]
+            std_unscaled = res_unscaled[1][0]
+            res_scaled = gmm.get_mean_and_stddevs(
+                self.ctx, self.ctx, self.ctx, imt, stddevs)
+            mean = res_scaled[0]
+            std = res_scaled[1][0]
+            tmp_mean_ratio = np.exp(mean_unscaled[0]) / np.exp(mean[0])
+            tmp_conv_std = (std_unscaled[0]**2 - std[0]**2)**0.5
+            results.append([tmp_mean_ratio, tmp_conv_std])
+        results = np.array(results)
+        np.testing.assert_almost_equal(results[:, 0], expected, decimal=5)
+        np.testing.assert_almost_equal(results[:, 1], convs, decimal=5)
+
 
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """
@@ -285,5 +317,3 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
 
             # Check the computed mean + amplification
             np.testing.assert_almost_equal(mean, exp_mean)
-
-
