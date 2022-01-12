@@ -21,10 +21,12 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
+from openquake.hazardlib.contexts import STD_TYPES
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import from_string, PGA, PGV
 from openquake.hazardlib.const import IMC
+
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
