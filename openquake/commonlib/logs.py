@@ -167,7 +167,8 @@ class LogContext:
             self.params = job_ini
         else:  # path to job.ini file
             self.params = readinput.get_params(job_ini)
-        self.params['hazard_calculation_id'] = hc_id
+        if hc_id:
+            self.params['hazard_calculation_id'] = hc_id
         if calc_id == 0:
             self.calc_id = dbcmd(
                 'create_job',
