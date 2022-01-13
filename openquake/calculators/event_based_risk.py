@@ -310,7 +310,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         self.gmf_bytes = 0
         if 'gmf_data' not in self.datastore:  # start from ruptures
-            if not hasattr(oq, 'maximum_distance'):
+            if (oq.ground_motion_fields and
+                    'gsim_logic_tree' not in oq.inputs and
+                    oq.gsim == '[FromFile]'):
+                raise InvalidFile('Missing gsim or gsim_logic_tree_file in %s'
+                                  % oq.inputs['job_ini'])
+            elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
             srcfilter = self.src_filter()
