@@ -158,7 +158,6 @@ class KiteSurface(BaseSurface):
         iro = iro[iro <= 1]
         return self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
 
-    @property
     def is_vertical(self):
         """ True if all the profiles, and hence the surface, are vertical """
         mgd = geodetic.min_geodetic_distance
@@ -185,7 +184,7 @@ class KiteSurface(BaseSurface):
             Two :class:`numpy.ndarray` instances containing longitudes and
             latitudes, respectively
         """
-        if self.is_vertical:
+        if self.is_vertical():
 
             lo = []
             la = []
