@@ -103,11 +103,11 @@ the individual countries and a special file for precomputing the ruptures::
  ...
 
 The files for the individual countries will be as before, except for
-the parameters ``source_model_logic_tree_file`` and ``gsim_logic_tree_file``,
-that should be removed. That will avoid reading 13 times the same source
-model files, which are useless anyway, since the calculation now starts from
-precomputed ruptures. There are still a lot of repetitions in the files
-and the potential for making mistakes.
+the parameter ``source_model_logic_tree_file`` which should be
+removed. That will avoid reading 13 times the same source model files,
+which are useless anyway, since the calculation now starts from
+precomputed ruptures. There are still a lot of repetitions in the
+files and the potential for making mistakes.
 
 Approach #3 is very similar to approach #2: the only differences will be
 in the initial file, the one used to precompute the GMFs. Obviously it
@@ -216,6 +216,16 @@ Here ``job_XXX.ini`` are the country specific configuration files,
 is the file generating the ruptures, ``job_gmf.ini`` is the file
 generating the ground motion files and ``job_all.ini`` is the
 file encompassing all countries.
+
+Finally, if you have a file ``job_haz.ini`` generating the full GMFs,
+a file ``job_weak.ini`` generating the losses with a weak building code
+and a file ``job_strong.ini`` generating the losses with a strong building
+code, you can run the entire an analysis with a single command as follows::
+
+ $ oq engine --run job_haz.ini job_weak.ini job_strong.ini
+
+This will generate three calculations and the GMFs will be reused.
+This is as efficient as possible for this kind of problem.
 
 Caveat: GMFs are split-dependent
 --------------------------------
