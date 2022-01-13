@@ -26,6 +26,7 @@ from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
     ModifiableGMPE, _dict_to_coeffs_table)
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
 
 class ModifiableGMPEAddWithBetweenTest(unittest.TestCase):
@@ -232,22 +233,38 @@ class ModifiableGMPETest(unittest.TestCase):
 
     def test_horiz_comp_to_geom_mean01(self):
         """ Checks the horizontal component conversion """
+
+        # Initialize the modified GMM
         gmpe_name = 'BooreEtAl2014'
         gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
         gmm = ModifiableGMPE(gmpe={gmpe_name: {}}, horiz_comp_to_geom_mean={})
-        stddevs = [const.StdDev.TOTAL]
+
+        # Define expected conversion factors for median gm
         expected = [1.009, 1.009, 1.0100744, 1.01714271, 1.0264865,
                     1.03168663, 1.04649942, 1.077]
+
+        # Define IMTs
+        imts = [PGA(), SA(0.01), SA(0.1), SA(0.2), SA(0.5), SA(1), SA(5),
+                SA(10)]
+
+        # Computing results
         results = []
-        for imt in [PGA(), SA(0.01), SA(0.1), SA(0.2), SA(0.5), SA(1), SA(5),
-                    SA(10)]:
-            res_unscaled = gmm_unscaled.get_mean_and_stddevs(
-                self.ctx, self.ctx, self.ctx, imt, stddevs)
-            mean_unscaled = res_unscaled[0]
-            res_scaled = gmm.get_mean_and_stddevs(
-                self.ctx, self.ctx, self.ctx, imt, stddevs)
-            mean = res_scaled[0]
-            results.append(np.exp(mean_unscaled[0]) / np.exp(mean[0]))
+        for imt in imts:
+
+            # Results from original GMM
+            out = get_mean_stds([BooreEtAl2014()], self.ctx, [imt])
+            mean_unscaled = out[0].flatten()
+            std_unscaled = out[1].flatten()
+
+            # Results from modified GMM
+            out = get_mean_stds([gmm], self.ctx, [imt])
+            mean_scaled = out[0].flatten()
+            std_scaled = out[1].flatten()
+
+            # Storing results
+            results.append(np.exp(mean_unscaled[0]) / np.exp(mean_scaled[0]))
+
+        # Check
         np.testing.assert_almost_equal(results, expected, decimal=5)
 
     def test_horiz_comp_to_geom_mean02(self):
