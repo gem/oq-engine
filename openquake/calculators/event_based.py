@@ -205,9 +205,6 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        params = dict(imtls=oq.imtls,
-                      ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-                      ses_seed=oq.ses_seed)
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         sources = self.csm.get_sources()
         # weighting the heavy sources

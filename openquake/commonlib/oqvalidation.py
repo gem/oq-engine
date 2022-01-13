@@ -1066,7 +1066,7 @@ class OqParam(valid.ParamSet):
             self._trts = set(gsim_lt.values)
             for gsims in gsim_lt.values.values():
                 self.check_gsims(gsims)
-        elif self.gsim is not None:
+        elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
 
         # check inputs

@@ -1,8 +1,9 @@
   [Kendra Johnson]
-  * Implemented possibility of assigning the parameters floating_x_step and 
+  * Implemented possibility of assigning the parameters floating_x_step and
   * floating_y_step for kite fault sources in the job configuration file
 
   [Michele Simionato]
+  * Added a check for missing gsim information in the job.ini file
   * Fixed the case of continuous fragility functions with minIML=noDamageLimit
 
   [Miguel Leonardo-Suárez]
