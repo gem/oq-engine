@@ -57,7 +57,7 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
     """
 
     # Get the definition of the horizontal component using in the original GMM
-    horcom = getattr(self.gmpe, 'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT')
+    horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
 
     # IMT period
     T = imt.period
@@ -76,11 +76,12 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
 
     # Apply the conversion
     if comp in tmp:
-        if imt == PGA():
+        imt_name = imt.__repr__()
+        if imt_name == 'PGA':
             conv_median = C_PGA_PGV[0]
             conv_sigma = C_PGA_PGV[1]
             rstd = C_PGA_PGV[2]
-        elif imt == PGV():
+        elif imt_name == 'PGV':
             conv_median = C_PGA_PGV[3]
             conv_sigma = C_PGA_PGV[4]
             rstd = C_PGA_PGV[5]
