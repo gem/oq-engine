@@ -216,3 +216,47 @@ Here ``job_XXX.ini`` are the country specific configuration files,
 is the file generating the ruptures, ``job_gmf.ini`` is the file
 generating the ground motion files and ``job_all.ini`` is the
 file encompassing all countries.
+
+Caveat: GMFs are split-dependent
+--------------------------------
+
+You should not expect the results of approach #4 to match exactly the
+results of approaches #3 or #2, since splitting a calculation in
+countries is a tricky operation. In general, if you have a set of
+sites and you split it in disjoint subsets, and then you compute the
+ground motion fields for each subset, you will get different results
+than if you do not split.
+
+To be concrete, if you run a calculation for Chile and then one for
+Argentina, you will get different results than running a single
+calculation for Chile+Argentina, *even if you have precomputed the
+ruptures for both countries, even if the random seeds are the same and
+even if there is no spatial correlation*. Many users are surprised but
+this fact, but it obvious once you realize how the GMFs are
+computed. Suppose you are considering 3 sites in Chile and 2 sites in
+Argentina, and that the value of the random seed in 123456: if you
+split, assuming there is a single event, you will produce the
+following 3+2 random numbers:
+
+>>> numpy.random.default_rng(123456).normal(size=3)  # for Chile
+array([ 0.1928212 , -0.06550702,  0.43550665])
+>>> numpy.random.default_rng(123456).normal(size=2)  # for Argentina
+array([ 0.1928212 , -0.06550702])
+
+If you do not split, you will generate the following 5 random numbers
+instead:
+
+>>> numpy.random.default_rng(123456).normal(size=5)
+array([ 0.1928212 , -0.06550702,  0.43550665,  0.88235875,  0.37132785])
+
+They are unavoidably different. You may argue than not splitting is
+the correct way of proceeding, since the splitting causes some
+random numbers to be repeated (the numbers 0.1928212 and -0.0655070
+in this example) and actually breaks the normal distribution.
+
+In practice, if there is a large number of events and if you are
+interested in statistical quantities, things work out and you will
+produce similar results with and without splitting. But you will
+*never produce identical results*. Only the classical calculator does
+not depend on the splitting of the sites, for event based and scenario
+calculations there is no way out.
