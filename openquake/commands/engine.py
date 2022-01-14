@@ -117,11 +117,13 @@ def main(
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
-    dbserver.ensure_on()
-    # check if we are talking to the right server
-    err = dbserver.check_foreign()
-    if err:
-        sys.exit(err)
+    if not os.environ.get('OQ_DATABASE'):
+        # start the dbserver locally if needed
+        dbserver.ensure_on()
+        # check that we are talking to the right server
+        err = dbserver.check_foreign()
+        if err:
+            sys.exit(err)
 
     if upgrade_db:
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')

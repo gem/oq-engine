@@ -25,11 +25,12 @@ import re
 import ast
 import json
 import toml
+import socket
 import logging
 import numpy
 
 from openquake.baselib.general import distinct
-from openquake.baselib import hdf5
+from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
@@ -1055,6 +1056,21 @@ def uncertainty_model(value):
     if value.lstrip().startswith('['):  # TOML, do not mess with newlines
         return value.strip()
     return ' '.join(value.split())  # remove newlines too
+
+
+def host_port(value=None):
+    """
+    Returns a pair (host_IP, port_number).
+
+    >>> host_port('localhost:1908')
+    ('127.0.0.1', 1908)
+
+    If value is missing returns the parameters in openquake.cfg
+    """
+    if not value:
+        return (config.dbserver.host, config.dbserver.port)
+    host, port = value.split(':')
+    return socket.gethostbyname(host), int(port)
 
 
 # used for the exposure validation

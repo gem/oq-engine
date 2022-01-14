@@ -20,13 +20,12 @@ Set up some system-wide loggers
 """
 import os
 import re
-import socket
 import getpass
-import sqlite3
 import logging
 import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
+from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 
 LEVELS = {'debug': logging.DEBUG,
@@ -35,7 +34,7 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+DATABASE = os.environ.get('OQ_DATABASE') or '%s:%d' % valid.host_port()
 
 
 def dbcmd(action, *args):
@@ -45,9 +44,8 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    host = socket.gethostbyname(config.dbserver.host)
-    sock = zeromq.Socket(
-        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
+    # host = socket.gethostbyname(config.dbserver.host)
+    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
