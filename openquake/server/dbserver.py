@@ -42,7 +42,8 @@ db.cmd = lambda action, *args: getattr(actions, action)(db, *args)
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
-DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+
+DATABASE = os.environ.get('OQ_DATABASE', '%(host)s:%(port)d' % config.dbserver)
 
 
 class DbServer(object):
@@ -138,7 +139,9 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    address = address or (config.dbserver.listen, DBSERVER_PORT)
+    if address is None:
+        host, port = DATABASE.split(':')
+        address = host, int(port)
     return 'running' if socket_ready(address) else 'not-running'
 
 
@@ -146,7 +149,7 @@ def check_foreign():
     """
     Check if we the DbServer is the right one
     """
-    if not config.multi_user:
+    if not config.multi_user and not os.environ.get('OQ_DATABASE'):
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
@@ -192,7 +195,7 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
     else:
-        addr = (config.dbserver.listen, DBSERVER_PORT)
+        addr = (config.dbserver.listen, config.dbserver.port)
 
     # create the db directory if needed
     dirname = os.path.dirname(os.path.expanduser(config.dbserver.file))
