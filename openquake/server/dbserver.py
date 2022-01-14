@@ -28,6 +28,7 @@ import subprocess
 from openquake.baselib import (
     config, zeromq as z, workerpool as w, parallel as p)
 from openquake.baselib.general import socket_ready, detach_process
+from openquake.hazardlib import valid
 from openquake.commonlib import logs
 from openquake.engine import __version__
 from openquake.server.db import actions
@@ -41,9 +42,6 @@ db = dbapi.Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
 db.cmd = lambda action, *args: getattr(actions, action)(db, *args)
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
-
-
-DATABASE = os.environ.get('OQ_DATABASE', '%(host)s:%(port)d' % config.dbserver)
 
 
 class DbServer(object):
@@ -139,9 +137,7 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    if address is None:
-        host, port = DATABASE.split(':')
-        address = host, int(port)
+    address = address or valid.host_port()
     return 'running' if socket_ready(address) else 'not-running'
 
 
