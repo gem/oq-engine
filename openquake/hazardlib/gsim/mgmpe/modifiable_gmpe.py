@@ -22,12 +22,104 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.contexts import STD_TYPES
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib import const, contexts
+from openquake.hazardlib.imt import from_string, PGA, PGV
+from openquake.hazardlib.const import IMC
+
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
+
+COEFF = {IMC.AVERAGE_HORIZONTAL: [1, 1, 0.01, 0.02, 1],
+         IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
+         IMC.RANDOM_HORIZONTAL: [1, 1, 0.07, 0.11, 1.05],
+         IMC.GREATER_OF_TWO_HORIZONTAL:
+         [0.1, 1.117, 0.53, 1.165, 4.48, 1.195, 8.70, 1.266, 1.266],
+         IMC.RotD50:
+         [0.09, 1.009, 0.58, 1.028, 4.59, 1.042, 8.93, 1.077, 1.077]}
+
+COEFF_PGA_PGV = {IMC.AVERAGE_HORIZONTAL: [1, 0.01, 1, 1, 0.01, 1],
+                 IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
+                 IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
+                 IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
+                 IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
+
+
+def horiz_comp_to_geom_mean(self, ctx, imt):
+    """
+    This function converts ground-motion obtained for a given description of
+    horizontal component into ground-motion values for geometric_mean.
+    The conversion equations used are from:
+        - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
+        - Boore and Kishida (2017): for RotD50
+    """
+
+    # Get the definition of the horizontal component using in the original GMM
+    horcom = self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
+
+    # IMT period
+    T = imt.period
+
+    # Conversion coefficients
+    C = COEFF[horcom]
+    C_PGA_PGV = COEFF_PGA_PGV[horcom]
+
+    # Get the string defining the horizontal component
+    comp = str(horcom).split('.')[1]
+
+    # List of the horizontal component definitions that can be converted into
+    # geometric mean
+    tmp = ['AVERAGE_HORIZONTAL', 'GMRotI50', 'RANDOM_HORIZONTAL',
+           'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
+
+    # Apply the conversion
+    if comp in tmp:
+        imt_name = imt.__repr__()
+        if imt_name == 'PGA':
+            conv_median = C_PGA_PGV[0]
+            conv_sigma = C_PGA_PGV[1]
+            rstd = C_PGA_PGV[2]
+        elif imt_name == 'PGV':
+            conv_median = C_PGA_PGV[3]
+            conv_sigma = C_PGA_PGV[4]
+            rstd = C_PGA_PGV[5]
+        else:
+            if comp in ['RotD50', 'GREATER_OF_TWO_HORIZONTAL']:
+                term1 = C[1] + (C[3]-C[1]) / np.log(C[2]/C[0])*np.log(T/C[0])
+                term2 = C[3] + (C[5]-C[3]) / np.log(C[4]/C[2])*np.log(T/C[2])
+                term3 = C[5] + (C[7]-C[5]) / np.log(C[6]/C[4])*np.log(T/C[4])
+                term4 = C[8]
+                tmp_max = np.maximum(np.minimum(term1, term2),
+                                     np.minimum(term3, term4))
+                conv_median = np.maximum(C[1], tmp_max)
+                conv_sigma = 0
+                rstd = 1
+            else:
+                if T <= 0.15:
+                    conv_median = C[0]
+                    conv_sigma = C[2]
+                elif T > 0.8:
+                    conv_median = C[1]
+                    conv_sigma = C[3]
+                else:
+                    conv_median = (C[0] + (C[1]-C[0]) *
+                                   np.log10(T/0.15)/np.log10(0.8/0.15))
+                    conv_sigma = (C[2] + (C[3]-C[2]) *
+                                  np.log10(T/0.15)/np.log10(0.8/0.15))
+                rstd = C[4]
+    else:
+        msg = f'Conversion not applicable for {comp}'
+        raise ValueError(msg)
+
+    # Original total STD
+    total_stddev = getattr(self, const.StdDev.TOTAL)
+
+    # Converted values
+    std = ((total_stddev**2-conv_sigma**2)/rstd**2)**0.5
+    self.mean = np.log(np.exp(self.mean)/conv_median)
+    setattr(self, const.StdDev.TOTAL, std)
 
 
 def add_between_within_stds(self, ctx, imt, with_betw_ratio):
