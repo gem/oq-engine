@@ -1,5 +1,13 @@
 # FAQ about running hazard calculations
 
+## logic trees
+
+### How should I interpret the "Realizations" output?
+
+This is explained in the advanced manual:
+
+https://docs.openquake.org/oq-engine/advanced/logic-trees.html
+
 ## classical calculations
 
 ### How do I export the hazard curves/maps/uhs for each realization?

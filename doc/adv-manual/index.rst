@@ -18,6 +18,7 @@ Contents:
    common-mistakes
    hazard
    risk
+   logic-trees
    effective-realizations
    sslt
    sampling
