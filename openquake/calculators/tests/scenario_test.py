@@ -25,7 +25,7 @@ from openquake.qa_tests_data.scenario import (
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
-from openquake.calculators.views import text_table
+from openquake.calculators.views import text_table, view
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -148,6 +148,10 @@ class ScenarioTestCase(CalculatorTestCase):
         # there are 600+400 = 1000 GMVs
         self.assertEqual(4*(counts_by_eid.sid == 4).sum(), 400)
         self.assertEqual(6*(counts_by_eid.sid == 6).sum(), 600)
+
+        # check the branches
+        tbl = text_table(view('branches', self.calc.datastore))
+        self.assertEqualFiles('expected/branches.org', gettemp(tbl))
 
     def test_case_14(self):
         # new Swiss GMPEs

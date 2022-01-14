@@ -2,44 +2,48 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
 xmlns="http://openquake.org/xmlns/nrml/0.4">
 <logicTree logicTreeID='lt1'>
-  
-  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2" applyToTectonicRegionType="Stable Shallow Crust">
-    
-    <logicTreeBranch branchID="b2_1">
+  <logicTreeBranchSet
+      uncertaintyType="gmpeModel"
+      branchSetID="bs2" applyToTectonicRegionType="Stable Shallow Crust">
+
+    <logicTreeBranch>
       <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
       <uncertaintyWeight>0.20</uncertaintyWeight>
     </logicTreeBranch>
     
-    <logicTreeBranch branchID="b2_2">
+    <logicTreeBranch>
       <uncertaintyModel>CauzziFaccioli2008</uncertaintyModel>
       <uncertaintyWeight>0.20</uncertaintyWeight>
     </logicTreeBranch>
     
-    <logicTreeBranch branchID="b2_3">
+    <logicTreeBranch>
       <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
       <uncertaintyWeight>0.20</uncertaintyWeight>
     </logicTreeBranch>
     
-    <logicTreeBranch branchID="b2_4">
+    <logicTreeBranch>
       <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
       <uncertaintyWeight>0.20</uncertaintyWeight>
     </logicTreeBranch>
     
-    <logicTreeBranch branchID="b2_5">
+    <logicTreeBranch>
       <uncertaintyModel>Campbell2003SHARE</uncertaintyModel>
       <uncertaintyWeight>0.20</uncertaintyWeight>
     </logicTreeBranch>
-    
   </logicTreeBranchSet>
-  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4" applyToTectonicRegionType="Volcanic">
-    <logicTreeBranch branchID="b4_1">
+
+  <logicTreeBranchSet
+      uncertaintyType="gmpeModel"
+      branchSetID="bs4" applyToTectonicRegionType="Volcanic">
+    <logicTreeBranch>
       <uncertaintyModel>FaccioliEtAl2010</uncertaintyModel>
       <uncertaintyWeight>0.60</uncertaintyWeight>
     </logicTreeBranch>
-    <logicTreeBranch branchID="b4_2">
+    <logicTreeBranch>
       <uncertaintyModel>TusaLanger2016RepiSP87SE</uncertaintyModel>
       <uncertaintyWeight>0.40</uncertaintyWeight>
     </logicTreeBranch>
+
   </logicTreeBranchSet>
 </logicTree>
 </nrml>

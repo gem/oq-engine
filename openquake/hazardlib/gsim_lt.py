@@ -390,7 +390,10 @@ class GsimLogicTree(object):
             for brno, branch in enumerate(branchset):
                 weight = ImtWeight(branch, self.filename)
                 weights.append(weight)
-                branch_id = branch['branchID']
+                try:
+                    branch_id = branch['branchID']
+                except KeyError:
+                    branch_id = 'g' + BASE64[brno] + str(bsno)
                 branch_ids.append(branch_id)
                 try:
                     gsim = valid.gsim(branch.uncertaintyModel, basedir)
