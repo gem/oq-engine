@@ -25,6 +25,7 @@ import logging
 import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
+from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 
 LEVELS = {'debug': logging.DEBUG,
@@ -33,7 +34,7 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DATABASE = os.environ.get('OQ_DATABASE', '%(host)s:%(port)d' % config.dbserver)
+DATABASE = os.environ.get('OQ_DATABASE') or '%s:%d' % valid.host_port()
 
 
 def dbcmd(action, *args):
