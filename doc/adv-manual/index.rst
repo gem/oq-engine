@@ -36,6 +36,7 @@ Contents:
    point-source-gridding
    asset-site-association
    event-based-damage
+   conditional-spectrum
    correlation
    risk-features
    risk-profiles
