@@ -21,6 +21,7 @@ import unittest
 import numpy as np
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+from openquake.hazardlib.nrml import read
 from openquake.hazardlib.geo.geodetic import (
     geodetic_distance, npoints_towards)
 from openquake.hazardlib.geo.mesh import Mesh
@@ -33,6 +34,7 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
+NS = "{http://openquake.org/xmlns/nrml/0.5}"
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
@@ -375,8 +377,9 @@ class NZLTestCase(unittest.TestCase):
     def setUp(self):
 
         # Create converter
+        self.rms = 2.5
         sconv = SourceConverter(investigation_time=1.,
-                                rupture_mesh_spacing=2.5)
+                                rupture_mesh_spacing=self.rms)
 
         # Read geometry model. It contains a list of sections (i.e. instances
         # of :class:`openquake.hazardlib.source.multi_fault.FaultSection`).
@@ -394,7 +397,8 @@ class NZLTestCase(unittest.TestCase):
 
         # Create second surface
         keys = [sec for sec in gmodel.sections]
-        sfcs2 = [gmodel.sections[keys[1]].surface]
+        self.sec_id = keys[1]
+        sfcs2 = [gmodel.sections[self.sec_id].surface]
         self.msrf2 = MultiSurface(sfcs2)
 
     def test_nzl_tors(self):
@@ -417,12 +421,23 @@ class NZLTestCase(unittest.TestCase):
                 ax.plot(coo[0, 0], coo[0, 1], marker='$s$', color=col)
             plt.show()
 
-    def test_nzl_get_rx_1(self):
+    def test_nzl_1_get_rx(self):
         title = f'{type(self).__name__} - Rx - Surface 1'
         fname = os.path.join(BASE_PATH, 'results', 'results_nzl_1_rx.txt')
         #_test_nzl_get_rx(self.msrf, title, fname)
 
-    def test_nzl_get_rx_2(self):
+    def test_nzl_2_sfc_building(self):
+
+        fname = 'sections_rupture200_sections.xml'
+        fname = os.path.join(BASE_DATA_PATH, fname)
+        profiles = _get_profiles(fname)
+        profiles[self.sec_id][0]
+        rms = self.rms
+        sfc = KiteSurface.from_profiles(profiles[self.sec_id][0], rms, rms)
+        aae(sfc.mesh.lons, self.msrf2.surfaces[0].mesh.lons, decimal=3)
+
+
+    def test_nzl_2_get_rx(self):
 
         # Saving the mesh
         fname_lo = 'results_nzl_2_mesh_lons.txt'
@@ -493,3 +508,29 @@ def _plt_results(clo, cla, dst, msrf, title, boundary=True):
     _ = plt.clabel(cs)
     plt.title(title)
     return fig, ax
+
+
+def _get_profiles(fname):
+    """ Gets profiles from a Geometry Model """
+    [node] = read(fname)
+    all_profiles = {}
+    # Parse file
+    for section in node:
+        if section.tag == f"{NS}section":
+            # Parse the surfaces in each section
+            for surface in section:
+                section_profiles = []
+                if surface.tag == f"{NS}kiteSurface":
+                    # Parse the profiles for each surface
+                    profiles = []
+                    for profile in surface:
+                        # Get poslists
+                        for points in profile.LineString:
+                            pnts = np.array(~points)
+                            rng = range(0, len(pnts), 3)
+                            pro = Line([Point(pnts[i], pnts[i+1], pnts[i+2])
+                                        for i in rng])
+                            profiles.append(pro)
+                    section_profiles = [profiles]
+            all_profiles[section['id']] = section_profiles
+    return all_profiles
