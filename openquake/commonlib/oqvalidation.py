@@ -840,7 +840,7 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     imls_ref = valid.Param(valid.positivefloats, [])
     imt_ref = valid.Param(valid.intensity_measure_type)
-    individual_rlzs = individual_curves = valid.Param(valid.boolean, None)
+    individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -974,7 +974,9 @@ class OqParam(valid.ParamSet):
 
         # support legacy names
         for name in list(names_vals):
-            if name == 'quantile_hazard_curves':
+            if name == 'individual_curves':
+                names_vals['individual_rlzs'] = names_vals.pop(name)
+            elif name == 'quantile_hazard_curves':
                 names_vals['quantiles'] = names_vals.pop(name)
             elif name == 'mean_hazard_curves':
                 names_vals['mean'] = names_vals.pop(name)
