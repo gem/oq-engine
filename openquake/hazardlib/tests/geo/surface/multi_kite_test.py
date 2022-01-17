@@ -31,7 +31,8 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
     _read_profiles)
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
+from openquake.hazardlib.geo.surface.kite_fault import (
+    KiteSurface, _fix_profiles)
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -424,18 +425,33 @@ class NZLTestCase(unittest.TestCase):
     def test_nzl_1_get_rx(self):
         title = f'{type(self).__name__} - Rx - Surface 1'
         fname = os.path.join(BASE_PATH, 'results', 'results_nzl_1_rx.txt')
-        #_test_nzl_get_rx(self.msrf, title, fname)
+        _test_nzl_get_rx(self.msrf, title, fname)
 
-    def test_nzl_2_sfc_building(self):
-
+    def test_nzl_2_profiles(self):
+        # Name of the file with the Geometry Model
         fname = 'sections_rupture200_sections.xml'
         fname = os.path.join(BASE_DATA_PATH, fname)
         profiles = _get_profiles(fname)
-        profiles[self.sec_id][0]
+        prof = profiles[self.sec_id][0]
+        rprof, _ = _fix_profiles(prof, self.rms, False, False)
+
+        fname = 'results_nzl_2_rprof.txt'
+        fname = os.path.join(BASE_PATH, 'results', fname)
+        if OVERWRITE:
+            np.savetxt(fname, rprof[0])
+
+        # Checking the profiles
+        expected_prof = np.loadtxt(fname)
+        aae(expected_prof, rprof[0], decimal=3)
+
+    def test_nzl_2_sfc_building(self):
+        # Name of the file with the Geometry Model
+        fname = 'sections_rupture200_sections.xml'
+        fname = os.path.join(BASE_DATA_PATH, fname)
+        profiles = _get_profiles(fname)
         rms = self.rms
         sfc = KiteSurface.from_profiles(profiles[self.sec_id][0], rms, rms)
-        aae(sfc.mesh.lons, self.msrf2.surfaces[0].mesh.lons, decimal=3)
-
+        aae(sfc.mesh.lons, self.msrf2.surfaces[0].mesh.lons, decimal=5)
 
     def test_nzl_2_get_rx(self):
 

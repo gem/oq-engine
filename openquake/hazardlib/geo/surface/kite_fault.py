@@ -416,70 +416,8 @@ class KiteSurface(BaseSurface):
 
         """
 
-
-        # Resample profiles using the resampling distance provided
-        rprofiles = []
-        for prf in profiles:
-            rprofiles.append(_resample_profile(prf, profile_sd))
-
-        # Set the reference profile i.e. the longest one
-        ref_idx = None
-        max_length = -1e10
-        for idx, prf in enumerate(rprofiles):
-            length = prf.get_length()
-            if length > max_length:
-                max_length = length
-                ref_idx = idx
-
-        # Check that in each profile the points are equally spaced
-        for pro in rprofiles:
-            pnts = [(p.longitude, p.latitude, p.depth) for p in pro.points]
-            pnts = np.array(pnts)
-
-            # Check that the profile is not crossing the IDL and compute the
-            # distance between consecutive points along the profile
-            assert np.all(pnts[:, 0] <= 180) & np.all(pnts[:, 0] >= -180)
-            dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
-                           pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
-
-            # Check that all the distances are within a tolerance
-            np.testing.assert_allclose(dst, profile_sd, rtol=1.)
-
-        # Find the delta needed to align profiles if requested
-        shift = np.zeros(len(rprofiles)-1)
-        if align is True:
-            for i in range(0, len(rprofiles)-1):
-                shift[i] = profiles_depth_alignment(rprofiles[i],
-                                                    rprofiles[i+1])
-        shift = np.array([0] + list(shift))
-
-        # Find the maximum back-shift
-        ccsum = [shift[0]]
-        for i in range(1, len(shift)):
-            ccsum.append(shift[i] + ccsum[i-1])
-        add = ccsum - min(ccsum)
-
-        # Create resampled profiles. Now the profiles should be all aligned
-        # from the top (if align option is True)
-        rprof = []
-        maxnum = 0
-        for i, pro in enumerate(rprofiles):
-            j = int(add[i])
-            coo = get_coords(pro, idl)
-            tmp = [[np.nan, np.nan, np.nan] for a in range(0, j)]
-            if len(tmp) > 0:
-                points = tmp + coo
-            else:
-                points = coo
-            rprof.append(points)
-            maxnum = max(maxnum, len(rprof[-1]))
-
-        # Now profiles will have the same number of samples (some of them can
-        # be nan). This is needed to have an array to store the surface.
-        for i, pro in enumerate(rprof):
-            while len(pro) < maxnum:
-                pro.append([np.nan, np.nan, np.nan])
-            rprof[i] = np.array(pro)
+        # Fix profiles
+        rprof, ref_idx = _fix_profiles(profiles, profile_sd, align, idl)
 
         # Create mesh the in the forward direction
         prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
@@ -592,6 +530,81 @@ class KiteSurface(BaseSurface):
         # each cell the centroid as 3d vector in a Cartesian space, the length
         # width (size along column of points) in km and the area in km2.
         return None, None, None, area
+
+
+def _fix_profiles(profiles, profile_sd, align, idl):
+    """
+    Resample and align profiles
+
+    :param profiles:
+    :param profile_sd:
+    """
+
+    # Resample profiles using the resampling distance provided
+    rprofiles = []
+    for prf in profiles:
+        rprofiles.append(_resample_profile(prf, profile_sd))
+
+    # Set the reference profile i.e. the longest one
+    ref_idx = None
+    max_length = -1e10
+    for idx, prf in enumerate(rprofiles):
+        length = prf.get_length()
+        if length > max_length:
+            max_length = length
+            ref_idx = idx
+
+    # Check that in each profile the points are equally spaced
+    for pro in rprofiles:
+        pnts = [(p.longitude, p.latitude, p.depth) for p in pro.points]
+        pnts = np.array(pnts)
+
+        # Check that the profile is not crossing the IDL and compute the
+        # distance between consecutive points along the profile
+        assert np.all(pnts[:, 0] <= 180) & np.all(pnts[:, 0] >= -180)
+        dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
+                        pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
+
+        # Check that all the distances are within a tolerance
+        np.testing.assert_allclose(dst, profile_sd, rtol=1.)
+
+    # Find the delta needed to align profiles if requested
+    shift = np.zeros(len(rprofiles)-1)
+    if align is True:
+        for i in range(0, len(rprofiles)-1):
+            shift[i] = profiles_depth_alignment(rprofiles[i],
+                                                rprofiles[i+1])
+    shift = np.array([0] + list(shift))
+
+    # Find the maximum back-shift
+    ccsum = [shift[0]]
+    for i in range(1, len(shift)):
+        ccsum.append(shift[i] + ccsum[i-1])
+    add = ccsum - min(ccsum)
+
+    # Create resampled profiles. Now the profiles should be all aligned
+    # from the top (if align option is True)
+    rprof = []
+    maxnum = 0
+    for i, pro in enumerate(rprofiles):
+        j = int(add[i])
+        coo = get_coords(pro, idl)
+        tmp = [[np.nan, np.nan, np.nan] for a in range(0, j)]
+        if len(tmp) > 0:
+            points = tmp + coo
+        else:
+            points = coo
+        rprof.append(points)
+        maxnum = max(maxnum, len(rprof[-1]))
+
+    # Now profiles will have the same number of samples (some of them can
+    # be nan). This is needed to have an array to store the surface.
+    for i, pro in enumerate(rprof):
+        while len(pro) < maxnum:
+            pro.append([np.nan, np.nan, np.nan])
+        rprof[i] = np.array(pro)
+
+    return rprof, ref_idx
 
 
 def get_profiles_from_simple_fault_data(
