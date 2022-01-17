@@ -36,7 +36,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
-OVERWRITE = True
+OVERWRITE = False
 
 aae = np.testing.assert_almost_equal
 
@@ -387,12 +387,10 @@ class NZLTestCase(unittest.TestCase):
         gmodel = to_python(fname, sconv)
 
         # Create the surface
-        """
         sfcs = []
         for sec in gmodel.sections:
             sfcs.append(gmodel.sections[sec].surface)
         self.msrf = MultiSurface(sfcs)
-        """
 
         # Create second surface
         keys = [sec for sec in gmodel.sections]
@@ -421,7 +419,7 @@ class NZLTestCase(unittest.TestCase):
 
     def test_nzl_get_rx_1(self):
         title = f'{type(self).__name__} - Rx - Surface 1'
-        fname = os.path.join(BASE_PATH, 'results', 'results_nzl_rx.txt')
+        fname = os.path.join(BASE_PATH, 'results', 'results_nzl_1_rx.txt')
         #_test_nzl_get_rx(self.msrf, title, fname)
 
     def test_nzl_get_rx_2(self):
