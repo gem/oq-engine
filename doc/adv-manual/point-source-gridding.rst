@@ -140,3 +140,8 @@ for a description of how the tolerances work.
 By increasing the ``pointsource_distance`` parameter and decreasing the
 ``ps_grid_spacing`` parameter one can make the approximation as
 precise as wanted, at the expense of a larger runtime.
+
+NB: the fact that the Canada model with 7 cities can be made 26 times
+faster does not mean that the same speedup apply when you consider
+130,000+ sites. A test with ps_grid_spacing=pointsource_distance=50 km
+gives a speedup of 11 times, which is still very significant.
