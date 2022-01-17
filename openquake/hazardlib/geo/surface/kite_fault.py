@@ -415,6 +415,8 @@ class KiteSurface(BaseSurface):
             Lower edge  |____________________|
 
         """
+
+
         # Resample profiles using the resampling distance provided
         rprofiles = []
         for prf in profiles:
@@ -493,6 +495,7 @@ class KiteSurface(BaseSurface):
         # Convert from profiles to edges
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
+
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
                    profiles, sec_id)
 
