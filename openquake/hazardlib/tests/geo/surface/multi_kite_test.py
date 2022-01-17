@@ -425,6 +425,18 @@ class NZLTestCase(unittest.TestCase):
         #_test_nzl_get_rx(self.msrf, title, fname)
 
     def test_nzl_get_rx_2(self):
+
+        # Saving the mesh
+        fname_lo = 'results_nzl_2_mesh_lons.txt.gz'
+        fname_lo = os.path.join(BASE_PATH, 'results', fname_lo)
+        if OVERWRITE:
+            np.savetxt(fname_lo, self.msrf2.surfaces[0].mesh.lons)
+
+        # Checking the mesh
+        expected_lons = np.loadtxt(fname_lo)
+        aae(expected_lons, self.msrf2.surfaces[0].mesh.lons, decimal=3)
+
+        # Checking Rx
         title = f'{type(self).__name__} - Rx - Surface 2'
         fname = os.path.join(BASE_PATH, 'results', 'results_nzl_rx_2.txt.gz')
         _test_nzl_get_rx(self.msrf2, title, fname)
