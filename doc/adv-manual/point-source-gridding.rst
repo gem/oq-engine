@@ -144,4 +144,4 @@ precise as wanted, at the expense of a larger runtime.
 NB: the fact that the Canada model with 7 cities can be made 26 times
 faster does not mean that the same speedup apply when you consider
 130,000+ sites. A test with ps_grid_spacing=pointsource_distance=50 km
-gives a speedup of 11 times, which is still very significant.
+gives a speedup of 7 times, which is still very significant.
