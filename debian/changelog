@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added command `oq show rlz:<no>`
   * Internal: added an environment variable OQ_DATABASE
 
   [Manuela Villani]
