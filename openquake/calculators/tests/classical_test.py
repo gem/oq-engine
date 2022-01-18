@@ -511,8 +511,9 @@ hazard_uhs-std.csv
         if check:
             import pandas as pd
             df = pd.DataFrame({'geometry': [poly, expected]})
-            tmp = general.gettemp()
-            df.to_csv(os.path.join(tmp, 'case_29.csv'))
+            fname = general.gettemp(suffix='.csv')
+            print('Saving %s' % fname)
+            df.to_csv(fname)
 
         # then perform a classical calculation
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
