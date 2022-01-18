@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import gzip
 import unittest
 import numpy
@@ -489,6 +490,7 @@ hazard_uhs-std.csv
             self.assertEqualFiles('expected/' + strip_calc_id(f), f)
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
+        check = False
 
         # first test that the exported ruptures can be re-imported
         self.run_calc(case_29.__file__, 'job.ini',
@@ -501,7 +503,16 @@ hazard_uhs-std.csv
         # check what QGIS will be seeing
         aw = extract(self.calc.datastore, 'rupture_info')
         poly = gzip.decompress(aw.boundaries).decode('ascii')
-        self.assertEqual(poly, '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04006, 0.00000 0.08013, 0.00000 0.12019, 0.00000 0.16025, 0.00000 0.20032, 0.00000 0.24038, 0.00000 0.28045, 0.04512 0.28045, 0.08980 0.28045, 0.13492 0.28045, 0.17961 0.28045, 0.17961 0.24038, 0.17961 0.20032, 0.17961 0.16025, 0.17961 0.12019, 0.17961 0.08013, 0.17961 0.04006, 0.17961 0.00000, 0.17961 0.10000, 0.13492 0.10000, 0.08980 0.10000, 0.04512 0.10000, 0.00000 0.10000, 0.00000 0.14006, 0.00000 0.18013, 0.00000 0.22019, 0.00000 0.26025, 0.00000 0.30032, 0.00000 0.34038, 0.00000 0.38045, 0.04512 0.38045, 0.08980 0.38045, 0.13492 0.38045, 0.17961 0.38045, 0.17961 0.34038, 0.17961 0.30032, 0.17961 0.26025, 0.17961 0.22019, 0.17961 0.18013, 0.17961 0.14006, 0.17961 0.10000))''')
+        expected = '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04006, 0.00000 0.08013, 0.00000 0.12019, 0.00000 0.16025, 0.00000 0.20032, 0.00000 0.24038, 0.00000 0.28045, 0.04512 0.28045, 0.08980 0.28045, 0.13492 0.28045, 0.17961 0.28045, 0.17961 0.24038, 0.17961 0.20032, 0.17961 0.16025, 0.17961 0.12019, 0.17961 0.08013, 0.17961 0.04006, 0.17961 0.00000, 0.00000 0.10000, 0.04512 0.10000, 0.08980 0.10000, 0.13492 0.10000, 0.17961 0.10000, 0.17961 0.14006, 0.17961 0.18013, 0.17961 0.22019, 0.17961 0.26025, 0.17961 0.30032, 0.17961 0.34038, 0.17961 0.38045, 0.13492 0.38045, 0.08980 0.38045, 0.04512 0.38045, 0.00000 0.38045, 0.00000 0.34038, 0.00000 0.30032, 0.00000 0.26025, 0.00000 0.22019, 0.00000 0.18013, 0.00000 0.14006, 0.00000 0.10000))'''
+        self.assertEqual(poly, expected)
+
+        # This is for checking purposes. It creates a .txt file that can be
+        # read with QGIS
+        if check:
+            import pandas as pd
+            df = pd.DataFrame({'geometry': [poly, expected]})
+            tmp = general.gettemp()
+            df.to_csv(os.path.join(tmp, 'case_29.csv'))
 
         # then perform a classical calculation
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
