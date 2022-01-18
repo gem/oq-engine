@@ -493,10 +493,10 @@ class NZLTestCase(unittest.TestCase):
             np.savetxt(fnameb, np.array(mback)[:, :, 0])
 
         # Check the mesh
-        expected_msh = np.loadtxt(fname)
-        aae(expected_msh, self.msrf2.surfaces[0].mesh.lons, decimal=3)
         expected_mshb = np.loadtxt(fnameb)
         aae(expected_mshb, np.array(mback)[:, :, 0], decimal=3)
+        expected_msh = np.loadtxt(fname)
+        aae(expected_msh, self.msrf2.surfaces[0].mesh.lons, decimal=3)
 
     def test_nzl_2_get_rx(self):
 
