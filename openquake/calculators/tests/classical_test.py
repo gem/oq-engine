@@ -548,12 +548,15 @@ hazard_uhs-std.csv
                               case_35.__file__)
 
     def test_case_36(self):
-        # test with advanced applyToSources and preclassical
+        # test with advanced applyToSources and disordered gsim_logic_tree
         self.run_calc(case_36.__file__, 'job.ini')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_36.__file__, 'job.ini', hazard_calculation_id=hc_id,
                       calculation_mode='classical')
         self.assertEqual(self.calc.R, 9)  # there are 9 realizations
+
+        tbl = general.gettemp(text_table(view('rlz:8', self.calc.datastore)))
+        self.assertEqualFiles('expected/show-rlz8.org', tbl)
 
     def test_case_37(self):
         # Christchurch
