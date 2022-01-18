@@ -571,6 +571,7 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     for prf in profiles:
         rprofiles.append(_resample_profile(prf, profile_sd))
 
+    """
     # Set the reference profile i.e. the longest one
     ref_idx = None
     max_length = -1e10
@@ -579,6 +580,14 @@ def _fix_profiles(profiles, profile_sd, align, idl):
         if length > max_length:
             max_length = length
             ref_idx = idx
+    """
+
+    # Set the reference profile i.e. the longest one
+    ref_idx = 0
+    lengths = np.array([prf.get_length() for prf in rprofiles])
+    if np.max(lengths) - np.min(lengths) > profile_sd*0.1:
+        ref_idx = np.argmax(lengths)
+    max_length = lengths[ref_idx]
 
     # Check that in each profile the points are equally spaced
     for pro in rprofiles:
