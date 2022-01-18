@@ -211,7 +211,7 @@ and the associated GMPE you can use the command
 
 ::
    
- $ oq show branch_ids
+ $ oq show branches
  | branch_id | abbrev | gsim                          |
  |-----------+--------+-------------------------------|
  | b0        | 0      | [AbrahamsonEtAl2015SInter]    |

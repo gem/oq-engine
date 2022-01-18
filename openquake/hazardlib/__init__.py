@@ -226,7 +226,7 @@ def read_input(hparams, **extra):
         cmakerdict[trt].start = start
         start += len(rlzs_by_gsim)
     if rmfname:
-        # for instance for 2 TRTs with 5x2 GSIMs and ngmfs=10, then the
+        # for instance, for 2 TRTs with 5x2 GSIMs and ngmfs=10, the
         # number of occupation is 100 for each rupture, for a total
         # of 200 events, see scenario/case_13
         nrlzs = gslt.get_num_paths()

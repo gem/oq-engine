@@ -53,6 +53,13 @@ def _print_diff(a1, a2, idx1, idx2, col):
             print(col, idx2[i], a2[i])
 
 
+def get_mean(extractor, what, sids, imtls, p):
+    mean = extractor.get(what).mean[sids, :, p]  # shape (N, M)
+    mu = numpy.array([mean[:, m] for m, imt in enumerate(imtls)
+                      if imt.startswith(('PGA', 'SA'))]).T  # (N, M')
+    return mu.reshape(len(sids), -1)  # shape N * M'
+
+
 class Comparator(object):
     def __init__(self, calc_ids):
         self.extractors = [Extractor(calc_id) for calc_id in calc_ids]
@@ -108,17 +115,13 @@ class Comparator(object):
         oq0 = self.oq
         extractor = self.extractors[0]
         what = 'hmaps?kind=mean'  # shape (N, M, P)
-        midx = numpy.array([m for m, imt in enumerate(oq0.imtls)
-                            if imt.startswith(('PGA', 'SA'))])
-        shp = (len(sids), -1)
-        arrays = [extractor.get(what).mean[sids, midx, p].reshape(shp)]
+        arrays = [get_mean(extractor, what, sids, oq0.imtls, p)]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
             numpy.testing.assert_array_equal(oq.imtls.array, oq0.imtls.array)
             numpy.testing.assert_array_equal(oq.poes, oq0.poes)
-            arrays.append(
-                extractor.get(what).mean[sids, midx, p].reshape(shp))
+            arrays.append(get_mean(extractor, what, sids, oq0.imtls, p))
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, M*P)
 

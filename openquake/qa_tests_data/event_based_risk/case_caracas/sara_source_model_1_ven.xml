@@ -6,12 +6,11 @@ xmlns:gml="http://www.opengis.net/gml"
     <sourceModel>        
         <sourceGroup
         name="group 1"
-        tectonicRegion="Active Shallow Crust"
+        tectonicRegion="Subduction Interface"
         >
             <simpleFaultSource
             id="CO-01"
             name="Oca Oeste"
-            tectonicRegion="Active Shallow Crust"
             >
                 
                 <simpleFaultGeometry>

@@ -18,12 +18,15 @@
 import numpy as np
 import unittest
 from openquake.hazardlib import const
+from openquake.hazardlib.contexts import get_mean_stds
 from openquake.hazardlib.imt import PGA, SA, MMI
 from openquake.hazardlib.gsim.base import registry, CoeffsTable
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
     ModifiableGMPE, _dict_to_coeffs_table)
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
 
 class ModifiableGMPEAddWithBetweenTest(unittest.TestCase):
@@ -228,6 +231,84 @@ class ModifiableGMPETest(unittest.TestCase):
         # Original tau for PGA is 0.6201
         np.testing.assert_almost_equal(stddev[0], 0.5701491121, decimal=6)
 
+    def test_horiz_comp_to_geom_mean01(self):
+        """ Checks the horizontal component conversion """
+
+        # Initialize the modified GMM
+        gmpe_name = 'BooreEtAl2014'
+        gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
+        gmm = ModifiableGMPE(gmpe={gmpe_name: {}}, horiz_comp_to_geom_mean={})
+
+        # Define expected conversion factors for median gm
+        expected = [1.009, 1.009, 1.0100744, 1.01714271, 1.0264865,
+                    1.03168663, 1.04649942, 1.077]
+
+        # Define IMTs
+        imts = [PGA(), SA(0.01), SA(0.1), SA(0.2), SA(0.5), SA(1), SA(5),
+                SA(10)]
+
+        # Computing results
+        results = []
+        for imt in imts:
+
+            # Results from original GMM
+            out = get_mean_stds([BooreEtAl2014()], self.ctx, [imt])
+            mean_unscaled = out[0].flatten()
+            std_unscaled = out[1].flatten()
+
+            # Results from modified GMM
+            out = get_mean_stds([gmm], self.ctx, [imt])
+            mean_scaled = out[0].flatten()
+            std_scaled = out[1].flatten()
+
+            # Storing results
+            results.append(np.exp(mean_unscaled[0]) / np.exp(mean_scaled[0]))
+
+        # Check
+        np.testing.assert_almost_equal(results, expected, decimal=5)
+
+    def test_horiz_comp_to_geom_mean02(self):
+        """ Checks the horizontal component conversion """
+
+        # Initialize the modified GMM
+        gmpe_name = 'BooreAtkinson2008'
+        gmm = ModifiableGMPE(gmpe={gmpe_name: {}}, horiz_comp_to_geom_mean={})
+
+        # Define IMTs
+        imts = [PGA(), SA(0.01), SA(0.1), SA(0.2), SA(0.5), SA(1), SA(5),
+                SA(10)]
+
+        # Define expected conversion factors for median gm
+        expected = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        # Define expected conversion factors for stds
+        convs = [0.02, 0.03, 0.03, 0.0317185550924273, 0.0371922924372184,
+                 0.04, 0.04, 0.04]
+
+        # Computing results
+        results = []
+        for imt in imts:
+
+            # Results from original GMM
+            out = get_mean_stds([BooreAtkinson2008()], self.ctx, [imt])
+            mean_unscaled = out[0].flatten()
+            std_unscaled = out[1].flatten()
+
+            # Results from modified GMM
+            out = get_mean_stds([gmm], self.ctx, [imt])
+            mean_scaled = out[0].flatten()
+            std_scaled = out[1].flatten()
+
+            # Storing results
+            tmp_mean_ratio = np.exp(mean_unscaled[0]) / np.exp(mean_scaled[0])
+            tmp_conv_std = (std_unscaled[0]**2 - std_scaled[0]**2)**0.5
+            results.append([tmp_mean_ratio, tmp_conv_std])
+
+        # Check
+        results = np.array(results)
+        np.testing.assert_almost_equal(results[:, 0], expected, decimal=5)
+        np.testing.assert_almost_equal(results[:, 1], convs, decimal=5)
+
 
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """
@@ -268,5 +349,3 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
 
             # Check the computed mean + amplification
             np.testing.assert_almost_equal(mean, exp_mean)
-
-

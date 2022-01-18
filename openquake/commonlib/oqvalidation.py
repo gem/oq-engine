@@ -223,13 +223,13 @@ ebrisk_maxsize:
 floating_x_step:
   Float, used in rupture generation for kite faults. indicates the fraction
   of fault length used to float ruptures along strike by the given float
-  (i.e. "0.5" floats the ruptures at half the rupture length). Uniform 
+  (i.e. "0.5" floats the ruptures at half the rupture length). Uniform
   distribution of the ruptures is maintained, such that if the mesh spacing
   and rupture dimensions prohibit the defined overlap fraction, the fraction
   is increased until uniform distribution is achieved. The minimum possible
   value depends on the rupture dimensions and the mesh spacing.
   If 0, standard rupture floating is used along-strike (i.e. no mesh nodes
-  are skipped). 
+  are skipped).
   Example: *floating_x_step = 0.5*
   Default: 0
 
@@ -840,7 +840,7 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     imls_ref = valid.Param(valid.positivefloats, [])
     imt_ref = valid.Param(valid.intensity_measure_type)
-    individual_rlzs = individual_curves = valid.Param(valid.boolean, None)
+    individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -974,7 +974,9 @@ class OqParam(valid.ParamSet):
 
         # support legacy names
         for name in list(names_vals):
-            if name == 'quantile_hazard_curves':
+            if name == 'individual_curves':
+                names_vals['individual_rlzs'] = names_vals.pop(name)
+            elif name == 'quantile_hazard_curves':
                 names_vals['quantiles'] = names_vals.pop(name)
             elif name == 'mean_hazard_curves':
                 names_vals['mean'] = names_vals.pop(name)
@@ -1066,7 +1068,7 @@ class OqParam(valid.ParamSet):
             self._trts = set(gsim_lt.values)
             for gsims in gsim_lt.values.values():
                 self.check_gsims(gsims)
-        elif self.gsim is not None:
+        elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
 
         # check inputs

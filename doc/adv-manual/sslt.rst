@@ -121,35 +121,35 @@ In the demo the storage is over 4 times less (18 vs 81); in more
 complex cases the gain than can be much more impressive. For instance
 the ZAF model in our mosaic (the national model for South Africa)
 contains a source specific logic tree with 22 sources that can be
-decomposed as follows::
+decomposed as follows:
 
-.. python:
+.. code:
 
    >> full_lt = readinput.get_full_lt(oq)
    >> dic = full_lt.source_model_lt.decompose()
    >> pprint(dic)
    {'1': <SSLT:1 [<abGRAbsolute(3)>, <maxMagGRAbsolute(4)>]>,
-    '10': <SSLT:10 [<abGRAbsolute(4)>, <maxMagGRAbsolute(3)>]>,
-    '11': <SSLT:11 [<abGRAbsolute(4)>, <maxMagGRAbsolute(2)>]>,
-    '12': <SSLT:12 [<abGRAbsolute(3)>, <maxMagGRAbsolute(3)>]>,
-    '13': <SSLT:13 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
-    '14': <SSLT:14 [<abGRAbsolute(3)>, <maxMagGRAbsolute(4)>]>,
-    '15': <SSLT:15 [<abGRAbsolute(3)>, <maxMagGRAbsolute(3)>]>,
-    '16': <SSLT:16 [<abGRAbsolute(4)>, <maxMagGRAbsolute(3)>]>,
-    '17': <SSLT:17 [<abGRAbsolute(4)>, <maxMagGRAbsolute(3)>]>,
-    '18': <SSLT:18 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
-    '19': <SSLT:19 [<abGRAbsolute(3)>, <maxMagGRAbsolute(3)>]>,
-    '2': <SSLT:2 [<abGRAbsolute(2)>, <maxMagGRAbsolute(3)>]>,
-    '20': <SSLT:20 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
-    '21': <SSLT:21 [<abGRAbsolute(2)>, <maxMagGRAbsolute(3)>]>,
-    '22': <SSLT:22 [<abGRAbsolute(4)>, <maxMagGRAbsolute(3)>]>,
-    '23': <SSLT:23 [<abGRAbsolute(2)>, <maxMagGRAbsolute(3)>]>,
-    '24': <SSLT:24 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
-    '3': <SSLT:3 [<abGRAbsolute(5)>, <maxMagGRAbsolute(4)>]>,
-    '4': <SSLT:4 [<abGRAbsolute(3)>, <maxMagGRAbsolute(2)>]>,
-    '5': <SSLT:5 [<abGRAbsolute(3)>, <maxMagGRAbsolute(3)>]>,
-    '8': <SSLT:8 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
-    '9': <SSLT:9 [<abGRAbsolute(3)>, <maxMagGRAbsolute(2)>]>}
+   '10': <SSLT:10 [<abGRAbsolute(4)>, <maxMagGRAbsolute(3)>]>,
+   '11': <SSLT:11 [<abGRAbsolute(4)>, <maxMagGRAbsolute(2)>]>,
+   '12': <SSLT:12 [<abGRAbsolute(3)>, <maxMagGRAbsolute(3)>]>,
+   '13': <SSLT:13 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
+   '14': <SSLT:14 [<abGRAbsolute(3)>, <maxMagGRAbsolute(4)>]>,
+   '15': <SSLT:15 [<abGRAbsolute(3)>, <maxMagGRAbsolute(3)>]>,
+   '16': <SSLT:16 [<abGRAbsolute(4)>, <maxMagGRAbsolute(3)>]>,
+   '17': <SSLT:17 [<abGRAbsolute(4)>, <maxMagGRAbsolute(3)>]>,
+   '18': <SSLT:18 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
+   '19': <SSLT:19 [<abGRAbsolute(3)>, <maxMagGRAbsolute(3)>]>,
+   '2': <SSLT:2 [<abGRAbsolute(2)>, <maxMagGRAbsolute(3)>]>,
+   '20': <SSLT:20 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
+   '21': <SSLT:21 [<abGRAbsolute(2)>, <maxMagGRAbsolute(3)>]>,
+   '22': <SSLT:22 [<abGRAbsolute(4)>, <maxMagGRAbsolute(3)>]>,
+   '23': <SSLT:23 [<abGRAbsolute(2)>, <maxMagGRAbsolute(3)>]>,
+   '24': <SSLT:24 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
+   '3': <SSLT:3 [<abGRAbsolute(5)>, <maxMagGRAbsolute(4)>]>,
+   '4': <SSLT:4 [<abGRAbsolute(3)>, <maxMagGRAbsolute(2)>]>,
+   '5': <SSLT:5 [<abGRAbsolute(3)>, <maxMagGRAbsolute(3)>]>,
+   '8': <SSLT:8 [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)>]>,
+   '9': <SSLT:9 [<abGRAbsolute(3)>, <maxMagGRAbsolute(2)>]>}
    >> C, R = 0, 1
    >> for sslt in dic.values():
    ..  Rs = sslt.get_num_paths()
@@ -172,7 +172,7 @@ which is able to retrieve all the curves associated to the
 realizations of the logic tree associated to a specific source.
 Here is the usage:
 
-.. python::
+.. code::
 
  from openquake.commonlib.datastore import read
  from openquake.calculators.getters import HcurvesGetter

@@ -1,8 +1,18 @@
+  [Michele Simionato]
+  * Added command `oq show rlz:<no>`
+  * Internal: added an environment variable OQ_DATABASE
+
+  [Manuela Villani]
+  * Added a function in the modifiable GMPE to covert ground-motion assuming
+    different representations of the horizontal component.
+
   [Kendra Johnson]
-  * Implemented possibility of assigning the parameters floating_x_step and 
-  * floating_y_step for kite fault sources in the job configuration file
+  * Implemented possibility of assigning the parameters `floating_x_step` and
+    `floating_y_step` for kite fault sources in the job configuration file
 
   [Michele Simionato]
+  * The `branchID` is now optional in gsim logic tree files
+  * Added a check for missing gsim information in the job.ini file
   * Fixed the case of continuous fragility functions with minIML=noDamageLimit
 
   [Miguel Leonardo-Suárez]

@@ -100,12 +100,6 @@ authkey = changeme  |  authkey = changeme
 ## cut ##           |  ## cut ##
 ```
 
-or the `OQ_DBSERVER_PORT` enviroment variable must be set:
-
-```bash
-export OQ_DBSERVER_PORT=1985
-```
-
 ## Running the tests
 
 To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.

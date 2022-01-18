@@ -1021,7 +1021,7 @@ def _get(df, sid):
 @view.add('gsim_for_event')
 def view_gsim_for_event(token, dstore):
     """
-    Display the GSIM used when computing the GMF for the given event
+    Display the GSIM used when computing the GMF for the given event:
 
     $ oq show gsim_for_event:123 -1
     [BooreAtkinson2008]
@@ -1126,6 +1126,27 @@ def view_branches(token, dstore):
     for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
     return numpy.array(tbl, dt('branch_id abbrev uvalue'))
+
+
+@view.add('rlz')
+def view_rlz(token, dstore):
+    """
+    Show info about a given realization in the logic tree
+    Example:
+
+    $ oq show rlz:0 -1
+    """
+    _, rlz_id = token.split(':')
+    full_lt = dstore['full_lt']
+    rlz = full_lt.get_realizations()[int(rlz_id)]
+    smlt = full_lt.source_model_lt
+    gslt = full_lt.gsim_lt
+    tbl = []
+    for bset, brid in zip(smlt.branchsets, rlz.sm_lt_path):
+        tbl.append((bset.uncertainty_type, smlt.branches[brid].value))
+    for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
+        tbl.append((trt, value))
+    return numpy.array(tbl, dt('uncertainty_type uvalue'))
 
 
 @view.add('branchsets')

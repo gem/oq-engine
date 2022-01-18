@@ -167,7 +167,7 @@ def event_based_risk(df, oqparam, monitor):
     :returns: a dictionary of arrays
     """
     dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
-    with dstore, monitor('reading gmf_data'):
+    with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
@@ -310,7 +310,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         self.gmf_bytes = 0
         if 'gmf_data' not in self.datastore:  # start from ruptures
-            if not hasattr(oq, 'maximum_distance'):
+            if (oq.ground_motion_fields and
+                    'gsim_logic_tree' not in oq.inputs and
+                    oq.gsim == '[FromFile]'):
+                raise InvalidFile('Missing gsim or gsim_logic_tree_file in %s'
+                                  % oq.inputs['job_ini'])
+            elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
             srcfilter = self.src_filter()

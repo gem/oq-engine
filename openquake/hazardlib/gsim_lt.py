@@ -390,7 +390,10 @@ class GsimLogicTree(object):
             for brno, branch in enumerate(branchset):
                 weight = ImtWeight(branch, self.filename)
                 weights.append(weight)
-                branch_id = branch['branchID']
+                try:
+                    branch_id = branch['branchID']
+                except KeyError:
+                    branch_id = 'g' + BASE64[brno] + str(bsno)
                 branch_ids.append(branch_id)
                 try:
                     gsim = valid.gsim(branch.uncertaintyModel, basedir)
@@ -426,8 +429,7 @@ class GsimLogicTree(object):
         if dupl:
             logging.warning(
                 'There are duplicated branchIDs %s in %s', dupl, self.filename)
-        branches.sort(key=lambda b: (b.trt, b.id))
-        # TODO: add an .idx to each GSIM ?
+        branches.sort(key=lambda b: b.trt)
         return branches
 
     def get_weights(self, trt, imt='weight'):

@@ -552,7 +552,8 @@ class HazardCalculator(BaseCalculator):
                     raise ValueError(
                         'collect_rlzs=true can be specified only if '
                         'the realizations have identical weights')
-            check_imtls(self.oqparam.imtls, oqparent.imtls)
+            if oqparent.imtls:
+                check_imtls(self.oqparam.imtls, oqparent.imtls)
             self.check_precalc(oqparent.calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
@@ -579,7 +580,7 @@ class HazardCalculator(BaseCalculator):
                     (hstats, rstats))
             sec_imts = set(oq.get_sec_imts())
             missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
-            if missing_imts:
+            if oqp.imtls and missing_imts:
                 raise ValueError(
                     'The parent calculation is missing the IMT(s) %s' %
                     ', '.join(missing_imts))
@@ -738,7 +739,11 @@ class HazardCalculator(BaseCalculator):
                               oq.inputs['job_ini'])
         elif oq.hazard_calculation_id:
             with datastore.read(oq.hazard_calculation_id) as dstore:
-                haz_sitecol = dstore['sitecol'].complete
+                if 'sitecol' in dstore:
+                    haz_sitecol = dstore['sitecol'].complete
+                else:
+                    haz_sitecol = readinput.get_site_collection(
+                        oq, self.datastore)
                 if ('amplification' in oq.inputs and
                         'ampcode' not in haz_sitecol.array.dtype.names):
                     haz_sitecol.add_col('ampcode', site.ampcode_dt)

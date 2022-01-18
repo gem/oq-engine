@@ -536,7 +536,11 @@ def get_site_collection(oqparam, h5=None):
         # a None sitecol is okay when computing the ruptures only
         return
     else:  # use the default site params
-        req_site_params = get_gsim_lt(oqparam).req_site_params
+        if ('gmfs' in oqparam.inputs or 'hazard_curves' in oqparam.inputs
+                or 'shakemap' in oqparam.inputs):
+            req_site_params = set()   # no parameters are required
+        else:
+            req_site_params = get_gsim_lt(oqparam).req_site_params
         if 'amplification' in oqparam.inputs:
             req_site_params.add('ampcode')
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
@@ -940,6 +944,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         discarded = []
         logging.info('Read %d sites and %d assets from the exposure',
                      len(sitecol), sum(len(a) for a in assets_by_site))
+
     assetcol = asset.AssetCollection(
         exposure, assets_by_site, oqparam.time_event, oqparam.aggregate_by)
     if assetcol.occupancy_periods:
