@@ -479,8 +479,15 @@ class NZLTestCase(unittest.TestCase):
         msh = _create_mesh(rprof, ref_idx, rms, idl=False)
         tmp = np.fliplr(msh[:, :, 0])
 
+        # Save results
+        fname = 'results_nzl_2_mesh.txt'
+        fname = os.path.join(BASE_PATH, 'results', fname)
+        if OVERWRITE:
+            np.savetxt(fname, tmp)
+
         # Check the mesh
-        aae(tmp, self.msrf2.surfaces[0].mesh.lons, decimal=5)
+        expected_msh = np.loadtxt(fname)
+        aae(expected_msh, self.msrf2.surfaces[0].mesh.lons, decimal=3)
 
     def test_nzl_2_get_rx(self):
 
@@ -536,7 +543,7 @@ def _test_nzl_get_rx(msrf, title, fname):
     dst = np.sort(dst.flatten())
 
     # Testing
-    aae(dst_expected, dst, decimal=1)
+    aae(dst_expected, dst, decimal=3)
 
 
 def _plt_results(clo, cla, dst, msrf, title, boundary=True):
