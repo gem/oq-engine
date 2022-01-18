@@ -225,7 +225,8 @@ def get_ini_defaults(request):
     Return a list of ini attributes with a default value
     """
     ini_defs = {}
-    for name in dir(oqvalidation.OqParam):
+    all_names = dir(oqvalidation.OqParam) + list(oqvalidation.OqParam.ALIASES)
+    for name in all_names:
         obj = getattr(oqvalidation.OqParam, name)
         if (isinstance(obj, valid.Param)
                 and obj.default is not valid.Param.NODEFAULT):
