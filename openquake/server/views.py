@@ -227,6 +227,8 @@ def get_ini_defaults(request):
     ini_defs = {}
     all_names = dir(oqvalidation.OqParam) + list(oqvalidation.OqParam.ALIASES)
     for name in all_names:
+        if name in oqvalidation.OqParam.ALIASES:  # old name
+            name = oqvalidation.OqParam.ALIASES[name]
         obj = getattr(oqvalidation.OqParam, name)
         if (isinstance(obj, valid.Param)
                 and obj.default is not valid.Param.NODEFAULT):
