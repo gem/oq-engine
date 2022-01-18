@@ -49,14 +49,14 @@ logic tree. In past versions of the engine the branch path was using
 directly the branch IDs, so it was easy to assess the correspondence
 between each realization and the associated branches.
 
-Unfortunately, we had to remove that direct correspondence. The
-reason is that engine is used in situations where the logic
+Unfortunately, we had to remove that direct correspondence in engine
+3.11. The reason is that engine is used in situations where the logic
 tree has billions of billions of billions ... of billions potential
 realizations, with hundreds of branchsets. If you have 100 branchsets
 and the branch IDs are 10 characters long, each branch path will be
-1000 characters long and impossible to display. The compact representation
-requires only 1-character per branchset instead. It is possible to
-pass from the compact representation to the original
+1000 characters long and impossible to display. The compact
+representation requires only 1-character per branchset instead. It is
+possible to pass from the compact representation to the original
 branch IDs by using the command ``oq show branches``::
 
  $ oq show branches
@@ -123,4 +123,6 @@ FAQ::
 
 NB: the commands `oq show branches` and `oq show rlz` are new in
 engine 3.13: they may change in the future and the string
-representation of the branch path may change too.
+representation of the branch path may change too. It has already
+changed twice in engine 3.11 and engine 3.12. You cannot rely on
+it across engine versions.
