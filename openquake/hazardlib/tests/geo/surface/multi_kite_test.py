@@ -32,7 +32,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.surface.kite_fault import (
-    KiteSurface, _fix_profiles, _create_mesh)
+    KiteSurface, _fix_profiles, _create_mesh, get_mesh_back)
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -475,19 +475,28 @@ class NZLTestCase(unittest.TestCase):
         rprof, ref_idx = _fix_profiles(prof, rms, False, idl=False)
 
         # Create mesh (note that we flip it to replicate the right_hand rule
-        # fix)
+        # fix). The 'get_mesh' function provides the same results on MacOS and
+        # Linux.
         msh = _create_mesh(rprof, ref_idx, rms, idl=False)
         tmp = np.fliplr(msh[:, :, 0])
+
+        mback = get_mesh_back(rprof, ref_idx, rms, idl=False)
+        print(np.array(mback))
 
         # Save results
         fname = 'results_nzl_2_mesh.txt'
         fname = os.path.join(BASE_PATH, 'results', fname)
+        fnameb = 'results_nzl_2_mesh_back.txt'
+        fnameb = os.path.join(BASE_PATH, 'results', fnameb)
         if OVERWRITE:
             np.savetxt(fname, tmp)
+            np.savetxt(fnameb, np.array(mback)[:, :, 0])
 
         # Check the mesh
         expected_msh = np.loadtxt(fname)
         aae(expected_msh, self.msrf2.surfaces[0].mesh.lons, decimal=3)
+        expected_mshb = np.loadtxt(fnameb)
+        aae(expected_mshb, np.array(mback)[:, :, 0], decimal=3)
 
     def test_nzl_2_get_rx(self):
 
