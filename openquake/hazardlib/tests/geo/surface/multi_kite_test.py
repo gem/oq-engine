@@ -397,7 +397,7 @@ class NZLTestCase(unittest.TestCase):
         self.msrf = MultiSurface(sfcs)
 
         # Create second surface
-        keys = [sec for sec in gmodel.sections]
+        keys = list(gmodel.sections)
         self.sec_id = keys[1]
         sfcs2 = [gmodel.sections[self.sec_id].surface]
         self.msrf2 = MultiSurface(sfcs2)
@@ -439,12 +439,12 @@ class NZLTestCase(unittest.TestCase):
         fname = 'sections_rupture200_sections.xml'
         fname = os.path.join(BASE_DATA_PATH, fname)
 
-        # Getting resampled profiles
+        # Read data and get resampled profiles
         profiles = _get_profiles(fname)
         prof = profiles[self.sec_id][0]
         rprof, _ = _fix_profiles(prof, self.rms, False, False)
 
-        # Saving results
+        # Save results
         fname0 = 'results_nzl_2_rprof_0.txt'
         fname0 = os.path.join(BASE_PATH, 'results', fname0)
         fname2 = 'results_nzl_2_rprof_2.txt'
@@ -475,7 +475,7 @@ class NZLTestCase(unittest.TestCase):
         rprof, ref_idx = _fix_profiles(prof, rms, False, idl=False)
 
         # Create mesh (note that we flip it to replicate the right_hand rule
-        # fix
+        # fix)
         msh = _create_mesh(rprof, ref_idx, rms, idl=False)
         tmp = np.fliplr(msh[:, :, 0])
 
