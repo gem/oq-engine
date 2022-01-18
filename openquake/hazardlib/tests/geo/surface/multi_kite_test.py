@@ -442,22 +442,27 @@ class NZLTestCase(unittest.TestCase):
         # Read data and get resampled profiles
         profiles = _get_profiles(fname)
         prof = profiles[self.sec_id][0]
-        rprof, _ = _fix_profiles(prof, self.rms, False, False)
+        rprof, ref_idx = _fix_profiles(prof, self.rms, False, False)
 
         # Save results
         fname0 = 'results_nzl_2_rprof_0.txt'
         fname0 = os.path.join(BASE_PATH, 'results', fname0)
         fname2 = 'results_nzl_2_rprof_2.txt'
         fname2 = os.path.join(BASE_PATH, 'results', fname2)
+        fnamei = 'results_nzl_2_ref_idx.txt'
+        fnamei = os.path.join(BASE_PATH, 'results', fnamei)
         if OVERWRITE:
             np.savetxt(fname0, rprof[0])
             np.savetxt(fname2, rprof[2])
+            np.savetxt(fnamei, np.array([ref_idx]))
 
         # Check profiles
         expected_prof0 = np.loadtxt(fname0)
         aae(expected_prof0, rprof[0], decimal=3)
         expected_prof2 = np.loadtxt(fname2)
         aae(expected_prof2, rprof[2], decimal=3)
+        expected_refi = np.loadtxt(fnamei)
+        aae(expected_refi, ref_idx, decimal=3)
 
     def test_nzl_2_sfc_building(self):
         """ Testing the mesh """
