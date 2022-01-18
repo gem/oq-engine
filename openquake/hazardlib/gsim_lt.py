@@ -424,7 +424,7 @@ class GsimLogicTree(object):
                 (self.filename, trts))
         dupl = duplicated(branchids)
         if dupl:
-            logging.warning(
+            logging.debug(
                 'There are duplicated branchIDs %s in %s', dupl, self.filename)
         branches.sort(key=lambda b: b.trt)
         return branches

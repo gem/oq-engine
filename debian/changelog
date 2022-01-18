@@ -107,8 +107,6 @@
   * Added a command `oq info cfg` to show the configuration file paths
   * Added a check on the intensity measure levels with `--hc` is used
   * Bug fix: pointsource_distance = 0 was not honored
-  * Added a warning in case of duplicated branch IDs in the gsim logic
-    tree file
   * Fixed a small bug of `oq zip job_haz.ini -r job_risk.ini`
   * Optimized the aggregation of losses in event_based_risk and made it possible
     to aggregate by site_id for more than 65,536 sites
