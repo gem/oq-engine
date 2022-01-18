@@ -428,21 +428,30 @@ class NZLTestCase(unittest.TestCase):
         _test_nzl_get_rx(self.msrf, title, fname)
 
     def test_nzl_2_profiles(self):
+
         # Name of the file with the Geometry Model
         fname = 'sections_rupture200_sections.xml'
         fname = os.path.join(BASE_DATA_PATH, fname)
+
+        # Getting resampled profiles
         profiles = _get_profiles(fname)
         prof = profiles[self.sec_id][0]
         rprof, _ = _fix_profiles(prof, self.rms, False, False)
 
-        fname = 'results_nzl_2_rprof.txt'
-        fname = os.path.join(BASE_PATH, 'results', fname)
+        # Saving
+        fname0 = 'results_nzl_2_rprof_0.txt'
+        fname0 = os.path.join(BASE_PATH, 'results', fname0)
+        fname2 = 'results_nzl_2_rprof_2.txt'
+        fname2 = os.path.join(BASE_PATH, 'results', fname2)
         if OVERWRITE:
-            np.savetxt(fname, rprof[0])
+            np.savetxt(fname0, rprof[0])
+            np.savetxt(fname2, rprof[2])
 
         # Checking the profiles
-        expected_prof = np.loadtxt(fname)
-        aae(expected_prof, rprof[0], decimal=3)
+        expected_prof0 = np.loadtxt(fname0)
+        aae(expected_prof0, rprof[0], decimal=3)
+        expected_prof2 = np.loadtxt(fname2)
+        aae(expected_prof2, rprof[2], decimal=3)
 
     def test_nzl_2_sfc_building(self):
         # Name of the file with the Geometry Model

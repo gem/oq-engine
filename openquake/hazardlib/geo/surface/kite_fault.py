@@ -452,9 +452,6 @@ class KiteSurface(BaseSurface):
         return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
                      mesh.depths[irow, icol])
 
-    def get_TUB(self, sites, shift):
-        pass
-
     @property
     def surface_projection(self):
         """
@@ -532,12 +529,53 @@ class KiteSurface(BaseSurface):
         return None, None, None, area
 
 
+def _create_mesh(rprof, ref_idx, edge_sd, idl):
+    """
+    Create the mesh in the forward and backward direction (from the reference
+    profile)
+
+    :param rprof:
+        A list of profiles
+    :param ref_idx:
+        Index indicating the reference profile
+    :param edge_sd:
+        A float defining the sampling distance [km] for the edges
+    :param idl:
+        A boolean. When true the profiles cross the international date line
+    :returns:
+        An instance of  :class:`openquake.hazardlib.geo.Mesh`
+    """
+
+    # Create mesh the in the forward direction
+    prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
+
+    # Create the mesh in the backward direction
+    if ref_idx > 0:
+        prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl)
+    else:
+        prfl = []
+    prf = prfl + prfr
+    msh = np.array(prf)
+
+    # Convert from profiles to edges
+    msh = msh.swapaxes(0, 1)
+    msh = fix_mesh(msh)
+
+    return msh
+
+
 def _fix_profiles(profiles, profile_sd, align, idl):
     """
     Resample and align profiles
 
     :param profiles:
+        A list of :class:`openquake.hazardlib.geo.Line` instances
     :param profile_sd:
+        A float [km] defining the sampling distance for profiles
+    :param align:
+        A boolean controlling the alignment of profiles
+    :param idl:
+        A boolean. When true the profiles cross the international date line
     """
 
     # Resample profiles using the resampling distance provided
