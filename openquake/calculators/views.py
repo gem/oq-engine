@@ -1123,6 +1123,10 @@ def view_branches(token, dstore):
     for k, v in full_lt.source_model_lt.shortener.items():
         tbl.append((k, v, smlt.branches[k].value))
     gsims = sum(gslt.values.values(), [])
+    if len(gslt.shortener) < len(gsims):  # possible for engine < 3.13
+        raise ValueError(
+            'There were duplicated branch IDs in the gsim logic tree %s'
+            % gslt.filename)
     for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
     return numpy.array(tbl, dt('branch_id abbrev uvalue'))
