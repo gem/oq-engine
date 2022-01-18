@@ -484,9 +484,7 @@ class NZLTestCase(unittest.TestCase):
         # Linux.
         msh = _create_mesh(rprof, ref_idx, rms, idl=False)
         tmp = np.fliplr(msh[:, :, 0])
-
         mback = get_mesh_back(rprof, ref_idx, rms, idl=False)
-        print(np.array(mback))
 
         # Save results
         fname = 'results_nzl_2_mesh.txt'
