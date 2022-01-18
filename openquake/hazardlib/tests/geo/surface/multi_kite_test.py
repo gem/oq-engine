@@ -32,7 +32,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.surface.kite_fault import (
-    KiteSurface, _fix_profiles)
+    KiteSurface, _fix_profiles, _create_mesh)
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -423,11 +423,17 @@ class NZLTestCase(unittest.TestCase):
             plt.show()
 
     def test_nzl_1_get_rx(self):
+        """ Testing the calculation of the rx distance """
+
+        # Set the output name
         title = f'{type(self).__name__} - Rx - Surface 1'
         fname = os.path.join(BASE_PATH, 'results', 'results_nzl_1_rx.txt')
+
+        # Test
         _test_nzl_get_rx(self.msrf, title, fname)
 
     def test_nzl_2_profiles(self):
+        """ Testing the resampled profiles """
 
         # Name of the file with the Geometry Model
         fname = 'sections_rupture200_sections.xml'
@@ -438,7 +444,7 @@ class NZLTestCase(unittest.TestCase):
         prof = profiles[self.sec_id][0]
         rprof, _ = _fix_profiles(prof, self.rms, False, False)
 
-        # Saving
+        # Saving results
         fname0 = 'results_nzl_2_rprof_0.txt'
         fname0 = os.path.join(BASE_PATH, 'results', fname0)
         fname2 = 'results_nzl_2_rprof_2.txt'
@@ -447,20 +453,34 @@ class NZLTestCase(unittest.TestCase):
             np.savetxt(fname0, rprof[0])
             np.savetxt(fname2, rprof[2])
 
-        # Checking the profiles
+        # Check profiles
         expected_prof0 = np.loadtxt(fname0)
         aae(expected_prof0, rprof[0], decimal=3)
         expected_prof2 = np.loadtxt(fname2)
         aae(expected_prof2, rprof[2], decimal=3)
 
     def test_nzl_2_sfc_building(self):
+        """ Testing the mesh """
+
         # Name of the file with the Geometry Model
         fname = 'sections_rupture200_sections.xml'
         fname = os.path.join(BASE_DATA_PATH, fname)
-        profiles = _get_profiles(fname)
+
+        # Rupture mesh spacing
         rms = self.rms
-        sfc = KiteSurface.from_profiles(profiles[self.sec_id][0], rms, rms)
-        aae(sfc.mesh.lons, self.msrf2.surfaces[0].mesh.lons, decimal=5)
+
+        # Get profiles
+        profiles = _get_profiles(fname)
+        prof = profiles[self.sec_id][0]
+        rprof, ref_idx = _fix_profiles(prof, rms, False, idl=False)
+
+        # Create mesh (note that we flip it to replicate the right_hand rule
+        # fix
+        msh = _create_mesh(rprof, ref_idx, rms, idl=False)
+        tmp = np.fliplr(msh[:, :, 0])
+
+        # Check the mesh
+        aae(tmp, self.msrf2.surfaces[0].mesh.lons, decimal=5)
 
     def test_nzl_2_get_rx(self):
 

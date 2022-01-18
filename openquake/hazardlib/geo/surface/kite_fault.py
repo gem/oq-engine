@@ -419,20 +419,8 @@ class KiteSurface(BaseSurface):
         # Fix profiles
         rprof, ref_idx = _fix_profiles(profiles, profile_sd, align, idl)
 
-        # Create mesh the in the forward direction
-        prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
-
-        # Create the mesh in the backward direction
-        if ref_idx > 0:
-            prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl)
-        else:
-            prfl = []
-        prf = prfl + prfr
-        msh = np.array(prf)
-
-        # Convert from profiles to edges
-        msh = msh.swapaxes(0, 1)
-        msh = fix_mesh(msh)
+        # Create mesh
+        msh = _create_mesh(rprof, ref_idx, edge_sd, idl)
 
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
                    profiles, sec_id)
@@ -601,7 +589,7 @@ def _fix_profiles(profiles, profile_sd, align, idl):
         # distance between consecutive points along the profile
         assert np.all(pnts[:, 0] <= 180) & np.all(pnts[:, 0] >= -180)
         dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
-                        pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
+                       pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
 
         # Check that all the distances are within a tolerance
         np.testing.assert_allclose(dst, profile_sd, rtol=1.)
