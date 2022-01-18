@@ -426,8 +426,7 @@ class GsimLogicTree(object):
         if dupl:
             logging.warning(
                 'There are duplicated branchIDs %s in %s', dupl, self.filename)
-        branches.sort(key=lambda b: (b.trt, b.id))
-        # TODO: add an .idx to each GSIM ?
+        branches.sort(key=lambda b: b.trt)
         return branches
 
     def get_weights(self, trt, imt='weight'):
