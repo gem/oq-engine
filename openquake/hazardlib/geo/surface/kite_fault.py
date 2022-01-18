@@ -571,17 +571,6 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     for prf in profiles:
         rprofiles.append(_resample_profile(prf, profile_sd))
 
-    """
-    # Set the reference profile i.e. the longest one
-    ref_idx = None
-    max_length = -1e10
-    for idx, prf in enumerate(rprofiles):
-        length = prf.get_length()
-        if length > max_length:
-            max_length = length
-            ref_idx = idx
-    """
-
     # Set the reference profile i.e. the longest one
     ref_idx = 0
     lengths = np.array([prf.get_length() for prf in rprofiles])
