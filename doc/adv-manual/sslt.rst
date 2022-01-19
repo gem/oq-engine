@@ -7,7 +7,7 @@ tree managing the uncertainty of a few parameters. In such situations
 we say that we have a *Source Specific Logic Tree*.
 
 Such situation is esemplified by the demo that you can find in
-the directory``demos/hazard/LogicTreeCase2ClassicalPSHA``, which has
+the directory ``demos/hazard/LogicTreeCase2ClassicalPSHA``, which has
 the following logic tree, in XML form:
 
 .. xml:
