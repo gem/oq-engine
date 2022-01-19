@@ -175,13 +175,10 @@ class GriddedSurface(BaseSurface):
         y = n[0] ##lat
         c = dot(Y,n_proj)/norm(Y)/norm(n_proj)
         strike_r = arccos(clip(c, -1, 1))
-        if x >0:
-            if y > 0:
-                strike = 270 +np.rad2deg(strike_r) ##first quadrant
-            else:
-                strike = np.rad2deg(strike_r) - 90 ##fourth quadrant
+        if x > 0:
+            strike = np.rad2deg(strike_r)
         else:
-            strike = 270 - np.rad2deg(strike_r) ## second and thrid quadrant  
+            strike = 360 - np.rad2deg(strike_r)
         
         return round(strike, 5)
 
