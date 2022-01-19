@@ -314,6 +314,8 @@ class EngineServerTestCase(unittest.TestCase):
     def test_ini_defaults(self):
         resp = self.c.get('/v1/ini_defaults')
         self.assertEqual(resp.status_code, 200)
+        # make sure an old name still works
+        self.assertIn(b'individual_curves', resp.content)
 
     def test_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
