@@ -784,6 +784,12 @@ class OqParam(valid.ParamSet):
                     'business_interruption_consequence',
                     'structural_vulnerability_retrofitted',
                     'occupants_vulnerability'}
+    # old name => new name
+    ALIASES = {'individual_curves': 'individual_rlzs',
+               'quantile_hazard_curves': 'quantiles',
+               'mean_hazard_curves': 'mean',
+               'max_hazard_curves': 'max'}
+
     hazard_imtls = {}
     aggregate_by = valid.Param(valid.namelist, [])
     reaggregate_by = valid.Param(valid.namelist, [])
@@ -974,14 +980,9 @@ class OqParam(valid.ParamSet):
 
         # support legacy names
         for name in list(names_vals):
-            if name == 'individual_curves':
-                names_vals['individual_rlzs'] = names_vals.pop(name)
-            elif name == 'quantile_hazard_curves':
-                names_vals['quantiles'] = names_vals.pop(name)
-            elif name == 'mean_hazard_curves':
-                names_vals['mean'] = names_vals.pop(name)
-            elif name == 'max':
-                names_vals['max'] = names_vals.pop(name)
+            if name in self.ALIASES:
+                # use the new name instead of the old one
+                names_vals[self.ALIASES[name]] = names_vals.pop(name)
         super().__init__(**names_vals)
         if 'job_ini' not in self.inputs:
             self.inputs['job_ini'] = '<in-memory>'
