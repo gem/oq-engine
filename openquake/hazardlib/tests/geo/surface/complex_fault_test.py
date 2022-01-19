@@ -30,13 +30,6 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         self.assertRaises(ValueError, ComplexFaultSurface.from_fault_data,
                           edges, mesh_spacing=1)
 
-    def test_one_point_in_an_edge(self):
-        edges = [Line([Point(0, 0), Point(0, 1)]),
-                 Line([Point(0, 0, 1), Point(0, 1, 1)]),
-                 Line([Point(0, 0, 2)])]
-        self.assertRaises(ValueError, ComplexFaultSurface.from_fault_data,
-                          edges, mesh_spacing=1)
-
     def test_non_positive_mesh_spacing(self):
         edges = [Line([Point(0, 0), Point(0, 1)]),
                  Line([Point(0, 0, 1), Point(0, 1, 1)])]

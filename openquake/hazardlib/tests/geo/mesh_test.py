@@ -825,7 +825,7 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
                             [0.1, 0.1]])
         depths = numpy.array([[2., 3.],
                               [8., 9.]])
-        expected_coords = [(179.9, -0.1), (179.9, 0.1), (-179.9, 0.1),
+        expected_coords = [(179.9, -0.1), (179.9, 0.1), (-179.9, 0.1), 
                            (-179.9, -0.1), (179.9, -0.1)]
         polygon = self._test(lons, lats, depths, expected_coords)
 
