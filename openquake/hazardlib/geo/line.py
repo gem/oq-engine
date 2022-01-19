@@ -61,9 +61,9 @@ class Line(object):
     def __ne__(self, other):
         """
         >>> from openquake.hazardlib.geo.point import Point
-        >>> Line([Point(1, 2)]) != Line([Point(1, 2)])
+        >>> Line([Point(1,2), Point(1,3)]) != Line([Point(1,2), Point(1,3)])
         False
-        >>> Line([Point(1, 2)]) != Line([Point(2, 1)])
+        >>> Line([Point(1,2), Point(1,3)]) != Line([Point(1,2), Point(1,4)])
         True
         """
         return not self.__eq__(other)
