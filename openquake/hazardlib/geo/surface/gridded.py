@@ -130,17 +130,7 @@ class GriddedSurface(BaseSurface):
             and the shallowest point in surface's top edge in km.
         """
         return self.mesh.depths.min()
-
-    # def get_strike(self):
-    #     """
-    #     Compute surface's strike as decimal degrees in a range ``[0, 360)``.
-
-    #     The actual definition of the strike might depend on surface geometry.
-
-    #     :returns:
-    #         numpy.nan, not available for this kind of surface (yet)
-    #     """
-    #     return np.nan
+ 
 
     def get_dip(self):
         """
@@ -162,7 +152,7 @@ class GriddedSurface(BaseSurface):
             dip = 90 - np.rad2deg(dip_r)
         else:
             dip = np.rad2deg(dip_r)
-        return dip
+        return round(dip,5)
 
     def get_strike(self):
         """
@@ -193,18 +183,7 @@ class GriddedSurface(BaseSurface):
         else:
             strike = 270 - np.rad2deg(strike_r) ## second and thrid quadrant  
         
-        return strike
-
-    # def get_dip(self):
-    #     """
-    #     Compute surface's dip as decimal degrees in a range ``(0, 90]``.
-
-    #     The actual definition of the dip might depend on surface geometry.
-
-    #     :returns:
-    #         numpy.nan, not available for this kind of surface (yet)
-    #     """
-    #     return np.nan
+        return round(strike, 5)
 
     def get_width(self):
         """

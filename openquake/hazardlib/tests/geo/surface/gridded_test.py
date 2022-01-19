@@ -31,7 +31,7 @@ POINTSIDL = [Point(179.5, 0, 0.1), Point(179.5, 1, 0), Point(-179.5, 1, 0.1),
 
 
 class GriddedSurfaceTestCase(unittest.TestCase):
-
+    
     def setUp(self):
         self.surf = GriddedSurface.from_points_list(POINTS)
         self.mesh = Mesh(np.array([1.]), np.array([2.]), np.array([3.]))
@@ -70,10 +70,12 @@ class GriddedSurfaceTestCase(unittest.TestCase):
                           self.mesh)
 
     def test_get_strike(self):
-        np.testing.assert_equal(np.nan, self.surf.get_strike())
+        strike = self.surf.get_strike()
+        self.assertEqual(strike, 179.47424)
 
     def test_get_dip(self):
-        np.testing.assert_equal(np.nan, self.surf.get_dip())
+        dip = self.surf.get_dip()
+        self.assertEqual(dip, 0.47422)
 
     def test_get_width(self):
         self.assertRaises(NotImplementedError, self.surf.get_width)
