@@ -27,6 +27,10 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
+from numpy import (array, dot, arccos, clip)
+from numpy.linalg import norm
+from openquake.hazardlib.geo.geodetic import spherical_to_cartesian
+from openquake.hazardlib.geo.utils import plane_fit
 
 
 class GriddedSurface(BaseSurface):
@@ -127,27 +131,80 @@ class GriddedSurface(BaseSurface):
         """
         return self.mesh.depths.min()
 
-    def get_strike(self):
-        """
-        Compute surface's strike as decimal degrees in a range ``[0, 360)``.
+    # def get_strike(self):
+    #     """
+    #     Compute surface's strike as decimal degrees in a range ``[0, 360)``.
 
-        The actual definition of the strike might depend on surface geometry.
+    #     The actual definition of the strike might depend on surface geometry.
 
-        :returns:
-            numpy.nan, not available for this kind of surface (yet)
-        """
-        return np.nan
+    #     :returns:
+    #         numpy.nan, not available for this kind of surface (yet)
+    #     """
+    #     return np.nan
 
     def get_dip(self):
         """
-        Compute surface's dip as decimal degrees in a range ``(0, 90]``.
-
-        The actual definition of the dip might depend on surface geometry.
-
-        :returns:
-            numpy.nan, not available for this kind of surface (yet)
+        params:
+            n = unit vector normal to the plane; 3X1 matrix with x, y and z components
+            n_proj = projection of the vector 'n' on XY plane =  n*(1,1,0)
+        returns:    
+            the function calculates the dip angle for gridded surface
         """
-        return np.nan
+        lat = self.mesh.lats.flatten()
+        lon = self.mesh.lons.flatten()
+        depth = self.mesh.depths.flatten()
+        p, n = plane_fit(spherical_to_cartesian(lon, lat, depth))
+        n_proj = n.copy()
+        n_proj[-1] = 0
+        d = dot(n,n_proj)/norm(n)/norm(n_proj)
+        dip_r = arccos(clip(d, -1, 1))
+        if n[2] > 0: ##check if z component is positive so that dip angle lies between 0 and 90
+            dip = 90 - np.rad2deg(dip_r)
+        else:
+            dip = np.rad2deg(dip_r)
+        return dip
+
+    def get_strike(self):
+        """
+        params:
+            n = unit vector normal to the plane; 3X1 matrix with x, y and z components
+            n_proj = projection of the vector 'n' on XY plane =  n*(1,1,0)
+            Y = unit vector along standard y-axis (0,1,0)
+
+        returns:
+            the function calculates the strike for gridded surface
+        """
+        lat = self.mesh.lats.flatten()
+        lon = self.mesh.lons.flatten()
+        depth = self.mesh.depths.flatten()
+        p, n = plane_fit(spherical_to_cartesian(lon, lat, depth))
+        n_proj = n.copy()
+        n_proj[-1] = 0
+        Y = np.array([0,1,0])
+        x = n[1] ##lon
+        y = n[0] ##lat
+        c = dot(Y,n_proj)/norm(Y)/norm(n_proj)
+        strike_r = arccos(clip(c, -1, 1))
+        if x >0:
+            if y > 0:
+                strike = 270 +np.rad2deg(strike_r) ##first quadrant
+            else:
+                strike = np.rad2deg(strike_r) - 90 ##fourth quadrant
+        else:
+            strike = 270 - np.rad2deg(strike_r) ## second and thrid quadrant  
+        
+        return strike
+
+    # def get_dip(self):
+    #     """
+    #     Compute surface's dip as decimal degrees in a range ``(0, 90]``.
+
+    #     The actual definition of the dip might depend on surface geometry.
+
+    #     :returns:
+    #         numpy.nan, not available for this kind of surface (yet)
+    #     """
+    #     return np.nan
 
     def get_width(self):
         """
