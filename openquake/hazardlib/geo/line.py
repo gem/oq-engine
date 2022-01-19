@@ -34,7 +34,7 @@ class Line(object):
     This class represents a geographical line, which is basically
     a sequence of geographical points.
 
-    A line is defined by at least one point.
+    A line is defined by at least two points.
 
     :param points:
         The sequence of points defining this line.
@@ -43,11 +43,9 @@ class Line(object):
     """
 
     def __init__(self, points):
-        self.points = utils.clean_points(points)
-
-        if len(self.points) < 1:
-            raise ValueError("One point needed to create a line!")
-
+        self.points = utils.clean_points(points)  # can remove points!
+        if len(self.points) < 2:
+            raise ValueError("At least two points are needed for a line!")
         self.coo = np.array([[p.longitude, p.latitude] for p in self.points])
 
     def __eq__(self, other):
