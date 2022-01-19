@@ -20,7 +20,6 @@ import numpy
 import unittest
 
 from openquake.baselib.hdf5 import read_csv
-from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import _get_poes
 from openquake.baselib.general import gettemp, DictArray

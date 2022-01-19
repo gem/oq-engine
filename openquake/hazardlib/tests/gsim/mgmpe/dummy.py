@@ -44,7 +44,7 @@ class Dummy:
 
     @classmethod
     def get_surface(self):
-        hyp = Line([Point(0, 0.5)])
+        hyp = Point(0, 0.5)
         trc = Line([Point(0, 0), Point(0, 1)])
         sfc = SimpleFaultSurface.from_fault_data(fault_trace=trc,
                                                  upper_seismogenic_depth=0,

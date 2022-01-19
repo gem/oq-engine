@@ -30,7 +30,7 @@ class Line(object):
     This class represents a geographical line, which is basically
     a sequence of geographical points.
 
-    A line is defined by at least one point.
+    A line is defined by at least two points.
 
     :param points:
         The sequence of points defining this line.
@@ -39,10 +39,10 @@ class Line(object):
     """
 
     def __init__(self, points):
-        self.points = utils.clean_points(points)
-
-        if len(self.points) < 1:
-            raise ValueError("One point needed to create a line!")
+        self.points = utils.clean_points(points)  # can remove points!
+        if len(self.points) < 2:
+            raise ValueError(
+                "At least two distinct points are needed for a line!")
 
     def __eq__(self, other):
         """
@@ -57,9 +57,9 @@ class Line(object):
     def __ne__(self, other):
         """
         >>> from openquake.hazardlib.geo.point import Point
-        >>> Line([Point(1, 2)]) != Line([Point(1, 2)])
+        >>> Line([Point(1,2), Point(1,3)]) != Line([Point(1,2), Point(1,3)])
         False
-        >>> Line([Point(1, 2)]) != Line([Point(2, 1)])
+        >>> Line([Point(1,2), Point(1,3)]) != Line([Point(1,2), Point(1,4)])
         True
         """
         return not self.__eq__(other)
@@ -175,15 +175,12 @@ class Line(object):
 
         resampled_points.extend(
             self.points[0].equally_spaced_points(self.points[1],
-                                                 section_length)
-        )
+                                                 section_length))
 
         # Skip the first point, it's already resampled
         for i in range(2, len(self.points)):
             points = resampled_points[-1].equally_spaced_points(
-                self.points[i], section_length
-            )
-
+                self.points[i], section_length)
             resampled_points.extend(points[1:])
 
         return Line(resampled_points)
@@ -224,8 +221,7 @@ class Line(object):
             tot_length = (i + 1) * section_length
             while tot_length > acc_length and segment < len(self.points) - 1:
                 last_segment_length = self.points[segment].distance(
-                    self.points[segment + 1]
-                )
+                    self.points[segment + 1])
                 acc_length += last_segment_length
                 segment += 1
             p1, p2 = self.points[segment - 1:segment + 1]

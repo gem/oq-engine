@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-
 from openquake.hazardlib import geo
+
+PLOTTING = False
 
 
 class LineResampleTestCase(unittest.TestCase):
@@ -37,50 +38,29 @@ class LineResampleTestCase(unittest.TestCase):
         self.assertEqual(expected, resampled)
 
     def test_resample_2(self):
-        """
-        Line made of 3 points (aligned in the same direction) equally spaced
-        (spacing equal to 10 km). The resampled line contains 2 points
-        (with spacing of 30 km) consistent with the number of points
-        as predicted by n = round(20 / 30) + 1.
-        """
-
+        # Line made of 3 points (aligned in the same direction) equally spaced
+        # (spacing equal to 10 km). The resampled line contains 2 points
+        # (with spacing of 30 km) consistent with the number of points
+        # as predicted by n = round(20 / 30) + 1.
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.0, 0.089932202939476777)
         p3 = geo.Point(0.0, 0.1798644058789465)
-
         self.assertEqual(2, len(geo.Line([p1, p2, p3]).resample(30.0)))
 
     def test_resample_3(self):
-        """
-        Line made of 3 points (aligned in the same direction) equally spaced
-        (spacing equal to 10 km). The resampled line contains 1 point
-        (with spacing of 50 km) consistent with the number of points
-        as predicted by n = round(20 / 50) + 1.
-        """
-
+        # Line made of 3 points (aligned in the same direction) equally spaced
+        # (spacing equal to 10 km). The resampled line contains 1 point
+        # (with spacing of 50 km) consistent with the number of points
+        # as predicted by n = round(20 / 50) + 1, therefore a ValueError
+        # is raised.
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.0, 0.089932202939476777)
         p3 = geo.Point(0.0, 0.1798644058789465)
-
-        self.assertEqual(1, len(geo.Line([p1, p2, p3]).resample(50.0)))
-
-        self.assertEqual(geo.Line([p1]), geo.Line(
-                [p1, p2, p3]).resample(50.0))
-
-    def test_resample_4(self):
-        """
-        When resampling a line with a single point, the result
-        is a one point line with the same point.
-        """
-
-        p1 = geo.Point(0.0, 0.0)
-
-        self.assertEqual(geo.Line([p1]), geo.Line([p1]).resample(10.0))
+        with self.assertRaises(ValueError):
+            geo.Line([p1, p2, p3]).resample(50.0)
 
 
 class LineCreationTestCase(unittest.TestCase):
-    def test_one_point_needed(self):
-        self.assertRaises(ValueError, geo.Line, [])
 
     def test_remove_adjacent_duplicates(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
@@ -126,10 +106,6 @@ class LineResampleToNumPointsTestCase(unittest.TestCase):
         p4 = p3.point_at(5, 0, 90)
         line = geo.Line([p1, p2, p3, p4]).resample_to_num_points(3)
         self.assertEqual(len(line), 3)
-
-    def test_line_of_one_point(self):
-        line = geo.Line([geo.Point(0, 0)])
-        self.assertRaises(AssertionError, line.resample_to_num_points, 10)
 
     def test_hangup(self):
         p1 = geo.Point(0.00899322032502, 0., 0.)
