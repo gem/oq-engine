@@ -13,11 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import os
 import unittest
 import numpy
 
-from openquake.hazardlib import nrml
 from openquake.hazardlib.source.non_parametric import \
     NonParametricSeismicSource
 from openquake.hazardlib.source.rupture import BaseRupture, \
@@ -25,7 +23,6 @@ from openquake.hazardlib.source.rupture import BaseRupture, \
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.hazardlib.tests import assert_pickleable
 
@@ -94,16 +91,3 @@ class NonParametricSourceTestCase(unittest.TestCase):
     def test_count_ruptures(self):
         source, _ = self.make_non_parametric_source()
         self.assertEqual(source.count_ruptures(), 2)
-
-class NankaiTest(unittest.TestCase):
-
-    def test_bounding_box(self):
-        """ Test calculation of bounding box for gridded source """
-        path = os.path.join(os.path.dirname(__file__), '..', 'calc')
-        fname = os.path.join(path, 'nankai.xml')
-        sc = SourceConverter(investigation_time=50., rupture_mesh_spacing=2.)
-        groups = nrml.to_python(fname, sc)
-        src = groups[0][0]
-        west, south, east, north = src.get_bounding_box(0.0)
-        expected = [131.772, 31.336, 138.606, 35.43]
-        numpy.testing.assert_almost_equal(expected, [west, south, east, north])
