@@ -41,7 +41,8 @@ class Line(object):
     def __init__(self, points):
         self.points = utils.clean_points(points)  # can remove points!
         if len(self.points) < 2:
-            raise ValueError("At least two points are needed for a line!")
+            raise ValueError(
+                "At least two distinct points are needed for a line!")
 
     def __eq__(self, other):
         """
