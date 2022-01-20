@@ -521,7 +521,7 @@ class ContextMaker(object):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         for rup in src.iruptures(point_rup):
-            psdist = self.pointsource_distance + _delta_mag(rup)
+            psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
             if fewsites:
