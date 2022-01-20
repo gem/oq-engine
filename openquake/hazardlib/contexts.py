@@ -344,7 +344,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rup, sites, 'rrup')
-        mdist = self.maximum_distance(rup.mag) + _delta_mag(rup)
+        mdist = self.maximum_distance(rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
