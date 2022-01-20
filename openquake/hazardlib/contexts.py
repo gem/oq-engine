@@ -143,10 +143,6 @@ def _interp(param, name, trt):
     return mdd
 
 
-def _delta_mag(rup):
-    return rup.mag * 10.
-
-
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
