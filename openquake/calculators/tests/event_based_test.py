@@ -566,7 +566,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_mutex(self):
         out = self.run_calc(mutex.__file__, 'job.ini', exports='csv,xml')
         [fname] = out['ruptures', 'csv']
-        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=0.05)
 
     def test_gmpe_tables(self):
         out = self.run_calc(
