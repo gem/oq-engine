@@ -71,7 +71,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_get_strike(self):
         strike = self.surf.get_strike()
-        self.assertEqual(strike, 179.47424)
+        self.assertEqual(strike, 269.47424)
 
     def test_get_dip(self):
         dip = self.surf.get_dip()
