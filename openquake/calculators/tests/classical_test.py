@@ -610,7 +610,7 @@ hazard_uhs-std.csv
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
         data = self.calc.datastore.read_df('source_data')
-        self.assertEqual(data.nrupts.sum(), 2986)  # number of contexts
+        self.assertEqual(data.nrupts.sum(), 5020)  # number of contexts
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -684,17 +684,22 @@ hazard_uhs-std.csv
         # in presence of a pointsource_distance
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='50')
 
-        # 10 approx rrup distances for site 0 and site 1 respectively
+        # 15 approx rrup distances for site 0 and site 1 respectively
         approx = numpy.array([[54.2, 109.7],
                               [53.8, 109.3],
                               [53.3, 108.8],
                               [52.7, 108.2],
                               [51.9, 107.5],
-                              [50.5, 106.0],
+                              [50.5, 106.1],
+                              [50.4, 106.0],
                               [47.8, 103.2],
-                              [43.7, 98.7],
-                              [38.1, 92.0],
-                              [32.9, 82.3]])
+                              [47.7, 103.1],
+                              [43.7, 98.8],
+                              [43.6, 98.6],
+                              [38.2, 92.0],
+                              [38.0, 91.9],
+                              [33.0, 82.3],
+                              [32.8, 82.2]])
 
         # approx distances from site 0 and site 1 respectively
         dst = get_dists(self.calc.datastore)
