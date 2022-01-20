@@ -143,8 +143,8 @@ def _interp(param, name, trt):
     return mdd
 
 
-def _delta_pr(rup):
-    return 0 if rup.surface else rup.mag * 10  # PointRupture
+def _delta_mag(rup):
+    return rup.mag * 10.
 
 
 class ContextMaker(object):
@@ -344,7 +344,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rup, sites, 'rrup')
-        mdist = self.maximum_distance(rup.mag) + _delta_pr(rup)
+        mdist = self.maximum_distance(rup.mag) + _delta_mag(rup)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
@@ -521,7 +521,7 @@ class ContextMaker(object):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         for rup in src.iruptures(point_rup):
-            psdist = self.pointsource_distance + _delta_pr(rup)
+            psdist = self.pointsource_distance + _delta_mag(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
             if fewsites:
