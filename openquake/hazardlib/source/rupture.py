@@ -562,13 +562,13 @@ class ParametricProbabilisticRupture(BaseRupture):
 class PointSurface:
     """
     A fake surface used in PointRuptures.
-    The parameters `hypocenter`, `strike` and `dip` are determined by
+    The parameters `hypocenter` and `strike` are determined by
     collapsing the corresponding parameters in the original PointSource.
     """
-    def __init__(self, hypocenter, strike, dip):
+    def __init__(self, hypocenter, strike):
         self.hypocenter = hypocenter
         self.strike = strike
-        self.dip = dip
+        self.dip = 90.
 
     def get_strike(self):
         return self.strike
@@ -595,16 +595,15 @@ class PointRupture(ParametricProbabilisticRupture):
     size effects can be neglected.
     """
     def __init__(self, mag, tectonic_region_type, hypocenter, strike,
-                 dip, rake, occurrence_rate, temporal_occurrence_model):
+                 rake, occurrence_rate, temporal_occurrence_model):
         self.tectonic_region_type = tectonic_region_type
         self.hypocenter = hypocenter
         self.mag = mag
         self.strike = strike
         self.rake = rake
-        self.dip = dip
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
-        self.surface = PointSurface(hypocenter, strike, dip)
+        self.surface = PointSurface(hypocenter, strike)
         self.weight = None  # no mutex
 
 

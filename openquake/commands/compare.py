@@ -43,8 +43,7 @@ def _print_diff(a1, a2, idx1, idx2, col):
         for i, (v1, v2) in enumerate(zip(a1, a2)):
             idx = numpy.where(numpy.abs(v1-v2) > 1e-5)
             if len(idx[0]):
-                print(col, idx1[i], v1[idx])
-                print(col, idx2[i], v2[idx])
+                print(col, v1[idx], v2[idx])
                 break
     else:
         i, = numpy.where(numpy.abs(a1-a2) > 1e-5)
