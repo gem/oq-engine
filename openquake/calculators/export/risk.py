@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import json
-import logging
 import itertools
 import collections
 import numpy
@@ -123,15 +122,23 @@ def export_aggrisk(ekey, dstore):
 
 
 @export.add(('aggrisk-stats', 'csv'), ('aggcurves-stats', 'csv'))
-def export_aggrisk_stat(ekey, dstore):
+def export_aggrisk_stats(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    oq = dstore['oqparam']
+    tagcol = dstore['assetcol/tagcol']
+    aggtags = list(tagcol.get_aggkey(oq.aggregate_by).values())
+    aggtags.append(('*total*',) * len(oq.aggregate_by))
     key = ekey[0].split('-')[0]  # aggrisk or aggcurves
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname(f'{key}-stats', '', 'csv')
     df = extract(dstore, f'risk_stats/{key}')
+    tagvalues = numpy.array([aggtags[agg_id] for agg_id in df.agg_id])
+    for n, name in enumerate(oq.aggregate_by):
+        df[name] = tagvalues[:, n]
+    del df['agg_id']
     writer.save(df, dest, df.columns, comment=dstore.metadata)
     return [dest]
 

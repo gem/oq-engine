@@ -245,7 +245,7 @@ class EngineServerTestCase(unittest.TestCase):
         # check risk_stats
         extract_url = '/v1/calc/%s/extract/risk_stats/aggrisk' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertEqual(list(got), ['agg_id', 'loss_id', 'loss', 'stat'])
+        self.assertEqual(list(got), ['agg_id', 'loss_type', 'loss', 'stat'])
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')

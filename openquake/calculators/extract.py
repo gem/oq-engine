@@ -1370,10 +1370,13 @@ def extract_risk_stats(dstore, what):
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/risk_stats/aggcurves
     """
-    stats = dstore['oqparam'].hazard_stats()
+    oq = dstore['oqparam']
+    stats = oq.hazard_stats()
     df = dstore.read_df(what)
+    df['loss_type'] = [oq.loss_types[lid] for lid in df.loss_id]
+    del df['loss_id']
     kfields = [f for f in df.columns if f in {
-        'agg_id', 'loss_id', 'return_period'}]
+        'agg_id', 'loss_type', 'return_period'}]
     weights = dstore['weights'][:]
     return calc_stats(df, kfields, stats, weights)
 
