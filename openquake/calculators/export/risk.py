@@ -122,6 +122,20 @@ def export_aggrisk(ekey, dstore):
     return [dest]
 
 
+@export.add(('aggrisk-stats', 'csv'), ('aggcurves-stats', 'csv'))
+def export_aggrisk_stat(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    key = ekey[0].split('-')[0]  # aggrisk or aggcurves
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    dest = dstore.build_fname(f'{key}-stats', '', 'csv')
+    df = extract(dstore, f'risk_stats/{key}')
+    writer.save(df, dest, df.columns, comment=dstore.metadata)
+    return [dest]
+
+
 def _get_data(dstore, dskey, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':
