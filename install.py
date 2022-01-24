@@ -28,7 +28,7 @@ Three installation methods are supported:
 To disinstall use the --remove flag, which remove the services and the
 directories /opt/openquake or $HOME/openquake.
 The calculations will NOT be removed since they live in
-/var/lib/openquake/oqdata or $HOME/oqdata.
+/opt/openquake/oqdata or $HOME/oqdata.
 You have to remove the data directories manually, if you so wish.
 """
 import os
@@ -68,13 +68,13 @@ class server:
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    shared_dir = /opt
     ''' % (DBPORT, DBPATH)
 
     @classmethod
@@ -95,13 +95,13 @@ class devel_server:
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    shared_dir = /opt
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
@@ -448,8 +448,11 @@ def remove(inst):
                 os.remove(service_path)
                 print('removed ' + service_name)
         subprocess.check_call(['systemctl', 'daemon-reload'])
-    shutil.rmtree(inst.VENV)
-    print('%s has been removed' % inst.VENV)
+    for subdir in ('bin', 'lib', 'share', 'include'):
+        path = os.path.join(inst.VENV, subdir)
+        if os.path.exists(path):  # in Windows may not exist
+            shutil.rmtree(path)
+            print('%s has been removed' % path)
     if inst is server and os.path.exists(server.OQ) or (
             inst is devel_server and os.path.exists(server.OQ)):
         os.remove(server.OQ)
