@@ -46,7 +46,7 @@ jobs:
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
       # Use script to install engine and not the pip install .
-    - name: Install engine with install script
+    - name: Install engine with install script and version 3.11
       run: |
         pwd
         python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
@@ -59,7 +59,7 @@ jobs:
         oq --version
         oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
       shell: bash
-    - name: Upgrade engine with install script
+    - name: Upgrade engine with install script to version 3.13
       run: |
         pwd
         source /opt/openquake/bin/activate
@@ -67,7 +67,7 @@ jobs:
         deactivate
         sudo -H python install.py server --remove
         sleep 5
-        sudo -H python install.py server --version=3.12
+        sudo -H python install.py server --version=3.13
         source /opt/openquake/bin/activate
         journalctl -xe -u openquake-dbserver
         sleep 5
