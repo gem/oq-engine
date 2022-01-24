@@ -4,7 +4,7 @@
   * Internal: added an environment variable OQ_DATABASE
 
   [Manuela Villani]
-  * Added a function in the modifiable GMPE to covert ground-motion assuming
+  * Added a function in the modifiable GMPE to convert ground-motion assuming
     different representations of the horizontal component.
 
   [Kendra Johnson]
