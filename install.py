@@ -28,7 +28,7 @@ Three installation methods are supported:
 To disinstall use the --remove flag, which remove the services and the
 directories /opt/openquake or $HOME/openquake.
 The calculations will NOT be removed since they live in
-/opt/openquake/oqdata or $HOME/oqdata.
+/var/lib/openquake/oqdata or $HOME/oqdata.
 You have to remove the data directories manually, if you so wish.
 """
 import os
@@ -68,19 +68,19 @@ class server:
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/opt/openquake/oqdata'
+    OQDATA = '/var/lib/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /opt
+    shared_dir = /var/lib
     ''' % (DBPORT, DBPATH)
 
     @classmethod
     def exit(cls):
         return f'''There is a DbServer running on port {cls.DBPORT} from a
-previous installation. 
+previous installation.
 On linux please stop the server with the command
 `sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`
 On Windows please use Task Manager to stop the process
@@ -95,13 +95,13 @@ class devel_server:
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/opt/openquake/oqdata'
+    OQDATA = '/var/lib/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /opt
+    shared_dir = /var/lib
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
@@ -303,17 +303,17 @@ def install(inst, version):
             subprocess.check_call(['useradd', '-m', '-U', 'openquake'])
             print('Created user openquake')
 
-    # create the openquake venv if necessary
-    if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
-        # create venv
-        venv.EnvBuilder(with_pip=True).create(inst.VENV)
-        print('Created %s' % inst.VENV)
-
     # create the database
     if not os.path.exists(inst.OQDATA):
         os.makedirs(inst.OQDATA)
         if inst is server or inst is devel_server:
             subprocess.check_call(['chown', 'openquake', inst.OQDATA])
+
+    # create the openquake venv if necessary
+    if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
+        # create venv
+        venv.EnvBuilder(with_pip=True).create(inst.VENV)
+        print('Created %s' % inst.VENV)
 
     if sys.platform == 'win32':
         if os.path.exists('python\\python._pth.old'):
@@ -448,11 +448,8 @@ def remove(inst):
                 os.remove(service_path)
                 print('removed ' + service_name)
         subprocess.check_call(['systemctl', 'daemon-reload'])
-    for subdir in ('oqdata', 'bin', 'lib', 'share', 'include'):
-        path = os.path.join(inst.VENV, subdir)
-        if os.path.exists(path):  # in Windows may not exist
-            shutil.rmtree(path)
-            print('%s has been removed' % path)
+    shutil.rmtree(inst.VENV)
+    print('%s has been removed' % inst.VENV)
     if inst is server and os.path.exists(server.OQ) or (
             inst is devel_server and os.path.exists(server.OQ)):
         os.remove(server.OQ)
