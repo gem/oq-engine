@@ -59,7 +59,7 @@ jobs:
         oq --version
         oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
       shell: bash
-    - name: Upgrade engine with install script to version 3.13
+    - name: Upgrade engine to the current master
       run: |
         pwd
         source /opt/openquake/bin/activate
@@ -67,7 +67,7 @@ jobs:
         deactivate
         sudo -H python install.py server --remove
         sleep 5
-        sudo -H python install.py server --version=3.13
+        sudo -H python install.py server --version=master
         source /opt/openquake/bin/activate
         journalctl -xe -u openquake-dbserver
         sleep 5
