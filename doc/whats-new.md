@@ -1,7 +1,8 @@
 The release 3.13 is the result of 4 months of work involving over
-350 pull requests and touching all aspects on the engine. In particular
-this is the minimal release needed to run the new european model (ESHM20)
-and the GEM China model.
+350 pull requests and touching all aspects of the engine. In particular,
+this is the minimal release needed to run the new [2020 Euro-Mediterranean 
+Seismic Hazard Model (ESHM20)](http://hazard.efehr.org/en/Documentation/specific-hazard-models/europe/eshm2020-overview/) 
+and the new [GEM China model](https://www.globalquakemodel.org/GEMNews/china-earthquake-loss-model-2021).
 
 The complete list of changes is listed in the changelog:
 
@@ -16,17 +17,17 @@ https://docs.openquake.org/oq-engine/advanced/conditional-spectrum.html
 For the moment, it should still be considered experimental; we welcome
 help from people wanting to test it.
 
-The event based damage calculator introduced in version 3.12 has been
-revised, unified with the scenario damage calculator and documented here:
+The event_based_damage calculator introduced in version 3.12 has been
+revised, unified with the scenario_damage calculator and documented here:
 
 https://docs.openquake.org/oq-engine/advanced/event-based-damage.html
 
 In particular it is possible to work with discrete damage distributions
 by setting the parameter `discrete_damage_distribution=true` (the
-default is false, which is much more performant). Moreover a few bugs
+default is false, which is much more performant). Moreover, a few bugs
 were fixed.
 
-We now support 4 different strategies for computing risk profiles,
+We now support four different strategies for computing risk profiles,
 documented here:
 
 https://github.com/gem/oq-engine/blob/engine-3.13/doc/adv-manual/risk-profiles.rst
@@ -35,11 +36,11 @@ Global site model parameters (i.e. the site model parameters defined
 in the job.ini file) are now used if a column is missing in the site
 model file, instead of raising an error. Only the site model
 parameters required by the GMPEs are imported in the datastore,
-additional columns in the site model file are ignored (before they
+additional columns in the site model file are ignored (previously, they
 were imported even unnecessarily).
 
-Finally, we support cross correlation (i.e. correlation within IMTs) when
-generating the ground motion fields. Two cross correlation model are
+Finally, the engine now supports cross correlation (i.e. inter-period correlation) when
+generating the ground motion fields. Two cross correlation models are
 supported at the moment (FullCrossCorrelation and GodaAtkinson2009),
 more will likely be added in the future. The feature is documented here:
 
@@ -49,7 +50,7 @@ https://docs.openquake.org/oq-engine/advanced/correlation.html
 
 In order to support the ESHM20 model, which is too large to run on
 most hardware, we had to implement a tiling functionality, so that
-a classical calculation can be split in chunks of sites (tiles) that
+a classical calculation can be split into chunks of sites (tiles) that
 are then run sequentially. This is slower than the usual strategey of
 running everything in a single tile and should be used only as last
 resort, in out-of-memory situations. Also, you should use a small
@@ -59,9 +60,9 @@ in the job.ini file will produce two tiles and reduce by half the memory
 consumption.
 
 In order to avoid slow tasks in tiling calculations that would completely
-kill the performance, enormous efforts were spent in improving the task
+kill the performance, enormous efforts was dedicated to improving the task
 distribution which is now sensibly better than before, in particular
-in presence of CollapsedPointSources and MultiFaultSources. Slow tasks
+in the presence of CollapsedPointSources and MultiFaultSources. Slow tasks
 are still possible in corner case situations but they can be mitigated
 by tweaking the parameters `time_per_task` and `outs_per_task`.
 
@@ -70,14 +71,14 @@ for the `source_info` dataset; there is now an additional `source_data`
 dataset. They are used internally to understand the content of the tasks
 in terms of sources and the calculation time per source.
 
-The memory occupation has been significantly reduced, even without
-tiling, and calculations that were previously running out of of memory
-are now progressing smoothly. The
-reduction depends on the model: for instance the USA model now
-requires half the memory than before, while the Canada model requires
-the same memory as before. Some small models could possibly require
-more memory than before. The memory reduction is particularly
-sensible in model with few sites and in disaggregation calculations.
+The memory occupation has been significantly reduced, even without tiling, 
+and calculations that were previously running out of of memory are now
+progressing smoothly. The reduction depends on the model: for instance the
+OpenQuake implementation of the USGS model for the United States now
+requires half the memory than before, while the NRCan model for Canada
+requires the same memory as before. Some small models could possibly require
+more memory than before. The memory reduction is particularly sensible in
+model with few sites and in disaggregation calculations.
 
 The disk space occupation has been significantly reduced by changing
 the ways the PoEs are stored (not storing the zero values).  This was
@@ -123,7 +124,7 @@ have to update their scripts.
 
 In the single site case, there is now a warning when a realization
 does not contribute to the disaggregation. This helps identifying
-patological situations.
+pathological situations.
 
 We fixed a bug in the `Mag_Lon_Lat` exporter: the order of
 the columns was wrong and the fields mag, lon, lat were actually
@@ -137,11 +138,11 @@ many uses asked, see
 
 https://github.com/gem/oq-engine/blob/engine-3.13/doc/faq-hazard.md#how-can-i-compute-mean-disaggregation-outputs
 
-Finally we removed the long time deprecated XML exporters.
+Finally we removed the long deprecated XML exporters.
 
 # Improvements to the event based calculator
 
-We reduced significantly the slow tasks affecting event based calculations,
+We significantly reduced the slow tasks affecting event based calculations,
 both for hazard and risk.
 
 We added a check for missing GSIMs in the job_risk.ini file, to
@@ -209,18 +210,20 @@ the postclassical phase.
 
 As usual, many new GMPEs were contributed:
 
-- Miguel Leonardo-Suárez contributed the GMPEs Arroyo et al. (2010) and
+- [Miguel Leonardo-Suárez](https://github.com/mleonardos)
+  contributed the GMPEs Arroyo et al. (2010) and
   Jaimes et al. (2020).
 
-- Chiara Mascandala contributed a new GMPE LanzanoEtAl2019_RJB_OMO
+- [Chiara Mascandala](https://github.com/mascandola)
+  contributed a new GMPE LanzanoEtAl2019_RJB_OMO
   and fixed a bug in the SgobbaEtAl2020 GMPE. She also contributed
   new variations of Lanzano & Luzi (2019), Skarlatoudis et al. (2013),
   and BCHydro GMPEs.
 
-- Giuseppina Tusa contributed the Tusa-Langer-Azzaro (2019) GMPE.
+- [Giuseppina Tusa](https://github.com/gtus23) contributed the Tusa-Langer-Azzaro (2019) GMPE.
 
 - We added support for EAS, FAS and DRVT intensity measure types, used
-  the new GMPEs Bora et al. (2019),￼Bayless & Abrahamson (2018).
+  the new GMPEs Bora et al. (2019), Bayless & Abrahamson (2018).
 
 - We added the GMPEs of Bahrampouri et al. (2021) for the Arias intensity
   measure type.
@@ -228,7 +231,8 @@ As usual, many new GMPEs were contributed:
 - The `backarc` site parameter used to have only two possible values, 0
   for "fore arc" and 1 for "back arc"; now the value 2 for "along arc"
   is accepted too. The change was made to support the GMPE Manea (2021),
-  contributed by Elena Manea and Laurentiu Danciu.
+  contributed by [Elena Manea](https://github.com/ElenaManea) and 
+  [Laurentiu Danciu](https://github.com/danciul).
 
 A few bugs were also fixed:
 
@@ -245,15 +249,15 @@ A few bugs were also fixed:
   MultiFaultSource and KiteSurface classes, needed for the GEM China model
   and others.
 
-- Riccardo Zaccarelli found a typo in the intensity measure type RSD that
-  we fixed.
+- [Riccardo Zaccarelli](https://github.com/rizac) found a typo in the 
+  intensity measure type RSD that was fixed.
 
 There were a few other changes and new features:
 
 - We changed `hazardlib.valid.gsim` to return a correctly instantiated
   GSIM or to fail. Before for GMPETable subclasses it was returning a partially
-  initialized GSIM to be post-initialized later on. Thanks to Bruce
-  Worden for pointing this out.
+  initialized GSIM to be post-initialized later on. Thanks to [Bruce
+  Worden](https://github.com/cbworden) for pointing this out.
 
 - We changed the API of `get_mean_stds`: there is no need to specify the
   standard deviation anymore, since it always returns all three standard
@@ -270,18 +274,19 @@ There were a few other changes and new features:
   deviation. To be used with care.
 
 - We added a check to the geo.Line class to ensure that every Line object
-  must have at least 2 points.
+  must have at least two points.
 
 - We improved the error message in ShakeMap calculations failing due to the
   correlation matrix being not positive defined; now we point out to
   the manual: https://docs.openquake.org/oq-engine/advanced/shakemaps.html#correlation
 
-- Yenshin Chen contributed a new scaling relationship Thingbaijam et
-  al. (2017) for strike-slip.
+- [Yen-Shin Chen](https://github.com/vup1120) contributed a new scaling 
+  relationship Thingbaijam et al. (2017) for strike-slip.
 
-- Manuela Villani contributed a new method `horiz_comp_to_geom_mean`
+- [Manuela Villani](https://github.com/orgs/gem/people/ManuelaVillani)
+  contributed a new method `horiz_comp_to_geom_mean`
   to the ModifiableGMPE class to convert ground-motion between
-￼ different representations of the horizontal component.
+  different representations of the horizontal component.
 
 Finally there was some refactoring and 15 classes in the module
 `hazardlib.gsim.boore_2014` have been replaced with a single parametric GMPE,
@@ -297,7 +302,7 @@ We fixed a bug in presence of continuous fragility functions with
 `minIML` equal to `noDamageLimit`, causing damages where there should
 have been no damage.
 
-We fixed a bug in event based risk calculations with nontrivial taxonomy
+We fixed a bug in event based risk calculations with non-trivial taxonomy
 mapping producing NaNs in the event loss table.
 
 We added a "reaggregate_by" feature in event based risk calculations,
@@ -325,7 +330,7 @@ When using the `--hc` option there is now a check making sure that the
 intensity measure levels are consistent between child calculation
 and parent calculation.
 
-We fixed a bug when using `aggregate_by=site_id` in presence of
+We fixed a bug when using `aggregate_by = site_id` in presence of
 a parent calculation.
 
 The aggregation of losses in event based risk calculations has been
@@ -334,8 +339,8 @@ calculations.
 
 The damage outputs have been unified with the risk outputs and now we
 have only two possibilites, both for risk and damage calculations: an
-`aggrisk` output and and `aggcurves` output. Both are pandas-friendly
-to help postprocessing of the results. As of consequence, also the
+`aggrisk` output and an `aggcurves` output. Both are pandas-friendly
+to help post-processing of the results. As a consequence, also the
 exported CSV files are more similar between risk and damage outputs.
 
 Consequence models in XML format have been deprecated: you should use
@@ -344,7 +349,7 @@ solely the CSV format.
 # Other fixed and changes
 
 We renamed the parameter `individual_curves` into `individual_rlzs`
-since it applies not only to hazard curves but to all kinds of outputs.
+since it now applies not only to hazard curves but to all kinds of outputs.
 The old name is still valid as an alias.
 
 The --log-file option in the command `oq engine` was not honored.
@@ -358,7 +363,7 @@ this has been fixed.
 
 The `custom_site_id` site model parameter is now honored in all
 calculators, not only in classical calculators. Moreover we
-changed it from being a 32 bit integer to a 6-characters ASCII string
+changed it from being a 32-bit integer to a 6-characters ASCII string
 and we documented it:
 
 https://docs.openquake.org/oq-engine/advanced/special-features.html
