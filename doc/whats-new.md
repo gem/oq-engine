@@ -462,7 +462,10 @@ and not only on Ubuntu.
 We extended and improved the installation script `install.py` in
 various ways. For instance now it is mandatory to pass the kind of
 installation to perform. Optionally, it is also possible to pass a
-port for the DBServer.  When using `install.py --version <branch>`
+port for the DBServer. We changed the default installation directory
+from `/var/lib/openquake` to `/opt/openquake` in "server" mode.
+
+When using `install.py --version <branch>`
 the latest commit of a branch is downloaded and stored so that
 `oq engine --version` prints the git hash.
 
