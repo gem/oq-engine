@@ -303,17 +303,17 @@ def install(inst, version):
             subprocess.check_call(['useradd', '-m', '-U', 'openquake'])
             print('Created user openquake')
 
-    # create the database
-    if not os.path.exists(inst.OQDATA):
-        os.makedirs(inst.OQDATA)
-        if inst is server or inst is devel_server:
-            subprocess.check_call(['chown', 'openquake', inst.OQDATA])
-
     # create the openquake venv if necessary
     if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
         # create venv
         venv.EnvBuilder(with_pip=True).create(inst.VENV)
         print('Created %s' % inst.VENV)
+
+    # create the database
+    if not os.path.exists(inst.OQDATA):
+        os.makedirs(inst.OQDATA)
+        if inst is server or inst is devel_server:
+            subprocess.check_call(['chown', 'openquake', inst.OQDATA])
 
     if sys.platform == 'win32':
         if os.path.exists('python\\python._pth.old'):
