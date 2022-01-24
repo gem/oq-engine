@@ -7,7 +7,7 @@ The complete list of changes is listed in the changelog:
 
 https://github.com/gem/oq-engine/blob/engine-3.13/debian/changelog
 
-* New features
+# New features
 
 We have a brand new conditional spectrum calculator documented here:
 
@@ -22,7 +22,7 @@ revised, unified with the scenario damage calculator and documented here:
 https://docs.openquake.org/oq-engine/advanced/event-based-damage.html
 
 In particular it is possible to work with discrete damage distributions
-by setting the parameter ``discrete_damage_distribution=true`` (the
+by setting the parameter `discrete_damage_distribution=true` (the
 default is false, which is much more performant). Moreover a few bugs
 were fixed.
 
@@ -45,7 +45,7 @@ more will likely be added in the future. The feature is documented here:
 
 https://docs.openquake.org/oq-engine/advanced/correlation.html
 
-* Improvements to the classical calculator
+# Improvements to the classical calculator
 
 In order to support the ESHM20 model, which is too large to run on
 most hardware, we had to implement a tiling functionality, so that
@@ -66,7 +66,7 @@ are still possible in corner case situations but they can be mitigated
 by tweaking the parameters `time_per_task` and `outs_per_task`.
 
 The internals of the datastore have changed significantly, in particular
-for the ``source_info`` dataset; there is now an additional ``source_data``
+for the `source_info` dataset; there is now an additional `source_data`
 dataset. They are used internally to understand the content of the tasks
 in terms of sources and the calculation time per source.
 
@@ -99,8 +99,8 @@ improved, with a section about how to make the Canada model 26x faster:
 
 https://docs.openquake.org/oq-engine/advanced/point-source-gridding.html
 
-We improved the precision of the ``pointsource_distance`` approximation:
-that means the now you can use smaller values for the ``pointsource_distance``
+We improved the precision of the `pointsource_distance` approximation:
+that means the now you can use smaller values for the `pointsource_distance`
 parameter and have better performance without loosing precision.
 
 Finally, the preclassical phase of the classical calculator has been
@@ -110,7 +110,7 @@ calculations starting from the same sources by using the `--hc`
 option. This is also useful when debugging, in case the preclassical
 phase is expensive, i.e. for large models.
 
-* Changes to the disaggregation calculator
+# Changes to the disaggregation calculator
 
 There was a big change in the CSV exporters, with the goal of reducing
 the proliferation of outputs. For instance a calculation with N=2
@@ -125,7 +125,7 @@ In the single site case, there is now a warning when a realization
 does not contribute to the disaggregation. This helps identifying
 patological situations.
 
-We fixed a bug in the ``Mag_Lon_Lat`` exporter: the order of
+We fixed a bug in the `Mag_Lon_Lat` exporter: the order of
 the columns was wrong and the fields mag, lon, lat were actually
 containing the values of lon, lat, mag.
 
@@ -139,7 +139,7 @@ https://github.com/gem/oq-engine/blob/engine-3.13/doc/faq-hazard.md#how-can-i-co
 
 Finally we removed the long time deprecated XML exporters.
 
-* Improvements to the event based calculator
+# Improvements to the event based calculator
 
 We reduced significantly the slow tasks affecting event based calculations,
 both for hazard and risk.
@@ -150,9 +150,9 @@ avoid confusing error messages in the middle of the computation.
 We extended the mag-dependent filtering to event based calculations; before
 it was honored only in classical calculations.
 
-The ``custom_site_id`` is now exported also by the GMF exporters.
+The `custom_site_id` is now exported also by the GMF exporters.
 
-When using the ``--hc`` option the engine was using the site collection
+When using the `--hc` option the engine was using the site collection
 of the parent calculation and ignoring the site collection of the
 child calculation: this is now fixed.
 
@@ -163,10 +163,10 @@ We improved the documentation on the rupture sampling mechanism:
 
 https://docs.openquake.org/oq-engine/advanced/rupture-sampling.html
 
-* Logic trees
+# Logic trees
 
 We improved the support for source specific logic trees (i.e. logic
-trees with an ``applyToSources`` for each source) and documented it
+trees with an `applyToSources` for each source) and documented it
 here:
 
 https://docs.openquake.org/oq-engine/advanced/sslt.html
@@ -177,7 +177,7 @@ to fix a subtle bug causing incorrect branch paths to be listed
 in the output "Realizations" in case of duplicated branch IDs.
 
 We changed the string representation of logic tree paths and 
-added the commands ``oq show branches`` and ``oq show rlz:<no>``
+added the commands `oq show branches` and `oq show rlz:<no>`
 to allow the user to switch easily from the branch path to the
 corresponding source model, source parameters and GMPE. They
 are documented here:
@@ -190,13 +190,13 @@ using sampling can produce slightly different averages since different
 realizations may be chosen internally. This is akin to a change of
 random seed, i.e. it is not a physically significant change.
 
-We changed the experimental feature ``collapse_gsim_logic_tree`` to use 
-the class ``AvgPoeGMPE`` instead of ``AvgGMPE``: in this way it is possible to
+We changed the experimental feature `collapse_gsim_logic_tree` to use 
+the class `AvgPoeGMPE` instead of `AvgGMPE`: in this way it is possible to
 compute exactly the average mean curves in the case of full enumeration,
 even when the number of realizations is too large to use the traditional
 approach.
 
-We fixed the ``extendModel`` feature that was not working in presence
+We fixed the `extendModel` feature that was not working in presence
 of multiple files per source model logic tree branch.
 
 Running a calculation with full enumeration and more than 15,000
@@ -205,7 +205,7 @@ parameters `max_potential_paths` in the job.ini file. This is useful
 to avoid out-of-memory issue at the end of the calculation, in
 the postclassical phase.
 
-* hazardlib
+# hazardlib
 
 As usual, many new GMPEs were contributed:
 
@@ -236,7 +236,7 @@ A few bugs were also fixed:
   of square kilometers) affecting logic trees changing the slipRate.
 
 - We fixed a compatibility bug with the SMTK causing the error
-  ``'RuptureContext' object has no attribute 'occurrence_rate'``
+  `'RuptureContext' object has no attribute 'occurrence_rate'`
   when running the SMTK tests.
 
 - We fixed an array<->scalar bug in the GMPE Abrahamson-Gulerce (2020)
@@ -250,12 +250,12 @@ A few bugs were also fixed:
 
 There were a few other changes and new features:
 
-- We changed ``hazardlib.valid.gsim`` to return a correctly instantiated
+- We changed `hazardlib.valid.gsim` to return a correctly instantiated
   GSIM or to fail. Before for GMPETable subclasses it was returning a partially
   initialized GSIM to be post-initialized later on. Thanks to Bruce
   Worden for pointing this out.
 
-- We changed the API of ``get_mean_stds``: there is no need to specify the
+- We changed the API of `get_mean_stds`: there is no need to specify the
   standard deviation anymore, since it always returns all three standard
   deviations (\sig, \tau, \phi) on top of the mean (\mu). Improved its
   documentation in the advanced manual.
@@ -279,7 +279,7 @@ There were a few other changes and new features:
 - Yenshin Chen contributed a new scaling relationship Thingbaijam et
   al. (2017) for strike-slip.
 
-- Manuela Villani contributed a new method ``horiz_comp_to_geom_mean``
+- Manuela Villani contributed a new method `horiz_comp_to_geom_mean`
   to the ModifiableGMPE class to convert ground-motion between
 ￼ different representations of the horizontal component.
 
@@ -288,7 +288,7 @@ Finally there was some refactoring and 15 classes in the module
 so they cannot be called directly anymore, but rather via the
 `valid.gsim` factory function, which is the recommended way for all GMPEs.
 
-* Risk fixes and improvements
+# Risk fixes and improvements
 
 We renamed the field "conversion" into "risk_id" in the header of the
 taxonomy mapping file. The old name is still valid.
@@ -315,17 +315,17 @@ error.
 We added a check for missing investigation_time in classical risk
 calculations.
 
-We fixed a serious performance bug when using ``ignore_master_seed=true``
+We fixed a serious performance bug when using `ignore_master_seed=true`
 that caused a 60x slowdown in the event based risk calculation for China.
 
 We implemented secondary perils in the risk side. This is still an
 experimental feature.
 
-When using the ``--hc`` option there is now a check making sure that the
+When using the `--hc` option there is now a check making sure that the
 intensity measure levels are consistent between child calculation
 and parent calculation.
 
-We fixed a bug when using ``aggregate_by=site_id`` in presence of
+We fixed a bug when using `aggregate_by=site_id` in presence of
 a parent calculation.
 
 The aggregation of losses in event based risk calculations has been
@@ -334,20 +334,20 @@ calculations.
 
 The damage outputs have been unified with the risk outputs and now we
 have only two possibilites, both for risk and damage calculations: an
-``aggrisk`` output and and ``aggcurves`` output. Both are pandas-friendly
+`aggrisk` output and and `aggcurves` output. Both are pandas-friendly
 to help postprocessing of the results. As of consequence, also the
 exported CSV files are more similar between risk and damage outputs.
 
 Consequence models in XML format have been deprecated: you should use
 solely the CSV format.
 
-* Other fixed and changes
+# Other fixed and changes
 
-We renamed the parameter ``individual_curves`` into ``individual_rlzs``
+We renamed the parameter `individual_curves` into `individual_rlzs`
 since it applies not only to hazard curves but to all kinds of outputs.
 The old name is still valid as an alias.
 
-The --log-file option in the command ``oq engine`` was not honored.
+The --log-file option in the command `oq engine` was not honored.
 
 We fixed running a calculation starting from a parent calculation owned
 by a different user.
@@ -356,29 +356,30 @@ Mixed list-scalar maximum distances (for instance maximum_distance={
 'TRT_A': 100, 'TRT_B': [4, 100], [8, 200]}) were previously invalid:
 this has been fixed.
 
-The ``custom_site_id`` site model parameter is now honored in all
+The `custom_site_id` site model parameter is now honored in all
 calculators, not only in classical calculators. Moreover we
 changed it from being a 32 bit integer to a 6-characters ASCII string
 and we documented it:
 
 https://docs.openquake.org/oq-engine/advanced/special-features.html
 
-``DataStore.read_df`` now returns strings and not bytes for fields stored
+`DataStore.read_df` now returns strings and not bytes for fields stored
 as bytes.
 
-``readinput.get_composite_source_model(oqparam, branchID)``
+`readinput.get_composite_source_model(oqparam, branchID)`
 now accepts a `branchID` parameter; this is useful for Hamlet.
 
-``datastore.read`` now accepts a flag ``read_parent``; by default it is
+`datastore.read` now accepts a flag `read_parent`; by default it is
 True, but it can be set to False to avoid reading the parent of a calculation
 (if any). This is useful in postprocessing scripts.
 
-``get_oqparam`` now does not instantiate a SourceModelLogicTree object
+`get_oqparam` now does not instantiate a SourceModelLogicTree object
 and thus avoids parsing the entire source model every time. For the
 Australia model that reduces the instantiation time from 47 seconds to
 0.7 seconds. That makes it possible to assess the size of a source model
 very quickly.
-* oq commands
+
+# oq commands
 
 The logic behind the command `oq check_input job_haz.ini job_risk.ini`
 has changed: now the risk files are checked first, so errors are
@@ -411,7 +412,7 @@ engine configuration file.
 We extended the command `oq plot avg_gmf` so it can plot the differences
 between two average GMFs.
 
-* IT and WebUI changes
+# IT and WebUI changes
 
 We upgraded a few libraries: numpy to version 1.20, scipy to version
 1.7, h5py to version 3.1 and GDAL to version 3.3.3. This allowed us
@@ -439,9 +440,9 @@ are recognized and executed on the master machine, without spawning
 anything.
 
 The WebUI has been changed to store the input files in the
-temporary directory determined by the ``custom_tmp`` parameter in the
-file ``openquake.cfg``. Moreover we added a parameter ``mosaic_dir``
-in ``openquake.cfg`` that allows the engine to read (big) files from
+temporary directory determined by the `custom_tmp` parameter in the
+file `openquake.cfg`. Moreover we added a parameter `mosaic_dir`
+in `openquake.cfg` that allows the engine to read (big) files from
 a predefined global directory, so that we can avoid uploading huge files
 to the WebUI.
 
@@ -453,14 +454,14 @@ been removed.
 We extended the systemd services to work on multiple linux distributions
 and not only on Ubuntu.
 
-We extended and improved the installation script ``install.py`` in
+We extended and improved the installation script `install.py` in
 various ways. For instance now it is mandatory to pass the kind of
 installation to perform. Optionally, it is also possible to pass a
-port for the DBServer.  When using ``install.py --version <branch>``
+port for the DBServer.  When using `install.py --version <branch>`
 the latest commit of a branch is downloaded and stored so that
-``oq engine --version`` prints the git hash.
+`oq engine --version` prints the git hash.
 
-We removed the ``multi_user`` flag from the file ``openquake.cfg``:
+We removed the `multi_user` flag from the file `openquake.cfg`:
 now an installation is automatically considered to be of kind multi
 user if the engine was installed with root permissions. Multi users
 installations are meant for Linux servers only.
