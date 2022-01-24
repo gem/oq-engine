@@ -448,7 +448,7 @@ def remove(inst):
                 os.remove(service_path)
                 print('removed ' + service_name)
         subprocess.check_call(['systemctl', 'daemon-reload'])
-    for subdir in ('bin', 'lib', 'share', 'include'):
+    for subdir in ('oqdata', 'bin', 'lib', 'share', 'include'):
         path = os.path.join(inst.VENV, subdir)
         if os.path.exists(path):  # in Windows may not exist
             shutil.rmtree(path)
