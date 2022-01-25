@@ -242,10 +242,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk2.csv', fname)
 
     def test_case_13(self):
-        # consequence recovery time
+        # 3 realizations and consequences
         self.run_calc(case_13.__file__, 'job.ini')
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname)
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk-stats.csv', fname)
 
 
 def losses(aid, alt):

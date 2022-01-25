@@ -115,10 +115,15 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if len(rlzs) > 1 and not oq.individual_rlzs and not oq.collect_rlzs:
-        for out in ['avg_losses-rlzs', 'aggrisk']:
-            if out in dskeys:
-                dskeys.remove(out)
+    if len(rlzs) > 1 and not oq.collect_rlzs:
+        if 'aggrisk' in dstore:
+            dskeys.add('aggrisk-stats')
+        if 'aggcurves' in dstore:
+            dskeys.add('aggcurves-stats')
+        if not oq.individual_rlzs:
+            for out in ['avg_losses-rlzs', 'aggrisk', 'aggcurves']:
+                if out in dskeys:
+                    dskeys.remove(out)
     if 'curves-rlzs' in dstore and len(rlzs) == 1:
         dskeys.add('loss_curves-rlzs')
     if 'curves-stats' in dstore and len(rlzs) > 1:
