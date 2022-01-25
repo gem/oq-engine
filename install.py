@@ -21,14 +21,14 @@ Three installation methods are supported:
 
 1. "server" installation, i.e. system-wide installation on /opt/openquake
 1. "devel_server" installation, i.e. developement system-wide installation on
-    /opt/openquake
+    /opt/openquake/engine
 2. "user" installation on $HOME/openquake
 3. "devel" installation on $HOME/openquake from the engine repository
 
 To disinstall use the --remove flag, which remove the services and the
-directories /opt/openquake or $HOME/openquake.
+directories /opt/openquake/engine or $HOME/openquake.
 The calculations will NOT be removed since they live in
-/var/lib/openquake/oqdata or $HOME/oqdata.
+/opt/openquake/oqdata or $HOME/oqdata.
 You have to remove the data directories manually, if you so wish.
 """
 import os
@@ -64,17 +64,17 @@ class server:
     """
     Parameters for a server installation (with root permissions)
     """
-    VENV = '/opt/openquake'
+    VENV = '/opt/openquake/engine'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    shared_dir = /opt/openquake/oqdata
     ''' % (DBPORT, DBPATH)
 
     @classmethod
@@ -91,17 +91,17 @@ class devel_server:
     """
     Parameters for a development on server installation (with root permissions)
     """
-    VENV = '/opt/openquake'
+    VENV = '/opt/openquake/engine'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    shared_dir = /opt/openquake/oqdata
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
@@ -159,7 +159,7 @@ User=openquake
 Group=openquake
 Environment=
 WorkingDirectory={OQDATA}
-ExecStart=/opt/openquake/bin/oq {service} start
+ExecStart=/opt/openquake/engine/bin/oq {service} start
 Restart=always
 RestartSec=30
 KillMode=control-group
