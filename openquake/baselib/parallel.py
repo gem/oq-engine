@@ -772,7 +772,8 @@ class Starmap(object):
         self.sent = AccumDict(accum=AccumDict())  # fname -> argname -> nbytes
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
-        self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
+        self.receiver = 'tcp://%s:%s' % (
+            socket.gethostname(), config.dbserver.receiver_ports)
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
