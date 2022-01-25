@@ -581,21 +581,27 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     :param edge_sd:
         A float defining the sampling distance [km] for the edges
     :param idl:
-        A boolean. When true the profiles cross the international date line
+        A boolean. When true the profiles cross the international date li
     :returns:
         An instance of  :class:`openquake.hazardlib.geo.Mesh`
     """
 
-    # Create mesh the in the forward direction
-    prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
+    # Create the mesh the in the forward direction
+    prfr = []
+    if ref_idx < len(rprof)-1:
+        prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
 
     # Create the mesh in the backward direction
+    prfl = []
     if ref_idx > 0:
         prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl)
-    else:
-        prfl = []
+
+    # Create the whole mesh
     prf = prfl + prfr
     msh = np.array(prf)
+
+    # Check output profiles
+    assert len(prf) > 1
 
     # Convert from profiles to edges
     msh = msh.swapaxes(0, 1)
