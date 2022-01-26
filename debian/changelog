@@ -2,6 +2,7 @@
   * Added GMPE Youd et al. (2002) and the corresponding site parameters
 
   [Michele Simionato]
+  * Internal: changed install.py to install the venv in /opt/openquake/venv
   * Fixed a BOM issue on Windows when reading job.ini files
 
 python3-oq-engine (3.13.0-1~xenial01) xenial; urgency=low
