@@ -26,7 +26,7 @@ Three installation methods are supported:
 3. "devel" installation on $HOME/openquake from the engine repository
 
 To disinstall use the --remove flag, which remove the services and the
-directories /opt/openquake or $HOME/openquake.
+directories /opt/openquake/venv or $HOME/openquake.
 The calculations will NOT be removed since they live in
 /opt/openquake/oqdata or $HOME/oqdata.
 You have to remove the data directories manually, if you so wish.
