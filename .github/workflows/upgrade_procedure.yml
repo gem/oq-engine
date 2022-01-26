@@ -55,20 +55,20 @@ jobs:
     - name: Run demos to test installation
       run: |
         echo "$RUNNER_OS"
-        source /opt/openquake/bin/activate
+        source /opt/openquake/venv/bin/activate
         oq --version
         oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
       shell: bash
     - name: Upgrade engine to the current master
       run: |
         pwd
-        source /opt/openquake/bin/activate
+        source /opt/openquake/venv/bin/activate
         oq --version
         deactivate
         sudo -H python install.py server --remove
         sleep 5
         sudo -H python install.py server --version=master
-        source /opt/openquake/bin/activate
+        source /opt/openquake/venv/bin/activate
         journalctl -xe -u openquake-dbserver
         sleep 5
         oq --version
