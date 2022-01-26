@@ -15,7 +15,7 @@ We have a brand new conditional spectrum calculator documented here:
 https://docs.openquake.org/oq-engine/advanced/conditional-spectrum.html
 
 For the moment, it should still be considered experimental; we welcome
-help from people wanting to test it.
+help from people wanting to test it. This is a functionality implemented as part of the activities GEM is performing within the METIS project (https://metis-h2020.eu).
 
 The event_based_damage calculator introduced in version 3.12 has been
 revised, unified with the scenario_damage calculator and documented here:
@@ -51,7 +51,7 @@ https://docs.openquake.org/oq-engine/advanced/correlation.html
 In order to support the ESHM20 model, which is too large to run on
 most hardware, we had to implement a tiling functionality, so that
 a classical calculation can be split into chunks of sites (tiles) that
-are then run sequentially. This is slower than the usual strategey of
+are then run sequentially. This is slower than the usual strategy of
 running everything in a single tile and should be used only as last
 resort, in out-of-memory situations. Also, you should use a small
 number of tiles to reduce the performance penalty. For instance,
@@ -78,7 +78,7 @@ OpenQuake implementation of the USGS model for the United States now
 requires half the memory than before, while the NRCan model for Canada
 requires the same memory as before. Some small models could possibly require
 more memory than before. The memory reduction is particularly sensible in
-model with few sites and in disaggregation calculations.
+models with few sites and in disaggregation calculations.
 
 The disk space occupation has been significantly reduced by changing
 the ways the PoEs are stored (not storing the zero values).  This was
@@ -222,8 +222,9 @@ As usual, many new GMPEs were contributed:
 
 - [Giuseppina Tusa](https://github.com/gtus23) contributed the Tusa-Langer-Azzaro (2019) GMPE.
 
-- We added support for EAS, FAS and DRVT intensity measure types, used
-  the new GMPEs Bora et al. (2019), Bayless & Abrahamson (2018).
+- Thanks to EDF ve added support for EAS, FAS and DRVT intensity
+  measure types, used the new GMPEs Bora et al. (2019), Bayless &
+  Abrahamson (2018).
 
 - We added the GMPEs of Bahrampouri et al. (2021) for the Arias intensity
   measure type.
@@ -431,7 +432,7 @@ We removed the dependency from python-prctl which was not needed anymore.
 
 We removed all upper bounds on the dependencies to make it possible
 for people to install the engine with newer libraries. Thanks to that
-the the engine now unofficially works on macOS with an M1 processor by
+the engine now unofficially works on macOS with an M1 processor by
 using Python 3.9 and the latest libraries. However, that requires
 manual tweaking and it is not officially supported by GEM. We cannot
 support the M1 processor until GitHub provides support for automatic
