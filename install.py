@@ -28,7 +28,7 @@ Three installation methods are supported:
 To disinstall use the --remove flag, which remove the services and the
 directories /opt/openquake or $HOME/openquake.
 The calculations will NOT be removed since they live in
-/var/lib/openquake/oqdata or $HOME/oqdata.
+/opt/openquake/oqdata or $HOME/oqdata.
 You have to remove the data directories manually, if you so wish.
 """
 import os
@@ -64,17 +64,17 @@ class server:
     """
     Parameters for a server installation (with root permissions)
     """
-    VENV = '/opt/openquake'
+    VENV = '/opt/openquake/venv'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    shared_dir = /opt
     ''' % (DBPORT, DBPATH)
 
     @classmethod
@@ -91,17 +91,17 @@ class devel_server:
     """
     Parameters for a development on server installation (with root permissions)
     """
-    VENV = '/opt/openquake'
+    VENV = '/opt/openquake/venv'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    shared_dir = /opt
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
