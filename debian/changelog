@@ -1,3 +1,6 @@
+  [Prajacta Jadhav]
+  * Added GMPE Youd et al. (2002) and the corresponding site parameters
+
   [Michele Simionato]
   * Fixed a BOM issue on Windows when reading job.ini files
 
