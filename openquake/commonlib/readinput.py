@@ -252,7 +252,7 @@ def get_params(job_ini, kw={}):
     base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser()
-    cp.read([job_ini], encoding='utf8')
+    cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     for sect in cp.sections():
         _update(params, cp.items(sect), base_path)
 
