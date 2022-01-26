@@ -772,8 +772,8 @@ class Starmap(object):
         self.sent = AccumDict(accum=AccumDict())  # fname -> argname -> nbytes
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
-        self.receiver = 'tcp://%s:%s' % (
-            socket.gethostname(), config.dbserver.receiver_ports)
+        self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
+        self.host_ip = socket.gethostbyname(socket.gethostname())
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
@@ -811,7 +811,7 @@ class Starmap(object):
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
-                config.dbserver.host, self.socket.port)
+                self.host_ip, self.socket.port)
             self.monitor.version = version
             self.monitor.config = config
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
