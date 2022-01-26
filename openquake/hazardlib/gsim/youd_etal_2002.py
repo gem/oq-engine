@@ -22,36 +22,36 @@ Module
 exports
 :class:`YoudEtAl2002`
 """
-import warnings
+
 import numpy as np
 
-from openquake.hazardlib import const, site
+from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGD
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
 
-def _compute_magnitude_term(rup, C):
+def _compute_magnitude_term(rup, c0, c1):
     """
     Returns the magnitude scaling term
     """
-    return C["c0"] + (C["c1"] * rup.mag)
+    return c0 + c1 * rup.mag
 
 
-def _compute_distance_term(dists, R, C):
+def _compute_distance_term(dists, R, c2, c3):
     """
     Returns the distance scaling term
     """
-    return (C["c3"] * dists.repi) + (C["c2"] * np.log10(R))
+    return c3 * dists.repi + c2 * np.log10(R)
 
 
-def _compute_site_term(sites, C):
+def _compute_site_term(sites, c4, c5, c6, c7):
     """
     Returns the distance scaling term
     """
-    return (C["c4"] * np.log10(sites.slope)) + \
-           (C["c5"] * np.log10(sites.T_15)) + \
-           (C["c6"] * np.log10(100 - sites.F_15)) + \
-           (C["c7"] * np.log10(sites.D50_15 + 0.1))
+    return (c4 * np.log10(sites.slope) +
+            c5 * np.log10(sites.T_15) +
+            c6 * np.log10(100 - sites.F_15) +
+            c7 * np.log10(sites.D50_15 + 0.1))
 
 
 class YoudEtAl2002(GMPE):
@@ -69,17 +69,13 @@ class YoudEtAl2002(GMPE):
 
     #: Supported intensity measure types are Permanent ground deformation (m)
     #: from lateral spread
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGD,
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGD}
 
     #: Supported intensity measure component is the horizontal
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation types is total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters
     REQUIRES_SITES_PARAMETERS = {
@@ -107,19 +103,20 @@ class YoudEtAl2002(GMPE):
                 ctx.repi[ctx.repi < 5.0] = 5.0
 
             R = (10 ** ((0.89 * ctx.mag) - 5.64)) + ctx.repi
-
-            if ctx.freeface_ratio.all() == 0.0:
-                C = self.COEFFS_SLOPE[imt]
-            else:
-                C = self.COEFFS_FREEFACE[imt]
-                ctx.slope = ctx.freeface_ratio
+            zslope = ctx.slope == 0.0
+            ctx.slope[zslope] = ctx.freeface_ratio[zslope]
+            c = np.zeros((8, len(ctx.sids)))  # slope coeffs updated
+            for i in range(8):
+                # where the slope is zero use the freeface coeffs
+                c[i, zslope] = self.COEFFS_FREEFACE[imt][f'c{i}']
+                c[i, ~zslope] = self.COEFFS_SLOPE[imt][f'c{i}']
 
             mean[m] = (
-                _compute_magnitude_term(ctx, C) +
-                _compute_distance_term(ctx, R, C) +
-                _compute_site_term(ctx, C))
+                _compute_magnitude_term(ctx, c[0], c[1]) +
+                _compute_distance_term(ctx, R, c[2], c[3]) +
+                _compute_site_term(ctx, c[4], c[5], c[6], c[7]))
             mean[m] = np.log(10.0 ** mean[m])
-            sig[m] = np.log(10.0 ** C["sigma"])
+            sig[m] = np.log(10.0 ** self.COEFFS_SLOPE[imt]["sigma"])
 
     COEFFS_SLOPE = CoeffsTable(table="""\
     IMT      c0     c1       c2      c3     c4     c5     c6      c7     sigma
