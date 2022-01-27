@@ -28,7 +28,7 @@ spec:
          - name: OQ_CONFIG_FILE 
            value: /opt/openquake/venv/openquake.cfg 
          - name: HDF5_USE_FILE_LOCKING
-           value: FALSE
+           value: "FALSE"
          - name: HOME 
            value: /opt/openquake 
          - name: PATH 
@@ -44,7 +44,7 @@ spec:
          ports: # need for svc 
          - containerPort: 1909 
          command: ["/bin/sh"] 
-         args: ["-c", "python -m openquake.venv.venv ${CALC_PIK}"]
+         args: ["-c", "python -m openquake.engine.engine ${CALC_PIK}"]
          volumeMounts:
          - mountPath: "/opt/openquake"
            name: azure
@@ -55,7 +55,7 @@ spec:
            claimName: nfsdata
      restartPolicy: Never
      nodeSelector:
-       cputype: rome32
+       cputype: rome120
      tolerations:
      - key: "kubernetes.azure.com/scalesetpriority"
        operator: "Equal"
