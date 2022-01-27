@@ -223,7 +223,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_13(self):
         self.assert_curves_ok(
             ['hazard_curve-mean_PGA.csv', 'hazard_curve-mean_SA(0.2).csv',
-             'hazard_map-mean.csv'], case_13.__file__)
+             'hazard_map-mean.csv'], case_13.__file__, delta=1E-5)
 
         # test recomputing the hazard maps
         self.run_calc(

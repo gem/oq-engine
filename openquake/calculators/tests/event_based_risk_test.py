@@ -125,7 +125,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # vulnerability function with BT
         self.run_calc(case_1f.__file__, 'job_h.ini,job_r.ini')
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
-        self.assertEqualFiles('portfolio_losses.txt', fname, delta=1E-5)
+        # sensitive to shapely version
+        self.assertEqualFiles('portfolio_losses.txt', fname, delta=2E-4)
         os.remove(fname)
 
     def test_ct_independence(self):
@@ -260,7 +261,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
-                                  fname, delta=1E-5)
+                                  fname, delta=1E-4)
 
     def test_case_master(self):
         # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
@@ -428,11 +429,12 @@ agg_id
         hc = str(self.calc.datastore.calc_id)
         out = self.run_calc(case_6c.__file__, 'job_r.ini', exports='csv',
                             hazard_calculation_id=hc)
-        [fname] = out['avg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)
 
+        # very sensitive to shapely version
+        [fname] = out['avg_losses-rlzs', 'csv']
+        self.assertEqualFiles('expected/avg_losses.csv', fname, delta=3E-4)
         [fname] = out['aggcurves', 'csv']
-        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=5E-5)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=2E-3)
 
         # check total stddev
         elt_df = self.calc.datastore.read_df(
@@ -443,20 +445,21 @@ agg_id
         del elt_df['loss_id']
         del elt_df['variance']
         fname = gettemp(str(elt_df))
-        self.assertEqualFiles('expected/stddevs.txt', fname, delta=1E-4)
+        self.assertEqualFiles('expected/stddevs.txt', fname, delta=2E-3)
 
-    # NB: big difference between Ubuntu 18 and 20
     def test_case_7a(self):
         # case with preimported exposure
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-4)
+
+        # sensitive to shapely version
+        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=2E-3)
         rup_ids = set(read_csv(fname, {None: '<S50'})['rup_id'])
 
         [fname] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=2E-3)
 
         # check that the IDs in risk_by_event.csv exist in ruptures.csv
         # this is using extract/rupture_info internally
@@ -490,7 +493,8 @@ agg_id
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv',
                             minimum_asset_loss='100')
         [fname] = out['aggcurves', 'csv']
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=1E-4)
+        # very sensitive to shapely version
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
 
         curves = self.calc.datastore.read_df('aggcurves')
         self.assertEqual(len(curves), 18)  # (2 tags + 1 total) x 6 periods
@@ -500,7 +504,7 @@ agg_id
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = out['aggcurves', 'csv']
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=1E-4)
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk
