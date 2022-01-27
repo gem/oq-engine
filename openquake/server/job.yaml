@@ -27,6 +27,8 @@ spec:
          env: 
          - name: OQ_CONFIG_FILE 
            value: /opt/openquake/engine/openquake.cfg 
+         - name: HDF5_USE_FILE_LOCKING
+           value: FALSE
          - name: HOME 
            value: /opt/openquake 
          - name: PATH 
@@ -50,7 +52,7 @@ spec:
      volumes: 
        - name: azure 
          persistentVolumeClaim: 
-           claimName: pv-azurefile 
+           claimName: nfsdata
      restartPolicy: Never
      nodeSelector:
        cputype: rome32
