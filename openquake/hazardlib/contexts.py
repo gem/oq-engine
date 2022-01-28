@@ -168,7 +168,7 @@ class ContextMaker(object):
         """
         return self.ctx_builder.dtype
 
-    def __init__(self, trt, gsims, oq, monitor=Monitor()):
+    def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         if isinstance(oq, dict):
             param = oq
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
@@ -227,7 +227,7 @@ class ContextMaker(object):
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
-                sorted(self.REQUIRES_SITES_PARAMETERS) +
+                sorted(self.REQUIRES_SITES_PARAMETERS | extraparams) +
                 sorted(self.REQUIRES_DISTANCES))
         dic = {}
         for req in reqs:
