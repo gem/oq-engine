@@ -297,14 +297,13 @@ class BooreEtAl2014(GMPE):
         C_PGA = self.COEFFS[PGA()]
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            imt_per = 0 if imt.string == 'PGV' else imt.period
             pga_rock = _get_pga_on_rock(
                 self.kind, self.region, self.sof, C_PGA, ctx)
             mean[m] = (
                 _get_magnitude_scaling_term(self.sof, C, ctx) +
                 _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
-                                  C, pga_rock, ctx, imt_per, ctx.rjb))
+                                  C, pga_rock, ctx, imt.period, ctx.rjb))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
