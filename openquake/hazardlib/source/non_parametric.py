@@ -221,7 +221,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         The convex hull of the first mesh of points
         """
         lons, lats = [], []
-        rup, pmf = list(self.data)[0]
+        rup, pmf = next(iter(self.data))
         if isinstance(rup.surface, MultiSurface):
             for sfc in rup.surface.surfaces:
                 lons.extend(sfc.mesh.lons.flat)
