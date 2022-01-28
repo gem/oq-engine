@@ -90,6 +90,7 @@ class WesternCan15Mid(BooreAtkinson2011):
                 mean[m] += self.sgn * delta
             sig[m] = get_sigma(imt)
 
+
 # IMPORTANT! we must use subclasses and not aliases here because we would
 # break classical/case_59 that use the NRCanSiteTerm with the subclasses
 
