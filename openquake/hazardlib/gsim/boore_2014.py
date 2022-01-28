@@ -133,7 +133,7 @@ def _get_magnitude_scaling_term(sof, C, ctx):
     """
     dmag = ctx.mag - C["Mh"]
     if ctx.mag <= C["Mh"]:
-        mag_term = (C["e4"] * dmag) + (C["e5"] * (dmag ** 2.0))
+        mag_term = C["e4"] * dmag + C["e5"] * dmag ** 2.0
     else:
         mag_term = C["e6"] * dmag
     return _get_style_of_faulting_term(sof, C, ctx) + mag_term
@@ -146,8 +146,7 @@ def _get_nonlinear_site_term(C, vs30, pga_rock):
     v_s = np.copy(vs30)
     v_s[vs30 > 760.] = 760.
     # Nonlinear controlling parameter (equation 8)
-    f_2 = C["f4"] * (np.exp(C["f5"] * (v_s - 360.)) -
-                     np.exp(C["f5"] * 400.))
+    f_2 = C["f4"] * (np.exp(C["f5"] * (v_s - 360.)) - np.exp(C["f5"] * 400.))
     fnl = CONSTS["f1"] + f_2 * np.log((pga_rock + CONSTS["f3"]) / CONSTS["f3"])
     return fnl
 
