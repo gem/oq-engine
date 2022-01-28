@@ -127,7 +127,9 @@ def _get_magnitude_scaling_term(sof, C, ctx):
     dmag = ctx.mag - C["Mh"]
     mag_term[below] = C["e4"] * dmag[below] + C["e5"] * dmag[below] ** 2.0
     mag_term[~below] = C["e6"] * dmag[~below]
-    return _get_style_of_faulting_term(sof, C, ctx) + mag_term
+    if not sof:  # unspecified style-of-faulting
+        return C["e0"] + mag_term
+    return _get_style_of_faulting_term(C, ctx) + mag_term
 
 
 def _get_nonlinear_site_term(C, vs30, pga_rock):
@@ -215,7 +217,7 @@ def _get_stddevs(kind, C, ctx):
     return [np.sqrt(tau**2 + phi**2), tau, phi]
 
 
-def _get_style_of_faulting_term(sof, C, ctx):
+def _get_style_of_faulting_term(C, ctx):
     """
     Get fault type dummy variables
     Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -226,8 +228,6 @@ def _get_style_of_faulting_term(sof, C, ctx):
     Note that the 'Unspecified' case is not considered here as
     rake is always given.
     """
-    if not sof:
-        return C["e0"]  # Unspecified style-of-faulting
     # normal
     res = np.full_like(ctx.rake, C["e2"])
     # strike-slip
