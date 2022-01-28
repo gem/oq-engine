@@ -91,16 +91,14 @@ def _get_intra_event_phi_1(kind, C, mag, rjb, vs30):
     idx1 = rjb > C["R2"]
     base_vals[idx1] += C["DfR"]
     idx2 = np.logical_and(rjb > C["R1"], rjb <= C["R2"])
-    base_vals[idx2] += (C["DfR"] * (np.log(rjb[idx2] / C["R1"]) /
-                                    np.log(C["R2"] / C["R1"])))
+    base_vals[idx2] += C["DfR"] * (np.log(rjb[idx2] / C["R1"]) /
+                                   np.log(C["R2"] / C["R1"]))
     # Site-dependent phi (Equation 15)
     idx1 = vs30 <= CONSTS["v1"]
     base_vals[idx1] -= C["DfV"]
-    idx2 = np.logical_and(vs30 >= CONSTS["v1"],
-                          vs30 <= CONSTS["v2"])
-    base_vals[idx2] -= (
-        C["DfV"] * (np.log(CONSTS["v2"] / vs30[idx2]) /
-                    np.log(CONSTS["v2"] / CONSTS["v1"])))
+    idx2 = np.logical_and(vs30 >= CONSTS["v1"], vs30 <= CONSTS["v2"])
+    base_vals[idx2] -= C["DfV"] * (np.log(CONSTS["v2"] / vs30[idx2]) /
+                                   np.log(CONSTS["v2"] / CONSTS["v1"]))
     return base_vals
 
 
@@ -150,8 +148,7 @@ def _get_nonlinear_site_term(C, vs30, pga_rock):
     # Nonlinear controlling parameter (equation 8)
     f_2 = C["f4"] * (np.exp(C["f5"] * (v_s - 360.)) -
                      np.exp(C["f5"] * 400.))
-    fnl = CONSTS["f1"] + f_2 * np.log((pga_rock + CONSTS["f3"]) /
-                                      CONSTS["f3"])
+    fnl = CONSTS["f1"] + f_2 * np.log((pga_rock + CONSTS["f3"]) / CONSTS["f3"])
     return fnl
 
 
@@ -163,9 +160,9 @@ def _get_path_scaling_1(kind, region, C, ctx):
     """
     Returns the path scaling term given by equation (3)
     """
-    rval = np.sqrt((ctx.rjb ** 2.0) + (C["h"] ** 2.0))
-    scaling = (C["c1"] + C["c2"] * (ctx.mag - CONSTS["Mref"])) *\
-        np.log(rval / CONSTS["Rref"])
+    rval = np.sqrt(ctx.rjb ** 2.0 + C["h"] ** 2.0)
+    scaling = (C["c1"] + C["c2"] * (ctx.mag - CONSTS["Mref"])) * np.log(
+        rval / CONSTS["Rref"])
     return scaling + ((C["c3"] + C["Dc3"]) * (rval - CONSTS["Rref"]))
 
 
@@ -175,7 +172,7 @@ def _get_path_scaling_2(kind, region, C, ctx):
     Returns the path scaling term defined in Equation 3
     """
     # Calculate R in Equation 4
-    rval = np.sqrt((ctx.rjb ** 2.0) + (C["h"] ** 2.0))
+    rval = np.sqrt(ctx.rjb ** 2.0 + C["h"] ** 2.0)
     if region == "CAL":
         delta_c3 = 0
     elif region == "CHN":
