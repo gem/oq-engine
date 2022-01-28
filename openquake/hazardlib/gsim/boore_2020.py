@@ -89,7 +89,7 @@ def _get_path_scaling(C, dists, mag):
     rval = np.sqrt(dists.rjb**2 + C["h"]**2)
     scaling = (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) * np.log(
         rval / CONSTS["Rref"])
-    return scaling + (C["c3"] * (rval - CONSTS["Rref"]))
+    return scaling + C["c3"] * (rval - CONSTS["Rref"])
 
 
 def _get_pga_on_rock(C, rup, dists):

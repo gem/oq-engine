@@ -227,7 +227,7 @@ class ContextMaker(object):
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
-                sorted(self.REQUIRES_SITES_PARAMETERS | extraparams) +
+                sorted(self.REQUIRES_SITES_PARAMETERS | set(extraparams)) +
                 sorted(self.REQUIRES_DISTANCES))
         dic = {}
         for req in reqs:
