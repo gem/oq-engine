@@ -159,18 +159,18 @@ _get_path_scaling = CallableDict()
 
 
 @_get_path_scaling.add("base")
-def _get_path_scaling_1(kind, region, C, ctx, mag):
+def _get_path_scaling_1(kind, region, C, ctx):
     """
     Returns the path scaling term given by equation (3)
     """
     rval = np.sqrt((ctx.rjb ** 2.0) + (C["h"] ** 2.0))
-    scaling = (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *\
+    scaling = (C["c1"] + C["c2"] * (ctx.mag - CONSTS["Mref"])) *\
         np.log(rval / CONSTS["Rref"])
     return scaling + ((C["c3"] + C["Dc3"]) * (rval - CONSTS["Rref"]))
 
 
 @_get_path_scaling.add("stewart")
-def _get_path_scaling_2(kind, region, C, ctx, mag):
+def _get_path_scaling_2(kind, region, C, ctx):
     """
     Returns the path scaling term defined in Equation 3
     """
@@ -186,7 +186,7 @@ def _get_path_scaling_2(kind, region, C, ctx, mag):
         raise ValueError("region=%s" % region)
 
     # Calculate geometric spreading component of path scaling term
-    fp_geom = ((C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
+    fp_geom = ((C["c1"] + C["c2"] * (ctx.mag - CONSTS["Mref"])) *
                np.log(rval / CONSTS["Rref"]))
     # Calculate anelastic attenuation component of path scaling term, with
     # delta c3 accounting for regional effects
@@ -200,7 +200,7 @@ def _get_pga_on_rock(kind, region, sof, C, ctx):
     magnitude and distance scaling
     """
     return np.exp(_get_magnitude_scaling_term(sof, C, ctx) +
-                  _get_path_scaling(kind, region, C, ctx, ctx.mag))
+                  _get_path_scaling(kind, region, C, ctx))
 
 
 def _get_site_scaling(kind, region, C, pga_rock, ctx, period, rjb):
@@ -304,7 +304,7 @@ class BooreEtAl2014(GMPE):
                 self.kind, self.region, self.sof, C_PGA, ctx)
             mean[m] = (
                 _get_magnitude_scaling_term(self.sof, C, ctx) +
-                _get_path_scaling(self.kind, self.region, C, ctx, ctx.mag) +
+                _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
                                   C, pga_rock, ctx, imt_per, ctx.rjb))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
@@ -665,9 +665,8 @@ def california_basin_model(vs30):
     (equation 11)
     """
     coeff = 570.94 ** 4.0
-    model = (-7.15 / 4.0) * np.log(
-        ((vs30 ** 4.0) + coeff) / ((1360.0 ** 4.0) + coeff)
-        ) - np.log(1000.)
+    model = -7.15 / 4.0 * np.log(
+        (vs30 ** 4.0 + coeff) / (1360.0 ** 4.0 + coeff)) - np.log(1000.)
     return np.exp(model)
 
 
@@ -677,9 +676,8 @@ def japan_basin_model(vs30):
     (equation 12)
     """
     coeff = 412.39 ** 2.0
-    model = (-5.23 / 2.0) * np.log(
-        ((vs30 ** 2.0) + coeff) / ((1360.0 ** 2.0) + coeff)
-        ) - np.log(1000.)
+    model = -5.23 / 2.0 * np.log(
+        ((vs30 ** 2.0) + coeff) / ((1360.0 ** 2.0) + coeff)) - np.log(1000.)
     return np.exp(model)
 
 
