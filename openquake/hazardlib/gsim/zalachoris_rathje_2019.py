@@ -169,7 +169,7 @@ class ZalachorisRathje2019(GMPE):
 
             mean_BSSA14 = (
                 _get_magnitude_scaling_term(self.sof, C, ctx) +
-                _get_path_scaling(self.kind, self.region, C, ctx, ctx.mag) +
+                _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region, C, pga_rock, ctx,
                                   imt_per, ctx.rjb))
 
