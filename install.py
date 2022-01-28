@@ -21,7 +21,7 @@ Three installation methods are supported:
 
 1. "server" installation, i.e. system-wide installation on /opt/openquake
 1. "devel_server" installation, i.e. developement system-wide installation on
-    /opt/openquake/engine
+    /opt/openquake
 2. "user" installation on $HOME/openquake
 3. "devel" installation on $HOME/openquake from the engine repository
 
@@ -101,7 +101,7 @@ class devel_server:
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /opt/openquake/oqdata
+    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
