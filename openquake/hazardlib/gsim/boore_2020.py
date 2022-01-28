@@ -26,6 +26,7 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.boore_2014 import _get_magnitude_scaling_term
 
 CONSTS = {
     "Mref": 4.5,
@@ -38,13 +39,12 @@ def _get_inter_event_tau(C, mag):
     Returns the inter-event standard deviation (tau), which is dependent
     on magnitude
     """
-    if mag <= C["Mtau1"]:
-        return C["tau1"]
-    elif mag > C["Mtau1"] and mag < C["Mtau2"]:
-        magncof = (mag - C["Mtau1"]) / (C["Mtau2"] - C["Mtau1"])
-        return C["tau1"] + (C["tau2"] - C["tau1"]) * magncof
-    else:
-        return C["tau2"]
+    tau = np.full_like(mag, C["tau2"])
+    tau[mag <= C["Mtau1"]] = C["tau1"]
+    between = (mag > C["Mtau1"]) & (mag < C["Mtau2"])
+    magncof = (mag[between] - C["Mtau1"]) / (C["Mtau2"] - C["Mtau1"])
+    tau[between] = C["tau1"] + (C["tau2"] - C["tau1"]) * magncof
+    return tau
 
 
 def _get_linear_site_term(C, vs30):
@@ -57,19 +57,6 @@ def _get_linear_site_term(C, vs30):
     ok = (vs30 > C["V1"]) & (vs30 <= C["Vc"])
     flin[ok] = C["clin"] * np.log(vs30[ok] / C["Vref"])
     return flin
-
-
-def _get_magnitude_scaling_term(C, rup):
-    """
-    Returns the magnitude scling term defined in equation (2)
-    it is the same as Boore 2014
-    """
-    dmag = rup.mag - C["Mh"]
-    if rup.mag <= C["Mh"]:
-        mag_term = (C["e4"] * dmag) + (C["e5"] * dmag**2)
-    else:
-        mag_term = C["e6"] * dmag
-    return _get_style_of_faulting_term(C, rup) + mag_term
 
 
 def _get_nonlinear_site_term(C, vs30, pga_rock):
@@ -97,7 +84,7 @@ def _get_pga_on_rock(C, rup, dists):
     Returns the median PGA on rock, which is a sum of the
     magnitude and distance scaling
     """
-    return np.exp(_get_magnitude_scaling_term(C, rup) +
+    return np.exp(_get_magnitude_scaling_term(False, C, rup) +
                   _get_path_scaling(C, dists, rup.mag))
 
 
@@ -109,29 +96,6 @@ def _get_site_scaling(C, pga_rock, sites):
     flin = _get_linear_site_term(C, sites.vs30)
     fnl = _get_nonlinear_site_term(C, sites.vs30, pga_rock)
     return flin + fnl
-
-
-def _get_style_of_faulting_term(C, rup):
-    """
-    Get fault type dummy variables
-    Fault type (Strike-slip, Normal, Thrust/reverse) is
-    derived from rake angle.
-    Rakes angles within 30 of horizontal are strike-slip,
-    angles from 30 to 150 are reverse, and angles from
-    -30 to -150 are normal.
-    Note that the 'Unspecified' case is not considered here as
-    rake is always given.
-    what about bias (B) ??? it should be taken care here
-    """
-    if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-        # strike-slip
-        return C["e1"]
-    elif rup.rake > 30.0 and rup.rake < 150.0:
-        # reverse
-        return C["e3"]
-    else:
-        # normal
-        return C["e2"]
 
 
 class BooreEtAl2020(GMPE):
@@ -168,12 +132,12 @@ class BooreEtAl2020(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         C_PGA = self.COEFFS[PGA()]
         pga_rock = _get_pga_on_rock(C_PGA, ctx, ctx)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            mean[m] = (_get_magnitude_scaling_term(C, ctx) +
+            mean[m] = (_get_magnitude_scaling_term(False, C, ctx) +
                        _get_path_scaling(C, ctx, ctx.mag) +
                        _get_site_scaling(C, pga_rock, ctx))
             if imt.string != "PGV":
