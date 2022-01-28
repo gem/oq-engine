@@ -74,7 +74,7 @@ _get_intra_event_phi = CallableDict()
 
 
 @_get_intra_event_phi.add("base")
-def _get_intra_event_phi_1(kind, C, mag, rjb, vs30):
+def _get_intra_event_phi_base(kind, C, mag, rjb, vs30):
     """
     Returns the intra-event standard deviation (phi), dependent on
     magnitude, distance and vs30
@@ -103,7 +103,7 @@ def _get_intra_event_phi_1(kind, C, mag, rjb, vs30):
 
 
 @_get_intra_event_phi.add("stewart")
-def _get_intra_event_phi_2(kind, C, mag, rjb, vs30):
+def _get_intra_event_phi_stewart(kind, C, mag, rjb, vs30):
     """
     Returns the intra-event standard deviation (phi)
 
@@ -114,7 +114,7 @@ def _get_intra_event_phi_2(kind, C, mag, rjb, vs30):
     elif mag >= 5.5:
         phi = C["phi2"]
     else:
-        phi = (C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5))
+        phi = C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5)
     return phi
 
 
@@ -156,7 +156,7 @@ _get_path_scaling = CallableDict()
 
 
 @_get_path_scaling.add("base")
-def _get_path_scaling_1(kind, region, C, ctx):
+def _get_path_scaling_base(kind, region, C, ctx):
     """
     Returns the path scaling term given by equation (3)
     """
@@ -167,7 +167,7 @@ def _get_path_scaling_1(kind, region, C, ctx):
 
 
 @_get_path_scaling.add("stewart")
-def _get_path_scaling_2(kind, region, C, ctx):
+def _get_path_scaling_stewart(kind, region, C, ctx):
     """
     Returns the path scaling term defined in Equation 3
     """
@@ -183,14 +183,15 @@ def _get_path_scaling_2(kind, region, C, ctx):
         raise ValueError("region=%s" % region)
 
     # Calculate geometric spreading component of path scaling term
-    fp_geom = ((C["c1"] + C["c2"] * (ctx.mag - CONSTS["Mref"])) *
-               np.log(rval / CONSTS["Rref"]))
+    fp_geom = (C["c1"] + C["c2"] * (ctx.mag - CONSTS["Mref"])) * np.log(
+        rval / CONSTS["Rref"])
     # Calculate anelastic attenuation component of path scaling term, with
     # delta c3 accounting for regional effects
     fp_atten = (C["c3"] + delta_c3) * (rval - CONSTS["Rref"])
     return fp_geom + fp_atten
 
 
+# imported by other GMPEs
 def _get_pga_on_rock(kind, region, sof, C, ctx):
     """
     Returns the median PGA on rock, which is a sum of the
