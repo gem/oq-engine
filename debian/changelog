@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Extended `oq postzip` to multiple files
+  * Extended `oq postzip` to multiple files and `oq abort` to multiple jobs
   * Internal: changed install.py to install the venv in /opt/openquake/venv
   * Fixed a BOM issue on Windows when reading job.ini files
 
