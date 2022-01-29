@@ -207,7 +207,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         :returns: the number of points in the underlying mesh
         """
         n = 0
-        for rup, pmf in self.data:
+        for rup in self.few_ruptures():
             if isinstance(rup.surface, MultiSurface):
                 for sfc in rup.surface.surfaces:
                     n += len(sfc.mesh)
@@ -218,17 +218,17 @@ class NonParametricSeismicSource(BaseSeismicSource):
     @property
     def polygon(self):
         """
-        The convex hull of the first mesh of points
+        The convex hull of a few subsurfaces
         """
         lons, lats = [], []
-        rup, pmf = next(iter(self.data))
-        if isinstance(rup.surface, MultiSurface):
-            for sfc in rup.surface.surfaces:
-                lons.extend(sfc.mesh.lons.flat)
-                lats.extend(sfc.mesh.lats.flat)
-        else:
-            lons.extend(rup.surface.mesh.lons.flat)
-            lats.extend(rup.surface.mesh.lats.flat)
+        for rup in self.few_ruptures():
+            if isinstance(rup.surface, MultiSurface):
+                for sfc in rup.surface.surfaces:
+                    lons.extend(sfc.mesh.lons.flat)
+                    lats.extend(sfc.mesh.lats.flat)
+            else:
+                lons.extend(rup.surface.mesh.lons.flat)
+                lats.extend(rup.surface.mesh.lats.flat)
 
         condition = numpy.isfinite(lons).astype(int)
         lons = numpy.extract(condition, lons)
