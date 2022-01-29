@@ -350,8 +350,15 @@ def run_jobs(jobs):
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
         if jobarray:
-            with general.start_many(run_calc, allargs):
-                pass
+            procs = []
+            for args in allargs:
+                proc = general.mp.Process(target=run_calc, args=args)
+                proc.start()
+                logging.info('Started %s' % str(args))
+                time.sleep(2)
+                procs.append(proc)
+            for proc in procs:
+                proc.join()
         else:
             for job in jobs:
                 run_calc(job)
