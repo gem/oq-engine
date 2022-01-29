@@ -240,6 +240,13 @@ def run_calc(log):
     register_signals()
     setproctitle('oq-job-%d' % log.calc_id)
     with log:
+        # check the available memory before starting
+        while True:
+            used_mem = psutil.virtual_memory().percent
+            if used_mem < 80:
+                break
+            logging.info('Used memory %d%%, waiting', used_mem)
+            time.sleep(2)
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
         try:
@@ -353,13 +360,6 @@ def run_jobs(jobs):
         if jobarray:
             procs = []
             for args in allargs:
-                while True:
-                    used_mem = psutil.virtual_memory().percent
-                    if used_mem < 80:
-                        break
-                    logging.info('Used memory %d%%, waiting', used_mem)
-                    time.sleep(2)
-
                 proc = general.mp.Process(target=run_calc, args=args)
                 proc.start()
                 logging.info('Started %s' % str(args))
