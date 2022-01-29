@@ -243,7 +243,7 @@ def run_calc(log):
         # check the available memory before starting
         while True:
             used_mem = psutil.virtual_memory().percent
-            if used_mem < 80:
+            if used_mem < 50:  # continue if little memory is in use
                 break
             logging.info('Used memory %d%%, waiting', used_mem)
             time.sleep(2)
