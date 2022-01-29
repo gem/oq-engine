@@ -359,14 +359,16 @@ def run_jobs(jobs):
         allargs = [(job,) for job in jobs]
         if jobarray:
             procs = []
-            for args in allargs:
-                proc = general.mp.Process(target=run_calc, args=args)
-                proc.start()
-                logging.info('Started %s' % str(args))
-                time.sleep(2)
-                procs.append(proc)
-            for proc in procs:
-                proc.join()
+            try:
+                for args in allargs:
+                    proc = general.mp.Process(target=run_calc, args=args)
+                    proc.start()
+                    logging.info('Started %s' % str(args))
+                    time.sleep(2)
+                    procs.append(proc)
+            finally:
+                for proc in procs:
+                    proc.join()
         else:
             for job in jobs:
                 run_calc(job)
