@@ -246,7 +246,7 @@ def run_calc(log):
             if used_mem < 50:  # continue if little memory is in use
                 break
             logging.info('Used memory %d%%, waiting', used_mem)
-            time.sleep(2)
+            time.sleep(5)
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
         try:
