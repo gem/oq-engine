@@ -58,7 +58,7 @@ def del_calculation(job_id, confirmed=False):
             'Are you sure you want to (abort and) delete this calculation and '
             'all associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            abort(job.id)
+            abort([job.id])
             resp = logs.dbcmd('del_calc', job.id, getpass.getuser())
         except RuntimeError as err:
             safeprint(err)
