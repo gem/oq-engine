@@ -54,8 +54,8 @@ spec:
          persistentVolumeClaim: 
            claimName: nfsdata
      restartPolicy: Never
-     nodeSelector:
-       cputype: rome120
+    nodeSelector:
+       vCpu: AMD
      tolerations:
      - key: "kubernetes.azure.com/scalesetpriority"
        operator: "Equal"
