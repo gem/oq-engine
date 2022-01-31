@@ -407,8 +407,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         depths = depths.transpose()
         mesh = RectangularMesh(lons, lats, depths)
         distance = mesh.get_joyner_boore_distance(
-            Mesh.from_points_list([Point(*site)])
-        )[0]
+            Mesh.from_points_list([Point(*site)]))[0]
         self.assertAlmostEqual(distance, expected_distance, delta=0.02)
 
     def test3(self):
@@ -797,8 +796,8 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
         proj, polygon = mesh._get_proj_enclosing_polygon()
         self.assertTrue(polygon.is_valid)
         self.assertEqual(list(polygon.interiors), [])
-        coords = numpy.array(proj(*numpy.array(polygon.exterior).transpose(),
-                                  reverse=True)).transpose()
+        ext_array = numpy.array(polygon.exterior.coords)
+        coords = numpy.array(proj(*ext_array.T, reverse=True)).T
         numpy.testing.assert_almost_equal(coords, expected_coords, decimal=4)
         return polygon
 
@@ -818,6 +817,7 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
                              (11.12, -11.12), (-11.12, -11.12)]
         numpy.testing.assert_almost_equal(coords2d, expected_coords2d,
                                           decimal=2)
+
     def test_idl(self):
         lons = numpy.array([[179.9, -179.9],
                             [179.9, -179.9]])
@@ -825,7 +825,7 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
                             [0.1, 0.1]])
         depths = numpy.array([[2., 3.],
                               [8., 9.]])
-        expected_coords = [(179.9, -0.1), (179.9, 0.1), (-179.9, 0.1), 
+        expected_coords = [(179.9, -0.1), (179.9, 0.1), (-179.9, 0.1),
                            (-179.9, -0.1), (179.9, -0.1)]
         polygon = self._test(lons, lats, depths, expected_coords)
 
