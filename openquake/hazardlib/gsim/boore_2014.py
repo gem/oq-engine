@@ -61,12 +61,9 @@ def _get_inter_event_tau(C, mag):
     Returns the inter-event standard deviation (tau), which is dependent
     on magnitude
     """
-    if mag <= 4.5:
-        tau = C["tau1"]
-    elif mag >= 5.5:
-        tau = C["tau2"]
-    else:
-        tau = C["tau1"] + (C["tau2"] - C["tau1"]) * (mag - 4.5)
+    tau = np.full_like(mag, C["tau1"] + (C["tau2"] - C["tau1"]) * (mag - 4.5))
+    tau[mag <= 4.5] = C["tau1"]
+    tau[mag >= 5.5] = C["tau2"]
     return tau
 
 
@@ -79,14 +76,11 @@ def _get_intra_event_phi_base(kind, C, mag, rjb, vs30):
     Returns the intra-event standard deviation (phi), dependent on
     magnitude, distance and vs30
     """
-    base_vals = np.zeros_like(rjb)
     # Magnitude Dependent phi (Equation 17)
-    if mag <= 4.5:
-        base_vals += C["f1"]
-    elif mag >= 5.5:
-        base_vals += C["f2"]
-    else:
-        base_vals += (C["f1"] + (C["f2"] - C["f1"]) * (mag - 4.5))
+    base_vals = np.full_like(rjb, C["f1"] + (C["f2"] - C["f1"]) * (mag - 4.5))
+    base_vals[mag <= 4.5] = C["f1"]
+    base_vals[mag >= 5.5] = C["f2"]
+
     # Distance dependent phi (Equation 16)
     idx1 = rjb > C["R2"]
     base_vals[idx1] += C["DfR"]
@@ -109,12 +103,9 @@ def _get_intra_event_phi_stewart(kind, C, mag, rjb, vs30):
 
     In SBSA15, the intra-event standard deviation only depends on magnitude
     """
-    if mag <= 4.5:
-        phi = C["phi1"]
-    elif mag >= 5.5:
-        phi = C["phi2"]
-    else:
-        phi = C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5)
+    phi = np.full_like(mag, C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5))
+    phi[mag <= 4.5] = C["phi1"]
+    phi[mag >= 5.5] = C["phi2"]
     return phi
 
 
@@ -131,12 +122,14 @@ def _get_magnitude_scaling_term(sof, C, ctx):
     """
     Returns the magnitude scling term defined in equation (2)
     """
+    mag_term = np.zeros_like(ctx.mag)
+    below = ctx.mag <= C["Mh"]
     dmag = ctx.mag - C["Mh"]
-    if ctx.mag <= C["Mh"]:
-        mag_term = C["e4"] * dmag + C["e5"] * dmag ** 2.0
-    else:
-        mag_term = C["e6"] * dmag
-    return _get_style_of_faulting_term(sof, C, ctx) + mag_term
+    mag_term[below] = C["e4"] * dmag[below] + C["e5"] * dmag[below] ** 2.0
+    mag_term[~below] = C["e6"] * dmag[~below]
+    if not sof:  # unspecified style-of-faulting
+        return C["e0"] + mag_term
+    return _get_style_of_faulting_term(C, ctx) + mag_term
 
 
 def _get_nonlinear_site_term(C, vs30, pga_rock):
@@ -224,7 +217,7 @@ def _get_stddevs(kind, C, ctx):
     return [np.sqrt(tau**2 + phi**2), tau, phi]
 
 
-def _get_style_of_faulting_term(sof, C, ctx):
+def _get_style_of_faulting_term(C, ctx):
     """
     Get fault type dummy variables
     Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -235,17 +228,14 @@ def _get_style_of_faulting_term(sof, C, ctx):
     Note that the 'Unspecified' case is not considered here as
     rake is always given.
     """
-    if not sof:
-        return C["e0"]  # Unspecified style-of-faulting
-    elif np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
-        # strike-slip
-        return C["e1"]
-    elif ctx.rake > 30.0 and ctx.rake < 150.0:
-        # reverse
-        return C["e3"]
-    else:
-        # normal
-        return C["e2"]
+    # normal
+    res = np.full_like(ctx.rake, C["e2"])
+    # strike-slip
+    res[(np.abs(ctx.rake) <= 30.) |
+        ((180. - np.abs(ctx.rake)) <= 30.)] = C["e1"]
+    # reverse
+    res[(ctx.rake > 30.) & (ctx.rake < 150.)] = C["e3"]
+    return res
 
 
 class BooreEtAl2014(GMPE):
@@ -287,7 +277,7 @@ class BooreEtAl2014(GMPE):
         self.region = region
         self.sof = sof
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
