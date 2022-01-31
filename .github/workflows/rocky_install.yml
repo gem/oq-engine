@@ -71,4 +71,6 @@ jobs:
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         mkdir ~/oqdata
         export PYTEST_ADDOPTS="--color=yes"
-        pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators
+        #pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators
+        OQ_DISTRIBUTE=zmq /__w/oq-engine/oq-engine/bin/run-demos.sh /__w/oq-engine/oq-engine/demos
+
