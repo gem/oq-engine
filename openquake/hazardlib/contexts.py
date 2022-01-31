@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -107,12 +107,12 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def use_recarray(gsims):
+def any_recarray(gsims):
     """
     :returns:
-        True if the `ctx` argument of gsim.compute is a recarray for all gsims
+        True if the `ctx` argument of gsim.compute is a recarray for any gsim
     """
-    return all(gsim.compute.__annotations__.get("ctx") is numpy.recarray
+    return any(gsim.compute.__annotations__.get("ctx") is numpy.recarray
                for gsim in gsims)
 
 
@@ -148,11 +148,13 @@ class ContextMaker(object):
     A class to manage the creation of contexts and to compute mean/stddevs
     and possibly PoEs.
 
-    :param trt: a tectonic region type string
-    :param gsims: a list of GSIMs or a dictionary gsim -> rlz indices
-    :param param:
-       a dictionary of parameters like the maximum_distance, the IMTLs,
-       the investigation time, etc
+    :param trt: tectonic region type string
+    :param gsims: list of GSIMs or a dictionary gsim -> rlz indices
+    :param oq:
+       dictionary of parameters like the maximum_distance, the IMTLs,
+       the investigation time, etc, or an OqParam instance
+    :param extraparams:
+       additional site parameters to consider, used only in the tests
 
     NB: the trt can be different from the tectonic region type for which
     the underlying GSIMs are defined. This is intentional.
@@ -168,7 +170,7 @@ class ContextMaker(object):
         """
         return self.ctx_builder.dtype
 
-    def __init__(self, trt, gsims, oq, monitor=Monitor()):
+    def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         if isinstance(oq, dict):
             param = oq
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
@@ -207,7 +209,6 @@ class ContextMaker(object):
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
         self.effect = param.get('effect')
-        self.use_recarray = use_recarray(gsims)
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -227,7 +228,7 @@ class ContextMaker(object):
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
-                sorted(self.REQUIRES_SITES_PARAMETERS) +
+                sorted(self.REQUIRES_SITES_PARAMETERS | set(extraparams)) +
                 sorted(self.REQUIRES_DISTANCES))
         dic = {}
         for req in reqs:
@@ -580,20 +581,18 @@ class ContextMaker(object):
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
-        if self.use_recarray and not numpy.isnan(
-                [ctx.occurrence_rate for ctx in ctxs]).any():
-            # use recarrays only for poissonian sources
-            ctxs = [self.recarray(ctxs)]
+        recarray = self.recarray(ctxs) if any_recarray(self.gsims) else None
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
-            for ctx in ctxs:
+            for ctx in ([recarray] if compute.__annotations__.get("ctx")
+                        is numpy.recarray else ctxs):
                 slc = slice(start, start + len(ctx))
                 compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 start = slc.stop
         return out
 
-    # see http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
+    # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
     def get_cs_contrib(self, ctxs, imti, imls):
         """
         :param ctxs:

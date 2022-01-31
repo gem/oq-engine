@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,7 @@ import sys
 import json
 import time
 import pickle
+import socket
 import signal
 import getpass
 import logging
@@ -240,8 +241,13 @@ def run_calc(log):
     with log:
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
-        logging.info('%s running %s [--hc=%s]',
+        try:
+            hostname = socket.gethostname()
+        except Exception:  # gaierror
+            hostname = 'localhost'
+        logging.info('%s@%s running %s [--hc=%s]',
                      getpass.getuser(),
+                     hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
         logging.info('Using engine version %s', __version__)

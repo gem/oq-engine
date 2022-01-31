@@ -26,11 +26,13 @@ spec:
          #    cpu: "6" 
          env: 
          - name: OQ_CONFIG_FILE 
-           value: /opt/openquake/openquake.cfg 
+           value: /opt/openquake/venv/openquake.cfg 
+         - name: HDF5_USE_FILE_LOCKING
+           value: "FALSE"
          - name: HOME 
            value: /opt/openquake 
          - name: PATH 
-           value: /opt/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin 
+           value: /opt/openquake/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin 
          - name: OQ_WORKER_NAME 
            valueFrom: 
              fieldRef: 
@@ -50,10 +52,10 @@ spec:
      volumes: 
        - name: azure 
          persistentVolumeClaim: 
-           claimName: pv-azurefile 
+           claimName: nfsdata
      restartPolicy: Never
      nodeSelector:
-       cputype: rome32
+       cputype: rome120
      tolerations:
      - key: "kubernetes.azure.com/scalesetpriority"
        operator: "Equal"

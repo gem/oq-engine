@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,7 +24,8 @@ from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
-from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
+from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
+                                           get_spherical_bounding_box)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.pmf import PMF
@@ -82,7 +83,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         Fast version of iter_ruptures used in estimate_weight
         """
         for i, (rup, pmf) in enumerate(self.data):
-            if i % 25 == 0 and rup.mag >= self.min_mag:
+            if i % 50 == 0 and rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
                     rup.hypocenter, rup.surface, pmf, weight=rup.weight)
@@ -196,10 +197,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
     @property
     def mesh_size(self):
         """
-        :returns: the number of points in the underlying mesh
+        :returns: the number of points in the underlying meshes (reduced)
         """
         n = 0
-        for rup, pmf in self.data:
+        for rup in self.few_ruptures():
             if isinstance(rup.surface, MultiSurface):
                 for sfc in rup.surface.surfaces:
                     n += len(sfc.mesh)
@@ -210,11 +211,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
     @property
     def polygon(self):
         """
-        The convex hull of the underlying mesh of points
+        The convex hull of a few subsurfaces
         """
         lons, lats = [], []
-        for rup, pmf in self.data:
-
+        for rup in self.few_ruptures():
             if isinstance(rup.surface, MultiSurface):
                 for sfc in rup.surface.surfaces:
                     lons.extend(sfc.mesh.lons.flat)
