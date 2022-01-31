@@ -17,7 +17,7 @@ import unittest
 import numpy as np
 
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.surface.gridded import GriddedSurface
+from openquake.hazardlib.geo.surface.gridded import GriddedSurface, get_nproj
 from openquake.hazardlib.geo.mesh import Mesh
 
 POINTS = [Point(0, 0, 0.1), Point(0, 1, 0), Point(1, 1, 0.1),
@@ -71,11 +71,11 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_get_strike(self):
         strike = self.surf.get_strike()
-        self.assertEqual(strike, 269.47424)
+        self.assertEqual(strike, 270.5257632176095)
 
-    def test_get_dip(self):
-        dip = self.surf.get_dip()
-        self.assertEqual(dip, 0.47422)
+    def test_dip(self):
+        strike, dip = self.surf.get_dip()
+        self.assertEqual(dip, 89.5257814236058)
 
     def test_get_width(self):
         self.assertRaises(NotImplementedError, self.surf.get_width)
