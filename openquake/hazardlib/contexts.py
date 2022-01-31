@@ -288,9 +288,6 @@ class ContextMaker(object):
         :params ctxs: a list of contexts
         :returns: a recarray
         """
-        # check if there are nonparametric ruptures
-        np = numpy.isnan([ctx.occurrence_rate for ctx in ctxs]).any()
-        assert not np
         C = sum(len(ctx) for ctx in ctxs)
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
         start = 0
