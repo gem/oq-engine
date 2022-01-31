@@ -68,18 +68,6 @@ jobs:
       run: |
         source /opt/openquake/venv/bin/activate
         pip install pytest
-        runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
-        while :
-             do
-                 (echo > /dev/tcp/localhost/1908) >/dev/null 2>&1
-                 result=$?
-                 if [[ $result -eq 0 ]]; then
-                     break
-                 fi
-                 sleep 1
-             done
         mkdir ~/oqdata
         export PYTEST_ADDOPTS="--color=yes"
-        #pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators
-        OQ_DISTRIBUTE=zmq /__w/oq-engine/oq-engine/bin/run-demos.sh /__w/oq-engine/oq-engine/demos
-
+        pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators
