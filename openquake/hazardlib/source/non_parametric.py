@@ -83,7 +83,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         Fast version of iter_ruptures used in estimate_weight
         """
         for i, (rup, pmf) in enumerate(self.data):
-            if i % 25 == 0 and rup.mag >= self.min_mag:
+            if i % 50 == 0 and rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
                     rup.hypocenter, rup.surface, pmf, weight=rup.weight)
