@@ -32,6 +32,7 @@ import logging
 import itertools
 import platform
 from os.path import getsize
+import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -239,6 +240,13 @@ def run_calc(log):
     register_signals()
     setproctitle('oq-job-%d' % log.calc_id)
     with log:
+        # check the available memory before starting
+        while True:
+            used_mem = psutil.virtual_memory().percent
+            if used_mem < 50:  # continue if little memory is in use
+                break
+            logging.info('Used memory %d%%, waiting', used_mem)
+            time.sleep(5)
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
         try:
@@ -263,7 +271,7 @@ def run_calc(log):
             logging.warning('Assuming %d %s workers',
                             parallel.Starmap.num_cores, OQ_DISTRIBUTE)
         t0 = time.time()
-        calc.run()
+        calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         path = calc.datastore.filename
@@ -350,8 +358,17 @@ def run_jobs(jobs):
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
         if jobarray:
-            with general.start_many(run_calc, allargs):
-                pass
+            procs = []
+            try:
+                for args in allargs:
+                    proc = general.mp.Process(target=run_calc, args=args)
+                    proc.start()
+                    logging.info('Started %s' % str(args))
+                    time.sleep(2)
+                    procs.append(proc)
+            finally:
+                for proc in procs:
+                    proc.join()
         else:
             for job in jobs:
                 run_calc(job)

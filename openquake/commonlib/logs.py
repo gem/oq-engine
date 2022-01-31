@@ -44,7 +44,6 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    # host = socket.gethostbyname(config.dbserver.host)
     sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
     with sock:
         res = sock.send((action,) + args)
