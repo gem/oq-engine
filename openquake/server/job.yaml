@@ -54,7 +54,7 @@ spec:
          persistentVolumeClaim: 
            claimName: nfsdata
      restartPolicy: Never
-    nodeSelector:
+     nodeSelector:
        vCpu: AMD
      tolerations:
      - key: "kubernetes.azure.com/scalesetpriority"
