@@ -66,7 +66,7 @@ jobs:
         fi
     - name: Run tests
       run: |
-        source /opt/openquake/bin/activate
+        source /opt/openquake/venv/bin/activate
         pip install pytest
         runuser -l openquake -c '/opt/openquake/bin/oq dbserver start &'
         mkdir ~/oqdata
