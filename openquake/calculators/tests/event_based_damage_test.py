@@ -46,13 +46,13 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         # test with double aggregate_by by Catalina
         self.run_calc(case_11.__file__, 'job.ini')
 
-        # check damages-rlzs
+        # check damages-rlzs, sensitive to shapely version
         [f] = export(('damages-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=2E-4)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-3)
 
-        # check aggcurves
+        # check aggcurves, sensitive to shapely version
         [f] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=2E-4)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=2E-3)
 
     def test_case_12a(self):
         # test event_based_damage, no aggregate_by,
