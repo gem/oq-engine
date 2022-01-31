@@ -44,6 +44,8 @@ from openquake.qa_tests_data.event_based import (
     case_25, case_26, case_27, case_28, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
+from openquake.hazardlib.geo.surface.gridded import GriddedSurface
+# from GriddedSurface import get_nproj
 
 aac = numpy.testing.assert_allclose
 
@@ -566,7 +568,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_mutex(self):
         out = self.run_calc(mutex.__file__, 'job.ini', exports='csv,xml')
         [fname] = out['ruptures', 'csv']
-        self.assertEqualFiles('expected/ruptures.csv', fname, delta=0.05)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
     def test_gmpe_tables(self):
         out = self.run_calc(

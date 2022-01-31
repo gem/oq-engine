@@ -27,7 +27,7 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
-from numpy import (array, dot, arccos, clip)
+from numpy import (array, dot, arccos, arctan, arcsin, clip)
 from numpy.linalg import norm
 from openquake.hazardlib.geo.geodetic import spherical_to_cartesian
 from openquake.hazardlib.geo.utils import plane_fit
@@ -130,57 +130,71 @@ class GriddedSurface(BaseSurface):
             and the shallowest point in surface's top edge in km.
         """
         return self.mesh.depths.min()
- 
 
-    def get_dip(self):
+    def get_nproj(self):
         """
         params:
-            n = unit vector normal to the plane; 3X1 matrix with x, y and z components
-            n_proj = projection of the vector 'n' on XY plane =  n*(1,1,0)
-        returns:    
-            the function calculates the dip angle for gridded surface
+        p, n = points on the plane and perpendicular to the plane
+        returns:
+        n_proj = projection of the vector 'n' on XY plane 
         """
         lat = self.mesh.lats.flatten()
         lon = self.mesh.lons.flatten()
         depth = self.mesh.depths.flatten()
         p, n = plane_fit(spherical_to_cartesian(lon, lat, depth))
-        n_proj = n.copy()
-        n_proj[-1] = 0
-        d = dot(n,n_proj)/norm(n)/norm(n_proj)
-        dip_r = arccos(clip(d, -1, 1))
-        if n[2] > 0: ##check if z component is positive so that dip angle lies between 0 and 90
-            dip = 90 - np.rad2deg(dip_r)
+        nproj = np.zeros(shape=(3,))
+        if n[2] < 0:##check if z component is positive so that dip angle lies between 0 and 90
+            nproj[0] = -n[0]
+            nproj[1] = -n[1]
+            nproj[2] = -n[2]
         else:
-            dip = np.rad2deg(dip_r)
-        return round(dip,5)
+            nproj = n
+        
+        return nproj
 
+ 
     def get_strike(self):
         """
         params:
             n = unit vector normal to the plane; 3X1 matrix with x, y and z components
-            n_proj = projection of the vector 'n' on XY plane =  n*(1,1,0)
-            Y = unit vector along standard y-axis (0,1,0)
-
-        returns:
+            n_proj = projection of the vector 'n' on XY plane 
+        returns:    
             the function calculates the strike for gridded surface
         """
-        lat = self.mesh.lats.flatten()
-        lon = self.mesh.lons.flatten()
-        depth = self.mesh.depths.flatten()
-        p, n = plane_fit(spherical_to_cartesian(lon, lat, depth))
-        n_proj = n.copy()
-        n_proj[-1] = 0
-        Y = np.array([0,1,0])
-        x = n[1] ##lon
-        y = n[0] ##lat
-        c = dot(Y,n_proj)/norm(Y)/norm(n_proj)
-        strike_r = arccos(clip(c, -1, 1))
-        if x > 0:
-            strike = np.rad2deg(strike_r)
+        nproj = self.get_nproj()   
+
+        (x, y, z) = (nproj[0], nproj[1], nproj[2])
+        if ((x>=0) and (y>0)):
+            a = arctan(abs(x)/abs(y))
+            strike_deg = 360-np.rad2deg(a)
+        elif ((x<0) and (y>=0)):
+            a = 3*np.pi*0.5+arctan(abs(y)/abs(x))
+            strike_deg = np.rad2deg(a)-90
+        elif ((x<=0) and (y<0)):
+            a = np.pi+arctan(abs(x)/abs(y))
+            strike_deg = np.rad2deg(a)-90
         else:
-            strike = 360 - np.rad2deg(strike_r)
+            a = np.pi*0.5+arctan(abs(y)/abs(x))
+            strike_deg = np.rad2deg(a)-90
+        return strike_deg
+
         
-        return round(strike, 5)
+    def get_dip(self):
+        """
+        params:
+            n = unit vector normal to the plane; 3X1 matrix with x, y and z components
+            n_proj = projection of the vector 'n' on XY plane 
+        returns:    
+            the function calculates the dip angle for gridded surface
+        """
+
+        nproj = self.get_nproj()     
+
+        (x, y, z) = (nproj[0], nproj[1], nproj[2])
+        dip_r = (np.pi*0.5)-arcsin(z)
+        dip_deg = np.rad2deg(dip_r)
+
+        return dip_deg
 
     def get_width(self):
         """

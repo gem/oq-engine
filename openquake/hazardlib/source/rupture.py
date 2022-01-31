@@ -798,6 +798,7 @@ def get_ruptures(fname_csv):
 
     :param fname_csv: path to the CSV file
     """
+    import pdb; pdb.set_trace()
     if not BaseRupture._code:
         BaseRupture.init()  # initialize rupture codes
     code = BaseRupture.str2code
