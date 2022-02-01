@@ -27,6 +27,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.multi import MultiSurface
+from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
@@ -193,7 +194,7 @@ class MultiFaultSource(BaseSeismicSource):
 
     def get_bounding_box(self, maxdist):
         """
-        Bounding box containing the sections, enlarged by the maximum distance
+        Bounding box containing the surfaces, enlarged by the maximum distance
         """
         surfaces = []
         for sec in self.sections.values():
