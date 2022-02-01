@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,12 +25,14 @@ import sys
 import json
 import time
 import pickle
+import socket
 import signal
 import getpass
 import logging
 import itertools
 import platform
 from os.path import getsize
+import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -115,10 +117,15 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if len(rlzs) > 1 and not oq.individual_rlzs and not oq.collect_rlzs:
-        for out in ['avg_losses-rlzs', 'aggrisk']:
-            if out in dskeys:
-                dskeys.remove(out)
+    if len(rlzs) > 1 and not oq.collect_rlzs:
+        if 'aggrisk' in dstore:
+            dskeys.add('aggrisk-stats')
+        if 'aggcurves' in dstore:
+            dskeys.add('aggcurves-stats')
+        if not oq.individual_rlzs:
+            for out in ['avg_losses-rlzs', 'aggrisk', 'aggcurves']:
+                if out in dskeys:
+                    dskeys.remove(out)
     if 'curves-rlzs' in dstore and len(rlzs) == 1:
         dskeys.add('loss_curves-rlzs')
     if 'curves-stats' in dstore and len(rlzs) > 1:
@@ -233,10 +240,22 @@ def run_calc(log):
     register_signals()
     setproctitle('oq-job-%d' % log.calc_id)
     with log:
+        # check the available memory before starting
+        while True:
+            used_mem = psutil.virtual_memory().percent
+            if used_mem < 50:  # continue if little memory is in use
+                break
+            logging.info('Used memory %d%%, waiting', used_mem)
+            time.sleep(5)
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
-        logging.info('%s running %s [--hc=%s]',
+        try:
+            hostname = socket.gethostname()
+        except Exception:  # gaierror
+            hostname = 'localhost'
+        logging.info('%s@%s running %s [--hc=%s]',
                      getpass.getuser(),
+                     hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
         logging.info('Using engine version %s', __version__)
@@ -252,7 +271,7 @@ def run_calc(log):
             logging.warning('Assuming %d %s workers',
                             parallel.Starmap.num_cores, OQ_DISTRIBUTE)
         t0 = time.time()
-        calc.run()
+        calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         path = calc.datastore.filename
@@ -339,8 +358,17 @@ def run_jobs(jobs):
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
         if jobarray:
-            with general.start_many(run_calc, allargs):
-                pass
+            procs = []
+            try:
+                for args in allargs:
+                    proc = general.mp.Process(target=run_calc, args=args)
+                    proc.start()
+                    logging.info('Started %s' % str(args))
+                    time.sleep(2)
+                    procs.append(proc)
+            finally:
+                for proc in procs:
+                    proc.join()
         else:
             for job in jobs:
                 run_calc(job)

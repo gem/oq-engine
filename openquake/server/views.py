@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -225,8 +225,13 @@ def get_ini_defaults(request):
     Return a list of ini attributes with a default value
     """
     ini_defs = {}
-    for name in dir(oqvalidation.OqParam):
-        obj = getattr(oqvalidation.OqParam, name)
+    all_names = dir(oqvalidation.OqParam) + list(oqvalidation.OqParam.ALIASES)
+    for name in all_names:
+        if name in oqvalidation.OqParam.ALIASES:  # old name
+            newname = oqvalidation.OqParam.ALIASES[name]
+        else:
+            newname = name
+        obj = getattr(oqvalidation.OqParam, newname)
         if (isinstance(obj, valid.Param)
                 and obj.default is not valid.Param.NODEFAULT):
             ini_defs[name] = obj.default

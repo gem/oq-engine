@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2021 GEM Foundation
+# Copyright (C) 2016-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -282,9 +282,11 @@ DISPLAY_NAME = {
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
     'aggrisk': 'Aggregate Risk',
+    'aggrisk-stats': 'Aggregate Risk Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
     'aggcurves': 'Aggregate Risk Curves',
+    'aggcurves-stats': 'Aggregate Risk Curves Statistics',
     'avg_gmf': 'Average Ground Motion Field',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',

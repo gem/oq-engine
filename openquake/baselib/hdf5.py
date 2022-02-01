@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -922,15 +922,18 @@ def save_npz(obj, path):
     :param obj: object to serialize
     :param path: an .npz pathname
     """
-    a = {}
-    for key, val in vars(obj).items():
-        if key.startswith('_'):
-            continue
-        elif isinstance(val, str):
-            # without this oq extract would fail
-            a[key] = val.encode('utf-8')
-        else:
-            a[key] = _fix_array(val, key)
+    if isinstance(obj, pandas.DataFrame):
+        a = {col: obj[col].to_numpy() for col in obj.columns}
+    else:
+        a = {}
+        for key, val in vars(obj).items():
+            if key.startswith('_'):
+                continue
+            elif isinstance(val, str):
+                # without this oq extract would fail
+                a[key] = val.encode('utf-8')
+            else:
+                a[key] = _fix_array(val, key)
     # turn into an error https://github.com/numpy/numpy/issues/14142
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=UserWarning)

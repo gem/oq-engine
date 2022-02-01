@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -58,7 +58,8 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
 from openquake.hmtk.seismicity.catalogue import Catalogue
-from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import CsvCatalogueParser
+from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import (
+    CsvCatalogueParser)
 from openquake.hmtk.seismicity.utils import decimal_time
 
 
@@ -244,7 +245,6 @@ class TestGetDistributions(unittest.TestCase):
                                                   normalisation=True))
 
     def test_depth_distribution_uncertainties(self):
-        raise unittest.SkipTest("numpy 1.20")
         # Tests the depth distribution with uncertainties
 
         # Without normalisation
@@ -254,16 +254,16 @@ class TestGetDistributions(unittest.TestCase):
         depth_bins = np.arange(-10., 70., 10.)
         expected_array = np.array([0., 1.5, 2., 2., 2., 1.5, 0.])
         hist_array = self.catalogue.get_depth_distribution(depth_bins,
-                                                           bootstrap=1000)
-        array_diff = np.round(hist_array, 1) - expected_array
-        self.assertTrue(np.all(np.fabs(array_diff) < 0.2))
+                                                           bootstrap=1000)/1000
+        diff = np.fabs(hist_array - expected_array).max()
+        self.assertTrue(diff <= 0.052)
         # With normalisation
         expected_array = np.array([0., 0.16, 0.22, 0.22, 0.22, 0.16, 0.01])
         hist_array = self.catalogue.get_depth_distribution(depth_bins,
                                                            normalisation=True,
                                                            bootstrap=1000)
-        array_diff = np.round(hist_array, 2) - expected_array
-        self.assertTrue(np.all(np.fabs(array_diff) < 0.03))
+        diff = np.fabs(hist_array - expected_array).max()
+        self.assertTrue(diff <= 0.01)
 
 
 class TestMagnitudeDepthDistribution(unittest.TestCase):

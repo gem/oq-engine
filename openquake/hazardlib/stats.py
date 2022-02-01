@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2021 GEM Foundation
+# Copyright (c) 2016-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@ import numpy
 import pandas
 from scipy.stats import norm
 from scipy.special import ndtr
-from openquake.baselib.general import agg_probs
+from openquake.baselib.general import AccumDict, agg_probs
 
 
 def _truncnorm_sf(truncation_level, values):
@@ -265,6 +265,28 @@ def compute_pmap_stats(pmaps, stats, weights, imtls):
             for j, sid in numpy.ndenumerate(sids):
                 out[sid].array[slc, i] = array[j]
     return out
+
+
+def calc_stats(df, kfields, stats, weights):
+    """
+    :param df: a pandas DataFrame with a column rlz_id
+    :param kfields: fields used in the group by
+    :param stats: a dictionary stat_name->stat_func
+    :param weights: an array of weights for each realization
+    :returns: a DataFrame with the statistics
+    """
+    acc = AccumDict(accum=[])
+    vfields = [f for f in df.columns if f not in kfields and f != 'rlz_id']
+    for key, group in df.groupby(kfields):
+        ws = weights[group.rlz_id]
+        for name, func in stats.items():
+            for k, kf in zip(key, kfields):
+                acc[kf].append(k)
+            for vf in vfields:
+                v = apply_stat(func, getattr(group, vf).to_numpy(), ws)
+                acc[vf].append(v)
+            acc['stat'].append(name)
+    return pandas.DataFrame(acc)
 
 
 # NB: this is a function linear in the array argument

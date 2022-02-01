@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -85,12 +85,9 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini')
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         assert fnames  # sanity check
-        # FIXME: on macOS the generation of loss maps stats is terribly wrong,
-        # the number of losses do not match, this must be investigated
-        if NOT_DARWIN:
-            for fname in fnames:
-                self.assertEqualFiles(
-                    'expected/' + strip_calc_id(fname), fname, delta=5E-5)
+        for fname in fnames:
+            self.assertEqualFiles(  # very sensitive to shapely version
+                'expected/' + strip_calc_id(fname), fname, delta=1E-3)
 
         # exported the npz, not checking the content
         for kind in ('rlzs', 'stats'):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1937,37 +1937,6 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             xml, gsim_lt.InvalidLogicTree,
             "Duplicated branchSetID bs1")
 
-    def test_branch_id_not_unique(self):
-        xml = _make_nrml("""
-<logicTree logicTreeID="lt1">
-    <logicTreeBranchingLevel branchingLevelID="bl4">
-        <logicTreeBranchSet uncertaintyType="gmpeModel"
-                            branchSetID="GrpD"
-                            applyToTectonicRegionType="Subduction Interface">
-
-            <logicTreeBranch branchID="GrpD_Gmpe1">
-                <uncertaintyModel>AbrahamsonEtAl2015SInter</uncertaintyModel>
-                <uncertaintyWeight>0.334</uncertaintyWeight>
-            </logicTreeBranch>
-
-            <logicTreeBranch branchID="GrpD_Gmpe2">
-                <uncertaintyModel>McVerry2006SInter</uncertaintyModel>
-                <uncertaintyWeight>0.333</uncertaintyWeight>
-            </logicTreeBranch>
-
-            <logicTreeBranch branchID="GrpD_Gmpe2">
-                <uncertaintyModel>ZhaoEtAl2016SInter</uncertaintyModel>
-                <uncertaintyWeight>0.333</uncertaintyWeight>
-            </logicTreeBranch>
-
-        </logicTreeBranchSet>
-    </logicTreeBranchingLevel>
-</logicTree>
-        """)
-        self.parse_invalid(
-            xml, gsim_lt.InvalidLogicTree,
-            "There where duplicated branchIDs in")
-
     def test_invalid_gsim(self):
         xml = _make_nrml("""\
         <logicTree logicTreeID="lt1">
@@ -2077,7 +2046,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         for rlz in rlzs:
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
-        self.assertEqual(counter, {('b1',): 421, ('b2',): 579})
+        self.assertEqual(counter, {('gA0',): 421, ('gB0',): 579})
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
@@ -2099,7 +2068,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
         self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(rlz.weight['default'], 0.5)
-        self.assertEqual(('b2', 'b3'), rlz.lt_path)
+        self.assertEqual(('gB0', 'gA1'), rlz.lt_path)
 
 
 class LogicTreeProcessorParsePathTestCase(unittest.TestCase):

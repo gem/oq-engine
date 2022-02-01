@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,13 +27,6 @@ from openquake.hazardlib.tests.geo.surface import _utils as utils
 class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
     def test_one_edge(self):
         edges = [Line([Point(0, 0), Point(0, 1)])]
-        self.assertRaises(ValueError, ComplexFaultSurface.from_fault_data,
-                          edges, mesh_spacing=1)
-
-    def test_one_point_in_an_edge(self):
-        edges = [Line([Point(0, 0), Point(0, 1)]),
-                 Line([Point(0, 0, 1), Point(0, 1, 1)]),
-                 Line([Point(0, 0, 2)])]
         self.assertRaises(ValueError, ComplexFaultSurface.from_fault_data,
                           edges, mesh_spacing=1)
 

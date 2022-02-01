@@ -242,11 +242,11 @@ Argentina, you will get different results than running a single
 calculation for Chile+Argentina, *even if you have precomputed the
 ruptures for both countries, even if the random seeds are the same and
 even if there is no spatial correlation*. Many users are surprised but
-this fact, but it obvious once you realize how the GMFs are
+this fact, but it is obvious if you know how the GMFs are
 computed. Suppose you are considering 3 sites in Chile and 2 sites in
 Argentina, and that the value of the random seed in 123456: if you
 split, assuming there is a single event, you will produce the
-following 3+2 random numbers:
+following 3+2 normally distributed random numbers:
 
 >>> numpy.random.default_rng(123456).normal(size=3)  # for Chile
 array([ 0.1928212 , -0.06550702,  0.43550665])

@@ -1,4 +1,4 @@
-#,,"generated_by='OpenQuake engine 3.13.0-git1da0589f16', start_date='2022-01-06T22:25:09', checksum=3317478333"
+#,,"generated_by='OpenQuake engine 3.12.0-gite89dcaef47', start_date='2021-06-10T10:55:02', checksum=1664000021"
 site_id,event_id,gmv_PGA
 0,0,3.28702E-02
 0,1,6.91859E-02

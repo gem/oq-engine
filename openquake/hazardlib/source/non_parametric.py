@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -118,24 +118,16 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def get_bounding_box(self, maxdist):
         """
-        Bounding box containing few surfaces, enlarged by the maximum distance
+        Bounding box containing the surfaces, enlarged by the maximum distance
         """
         surfaces = []
         for rup, _ in self.data:
             if isinstance(rup.surface, MultiSurface):
-                for s in rup.surface.surfaces:
-                    surfaces.append(s)
+                surfaces.extend(rup.surface.surfaces)
             else:
                 surfaces.append(rup.surface)
-        lons = []
-        lats = []
-        for surf in surfaces:
-            lo1, lo2, la1, la2 = surf.get_bounding_box()
-            lons.extend([lo1, lo2])
-            lats.extend([la1, la2])
-        # multi_surf = MultiSurface(surfaces)
-        # west, east, north, south = multi_surf.get_bounding_box()
-        west, east, north, south = get_spherical_bounding_box(lons, lats)
+        multi_surf = MultiSurface(surfaces)
+        west, east, north, south = multi_surf.get_bounding_box()
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
@@ -204,7 +196,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
     @property
     def mesh_size(self):
         """
-        :returns: the number of points in the underlying mesh
+        :returns: the number of points in the underlying meshes (reduced)
         """
         n = 0
         for rup in self.few_ruptures():

@@ -38,6 +38,7 @@ Contents:
    event-based-damage
    conditional-spectrum
    correlation
+   shakemaps
    risk-features
    risk-profiles
    developing

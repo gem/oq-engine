@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020-2021 GEM Foundation
+# Copyright (C) 2020-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,9 +26,9 @@ Three installation methods are supported:
 3. "devel" installation on $HOME/openquake from the engine repository
 
 To disinstall use the --remove flag, which remove the services and the
-directories /opt/openquake or $HOME/openquake.
+directories /opt/openquake/venv or $HOME/openquake.
 The calculations will NOT be removed since they live in
-/var/lib/openquake/oqdata or $HOME/oqdata.
+/opt/openquake/oqdata or $HOME/oqdata.
 You have to remove the data directories manually, if you so wish.
 """
 import os
@@ -64,23 +64,23 @@ class server:
     """
     Parameters for a server installation (with root permissions)
     """
-    VENV = '/opt/openquake'
+    VENV = '/opt/openquake/venv'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
 
     @classmethod
     def exit(cls):
         return f'''There is a DbServer running on port {cls.DBPORT} from a
-previous installation. 
+previous installation.
 On linux please stop the server with the command
 `sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`
 On Windows please use Task Manager to stop the process
@@ -91,17 +91,17 @@ class devel_server:
     """
     Parameters for a development on server installation (with root permissions)
     """
-    VENV = '/opt/openquake'
+    VENV = '/opt/openquake/venv'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
-    OQDATA = '/var/lib/openquake/oqdata'
+    OQDATA = '/opt/openquake/oqdata'
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
     port = %d
     file = %s
-    shared_dir = /var/lib
+    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
@@ -159,7 +159,7 @@ User=openquake
 Group=openquake
 Environment=
 WorkingDirectory={OQDATA}
-ExecStart=/opt/openquake/bin/oq {service} start
+ExecStart=/opt/openquake/venv/bin/oq {service} start
 Restart=always
 RestartSec=30
 KillMode=control-group
@@ -290,6 +290,24 @@ def fix_version(commit, venv):
         f.write(''.join(lines))
 
 
+def remove_old_venv(basedir):
+    """
+    Engine versions < 3.14 were installing the venv in /opt/openquake,
+    so we need to remove leftover directories and files
+    """
+    def find(*names):
+        for name in names:
+            path = os.path.join(basedir, name)
+            if os.path.exists(path):
+                yield path
+    for dname in find("bin", "include", "lib"):
+        print('Removing', dname)
+        shutil.rmtree(dname)
+    for fname in find("lib64", "openquake.cfg", "pyvenv.cfg"):
+        print('Removing', fname)
+        os.remove(fname)
+
+
 def install(inst, version):
     """
     Install the engine in one of the three possible modes
@@ -302,6 +320,7 @@ def install(inst, version):
         except KeyError:
             subprocess.check_call(['useradd', '-m', '-U', 'openquake'])
             print('Created user openquake')
+        remove_old_venv(os.path.dirname(inst.VENV))
 
     # create the database
     if not os.path.exists(inst.OQDATA):

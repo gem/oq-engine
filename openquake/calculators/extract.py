@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2021 GEM Foundation
+# Copyright (C) 2017-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,6 +38,7 @@ from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
+from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
@@ -190,6 +191,8 @@ class Extract(dict):
             data = self[key](dstore, '')
         else:
             data = extract_(dstore, key)
+        if isinstance(data, pandas.DataFrame):
+            return data
         return ArrayWrapper.from_(data)
 
 
@@ -1358,6 +1361,24 @@ def extract_eids_by_gsim(dstore, what):
     df = pandas.DataFrame({'id': evs['id'], 'rlz_id': evs['rlz_id']})
     for r, evs in df.groupby('rlz_id'):
         yield gsims[r], numpy.array(evs['id'])
+
+
+@extract.add('risk_stats')
+def extract_risk_stats(dstore, what):
+    """
+    Extract the risk statistics from a DataFrame.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/risk_stats/aggcurves
+    """
+    oq = dstore['oqparam']
+    stats = oq.hazard_stats()
+    df = dstore.read_df(what)
+    df['loss_type'] = [oq.loss_types[lid] for lid in df.loss_id]
+    del df['loss_id']
+    kfields = [f for f in df.columns if f in {
+        'agg_id', 'loss_type', 'return_period'}]
+    weights = dstore['weights'][:]
+    return calc_stats(df, kfields, stats, weights)
 
 
 # #####################  extraction from the WebAPI ###################### #

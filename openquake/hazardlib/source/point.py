@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -127,7 +127,7 @@ def _rupture_by_mag(src, np, hc, point_rup):
         for mag, rate in mag_rates[::5]:
             yield PointRupture(
                 mag, src.tectonic_region_type, hc,
-                0, 0, np.rake, rate, src.temporal_occurrence_model)
+                0, np.rake, rate, src.temporal_occurrence_model)
     else:  # regular case
         for mag, rate in mag_rates:
             surface, nhc = src._get_rupture_surface(mag, np, hc)
@@ -222,6 +222,15 @@ class PointSource(ParametricSeismicSource):
         self.radius = max(radius)
         return self.radius
 
+    def get_radius(self, rup, dip=90.):
+        """
+        :returns: half of maximum rupture's diagonal surface projection
+        """
+        rup_length, rup_width = _get_rupture_dimensions(
+            self, rup.mag, rup.rake, dip)
+        rup_width = rup_width * math.cos(math.radians(dip))
+        return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+
     def iter_ruptures(self, **kwargs):
         """
         Generate one rupture for each combination of magnitude, nodal plane
@@ -241,7 +250,7 @@ class PointSource(ParametricSeismicSource):
                     if point_rup:
                         yield PointRupture(
                             mag, self.tectonic_region_type, hc,
-                            0, 0, np.rake, occurrence_rate,
+                            0, np.rake, occurrence_rate,
                             self.temporal_occurrence_model)
                     else:
                         surface, nhc = self._get_rupture_surface(mag, np, hc)

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -77,14 +77,6 @@ class SimpleFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
 
         self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
                           self.fault_trace, 0.0, 1.0, 90.0, -1.0)
-
-    def test_fault_trace_points(self):
-        """
-        The fault trace must have at least two points.
-        """
-        fault_trace = Line([Point(0.0, 0.0)])
-        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
-                          fault_trace, 0.0, 1.0, 90.0, 1.0)
 
 
 class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import gzip
 import unittest
 import numpy
@@ -224,7 +223,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_13(self):
         self.assert_curves_ok(
             ['hazard_curve-mean_PGA.csv', 'hazard_curve-mean_SA(0.2).csv',
-             'hazard_map-mean.csv'], case_13.__file__)
+             'hazard_map-mean.csv'], case_13.__file__, delta=1E-5)
 
         # test recomputing the hazard maps
         self.run_calc(
@@ -490,7 +489,6 @@ hazard_uhs-std.csv
             self.assertEqualFiles('expected/' + strip_calc_id(f), f)
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
-        check = False
 
         # first test that the exported ruptures can be re-imported
         self.run_calc(case_29.__file__, 'job.ini',
@@ -503,16 +501,7 @@ hazard_uhs-std.csv
         # check what QGIS will be seeing
         aw = extract(self.calc.datastore, 'rupture_info')
         poly = gzip.decompress(aw.boundaries).decode('ascii')
-        expected = '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04006, 0.00000 0.08013, 0.00000 0.12019, 0.00000 0.16025, 0.00000 0.20032, 0.00000 0.24038, 0.00000 0.28045, 0.04512 0.28045, 0.08980 0.28045, 0.13492 0.28045, 0.17961 0.28045, 0.17961 0.24038, 0.17961 0.20032, 0.17961 0.16025, 0.17961 0.12019, 0.17961 0.08013, 0.17961 0.04006, 0.17961 0.00000, 0.00000 0.10000, 0.04512 0.10000, 0.08980 0.10000, 0.13492 0.10000, 0.17961 0.10000, 0.17961 0.14006, 0.17961 0.18013, 0.17961 0.22019, 0.17961 0.26025, 0.17961 0.30032, 0.17961 0.34038, 0.17961 0.38045, 0.13492 0.38045, 0.08980 0.38045, 0.04512 0.38045, 0.00000 0.38045, 0.00000 0.34038, 0.00000 0.30032, 0.00000 0.26025, 0.00000 0.22019, 0.00000 0.18013, 0.00000 0.14006, 0.00000 0.10000))'''
-        self.assertEqual(poly, expected)
-
-        # This is for checking purposes. It creates a .txt file that can be
-        # read with QGIS
-        if check:
-            import pandas as pd
-            df = pd.DataFrame({'geometry': [poly, expected]})
-            tmp = general.gettemp()
-            df.to_csv(os.path.join(tmp, 'case_29.csv'))
+        self.assertEqual(poly, '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04006, 0.00000 0.08013, 0.00000 0.12019, 0.00000 0.16025, 0.00000 0.20032, 0.00000 0.24038, 0.00000 0.28045, 0.04512 0.28045, 0.08980 0.28045, 0.13492 0.28045, 0.17961 0.28045, 0.17961 0.24038, 0.17961 0.20032, 0.17961 0.16025, 0.17961 0.12019, 0.17961 0.08013, 0.17961 0.04006, 0.17961 0.00000, 0.17961 0.10000, 0.13492 0.10000, 0.08980 0.10000, 0.04512 0.10000, 0.00000 0.10000, 0.00000 0.14006, 0.00000 0.18013, 0.00000 0.22019, 0.00000 0.26025, 0.00000 0.30032, 0.00000 0.34038, 0.00000 0.38045, 0.04512 0.38045, 0.08980 0.38045, 0.13492 0.38045, 0.17961 0.38045, 0.17961 0.34038, 0.17961 0.30032, 0.17961 0.26025, 0.17961 0.22019, 0.17961 0.18013, 0.17961 0.14006, 0.17961 0.10000))''')
 
         # then perform a classical calculation
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
@@ -559,12 +548,15 @@ hazard_uhs-std.csv
                               case_35.__file__)
 
     def test_case_36(self):
-        # test with advanced applyToSources and preclassical
+        # test with advanced applyToSources and disordered gsim_logic_tree
         self.run_calc(case_36.__file__, 'job.ini')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_36.__file__, 'job.ini', hazard_calculation_id=hc_id,
                       calculation_mode='classical')
         self.assertEqual(self.calc.R, 9)  # there are 9 realizations
+
+        tbl = general.gettemp(text_table(view('rlz:8', self.calc.datastore)))
+        self.assertEqualFiles('expected/show-rlz8.org', tbl)
 
     def test_case_37(self):
         # Christchurch
@@ -618,7 +610,7 @@ hazard_uhs-std.csv
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
         data = self.calc.datastore.read_df('source_data')
-        self.assertEqual(data.nrupts.sum(), 2986)  # number of contexts
+        self.assertEqual(data.nrupts.sum(), 5020)  # number of contexts
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -692,17 +684,22 @@ hazard_uhs-std.csv
         # in presence of a pointsource_distance
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='50')
 
-        # 10 approx rrup distances for site 0 and site 1 respectively
+        # 15 approx rrup distances for site 0 and site 1 respectively
         approx = numpy.array([[54.2, 109.7],
                               [53.8, 109.3],
                               [53.3, 108.8],
                               [52.7, 108.2],
                               [51.9, 107.5],
-                              [50.5, 106.0],
+                              [50.5, 106.1],
+                              [50.4, 106.0],
                               [47.8, 103.2],
-                              [43.7, 98.7],
-                              [38.1, 92.0],
-                              [32.9, 82.3]])
+                              [47.7, 103.1],
+                              [43.7, 98.8],
+                              [43.6, 98.6],
+                              [38.2, 92.0],
+                              [38.0, 91.9],
+                              [33.0, 82.3],
+                              [32.8, 82.2]])
 
         # approx distances from site 0 and site 1 respectively
         dst = get_dists(self.calc.datastore)

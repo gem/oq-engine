@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -148,7 +148,7 @@ def cholesky(spatial_cov, cross_corr):
         L = numpy.array([numpy.linalg.cholesky(spatial_cov[i])
                          for i in range(M)])
     except numpy.linalg.LinAlgError as exc:
-        raise exc.__class__('%s: see https://docs.openquake.org/oq-engine/advanced/risk-features.html#correlation' % exc)
+        raise exc.__class__('%s: see https://docs.openquake.org/oq-engine/advanced/shakemaps.html#correlation' % exc)
     LLT = []
     for i in range(M):
         row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]

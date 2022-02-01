@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021, GEM Foundation
+# Copyright (C) 2010-2022, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -390,10 +390,7 @@ class GsimLogicTree(object):
             for brno, branch in enumerate(branchset):
                 weight = ImtWeight(branch, self.filename)
                 weights.append(weight)
-                try:
-                    branch_id = branch['branchID']
-                except KeyError:
-                    branch_id = 'g' + BASE64[brno] + str(bsno)
+                branch_id = 'g' + BASE64[brno] + str(bsno)
                 branch_ids.append(branch_id)
                 try:
                     gsim = valid.gsim(branch.uncertaintyModel, basedir)
@@ -427,7 +424,7 @@ class GsimLogicTree(object):
                 (self.filename, trts))
         dupl = duplicated(branchids)
         if dupl:
-            logging.warning(
+            logging.debug(
                 'There are duplicated branchIDs %s in %s', dupl, self.filename)
         branches.sort(key=lambda b: b.trt)
         return branches
