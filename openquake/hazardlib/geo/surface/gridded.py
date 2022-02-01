@@ -138,6 +138,7 @@ class GriddedSurface(BaseSurface):
         returns:
         n_proj = projection of the vector 'n' on XY plane 
         """
+        # import pdb; pdb.set_trace()
         lat = self.mesh.lats.flatten()
         lon = self.mesh.lons.flatten()
         depth = self.mesh.depths.flatten()
