@@ -121,10 +121,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
         surfaces = []
-        for rup in self.few_ruptures():
+        for rup, _ in self.data:
             if isinstance(rup.surface, MultiSurface):
-                for s in rup.surface.surfaces:
-                    surfaces.append(s)
+                surfaces.extend(rup.surface.surfaces)
             else:
                 surfaces.append(rup.surface)
         multi_surf = MultiSurface(surfaces)
