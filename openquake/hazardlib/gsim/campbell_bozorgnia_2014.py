@@ -25,7 +25,7 @@ Module exports :class:`CampbellBozorgnia2014`
                :class:`CampbellBozorgnia2014LowQJapanSite`
 """
 import numpy as np
-from math import exp, radians, cos
+from numpy import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -70,8 +70,8 @@ def _get_basin_response_term(SJ, C, z2pt5):
     idx = z2pt5 < 1.0
     f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
     idx = z2pt5 > 3.0
-    f_sed[idx] = C["c16"] * C["k3"] * exp(-0.75) *\
-        (1.0 - np.exp(-0.25 * (z2pt5[idx] - 3.0)))
+    f_sed[idx] = C["c16"] * C["k3"] * exp(-0.75) * (
+        1. - np.exp(-0.25 * (z2pt5[idx] - 3.)))
     return f_sed
 
 
@@ -80,7 +80,7 @@ def _get_f1rx(C, r_x, r_1):
     Defines the f1 scaling coefficient defined in equation 9
     """
     rxr1 = r_x / r_1
-    return C["h1"] + (C["h2"] * rxr1) + (C["h3"] * (rxr1 ** 2.))
+    return C["h1"] + C["h2"] * rxr1 + C["h3"] * (rxr1 ** 2.)
 
 
 def _get_f2rx(C, r_x, r_1, r_2):
@@ -88,19 +88,17 @@ def _get_f2rx(C, r_x, r_1, r_2):
     Defines the f2 scaling coefficient defined in equation 10
     """
     drx = (r_x - r_1) / (r_2 - r_1)
-    return CONSTS["h4"] + (C["h5"] * drx) + (C["h6"] * (drx ** 2.))
+    return CONSTS["h4"] + C["h5"] * drx + C["h6"] * (drx ** 2.)
 
 
 def _get_fault_dip_term(C, ctx):
     """
     Returns the fault dip term, defined in equation 24
     """
-    if ctx.mag < 4.5:
-        return C["c19"] * ctx.dip
-    elif ctx.mag > 5.5:
-        return 0.0
-    else:
-        return C["c19"] * (5.5 - ctx.mag) * ctx.dip
+    res = C["c19"] * (5.5 - ctx.mag) * ctx.dip
+    res[ctx.mag < 4.5] = C["c19"] * ctx.dip[ctx.mag < 4.5]
+    res[ctx.mag > 5.5] = 0.0
+    return res
 
 
 def _get_geometric_attenuation_term(C, mag, rrup):
@@ -122,12 +120,10 @@ def _get_hanging_wall_coeffs_mag(C, mag):
     """
     Returns the hanging wall magnitude term defined in equation 14
     """
-    if mag < 5.5:
-        return 0.0
-    elif mag > 6.5:
-        return 1.0 + C["a2"] * (mag - 6.5)
-    else:
-        return (mag - 5.5) * (1.0 + C["a2"] * (mag - 6.5))
+    res = (mag - 5.5) * (1.0 + C["a2"] * (mag - 6.5))
+    res[mag < 5.5] = 0.0
+    res[mag > 6.5] = 1.0 + C["a2"] * (mag[mag > 6.5] - 6.5)
+    return res
 
 
 def _get_hanging_wall_coeffs_rrup(ctx):
@@ -151,10 +147,10 @@ def _get_hanging_wall_coeffs_rx(C, ctx):
     fhngrx = np.zeros(len(r_x))
     # Case when 0 <= Rx <= R1
     idx = np.logical_and(r_x >= 0., r_x < r_1)
-    fhngrx[idx] = _get_f1rx(C, r_x[idx], r_1)
+    fhngrx[idx] = _get_f1rx(C, r_x[idx], r_1[idx])
     # Case when Rx > R1
     idx = r_x >= r_1
-    f2rx = _get_f2rx(C, r_x[idx], r_1, r_2)
+    f2rx = _get_f2rx(C, r_x[idx], r_1[idx], r_2[idx])
     f2rx[f2rx < 0.0] = 0.0
     fhngrx[idx] = f2rx
     return fhngrx
@@ -164,10 +160,9 @@ def _get_hanging_wall_coeffs_ztor(ztor):
     """
     Returns the hanging wall ztor term defined in equation 15
     """
-    if ztor <= 16.66:
-        return 1.0 - 0.06 * ztor
-    else:
-        return 0.0
+    res = 1. - 0.06 * ztor
+    res[ztor > 16.66] = 0.
+    return res
 
 
 def _get_hanging_wall_term(C, ctx):
@@ -186,19 +181,12 @@ def _get_hypocentral_depth_term(C, ctx):
     """
     Returns the hypocentral depth scaling term defined in equations 21 - 23
     """
-    if ctx.hypo_depth <= 7.0:
-        fhyp_h = 0.0
-    elif ctx.hypo_depth > 20.0:
-        fhyp_h = 13.0
-    else:
-        fhyp_h = ctx.hypo_depth - 7.0
-
-    if ctx.mag <= 5.5:
-        fhyp_m = C["c17"]
-    elif ctx.mag > 6.5:
-        fhyp_m = C["c18"]
-    else:
-        fhyp_m = C["c17"] + ((C["c18"] - C["c17"]) * (ctx.mag - 5.5))
+    fhyp_h = ctx.hypo_depth - 7.0
+    fhyp_h[ctx.hypo_depth <= 7.0] = 0.0
+    fhyp_h[ctx.hypo_depth > 20.0] = 13.0
+    fhyp_m = C["c17"] + (C["c18"] - C["c17"]) * (ctx.mag - 5.5)
+    fhyp_m[ctx.mag <= 5.5] = C["c17"]
+    fhyp_m[ctx.mag > 6.5] = C["c18"]
     return fhyp_h * fhyp_m
 
 
@@ -207,15 +195,16 @@ def _get_magnitude_term(C, mag):
     Returns the magnitude scaling term defined in equation 2
     """
     f_mag = C["c0"] + C["c1"] * mag
-    if (mag > 4.5) and (mag <= 5.5):
-        return f_mag + (C["c2"] * (mag - 4.5))
-    elif (mag > 5.5) and (mag <= 6.5):
-        return f_mag + (C["c2"] * (mag - 4.5)) + (C["c3"] * (mag - 5.5))
-    elif mag > 6.5:
-        return f_mag + (C["c2"] * (mag - 4.5)) + (C["c3"] * (mag - 5.5)) +\
-            (C["c4"] * (mag - 6.5))
-    else:
-        return f_mag
+    around5 = (mag > 4.5) & (mag <= 5.5)
+    around6 = (mag > 5.5) & (mag <= 6.5)
+    beyond = mag > 6.5
+    f_mag[around5] += C["c2"] * (mag[around5] - 4.5)
+    f_mag[around6] += (C["c2"] * (mag[around6] - 4.5) +
+                       C["c3"] * (mag[around6] - 5.5))
+    f_mag[beyond] += (C["c2"] * (mag[beyond] - 4.5) +
+                      C["c3"] * (mag[beyond] - 5.5) +
+                      C["c4"] * (mag[beyond] - 6.5))
+    return f_mag
 
 
 def _get_philny(C, mag):
@@ -223,12 +212,10 @@ def _get_philny(C, mag):
     Returns the intra-event random effects coefficient (phi)
     Equation 28.
     """
-    if mag <= 4.5:
-        return C["phi1"]
-    elif mag >= 5.5:
-        return C["phi2"]
-    else:
-        return C["phi2"] + (C["phi1"] - C["phi2"]) * (5.5 - mag)
+    res = C["phi2"] + (C["phi1"] - C["phi2"]) * (5.5 - mag)
+    res[mag <= 4.5] = C["phi1"]
+    res[mag >= 5.5] = C["phi2"]
+    return res
 
 
 def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
@@ -272,23 +259,14 @@ def _get_style_of_faulting_term(C, ctx):
     """
     Returns the style-of-faulting scaling term defined in equations 4 to 6
     """
-    if (ctx.rake > 30.0) and (ctx.rake < 150.):
-        frv = 1.0
-        fnm = 0.0
-    elif (ctx.rake > -150.0) and (ctx.rake < -30.0):
-        fnm = 1.0
-        frv = 0.0
-    else:
-        fnm = 0.0
-        frv = 0.0
-
-    fflt_f = (CONSTS["c8"] * frv) + (C["c9"] * fnm)
-    if ctx.mag <= 4.5:
-        fflt_m = 0.0
-    elif ctx.mag > 5.5:
-        fflt_m = 1.0
-    else:
-        fflt_m = ctx.mag - 4.5
+    frv = np.zeros_like(ctx.rake)
+    fnm = np.zeros_like(ctx.rake)
+    frv[(ctx.rake > 30.) & (ctx.rake < 150.)] = 1.
+    fnm[(ctx.rake > -150.) & (ctx.rake < -30.)] = 1.
+    fflt_f = CONSTS["c8"] * frv + C["c9"] * fnm
+    fflt_m = ctx.mag - 4.5
+    fflt_m[ctx.mag <= 4.5] = 0.
+    fflt_m[ctx.mag > 5.5] = 1.
     return fflt_f * fflt_m
 
 
@@ -297,12 +275,10 @@ def _get_taulny(C, mag):
     Returns the inter-event random effects coefficient (tau)
     Equation 28.
     """
-    if mag <= 4.5:
-        return C["tau1"]
-    elif mag >= 5.5:
-        return C["tau2"]
-    else:
-        return C["tau2"] + (C["tau1"] - C["tau2"]) * (5.5 - mag)
+    res = C["tau2"] + (C["tau1"] - C["tau2"]) * (5.5 - mag)
+    res[mag <= 4.5] = C["tau1"]
+    res[mag >= 5.5] = C["tau2"]
+    return res
 
 
 def _select_basin_model(SJ, vs30):
@@ -382,7 +358,7 @@ class CampbellBozorgnia2014(GMPE):
 
     SJ = 0  # 1 for Japan
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
