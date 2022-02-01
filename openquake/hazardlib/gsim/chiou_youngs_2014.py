@@ -117,7 +117,7 @@ def _get_ln_y_ref(ctx, C):
         * ctx.rrup
         # fifth part
         + C['c8'] * dist_taper
-        * min(max(ctx.mag - 5.5, 0) / 0.8, 1.0)
+        * np.clip((ctx.mag - 5.5, 0) / 0.8, 0., 1.)
         * np.exp(-1 * C['c8a'] * (ctx.mag - C['c8b']) ** 2) * centered_dpp
         # sixth part
         # + C['c9'] * Fhw * np.cos(math.radians(ctx.dip)) *
@@ -172,7 +172,7 @@ def get_directivity(clsname, C, ctx):
         # No directivity term
         return 0.0
     f_dir = np.exp(-C["c8a"] * ((ctx.mag - C["c8b"]) ** 2.)) * cdpp
-    f_dir *= min((max(ctx.mag - 5.5, 0.0) / 0.8), 1.)
+    f_dir *= np.clip((ctx.mag - 5.5) / 0.8, 0., 1.)
     rrup_max = ctx.rrup - 40.
     rrup_max[rrup_max < 0.0] = 0.0
     rrup_max = 1.0 - (rrup_max / 30.)
