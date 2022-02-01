@@ -341,8 +341,8 @@ def get_phi(C, mag, ctx, nl0):
     phi = C["sig3"] * np.ones(ctx.vs30.shape)
     phi[ctx.vs30measured] = 0.7
     phi = np.sqrt(phi + ((1.0 + nl0) ** 2.))
-    mdep = C["sig1"] + (((C["sig2"] - C["sig1"]) / 1.5) *
-                        (min(max(mag, 5.0), 6.5) - 5.0))
+    mdep = C["sig1"] + (
+        C["sig2"] - C["sig1"]) * np.clip(mag - 5., 0., 1.5) / 1.5
     return mdep * phi
 
 
@@ -399,8 +399,8 @@ def get_tau(C, mag):
     Returns the between-event variability described in equation 13, line 2
     """
     # eq. 13 to calculate inter-event standard error
-    mag_test = min(max(mag, 5.0), 6.5) - 5.0
-    return C['tau1'] + ((C['tau2'] - C['tau1']) / 1.5) * mag_test
+    mag_test = np.clip(mag - 5.0, 0., 1.5)
+    return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
 class ChiouYoungs2014(GMPE):
