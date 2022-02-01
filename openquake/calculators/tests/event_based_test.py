@@ -45,7 +45,6 @@ from openquake.qa_tests_data.event_based import (
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
-# from GriddedSurface import get_nproj
 
 aac = numpy.testing.assert_allclose
 
