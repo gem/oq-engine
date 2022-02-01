@@ -32,8 +32,6 @@ spec:
         env: 
         - name: OQ_CONFIG_FILE 
           value: /opt/openquake/venv/openquake.cfg 
-        - name: HDF5_USE_FILE_LOCKING
-          value: "FALSE"
         - name: HOME 
           value: /opt/openquake 
         - name: PATH 
@@ -54,6 +52,8 @@ spec:
         - name: azure 
           persistentVolumeClaim: 
             claimName: nfsdata
+      nodeSelector:
+        vCpu: AMD
       tolerations:
       - key: "kubernetes.azure.com/scalesetpriority"
         operator: "Equal"
