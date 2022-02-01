@@ -189,5 +189,20 @@ class MultiFaultSource(BaseSeismicSource):
 
     polygon = NP.polygon
     wkt = NP.wkt
-    get_bounding_box = NP.get_bounding_box
     mesh_size = NP.mesh_size
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing the sections, enlarged by the maximum distance
+        """
+        surfaces = []
+        for sec in self.sections.values():
+            if isinstance(sec.surface, MultiSurface):
+                surfaces.extend(sec.surface.surfaces)
+            else:
+                surfaces.append(sec.surface)
+        multi_surf = MultiSurface(surfaces)
+        west, east, north, south = multi_surf.get_bounding_box()
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, north, south)
+        return west - a2, south - a1, east + a2, north + a1
