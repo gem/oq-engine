@@ -117,7 +117,7 @@ def _get_ln_y_ref(ctx, C):
         * ctx.rrup
         # fifth part
         + C['c8'] * dist_taper
-        * min(max(ctx.mag - 5.5, 0) / 0.8, 1.0)
+        * np.clip((ctx.mag - 5.5, 0) / 0.8, 0., 1.)
         * np.exp(-1 * C['c8a'] * (ctx.mag - C['c8b']) ** 2) * centered_dpp
         # sixth part
         # + C['c9'] * Fhw * np.cos(math.radians(ctx.dip)) *
@@ -172,7 +172,7 @@ def get_directivity(clsname, C, ctx):
         # No directivity term
         return 0.0
     f_dir = np.exp(-C["c8a"] * ((ctx.mag - C["c8b"]) ** 2.)) * cdpp
-    f_dir *= min((max(ctx.mag - 5.5, 0.0) / 0.8), 1.)
+    f_dir *= np.clip((ctx.mag - 5.5) / 0.8, 0., 1.)
     rrup_max = ctx.rrup - 40.
     rrup_max[rrup_max < 0.0] = 0.0
     rrup_max = 1.0 - (rrup_max / 30.)
@@ -341,8 +341,8 @@ def get_phi(C, mag, ctx, nl0):
     phi = C["sig3"] * np.ones(ctx.vs30.shape)
     phi[ctx.vs30measured] = 0.7
     phi = np.sqrt(phi + ((1.0 + nl0) ** 2.))
-    mdep = C["sig1"] + (((C["sig2"] - C["sig1"]) / 1.5) *
-                        (min(max(mag, 5.0), 6.5) - 5.0))
+    mdep = C["sig1"] + (
+        C["sig2"] - C["sig1"]) * np.clip(mag - 5., 0., 1.5) / 1.5
     return mdep * phi
 
 
@@ -399,8 +399,8 @@ def get_tau(C, mag):
     Returns the between-event variability described in equation 13, line 2
     """
     # eq. 13 to calculate inter-event standard error
-    mag_test = min(max(mag, 5.0), 6.5) - 5.0
-    return C['tau1'] + ((C['tau2'] - C['tau1']) / 1.5) * mag_test
+    mag_test = np.clip(mag - 5.0, 0., 1.5)
+    return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
 class ChiouYoungs2014(GMPE):
