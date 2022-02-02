@@ -53,6 +53,18 @@ if, for any reason, the `oq` command isn't available in the path you can use the
 ```bash
 $ python3 -m openquake.server.manage <subcommand> 
 ```
+An example configuration is the follow:
+
+```python
+# Enable authentication
+LOCKDOWN = True
+
+#Static Folder
+STATIC_ROOT = '/var/www/webui'
+```
+
+
+After the creation of the files perform the same steps of the package installation to setup the environment, 
 
 ##### Groups support
 
@@ -62,8 +74,6 @@ Users can be part of groups. Members of the same group can have access to any ca
 ##### Users and groups management
 
 Users and group can be managed via the Django admin interface, available at `/admin` when `LOCKDOWN` is enabled.
-
-
 
 
 #### Authentication using PAM
