@@ -25,6 +25,7 @@ jobs:
         pip install pytest
         pip install fiona
         pip install -r requirements-py39-linux64.txt && pip install -e .
+        python -c'import shapely as s; print("shapely=%s" % s.__version__)'
     - name: Test with pytest
       run: |
         oq dbserver start

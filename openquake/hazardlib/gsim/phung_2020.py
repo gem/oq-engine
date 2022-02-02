@@ -166,7 +166,7 @@ class PhungEtAl2020Asc(GMPE):
             # directivity [11]
             lnmed += C['c8'] \
                 * np.maximum(1 - np.maximum(ctx.rrup - 40, 0) / 30, 0) \
-                * min(max(ctx.mag - 5.5, 0) / 0.8, 1) \
+                * np.clip((ctx.mag - 5.5) / 0.8, 0., 1.) \
                 * math.exp(s['c8_a'] * (ctx.mag - C['c8_b']) ** 2) \
                 * self.d_dpp
             # fmag [6, 7]
