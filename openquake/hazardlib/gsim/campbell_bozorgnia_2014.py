@@ -80,7 +80,7 @@ def _get_f1rx(C, r_x, r_1):
     Defines the f1 scaling coefficient defined in equation 9
     """
     rxr1 = r_x / r_1
-    return C["h1"] + C["h2"] * rxr1 + C["h3"] * (rxr1 ** 2.)
+    return C["h1"] + C["h2"] * rxr1 + C["h3"] * rxr1 ** 2
 
 
 def _get_f2rx(C, r_x, r_1, r_2):
@@ -88,7 +88,7 @@ def _get_f2rx(C, r_x, r_1, r_2):
     Defines the f2 scaling coefficient defined in equation 10
     """
     drx = (r_x - r_1) / (r_2 - r_1)
-    return CONSTS["h4"] + C["h5"] * drx + C["h6"] * (drx ** 2.)
+    return CONSTS["h4"] + C["h5"] * drx + C["h6"] * drx ** 2
 
 
 def _get_fault_dip_term(C, ctx):
@@ -105,8 +105,8 @@ def _get_geometric_attenuation_term(C, mag, rrup):
     """
     Returns the geometric attenuation term defined in equation 3
     """
-    return (C["c5"] + C["c6"] * mag) * np.log(np.sqrt((rrup ** 2.) +
-                                                      (C["c7"] ** 2.)))
+    return (C["c5"] + C["c6"] * mag) * np.log(
+        np.sqrt(rrup ** 2 + C["c7"] ** 2))
 
 
 def _get_hanging_wall_coeffs_dip(dip):
@@ -181,9 +181,7 @@ def _get_hypocentral_depth_term(C, ctx):
     """
     Returns the hypocentral depth scaling term defined in equations 21 - 23
     """
-    fhyp_h = ctx.hypo_depth - 7.0
-    fhyp_h[ctx.hypo_depth <= 7.0] = 0.0
-    fhyp_h[ctx.hypo_depth > 20.0] = 13.0
+    fhyp_h = np.clip(ctx.hypo_depth - 7.0, 0., 13.)
     fhyp_m = C["c17"] + (C["c18"] - C["c17"]) * (ctx.mag - 5.5)
     fhyp_m[ctx.mag <= 5.5] = C["c17"]
     fhyp_m[ctx.mag > 6.5] = C["c18"]

@@ -129,9 +129,7 @@ def _get_style_of_faulting_term(C, ctx):
     # Re-defined this method to replace c8, which is now
     # IMT-dependent in BC15
     fflt_f = C["c8"] * frv + C["c9"] * fnm
-    fflt_m = ctx.mag - 4.5
-    fflt_m[ctx.mag <= 4.5] = 0.
-    fflt_m[ctx.mag > 5.5] = 1.
+    fflt_m = np.clip(ctx.mag - 4.5, 0., 1.)
     return fflt_f * fflt_m
 
 
