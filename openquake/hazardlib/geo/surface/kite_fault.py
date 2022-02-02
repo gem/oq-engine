@@ -313,14 +313,14 @@ class KiteSurface(BaseSurface):
         if found:
             azi_strike = azimuth(self.mesh.lons[irow, icol],
                                  self.mesh.lats[irow, icol],
-                                 self.mesh.lons[irow+1, icol],
-                                 self.mesh.lats[irow+1, icol])
+                                 self.mesh.lons[irow, icol+1],
+                                 self.mesh.lats[irow, icol+1])
             azi_dip = azimuth(self.mesh.lons[irow, icol],
                               self.mesh.lats[irow, icol],
-                              self.mesh.lons[irow, icol+1],
-                              self.mesh.lats[irow, icol+1])
+                              self.mesh.lons[irow+1, icol],
+                              self.mesh.lats[irow+1, icol])
 
-            if abs((azi_strike + 90) % 360 - azi_dip) < 10:
+            if abs((azi_strike - 90) % 360 - azi_dip) < 40:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
@@ -466,84 +466,13 @@ class KiteSurface(BaseSurface):
             Lower edge  |____________________|
 
         """
-        # Resample profiles using the resampling distance provided
-        rprofiles = []
-        for prf in profiles:
-            rprofiles.append(_resample_profile(prf, profile_sd))
 
-        # Set the reference profile i.e. the longest one
-        ref_idx = None
-        max_length = -1e10
-        for idx, prf in enumerate(rprofiles):
-            length = prf.get_length()
-            if length > max_length:
-                max_length = length
-                ref_idx = idx
+        # Fix profiles
+        rprof, ref_idx = _fix_profiles(profiles, profile_sd, align, idl)
 
-        # Check that in each profile the points are equally spaced
-        for pro in rprofiles:
-            pnts = [(p.longitude, p.latitude, p.depth) for p in pro.points]
-            pnts = np.array(pnts)
+        # Create mesh
+        msh = _create_mesh(rprof, ref_idx, edge_sd, idl)
 
-            # Check that the profile is not crossing the IDL and compute the
-            # distance between consecutive points along the profile
-            assert np.all(pnts[:, 0] <= 180) & np.all(pnts[:, 0] >= -180)
-            dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
-                           pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
-
-            # Check that all the distances are within a tolerance
-            np.testing.assert_allclose(dst, profile_sd, rtol=1.)
-
-        # Find the delta needed to align profiles if requested
-        shift = np.zeros(len(rprofiles)-1)
-        if align is True:
-            for i in range(0, len(rprofiles)-1):
-                shift[i] = profiles_depth_alignment(rprofiles[i],
-                                                    rprofiles[i+1])
-        shift = np.array([0] + list(shift))
-
-        # Find the maximum back-shift
-        ccsum = [shift[0]]
-        for i in range(1, len(shift)):
-            ccsum.append(shift[i] + ccsum[i-1])
-        add = ccsum - min(ccsum)
-
-        # Create resampled profiles. Now the profiles should be all aligned
-        # from the top (if align option is True)
-        rprof = []
-        maxnum = 0
-        for i, pro in enumerate(rprofiles):
-            j = int(add[i])
-            coo = get_coords(pro, idl)
-            tmp = [[np.nan, np.nan, np.nan] for a in range(0, j)]
-            if len(tmp) > 0:
-                points = tmp + coo
-            else:
-                points = coo
-            rprof.append(points)
-            maxnum = max(maxnum, len(rprof[-1]))
-
-        # Now profiles will have the same number of samples (some of them can
-        # be nan). This is needed to have an array to store the surface.
-        for i, pro in enumerate(rprof):
-            while len(pro) < maxnum:
-                pro.append([np.nan, np.nan, np.nan])
-            rprof[i] = np.array(pro)
-
-        # Create mesh the in the forward direction
-        prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
-
-        # Create the mesh in the backward direction
-        if ref_idx > 0:
-            prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl)
-        else:
-            prfl = []
-        prf = prfl + prfr
-        msh = np.array(prf)
-
-        # Convert from profiles to edges
-        msh = msh.swapaxes(0, 1)
-        msh = fix_mesh(msh)
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
                    profiles, sec_id)
 
