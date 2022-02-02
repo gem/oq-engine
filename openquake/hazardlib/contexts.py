@@ -222,9 +222,10 @@ class ContextMaker(object):
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
-                if hasattr(gsim, 'gmpe'):  # ModifiableGMPE, NRCanSiteTerm
+                if hasattr(gsim, 'gmpe') and hasattr(gsim, 'params'):
+                    # ModifiableGMPE
                     if (req == 'SITES_PARAMETERS' and
-                        'apply_swiss_amplification' in gsim.params):
+                            'apply_swiss_amplification' in gsim.params):
                         reqset.add('amplfactor')
             setattr(self, 'REQUIRES_' + req, reqset)
         if 'imtls' in param:
