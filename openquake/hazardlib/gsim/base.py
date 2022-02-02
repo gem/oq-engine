@@ -495,7 +495,7 @@ class GMPE(GroundShakingIntensityModel):
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, m] += s * ctx.adjustment
+                    ms[0, m] += s * self.adjustment
                 outs.append(_get_poes(ms, loglevels, truncation_level))
             arr[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
@@ -507,7 +507,8 @@ class GMPE(GroundShakingIntensityModel):
         else:  # regular case
             # split large arrays in slices < 1 MB to fit inside the CPU cache
             for sl in gen_slices(0, N, maxsize):
-                arr[sl] = _get_poes(mean_std[:, :, sl], loglevels, truncation_level)
+                arr[sl] = _get_poes(mean_std[:, :, sl],
+                                    loglevels, truncation_level)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for imt in loglevels:
             if imtweight and imtweight.dic.get(imt) == 0:
