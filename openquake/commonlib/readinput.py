@@ -508,14 +508,17 @@ def get_site_model(oqparam):
     return numpy.concatenate(arrays)
 
 
-def count_no_vect(gsim_lt):
-    # count the number of nonvectorized GMPEs
-    no = 0
+def get_no_vect(gsim_lt):
+    """
+    :returns: the names of the non-vectorized GMPEs
+    """
+    names = set()
     for gsims in gsim_lt.values.values():
         for gsim in gsims:
             compute = getattr(gsim.__class__, 'compute')
-            no += 'ctx' not in compute.__annotations__
-    return no
+            if 'ctx' not in compute.__annotations__:
+                names.add(gsim.__class__.__name__)
+    return names
 
 
 def get_site_collection(oqparam, h5=None):
@@ -619,9 +622,9 @@ def get_gsim_lt(oqparam, trts=('*',)):
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     gsim_lt_cache[key] = gsim_lt
     if trts != ('*',):  # not in get_input_files
-        no_vect = count_no_vect(gsim_lt)
+        no_vect = get_no_vect(gsim_lt)
         if no_vect:
-            logging.info('There are %d not vectorized GMPEs', no_vect)
+            logging.info('The following GMPEs are not vectorized: %s', no_vect)
     return gsim_lt
 
 
