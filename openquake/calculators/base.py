@@ -428,16 +428,20 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
+        oq = self.oqparam
         f, s = self.csm.get_floating_spinning_factors()
         if f != 1:
             logging.info('Rupture floating factor = %s', f)
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
-        if (f * s >= 1.5 and self.oqparam.no_pointsource_distance
-                and 'classical' in self.oqparam.calculation_mode):
+        if (f * s >= 1.5 and oq.no_pointsource_distance
+                and 'classical' in oq.calculation_mode):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
+        elif 'classical' in oq.calculation_mode:
+            logging.info('Using pointsource_distance=%s',
+                         oq.pointsource_distance)
 
     def read_inputs(self):
         """
