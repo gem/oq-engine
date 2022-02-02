@@ -667,6 +667,8 @@ class ContextMaker(object):
             with self.poe_mon:
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
+                    if hasattr(gsim, 'adjustment'):  # NSHM14
+                        ctx.adjustment = gsim.adjustment[s:s+n]
                     ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method
