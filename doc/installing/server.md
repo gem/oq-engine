@@ -63,8 +63,7 @@ LOCKDOWN = True
 STATIC_ROOT = '/var/www/webui'
 ```
 
-
-After the creation of the files perform the same steps of the package installation to setup the environment, 
+After the creation of the files perform the same steps of the package installation to setup the environment with root user
 
 ##### Groups support
 
