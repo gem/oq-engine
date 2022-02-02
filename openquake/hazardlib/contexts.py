@@ -589,8 +589,12 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
-        recarray = self.recarray(ctxs) if any_recarray(self.gsims) else None
+        if len(ctxs) == 1 and isinstance(ctxs[0], numpy.recarray):
+            # happens in event_based/case_22
+            recarray = ctxs[0]
+        else:
+            ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
+            recarray = self.recarray(ctxs) if any_recarray(self.gsims) else 0
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
