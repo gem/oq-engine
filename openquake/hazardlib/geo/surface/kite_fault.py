@@ -585,15 +585,16 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
         An instance of  :class:`openquake.hazardlib.geo.Mesh`
     """
 
-    # Create the mesh the in the forward direction
+    # Create the mesh in the forward direction
     prfr = []
     if ref_idx < len(rprof)-1:
         prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
 
     # Create the mesh in the backward direction
     prfl = []
+    last = False if ref_idx < len(rprof) - 1 else True
     if ref_idx > 0:
-        prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl)
+        prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl, last)
 
     # Create the whole mesh
     prf = prfl + prfr
@@ -633,7 +634,6 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     lengths = np.array([prf.get_length() for prf in rprofiles])
     if np.max(lengths) - np.min(lengths) > profile_sd*0.1:
         ref_idx = np.argmax(lengths)
-    max_length = lengths[ref_idx]
 
     # Check that in each profile the points are equally spaced
     for pro in rprofiles:
@@ -980,8 +980,8 @@ def get_mesh(pfs, rfi, sd, idl):
 
         # Fixing IDL case
         if idl:
-            for ii in range(0, len(pl)):
-                ptmp = pl[ii][0]
+            for vpl, ii in enumerate(pl):
+                ptmp = vpl[0]
                 ptmp = ptmp+360 if ptmp < 0 else ptmp
                 pl[ii][0] = ptmp
 
@@ -1159,7 +1159,7 @@ def update_rdist(rdist, az12, angle, sd):
     return rdist_new
 
 
-def get_mesh_back(pfs, rfi, sd, idl):
+def get_mesh_back(pfs, rfi, sd, idl, last):
     """
     Compute resampled profiles in the backward direction from the reference
     profile and creates the portion of the mesh 'before' the reference profile.
@@ -1245,18 +1245,16 @@ def get_mesh_back(pfs, rfi, sd, idl):
                 new_rdist = update_rdist(rdist[k], az12, angle[k], sd)
 
             # Calculate the number of cells
-            #ndists = int(np.floor((tdist+rdist[k])/sd))
             ndists = int(np.floor((tdist+new_rdist)/sd))
 
             # Adding new points along edge with index k
             for j, _ in enumerate(range(ndists)):
-                #
+
                 # add new profile
                 if len(npr)-1 < laidx[k]+1:
                     npr = add_empty_profile(npr)
-                #
+
                 # fix distance
-                #tmp = (j+1)*sd - rdist[k]
                 tmp = (j+1)*sd - new_rdist
                 lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
                                   tmp*hdist/tdist*1e3)
@@ -1298,7 +1296,8 @@ def get_mesh_back(pfs, rfi, sd, idl):
             assert rdist[k] < sd
 
     tmp = []
-    for i in range(len(npr)-1, 0, -1):
+    to_idx = -1 if last else 0
+    for i in range(len(npr)-1, to_idx, -1):
         tmp.append(npr[i])
 
     return tmp
