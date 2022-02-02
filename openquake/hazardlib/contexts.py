@@ -107,13 +107,22 @@ def get_num_distances(gsims):
     return len(dists)
 
 
+def use_recarray(gsim):
+    """
+    :returns: True if the gsim or its underlying require a recarray
+    """
+    if gsim.compute.__annotations__.get("ctx") is numpy.recarray:
+        return True
+    if hasattr(gsim, 'gmpe'):  # for NRCanSiteTerm
+        return gsim.gmpe.compute.__annotations__.get("ctx") is numpy.recarray
+
+
 def any_recarray(gsims):
     """
     :returns:
         True if the `ctx` argument of gsim.compute is a recarray for any gsim
     """
-    return any(gsim.compute.__annotations__.get("ctx") is numpy.recarray
-               for gsim in gsims)
+    return any(use_recarray(gsim) for gsim in gsims)
 
 
 def csdict(M, N, P, start, stop):
@@ -213,6 +222,11 @@ class ContextMaker(object):
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
+                if hasattr(gsim, 'gmpe') and hasattr(gsim, 'params'):
+                    # ModifiableGMPE
+                    if (req == 'SITES_PARAMETERS' and
+                            'apply_swiss_amplification' in gsim.params):
+                        reqset.add('amplfactor')
             setattr(self, 'REQUIRES_' + req, reqset)
         if 'imtls' in param:
             self.imtls = param['imtls']
@@ -580,13 +594,16 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
-        recarray = self.recarray(ctxs) if any_recarray(self.gsims) else None
+        if len(ctxs) == 1 and isinstance(ctxs[0], numpy.recarray):
+            # happens in event_based/case_22
+            recarray = ctxs[0]
+        else:
+            ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
+            recarray = self.recarray(ctxs) if any_recarray(self.gsims) else 0
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
-            for ctx in ([recarray] if compute.__annotations__.get("ctx")
-                        is numpy.recarray else ctxs):
+            for ctx in ([recarray] if use_recarray(gsim) else ctxs):
                 slc = slice(start, start + len(ctx))
                 compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 start = slc.stop
@@ -667,6 +684,8 @@ class ContextMaker(object):
             with self.poe_mon:
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
+                    if hasattr(gsim, 'adjustment'):  # NSHM14
+                        ctx.adjustment = gsim.adjustment[s:s+n]
                     ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method

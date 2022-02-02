@@ -217,4 +217,16 @@ class ChiouYoungs2014Armenia(ChiouYoungs2014):
     3.00     -1.94949    0.28219   1.223141696    1.318344654
     4.00     -1.94949    0.28219   1.223141696    1.318344654
     """)
-    compute = compute
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        Adjustments for Armenia
+        """
+        self.__class__.__base__.compute(self, ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            C_ADJ = self.COEFFS_ADJUST[imt]
+            # Offset factor is dependent on magnitude and inter-event residual
+            mean[m] += (C_ADJ["a"] + C_ADJ["b"] * ctx.mag) * tau[m]
+            tau[m] = tau[m] * C_ADJ["tau_adj"]
+            phi[m] = phi[m] * C_ADJ["sig_adj"]
+            sig[m] = np.sqrt(tau[m] ** 2 + phi[m] ** 2)

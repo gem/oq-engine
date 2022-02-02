@@ -152,8 +152,9 @@ def read_cmaker_df(gsim, csvfnames):
 def gen_ctxs(df):
     """
     :param df: a DataFrame with a specific structure
-    :yields: RuptureContexts
+    :returns: a list of RuptureContexts
     """
+    ctxs = []
     rrp = [col for col in df.columns if col.startswith('rup_')]
     pars = [col for col in df.columns if col.startswith(('dist_', 'site_'))]
     outs = df.result_type.unique()
@@ -182,7 +183,8 @@ def gen_ctxs(df):
             setattr(ctx, par[5:], value)  # dist_, site_ parameters
         ctx.sids = np.arange(len(gr))
         assert len(gr) == len(grp) / num_outs, (len(gr), len(gr) / num_outs)
-        yield ctx
+        ctxs.append(ctx)
+    return ctxs
 
 
 class BaseGSIMTestCase(unittest.TestCase):
