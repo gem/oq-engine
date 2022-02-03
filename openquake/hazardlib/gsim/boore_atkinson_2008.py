@@ -37,7 +37,7 @@ def hawaii_adjust(mean, ctx, imt):
         freq = 1./imt.period
 
     # Equation 3 of Atkinson (2010)
-    x1 = np.min([-0.18+0.17*np.log10(freq), 0])
+    x1 = np.min([-0.18 + 0.17 * np.log10(freq), 0])
 
     # Equation 4 a-b-c of Atkinson (2010)
     x0 = np.full_like(ctx.hypo_depth, 0.2)
@@ -133,8 +133,8 @@ class BooreAtkinson2008(GMPE):
             if self.kind in ('2011', 'prime'):
                 # correction factor (see Atkinson and Boore, 2011; equation 5
                 # at page 1126 and nga08_gm_tmr.for line 508
-                corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * ctx.mag]) -
-                                   (np.max([0, 2.933 - 0.510 * ctx.mag]) *
+                corr_fact = 10.0**(np.clip(3.888 - 0.674 * ctx.mag, 0, None) -
+                                   (np.clip(2.933 - 0.510 * ctx.mag, 0, None) *
                                     np.log10(ctx.rjb + 10.)))
                 mean[m] = np.log(np.exp(mean[m]) * corr_fact)
 
