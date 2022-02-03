@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <geometryModel
+    name="sections_rupture200"
+    >
+        <section
+        id="21"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            167.0929 -44.9832 0.0 167.0658 -44.9527 22.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            167.1094 -44.9678 0.0 167.0824 -44.9373 22.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            167.1834 -44.907 0.0 167.1564 -44.8765 22.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="20"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.9821 -45.0393 0.0 166.9551 -45.0088 22.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            167.017 -45.0338 0.0 166.99 -45.0033 22.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            167.0462 -45.0193 0.0 167.0192 -44.9888 22.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            167.0839 -44.9916 0.0 167.0569 -44.9611 22.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            167.0929 -44.9832 0.0 167.0659 -44.9527 22.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="74"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.9012 -45.0621 0.0 166.875 -45.0325 22.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.9416 -45.0272 0.0 166.9154 -44.9976 22.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="73"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.8607 -45.0969 0.0 166.8345 -45.0673 22.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.9012 -45.0621 0.0 166.875 -45.0325 22.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="75"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.8607 -45.0969 0.0 166.8323 -45.0648 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.8246 -45.1243 0.0 166.7962 -45.0922 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.7716 -45.1735 0.0 166.7431 -45.1414 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="76"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.7716 -45.1735 0.0 166.7432 -45.1413 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.7208 -45.2205 0.0 166.6923 -45.1883 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.7045 -45.2413 0.0 166.676 -45.2091 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.688 -45.2528 0.0 166.6595 -45.2206 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="77"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.688 -45.2528 0.0 166.6595 -45.2206 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.6273 -45.2949 0.0 166.5988 -45.2627 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.5804 -45.316 0.0 166.5519 -45.2838 23.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="1593"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.2254 -45.292 0.0 165.5169 -45.261 25.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.3603 -45.1877 0.0 165.6531 -45.1567 25.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.4865 -45.1099 0.0 165.7803 -45.0789 25.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="1592"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.0443 -45.5129 0.0 165.3331 -45.4814 25.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.1523 -45.4218 0.0 165.4422 -45.3903 25.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.21 -45.3038 0.0 165.5014 -45.2723 25.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.2254 -45.292 0.0 165.517 -45.2605 25.9
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="475"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.5383 -45.6827 0.0 166.5074 -45.6481 25.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.4438 -45.7551 0.0 166.4129 -45.7205 25.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+        <section
+        id="474"
+        >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.564 -45.5883 0.0 166.5332 -45.5537 25.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.5494 -45.6741 0.0 166.5186 -45.6395 25.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            166.5383 -45.6827 0.0 166.5075 -45.6481 25.7
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+    </geometryModel>
+</nrml>
