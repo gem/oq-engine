@@ -1,3 +1,7 @@
+
+  [Marco Pagani]
+  * Added a more flexible version of the GC2 implementation
+
   [Michele Simionato]
   * Optimized .get_bounding_box, .polygon and .mesh_size for MultiFaultSources
   * Fixed bug in presence of mixed vectorized/nonvectorized GMPEs
