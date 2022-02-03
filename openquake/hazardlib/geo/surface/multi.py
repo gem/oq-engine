@@ -690,3 +690,50 @@ class MultiSurface(BaseSurface):
         pos_gc2u = self.gc2u >= self.gc_length
         ry0[pos_gc2u] = self.gc2u[pos_gc2u] - self.gc_length
         return ry0
+
+
+def get_dst_multi(rup, sites, params, dbuffer):
+    """
+    """
+    from openquake.hazardlib.calc.filters import get_distances
+    # Updating the buffer with the distances for the sections not yet
+    # considered
+    suids = []
+    for srf in rup.surface.surfaces:
+        suids.append(srf.suid)
+        if srf.suid not in dbuffer:
+            dbuffer[srf.suid] = {}
+            for param in params:
+                distances = _get_distances(srf, sites, param)
+                dbuffer[srf.suid][param] = distances
+    # Computing distances from the buffer
+    output = {}
+    for param in params:
+        distances = _get_distances_from_buffer(dbuffer, suids, param)
+        output[param] = distances
+    return output, dbuffer
+
+
+def _get_distances_from_buffer(dbuffer, suids, param):
+    distances = dbuffer[suids[0]][param]
+    if param == 'rjb':
+        for suid in suids:
+            distances = numpy.minimum(distances, dbuffer[suid][param])
+    else:
+        raise ValueError('Unknown distance measure %r' % param)
+    return distances
+
+
+def _get_distances(surface, sites, param):
+    if param == 'rrup':
+        dist = surface.get_min_distance(sites)
+    elif param == 'rjb':
+        dist = surface.get_joyner_boore_distance(sites)
+    elif param == 'rx':
+        dist = surface.get_rx_distance(sites)
+    elif param == 'ry0':
+        dist = surface.get_ry0_distance(sites)
+    else:
+        raise ValueError('Unknown distance measure %r' % param)
+    return dist
+

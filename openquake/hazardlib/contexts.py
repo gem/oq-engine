@@ -46,6 +46,7 @@ from openquake.hazardlib.calc.filters import (
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.geo.surface.multi import get_dst_multi, MultiSurface
 
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
@@ -411,6 +412,10 @@ class ContextMaker(object):
             irups = src_or_ruptures
         ctxs = []
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
+
+        # Create the distance buffer. A dictionary containing
+        dbuff = {}
+
         for rup in irups:
             sites = getattr(rup, 'sites', sitecol)
             try:
@@ -419,9 +424,18 @@ class ContextMaker(object):
                 continue
             ctx = self.make_rctx(rup)
             ctx.sites = r_sites
-            for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                distances = get_distances(rup, r_sites, param)
+
+            # This is a multifault source
+            if isinstance(rup.surface, MultiSurface):
+                params = self.REQUIRES_DISTANCES - {'rrup'}
+                distances, dbuff = get_dst_multi(rup, r_sites, params, dbuff)
+                for key in distances:
+                    setattr(dctx, key, distances[key])
+            else:
+                for param in self.REQUIRES_DISTANCES - {'rrup'}:
+                    distances = get_distances(rup, r_sites, param)
                 setattr(dctx, param, distances)
+
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
             if reqv_obj and isinstance(rup.surface, PlanarSurface):
                 reqv = reqv_obj.get(dctx.repi, rup.mag)

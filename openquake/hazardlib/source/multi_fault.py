@@ -102,7 +102,17 @@ class MultiFaultSource(BaseSeismicSource):
 
         Set the attribute .sections to the passed dictionary
         """
+        # Check
         assert sections
+
+        # Assign to the surface the index of the corresponding section
+        for key in sections:
+            sections[key].surface.suid = key
+
+        # `i` is the index of the rupture of the `n` admitted by this source.
+        # In this loop we check that all the IDs of the sections composing one
+        # rupture have a object in the sections dictionary describing their
+        # geometry.
         self.sections = sections
         msg = 'Rupture #{:d}: section "{:s}" does not exist'
         for i in range(len(self.mags)):
@@ -117,7 +127,7 @@ class MultiFaultSource(BaseSeismicSource):
         :param fromidx: start
         :param untilidx: stop
         """
-        # check
+        # Check
         if 'sections' not in self.__dict__:
             raise RuntimeError('You forgot to call set_sections in %s!' % self)
 

@@ -82,7 +82,7 @@ class KiteSurface(BaseSurface):
         # Clean the mesh
         success = self._clean()
         if not success:
-            msg = f'Error while initialising section (id: {sec_id})'
+            msg = f"Error while initialising section (id: {sec_id})"
             raise ValueError(msg)
 
         # Save profiles

@@ -285,6 +285,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
         self.weight = weight
+        self.ruid = None
 
     @property
     def code(self):
