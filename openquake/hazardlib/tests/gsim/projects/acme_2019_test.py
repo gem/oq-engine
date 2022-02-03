@@ -30,6 +30,7 @@ class AlAtikSigmaModelTest(unittest.TestCase):
             sites, rup, rup, imt, stdt)
 
     def test02(self):
+        raise unittest.SkipTest("Rewrite this in a modern way")
         # checks if gmpe is always being evaluated at vs30=760
         # see HID 2.6.2
         filename = os.path.join(DATA_PATH, 'kappa.txt')

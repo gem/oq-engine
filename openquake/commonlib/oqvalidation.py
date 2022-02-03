@@ -28,7 +28,7 @@ import collections
 import multiprocessing
 import numpy
 
-from openquake.baselib import __version__, hdf5, python3compat
+from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
@@ -728,6 +728,10 @@ width_of_mfd_bin:
   Default: None
 """ % __version__
 
+try:
+    PSDIST = config.performance.pointsource_distance
+except AttributeError:
+    PSDIST = 1000
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 TWO32 = 2 ** 32
@@ -879,7 +883,7 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.floatdict, {'default': 1000})
+    pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
     ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)

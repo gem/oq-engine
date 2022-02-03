@@ -118,12 +118,11 @@ def _get_c_p(region, imt, rrup, m):
 
 
 def _get_edelta(C, m, stress_drop):
-    if stress_drop <= 100:
-        edelta = (C['s0'] + C['s1']*m + C['s2']*m**2 + C['s3']*m**3 +
-                  C['s4']*m**4)
-    else:
-        edelta = (C['s5'] + C['s6']*m + C['s7']*m**2 + C['s8']*m**3 +
-                  C['s9']*m**4)
+    edelta = (C['s0'] + C['s1']*m + C['s2']*m**2 + C['s3']*m**3 +
+              C['s4']*m**4)
+    m = m[stress_drop > 100]
+    edelta[stress_drop > 100] = (C['s5'] + C['s6']*m + C['s7']*m**2 +
+                                 C['s8']*m**3 + C['s9']*m**4)
     return edelta
 
 
@@ -146,10 +145,9 @@ def _get_f_m(C, imt, m):
     Implements eq. 3 at page 1991
     """
     mh = C['Mh']
-    if m <= mh:
-        return C['e0'] + C['e1']*(m-mh) + C['e2']*(m-mh)**2
-    else:
-        return C['e0'] + C['e3']*(m-mh)
+    res = C['e0'] + C['e1'] * (m - mh) + C['e2'] * (m - mh)**2
+    res[m > mh] = C['e0'] + C['e3']*(m[m > mh] - mh)
+    return res
 
 
 def _get_f_z(C, imt, rrup, m):
@@ -224,8 +222,8 @@ def _get_stress_drop_adjstment(region, focal_depth, C, imt, m):
     """
     if region == 'CENA':
         d = focal_depth
-        t1 = min([0, 0.290*(d - 10.)])
-        t2 = min([0, 0.229*(m - 5.)])
+        t1 = np.clip(0.290*(d - 10.), None, 0)
+        t2 = np.clip(0.229*(m - 5.), None, 0)
         delta_sigma = np.exp(5.704 + t1 + t2)
         edelta = _get_edelta(C, m, delta_sigma)
         return edelta * np.log(delta_sigma/100.)
@@ -312,7 +310,7 @@ class YenierAtkinson2015BSSA(GMPE):
         self.region = region
         self.gmpe = BooreEtAl2014()
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
             C2 = self.COEFFS_TAB2[imt]
             C3 = self.COEFFS_TAB3[imt]

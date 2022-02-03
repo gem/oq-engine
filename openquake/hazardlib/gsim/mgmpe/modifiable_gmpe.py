@@ -21,10 +21,10 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.contexts import STD_TYPES
+from openquake.hazardlib.contexts import STD_TYPES, get_mean_stds
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib import const, contexts
-from openquake.hazardlib.imt import from_string, PGA, PGV
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.const import IMC
 
 
@@ -305,9 +305,10 @@ class ModifiableGMPE(GMPE):
 
         if 'apply_swiss_amplification' in self.params:
             self.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
+            self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
         # Compute the original mean and standard deviations
-        self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
+        mean[:], sig[:], tau[:], phi[:] = get_mean_stds(self.gmpe, ctx, imts)
         g = globals()
         for m, imt in enumerate(imts):
             # Save mean and stds

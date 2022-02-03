@@ -65,12 +65,13 @@ def _get_centered_ztor(ctx):
     Get ztor centered on the M- dependent avarage ztor(km)
     by different fault types.
     """
-    if 30 <= ctx.rake <= 150:
-        # Reverse and reverse-oblique faulting
-        mean_ztor = max(2.704 - 1.226 * max(ctx.mag - 5.849, 0.0), 0.) ** 2
-    else:
-        # Strike-slip and normal faulting
-        mean_ztor = max(2.673 - 1.136 * max(ctx.mag - 4.970, 0.0), 0.) ** 2
+    # Strike-slip and normal faulting
+    mean_ztor = np.clip(2.673 - 1.136 * np.clip(ctx.mag - 4.970, 0., None),
+                        0., None) ** 2
+    # Reverse and reverse-oblique faulting
+    rev = (30. <= ctx.rake) & (ctx.rake <= 150.)
+    mean_ztor[rev] = np.clip(2.704 - 1.226 * np.clip(
+        ctx.mag[rev] - 5.849, 0.0, None), 0., None) ** 2
     return ctx.ztor - mean_ztor
 
 
@@ -84,7 +85,7 @@ def _get_ln_y_ref(ctx, C):
     # Normal faulting flag
     Fnm = 1. if -120 <= ctx.rake <= -60 else 0.
     # A part in eq. 11
-    mag_test1 = np.cosh(2. * max(ctx.mag - 4.5, 0))
+    mag_test1 = np.cosh(2. * np.clip(ctx.mag - 4.5, 0., None))
     # Centered DPP
     centered_dpp = 0
     # Centered Ztor
@@ -109,11 +110,12 @@ def _get_ln_y_ref(ctx, C):
         # third part
         + C['c4']
         * np.log(ctx.rrup + C['c5']
-                 * np.cosh(C['c6'] * max(ctx.mag - C['chm'], 0)))
+                 * np.cosh(C['c6'] * np.clip(ctx.mag - C['chm'], 0, None)))
         + (C['c4a'] - C['c4'])
         * np.log(np.sqrt(ctx.rrup ** 2 + C['crb'] ** 2))
         # forth part
-        + (C['cg1'] + C['cg2'] / (np.cosh(max(ctx.mag - C['cg3'], 0))))
+        + (C['cg1'] + C['cg2'] / (
+            np.cosh(np.clip(ctx.mag - C['cg3'], 0, None))))
         * ctx.rrup
         # fifth part
         + C['c8'] * dist_taper
@@ -193,7 +195,7 @@ def get_far_field_distance_scaling_1(region, C, mag, rrup):
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
     # Get the magnitude dependent term
-    f_rm = C["cg1"] + (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))
+    f_rm = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
     return f_r + f_rm * rrup
 
 
@@ -208,11 +210,10 @@ def get_far_field_distance_scaling_2(region, C, mag, rrup):
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] +
-            (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
-    if (mag > 6.0) and (mag < 6.9):
-        # Apply adjustment factor for Japan
-        f_rm *= C["gjpit"]
+    f_rm = (C["cg1"] + C["cg2"] /
+            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    # Apply adjustment factor for Japan
+    f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
     return f_r + f_rm
 
 
@@ -227,11 +228,10 @@ def get_far_field_distance_scaling_3(region, C, mag, rrup):
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] +
-            (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
-    if (mag > 6.0) and (mag < 6.9):
-        # Apply adjustment factor for Italy
-        f_rm *= C["gjpit"]
+    f_rm = (C["cg1"] + C["cg2"] /
+            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    # Apply adjustment factor for Italy
+    f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
     return f_r + f_rm
 
 
@@ -246,8 +246,8 @@ def get_far_field_distance_scaling_4(region, C, mag, rrup):
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] +
-            (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
+    f_rm = (C["cg1"] + C["cg2"] /
+            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
     # Apply adjustment factor for Wenchuan
     return f_r + (f_rm * C["gwn"])
 
@@ -258,7 +258,7 @@ def get_geometric_spreading(C, mag, rrup):
     """
     # Get the near-field magnitude scaling
     return CONSTANTS["c4"] * np.log(
-        rrup + C["c5"] * np.cosh(C["c6"] * max(mag - C["chm"], 0.0)))
+        rrup + C["c5"] * np.cosh(C["c6"] * np.clip(mag - C["chm"], 0.0, None)))
 
 
 def get_hanging_wall_term(C, ctx):
@@ -268,11 +268,10 @@ def get_hanging_wall_term(C, ctx):
     fhw = np.zeros(ctx.rrup.shape)
     idx = ctx.rx >= 0.0
     if np.any(idx):
-        fdist = 1.0 - (np.sqrt(ctx.rjb[idx] ** 2. + ctx.ztor ** 2.) /
+        fdist = 1.0 - (np.sqrt(ctx.rjb[idx] ** 2. + ctx.ztor[idx] ** 2.) /
                        (ctx.rrup[idx] + 1.0))
-        fdist *= (C["c9a"] + (1.0 - C["c9a"]) * np.tanh(ctx.rx[idx] /
-                                                        C["c9b"]))
-        fhw[idx] += (C["c9"] * np.cos(np.radians(ctx.dip)) * fdist)
+        fdist *= C["c9a"] + (1.0 - C["c9a"]) * np.tanh(ctx.rx[idx] / C["c9b"])
+        fhw[idx] += C["c9"] * np.cos(np.radians(ctx.dip[idx])) * fdist
     return fhw
 
 
@@ -351,17 +350,17 @@ def get_source_scaling_terms(C, ctx, delta_ztor):
     Returns additional source scaling parameters related to style of
     faulting, dip and top of rupture depth
     """
-    f_src = 0.0
-    coshm = np.cosh(2.0 * max(ctx.mag - 4.5, 0.0))
+    f_src = np.zeros_like(ctx.mag)
+    coshm = np.cosh(2.0 * np.clip(ctx.mag - 4.5, 0., None))
     # Style of faulting term
-    if 30 <= ctx.rake <= 150:
-        # reverse faulting flag
-        f_src += (C["c1a"] + (C["c1c"] / coshm))
-    elif -120 <= ctx.rake <= -60:
-        # normal faulting flag
-        f_src += (C["c1b"] + (C["c1d"] / coshm))
+    pos = (30 <= ctx.rake) & (ctx.rake <= 150)
+    neg = (-120 <= ctx.rake) & (ctx.rake <= -60)
+    # reverse faulting flag
+    f_src[pos] += C["c1a"] + (C["c1c"] / coshm[pos])
+    # normal faulting flag
+    f_src[neg] += C["c1b"] + (C["c1d"] / coshm[neg])
     # Top of rupture term
-    f_src += ((C["c7"] + (C["c7b"] / coshm)) * delta_ztor)
+    f_src += (C["c7"] + (C["c7b"] / coshm)) * delta_ztor
     # Dip term
     f_src += ((CONSTANTS["c11"] + (C["c11b"] / coshm)) *
               np.cos(np.radians(ctx.dip)) ** 2.0)
@@ -444,7 +443,7 @@ class ChiouYoungs2014(GMPE):
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
