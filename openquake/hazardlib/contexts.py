@@ -899,8 +899,11 @@ class PmapMaker(object):
             if pa not in vars(ctxs[0]):
                 continue
             elif par.endswith('_'):
-                dic[par] = numpy.array(
-                    [getattr(ctx, pa) for ctx in ctxs], dtype=object)
+                if par == 'probs_occur_':
+                    lst = [getattr(ctx, pa, []) for ctx in ctxs]
+                else:
+                    lst =  [getattr(ctx, pa) for ctx in ctxs]
+                dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
         return dic
