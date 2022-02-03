@@ -241,14 +241,12 @@ def run_calc(log):
     setproctitle('oq-job-%d' % log.calc_id)
     with log:
         # check the available memory before starting
-        """
         while True:
             used_mem = psutil.virtual_memory().percent
             if used_mem < 50:  # continue if little memory is in use
                 break
             logging.info('Used memory %d%%, waiting', used_mem)
             time.sleep(5)
-        """
         oqparam = log.get_oqparam()
         calc = base.calculators(oqparam, log.calc_id)
         try:
