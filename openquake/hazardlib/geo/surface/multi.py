@@ -694,6 +694,17 @@ class MultiSurface(BaseSurface):
 
 def get_dst_multi(rup, sites, params, dbuffer):
     """
+    Calculates the distances for multi-surfaces using a buffering of distances.
+
+    :param rup:
+        An instance of
+    :param sites:
+        A list of sites
+    :param params:
+        A list of keys for rupture-distance parameters
+    :param dbuffer:
+        A dictionary of dictionaries with the distances. The first key is the
+        surface ID and the second one is the type of distance
     """
     from openquake.hazardlib.calc.filters import get_distances
     # Updating the buffer with the distances for the sections not yet
@@ -716,11 +727,11 @@ def get_dst_multi(rup, sites, params, dbuffer):
 
 def _get_distances_from_buffer(dbuffer, suids, param):
     distances = dbuffer[suids[0]][param]
-    if param == 'rjb':
+    if param in ['rjb', 'rrup']:
         for suid in suids:
             distances = numpy.minimum(distances, dbuffer[suid][param])
     else:
-        raise ValueError('Unknown distance measure %r' % param)
+        raise ValueError("Unknown distance measure %r" % param)
     return distances
 
 
@@ -729,11 +740,10 @@ def _get_distances(surface, sites, param):
         dist = surface.get_min_distance(sites)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
-    elif param == 'rx':
-        dist = surface.get_rx_distance(sites)
-    elif param == 'ry0':
-        dist = surface.get_ry0_distance(sites)
+    #elif param == 'rx':
+    #    dist = surface.get_rx_distance(sites)
+    #elif param == 'ry0':
+    #    dist = surface.get_ry0_distance(sites)
     else:
-        raise ValueError('Unknown distance measure %r' % param)
+        raise ValueError(f'Unknown distance measure {param}')
     return dist
-

@@ -413,7 +413,7 @@ class ContextMaker(object):
         ctxs = []
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
 
-        # Create the distance buffer. A dictionary containing
+        # Create the distance buffer. A dictionary of dictionaries
         dbuff = {}
 
         for rup in irups:
@@ -425,6 +425,7 @@ class ContextMaker(object):
             ctx = self.make_rctx(rup)
             ctx.sites = r_sites
 
+
             # This is a multifault source
             if isinstance(rup.surface, MultiSurface):
                 params = self.REQUIRES_DISTANCES - {'rrup'}
@@ -435,6 +436,7 @@ class ContextMaker(object):
                 for param in self.REQUIRES_DISTANCES - {'rrup'}:
                     distances = get_distances(rup, r_sites, param)
                 setattr(dctx, param, distances)
+
 
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
             if reqv_obj and isinstance(rup.surface, PlanarSurface):
