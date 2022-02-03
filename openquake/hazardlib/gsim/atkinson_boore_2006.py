@@ -56,7 +56,6 @@ def _clip_distances(rrup):
     """
     rrup = rrup.copy()
     rrup[rrup < 1] = 1
-
     return rrup
 
 
@@ -112,6 +111,9 @@ def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean,
     Compute mean value (for a set of indexes) without site amplification
     terms. This is equation (5), p. 2191, without S term.
     """
+    if idxs.sum() == 0:  # no effect
+        return
+    mag = mag[idxs]
     mean[idxs] = (C['c1'] +
                   C['c2'] * mag +
                   C['c3'] * (mag ** 2) +
@@ -124,13 +126,13 @@ def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean,
 
 def _compute_ms(ctx, C):
     U, SS, NS, RS = _get_fault_type_dummy_variables(ctx)
-    if ctx.mag <= C['Mh']:
-        return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-            C['e5'] * (ctx.mag - C['Mh']) + \
-            C['e6'] * (ctx.mag - C['Mh']) ** 2
-    else:
-        return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-            C['e7'] * (ctx.mag - C['Mh'])
+    res = C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
+        C['e7'] * (ctx.mag - C['Mh'])
+    less = ctx.mag <= C['Mh']
+    res[less] = (C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS +
+                 C['e5'] * (ctx.mag[less] - C['Mh']) + C['e6'] *
+                 (ctx.mag[less] - C['Mh']) ** 2)
+    return res
 
 
 def _compute_non_linear_slope(vs30, C):
@@ -212,10 +214,10 @@ def _compute_stress_drop_adjustment(SC, mag, scale_fac):
     """
     Compute equation (6) p. 2200
     """
-    return scale_fac * np.minimum(
-        SC['delta'] + 0.05,
-        0.05 + SC['delta'] * (
-            np.maximum(mag - SC['M1'], 0) / (SC['Mh'] - SC['M1'])))
+    clipped_mag = np.clip(mag - SC['M1'], 0, None)
+    return scale_fac * np.clip(
+        0.05 + SC['delta'] * clipped_mag / (SC['Mh'] - SC['M1']),
+        None, SC['delta'] + 0.05)
 
 
 def _convert_magnitude(mag_eq, mag):
@@ -380,9 +382,8 @@ def _get_stress_drop_scaling_factor(magnitude):
     """
     stress_drop = 10.0 ** (3.45 - 0.2 * magnitude)
     cap = 10.0 ** (3.45 - 0.2 * 5.0)
-    if stress_drop > cap:
-        stress_drop = cap
-    return log10(stress_drop / 140.0) / log10(2.0)
+    stress_drop[stress_drop > cap] = cap
+    return np.log10(stress_drop / 140.0) / log10(2.0)
 
 
 class AtkinsonBoore2006(GMPE):
@@ -444,7 +445,7 @@ class AtkinsonBoore2006(GMPE):
         self.scale_fac = scale_fac
 
     # used in the "Modified" version
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
