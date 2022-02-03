@@ -129,7 +129,8 @@ def _compute_ms(ctx, C):
     res = C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
         C['e7'] * (ctx.mag - C['Mh'])
     less = ctx.mag <= C['Mh']
-    res[less] = (C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS +
+    res[less] = (C['e1'] * U[less] + C['e2'] * SS[less] +
+                 C['e3'] * NS[less] + C['e4'] * RS[less] +
                  C['e5'] * (ctx.mag[less] - C['Mh']) + C['e6'] *
                  (ctx.mag[less] - C['Mh']) ** 2)
     return res
@@ -258,19 +259,13 @@ def _get_fault_type_dummy_variables(ctx):
     Note that the 'Unspecified' case is not considered,
     because rake is always given.
     """
-    U, SS, NS, RS = 0, 0, 0, 0
-    if ctx.rake == 'undefined':
-        U = 1
-    elif np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
-        # strike-slip
-        SS = 1
-    elif ctx.rake > 30.0 and ctx.rake < 150.0:
-        # reverse
-        RS = 1
-    else:
-        # normal
-        NS = 1
-
+    U = np.zeros_like(ctx.rake)
+    SS = np.zeros_like(ctx.rake)
+    NS = np.zeros_like(ctx.rake)
+    RS = np.zeros_like(ctx.rake)
+    SS[(np.abs(ctx.rake) <= 30.) | (180. - np.abs(ctx.rake) <= 30.)] = 1
+    RS[(ctx.rake > 30.) & (ctx.rake < 150.)] = 1
+    NS[(ctx.rake > -150.) & (ctx.rake < -30)] = 1
     return U, SS, NS, RS
 
 

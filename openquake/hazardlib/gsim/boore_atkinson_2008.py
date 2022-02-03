@@ -40,19 +40,16 @@ def hawaii_adjust(mean, ctx, imt):
     x1 = np.min([-0.18+0.17*np.log10(freq), 0])
 
     # Equation 4 a-b-c of Atkinson (2010)
-    if ctx.hypo_depth < 20.0:
-        x0 = np.max([0.217 - 0.321 * np.log10(freq), 0])
-    elif ctx.hypo_depth > 35.0:
-        x0 = np.min([0.263 + 0.0924 * np.log10(freq), 0.35])
-    else:
-        x0 = 0.2
+    x0 = np.full_like(ctx.hypo_depth, 0.2)
+    x0[ctx.hypo_depth < 20.0] = np.max([0.217 - 0.321 * np.log10(freq), 0])
+    x0[ctx.hypo_depth > 35.0] = np.min([0.263 + 0.0924 * np.log10(freq), 0.35])
 
     # Limiting calculation distance to 1km
     # (as suggested by C. Bruce Worden)
     rjb = [d if d > 1 else 1 for d in ctx.rjb]
 
     # Equation 2 and 5 of Atkinson (2010)
-    mean += (x0 + x1*np.log10(rjb)) / np.log10(np.e)
+    mean += (x0 + x1 * np.log10(rjb)) / np.log10(np.e)
 
 
 class BooreAtkinson2008(GMPE):
