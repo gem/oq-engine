@@ -34,6 +34,13 @@ PLOTTING = False
 aae = np.testing.assert_almost_equal
 
 
+def plot_prf_2d(ax, prfs):
+    for i, prf in enumerate(prfs):
+        coo = np.array([(p.longitude, p.latitude) for p in prf.points])
+        ax.plot(coo[:, 0], coo[:, 1], 'c--', lw=2)
+        ax.text(coo[0, 0], coo[0, 1], f'{i}')
+
+
 def plot_mesh_2d(ax, smsh):
     """
     Plots the mesh
@@ -42,6 +49,7 @@ def plot_mesh_2d(ax, smsh):
         ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :], '-r', lw=0.5)
     for i in range(smsh.mesh.lons.shape[1]):
         ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i], '-r', lw=0.5)
+    ax.plot(smsh.mesh.lons[0, :], smsh.mesh.lats[0, :], '-g', lw=1.0)
 
 
 def plot_mesh_3d(ax, smsh, zfa):
@@ -221,14 +229,16 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
                         10.09853744, 10.14926874, 10.2])
         ela = np.array([44.99160022, 45.00003185,
                         45.00004377, 45.00003315, 45.])
-        aae(elo, tlo)
-        aae(ela, tla)
 
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
             plot_mesh_2d(ax, self.srfc)
+            plot_prf_2d(ax, self.prf)
             ax.plot(tlo, tla, '-g', lw=4)
             plt.show()
+
+        aae(elo, tlo)
+        aae(ela, tla)
 
     def test_rjb_calculation(self):
         # Test the calculation of the Rjb distance
