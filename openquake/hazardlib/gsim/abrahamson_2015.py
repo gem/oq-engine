@@ -176,11 +176,9 @@ def _compute_focal_depth_term(trt, C, ctx):
     indicated by equation (3)
     """
     if trt == const.TRT.SUBDUCTION_INTERFACE:
-        return 0.
-    if ctx.hypo_depth > 120.0:
-        z_h = 120.0
-    else:
-        z_h = ctx.hypo_depth
+        return np.zeros_like(ctx.mag)
+    z_h = ctx.hypo_depth
+    z_h[ctx.hypo_depth > 120.] = 120.0
     return C['theta11'] * (z_h - 60.)
 
 
@@ -302,7 +300,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         else:
             self.faba_model = None
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
