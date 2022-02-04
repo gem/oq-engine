@@ -133,8 +133,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
             lo1, lo2, la1, la2 = surf.get_bounding_box()
             lons.extend([lo1, lo2])
             lats.extend([la1, la2])
-        # multi_surf = MultiSurface(surfaces)
-        # west, east, north, south = multi_surf.get_bounding_box()
         west, east, north, south = get_spherical_bounding_box(lons, lats)
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
