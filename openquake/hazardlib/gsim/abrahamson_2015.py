@@ -82,11 +82,8 @@ def get_stress_factor(imt, slab):
     Returns the stress adjustment factor for the BC Hydro GMPE according to
     Abrahamson et al. (2018)
     """
-    if slab:
-        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SSLAB"]
-    else:
-        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SINTER"]
-    return sigma_mu / 1.65
+    C = BCHYDRO_SIGMA_MU[imt]
+    return (C["SIGMA_MU_SSLAB"] if slab else C["SIGMA_MU_SINTER"]) / 1.65
 
 
 def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
@@ -96,10 +93,9 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     """
     base = theta1 + theta4 * dc1
     dmag = C1 + dc1
-    f_mag = np.where(mag > dmag,
-                     theta5 * (mag - dmag) + theta13 * (10. - mag) ** 2.,
-                     theta4 * (mag - dmag) + theta13 * (10. - mag) ** 2.)
-    return base + f_mag
+    f_mag = np.where(
+        mag > dmag, theta5 * (mag - dmag), theta4 * (mag - dmag))
+    return base + f_mag + theta13 * (10. - mag) ** 2.
 
 
 # theta6_adj used in BCHydro
@@ -112,9 +108,9 @@ def _compute_disterm(trt, C1, theta2, theta14, theta3, ctx, c4, theta9,
         dists = ctx.rhypo
     else:
         raise NotImplementedError(trt)
-    return ((theta2 + theta14 + theta3 * (ctx.mag - C1)) * np.log(
-        dists + c4 * np.exp((ctx.mag - 6.) * theta9)) +
-            (theta6_adj + theta6) * dists) + theta10
+    return (theta2 + theta14 + theta3 * (ctx.mag - C1)) * np.log(
+        dists + c4 * np.exp((ctx.mag - 6.) * theta9)) + (
+        theta6_adj + theta6) * dists + theta10
 
 
 def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
@@ -177,8 +173,7 @@ def _compute_focal_depth_term(trt, C, ctx):
     """
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         return np.zeros_like(ctx.mag)
-    z_h = ctx.hypo_depth
-    z_h[ctx.hypo_depth > 120.] = 120.0
+    z_h = np.clip(ctx.hypo_depth, None, 120.)
     return C['theta11'] * (z_h - 60.)
 
 
@@ -468,9 +463,8 @@ class AbrahamsonEtAl2015SInter_scaled(AbrahamsonEtAl2015SInter):
 
     Application of a scaling factor that converts the prediction of
     AbrahamsonEtAl2015SInter to the corresponding
-    prediction for the Maximum value. 
+    prediction for the Maximum value.
     """
-    
     # Period-dependent coefficients
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 	IMT		vlin	b		theta1		theta2	theta6		theta7	theta8	theta10	theta11	theta12	theta13	theta14	theta15	theta16	phi	tau		sigma	sigma_ss
@@ -501,10 +495,10 @@ class AbrahamsonEtAl2015SSlab_scaled(AbrahamsonEtAl2015SInter_scaled):
     considered to be a point source located at the hypocentre. Therefore
     the hypocentral distance metric is used in place of the rupture distance,
     and the hypocentral depth is used to scale the ground motion by depth
-    
+
     Application of a scaling factor that converts the prediction of
     AbrahamsonEtAl2015SSlab to the corresponding
-    prediction for the Maximum value. 
+    prediction for the Maximum value.
     """
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = trt = const.TRT.SUBDUCTION_INTRASLAB
