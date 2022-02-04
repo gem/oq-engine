@@ -32,7 +32,7 @@ The following command adds the nighlty builds package repository:
 curl -sL https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
 ```
 
-## Install packages from the OpenQuake nighlty repository
+## Install packages from the OpenQuake nightly repository
 
 Then to install the OpenQuake Engine and its libraries first remove stable packages and then install nightly build packages
 
