@@ -4,7 +4,7 @@ Engine releases
 Since March 2021 engine releases are divided in two categories:
 Long Term Support (**LTS**) releases and non-LTS releases.
 
-The plan is to make few LTS release (one evey 1-2 years). *LTS
+The plan is to make few LTS release (one every 1-2 years). *LTS
 releases* are ideal for people that value stability and do not want
 upgrade the engine often. They are also ideal for beginners and for
 everybody not needing the latest features.
