@@ -773,7 +773,8 @@ class Starmap(object):
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
-        self.host_ip = socket.gethostbyname(socket.gethostname())
+        self.host_ip = socket.gethostbyname(
+            config.dbserver.receiver_host or socket.gethostname())
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
