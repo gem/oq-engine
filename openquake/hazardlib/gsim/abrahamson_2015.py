@@ -176,9 +176,11 @@ def _compute_focal_depth_term(trt, C, ctx):
     indicated by equation (3)
     """
     if trt == const.TRT.SUBDUCTION_INTERFACE:
-        return np.zeros_like(ctx.mag)
-    z_h = ctx.hypo_depth
-    z_h[ctx.hypo_depth > 120.] = 120.0
+        return 0.
+    if ctx.hypo_depth > 120.0:
+        z_h = 120.0
+    else:
+        z_h = ctx.hypo_depth
     return C['theta11'] * (z_h - 60.)
 
 
@@ -300,7 +302,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         else:
             self.faba_model = None
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -468,9 +470,8 @@ class AbrahamsonEtAl2015SInter_scaled(AbrahamsonEtAl2015SInter):
 
     Application of a scaling factor that converts the prediction of
     AbrahamsonEtAl2015SInter to the corresponding
-    prediction for the Maximum value. 
+    prediction for the Maximum value.
     """
-    
     # Period-dependent coefficients
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 	IMT		vlin	b		theta1		theta2	theta6		theta7	theta8	theta10	theta11	theta12	theta13	theta14	theta15	theta16	phi	tau		sigma	sigma_ss
@@ -501,10 +502,10 @@ class AbrahamsonEtAl2015SSlab_scaled(AbrahamsonEtAl2015SInter_scaled):
     considered to be a point source located at the hypocentre. Therefore
     the hypocentral distance metric is used in place of the rupture distance,
     and the hypocentral depth is used to scale the ground motion by depth
-    
+
     Application of a scaling factor that converts the prediction of
     AbrahamsonEtAl2015SSlab to the corresponding
-    prediction for the Maximum value. 
+    prediction for the Maximum value.
     """
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = trt = const.TRT.SUBDUCTION_INTRASLAB
