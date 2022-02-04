@@ -172,7 +172,7 @@ def _compute_focal_depth_term(trt, C, ctx):
     indicated by equation (3)
     """
     if trt == const.TRT.SUBDUCTION_INTERFACE:
-        return np.zeros_like(ctx.hypo_depth)
+        return np.zeros_like(ctx.mag)
     z_h = np.clip(ctx.hypo_depth, None, 120.)
     return C['theta11'] * (z_h - 60.)
 
