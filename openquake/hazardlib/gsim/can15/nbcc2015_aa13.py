@@ -123,7 +123,7 @@ class NBCC2015_AA13(GMPETable):
         self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
             'DEFINED_FOR_TECTONIC_REGION_TYPE']
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
