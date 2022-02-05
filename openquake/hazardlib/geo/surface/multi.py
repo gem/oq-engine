@@ -376,7 +376,7 @@ class MultiSurface(BaseSurface):
         if (self.uut is None) or condition2:
             self._set_tu(mesh)
         rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
-        return -rx
+        return rx
 
     def get_ry0_distance(self, mesh):
         """
