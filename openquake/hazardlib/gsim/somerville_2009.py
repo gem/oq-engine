@@ -45,11 +45,7 @@ def _compute_mean(C, mag, rjb):
     mean[less_r1] += C['c3'] * np.log(R[less_r1])
     mean[ge_r1] += (C['c3'] * np.log(R1) +
                     C['c6'] * (np.log(R[ge_r1]) - np.log(R1)))
-
-    if mag < m1:
-        mean += C['c2'] * (mag - m1)
-    else:
-        mean += C['c7'] * (mag - m1)
+    mean += np.where(mag < m1, C['c2'] * (mag - m1), C['c7'] * (mag - m1))
 
     return mean
 
@@ -87,7 +83,7 @@ class SomervilleEtAl2009NonCratonic(GMPE):
     #: The required distance parameter is 'Joyner-Boore' distance, see table 2
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

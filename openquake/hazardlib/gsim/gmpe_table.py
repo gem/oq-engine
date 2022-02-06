@@ -369,15 +369,12 @@ def apply_magnitude_interpolation(self, mag, iml_table):
         Intensity measure level table
     """
     # do not allow "mag" to exceed maximum table magnitude
-    if mag > self.m_w[-1]:
-        mag = self.m_w[-1]
+    mag = numpy.clip(mag, None, self.m_w[-1])
 
     # Get magnitude values
-    if mag < self.m_w[0] or mag > self.m_w[-1]:
-        raise ValueError("Magnitude %.2f outside of supported range "
-                         "(%.2f to %.2f)" % (mag,
-                                             self.m_w[0],
-                                             self.m_w[-1]))
+    if (mag < self.m_w[0]).any() or (mag > self.m_w[-1]).any():
+        raise ValueError("Magnitude %s outside of supported range "
+                         "(%.2f to %.2f)" % (mag, self.m_w[0], self.m_w[-1]))
     # It is assumed that log10 of the spectral acceleration scales
     # linearly (or approximately linearly) with magnitude
     m_interpolator = interp1d(self.m_w, numpy.log10(iml_table), axis=1)
