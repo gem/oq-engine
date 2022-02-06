@@ -41,8 +41,9 @@ class Line(object):
 
     def __init__(self, points):
         self.points = utils.clean_points(points)
-        if len(self.points) < 1:
-            raise ValueError("One point needed to create a line!")
+        if len(self.points) < 2:
+            msg = "At least two distinct points are needed for a line!"
+            raise ValueError(msg)
         self.coo = np.array([[p.longitude, p.latitude] for p in self.points])
 
     def __eq__(self, other):

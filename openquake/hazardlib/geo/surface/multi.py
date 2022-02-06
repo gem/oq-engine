@@ -55,9 +55,9 @@ class MultiSurface(BaseSurface):
         """
         :param fname:
             path to a CSV file with header (lon, lat, dep) and 4 x P
-        rows describing planes in terms of corner points in the order
-        topleft, topright, bottomright, bottomleft
-    :returns:
+            rows describing planes in terms of corner points in the order
+            topleft, topright, bottomright, bottomleft
+        :returns:
             a MultiSurface made of P planar surfaces
         """
         surfaces = []

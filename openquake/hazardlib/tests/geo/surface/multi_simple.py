@@ -29,7 +29,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
-PLOTTING = True
+PLOTTING = False
 OVERWRITE = False
 
 aae = np.testing.assert_almost_equal
@@ -41,8 +41,6 @@ class Ry0TestCase(unittest.TestCase):
         msurf = MultiSurface([sfc])
         mesh, mlons, mlats = get_mesh(-0.2, 0.6, -0.2, 0.3, 0.0025)
         ry0 = msurf.get_ry0_distance(mesh)
-        # msurf._set_tu(mesh)
-        # ry0 = msurf.uut
 
         if PLOTTING:
             lons = []
@@ -111,8 +109,8 @@ class Ry0TestCase(unittest.TestCase):
             np.savez_compressed(fname, ry0=ry0)
 
         # Load expected results and test
-        # er = np.load(fname)
-        # aae(er['ry0'], ry0, decimal=1)
+        er = np.load(fname)
+        aae(er['ry0'], ry0, decimal=1)
 
 
 class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):

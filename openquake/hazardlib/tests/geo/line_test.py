@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib import geo
 
-PLOTTING = True
+PLOTTING = False
 
 
 class LineResampleTestCase(unittest.TestCase):
@@ -117,10 +117,6 @@ class LineResampleToNumPointsTestCase(unittest.TestCase):
         p4 = p3.point_at(5, 0, 90)
         line = geo.Line([p1, p2, p3, p4]).resample_to_num_points(3)
         self.assertEqual(len(line), 3)
-
-    def test_line_of_one_point(self):
-        line = geo.Line([geo.Point(0, 0)])
-        self.assertRaises(AssertionError, line.resample_to_num_points, 10)
 
     def test_hangup(self):
         p1 = geo.Point(0.00899322032502, 0., 0.)
