@@ -461,7 +461,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
             _return_tables(gsim, 4.5, imt_module.PGA(), "IMLs")
         self.assertEqual(
             str(ve.exception),
-            "Magnitude 4.50 outside of supported range (5.00 to 7.00)")
+            'Magnitude 4.50 outside of supported range (5.00 to 7.00)')
 
     def test_retreival_tables_outside_period_range(self):
         """
