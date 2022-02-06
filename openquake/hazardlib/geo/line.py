@@ -32,7 +32,9 @@ class Line(object):
     """
     This class represents a geographical line, which is basically
     a sequence of geographical points.
-    A line is defined by at least one point.
+
+    A line is defined by at least two points.
+
     :param points:
         The sequence of points defining this line.
     :type points:
@@ -40,10 +42,10 @@ class Line(object):
     """
 
     def __init__(self, points):
-        self.points = utils.clean_points(points)
+        self.points = utils.clean_points(points)  # can remove points!
         if len(self.points) < 2:
-            msg = "At least two distinct points are needed for a line!"
-            raise ValueError(msg)
+            raise ValueError(
+                "At least two distinct points are needed for a line!")
         self.coo = np.array([[p.longitude, p.latitude] for p in self.points])
 
     def __eq__(self, other):
@@ -59,9 +61,9 @@ class Line(object):
     def __ne__(self, other):
         """
         >>> from openquake.hazardlib.geo.point import Point
-        >>> Line([Point(1, 2)]) != Line([Point(1, 2)])
+        >>> Line([Point(1,2), Point(1,3)]) != Line([Point(1,2), Point(1,3)])
         False
-        >>> Line([Point(1, 2)]) != Line([Point(2, 1)])
+        >>> Line([Point(1,2), Point(1,3)]) != Line([Point(1,2), Point(1,4)])
         True
         """
         return not self.__eq__(other)
