@@ -38,7 +38,7 @@ NS = "{http://openquake.org/xmlns/nrml/0.5}"
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
-OVERWRITE = False
+OVERWRITE = True
 aae = np.testing.assert_almost_equal
 
 

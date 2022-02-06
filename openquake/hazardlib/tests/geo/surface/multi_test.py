@@ -32,7 +32,7 @@ cd = pathlib.Path(__file__).parent
 aac = numpy.testing.assert_allclose
 aae = numpy.testing.assert_almost_equal
 
-PLOTTING = True
+PLOTTING = False
 
 
 class GetTorTestCase(unittest.TestCase):
@@ -117,7 +117,7 @@ class MultiSurfaceTestCase(unittest.TestCase):
             plt.show()
 
         # Test first set of surfaces
-        aac([rx18, rx19, rx20], [64.328038, 64.288793, 60.205692])
+        aac([rx18, rx19, rx20], [-64.328038, -64.288793, -60.205692])
 
         # Create surfaces and compute Rx
         surfa = MultiSurface(surf18.surfaces + surf19.surfaces)
@@ -137,7 +137,7 @@ class MultiSurfaceTestCase(unittest.TestCase):
             plt.show()
 
         # Test second set of surfaces
-        aac([rxa, rxb], [64.309214, 62.332508], rtol=1e-5)
+        aac([rxa, rxb], [-64.309214, -62.332508], rtol=1e-5)
 
     def test_rx_ry0_kite(self):
 
@@ -162,7 +162,7 @@ class MultiSurfaceTestCase(unittest.TestCase):
 
         # Checking Rx
         rx = msurf.get_rx_distance(mesh)
-        expected = numpy.array([-tmp0, tmp1])
+        expected = numpy.array([tmp0, -tmp1])
         computed = numpy.squeeze(rx)
         numpy.testing.assert_almost_equal(expected, computed, decimal=5)
 
