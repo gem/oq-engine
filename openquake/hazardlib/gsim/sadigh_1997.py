@@ -157,30 +157,27 @@ class SadighEtAl1997(GMPE):
         """
         # GMPE differentiates strike-slip, reverse and normal ruptures,
         # but combines normal and strike-slip into one category. See page 180.
-        is_reverse = (45 <= ctx.rake) & (ctx.rake <= 135)
+        reverse = (45 <= ctx.rake) & (ctx.rake <= 135)
         is_rock = ctx.vs30 > ROCK_VS30
         is_soil = ctx.vs30 <= ROCK_VS30
         mag_r = ctx.mag[is_rock]
         mag_s = ctx.mag[is_soil]
         rrup_r = ctx.rrup[is_rock]
         rrup_s = ctx.rrup[is_soil]
-        reverse_r = is_reverse[is_rock]
-        reverse_s = is_reverse[is_soil]
+        reverse_r = reverse[is_rock]
+        reverse_s = reverse[is_soil]
         for m, imt in enumerate(imts):
-            if is_rock.any():
-                mean_rock = get_mean_rock(
-                    mag_r, rrup_r, reverse_r,
-                    self.COEFFS_ROCK_LOWMAG[imt],
-                    self.COEFFS_ROCK_HIMAG[imt])
-                mean[m, is_rock] = mean_rock
-                sig[m, is_rock] = get_stddev_rock(
-                    mag_r, self.COEFFS_ROCK_STDDERR[imt])
-            if is_soil.any():
-                mean_soil = get_mean_deep_soil(
-                    mag_s, rrup_s, reverse_s, self.COEFFS_SOIL[imt])
-                mean[m, is_soil] = mean_soil
-                sig[m, is_soil] = get_stddev_deep_soil(
-                    mag_s, self.COEFFS_SOIL[imt])
+            mean[m, is_rock] = get_mean_rock(
+                mag_r, rrup_r, reverse_r,
+                self.COEFFS_ROCK_LOWMAG[imt],
+                self.COEFFS_ROCK_HIMAG[imt])
+            sig[m, is_rock] = get_stddev_rock(
+                mag_r, self.COEFFS_ROCK_STDDERR[imt])
+
+            mean[m, is_soil] = get_mean_deep_soil(
+                mag_s, rrup_s, reverse_s, self.COEFFS_SOIL[imt])
+            sig[m, is_soil] = get_stddev_deep_soil(
+                mag_s, self.COEFFS_SOIL[imt])
 
     #: Coefficients tables for rock ctx (table 2), for magnitude
     #: values of :attr:`NEAR_FIELD_SATURATION_MAG` and below. Damping
