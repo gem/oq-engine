@@ -154,25 +154,25 @@ class SadighEtAl1997(GMPE):
         # GMPE differentiates strike-slip, reverse and normal ruptures,
         # but combines normal and strike-slip into one category. See page 180.
         is_reverse = (45 <= ctx.rake <= 135)
-        [rocks_i] = (ctx.vs30 > ROCK_VS30).nonzero()
-        [soils_i] = (ctx.vs30 <= ROCK_VS30).nonzero()
+        is_rock = (ctx.vs30 > ROCK_VS30)
+        is_soil = (ctx.vs30 <= ROCK_VS30)
         for m, imt in enumerate(imts):
-            if len(rocks_i):
-                rrup = ctx.rrup.take(rocks_i)
+            if is_rock.any():
+                rrup = ctx.rrup[is_rock]
                 if ctx.mag <= NEAR_FIELD_SATURATION_MAG:
                     C = self.COEFFS_ROCK_LOWMAG[imt]
                 else:
                     C = self.COEFFS_ROCK_HIMAG[imt]
                 mean_rock = get_mean_rock(ctx.mag, rrup, is_reverse, C)
-                mean[m, rocks_i] = mean_rock
-                sig[m, rocks_i] = get_stddev_rock(
+                mean[m, is_rock] = mean_rock
+                sig[m, is_rock] = get_stddev_rock(
                     ctx.mag, self.COEFFS_ROCK_STDDERR[imt])
-            if len(soils_i):
-                rrup = ctx.rrup.take(soils_i)
+            if is_soil.any():
+                rrup = ctx.rrup[is_soil]
                 mean_soil = get_mean_deep_soil(
                     ctx.mag, rrup, is_reverse, self.COEFFS_SOIL[imt])
-                mean[m, soils_i] = mean_soil
-                sig[m, soils_i] = get_stddev_deep_soil(
+                mean[m, is_soil] = mean_soil
+                sig[m, is_soil] = get_stddev_deep_soil(
                     ctx.mag, self.COEFFS_SOIL[imt])
 
     #: Coefficients tables for rock ctx (table 2), for magnitude
