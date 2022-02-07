@@ -31,15 +31,14 @@ def _compute_mean(C, mag, repi, hypo_depth):
     """
     Compute mean value for MSK-64.
     """
-    return (C['a1'] * mag + C['a2'] +
-            _get_term01(C, repi, hypo_depth))
+    return C['a1'] * mag + C['a2'] + _get_term01(C, repi, hypo_depth)
 
 
 def _get_term01(C, repi, hypo_depth):
     h = hypo_depth
-    term_repi = np.sqrt((repi**2+h**2)/h**2)
-    term_h = np.sqrt(repi**2+h**2)-h
-    return -C['a3']*np.log10(term_repi)-(C['a4']*term_h)
+    term_repi = np.sqrt((repi**2 + h**2) / h**2)
+    term_h = np.sqrt(repi**2 + h**2) - h
+    return -C['a3'] * np.log10(term_repi) - C['a4'] * term_h
 
 
 class BindiEtAl2011Repi(GMPE):
