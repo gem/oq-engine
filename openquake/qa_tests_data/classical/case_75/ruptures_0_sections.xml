@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <geometryModel investigation_time="1.0" name="Test Geometry Model">
+
+        <section id="1" >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.0 0.0 0.0 0.03 0.0 10.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.0 0.1 0.0 0.03 0.1 10.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+
+        <section id="2" >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.0 0.2 0.0 -0.03 0.2 10.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.0 0.1 0.0 -0.03 0.1 10.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+
+        <section id="3" >
+            <kiteSurface>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.0 0.2 0.0 0.03 0.2 10.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+                <profile>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.0 0.3 0.0 0.03 0.3 10.0
+                        </gml:posList>
+                    </gml:LineString>
+                </profile>
+            </kiteSurface>
+        </section>
+
+    </geometryModel>
+</nrml>
