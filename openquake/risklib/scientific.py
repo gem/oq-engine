@@ -1002,14 +1002,17 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
       4. if the given probability is greater than the highest PoE
          defined it returns zero.
 
-    :param loss_ratios: an iterable over non-decreasing loss ratio
-                        values (float)
-    :param poes: an iterable over non-increasing probability of
-                 exceedance values (float)
+    :param loss_ratios: non-decreasing loss ratio values (float32)
+    :param poes: non-increasing probabilities of exceedance values (float32)
     :param float probability: the probability value used to
                               interpolate the loss curve
     """
     assert len(loss_ratios) >= 3, loss_ratios
+    probability = numpy.float32(probability)
+    if not isinstance(loss_ratios, numpy.ndarray):
+        loss_ratios = numpy.float32(loss_ratios)
+    if not isinstance(poes, numpy.ndarray):
+        poes = numpy.float32(poes)
     rpoes = poes[::-1]
     if probability > poes[0]:  # max poes
         return 0.0
