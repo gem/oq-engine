@@ -77,12 +77,14 @@ def get_mean_rock(mag, rrup, is_reverse, low_coeffs, hi_coeffs):
 
     Implements an equation from table 2.
     """
-    # determine the coefficients to use depending on the mag
-    C = np.where(mag <= NEAR_FIELD_SATURATION_MAG, low_coeffs, hi_coeffs)
-
     # clip mag if greater than 8.5. This is to avoid
     # ValueError: negative number cannot be raised to a fractional power
     mag = np.clip(mag, None, 8.5)
+
+    # determine the coefficients to use depending on the mag
+    C = np.where(mag <= NEAR_FIELD_SATURATION_MAG, low_coeffs, hi_coeffs)
+
+    # compute the mean
     mean = (C['c1'] + C['c2'] * mag + C['c3'] * ((8.5 - mag) ** 2.5)
             + C['c4'] * np.log(rrup + np.exp(C['c5'] + C['c6'] * mag))
             + C['c7'] * np.log(rrup + 2))
@@ -98,9 +100,8 @@ def get_stddev_rock(mag, C):
 
     Implements formulae from table 3.
     """
-    return np.where(mag > C['maxmag'],
-                       C['maxsigma'],
-                       C['sigma0'] + C['magfactor'] * mag)
+    return np.where(
+        mag > C['maxmag'], C['maxsigma'], C['sigma0'] + C['magfactor'] * mag)
 
 
 def get_stddev_deep_soil(mag, C):
@@ -161,17 +162,17 @@ class SadighEtAl1997(GMPE):
         is_soil = (ctx.vs30 <= ROCK_VS30)
         for m, imt in enumerate(imts):
             if is_rock.any():
-                rrup = ctx.rrup[is_rock]
-                mean_rock = get_mean_rock(ctx.mag, rrup, is_reverse,
-                                          self.COEFFS_ROCK_LOWMAG[imt],
-                                          self.COEFFS_ROCK_HIMAG[imt])
+                mean_rock = get_mean_rock(
+                    ctx.mag, ctx.rrup[is_rock], is_reverse,
+                    self.COEFFS_ROCK_LOWMAG[imt],
+                    self.COEFFS_ROCK_HIMAG[imt])
                 mean[m, is_rock] = mean_rock
                 sig[m, is_rock] = get_stddev_rock(
                     ctx.mag, self.COEFFS_ROCK_STDDERR[imt])
             if is_soil.any():
-                rrup = ctx.rrup[is_soil]
                 mean_soil = get_mean_deep_soil(
-                    ctx.mag, rrup, is_reverse, self.COEFFS_SOIL[imt])
+                    ctx.mag, ctx.rrup[is_soil], is_reverse,
+                    self.COEFFS_SOIL[imt])
                 mean[m, is_soil] = mean_soil
                 sig[m, is_soil] = get_stddev_deep_soil(
                     ctx.mag, self.COEFFS_SOIL[imt])
