@@ -66,7 +66,7 @@ class BindiEtAl2011Repi(GMPE):
 
     fixedh = None
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -75,7 +75,7 @@ class BindiEtAl2011Repi(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             if self.fixedh:
-                ctx.hypo_depth = self.fixedh
+                ctx.hypo_depth = np.full_like(ctx.hypo_depth, self.fixedh)
             mean[m] = _compute_mean(C, ctx.mag, ctx.repi, ctx.hypo_depth)
             sig[m] = C['sigma']
 
