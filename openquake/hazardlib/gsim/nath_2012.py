@@ -113,7 +113,7 @@ class NathEtAl2012Lower(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method
