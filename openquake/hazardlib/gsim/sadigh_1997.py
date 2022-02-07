@@ -19,7 +19,7 @@
 """
 Module exports :class:`SadighEtAl1997`.
 """
-import numpy
+import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -52,37 +52,40 @@ def get_mean_deep_soil(mag, rrup, is_reverse, C):
 
     Implements an equation from table 4.
     """
-    c1 = numpy.where(is_reverse,
+    c1 = np.where(is_reverse,
                      COEFFS_SOIL_IMT_INDEPENDENT['c1r'],
                      COEFFS_SOIL_IMT_INDEPENDENT['c1ss'])
     c2 = COEFFS_SOIL_IMT_INDEPENDENT['c2']
     c3 = COEFFS_SOIL_IMT_INDEPENDENT['c3']
-    c4 = numpy.where(mag <= NEAR_FIELD_SATURATION_MAG,
+    c4 = np.where(mag <= NEAR_FIELD_SATURATION_MAG,
                      COEFFS_SOIL_IMT_INDEPENDENT['c4lowmag'],
                      COEFFS_SOIL_IMT_INDEPENDENT['c4himag'])
-    c5 = numpy.where(mag <= NEAR_FIELD_SATURATION_MAG,
+    c5 = np.where(mag <= NEAR_FIELD_SATURATION_MAG,
                      COEFFS_SOIL_IMT_INDEPENDENT['c5lowmag'],
                      COEFFS_SOIL_IMT_INDEPENDENT['c5himag'])
-    c6 = numpy.where(is_reverse, C['c6r'], C['c6ss'])
+    c6 = np.where(is_reverse, C['c6r'], C['c6ss'])
     # clip mag if greater than 8.5. This is to avoid
     # ValueError: negative number cannot be raised to a fractional power
-    mag = numpy.clip(mag, None, 8.5)
+    mag = np.clip(mag, None, 8.5)
     return (c1 + c2 * mag + c6 + C['c7'] * ((8.5 - mag) ** 2.5)
-            - c3 * numpy.log(rrup + c4 * numpy.exp(c5 * mag)))
+            - c3 * np.log(rrup + c4 * np.exp(c5 * mag)))
 
 
-def get_mean_rock(mag, rrup, is_reverse, C):
+def get_mean_rock(mag, rrup, is_reverse, low_coeffs, hi_coeffs):
     """
     Calculate and return the mean intensity for rock ctx.
 
     Implements an equation from table 2.
     """
+    # determine the coefficients to use depending on the mag
+    C = np.where(mag <= NEAR_FIELD_SATURATION_MAG, low_coeffs, hi_coeffs)
+
     # clip mag if greater than 8.5. This is to avoid
     # ValueError: negative number cannot be raised to a fractional power
-    mag = numpy.clip(mag, None, 8.5)
+    mag = np.clip(mag, None, 8.5)
     mean = (C['c1'] + C['c2'] * mag + C['c3'] * ((8.5 - mag) ** 2.5)
-            + C['c4'] * numpy.log(rrup + numpy.exp(C['c5'] + C['c6'] * mag))
-            + C['c7'] * numpy.log(rrup + 2))
+            + C['c4'] * np.log(rrup + np.exp(C['c5'] + C['c6'] * mag))
+            + C['c7'] * np.log(rrup + 2))
     # footnote in table 2 says that for reverse ruptures
     # the mean amplitude value should be multiplied by 1.2
     mean[is_reverse] += 0.1823215567939546  # == log(1.2)
@@ -95,7 +98,7 @@ def get_stddev_rock(mag, C):
 
     Implements formulae from table 3.
     """
-    return numpy.where(mag > C['maxmag'],
+    return np.where(mag > C['maxmag'],
                        C['maxsigma'],
                        C['sigma0'] + C['magfactor'] * mag)
 
@@ -108,7 +111,7 @@ def get_stddev_deep_soil(mag, C):
     """
     # footnote from table 4 says that stderr for magnitudes over 7
     # is equal to one of magnitude 7.
-    return C['sigma0'] + C['magfactor'] * numpy.clip(mag, None, 7)
+    return C['sigma0'] + C['magfactor'] * np.clip(mag, None, 7)
 
 
 class SadighEtAl1997(GMPE):
@@ -153,17 +156,15 @@ class SadighEtAl1997(GMPE):
         """
         # GMPE differentiates strike-slip, reverse and normal ruptures,
         # but combines normal and strike-slip into one category. See page 180.
-        is_reverse = (45 <= ctx.rake <= 135)
+        is_reverse = (45 <= ctx.rake) & (ctx.rake <= 135)
         is_rock = (ctx.vs30 > ROCK_VS30)
         is_soil = (ctx.vs30 <= ROCK_VS30)
         for m, imt in enumerate(imts):
             if is_rock.any():
                 rrup = ctx.rrup[is_rock]
-                if ctx.mag <= NEAR_FIELD_SATURATION_MAG:
-                    C = self.COEFFS_ROCK_LOWMAG[imt]
-                else:
-                    C = self.COEFFS_ROCK_HIMAG[imt]
-                mean_rock = get_mean_rock(ctx.mag, rrup, is_reverse, C)
+                mean_rock = get_mean_rock(ctx.mag, rrup, is_reverse,
+                                          self.COEFFS_ROCK_LOWMAG[imt],
+                                          self.COEFFS_ROCK_HIMAG[imt])
                 mean[m, is_rock] = mean_rock
                 sig[m, is_rock] = get_stddev_rock(
                     ctx.mag, self.COEFFS_ROCK_STDDERR[imt])
