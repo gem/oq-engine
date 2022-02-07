@@ -97,8 +97,8 @@ def get_amplification_factor_2(kind, F1, FS, s_s_rp, s_1_rp, sctx, ec8):
     Returns the amplification factors based on the proposed EC8 formulation
     in Table 3.4
     """
-    r_alpha = 1.0 - 2.0E3 * ((s_s_rp * g) / (sctx.vs30 ** 2))
-    r_beta = 1.0 - 2.0E3 * ((s_1_rp * g) / (sctx.vs30 ** 2))
+    r_alpha = 1.0 - 2.0E3 * (s_s_rp * g) / (sctx.vs30 ** 2)
+    r_beta = 1.0 - 2.0E3 * (s_1_rp * g) / (sctx.vs30 ** 2)
     f_s = np.ones(sctx.vs30.shape)
     f_l = np.ones(sctx.vs30.shape)
     vsh_norm = sctx.vs30 / 800.
