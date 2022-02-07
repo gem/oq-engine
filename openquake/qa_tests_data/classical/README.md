@@ -74,3 +74,4 @@
 | [case_72](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_72) | Test calculation with a subset of the 2014 US model | 
 | [case_73](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_73) | Tests some epistemic uncertainties in a source-specific LT | 
 | [case_74](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_74) | Tests EAS-based calculation |
+| [case_75](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_75) | Tests calculation with multi-fault source |
