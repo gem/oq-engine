@@ -403,15 +403,22 @@ def get_dst_multi(rup, sites, params, dbuffer):
     Calculates the distances for multi-surfaces using a buffering of distances.
 
     :param rup:
-        An instance of
+        An instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
     :param sites:
-        A list of sites
+        A list of sites or a site collection
     :param params:
-        A list of keys for rupture-distance parameters
+        A list of keys defining the required rupture-distance parameters
     :param dbuffer:
         A dictionary of dictionaries with the distances. The first key is the
-        surface ID and the second one is the type of distance
+        surface ID and the second one is the type of distance. In a traditional
+        calculation dbuffer is instatiated by in the `get_ctxs` method of the
+        :class:`openquake.hazardlib.contexts.ContextMaker`
+    :returns:
+        A tuple containing a dictionary with the computed distances for the
+        rupture in input and an updated instance of the dictionary with the
+        buffer of distances
     """
+    # TODO move up
     from openquake.hazardlib.calc.filters import get_distances
     # Updating the buffer with the distances for the sections not yet
     # considered
@@ -423,7 +430,7 @@ def get_dst_multi(rup, sites, params, dbuffer):
             for param in params:
                 distances = _get_distances(srf, sites, param)
                 dbuffer[srf.suid][param] = distances
-    # Computing distances from the buffer
+    # Computing distances using the buffer
     output = {}
     for param in params:
         distances = _get_distances_from_buffer(dbuffer, suids, param)
@@ -431,23 +438,46 @@ def get_dst_multi(rup, sites, params, dbuffer):
     return output, dbuffer
 
 
-def _get_distances_from_buffer(dbuffer, suids, param):
-    distances = dbuffer[suids[0]][param]
+def _get_distances_from_buffer(dbuffer: dict, suids: list, param: str):
+    """
+    :param dbuffer:
+        See description in
+        :method:`openquake.hazardlib.geo.surface.multi.get_dst_multi`
+    :param suids:
+        A list with the IDs of the surfaces to consider
+    :param param:
+        A string defining a rupture-site metric (e.g. 'rjb')
+    """
     if param in ['rjb', 'rrup']:
+        distances = dbuffer[suids[0]][param]
+        # This is looping over all the surface IDs composing the rupture
         for suid in suids:
-            distances = numpy.minimum(distances, dbuffer[suid][param])
+            distances = np.minimum(distances, dbuffer[suid][param])
+    elif param in ['rx', 'ry0']:
+        distances = _get_rx_ry0_from_buffer(dbuffer, suids, param)
     else:
         raise ValueError("Unknown distance measure %r" % param)
     return distances
 
 
 def _get_distances(surface, sites, param):
+    """
+    :param surface:
+        An instance of :class:`openquake.hazardlib.geo.surface.BaseSurface`
+    :param sites:
+        An instance of :class:`openquake.hazardlib.site.SiteCollection`
+    :param param:
+        A string defining a rupture-site metric (e.g. 'rjb')
+    :returns:
+        The requested distances
+    """
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
-    #elif param == 'rx':
-    #    dist = surface.get_rx_distance(sites)
+    elif param == 'rx':
+        # In this case we compute the GC2
+        dist = surface.get_rx_distance(sites)
     #elif param == 'ry0':
     #    dist = surface.get_ry0_distance(sites)
     else:

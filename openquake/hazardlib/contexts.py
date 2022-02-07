@@ -425,8 +425,8 @@ class ContextMaker(object):
             ctx = self.make_rctx(rup)
             ctx.sites = r_sites
 
-
-            # This is a multifault source
+            # This is a multifault source. TODO make sure that the buffering is
+            # also used initially for 'rrup'
             if isinstance(rup.surface, MultiSurface):
                 params = self.REQUIRES_DISTANCES - {'rrup'}
                 distances, dbuff = get_dst_multi(rup, r_sites, params, dbuff)
