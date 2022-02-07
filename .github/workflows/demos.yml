@@ -1,6 +1,12 @@
 ---
 name: demos + docs
 on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
   push:
     branches: [ master ]
 jobs:
@@ -12,10 +18,16 @@ jobs:
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
-        #more $GITHUB_EVENT_PATH
+
     steps:
-      - name: Check out the codebase.
+      - name: Check out the codebase (Master)
         uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == ''
+      - name: Check out the codebase (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python 3.8
         uses: actions/setup-python@v2
         with:
