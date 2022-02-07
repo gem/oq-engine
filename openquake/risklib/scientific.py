@@ -1016,9 +1016,7 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
     elif probability < poes[-1]:  # min PoE
         return loss_ratios[-1]
     if probability in poes:
-        return max([loss
-                    for i, loss in enumerate(loss_ratios)
-                    if probability == poes[i]])
+        return loss_ratios[probability == poes].max()
     else:
         interval_index = bisect.bisect_right(rpoes, probability)
 
