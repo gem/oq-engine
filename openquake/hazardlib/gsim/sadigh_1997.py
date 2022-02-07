@@ -149,7 +149,7 @@ class SadighEtAl1997(GMPE):
     #: Required distance measure is RRup (eq. 1).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -163,19 +163,19 @@ class SadighEtAl1997(GMPE):
         for m, imt in enumerate(imts):
             if is_rock.any():
                 mean_rock = get_mean_rock(
-                    ctx.mag, ctx.rrup[is_rock], is_reverse,
+                    ctx.mag[is_rock], ctx.rrup[is_rock], is_reverse[is_rock],
                     self.COEFFS_ROCK_LOWMAG[imt],
                     self.COEFFS_ROCK_HIMAG[imt])
                 mean[m, is_rock] = mean_rock
                 sig[m, is_rock] = get_stddev_rock(
-                    ctx.mag, self.COEFFS_ROCK_STDDERR[imt])
+                    ctx.mag[is_rock], self.COEFFS_ROCK_STDDERR[imt])
             if is_soil.any():
                 mean_soil = get_mean_deep_soil(
-                    ctx.mag, ctx.rrup[is_soil], is_reverse,
+                    ctx.mag[is_soil], ctx.rrup[is_soil], is_reverse[is_soil],
                     self.COEFFS_SOIL[imt])
                 mean[m, is_soil] = mean_soil
                 sig[m, is_soil] = get_stddev_deep_soil(
-                    ctx.mag, self.COEFFS_SOIL[imt])
+                    ctx.mag[is_soil], self.COEFFS_SOIL[imt])
 
     #: Coefficients tables for rock ctx (table 2), for magnitude
     #: values of :attr:`NEAR_FIELD_SATURATION_MAG` and below. Damping
