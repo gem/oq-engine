@@ -1,8 +1,8 @@
-
   [Marco Pagani]
   * Added a more flexible version of the GC2 implementation
 
   [Michele Simionato]
+  * Vectorized most GMPEs in hazardlib
   * Optimized .get_bounding_box, .polygon and .mesh_size for MultiFaultSources
   * Fixed bug in presence of mixed vectorized/nonvectorized GMPEs
   * Extended `oq postzip` to multiple files and `oq abort` to multiple jobs
