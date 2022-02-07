@@ -30,7 +30,8 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils import (
-    mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean)
+    mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean,
+    get_fault_type_dummy_variables)
 
 #: IMT-independent coefficients. std_total is the total standard deviation,
 #: see Table 6, pag 2192 and Table 9, pag 2202. R0, R1, R2 are coefficients
@@ -125,12 +126,11 @@ def _compute_mean(C, f0, f1, f2, SC, mag, rrup, idxs, mean,
 
 
 def _compute_ms(ctx, C):
-    U, SS, NS, RS = _get_fault_type_dummy_variables(ctx)
-    res = C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-        C['e7'] * (ctx.mag - C['Mh'])
+    SS, NS, RS = get_fault_type_dummy_variables(ctx)
+    res = C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + C['e7'] * (
+        ctx.mag - C['Mh'])
     less = ctx.mag <= C['Mh']
-    res[less] = (C['e1'] * U[less] + C['e2'] * SS[less] +
-                 C['e3'] * NS[less] + C['e4'] * RS[less] +
+    res[less] = (C['e2'] * SS[less] + C['e3'] * NS[less] + C['e4'] * RS[less] +
                  C['e5'] * (ctx.mag[less] - C['Mh']) + C['e6'] *
                  (ctx.mag[less] - C['Mh']) ** 2)
     return res
@@ -245,28 +245,6 @@ def _extract_coeffs(self, imt):
     SC = self.COEFFS_STRESS[imt]
 
     return C_HR, C_BC, C_SR, SC
-
-
-def _get_fault_type_dummy_variables(ctx):
-    """
-    Get fault type dummy variables, see Table 2, pag 107.
-    Fault type (Strike-slip, Normal, Thrust/reverse) is
-    derived from rake angle.
-    Rakes angles within 30 of horizontal are strike-slip,
-    angles from 30 to 150 are reverse, and angles from
-    -30 to -150 are normal. See paragraph 'Predictor Variables'
-    pag 103.
-    Note that the 'Unspecified' case is not considered,
-    because rake is always given.
-    """
-    U = np.zeros_like(ctx.rake)
-    SS = np.zeros_like(ctx.rake)
-    NS = np.zeros_like(ctx.rake)
-    RS = np.zeros_like(ctx.rake)
-    SS[(np.abs(ctx.rake) <= 30.) | (180. - np.abs(ctx.rake) <= 30.)] = 1
-    RS[(ctx.rake > 30.) & (ctx.rake < 150.)] = 1
-    NS[(ctx.rake > -150.) & (ctx.rake < -30)] = 1
-    return U, SS, NS, RS
 
 
 def _get_mean(self, vs30, mag, rrup, imt, scale_fac):
