@@ -254,7 +254,6 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
-        #dic['occurrence_rate'] = numpy.float64(0)
         dic['sids'] = numpy.uint32(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -308,7 +307,8 @@ class ContextMaker(object):
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                getattr(ra, par)[slc] = getattr(ctx, par)
+                val = getattr(ctx, par)
+                getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
         return ra
