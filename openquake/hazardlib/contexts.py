@@ -249,7 +249,7 @@ class ContextMaker(object):
             if req in site_param_dt:
                 dt = site_param_dt[req]
                 if isinstance(dt, tuple):  # (string_, size)
-                    dic[req] = b''
+                    dic[req] = b'X' * dt[1]
                 else:
                     dic[req] = dt(0)
             else:

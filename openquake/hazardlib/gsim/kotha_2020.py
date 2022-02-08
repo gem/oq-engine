@@ -216,7 +216,7 @@ def get_site_amplification(kind, extra, C, ctx, imt):
         ampl = np.zeros(vs30.shape)
         # For observed vs30 ctx
         ampl[ctx.vs30measured] = (C["d0_obs"] + C["d1_obs"] *
-                                    np.log(vs30[ctx.vs30measured]))
+                                  np.log(vs30[ctx.vs30measured]))
         # For inferred Vs30 ctx
         idx = np.logical_not(ctx.vs30measured)
         ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
@@ -708,7 +708,7 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     kind = "geology"
 
     #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("region", "slope", "geology"))
+    REQUIRES_SITES_PARAMETERS = {"region", "slope", "geology"}
 
     #: Geological Units
     GEOLOGICAL_UNITS = [b"CENOZOIC", b"HOLOCENE", b"JURASSIC-TRIASSIC",
