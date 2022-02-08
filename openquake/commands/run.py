@@ -35,9 +35,6 @@ calc_path = None  # set only when the flag --slowest is given
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
 
-oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
-    base.calculators)
-
 
 def get_pstats(pstatfile, n):
     """
