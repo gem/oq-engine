@@ -232,30 +232,20 @@ def _compute_nonlinear_soil_term(C, lnSA_AB, delta_C, delta_D):
     return lnSA_CD
 
 
-_compute_stress_drop_adjustment = CallableDict()
-
-
-@_compute_stress_drop_adjustment.add("chch")
-def _compute_stress_drop_adjustment_1(kind, SC, mag):
-    """
-    No adjustment for base class
-    """
-    return 0
-
-
-@_compute_stress_drop_adjustment.add("drop")
-def _compute_stress_drop_adjustment_2(kind, SC, mag):
+def _compute_stress_drop_adjustment(in_cshm, SC, mag):
     """
     Compute equation (6) p. 2200 from Atkinson and Boore (2006). However,
     the ratio of scale factors is in log space rather than linear space,
     to reflect that log PSA scales linearly with log stress drop. Then
     convert from log10 to natural log (G McVerry, personal communication).
     """
+    adj = np.zeros_like(mag)
     scale_fac = 1.5
-    fac = np.maximum(mag - SC['M1'], 0) / (SC['Mh'] - SC['M1'])
-    return np.log(10 ** ((np.log(scale_fac) / np.log(2)) *
-                         np.minimum(0.05 + SC['delta'],
-                                    0.05 + SC['delta'] * fac)))
+    fac = np.maximum(mag[in_cshm] - SC['M1'], 0) / (SC['Mh'] - SC['M1'])
+    adj[in_cshm] = np.log(10 ** (np.log(scale_fac) / np.log(2) *
+                                 np.minimum(0.05 + SC['delta'],
+                                            0.05 + SC['delta'] * fac)))
+    return adj
 
 
 _get_deltas = CallableDict()
@@ -746,9 +736,9 @@ class McVerry2006Chch(McVerry2006AscSC):
             # Get Atkinson and Boore (2006) stress drop factors or additional
             # standard deviation adjustment. Only apply these factors to
             # sources located within the boundaries of the CSHM.
-            if ctx.in_cshm:
+            if self.kind == 'drop':
                 stress_drop_factor = _compute_stress_drop_adjustment(
-                    self.kind, SC, ctx.mag)
+                    ctx.in_cshm, SC, ctx.mag)
                 additional_sigma = self.additional_sigma
             else:
                 stress_drop_factor = 0
