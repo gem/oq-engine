@@ -168,7 +168,8 @@ class ContextMaker(object):
     NB: the trt can be different from the tectonic region type for which
     the underlying GSIMs are defined. This is intentional.
     """
-    REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
+    REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS',
+                'COMPUTED_PARAMETERS']
     rup_indep = True
     tom = None
 
@@ -243,6 +244,7 @@ class ContextMaker(object):
             self.REQUIRES_DISTANCES.add('repi')
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
                 sorted(self.REQUIRES_SITES_PARAMETERS | set(extraparams)) +
+                sorted(self.REQUIRES_COMPUTED_PARAMETERS) +
                 sorted(self.REQUIRES_DISTANCES))
         dic = {}
         for req in reqs:
@@ -319,6 +321,7 @@ class ContextMaker(object):
         params = {'occurrence_rate', 'sids_', 'src_id',
                   'probs_occur_', 'clon_', 'clat_', 'rrup_'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
+        params.update(self.REQUIRES_COMPUTED_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
             params.add(dparam + '_')
         return params
@@ -594,11 +597,15 @@ class ContextMaker(object):
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
         if len(ctxs) == 1 and isinstance(ctxs[0], numpy.recarray):
-            # happens in event_based/case_22
+            # in event_based/case_22
             recarray = ctxs[0]
         else:
-            ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
-            recarray = self.recarray(ctxs) if any_recarray(self.gsims) else 0
+            lst = []
+            for ctx in ctxs:
+                for gsim in self.gsims:
+                    gsim.set_parameters(ctx)
+                lst.append(ctx.roundup(self.minimum_distance))
+            recarray = self.recarray(lst) if any_recarray(self.gsims) else 0
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
