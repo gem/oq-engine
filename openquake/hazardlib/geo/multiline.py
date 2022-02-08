@@ -44,6 +44,8 @@ class MultiLine():
         self.u_max = None
         self.tupps = None
         self.uupps = None
+        self.uut = None
+        self.tut = None
         self.weis = None
 
     def get_lengths(self) -> np.ndarray:
@@ -71,6 +73,9 @@ class MultiLine():
 
         :param lines:
             A list of :class:`openquake.hazardlib.geo.line.Line` instances
+
+        :return:
+
         """
         # Get lenghts and average azimuths
         llenghts = self.get_lengths()
@@ -105,7 +110,9 @@ class MultiLine():
         if self.shift is not None:
             self.shift = self.shift[soidx]
 
-    def _set_coordinate_shift(self) -> np.ndarray:
+        return soidx
+
+    def _set_coordinate_shift(self):
         """
         Computes the coordinate shift for each line in the multiline. This is
         used to compute coordinates in the GC2 system
@@ -113,13 +120,13 @@ class MultiLine():
 
         # If not defined, compute the origin of the multiline
         if self.olon is None:
-            self._set_origin()
+            _ = self._set_origin()
 
         # Set the shift param
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
                                           self.overall_strike)
 
-    def get_tu(self, mesh: Mesh):
+    def set_tu(self, mesh: Mesh = None):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
@@ -127,11 +134,17 @@ class MultiLine():
             self._set_coordinate_shift()
 
         if self.tupps is None:
+            assert mesh is not None
             tupps, uupps, weis = get_tus(self.lines, mesh)
+        else:
+            tupps = self.tupps
+            uupps = self.uupps
+            weis = self.weis
 
         uut, tut = get_tu(self.shift, tupps, uupps, weis)
+        self.uut = uut
+        self.tut = tut
 
-        return uut, tut
 
     def set_u_max(self):
         """
@@ -145,6 +158,10 @@ class MultiLine():
 
         if self.tupps is None:
             tupps, uupps, weis = get_tus(self.lines, mesh)
+        else:
+            tupps = self.tupps
+            uupps = self.uupps
+            weis = self.weis
 
         uut, _ = get_tu(self.shift, tupps, uupps, weis)
 
@@ -162,6 +179,42 @@ class MultiLine():
             lats.extend([line.coo[0, 1], line.coo[-1, 1]])
         mesh = Mesh(np.array(lons), np.array(lats))
         return mesh
+
+    def get_rx_distance(self, mesh: Mesh = None):
+        """
+        :param mesh:
+            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
+            coordinates of the sites.
+        :returns:
+            A :class:`numpy.ndarray` instance with the Rx distance. Note that
+            the Rx distance is directly taken from the GC2 t-coordinate.
+        """
+        if self.uut is None:
+            assert mesh is not None
+            self._set_tu(mesh)
+        rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
+        return rx
+
+    def get_ry0_distance(self, mesh: Mesh = None):
+        """
+        :param mesh:
+            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
+        """
+        if self.uut is None:
+            assert mesh is not None
+            self.set_tu(mesh)
+
+        if self.u_max is None:
+            self.set_u_max()
+
+        ry0 = np.zeros_like(self.uut)
+        ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
+
+        condition = self.uut > self.u_max
+        ry0[condition] = self.uut[condition] - self.u_max
+
+        out = ry0[0] if len(ry0.shape) > 1 else ry0
+        return out
 
 
 def get_tus(lines: list, mesh: Mesh):

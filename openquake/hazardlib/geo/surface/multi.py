@@ -27,7 +27,7 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
     PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
-from openquake.hazardlib.geo.multiline import get_tu
+from openquake.hazardlib.geo.multiline import get_tu, MultiLine
 
 
 class MultiSurface(BaseSurface):
@@ -363,6 +363,7 @@ class MultiSurface(BaseSurface):
             tupps.append(tu)
             uupps.append(uu)
             weis.append(np.squeeze(np.sum(we, axis=0)))
+        # `get_tu` is a function from the multiline module
         uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
         self.uut = uut
         self.tut = tut
@@ -389,6 +390,13 @@ class MultiSurface(BaseSurface):
         """
         :param mesh:
         """
+        if self.tors is None:
+            self._set_tor()
+        return self.tors.get_ry0_distance(mesh)
+
+
+"""
+    def get_ry0_distance(self, mesh):
         if self.uut is None or self.site_mesh != mesh:
             self._set_tu(mesh)
 
@@ -403,6 +411,7 @@ class MultiSurface(BaseSurface):
 
         out = ry0[0] if len(ry0.shape) > 1 else ry0
         return out
+"""
 
 
 def get_dst_multi(rup, sites, params, dbuffer):
@@ -440,13 +449,15 @@ def get_dst_multi(rup, sites, params, dbuffer):
                 # include the ToR of each surface as well as the GC2 t and u
                 # coordinates for each section.
                 distances = _get_distances(srf, sites, param)
-                # Save information into the buffer for the current surface.
-                dbuffer[srf.suid] = distances
+                # Save information into the buffer for the current surfac.
+                for key in distances.keys():
+                    dbuffer[srf.suid][key] = distances[key]
     # Computing distances using the buffer
     output = {}
     for param in params:
-        distances = _get_distances_from_buffer(dbuffer, suids, param)
-        output[param] = distances
+        distances, keys = _get_distances_from_buffer(dbuffer, suids, param)
+        for dst, key in zip(distances, keys):
+            output[key] = dst
     return output, dbuffer
 
 
@@ -466,6 +477,7 @@ def _get_distances_from_buffer(dbuffer: dict, suids: list, param: str):
         for suid in suids:
             distances = np.minimum(distances, dbuffer[suid][param])
         params = [param]
+        distances = [distances]
     elif param in ['rx', 'ry0']:
         # The computed distances. In this case we are not going to add them to
         # the buffer since they cannot be reused
@@ -475,18 +487,12 @@ def _get_distances_from_buffer(dbuffer: dict, suids: list, param: str):
     return distances, params
 
 
-def _get_rx_ry0_from_buffer(dbuf, suids, param):
-    """
-    """
-    pass
-
-
 def _get_distances(surface, sites, param):
     """
     :param surface:
         An instance of :class:`openquake.hazardlib.geo.surface.BaseSurface`
     :param sites:
-        An instance of :class:`openquake.hazardlib.site.SiteCollection`
+        An instance of :class:`openquake.hazardlib.geo.Mesh`
     :param param:
         A string defining a rupture-site metric (e.g. 'rjb')
     :returns:
@@ -496,15 +502,59 @@ def _get_distances(surface, sites, param):
         dist = surface.get_min_distance(sites)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
-    elif param in ['rx' 'ry0']:
+    elif param in ['rx', 'ry0']:
         # In this case we compute the GC2 coordinates for the surface
         tor_lo, tor_la = surface.get_tor()
-        tor_line = geo.line.Line.from_vectors(tor_lo, tor_la)
-        t_upp, u_upp, wei = tor_line.get_tu(sitec.mesh())
+        tor = geo.line.Line.from_vectors(tor_lo, tor_la)
+        t_upp, u_upp, wei = tor.get_tu(sites)
         wei_sum = np.squeeze(np.sum(wei, axis=0))
-        dists = {'t_upp': t_upp, 'u_upp': u_upp, 'wei': wei_sum}
+        dists = {'tor': tor, 't_upp': t_upp, 'u_upp': u_upp, 'wei': wei_sum}
     else:
         raise ValueError(f'Unknown distance measure {param}')
     if param in ['rrup', 'rjb']:
         dists = {param: dist}
     return dists
+
+
+def _get_rx_ry0_from_buffer(dbuf, suids, param):
+    """
+    See :function:`openquake.hazardlib.geo.surface.multi._get_distances`
+
+    :returns:
+        A dictionary
+    """
+
+    # Retrieve info from the buffer
+    lines = [dbuf[key]['tor'] for key in suids]
+
+    # Create the multiline
+    multil = MultiLine(lines)
+    revert = multil.set_overall_strike()
+    soidx = multil._set_origin()
+    revert = revert[soidx]
+
+    # Load data in buffer
+    tupps = [dbuf[suids[i]]['t_upp'] for i in soidx]
+    uupps = [dbuf[suids[i]]['u_upp'] for i in soidx]
+    weis = [dbuf[suids[i]]['wei'] for i in soidx]
+
+    # Change sign to reverted surface traces
+    for i, flag in enumerate(revert):
+        if flag:
+            tupps[i] = -tupps[i]
+
+    # Fixing shift
+    multil._set_coordinate_shift()
+    multil.tupps = tupps
+    multil.uupps = uupps
+    multil.weis = weis
+
+    # Get GC coordinates
+    multil.set_tu()
+    rx = multil.get_rx_distance()
+    ry0 = multil.get_ry0_distance()
+
+    dists = [rx, ry0]
+    params = ['rx', 'ry0']
+
+    return dists, params

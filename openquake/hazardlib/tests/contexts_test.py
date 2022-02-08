@@ -37,6 +37,9 @@ from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.nrml import to_python
+from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 
 
 aac = numpy.testing.assert_allclose
@@ -48,6 +51,7 @@ intensities = {
     '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
 tom = PoissonTOM(50.)
 JOB = os.path.join(os.path.dirname(__file__), 'data/context/job.ini')
+BASE_PATH = os.path.dirname(__file__)
 
 
 class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
@@ -241,3 +245,34 @@ class SetWeightTestCase(unittest.TestCase):
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
             weights, [3.04, 3.04, 3.04, 1, 1, 1])
+
+
+class GetCtxsTestCase(unittest.TestCase):
+
+    def setUp(self):
+
+        # Set paths
+        path = '../../qa_tests_data/classical/case_75/ruptures_0.xml'
+        rup_path = os.path.join(BASE_PATH, path)
+        path = '../../qa_tests_data/classical/case_75/ruptures_0_sections.xml'
+        geom_path = os.path.join(BASE_PATH, path)
+
+        # Create source
+        sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
+        ssm = to_python(rup_path, sc)
+        geom = to_python(geom_path, sc)
+        src = ssm[0][0]
+        src.set_sections(geom.sections)
+        self.src = src
+
+        # Create site-collection
+        site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
+                    vs30measured=True)
+        self.sitec = SiteCollection([site])
+
+    def test_multi_fault(self):
+
+        gmm = AbrahamsonEtAl2014()
+        param = dict(imtls={'PGA':[]})
+        cm = ContextMaker('boh', [gmm], param)
+        cm.get_ctxs(self.src, self.sitec)

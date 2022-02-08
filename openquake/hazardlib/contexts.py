@@ -434,9 +434,9 @@ class ContextMaker(object):
             else:
                 for param in self.REQUIRES_DISTANCES - {'rrup'}:
                     distances = get_distances(rup, r_sites, param)
-                setattr(dctx, param, distances)
+                    setattr(dctx, param, distances)
 
-
+            # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
             if reqv_obj and isinstance(rup.surface, PlanarSurface):
                 reqv = reqv_obj.get(dctx.repi, rup.mag)
