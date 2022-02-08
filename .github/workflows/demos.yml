@@ -72,6 +72,16 @@ jobs:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
           UPLOAD: ${{ github.event.inputs.git-ref }}
         run: |
+          if [ -z "$GITHUB_HD_REF" ]
+             then
+              echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
+              GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
+             else
+              echo " Is a pull request, use branch: $GITHUB_HD_BR"
+              GITHUB_BR=`echo ${{ github.head_ref }}`
+          fi
+          echo "BRANCH set to $GITHUB_BR"
+          echo "Upload folder set to $UPLOAD"  
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
