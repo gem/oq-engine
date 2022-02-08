@@ -20,11 +20,9 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
 
     steps:
-      - name: Check out the codebase ${{ github.ref }}
+      - name: Check out the codebase (Master)
         uses: actions/checkout@v2
         if: github.event.inputs.git-ref == ''
-        with:
-          ref: ${{ github.ref }}
       - name: Check out the codebase (Custom Ref)
         uses: actions/checkout@v2
         if: github.event.inputs.git-ref != ''
