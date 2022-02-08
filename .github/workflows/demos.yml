@@ -93,7 +93,7 @@ jobs:
           echo "BRANCH set to $GITHUB_BR"
           if [ -z "$UPLOAD" ]
              then
-              UPLOAD=`echo ${{ github.event.repository.default_branch }}`
+              UPLOAD=${GITHUB_BR}
               echo " Is not a workflow_dispatch run, use upload folder: $UPLOAD"
              else
               echo " Is a workflow_dispatch run, use branch: $UPLOAD"
