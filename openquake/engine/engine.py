@@ -357,7 +357,7 @@ def run_jobs(jobs):
             print('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
-        if jobarray:
+        if jobarray and OQ_DISTRIBUTE != 'no':
             procs = []
             try:
                 for args in allargs:
