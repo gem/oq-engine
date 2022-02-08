@@ -284,11 +284,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
         absolute paths to all of the files referenced in the job.ini, keyed by
         the parameter name.
     """
-    # UGLY: this is here to avoid circular imports
-    from openquake.calculators import base
-
-    OqParam.calculation_mode.validator.choices = tuple(
-        calculators or base.calculators)
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
