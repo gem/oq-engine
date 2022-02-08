@@ -31,27 +31,6 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
 
 
-def _check_in_cshm_polygon(rup):
-    """
-    Checks if any part of the rupture surface mesh is located within the
-    intended boundaries of the Canterbury Seismic Hazard Model in
-    Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
-    of Christchurch, Earthquake Spectra, 30(1), 17-29.
-    """
-    lats = np.ravel(rup.surface.mesh.array[1])
-    lons = np.ravel(rup.surface.mesh.array[0])
-    # These coordinates are provided by M Gerstenberger (personal
-    # communication, 10 August 2018)
-    polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
-                                        (173.2, -43.9), (171.6, -43.9)])
-    points_in_polygon = [
-        shapely.geometry.Point(lons[i], lats[i]).within(polygon)
-        for i in np.arange(len(lons))]
-    in_cshm = any(points_in_polygon)
-
-    return in_cshm
-
-
 def _compute_f4(C, mag, rrup):
     """
     Abrahamson and Silva 1997 f4 term for hanging wall effects.
@@ -717,12 +696,31 @@ class McVerry2006Chch(McVerry2006AscSC):
     Extends McVerry2006AscSC to implement modifications required for the
     Canterbury Seismic Hazard Model (CSHM).
     """
-    kind = "chch"
-
     #: This implementation is non-verified because the model has not been
     #: published, nor is independent code available.
     non_verified = True
+
+    kind = "chch"
     additional_sigma = 0
+    REQUIRES_COMPUTED_PARAMETERS = {"in_cshm"}
+
+    def set_parameters(self, rup):
+        """
+        Checks if any part of the rupture surface mesh is located within the
+        intended boundaries of the Canterbury Seismic Hazard Model in
+        Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
+        of Christchurch, Earthquake Spectra, 30(1), 17-29.
+        """
+        lats = np.ravel(rup.surface.mesh.array[1])
+        lons = np.ravel(rup.surface.mesh.array[0])
+        # These coordinates are provided by M Gerstenberger (personal
+        # communication, 10 August 2018)
+        polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
+                                            (173.2, -43.9), (171.6, -43.9)])
+        points_in_polygon = [
+            shapely.geometry.Point(lons[i], lats[i]).within(polygon)
+            for i in np.arange(len(lons))]
+        rup.in_cshm = any(points_in_polygon)
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         """
@@ -758,8 +756,7 @@ class McVerry2006Chch(McVerry2006AscSC):
             # Get Atkinson and Boore (2006) stress drop factors or additional
             # standard deviation adjustment. Only apply these factors to
             # sources located within the boundaries of the CSHM.
-            in_cshm = _check_in_cshm_polygon(ctx)
-            if in_cshm is True:
+            if ctx.in_cshm:
                 stress_drop_factor = _compute_stress_drop_adjustment(
                     self.kind, SC, ctx.mag)
                 additional_sigma = self.additional_sigma

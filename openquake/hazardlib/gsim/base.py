@@ -262,6 +262,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
+    REQUIRES_COMPUTED_PARAMETERS = ()
+
     _toml = ''  # set by valid.gsim
     superseded_by = None
     non_verified = False
@@ -431,11 +433,12 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def set_parameters(self):
+    def set_parameters(self, rup=None):
         """
         Combines the parameters of the GMPE provided at the construction level
         with the ones originally assigned to the backbone modified GMPE.
         """
+        # used in gulerce_abrahamson_2011
         for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
                     ADMITTED_SET_PARAMETERS):
             try:
