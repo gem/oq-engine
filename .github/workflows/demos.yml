@@ -107,16 +107,18 @@ jobs:
           pip install sphinx==1.6.5
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
           cd doc/sphinx && make html && cd ../adv-manual && make html && make latexpdf
+          echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
           # publish
           if [ -z "$UPLOAD" ]
           then
+            echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/"
+            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/
+          else
             VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])") 
             HTDOCS=/var/www/docs.openquake.org/oq-engine                                                                                                              
             DEST=${HTDOCS}/${VER}
-            # mn: REMOVE IT, JUST FOR TEST
+            echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:${DEST}"
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:${DEST}
-          else
-            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/
           fi
 
