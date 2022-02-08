@@ -72,7 +72,7 @@ def _get_mechanism(ctx, imt, C):
     ``b9 * Fn + b10 * Fr``
     """
     Fn, Fr = _get_fault_type_dummy_variables(ctx, imt)
-    return (C['b9'] * Fn) + (C['b10'] * Fr)
+    return C['b9'] * Fn + C['b10'] * Fr
 
 
 def _get_site_amplification(ctx, imt, C):

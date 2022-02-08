@@ -25,9 +25,9 @@ def AB06_BA08(C, vs30, imt, PGA760):
 
     F = np.zeros_like(vs30)
 
-    F[vs30 >= 760.] = 10**(np.interp(np.log10(vs30[vs30 >= 760.]),
-                                     np.log10([760.0, 2000.0]),
-                                     np.log10([1.0, C['c']])))
+    F[vs30 >= 760.] = 10**np.interp(np.log10(vs30[vs30 >= 760.]),
+                                    np.log10([760.0, 2000.0]),
+                                    np.log10([1.0, C['c']]))
     F[vs30 >= 760.] = 1./F[vs30 >= 760.]
 
     C2 = BA08.COEFFS_SOIL_RESPONSE[imt]

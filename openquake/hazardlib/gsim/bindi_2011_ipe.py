@@ -31,15 +31,14 @@ def _compute_mean(C, mag, repi, hypo_depth):
     """
     Compute mean value for MSK-64.
     """
-    return (C['a1'] * mag + C['a2'] +
-            _get_term01(C, repi, hypo_depth))
+    return C['a1'] * mag + C['a2'] + _get_term01(C, repi, hypo_depth)
 
 
 def _get_term01(C, repi, hypo_depth):
     h = hypo_depth
-    term_repi = np.sqrt((repi**2+h**2)/h**2)
-    term_h = np.sqrt(repi**2+h**2)-h
-    return -C['a3']*np.log10(term_repi)-(C['a4']*term_h)
+    term_repi = np.sqrt((repi**2 + h**2) / h**2)
+    term_h = np.sqrt(repi**2 + h**2) - h
+    return -C['a3'] * np.log10(term_repi) - C['a4'] * term_h
 
 
 class BindiEtAl2011Repi(GMPE):
@@ -66,7 +65,7 @@ class BindiEtAl2011Repi(GMPE):
 
     fixedh = None
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -75,7 +74,7 @@ class BindiEtAl2011Repi(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             if self.fixedh:
-                ctx.hypo_depth = self.fixedh
+                ctx.hypo_depth = np.full_like(ctx.hypo_depth, self.fixedh)
             mean[m] = _compute_mean(C, ctx.mag, ctx.repi, ctx.hypo_depth)
             sig[m] = C['sigma']
 
