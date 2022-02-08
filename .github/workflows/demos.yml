@@ -91,7 +91,13 @@ jobs:
               GITHUB_BR=`echo ${{ github.head_ref }}`
           fi
           echo "BRANCH set to $GITHUB_BR"
-          echo "Upload folder set to $UPLOAD"  
+          if [ -z "$UPLOAD" ]
+             then
+              UPLOAD=`echo ${{ github.event.repository.default_branch }}`
+              echo " Is not a workflow_dispatch run, use upload folder: $UPLOAD"
+             else
+              echo " Is a workflow_dispatch run, use branch: $UPLOAD"
+          fi
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
