@@ -412,7 +412,7 @@ class ContextMaker(object):
         ctxs = []
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
 
-        # Create the distance buffer. A dictionary of dictionaries
+        # Create the distance cache. A dictionary of dictionaries
         dbuff = {}
 
         for rup in irups:
@@ -424,7 +424,7 @@ class ContextMaker(object):
             ctx = self.make_rctx(rup)
             ctx.sites = r_sites
 
-            # This is a multifault source. TODO make sure that the buffering is
+            # This is a multifault source. TODO make sure that the cache is
             # also used initially for 'rrup'
             if isinstance(rup.surface, MultiSurface):
                 params = self.REQUIRES_DISTANCES - {'rrup'}
