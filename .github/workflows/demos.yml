@@ -43,6 +43,7 @@ jobs:
         run: pip install -e .
       - name: Run demos and upload to ci.openquake.org
         shell: bash
+        if: github.event.inputs.git-ref == ''
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
           GITHUB_PULL_REQUEST: ${{ github.event.number }}
@@ -59,8 +60,8 @@ jobs:
           echo " Check if this is a pull request or not"
           if [ -z "$GITHUB_HD_REF" ]
              then
-              echo " Is not a pull request, use branch: $GITHUB_BR"
-              GITHUB_BR=`echo ${{ github.ref }}`
+              echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
+              GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
              else
               echo " Is a pull request, use branch: $GITHUB_HD_BR"
               GITHUB_BR=`echo ${{ github.head_ref }}`
@@ -86,8 +87,8 @@ jobs:
         run: |
           if [ -z "$GITHUB_HD_REF" ]
              then
-              echo " Is not a pull request, use branch: $GITHUB_BR"
-              GITHUB_BR=`echo ${{ github.ref }}`
+              echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
+              GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
              else
               echo " Is a pull request, use branch: $GITHUB_HD_BR"
               GITHUB_BR=`echo ${{ github.head_ref }}`
