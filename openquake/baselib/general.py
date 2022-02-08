@@ -1439,7 +1439,7 @@ class RecordBuilder(object):
             self.names.append(name)
             self.values.append(value)
             if isinstance(value, (str, bytes)):
-                tp = (numpy.string_, len(value) or 1)
+                tp = (numpy.string_, len(value))
             elif isinstance(value, numpy.ndarray):
                 tp = value.dtype
             else:
