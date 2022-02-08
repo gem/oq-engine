@@ -309,7 +309,8 @@ class ContextMaker(object):
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                getattr(ra, par)[slc] = getattr(ctx, par)
+                val = getattr(ctx, par)
+                getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
         return ra
