@@ -371,7 +371,14 @@ class MultiSurface(BaseSurface):
     def get_rx_distance(self, mesh):
         """
         :param mesh:
+            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
+            coordinates of the sites.
+        :returns:
+            A :class:`numpy.ndarray` instance with the Rx distance. Note that
+            the Rx distance is directly taken from the GC2 t-coordinate.
         """
+        # This checks that the info stored is consistent with the mesh of
+        # points used
         condition2 = (self.site_mesh is not None and self.site_mesh != mesh)
         if (self.uut is None) or condition2:
             self._set_tu(mesh)
@@ -418,18 +425,23 @@ def get_dst_multi(rup, sites, params, dbuffer):
         rupture in input and an updated instance of the dictionary with the
         buffer of distances
     """
-    # TODO move up
-    from openquake.hazardlib.calc.filters import get_distances
-    # Updating the buffer with the distances for the sections not yet
-    # considered
+    # This is a list with the IDs of the surfaces representing the geometry of
+    # the rupture in question
     suids = []
+    # Updating the buffer with the distances for the surfaces not yet
+    # considered
     for srf in rup.surface.surfaces:
         suids.append(srf.suid)
         if srf.suid not in dbuffer:
             dbuffer[srf.suid] = {}
             for param in params:
+                # This function returns the distances that will be added to the
+                # buffer. In case of Rx and Ry0, the information buffered will
+                # include the ToR of each surface as well as the GC2 t and u
+                # coordinates for each section.
                 distances = _get_distances(srf, sites, param)
-                dbuffer[srf.suid][param] = distances
+                # Save information into the buffer for the current surface.
+                dbuffer[srf.suid] = distances
     # Computing distances using the buffer
     output = {}
     for param in params:
@@ -453,11 +465,20 @@ def _get_distances_from_buffer(dbuffer: dict, suids: list, param: str):
         # This is looping over all the surface IDs composing the rupture
         for suid in suids:
             distances = np.minimum(distances, dbuffer[suid][param])
+        params = [param]
     elif param in ['rx', 'ry0']:
-        distances = _get_rx_ry0_from_buffer(dbuffer, suids, param)
+        # The computed distances. In this case we are not going to add them to
+        # the buffer since they cannot be reused
+        distances, params = _get_rx_ry0_from_buffer(dbuffer, suids, param)
     else:
         raise ValueError("Unknown distance measure %r" % param)
-    return distances
+    return distances, params
+
+
+def _get_rx_ry0_from_buffer(dbuf, suids, param):
+    """
+    """
+    pass
 
 
 def _get_distances(surface, sites, param):
@@ -475,11 +496,15 @@ def _get_distances(surface, sites, param):
         dist = surface.get_min_distance(sites)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
-    elif param == 'rx':
-        # In this case we compute the GC2
-        dist = surface.get_rx_distance(sites)
-    #elif param == 'ry0':
-    #    dist = surface.get_ry0_distance(sites)
+    elif param in ['rx' 'ry0']:
+        # In this case we compute the GC2 coordinates for the surface
+        tor_lo, tor_la = surface.get_tor()
+        tor_line = geo.line.Line.from_vectors(tor_lo, tor_la)
+        t_upp, u_upp, wei = tor_line.get_tu(sitec.mesh())
+        wei_sum = np.squeeze(np.sum(wei, axis=0))
+        dists = {'t_upp': t_upp, 'u_upp': u_upp, 'wei': wei_sum}
     else:
         raise ValueError(f'Unknown distance measure {param}')
-    return dist
+    if param in ['rrup', 'rjb']:
+        dists = {param: dist}
+    return dists
