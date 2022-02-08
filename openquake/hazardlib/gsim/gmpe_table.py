@@ -299,12 +299,10 @@ def _setup_amplification(self, fle):
     If amplification data is specified then reads into memory and updates
     the required rupture and site parameters
     """
-    self.amplification = AmplificationTable(fle["Amplification"],
-                                            self.m_w,
-                                            self.distances)
+    self.amplification = AmplificationTable(
+        fle["Amplification"], self.m_w, self.distances)
     if self.amplification.element == "Sites":
-        self.REQUIRES_SITES_PARAMETERS = set(
-            [self.amplification.parameter])
+        self.REQUIRES_SITES_PARAMETERS = {self.amplification.parameter}
     elif self.amplification.element == "Rupture":
         # set the site and rupture parameters on the instance
         self.REQUIRES_SITES_PARAMETERS = set()
