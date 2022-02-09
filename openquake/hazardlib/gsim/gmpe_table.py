@@ -435,22 +435,21 @@ class GMPETable(GMPE):
                 _setup_amplification(self, fle)
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
+        # Get distance vector for the given magnitude
+        idx = numpy.searchsorted(self.m_w, ctx.mag)
+        table_dists = self.distances[:, 0, idx - 1]
+        dists = getattr(ctx, self.distance_type)
         for m, imt in enumerate(imts):
-            # Return Distance Tables
+            # compute Distance and Sigma Tables
             imls = _return_tables(self, ctx.mag, imt, "IMLs")
-            # Get distance vector for the given magnitude
-            idx = numpy.searchsorted(self.m_w, ctx.mag)
-            table_dists = self.distances[:, 0, idx - 1]
-            dists = getattr(ctx, self.distance_type)
+            sigma = _return_tables(self, ctx.mag, imt, 'Total')
             # Get mean and standard deviations
             mean_ = _get_mean(self.kind, imls, dists, table_dists)
-            sigma = _return_tables(self, ctx.mag, imt, 'Total')
             stddev = _get_stddev(sigma, dists, table_dists, imt)
             if self.amplification:
-                # Apply amplification
                 mean_amp, sigma_amp = \
                     self.amplification.get_amplification_factors(
-                        imt, ctx, getattr(ctx, self.distance_type))
+                        imt, ctx, dists)
                 mean[m] = numpy.log(mean_ * mean_amp)
                 sig[m] = stddev * sigma_amp
             else:

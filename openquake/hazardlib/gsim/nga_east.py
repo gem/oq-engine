@@ -466,8 +466,9 @@ def get_hard_rock_mean(self, ctx, imt):
     # Get distance vector for the given magnitude
     idx = np.searchsorted(self.m_w, ctx.mag)
     dists = self.distances[:, 0, idx - 1]
+    dst = getattr(ctx, self.distance_type)
     # Get mean and standard deviations
-    mean = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
+    mean = _get_mean(self.kind, imls, dst, dists)
     return np.log(mean)
 
 
