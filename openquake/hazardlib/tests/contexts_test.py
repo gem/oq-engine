@@ -284,7 +284,6 @@ class GetCtxsTestCase(unittest.TestCase):
                 idx = i
         self.ctx = ctxs[idx]
 
-    """
     def test_rjb_distance(self):
         rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
         self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
@@ -292,7 +291,6 @@ class GetCtxsTestCase(unittest.TestCase):
     def test_rrup_distance(self):
         rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
         self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
-    """
 
     def test_rx_distance(self):
         rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
