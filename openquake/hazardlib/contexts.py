@@ -181,8 +181,6 @@ class ContextMaker(object):
         return self.ctx_builder.dtype
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
-        # avoid circular import
-        from openquake.hazardlib.gsim.gmpe_table import set_tables
         if isinstance(oq, dict):
             param = oq
             self.mags = param.get('mags', ())
@@ -195,7 +193,10 @@ class ContextMaker(object):
             param['af'] = getattr(oq, 'af', None)
             self.cross_correl = oq.cross_correl
             self.imtls = oq.imtls
-            self.mags = oq.mags_by_trt[trt]
+            try:
+                self.mags = oq.mags_by_trt[trt]
+            except AttributeError:
+                self.mags = ()
         if 'imtls' in param:
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
@@ -211,7 +212,9 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
-        set_tables(gsims, self.mags, self.imtls)
+        for gsim in gsims:
+            if hasattr(gsim, 'set_tables'):
+                gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.

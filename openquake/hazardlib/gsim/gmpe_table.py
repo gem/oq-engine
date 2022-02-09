@@ -229,25 +229,21 @@ class GMPETable(GMPE):
             mean[m] = numpy.log(_get_mean(self.kind, imls, dists, table_dists))
             sig[m] = _get_stddev(sigma, dists, table_dists, imt)
 
+    # called by the ContextMaker
+    def set_tables(self, mags, imts):
+        """
+        :param mags: a list of magnitudes as strings
+        :param imts: a list of IMTs as strings
 
-# called by the ContextMaker
-def set_tables(gsims, mags, imts):
-    """
-    :param gsims: a list of GSIM instances
-    :param mags: a list of magnitudes as strings
-    :param imts: a list of IMTs as strings
-
-    Set the .mean_table and .sig_table on GSIMs with a .gmpe_table
-    """
-    for gsim in gsims:
-        if hasattr(gsim, 'gmpe_table'):
-            gsim.mean_table = {}  # dictionary mag_str, imt_str -> array
-            gsim.sig_table = {}  # dictionary mag_str, imt_str -> array
-            for imt in imts:
-                imt_obj = imt_module.from_string(imt)
-                for mag in mags:
-                    gsim.mean_table[mag, imt] = _return_tables(
-                        gsim, float(mag), imt_obj, 'IMLs')
-                    if gsim.stddev is not None:
-                        gsim.sig_table[mag, imt] = _return_tables(
-                            gsim, float(mag), imt_obj, 'Total')
+        Set the .mean_table and .sig_table attributes
+        """
+        self.mean_table = {}  # dictionary mag_str, imt_str -> array
+        self.sig_table = {}  # dictionary mag_str, imt_str -> array
+        for imt in imts:
+            imt_obj = imt_module.from_string(imt)
+            for mag in mags:
+                self.mean_table[mag, imt] = _return_tables(
+                    self, float(mag), imt_obj, 'IMLs')
+                if self.stddev is not None:
+                    self.sig_table[mag, imt] = _return_tables(
+                        self, float(mag), imt_obj, 'Total')
