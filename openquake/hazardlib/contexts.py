@@ -197,6 +197,8 @@ class ContextMaker(object):
                 self.mags = oq.mags_by_trt[trt]
             except AttributeError:
                 self.mags = ()
+            except KeyError:  # missing TRT but there is only one
+                [(_, self.mags)] = oq.mags_by_trt.items()
         if 'imtls' in param:
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
