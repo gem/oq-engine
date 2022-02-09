@@ -740,6 +740,24 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
+ALL_CALCULATORS = ['classical_risk',
+                   'classical_damage',
+                   'classical',
+                   'ucerf_classical',
+                   'event_based',
+                   'scenario',
+                   'ucerf_hazard',
+                   'post_risk',
+                   'ebrisk',
+                   'scenario_risk',
+                   'event_based_risk',
+                   'disaggregation',
+                   'multi_risk',
+                   'classical_bcr',
+                   'preclassical',
+                   'conditional_spectrum',
+                   'event_based_damage',
+                   'scenario_damage']
 
 
 def check_same_levels(imtls):
@@ -807,7 +825,7 @@ class OqParam(valid.ParamSet):
     assets_per_site_limit = valid.Param(valid.positivefloat, 1000)
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
-    calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
+    calculation_mode = valid.Param(valid.Choice(*ALL_CALCULATORS))
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), '0')
     collect_rlzs = valid.Param(valid.boolean, None)

@@ -461,14 +461,14 @@ def get_hard_rock_mean(self, ctx, imt):
     Returns the mean and standard deviations for the reference very hard
     rock condition (Vs30 = 3000 m/s)
     """
-    # Return Distance Tables
+    # return Distance Tables
     imls = _return_tables(self, ctx.mag, imt, "IMLs")
     # Get distance vector for the given magnitude
     idx = np.searchsorted(self.m_w, ctx.mag)
     dists = self.distances[:, 0, idx - 1]
-    # Get mean and standard deviations
-    mean = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
-    return np.log(mean)
+    dst = getattr(ctx, self.distance_type)
+    # get log(mean)
+    return np.log(_get_mean(self.kind, imls, dst, dists))
 
 
 def get_site_amplification(self, imt, pga_r, sites):

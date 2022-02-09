@@ -468,10 +468,10 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                mags_by_trt = csm.get_mags_by_trt()
-                for trt in mags_by_trt:
+                oq.mags_by_trt = csm.get_mags_by_trt()
+                for trt in oq.mags_by_trt:
                     self.datastore['source_mags/' + trt] = numpy.array(
-                        mags_by_trt[trt])
+                        oq.mags_by_trt[trt])
                     interp = oq.maximum_distance(trt)
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (

@@ -164,7 +164,8 @@ site_param_dt = {
 
     # other parameters
     'custom_site_id': (numpy.string_, 6),
-    'region': numpy.uint32
+    'region': numpy.uint32,
+    'in_cshm': bool  # used in mcverry
 }
 
 
