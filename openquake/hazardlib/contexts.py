@@ -152,6 +152,28 @@ def _interp(param, name, trt):
     return mdd
 
 
+def set_tables(gsims, mags, imts):
+    """
+    :param gsims: a list of GSIM instances
+    :param mags: a list of magnitudes as strings with 2 digits
+    :param imts: a list of IMTs as strings
+
+    Set the .table attribute on GSIMs with a .gmpe_table attribute
+    """
+    # avoid circular import
+    from openquake.hazardlib.gsim.gmpe_table import _return_tables
+    for gsim in gsims:
+        if hasattr(gsim, 'gmpe_table'):
+            for imt in imts:
+                imt_obj = imt_module.from_string(imt)
+                for mag in mags:
+                    gsim.table[mag, imt, 'IMLs'] = _return_tables(
+                        gsim, float(mag), imt_obj, 'IMLs')
+                    if gsim.stddev is not None:
+                        gsim.table[mag, imt, 'IMLs'] = _return_tables(
+                            gsim, float(mag), imt_obj, 'Total')
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -202,6 +224,7 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
+        set_tables(gsims, oq.mags_by_trt[trt], self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
@@ -1285,6 +1308,8 @@ def read_cmakers(dstore, full_lt=None):
             oq.af = AmplFunction.from_dframe(df)
         else:
             oq.af = None
+        oq.mags_by_trt = {k: decode(v[:])
+                          for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
         cmaker.trti = trti
