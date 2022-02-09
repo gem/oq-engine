@@ -85,6 +85,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
     """
     Verifies the correct execution of a GMPE Table
     """
+    # good_dummy_table has Amplification which is ignored
     TABLE_FILE = os.path.join(BASE_DATA_PATH, "good_dummy_table.hdf5")
 
     def setUp(self):
@@ -200,7 +201,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         ctx.sids = np.arange(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])
-        expected_sigma = 0.25 * np.ones(5)
+        expected_sigma = 0.5 * np.ones(5)
         imts = [imt_module.PGA(), imt_module.SA(1.0), imt_module.PGV()]
         # PGA
         mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
@@ -211,7 +212,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
                                                 imts[1], stddevs)
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
-        np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
+        np.testing.assert_array_almost_equal(sigma[0], 0.8 * np.ones(5), 5)
         # PGV
         mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
                                                 imts[2], stddevs)
