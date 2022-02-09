@@ -152,29 +152,6 @@ def _interp(param, name, trt):
     return mdd
 
 
-def set_tables(gsims, mags, imts):
-    """
-    :param gsims: a list of GSIM instances
-    :param mags: a list of magnitudes as strings with 2 digits
-    :param imts: a list of IMTs as strings
-
-    Set the .mean_table and .sig_table attributes on GSIMs
-    with a .gmpe_table attribute.
-    """
-    # avoid circular import
-    from openquake.hazardlib.gsim.gmpe_table import _return_tables
-    for gsim in gsims:
-        if hasattr(gsim, 'gmpe_table'):
-            for imt in imts:
-                imt_obj = imt_module.from_string(imt)
-                for mag in mags:
-                    gsim.mean_table[mag, imt] = _return_tables(
-                        gsim, float(mag), imt_obj, 'IMLs')
-                    if gsim.stddev is not None:
-                        gsim.sig_table[mag, imt] = _return_tables(
-                            gsim, float(mag), imt_obj, 'Total')
-
-
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -204,6 +181,8 @@ class ContextMaker(object):
         return self.ctx_builder.dtype
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
+        # avoid circular import
+        from openquake.hazardlib.gsim.gmpe_table import set_tables
         if isinstance(oq, dict):
             param = oq
             self.mags = param.get('mags', ())

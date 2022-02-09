@@ -323,18 +323,7 @@ def _return_tables(self, mag, imt, which):
         interpolator = interp1d(
             numpy.log10(periods), numpy.log10(iml_table), axis=1)
         iml_table = 10. ** interpolator(numpy.log10(imt.period))
-    return apply_magnitude_interpolation(self, mag, iml_table)
 
-
-def apply_magnitude_interpolation(self, mag, iml_table):
-    """
-    Interpolates the tables to the required magnitude level
-
-    :param float mag:
-        Magnitude
-    :param iml_table:
-        Intensity measure level table
-    """
     # do not allow "mag" to exceed maximum table magnitude
     mag = numpy.clip(mag, None, self.m_w[-1])
 
@@ -407,8 +396,6 @@ class GMPETable(GMPE):
         the tables from hdf5 and hold them in memory.
         """
         super().__init__(**kwargs)
-        self.mean_table = {}  # dictionary mag_str, imt_str -> array
-        self.sig_table = {}  # dictionary mag_str, imt_str -> array
         # populated by the ContextManager once imts and magnitudes are known
         fname = self.kwargs.get('gmpe_table', self.gmpe_table)
         with h5py.File(fname, "r") as fle:
@@ -459,3 +446,26 @@ class GMPETable(GMPE):
             else:
                 mean[m] = numpy.log(mean_)
                 sig[m] = stddev
+
+
+# called by the ContextMaker
+def set_tables(gsims, mags, imts):
+    """
+    :param gsims: a list of GSIM instances
+    :param mags: a list of magnitudes as strings
+    :param imts: a list of IMTs as strings
+
+    Set the .mean_table and .sig_table on GSIMs with a .gmpe_table
+    """
+    for gsim in gsims:
+        if hasattr(gsim, 'gmpe_table'):
+            gsim.mean_table = {}  # dictionary mag_str, imt_str -> array
+            gsim.sig_table = {}  # dictionary mag_str, imt_str -> array
+            for imt in imts:
+                imt_obj = imt_module.from_string(imt)
+                for mag in mags:
+                    gsim.mean_table[mag, imt] = _return_tables(
+                        gsim, float(mag), imt_obj, 'IMLs')
+                    if gsim.stddev is not None:
+                        gsim.sig_table[mag, imt] = _return_tables(
+                            gsim, float(mag), imt_obj, 'Total')
