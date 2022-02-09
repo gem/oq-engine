@@ -20,7 +20,7 @@ contributing is still nontrivial, and it absolutely necessary
 to know git and the tools of Open Source development in
 general, in particular about testing. If this is not the
 case, you should do some study on your own and come back later. There
-is a huge amount of resources in the net about these topics. This
+is a huge amount of resources on the net about these topics. This
 manual will focus solely on the OpenQuake engine and it assume that
 you already know how to use it, i.e. you have read the User Manual
 first.
