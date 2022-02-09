@@ -216,18 +216,14 @@ class GMPETable(GMPE):
             self.stddev = todict(fle["Total"])
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
-        # Get distance vector for the given magnitude
         idx = numpy.searchsorted(self.m_w, ctx.mag)
         table_dists = self.distances[:, 0, idx - 1]
         dists = getattr(ctx, self.distance_type)
         for m, imt in enumerate(imts):
-            # compute Distance and Sigma Tables
-            magstr = '%.2f' % ctx.mag
-            imls = self.mean_table[magstr, imt.string]
-            sigma = self.sig_table[magstr, imt.string]
-            # Get mean and standard deviations
+            key = ('%.2f' % ctx.mag, imt.string)
+            imls = self.mean_table[key]
             mean[m] = numpy.log(_get_mean(self.kind, imls, dists, table_dists))
-            sig[m] = _get_stddev(sigma, dists, table_dists, imt)
+            sig[m] = _get_stddev(self.sig_table[key], dists, table_dists, imt)
 
     # called by the ContextMaker
     def set_tables(self, mags, imts):
