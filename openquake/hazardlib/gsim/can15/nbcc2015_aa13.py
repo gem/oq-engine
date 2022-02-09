@@ -127,15 +127,13 @@ class NBCC2015_AA13(GMPETable):
         """
         Returns the mean and standard deviations
         """
+        # Get distance vector for the given magnitude
+        idx = np.searchsorted(self.m_w, ctx.mag)
+        dists = self.distances[:, 0, idx - 1]
+        dst = getattr(ctx, self.distance_type)
         for m, imt in enumerate(imts):
-            key = '%.2f' % ctx.mag, imt.string
-            # Return Distance Tables
+            key = ('%.2f' % ctx.mag, imt.string)
             imls = self.mean_table[key]
-            # Get distance vector for the given magnitude
-            idx = np.searchsorted(self.m_w, ctx.mag)
-            dists = self.distances[:, 0, idx - 1]
-            dst = getattr(ctx, self.distance_type)
-            # Get mean and standard deviations
             mean[m] = np.log(_get_mean(self.kind, imls, dst, dists)) + \
                 site_term(self, ctx, dists, imt)
             sig[m] = _get_stddev(self.sig_table[key], dst, dists, imt)
