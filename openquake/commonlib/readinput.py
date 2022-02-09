@@ -263,7 +263,7 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
+def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -272,9 +272,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
         dictionary of parameters with a key "calculation_mode"
     :param pkg:
         Python package where to find the configuration file (optional)
-    :param calculators:
-        Sequence of calculator names (optional) used to restrict the
-        valid choices for `calculation_mode`
     :param kw:
         Dictionary of strings to override the job parameters
     :returns:
