@@ -26,7 +26,7 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, AmplificationTable, hdf_arrays_to_dict, _return_tables)
+    GMPETable, AmplificationTable, todict, _return_tables)
 from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import imt as imt_module
@@ -65,7 +65,7 @@ class HDFArraysToDictTestCase(unittest.TestCase):
         # Setup two
         expected_dset1 = np.zeros([3, 3])
         expected_dset2 = np.ones([3, 3])
-        output_dict = hdf_arrays_to_dict(self.group)
+        output_dict = todict(self.group)
         assert isinstance(output_dict, dict)
         self.assertIn("DSET1", output_dict)
         self.assertIn("DSET2", output_dict)
@@ -102,7 +102,6 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         """
         Tests the setup and loading of data from file to memory
         """
-
         # Check setup
         # 1. Shape
         self.assertTupleEqual(self.amp_table.shape, (10, 3, 5, 2))
@@ -118,12 +117,11 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
                                              np.array([0.1, 0.5, 1.0]))
         # 6. Means and Standard Deviations
         expected_mean, expected_sigma = self._build_mean_and_stddev_table()
-        for key in self.amp_table.mean:
-            np.testing.assert_array_almost_equal(self.amp_table.mean[key],
-                                                 expected_mean[key])
+        for imt in self.amp_table.mean:
+            np.testing.assert_array_almost_equal(self.amp_table.mean[imt],
+                                                 expected_mean[imt])
             np.testing.assert_array_almost_equal(
-                self.amp_table.sigma[const.StdDev.TOTAL][key],
-                expected_sigma[const.StdDev.TOTAL][key])
+                self.amp_table.sigma[imt], expected_sigma[imt])
 
     def _build_mean_and_stddev_table(self):
         """
@@ -140,14 +138,13 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         expected_means["SA"][:, 0, :, self.IDX] *= 1.5
         expected_means["SA"][:, 1, :, self.IDX] *= 2.0
         expected_means["SA"][:, 2, :, self.IDX] *= 0.5
-        expected_sigma = {const.StdDev.TOTAL: {
+        expected_sigma = {
             "PGA": np.ones([10, 1, 5, 2]),
             "PGV": np.ones([10, 1, 5, 2]),
-            "SA": np.ones([10, 3, 5, 2])
-            }}
-        expected_sigma[const.StdDev.TOTAL]["PGA"][:, :, :, self.IDX] *= 0.8
-        expected_sigma[const.StdDev.TOTAL]["PGV"][:, :, :, self.IDX] *= 0.8
-        expected_sigma[const.StdDev.TOTAL]["SA"][:, :, :, self.IDX] *= 0.8
+            "SA": np.ones([10, 3, 5, 2])}
+        expected_sigma["PGA"][:, :, :, self.IDX] *= 0.8
+        expected_sigma["PGV"][:, :, :, self.IDX] *= 0.8
+        expected_sigma["SA"][:, :, :, self.IDX] *= 0.8
         return expected_means, expected_sigma
 
     def test_get_set(self):
@@ -194,15 +191,10 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         # PGA
         expected_table = np.ones([10, 2])
         expected_table[:, self.IDX] *= 0.8
-        stddevs = [const.StdDev.TOTAL]
-        pga_table = self.amp_table.get_sigma_tables(imt_module.PGA(),
-                                                    ctx,
-                                                    stddevs)[0]
+        pga_table = self.amp_table.get_sigma_table(imt_module.PGA(), ctx)
         np.testing.assert_array_almost_equal(pga_table, expected_table)
         # SA (for coverage)
-        sa_table = self.amp_table.get_sigma_tables(imt_module.SA(0.3),
-                                                   ctx,
-                                                   stddevs)[0]
+        sa_table = self.amp_table.get_sigma_table(imt_module.SA(0.3), ctx)
         np.testing.assert_array_almost_equal(sa_table, expected_table)
 
     def test_get_amplification_factors(self):
@@ -217,35 +209,28 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         # Test Vs30 is 700.0 m/s midpoint between the 400 m/s and 1000 m/s
         # specified in the table
         ctx.vs30 = 700.0 * np.ones_like(ctx.rjb)
-        stddevs = [const.StdDev.TOTAL]
         expected_mean = np.ones_like(ctx.rjb)
-        expected_sigma = np.ones_like(ctx.rjb)
         # Check PGA and PGV
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGA(), ctx, ctx.rjb, stddevs)
+            imt_module.PGA(), ctx, ctx.rjb)
         np.testing.assert_array_almost_equal(
-            mean_amp,
-            midpoint(1.0, 1.5) * expected_mean)
+            mean_amp, midpoint(1.0, 1.5) * expected_mean)
         np.testing.assert_array_almost_equal(
-            sigma_amp[0],
-            0.9 * expected_mean)
+            sigma_amp[0], 0.9 * expected_mean)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGV(), ctx, ctx.rjb, stddevs)
+            imt_module.PGV(), ctx, ctx.rjb)
         np.testing.assert_array_almost_equal(
             mean_amp,
             midpoint(1.0, 0.5) * expected_mean)
         np.testing.assert_array_almost_equal(
-            sigma_amp[0],
-            0.9 * expected_mean)
+            sigma_amp, 0.9 * expected_mean)
         # Sa (0.5)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.SA(0.5), ctx, ctx.rjb, stddevs)
+            imt_module.SA(0.5), ctx, ctx.rjb)
         np.testing.assert_array_almost_equal(
-            mean_amp,
-            midpoint(1.0, 2.0) * expected_mean)
+            mean_amp, midpoint(1.0, 2.0) * expected_mean)
         np.testing.assert_array_almost_equal(
-            sigma_amp[0],
-            0.9 * expected_mean)
+            sigma_amp, 0.9 * expected_mean)
 
     def tearDown(self):
         """
@@ -282,12 +267,11 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
                                              np.array([0.1, 0.5, 1.0]))
         # 6. Means and Standard Deviations
         expected_mean, expected_sigma = self._build_mean_and_stddev_table()
-        for key in self.amp_table.mean:
-            np.testing.assert_array_almost_equal(self.amp_table.mean[key],
-                                                 expected_mean[key])
+        for imt in self.amp_table.mean:
+            np.testing.assert_array_almost_equal(self.amp_table.mean[imt],
+                                                 expected_mean[imt])
             np.testing.assert_array_almost_equal(
-                self.amp_table.sigma[const.StdDev.TOTAL][key],
-                expected_sigma[const.StdDev.TOTAL][key])
+                self.amp_table.sigma[imt], expected_sigma[imt])
 
     def test_get_amplification_factors(self):
         """
@@ -305,30 +289,24 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
         expected_mean = np.ones_like(ctx.rjb)
         # Check PGA and PGV
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGA(), ctx, ctx.rjb, stddevs)
+            imt_module.PGA(), ctx, ctx.rjb)
         np.testing.assert_array_almost_equal(
-            mean_amp,
-            midpoint(1.0, 1.5) * expected_mean)
+            mean_amp, midpoint(1.0, 1.5) * expected_mean)
         np.testing.assert_array_almost_equal(
-            sigma_amp[0],
-            0.9 * expected_mean)
+            sigma_amp, 0.9 * expected_mean)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.PGV(), ctx, ctx.rjb, stddevs)
+            imt_module.PGV(), ctx, ctx.rjb)
         np.testing.assert_array_almost_equal(
-            mean_amp,
-            midpoint(1.0, 0.5) * expected_mean)
+            mean_amp, midpoint(1.0, 0.5) * expected_mean)
         np.testing.assert_array_almost_equal(
-            sigma_amp[0],
-            0.9 * expected_mean)
+            sigma_amp, 0.9 * expected_mean)
         # Sa (0.5)
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
-            imt_module.SA(0.5), ctx, ctx.rjb, stddevs)
+            imt_module.SA(0.5), ctx, ctx.rjb)
         np.testing.assert_array_almost_equal(
-            mean_amp,
-            midpoint(1.0, 2.0) * expected_mean)
+            mean_amp, midpoint(1.0, 2.0) * expected_mean)
         np.testing.assert_array_almost_equal(
-            sigma_amp[0],
-            0.9 * expected_mean)
+            sigma_amp, 0.9 * expected_mean)
 
     def test_get_set(self):
         """
@@ -393,16 +371,16 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         self.assertSetEqual(gsim.REQUIRES_DISTANCES, set(("rjb",)))
         self.assertSetEqual(
             gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES,
-            set((imt_module.PGA, imt_module.PGV, imt_module.SA)))
+            {imt_module.PGA, imt_module.PGV, imt_module.SA})
         self.assertSetEqual(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES,
-                            set((const.StdDev.TOTAL,)))
+                            {const.StdDev.TOTAL})
         # Verify correctly parsed IMLs and standard deviations
         for iml in ["PGA", "PGV", "SA", "T"]:
             np.testing.assert_array_almost_equal(
                 gsim.imls[iml],
                 self.hdf5["IMLs/" + iml][:])
             np.testing.assert_array_almost_equal(
-                gsim.stddevs[0][iml], self.hdf5["Total/" + iml][:])
+                gsim.stddev[iml], self.hdf5["Total/" + iml][:])
 
     def test_retreival_tables_good_no_interp(self):
         """
@@ -425,10 +403,10 @@ class GSIMTableGoodTestCase(unittest.TestCase):
             np.array([2.0, 1., 0.5]))
         # Also for standard deviations
         np.testing.assert_array_almost_equal(
-            _return_tables(gsim, 6.0, imt_module.PGA(), 0),
+            _return_tables(gsim, 6.0, imt_module.PGA(), 'Total'),
             0.5 * np.ones(3))
         np.testing.assert_array_almost_equal(
-            _return_tables(gsim, 6.0, imt_module.SA(1.0), 0),
+            _return_tables(gsim, 6.0, imt_module.SA(1.0), 'Total'),
             0.8 * np.ones(3))
 
     def test_retreival_tables_good_interp(self):
@@ -539,22 +517,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
 
-    def tearDown(self):
-        """
-        Close the hdf5 file
-        """
-        self.hdf5.close()
-
-
-class GSIMTableTestCaseMultiStdDev(unittest.TestCase):
-    """
-    Tests the instantiation of the GSIM table class in the case when
-    i. Multiple Standard Deviations are specified
-    ii. An unrecognised IMT is input
-    """
-    TABLE_FILE = os.path.join(BASE_DATA_PATH,
-                              "good_dummy_table_multi_stddev.hdf5")
-
     def test_instantiation(self):
         """
         Runs both instantiation checks
@@ -562,16 +524,16 @@ class GSIMTableTestCaseMultiStdDev(unittest.TestCase):
         deviation, as well as an IMT that is not recognised by OpenQuake
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        expected_stddev_set = set((const.StdDev.TOTAL,
-                                   const.StdDev.INTER_EVENT,
-                                   const.StdDev.INTRA_EVENT))
         self.assertSetEqual(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES,
-                            expected_stddev_set)
-        expected_imt_set = set((imt_module.PGA,
-                                imt_module.PGV,
-                                imt_module.SA))
+                            {const.StdDev.TOTAL})
         self.assertSetEqual(gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES,
-                            expected_imt_set)
+                            {imt_module.PGA, imt_module.PGV, imt_module.SA})
+
+    def tearDown(self):
+        """
+        Close the hdf5 file
+        """
+        self.hdf5.close()
 
 
 class GSIMTableTestCaseRupture(unittest.TestCase):
