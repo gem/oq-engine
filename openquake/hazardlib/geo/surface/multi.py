@@ -363,7 +363,8 @@ class MultiSurface(BaseSurface):
             tupps.append(tu)
             uupps.append(uu)
             weis.append(np.squeeze(np.sum(we, axis=0)))
-        # `get_tu` is a function from the multiline module
+
+        # `get_tu` is a function in the multiline module
         uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
         self.uut = uut
         self.tut = tut
@@ -455,9 +456,10 @@ def get_dst_multi(rup, sites, params, dcache):
     # Computing distances using the cache
     output = {}
     for param in params:
-        distances, keys = _get_distances_from_cache(dcache, suids, param)
-        for dst, key in zip(distances, keys):
-            output[key] = dst
+        if param not in output.keys():
+            distances, keys = _get_distances_from_cache(dcache, suids, param)
+            for dst, key in zip(distances, keys):
+                output[key] = dst
     return output, dcache
 
 
@@ -508,7 +510,12 @@ def _get_distances(surface, sites, param):
         tor = geo.line.Line.from_vectors(tor_lo, tor_la)
         t_upp, u_upp, wei = tor.get_tu(sites)
         wei_sum = np.squeeze(np.sum(wei, axis=0))
-        dists = {'tor': tor, 't_upp': t_upp, 'u_upp': u_upp, 'wei': wei_sum}
+        # Get the u-coordinate on the last vertex of the trace
+        mesh = Mesh(tor_lo[[0, -1]], tor_la[[0, -1]])
+        _, uu, _ = tor.get_tu(mesh)
+        # Save data
+        dists = {'tor': tor, 't_upp': t_upp, 'u_upp': u_upp, 'wei': wei_sum,
+                 'umax': max(uu)}
     else:
         raise ValueError(f'Unknown distance measure {param}')
     if param in ['rrup', 'rjb']:
@@ -521,7 +528,8 @@ def _get_rx_ry0_from_cache(dbuf, suids, param):
     See :function:`openquake.hazardlib.geo.surface.multi._get_distances`
 
     :returns:
-        A dictionary
+        Two lists. One with distances and one with the corresponding distance
+        definitions
     """
 
     # Retrieve info from the cache
@@ -537,11 +545,13 @@ def _get_rx_ry0_from_cache(dbuf, suids, param):
     tupps = [dbuf[suids[i]]['t_upp'] for i in soidx]
     uupps = [dbuf[suids[i]]['u_upp'] for i in soidx]
     weis = [dbuf[suids[i]]['wei'] for i in soidx]
+    umax = [dbuf[suids[i]]['umax'] for i in soidx]
 
     # Change sign to reverted surface traces
     for i, flag in enumerate(revert):
         if flag:
             tupps[i] = -tupps[i]
+            uupps[i] = -(uupps[i] - umax[i])
 
     # Fixing shift
     multil._set_coordinate_shift()
@@ -551,6 +561,8 @@ def _get_rx_ry0_from_cache(dbuf, suids, param):
 
     # Get GC coordinates
     multil.set_tu()
+
+    # Get Rx and Ry0
     rx = multil.get_rx_distance()
     ry0 = multil.get_ry0_distance()
 

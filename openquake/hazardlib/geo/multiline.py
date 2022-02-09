@@ -101,7 +101,8 @@ class MultiLine():
             _ = self.set_overall_strike()
 
         # Calculate the origin
-        olo, ola, soidx = get_origin(self.lines, self.strike_to_east)
+        olo, ola, soidx = get_origin(
+            self.lines, self.strike_to_east, self.overall_strike)
         self.olon = olo
         self.olat = ola
 
@@ -128,7 +129,8 @@ class MultiLine():
 
     def set_tu(self, mesh: Mesh = None):
         """
-        Given a mesh, computes the T and U coordinates for the multiline
+        Computes the T and U coordinates for the multiline. If a mesh is
+        first we compute the required info.
         """
         if self.shift is None:
             self._set_coordinate_shift()
@@ -144,7 +146,6 @@ class MultiLine():
         uut, tut = get_tu(self.shift, tupps, uupps, weis)
         self.uut = uut
         self.tut = tut
-
 
     def set_u_max(self):
         """
@@ -323,9 +324,13 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
     return revert, strike_to_east, avg_azim, lines
 
 
-def get_origin(lines: list, strike_to_east: bool):
+def get_origin(lines: list, strike_to_east: bool, avg_strike: float):
     """
     Compute the origin necessary to calculate the coordinate shift
+
+    :returns:
+        The longitude and latitude coordinates of the origin and an array with
+        the indexes used to sort the lines according to the origin
     """
 
     # Create the list of endpoints
@@ -342,7 +347,8 @@ def get_origin(lines: list, strike_to_east: bool):
 
     # Find the index of the eastmost (or westmost) point depending on the
     # prevalent direction of the strike
-    if strike_to_east:
+    DELTA = 0.1
+    if strike_to_east or abs(avg_strike) < DELTA:
         idx = np.argmin(px)
     else:
         idx = np.argmax(px)
@@ -355,7 +361,7 @@ def get_origin(lines: list, strike_to_east: bool):
     # Find the indexes needed to sort the segments according to the prevalent
     # direction of the strike
     sort_idxs = np.argsort(eps)
-    if not strike_to_east:
+    if not (strike_to_east or abs(avg_strike) < DELTA):
         sort_idxs = np.flipud(sort_idxs)
 
     # Set the origin to be used later for the calculation of the

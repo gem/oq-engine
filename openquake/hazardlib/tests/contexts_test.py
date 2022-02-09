@@ -270,9 +270,34 @@ class GetCtxsTestCase(unittest.TestCase):
                     vs30measured=True)
         self.sitec = SiteCollection([site])
 
-    def test_multi_fault(self):
-
+        # Create the context maker
         gmm = AbrahamsonEtAl2014()
         param = dict(imtls={'PGA':[]})
         cm = ContextMaker('boh', [gmm], param)
-        cm.get_ctxs(self.src, self.sitec)
+
+        # With this we get a list with six RuptureContexts
+        ctxs = cm.get_ctxs(self.src, self.sitec)
+
+        # Find index of rupture with three sections
+        for i, ctx in enumerate(ctxs):
+            if ctx.mag == 7.0:
+                idx = i
+        self.ctx = ctxs[idx]
+
+    """
+    def test_rjb_distance(self):
+        rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
+
+    def test_rrup_distance(self):
+        rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
+    """
+
+    def test_rx_distance(self):
+        rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rx, self.ctx.rx, delta=1e-3)
+
+    def test_ry0_distance(self):
+        dst = self.ctx.surface.get_ry0_distance(self.sitec.mesh)
+        self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)

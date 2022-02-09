@@ -193,6 +193,7 @@ class ContextMaker(object):
             self.cross_correl = oq.cross_correl
             self.imtls = oq.imtls
 
+        self.dcache = {}
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -354,7 +355,14 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        distances = get_distances(rup, sites, 'rrup')
+        # TODO evaluate the effectiveness of this since the performance
+        # improvement seems minimal (if not totally absent)
+        if isinstance(rup.surface, MultiSurface):
+            tmp, self.dcache = get_dst_multi(
+                rup, sites, ['rrup'], self.dcache)
+            distances = tmp['rrup']
+        else:
+            distances = get_distances(rup, sites, 'rrup')
         mdist = self.maximum_distance(rup.mag)
         mask = distances <= mdist
         if mask.any():
@@ -413,7 +421,7 @@ class ContextMaker(object):
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
 
         # Create the distance cache. A dictionary of dictionaries
-        dbuff = {}
+        dcache = {}
 
         for rup in irups:
             sites = getattr(rup, 'sites', sitecol)
@@ -424,11 +432,10 @@ class ContextMaker(object):
             ctx = self.make_rctx(rup)
             ctx.sites = r_sites
 
-            # This is a multifault source. TODO make sure that the cache is
-            # also used initially for 'rrup'
+            # In case of a multifault source we use a cache with distances
             if isinstance(rup.surface, MultiSurface):
                 params = self.REQUIRES_DISTANCES - {'rrup'}
-                distances, dbuff = get_dst_multi(rup, r_sites, params, dbuff)
+                distances, dcache = get_dst_multi(rup, r_sites, params, dcache)
                 for key in distances:
                     setattr(dctx, key, distances[key])
             else:
