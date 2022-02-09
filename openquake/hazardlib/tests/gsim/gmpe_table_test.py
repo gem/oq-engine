@@ -371,9 +371,9 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         self.assertSetEqual(gsim.REQUIRES_DISTANCES, set(("rjb",)))
         self.assertSetEqual(
             gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES,
-            set((imt_module.PGA, imt_module.PGV, imt_module.SA)))
+            {imt_module.PGA, imt_module.PGV, imt_module.SA})
         self.assertSetEqual(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES,
-                            set((const.StdDev.TOTAL,)))
+                            {const.StdDev.TOTAL})
         # Verify correctly parsed IMLs and standard deviations
         for iml in ["PGA", "PGV", "SA", "T"]:
             np.testing.assert_array_almost_equal(

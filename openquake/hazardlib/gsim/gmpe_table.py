@@ -410,7 +410,7 @@ class GMPETable(GMPE):
         fname = self.kwargs.get('gmpe_table', self.gmpe_table)
         with h5py.File(fname, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])
-            self.REQUIRES_DISTANCES = set([self.distance_type])
+            self.REQUIRES_DISTANCES = {self.distance_type}
             # Load in magnitude
             self.m_w = fle["Mw"][:]
             # Load in distances
@@ -418,19 +418,9 @@ class GMPETable(GMPE):
             # Load intensity measure types and levels
             self.imls = hdf_arrays_to_dict(fle["IMLs"])
             # Update the list of supported IMTs from the tables
-            imt_list = []  # this is a list of factories, like PGA, SA, etc
-            for key in self.imls:
-                if "SA" in key:
-                    imt_list.append(imt_module.SA)
-                elif key == "T":
-                    continue
-                else:
-                    try:
-                        factory = getattr(imt_module, key)
-                    except Exception:
-                        continue
-                    imt_list.append(factory)
-            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(imt_list)
+            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
+                getattr(imt_module, key)
+                for key in self.imls if key in imt_module.__dict__}
             if "SA" in self.imls and "T" not in self.imls:
                 raise ValueError("Spectral Acceleration must be accompanied by"
                                  " periods")
