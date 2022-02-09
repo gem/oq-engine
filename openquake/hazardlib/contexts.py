@@ -158,7 +158,8 @@ def set_tables(gsims, mags, imts):
     :param mags: a list of magnitudes as strings with 2 digits
     :param imts: a list of IMTs as strings
 
-    Set the .table attribute on GSIMs with a .gmpe_table attribute
+    Set the .mean_table and .sig_table attributes on GSIMs
+    with a .gmpe_table attribute.
     """
     # avoid circular import
     from openquake.hazardlib.gsim.gmpe_table import _return_tables
@@ -167,10 +168,10 @@ def set_tables(gsims, mags, imts):
             for imt in imts:
                 imt_obj = imt_module.from_string(imt)
                 for mag in mags:
-                    gsim.table[mag, imt, 'IMLs'] = _return_tables(
+                    gsim.mean_table[mag, imt] = _return_tables(
                         gsim, float(mag), imt_obj, 'IMLs')
                     if gsim.stddev is not None:
-                        gsim.table[mag, imt, 'IMLs'] = _return_tables(
+                        gsim.sig_table[mag, imt] = _return_tables(
                             gsim, float(mag), imt_obj, 'Total')
 
 
@@ -205,6 +206,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         if isinstance(oq, dict):
             param = oq
+            self.mags = param.get('mags', ())
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
             param = vars(oq)
@@ -214,6 +216,7 @@ class ContextMaker(object):
             param['af'] = getattr(oq, 'af', None)
             self.cross_correl = oq.cross_correl
             self.imtls = oq.imtls
+            self.mags = oq.mags_by_trt[trt]
 
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
@@ -224,7 +227,7 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
-        set_tables(gsims, oq.mags_by_trt[trt], self.imtls)
+        set_tables(gsims, self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
@@ -1083,18 +1086,20 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsim, ctx, imts):
+def get_mean_stds(gsim, ctx, imts, mags=()):
     """
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N
     :param imts: a list of M IMTs
+    :param mags: a list of magnitudes as strings (used only in GMPETables)
     :returns:
         an array of shape (4, M, N) obtained by applying the
         given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)
     """
     imtls = {imt.string: [0] for imt in imts}
     single = hasattr(gsim, 'compute')
-    cmaker = ContextMaker('*', [gsim] if single else gsim, {'imtls': imtls})
+    cmaker = ContextMaker('*', [gsim] if single else gsim,
+                          {'imtls': imtls, 'mags_by_trt': {'*': mags}})
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
     return out[:, 0] if single else out
 

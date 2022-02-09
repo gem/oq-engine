@@ -464,30 +464,22 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
         ctx.vs30 = 1000. * np.ones(5)
         ctx.sids = np.arange(5)
-        stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])
         expected_sigma = 0.25 * np.ones(5)
         imts = [imt_module.PGA(), imt_module.SA(1.0), imt_module.PGV()]
         # PGA
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imts[0], stddevs)
+        mean, sigma, _, _ = contexts.get_mean_stds(gsim, ctx, [imts[0]])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], expected_sigma, 5)
         # SA
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imts[1], stddevs)
+        mean, sigma, _, _ = contexts.get_mean_stds(gsim, ctx, [imts[1]])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
         # PGV
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imts[2], stddevs)
-        np.testing.assert_array_almost_equal(np.exp(mean),
-                                             10. * expected_mean,
-                                             5)
+        mean, sigma, _, _ = contexts.get_mean_stds(gsim, ctx, [imts[2]])
+        np.testing.assert_array_almost_equal(
+            np.exp(mean), 10. * expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], expected_sigma, 5)
-
-        # check
-        contexts.get_mean_stds(gsim, ctx, imts)
 
     def test_get_mean_and_stddevs_good_amplified(self):
         """
@@ -501,19 +493,16 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
         ctx.sids = np.arange(5)
         ctx.vs30 = 100. * np.ones(5)
-        stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([20., 20., 10., 5., 1.0E-19])
         expected_sigma = 0.25 * np.ones(5)
         # PGA
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.PGA(),
-                                                stddevs)
+        mean, sigma, _, _ = contexts.get_mean_stds(
+            gsim, ctx, [imt_module.PGA()])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], expected_sigma, 5)
         # SA
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.SA(1.0),
-                                                stddevs)
+        mean, sigma, _, _ = contexts.get_mean_stds(
+            gsim, ctx, [imt_module.SA(1.0)])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
 
@@ -566,18 +555,15 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
         ctx.sids = np.arange(5)
-        stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([20.0, 20.0, 10.0, 5.0, 1.0E-19])
         # PGA
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.PGA(),
-                                                stddevs)
+        mean, sigma, _, _ = contexts.get_mean_stds(
+            gsim, ctx, [imt_module.PGA()])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.25 * np.ones(5), 5)
         # SA
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.SA(1.0),
-                                                stddevs)
+        mean, sigma, _, _ = contexts.get_mean_stds(
+            gsim, ctx, [imt_module.SA(1.0)])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
 
@@ -627,27 +613,22 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         # Test values at the given distances and those outside range
         ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
         ctx.sids = np.arange(5)
-        stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])
         # PGA
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.PGA(),
-                                                stddevs)
+        mean, sigma, _, _ = contexts.get_mean_stds(
+            gsim, ctx, [imt_module.PGA()])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.5 * np.ones(5), 5)
         # SA
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.SA(1.0),
-                                                stddevs)
+        mean, sigma, _, _ = contexts.get_mean_stds(
+            gsim, ctx, [imt_module.SA(1.0)])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.8 * np.ones(5), 5)
         # PGV
-        mean, sigma = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                imt_module.PGV(),
-                                                stddevs)
-        np.testing.assert_array_almost_equal(np.exp(mean),
-                                             10. * expected_mean,
-                                             5)
+        mean, sigma, _, _ = contexts.get_mean_stds(
+            gsim, ctx, [imt_module.PGV()])
+        np.testing.assert_array_almost_equal(
+            np.exp(mean), 10. * expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.5 * np.ones(5), 5)
 
 

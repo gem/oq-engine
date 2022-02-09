@@ -407,7 +407,8 @@ class GMPETable(GMPE):
         the tables from hdf5 and hold them in memory.
         """
         super().__init__(**kwargs)
-        self.table = {}  # dictionary mag_str, imt_str, which -> array
+        self.mean_table = {}  # dictionary mag_str, imt_str -> array
+        self.sig_table = {}  # dictionary mag_str, imt_str -> array
         # populated by the ContextManager once imts and magnitudes are known
         fname = self.kwargs.get('gmpe_table', self.gmpe_table)
         with h5py.File(fname, "r") as fle:
@@ -444,8 +445,8 @@ class GMPETable(GMPE):
         for m, imt in enumerate(imts):
             # compute Distance and Sigma Tables
             magstr = '%.2f' % ctx.mag
-            imls = self.table[magstr, imt.string, "IMLs"]
-            sigma = self.table[magstr, imt.string, "Total"]
+            imls = self.mean_table[magstr, imt.string]
+            sigma = self.sig_table[magstr, imt.string]
             # Get mean and standard deviations
             mean_ = _get_mean(self.kind, imls, dists, table_dists)
             stddev = _get_stddev(sigma, dists, table_dists, imt)
