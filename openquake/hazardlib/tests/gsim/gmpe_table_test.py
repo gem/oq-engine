@@ -102,7 +102,6 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         """
         Tests the setup and loading of data from file to memory
         """
-
         # Check setup
         # 1. Shape
         self.assertTupleEqual(self.amp_table.shape, (10, 3, 5, 2))
@@ -539,22 +538,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma[0], 0.4 * np.ones(5), 5)
 
-    def tearDown(self):
-        """
-        Close the hdf5 file
-        """
-        self.hdf5.close()
-
-
-class GSIMTableTestCaseMultiStdDev(unittest.TestCase):
-    """
-    Tests the instantiation of the GSIM table class in the case when
-    i. Multiple Standard Deviations are specified
-    ii. An unrecognised IMT is input
-    """
-    TABLE_FILE = os.path.join(BASE_DATA_PATH,
-                              "good_dummy_table_multi_stddev.hdf5")
-
     def test_instantiation(self):
         """
         Runs both instantiation checks
@@ -562,16 +545,16 @@ class GSIMTableTestCaseMultiStdDev(unittest.TestCase):
         deviation, as well as an IMT that is not recognised by OpenQuake
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        expected_stddev_set = set((const.StdDev.TOTAL,
-                                   const.StdDev.INTER_EVENT,
-                                   const.StdDev.INTRA_EVENT))
         self.assertSetEqual(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES,
-                            expected_stddev_set)
-        expected_imt_set = set((imt_module.PGA,
-                                imt_module.PGV,
-                                imt_module.SA))
+                            {const.StdDev.TOTAL})
         self.assertSetEqual(gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES,
-                            expected_imt_set)
+                            {imt_module.PGA, imt_module.PGV, imt_module.SA})
+
+    def tearDown(self):
+        """
+        Close the hdf5 file
+        """
+        self.hdf5.close()
 
 
 class GSIMTableTestCaseRupture(unittest.TestCase):
