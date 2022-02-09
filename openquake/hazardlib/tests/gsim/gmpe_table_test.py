@@ -85,7 +85,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
     """
     Verifies the correct execution of a GMPE Table
     """
-    # good_dummy_table has Amplification which is ignored
     TABLE_FILE = os.path.join(BASE_DATA_PATH, "good_dummy_table.hdf5")
 
     def setUp(self):
@@ -306,19 +305,3 @@ class GSIMTableTestCase(unittest.TestCase):
                                              10. * expected_mean,
                                              5)
         np.testing.assert_array_almost_equal(sigma[0], 0.5 * np.ones(5), 5)
-
-
-class GSIMTableQATestCase(BaseGSIMTestCase):
-    """
-    Quality Assurance test case with real data taken from the
-    2015 Canadian National Seismic Hazard Map
-    """
-    GSIM_CLASS = GMPETable
-    MEAN_FILE = "gsimtables/Wcrust_rjb_med_MEAN.csv"
-    STD_TOTAL_FILE = "gsimtables/Wcrust_rjb_med_TOTAL.csv"
-
-    def test_all(self):
-        self.check(self.MEAN_FILE,
-                   self.STD_TOTAL_FILE,
-                   max_discrep_percentage=0.7,
-                   gmpe_table=GMPE_TABLE)
