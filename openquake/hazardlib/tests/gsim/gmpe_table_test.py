@@ -251,5 +251,3 @@ class GSIMTableTestCaseBadFile(unittest.TestCase):
         self.assertEqual(str(ve.exception),
                          "Spectral Acceleration must be accompanied by periods"
                          )
-
-
