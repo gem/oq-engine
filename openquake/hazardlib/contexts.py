@@ -183,6 +183,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         if isinstance(oq, dict):
             param = oq
+            self.mags = param.get('mags', ())
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
             param = vars(oq)
@@ -192,7 +193,18 @@ class ContextMaker(object):
             param['af'] = getattr(oq, 'af', None)
             self.cross_correl = oq.cross_correl
             self.imtls = oq.imtls
-
+            try:
+                self.mags = oq.mags_by_trt[trt]
+            except AttributeError:
+                self.mags = ()
+            except KeyError:  # missing TRT but there is only one
+                [(_, self.mags)] = oq.mags_by_trt.items()
+        if 'imtls' in param:
+            self.imtls = param['imtls']
+        elif 'hazard_imtls' in param:
+            self.imtls = DictArray(param['hazard_imtls'])
+        elif not hasattr(self, 'imtls'):
+            raise KeyError('Missing imtls in ContextMaker!')
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -202,6 +214,9 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
+        for gsim in gsims:
+            if hasattr(gsim, 'set_tables'):
+                gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
@@ -229,12 +244,6 @@ class ContextMaker(object):
                             'apply_swiss_amplification' in gsim.params):
                         reqset.add('amplfactor')
             setattr(self, 'REQUIRES_' + req, reqset)
-        if 'imtls' in param:
-            self.imtls = param['imtls']
-        elif 'hazard_imtls' in param:
-            self.imtls = DictArray(param['hazard_imtls'])
-        elif not hasattr(self, 'imtls'):
-            raise KeyError('Missing imtls in ContextMaker!')
         try:
             self.min_iml = param['min_iml']
         except KeyError:
@@ -1060,18 +1069,20 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsim, ctx, imts):
+def get_mean_stds(gsim, ctx, imts, mags=()):
     """
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N
     :param imts: a list of M IMTs
+    :param mags: a list of magnitudes as strings (used only in GMPETables)
     :returns:
         an array of shape (4, M, N) obtained by applying the
         given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)
     """
     imtls = {imt.string: [0] for imt in imts}
     single = hasattr(gsim, 'compute')
-    cmaker = ContextMaker('*', [gsim] if single else gsim, {'imtls': imtls})
+    cmaker = ContextMaker('*', [gsim] if single else gsim,
+                          {'imtls': imtls, 'mags': mags})
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
     return out[:, 0] if single else out
 
@@ -1285,6 +1296,8 @@ def read_cmakers(dstore, full_lt=None):
             oq.af = AmplFunction.from_dframe(df)
         else:
             oq.af = None
+        oq.mags_by_trt = {k: decode(v[:])
+                          for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
         cmaker.trti = trti

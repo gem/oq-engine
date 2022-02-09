@@ -122,7 +122,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
     return _truncnorm_sf(truncation_level, out)
 
 
-OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters'
+OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters set_tables'
 
 
 def bad_methods(clsdict):

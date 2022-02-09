@@ -118,18 +118,7 @@ def _return_tables(self, mag, imt, which):
         interpolator = interp1d(
             numpy.log10(periods), numpy.log10(iml_table), axis=1)
         iml_table = 10. ** interpolator(numpy.log10(imt.period))
-    return apply_magnitude_interpolation(self, mag, iml_table)
 
-
-def apply_magnitude_interpolation(self, mag, iml_table):
-    """
-    Interpolates the tables to the required magnitude level
-
-    :param float mag:
-        Magnitude
-    :param iml_table:
-        Intensity measure level table
-    """
     # do not allow "mag" to exceed maximum table magnitude
     mag = numpy.clip(mag, None, self.m_w[-1])
 
@@ -200,6 +189,7 @@ class GMPETable(GMPE):
         the tables from hdf5 and hold them in memory.
         """
         super().__init__(**kwargs)
+        # populated by the ContextManager once imts and magnitudes are known
         fname = self.kwargs.get('gmpe_table', self.gmpe_table)
         with h5py.File(fname, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])
@@ -232,8 +222,28 @@ class GMPETable(GMPE):
         dists = getattr(ctx, self.distance_type)
         for m, imt in enumerate(imts):
             # compute Distance and Sigma Tables
-            imls = _return_tables(self, ctx.mag, imt, "IMLs")
-            sigma = _return_tables(self, ctx.mag, imt, 'Total')
+            magstr = '%.2f' % ctx.mag
+            imls = self.mean_table[magstr, imt.string]
+            sigma = self.sig_table[magstr, imt.string]
             # Get mean and standard deviations
             mean[m] = numpy.log(_get_mean(self.kind, imls, dists, table_dists))
             sig[m] = _get_stddev(sigma, dists, table_dists, imt)
+
+    # called by the ContextMaker
+    def set_tables(self, mags, imts):
+        """
+        :param mags: a list of magnitudes as strings
+        :param imts: a list of IMTs as strings
+
+        Set the .mean_table and .sig_table attributes
+        """
+        self.mean_table = {}  # dictionary mag_str, imt_str -> array
+        self.sig_table = {}  # dictionary mag_str, imt_str -> array
+        for imt in imts:
+            imt_obj = imt_module.from_string(imt)
+            for mag in mags:
+                self.mean_table[mag, imt] = _return_tables(
+                    self, float(mag), imt_obj, 'IMLs')
+                if self.stddev is not None:
+                    self.sig_table[mag, imt] = _return_tables(
+                        self, float(mag), imt_obj, 'Total')
