@@ -7,7 +7,7 @@ import io
 import os
 import numpy as np
 from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, _return_tables, _get_mean, _get_stddevs)
+    GMPETable, _return_tables, _get_mean, _get_stddev)
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -127,9 +127,6 @@ class NBCC2015_AA13(GMPETable):
         """
         Returns the mean and standard deviations
         """
-        stds = [sig, tau, phi]
-        stdis = [const.StdDev.idx[sdt] for sdt in
-                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES]
         for m, imt in enumerate(imts):
             # Return Distance Tables
             imls = _return_tables(self, ctx.mag, imt, "IMLs")
@@ -140,9 +137,7 @@ class NBCC2015_AA13(GMPETable):
             mean[m] = np.log(_get_mean(
                 self.kind, self.distance_type, imls, ctx, dists)
             ) + site_term(self, ctx, dists, imt)
-            stddevs = _get_stddevs(self, dists, ctx, imt, stdis)
-            for s in stdis:
-                stds[s][m] = stddevs[s]
+            sig[m] = _get_stddev(self, dists, ctx, imt)
 
     COEFFS_2000_to_BC = CoeffsTable(sa_damping=5, table="""\
     IMT     c
