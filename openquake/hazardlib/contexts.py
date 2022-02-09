@@ -196,7 +196,12 @@ class ContextMaker(object):
             self.cross_correl = oq.cross_correl
             self.imtls = oq.imtls
             self.mags = oq.mags_by_trt[trt]
-
+        if 'imtls' in param:
+            self.imtls = param['imtls']
+        elif 'hazard_imtls' in param:
+            self.imtls = DictArray(param['hazard_imtls'])
+        elif not hasattr(self, 'imtls'):
+            raise KeyError('Missing imtls in ContextMaker!')
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -234,12 +239,6 @@ class ContextMaker(object):
                             'apply_swiss_amplification' in gsim.params):
                         reqset.add('amplfactor')
             setattr(self, 'REQUIRES_' + req, reqset)
-        if 'imtls' in param:
-            self.imtls = param['imtls']
-        elif 'hazard_imtls' in param:
-            self.imtls = DictArray(param['hazard_imtls'])
-        elif not hasattr(self, 'imtls'):
-            raise KeyError('Missing imtls in ContextMaker!')
         try:
             self.min_iml = param['min_iml']
         except KeyError:
@@ -1078,7 +1077,7 @@ def get_mean_stds(gsim, ctx, imts, mags=()):
     imtls = {imt.string: [0] for imt in imts}
     single = hasattr(gsim, 'compute')
     cmaker = ContextMaker('*', [gsim] if single else gsim,
-                          {'imtls': imtls, 'mags_by_trt': {'*': mags}})
+                          {'imtls': imtls, 'mags': mags})
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
     return out[:, 0] if single else out
 
