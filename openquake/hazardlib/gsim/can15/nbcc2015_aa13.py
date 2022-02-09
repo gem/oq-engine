@@ -54,11 +54,11 @@ def site_term(self, ctx, dists, imt):
     Assume PGA_760 = 0.1g for Vs30 > 450 m/s. Also need to correct PGA at
     site class C to 760 m/s. Cap PGA_450 at 0.1 - 0.5g.
     """
+    dst = getattr(ctx, self.distance_type)
     imls_pga = _return_tables(self, ctx.mag, PGA(), "IMLs")
-    PGA450 = _get_mean(self.kind, self.distance_type, imls_pga, ctx, dists)
+    PGA450 = _get_mean(self.kind, imls_pga, dst, dists)
     imls_SA02 = _return_tables(self, ctx.mag, SA(0.2), "IMLs")
-    SA02 = _get_mean(self.kind, self.distance_type, imls_SA02, ctx, dists)
-
+    SA02 = _get_mean(self.kind, imls_SA02, dst, dists)
     PGA450[SA02 / PGA450 < 2.0] = PGA450[SA02 / PGA450 < 2.0] * 0.8
 
     pgas = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
@@ -133,11 +133,12 @@ class NBCC2015_AA13(GMPETable):
             # Get distance vector for the given magnitude
             idx = np.searchsorted(self.m_w, ctx.mag)
             dists = self.distances[:, 0, idx - 1]
+            dst = getattr(ctx, self.distance_type)
             # Get mean and standard deviations
-            mean[m] = np.log(_get_mean(
-                self.kind, self.distance_type, imls, ctx, dists)
-            ) + site_term(self, ctx, dists, imt)
-            sig[m] = _get_stddev(self, dists, ctx, imt)
+            mean[m] = np.log(_get_mean(self.kind, imls, dst, dists)) + \
+                site_term(self, ctx, dists, imt)
+            sigma = _return_tables(self, ctx.mag, imt, 'Total')
+            sig[m] = _get_stddev(sigma, dst, dists, imt)
 
     COEFFS_2000_to_BC = CoeffsTable(sa_damping=5, table="""\
     IMT     c

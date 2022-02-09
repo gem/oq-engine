@@ -43,35 +43,37 @@ _get_mean = CallableDict()
 
 
 @_get_mean.add("base", "nga_east")
-def _get_mean_base(kind, distance_type, data, dctx, dists):
+def _get_mean_(kind, data, dists, table_dists):
     """
-    Returns the mean intensity measure level from the tables
+    :param kind:
+        The string "base" or "nga_east"
     :param data:
-        The intensity measure level vector for the given magnitude and IMT
-    :param key:
-        The distance type
-    :param distances:
-        The distance vector for the given magnitude and IMT
+        The intensity measure level table for the given magnitude and IMT
+    :param dists:
+        The distances for the given magnitude and IMT
+    :param table_dists:
+        The distance table for the given magnitude and IMT
+    :return:
+        The mean intensity measure level from the tables.
     """
-    dist = getattr(dctx, distance_type)
     # For values outside of the interpolation range use -999. to ensure
     # value is identifiable and outside of potential real values
     interpolator_mean = interp1d(
-        dists, data, bounds_error=False, fill_value=-999.)
-    mean = interpolator_mean(dist)
+        table_dists, data, bounds_error=False, fill_value=-999.)
+    mean = interpolator_mean(dists)
     # For those distances less than or equal to the shortest distance
     # extrapolate the shortest distance value
-    mean[dist < (dists[0] + 1.0E-3)] = data[0]
+    mean[dists < (table_dists[0] + 1.0E-3)] = data[0]
     # For those distances significantly greater than the furthest distance
     # set to 1E-20.
-    mean[dist > (dists[-1] + 1.0E-3)] = 1E-20
+    mean[dists > (table_dists[-1] + 1.0E-3)] = 1E-20
     # If any distance is between the final distance and a margin of 0.001
     # km then assign to smallest distance
     mean[mean < -1.] = data[-1]
     return mean
 
 
-def hdf_arrays_to_dict(hdfgroup):
+def todict(hdfgroup):
     """
     Convert an hdf5 group contains only data sets to a dictionary of
     data sets
@@ -195,8 +197,8 @@ class AmplificationTable(object):
         :returns:
             * mean_amp - Amplification factors applied to the median ground
                          motion
-            * sigma_amps - List of modification factors applied to the
-                         standard deviations of ground motion
+            * sigma_amp - Amplification factors applied to the
+                          total standard deviation of ground motion
         """
         dist_level_table = self.get_mean_table(imt, ctx)
         sigma_table = self.get_sigma_table(imt, ctx)
@@ -346,16 +348,14 @@ def apply_magnitude_interpolation(self, mag, iml_table):
     return 10.0 ** m_interpolator(mag)
 
 
-def _get_stddev(self, dists, ctx, imt):
+def _get_stddev(sigma, dists, table_dists, imt):
     """
     Returns the total standard deviation of the intensity measure level
     from the tables.
     """
-    dst = getattr(ctx, self.distance_type)
-    sigma = _return_tables(self, ctx.mag, imt, 'Total')
-    stddev = numpy.interp(dst, dists, sigma)
-    stddev[dst < dists[0]] = sigma[0]
-    stddev[dst > dists[-1]] = sigma[-1]
+    stddev = numpy.interp(dists, table_dists, sigma)
+    stddev[dists < table_dists[0]] = sigma[0]
+    stddev[dists > table_dists[-1]] = sigma[-1]
     return stddev
 
 
@@ -416,7 +416,7 @@ class GMPETable(GMPE):
             # Load in distances
             self.distances = fle["Distances"][:]
             # Load intensity measure types and levels
-            self.imls = hdf_arrays_to_dict(fle["IMLs"])
+            self.imls = todict(fle["IMLs"])
             # Update the list of supported IMTs from the tables
             self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
                 getattr(imt_module, key)
@@ -430,7 +430,7 @@ class GMPETable(GMPE):
                 # there are no stddevs in the hdf5 file
                 self.stddev = None
                 return
-            self.stddev = hdf_arrays_to_dict(fle["Total"])
+            self.stddev = todict(fle["Total"])
             if "Amplification" in fle:
                 _setup_amplification(self, fle)
 
@@ -440,10 +440,12 @@ class GMPETable(GMPE):
             imls = _return_tables(self, ctx.mag, imt, "IMLs")
             # Get distance vector for the given magnitude
             idx = numpy.searchsorted(self.m_w, ctx.mag)
-            dists = self.distances[:, 0, idx - 1]
+            table_dists = self.distances[:, 0, idx - 1]
+            dists = getattr(ctx, self.distance_type)
             # Get mean and standard deviations
-            mean_ = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
-            stddev = _get_stddev(self, dists, ctx, imt)
+            mean_ = _get_mean(self.kind, imls, dists, table_dists)
+            sigma = _return_tables(self, ctx.mag, imt, 'Total')
+            stddev = _get_stddev(sigma, dists, table_dists, imt)
             if self.amplification:
                 # Apply amplification
                 mean_amp, sigma_amp = \

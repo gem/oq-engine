@@ -26,7 +26,7 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, AmplificationTable, hdf_arrays_to_dict, _return_tables)
+    GMPETable, AmplificationTable, todict, _return_tables)
 from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import imt as imt_module
@@ -65,7 +65,7 @@ class HDFArraysToDictTestCase(unittest.TestCase):
         # Setup two
         expected_dset1 = np.zeros([3, 3])
         expected_dset2 = np.ones([3, 3])
-        output_dict = hdf_arrays_to_dict(self.group)
+        output_dict = todict(self.group)
         assert isinstance(output_dict, dict)
         self.assertIn("DSET1", output_dict)
         self.assertIn("DSET2", output_dict)
