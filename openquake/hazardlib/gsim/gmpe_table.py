@@ -479,8 +479,7 @@ class GMPETable(GMPE):
             self.stddevs[0] = hdf_arrays_to_dict(fle["Total"])
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
                 self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            for stddev_type in [StdDev.INTER_EVENT,
-                                StdDev.INTRA_EVENT]:
+            for stddev_type in [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]:
                 if stddev_type in fle:
                     self.stddevs[StdDev.idx[stddev_type]] = hdf_arrays_to_dict(
                         fle[stddev_type])
@@ -508,7 +507,7 @@ class GMPETable(GMPE):
                     self.amplification.get_amplification_factors(
                         imt, ctx, getattr(ctx, self.distance_type),
                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES))
-                mean[m] = numpy.log(mean_) + numpy.log(mean_amp)
+                mean[m] = numpy.log(mean_ * mean_amp)
                 for i, amp in zip(stdis, sigma_amp):
                     stds[i][m] = stddevs[i] * amp
             else:
