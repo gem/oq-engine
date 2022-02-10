@@ -720,7 +720,7 @@ class NGAEastGMPE(GMPETable):
         """
         Returns the mean and standard deviations
         """
-        [mag] = np.unique(ctx.mag)  # by construction
+        [mag] = np.unique(np.round(ctx.mag, 6))  # by construction
         for m, imt in enumerate(imts):
             mean[m], _, _ = get_mean_amp(self, mag, ctx, imt)
             # Get standard deviation model
