@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+xmlns="http://openquake.org/xmlns/nrml/0.4">
+<logicTree logicTreeID="lt1">
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="Active Shallow Fault">
+    <logicTreeBranch branchID="b11">
+      <uncertaintyModel>NBCC2015_AA13_activecrustFRjb_low</uncertaintyModel>
+      <uncertaintyWeight>0.2</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b12">
+      <uncertaintyModel>NBCC2015_AA13_activecrustFRjb_central</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b13">
+      <uncertaintyModel>NBCC2015_AA13_activecrustFRjb_high</uncertaintyModel>
+      <uncertaintyWeight>0.3</uncertaintyWeight>
+    </logicTreeBranch>  
+  </logicTreeBranchSet>
+  
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                      applyToTectonicRegionType="Subduction Interface">
+    
+    <logicTreeBranch branchID="b21">
+      <uncertaintyModel>NBCC2015_AA13_interface_low</uncertaintyModel>
+      <uncertaintyWeight>0.2</uncertaintyWeight>
+    </logicTreeBranch>
+      <logicTreeBranch branchID="b22">
+        <uncertaintyModel>NBCC2015_AA13_interface_central</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b23">
+        <uncertaintyModel>NBCC2015_AA13_interface_high</uncertaintyModel>
+        <uncertaintyWeight>0.3</uncertaintyWeight>
+      </logicTreeBranch>
+  </logicTreeBranchSet>
+
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
+                      applyToTectonicRegionType="Active Shallow Crust">
+    
+    <logicTreeBranch branchID="b31">
+      <uncertaintyModel>NBCC2015_AA13_activecrust_low</uncertaintyModel>
+      <uncertaintyWeight>0.2</uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="b32">
+      <uncertaintyModel>NBCC2015_AA13_activecrust_central</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b33">
+      <uncertaintyModel>NBCC2015_AA13_activecrust_high</uncertaintyModel>
+      <uncertaintyWeight>0.3</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4"
+                      applyToTectonicRegionType="Subduction IntraSlab30">
+    <logicTreeBranch branchID="b41">
+      <uncertaintyModel>NBCC2015_AA13_inslab30_low</uncertaintyModel>
+      <uncertaintyWeight>0.2</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b42">
+      <uncertaintyModel>NBCC2015_AA13_inslab30_central</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b43">
+      <uncertaintyModel>NBCC2015_AA13_inslab30_high</uncertaintyModel>
+      <uncertaintyWeight>0.3</uncertaintyWeight>
+    </logicTreeBranch>    
+  </logicTreeBranchSet>
+
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs5"
+                      applyToTectonicRegionType="Subduction IntraSlab50">
+    <logicTreeBranch branchID="b51">
+      <uncertaintyModel>NBCC2015_AA13_inslab50_low</uncertaintyModel>
+      <uncertaintyWeight>0.2</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b52">
+      <uncertaintyModel>NBCC2015_AA13_inslab50_central</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b53">
+      <uncertaintyModel>NBCC2015_AA13_inslab50_high</uncertaintyModel>
+      <uncertaintyWeight>0.3</uncertaintyWeight>
+    </logicTreeBranch>
+    
+  </logicTreeBranchSet>
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs6"
+                      applyToTectonicRegionType="Active Shallow Offshore">
+    <logicTreeBranch branchID="b61">
+      <uncertaintyModel>NBCC2015_AA13_offshore_low</uncertaintyModel>
+      <uncertaintyWeight>0.2</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b62">
+      <uncertaintyModel>NBCC2015_AA13_offshore_central</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b63">
+      <uncertaintyModel>NBCC2015_AA13_offshore_high</uncertaintyModel>
+      <uncertaintyWeight>0.3</uncertaintyWeight>
+    </logicTreeBranch>    
+  </logicTreeBranchSet>
+
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs7"
+                      applyToTectonicRegionType="Stable Shallow Crust">
+    
+    <logicTreeBranch branchID="b71">
+      <uncertaintyModel>NBCC2015_AA13_stablecrust_low</uncertaintyModel>
+      <uncertaintyWeight>0.2</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b72">
+      <uncertaintyModel>NBCC2015_AA13_stablecrust_central</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>    
+    <logicTreeBranch branchID="b73">
+      <uncertaintyModel>NBCC2015_AA13_stablecrust_high</uncertaintyModel>
+      <uncertaintyWeight>0.3</uncertaintyWeight>
+    </logicTreeBranch>
+    
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>
