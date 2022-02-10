@@ -34,7 +34,7 @@ GLT_XML = os.path.join(CWD, 'data', 'CAN15', 'gmmLT.xml')
 # is parametric; it is easier to build a scenario using ALL of the
 # combinations used in the Canada model 2015
 class NBCC2015_AA13TestCase(unittest.TestCase):
-    def test_mean(self):
+    def test_gmf(self):
         param = dict(rupture_model_file=RUP_XML,
                      gsim_logic_tree_file=GLT_XML,
                      number_of_ground_motion_fields=1,
@@ -46,8 +46,11 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
         inp = read_input(param)
         [[ebr]] = inp.groups
         for trt, cmaker in inp.cmakerdict.items():
-            cmaker.gsims = {  # rlzs by gsim
-                gsim: [g] for g, gsim in enumerate(inp.gsim_lt.values[trt])}
+            rlzs_by_gsim = {}
+            for g, gsim in enumerate(inp.gsim_lt.values[trt]):
+                gsim.set_tables(['%.2f' % ebr.rupture.mag], cmaker.imtls)
+                rlzs_by_gsim[gsim] = [g]
+            cmaker.gsims = rlzs_by_gsim
             ebr.n_occ = len(cmaker.gsims)
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
             gmfdata = pandas.DataFrame(gc.compute_all())

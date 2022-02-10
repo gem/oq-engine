@@ -24,8 +24,7 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
-from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, _return_tables, _get_mean)
+from openquake.hazardlib.gsim.gmpe_table import GMPETable, _get_mean
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -40,7 +39,7 @@ def _scaling(mean_tau, sd_tau2):
     Returns the chi-2 scaling factor from the mean and variance of the
     uncertainty model, as reported in equation 5.4 of Al Atik (2015)
     """
-    return (sd_tau2 ** 2.) / (2.0 * mean_tau ** 2.)
+    return sd_tau2 ** 2. / (2.0 * mean_tau ** 2.)
 
 
 def _dof(mean_tau, sd_tau2):
@@ -49,7 +48,7 @@ def _dof(mean_tau, sd_tau2):
     variance of the uncertainty model, as reported in equation 5.5 of Al Atik
     (2015)
     """
-    return (2.0 * mean_tau ** 4.) / (sd_tau2 ** 2.)
+    return 2.0 * mean_tau ** 4. / sd_tau2 ** 2.
 
 
 def _at_percentile(tau, var_tau, percentile):
@@ -58,7 +57,7 @@ def _at_percentile(tau, var_tau, percentile):
     percentile from the mean and variance of the uncertainty model, as
     reported in equations 5.1 - 5.3 of Al Atik (2015)
     """
-    assert (percentile >= 0.0) and (percentile <= 1.0)
+    assert percentile >= 0.0 and percentile <= 1.0
     c_val = _scaling(tau, var_tau)
     k_val = _dof(tau, var_tau)
     return np.sqrt(c_val * chi2.ppf(percentile, df=k_val))
@@ -462,7 +461,7 @@ def get_hard_rock_mean(self, ctx, imt):
     rock condition (Vs30 = 3000 m/s)
     """
     # return Distance Tables
-    imls = _return_tables(self, ctx.mag, imt, "IMLs")
+    imls = self.mean_table['%.2f' % ctx.mag, imt.string]
     # Get distance vector for the given magnitude
     idx = np.searchsorted(self.m_w, ctx.mag)
     dists = self.distances[:, 0, idx - 1]

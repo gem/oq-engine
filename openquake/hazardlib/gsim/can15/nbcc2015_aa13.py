@@ -7,7 +7,7 @@ import io
 import os
 import numpy as np
 from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, _return_tables, _get_mean, _get_stddev)
+    GMPETable,_get_mean, _get_stddev)
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -55,9 +55,9 @@ def site_term(self, ctx, dists, imt):
     site class C to 760 m/s. Cap PGA_450 at 0.1 - 0.5g.
     """
     dst = getattr(ctx, self.distance_type)
-    imls_pga = _return_tables(self, ctx.mag, PGA(), "IMLs")
+    imls_pga = self.mean_table['%.2f' % ctx.mag, 'PGA']
     PGA450 = _get_mean(self.kind, imls_pga, dst, dists)
-    imls_SA02 = _return_tables(self, ctx.mag, SA(0.2), "IMLs")
+    imls_SA02 = self.mean_table['%.2f' % ctx.mag, 'SA(0.2)']
     SA02 = _get_mean(self.kind, imls_SA02, dst, dists)
     PGA450[SA02 / PGA450 < 2.0] = PGA450[SA02 / PGA450 < 2.0] * 0.8
 
@@ -127,18 +127,17 @@ class NBCC2015_AA13(GMPETable):
         """
         Returns the mean and standard deviations
         """
+        # get distance vector for the given magnitude
+        idx = np.searchsorted(self.m_w, ctx.mag)
+        dists = self.distances[:, 0, idx - 1]
+        dst = getattr(ctx, self.distance_type)
+        # compute mean and stddevs
         for m, imt in enumerate(imts):
-            # Return Distance Tables
-            imls = _return_tables(self, ctx.mag, imt, "IMLs")
-            # Get distance vector for the given magnitude
-            idx = np.searchsorted(self.m_w, ctx.mag)
-            dists = self.distances[:, 0, idx - 1]
-            dst = getattr(ctx, self.distance_type)
-            # Get mean and standard deviations
+            key = ('%.2f' % ctx.mag, imt.string)
+            imls = self.mean_table[key]
             mean[m] = np.log(_get_mean(self.kind, imls, dst, dists)) + \
                 site_term(self, ctx, dists, imt)
-            sigma = _return_tables(self, ctx.mag, imt, 'Total')
-            sig[m] = _get_stddev(sigma, dst, dists, imt)
+            sig[m] = _get_stddev(self.sig_table[key], dst, dists, imt)
 
     COEFFS_2000_to_BC = CoeffsTable(sa_damping=5, table="""\
     IMT     c
