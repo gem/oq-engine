@@ -119,8 +119,10 @@ def split_by_mag(ctx: numpy.recarray):
     [(4.5, 102.) (4.5, 103.) (4.5, 104.)]
     """
     # assume the ctx recarray is already ordered by mag
+    out = []
     for [(i1, i2)] in get_slices(numpy.uint32(ctx.mag * 100)).values():
-        yield ctx[i1:i2]
+        out.append(ctx[i1:i2])
+    return out
 
 
 def use_recarray(gsim):
