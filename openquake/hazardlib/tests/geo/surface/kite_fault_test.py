@@ -799,7 +799,7 @@ class VerticalProfilesTest(unittest.TestCase):
             lo, la = sfc._get_external_boundary()
             ax.plot(lo, la, np.zeros_like(lo))
             ax.invert_zaxis()
-            ax.set_box_aspect([1, 1, 1])
+            # ax.set_box_aspect([1, 1, 1])
             plt.show()
 
         # Testing that the mesh is vertical
