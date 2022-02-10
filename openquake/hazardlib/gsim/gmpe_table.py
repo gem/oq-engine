@@ -50,11 +50,8 @@ def _get_mean_(kind, data, dists, table_dists):
     :return:
         The mean intensity measure level from the tables.
     """
-    # For values outside of the interpolation range use -999. to ensure
     # value is identifiable and outside of potential real values
-    interpolator_mean = interp1d(
-        table_dists, data, bounds_error=False, fill_value=-999.)
-    mean = interpolator_mean(dists)
+    mean = numpy.interp(dists, table_dists, data)
     # For those distances less than or equal to the shortest distance
     # extrapolate the shortest distance value
     mean[dists < (table_dists[0] + 1.0E-3)] = data[0]
