@@ -23,7 +23,7 @@ in the form of binary tables
 """
 import h5py
 from scipy.interpolate import interp1d
-import numpy
+import numpy as np
 
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import decode
@@ -116,11 +116,11 @@ def _return_tables(self, mag, imt, which):
                                                  periods[-1]))
         # Apply log-log interpolation for spectral period
         interpolator = interp1d(
-            numpy.log10(periods), numpy.log10(iml_table), axis=1)
-        iml_table = 10. ** interpolator(numpy.log10(imt.period))
+            np.log10(periods), np.log10(iml_table), axis=1)
+        iml_table = 10. ** interpolator(np.log10(imt.period))
 
     # do not allow "mag" to exceed maximum table magnitude
-    mag = numpy.clip(mag, None, self.m_w[-1])
+    mag = np.clip(mag, None, self.m_w[-1])
 
     # Get magnitude values
     if (mag < self.m_w[0]).any() or (mag > self.m_w[-1]).any():
@@ -128,7 +128,7 @@ def _return_tables(self, mag, imt, which):
                          "(%.2f to %.2f)" % (mag, self.m_w[0], self.m_w[-1]))
     # It is assumed that log10 of the spectral acceleration scales
     # linearly (or approximately linearly) with magnitude
-    m_interpolator = interp1d(self.m_w, numpy.log10(iml_table), axis=1)
+    m_interpolator = interp1d(self.m_w, np.log10(iml_table), axis=1)
     return 10.0 ** m_interpolator(mag)
 
 
@@ -137,7 +137,7 @@ def _get_stddev(sigma, dists, table_dists, imt):
     Returns the total standard deviation of the intensity measure level
     from the tables.
     """
-    stddev = numpy.interp(dists, table_dists, sigma)
+    stddev = np.interp(dists, table_dists, sigma)
     stddev[dists < table_dists[0]] = sigma[0]
     stddev[dists > table_dists[-1]] = sigma[-1]
     return stddev
@@ -215,14 +215,15 @@ class GMPETable(GMPE):
                 return
             self.stddev = todict(fle["Total"])
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
-        idx = numpy.searchsorted(self.m_w, ctx.mag)
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        [mag] = np.unique(ctx.mag)  # constructed unique in the ContextMaker
+        idx = np.searchsorted(self.m_w, mag)
         table_dists = self.distances[:, 0, idx - 1]
         dists = getattr(ctx, self.distance_type)
         for m, imt in enumerate(imts):
-            key = ('%.2f' % ctx.mag, imt.string)
+            key = ('%.2f' % mag, imt.string)
             imls = self.mean_table[key]
-            mean[m] = numpy.log(_get_mean(self.kind, imls, dists, table_dists))
+            mean[m] = np.log(_get_mean(self.kind, imls, dists, table_dists))
             sig[m] = _get_stddev(self.sig_table[key], dists, table_dists, imt)
 
     # called by the ContextMaker
