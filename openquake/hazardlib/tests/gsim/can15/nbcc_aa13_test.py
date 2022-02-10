@@ -46,9 +46,12 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
         inp = read_input(param)
         [[ebr]] = inp.groups
         for trt, cmaker in inp.cmakerdict.items():
+            cmaker.gsims = {  # rlzs by gsim
+                gsim: [g] for g, gsim in enumerate(inp.gsim_lt.values[trt])}
+            ebr.n_occ = len(cmaker.gsims)
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
             gmfdata = pandas.DataFrame(gc.compute_all())
-            del gmfdata['rlz']  # always 0, the eid contains the info
+            del gmfdata['rlz']  # the info is encoded in the eid
             fname = 'NBCC2015_AA13_%s.csv' % trt.replace(' ', '')
             path = os.path.join(CWD, 'data', 'CAN15', fname)
             if OVERWRITE:
