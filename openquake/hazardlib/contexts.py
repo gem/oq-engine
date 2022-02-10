@@ -371,7 +371,8 @@ class ContextMaker(object):
         """
         # TODO evaluate the effectiveness of this since the performance
         # improvement seems minimal (if not totally absent)
-        if isinstance(rup.surface, MultiSurface):
+        if (isinstance(rup.surface, MultiSurface) and
+                hasattr(rup.surface, 'suid')):
             tmp, self.dcache = get_dst_multi(
                 rup, sites, ['rrup'], self.dcache)
             distances = tmp['rrup']
@@ -447,7 +448,8 @@ class ContextMaker(object):
             ctx.sites = r_sites
 
             # In case of a multifault source we use a cache with distances
-            if isinstance(rup.surface, MultiSurface):
+            if (isinstance(rup.surface, MultiSurface) and
+                    hasattr(rup.surface, 'suid')):
                 params = self.REQUIRES_DISTANCES - {'rrup'}
                 distances, dcache = get_dst_multi(rup, r_sites, params, dcache)
                 for key in distances:
@@ -942,7 +944,7 @@ class PmapMaker(object):
                 if par == 'probs_occur_':
                     lst = [getattr(ctx, pa, []) for ctx in ctxs]
                 else:
-                    lst =  [getattr(ctx, pa) for ctx in ctxs]
+                    lst = [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
