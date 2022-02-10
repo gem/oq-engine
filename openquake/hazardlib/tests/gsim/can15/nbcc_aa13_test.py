@@ -46,8 +46,11 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
         inp = read_input(param)
         [[ebr]] = inp.groups
         for trt, cmaker in inp.cmakerdict.items():
-            cmaker.gsims = {  # rlzs by gsim
-                gsim: [g] for g, gsim in enumerate(inp.gsim_lt.values[trt])}
+            rlzs_by_gsim = {}
+            for g, gsim in enumerate(inp.gsim_lt.values[trt]):
+                gsim.set_tables(['%.2f' % ebr.rupture.mag], cmaker.imtls)
+                rlzs_by_gsim[gsim] = [g]
+            cmaker.gsims = rlzs_by_gsim
             ebr.n_occ = len(cmaker.gsims)
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
             gmfdata = pandas.DataFrame(gc.compute_all())
