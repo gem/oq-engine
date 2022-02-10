@@ -235,6 +235,9 @@ class GMPETable(GMPE):
         if 'PGA' in self.imls and 'PGA' not in imts:
             # add PGA since it will be needed in get_mean_amp
             imts = sorted(set(imts) | {'PGA'})
+        if 'SA(0.2)' not in imts:
+            # add SA(0.2) since it will be needed in get_mean_amp
+            imts = sorted(set(imts) | {'SA(0.2)'})
         for imt in imts:
             imt_obj = imt_module.from_string(imt)
             for mag in mags:
