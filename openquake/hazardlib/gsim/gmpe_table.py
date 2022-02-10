@@ -235,6 +235,9 @@ class GMPETable(GMPE):
         """
         self.mean_table = {}  # dictionary mag_str, imt_str -> array
         self.sig_table = {}  # dictionary mag_str, imt_str -> array
+        if 'PGA' in self.imls and 'PGA' not in imts:
+            # add PGA since it will be needed in get_mean_amp
+            imts = sorted(set(imts) | {'PGA'})
         for imt in imts:
             imt_obj = imt_module.from_string(imt)
             for mag in mags:
