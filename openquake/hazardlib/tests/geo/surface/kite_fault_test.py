@@ -30,7 +30,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-PLOTTING = False
+PLOTTING = True
 aae = np.testing.assert_almost_equal
 
 
@@ -318,6 +318,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
     # TODO
     def test_get_dip(self):
         dip = self.srfc.get_dip()
+        print(dip)
 
 
 class KiteSurfaceSimpleTests(unittest.TestCase):
@@ -785,8 +786,6 @@ class VerticalProfilesTest(unittest.TestCase):
         sfc = KiteSurface.from_profiles(profiles, 2., 2.)
 
         if PLOTTING:
-            import matplotlib.pyplot as plt
-            from mpl_toolkits.mplot3d import Axes3D
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             zfa = 50.
@@ -800,13 +799,7 @@ class VerticalProfilesTest(unittest.TestCase):
             lo, la = sfc._get_external_boundary()
             ax.plot(lo, la, np.zeros_like(lo))
             ax.invert_zaxis()
-            ax.set_box_aspect([1,1,1])
-            plt.show()
-
-            fig, ax = plt.subplots(1,1)
-            lo, la = sfc.surface_projection
-            ax.plot(lo, la)
-            ax.axis('equal')
+            ax.set_box_aspect([1, 1, 1])
             plt.show()
 
         # Testing that the mesh is vertical
@@ -822,6 +815,42 @@ class VerticalProfilesTest(unittest.TestCase):
         dst = mgd((sfc.mesh.lons[idx, 0], sfc.mesh.lats[idx, 0]),
                   (eblo[:2], ebla[:2]))
         self.assertTrue(np.all(dst < 0.1+0.01))
+
+
+class TestNarrowSurface(unittest.TestCase):
+
+    def test_narrow_01(self):
+
+        # The profiles are aligned at the top and the bottom. Their horizontal
+        # distance is lower than the sampling distance
+        self.profiles = []
+        tmp = [Point(0.0, 0.000, 0.0),
+               Point(0.0, 0.001, 15.0)]
+        self.profiles.append(Line(tmp))
+        tmp = [Point(0.01, 0.000, 0.0),
+               Point(0.01, 0.001, 15.0)]
+        self.profiles.append(Line(tmp))
+
+        # Computing the mesh
+        idl = False
+        alg = False
+        v_sampl = 5.0
+        h_sampl = 5.0
+        smsh = KiteSurface.from_profiles(
+            self.profiles, v_sampl, h_sampl, idl, alg)
+
+        # Testing
+        expected_lons = np.array([[0.01, 0.], [0.01, 0.], [0.01, 0.],
+                                  [0.01, 0.]])
+        expected_lats = np.array([[0., 0.], [0.00029411, 0.00029411],
+                                  [0.00058822, 0.00058822],
+                                  [0.00088233, 0.00088233]])
+        expected_deps = np.array([[0., 0.], [4.99989305, 4.99989305],
+                                  [9.99978609, 9.99978609],
+                                  [14.99967914, 14.99967914]])
+        aae(smsh.mesh.lons, expected_lons)
+        aae(smsh.mesh.lats, expected_lats)
+        aae(smsh.mesh.depths, expected_deps)
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
