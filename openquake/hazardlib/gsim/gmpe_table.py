@@ -235,14 +235,14 @@ class GMPETable(GMPE):
         """
         self.mean_table = {}  # dictionary mag_str, imt_str -> array
         self.sig_table = {}  # dictionary mag_str, imt_str -> array
+        if 'PGA' in self.imls and 'PGA' not in imts:
+            # add PGA since it will be needed in get_mean_amp
+            imts = sorted(set(imts) | {'PGA'})
         for imt in imts:
             imt_obj = imt_module.from_string(imt)
             for mag in mags:
-                try:
-                    self.mean_table[mag, imt] = _return_tables(
-                        self, float(mag), imt_obj, 'IMLs')
-                    if self.stddev is not None:
-                        self.sig_table[mag, imt] = _return_tables(
-                            self, float(mag), imt_obj, 'Total')
-                except ValueError:
-                    pass
+                self.mean_table[mag, imt] = _return_tables(
+                    self, float(mag), imt_obj, 'IMLs')
+                if self.stddev is not None:
+                    self.sig_table[mag, imt] = _return_tables(
+                        self, float(mag), imt_obj, 'Total')
