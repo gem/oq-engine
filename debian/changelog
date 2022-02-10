@@ -1,5 +1,9 @@
+python3-oq-engine (3.11.5-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Fixed a 32/64 bit bug in `oq export loss_maps-stats`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 10 Feb 2022 09:12:33 +0000
 
 python3-oq-engine (3.11.4-1~xenial01) xenial; urgency=low
 
