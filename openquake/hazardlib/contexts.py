@@ -21,6 +21,7 @@ import re
 import abc
 import copy
 import time
+import operator
 import warnings
 import itertools
 import functools
@@ -415,7 +416,7 @@ class ContextMaker(object):
         :param src_id:
             the numeric ID of the source (to be assigned to the ruptures)
         :returns:
-            fat RuptureContexts
+            fat RuptureContexts sorted by mag
         """
         if hasattr(src_or_ruptures, 'source_id'):
             irups = self._gen_rups(src_or_ruptures, sitecol)
@@ -453,6 +454,7 @@ class ContextMaker(object):
                 ctx.clon = closest.lons[ctx.sids]
                 ctx.clat = closest.lats[ctx.sids]
             ctxs.append(ctx)
+        ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
     # this is used with pointsource_distance approximation for close distances,
