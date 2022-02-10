@@ -50,8 +50,7 @@ def _get_mean_(kind, data, dists, table_dists):
     :return:
         The mean intensity measure level from the tables.
     """
-    # value is identifiable and outside of potential real values
-    mean = numpy.interp(dists, table_dists, data)
+    mean = np.interp(dists, table_dists, data)
     # For those distances less than or equal to the shortest distance
     # extrapolate the shortest distance value
     mean[dists < (table_dists[0] + 1.0E-3)] = data[0]
