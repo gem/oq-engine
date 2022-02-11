@@ -24,15 +24,14 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
-from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, _return_tables, _get_mean)
+from openquake.hazardlib.gsim.gmpe_table import GMPETable, _get_mean
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
 # Common interpolation function
 def ITPL(mag, tu, tl, ml, f):
-    return tl + (tu - tl) * ((mag - ml) / f)
+    return tl + (tu - tl) * (mag - ml) / f
 
 
 def _scaling(mean_tau, sd_tau2):
@@ -40,7 +39,7 @@ def _scaling(mean_tau, sd_tau2):
     Returns the chi-2 scaling factor from the mean and variance of the
     uncertainty model, as reported in equation 5.4 of Al Atik (2015)
     """
-    return (sd_tau2 ** 2.) / (2.0 * mean_tau ** 2.)
+    return sd_tau2 ** 2. / (2.0 * mean_tau ** 2.)
 
 
 def _dof(mean_tau, sd_tau2):
@@ -49,7 +48,7 @@ def _dof(mean_tau, sd_tau2):
     variance of the uncertainty model, as reported in equation 5.5 of Al Atik
     (2015)
     """
-    return (2.0 * mean_tau ** 4.) / (sd_tau2 ** 2.)
+    return 2.0 * mean_tau ** 4. / sd_tau2 ** 2.
 
 
 def _at_percentile(tau, var_tau, percentile):
@@ -58,7 +57,7 @@ def _at_percentile(tau, var_tau, percentile):
     percentile from the mean and variance of the uncertainty model, as
     reported in equations 5.1 - 5.3 of Al Atik (2015)
     """
-    assert (percentile >= 0.0) and (percentile <= 1.0)
+    assert percentile >= 0.0 and percentile <= 1.0
     c_val = _scaling(tau, var_tau)
     k_val = _dof(tau, var_tau)
     return np.sqrt(c_val * chi2.ppf(percentile, df=k_val))
@@ -111,11 +110,11 @@ def global_tau(imt, mag, params):
         C = params["SA"]
     if mag > 6.5:
         return C["tau4"]
-    elif (mag > 5.5) and (mag <= 6.5):
+    elif mag > 5.5 and mag <= 6.5:
         return ITPL(mag, C["tau4"], C["tau3"], 5.5, 1.0)
-    elif (mag > 5.0) and (mag <= 5.5):
+    elif mag > 5.0 and mag <= 5.5:
         return ITPL(mag, C["tau3"], C["tau2"], 5.0, 0.5)
-    elif (mag > 4.5) and (mag <= 5.0):
+    elif mag > 4.5 and mag <= 5.0:
         return ITPL(mag, C["tau2"], C["tau1"], 4.5, 0.5)
     else:
         return C["tau1"]
@@ -141,9 +140,9 @@ def cena_tau(imt, mag, params):
         C = params["SA"]
     if mag > 6.5:
         return C["tau3"]
-    elif (mag > 5.5) and (mag <= 6.5):
+    elif mag > 5.5 and mag <= 6.5:
         return ITPL(mag, C["tau3"], C["tau2"], 5.5, 1.0)
-    elif (mag > 5.0) and (mag <= 5.5):
+    elif mag > 5.0 and mag <= 5.5:
         return ITPL(mag, C["tau2"], C["tau1"], 5.0, 0.5)
     else:
         return C["tau1"]
@@ -456,19 +455,19 @@ def get_nonlinear_stddev(C_NL, vs30):
     return sigma_f2
 
 
-def get_hard_rock_mean(self, ctx, imt):
+def get_hard_rock_mean(self, mag, ctx, imt):
     """
     Returns the mean and standard deviations for the reference very hard
     rock condition (Vs30 = 3000 m/s)
     """
-    # Return Distance Tables
-    imls = _return_tables(self, ctx.mag, imt, "IMLs")
+    # return Distance Tables
+    imls = self.mean_table['%.2f' % mag, imt.string]
     # Get distance vector for the given magnitude
-    idx = np.searchsorted(self.m_w, ctx.mag)
+    idx = np.searchsorted(self.m_w, mag)
     dists = self.distances[:, 0, idx - 1]
-    # Get mean and standard deviations
-    mean = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
-    return np.log(mean)
+    dst = getattr(ctx, self.distance_type)
+    # get log(mean)
+    return np.log(_get_mean(self.kind, imls, dst, dists))
 
 
 def get_site_amplification(self, imt, pga_r, sites):
@@ -554,19 +553,19 @@ def _get_phi(self, imt, mag):
     return phi
 
 
-def get_mean_amp(self, ctx, imt):
+def get_mean_amp(self, mag, ctx, imt):
     # Get the PGA on the reference rock condition
     if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
         rock_imt = PGA()
     else:
         rock_imt = SA(0.01)
-    pga_r = get_hard_rock_mean(self, ctx, rock_imt)
+    pga_r = get_hard_rock_mean(self, mag, ctx, rock_imt)
 
     # Get the desired spectral acceleration on rock
     if imt.string != "PGA":
         # Calculate the ground motion at required spectral period for
         # the reference rock
-        mean = get_hard_rock_mean(self, ctx, imt)
+        mean = get_hard_rock_mean(self, mag, ctx, imt)
     else:
         # Avoid re-calculating PGA if that was already done!
         mean = np.copy(pga_r)
@@ -717,14 +716,15 @@ class NGAEastGMPE(GMPETable):
             assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
         super().__init__(**kwargs)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
+        [mag] = np.unique(np.round(ctx.mag, 6))  # by construction
         for m, imt in enumerate(imts):
-            mean[m], _, _ = get_mean_amp(self, ctx, imt)
+            mean[m], _, _ = get_mean_amp(self, mag, ctx, imt)
             # Get standard deviation model
-            sig[m], tau[m], phi[m] = get_stddevs(self, ctx.mag, imt)
+            sig[m], tau[m], phi[m] = get_stddevs(self, mag, imt)
 
     # Seven constants: vref, vL, vU, vw1, vw2, wt1 and wt2
     CONSTANTS = {"vref": 760., "vL": 200., "vU": 2000.0,

@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 9 * * *"
 
 jobs:
 
@@ -66,9 +66,9 @@ jobs:
         fi
     - name: Run tests
       run: |
-        source /opt/openquake/bin/activate
+        source /opt/openquake/venv/bin/activate
         pip install pytest
-        runuser -l openquake -c '/opt/openquake/bin/oq dbserver start &'
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         mkdir ~/oqdata
         export PYTEST_ADDOPTS="--color=yes"
         pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators

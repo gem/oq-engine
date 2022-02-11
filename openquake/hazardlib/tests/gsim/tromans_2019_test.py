@@ -53,37 +53,29 @@ class SigmaFunctionsTestCase(unittest.TestCase):
         mags = self.expected_hetero_pga[:, 0]
         imt = PGA()
         # Central Branch
-        phi = []
-        for mag in mags:
-            phi.append(HETEROSKEDASTIC_PHI["central"](imt, mag))
-        np.testing.assert_array_almost_equal(np.array(phi),
-                                             self.expected_hetero_pga[:, 2], 7)
+        phi = HETEROSKEDASTIC_PHI["central"](imt, mags)
+        np.testing.assert_array_almost_equal(
+            phi, self.expected_hetero_pga[:, 2], 7)
 
         imt = SA(1.0)
         # Central Branch
-        phi = []
-        for mag in mags:
-            phi.append(HETEROSKEDASTIC_PHI["central"](imt, mag))
-        np.testing.assert_array_almost_equal(np.array(phi),
-                                             self.expected_hetero_sa1[:, 2], 7)
+        phi = HETEROSKEDASTIC_PHI["central"](imt, mags)
+        np.testing.assert_array_almost_equal(
+            phi, self.expected_hetero_sa1[:, 2], 7)
 
     def test_heteroskedastic_tau(self):
         mags = self.expected_hetero_pga[:, 0]
         imt = PGA()
         # Central Branch
-        tau = []
-        for mag in mags:
-            tau.append(HETEROSKEDASTIC_TAU["central"](imt, mag))
-        np.testing.assert_array_almost_equal(np.array(tau),
-                                             self.expected_hetero_pga[:, 1], 7)
+        tau = HETEROSKEDASTIC_TAU["central"](imt, mags)
+        np.testing.assert_array_almost_equal(
+            tau, self.expected_hetero_pga[:, 1], 7)
 
         imt = SA(1.0)
         # Central Branch
-        tau = []
-        for mag in mags:
-            tau.append(HETEROSKEDASTIC_TAU["central"](imt, mag))
-        np.testing.assert_array_almost_equal(np.array(tau),
-                                             self.expected_hetero_sa1[:, 1], 7)
+        tau = HETEROSKEDASTIC_TAU["central"](imt, mags)
+        np.testing.assert_array_almost_equal(
+            tau, self.expected_hetero_sa1[:, 1], 7)
 
     def test_homoskedastic_phi(self):
         self.assertEqual(HOMOSKEDASTIC_PHI["central"](PGA()), 0.46)
@@ -95,33 +87,20 @@ class SigmaFunctionsTestCase(unittest.TestCase):
 
     def test_homoskedastic_phi_branches(self):
         mags = self.expected_hetero_pga[:, 0]
-        central = []
-        lower = []
-        upper = []
-        for mag in mags:
-            central.append(HOMOSKEDASTIC_PHI["central"](PGA()))
-            lower.append(HOMOSKEDASTIC_PHI["lower"](PGA()))
-            upper.append(HOMOSKEDASTIC_PHI["upper"](PGA()))
+        central = HOMOSKEDASTIC_PHI["central"](PGA())
+        lower = HOMOSKEDASTIC_PHI["lower"](PGA())
+        upper = HOMOSKEDASTIC_PHI["upper"](PGA())
         np.testing.assert_array_almost_equal(
-            np.array(lower) / np.array(central), 0.84 * np.ones(len(mags))
-            )
+            lower / central, 0.84 * np.ones(len(mags)))
         np.testing.assert_array_almost_equal(
-            np.array(upper) / np.array(central), 1.16 * np.ones(len(mags))
-            )
+            upper / central, 1.16 * np.ones(len(mags)))
 
     def test_homoskedastic_tau_branches(self):
-        mags = self.expected_hetero_pga[:, 0]
-        central = []
-        lower = []
-        upper = []
-        for mag in mags:
-            central.append(HOMOSKEDASTIC_TAU["central"](PGA()))
-            lower.append(HOMOSKEDASTIC_TAU["lower"](PGA()))
-            upper.append(HOMOSKEDASTIC_TAU["upper"](PGA()))
-        np.testing.assert_array_almost_equal(
-            np.array(lower), np.array(central) - 0.075)
-        np.testing.assert_array_almost_equal(
-            np.array(upper), np.array(central) + 0.075)
+        central = HOMOSKEDASTIC_TAU["central"](PGA())
+        lower = HOMOSKEDASTIC_TAU["lower"](PGA())
+        upper = HOMOSKEDASTIC_TAU["upper"](PGA())
+        np.testing.assert_array_almost_equal(lower, central - 0.075)
+        np.testing.assert_array_almost_equal(upper, central + 0.075)
 
 
 class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):

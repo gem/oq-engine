@@ -125,7 +125,7 @@ class GmfComputer(object):
         ctxs = cmaker.get_ctxs([rupture], sitecol, self.source_id)
         if not ctxs:
             raise FarAwayRupture
-        self.ctx = ctxs[0]
+        [self.ctx] = ctxs
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(

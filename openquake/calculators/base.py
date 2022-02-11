@@ -428,16 +428,20 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
+        oq = self.oqparam
         f, s = self.csm.get_floating_spinning_factors()
         if f != 1:
             logging.info('Rupture floating factor = %s', f)
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
-        if (f * s >= 1.5 and self.oqparam.no_pointsource_distance
-                and 'classical' in self.oqparam.calculation_mode):
+        if (f * s >= 1.5 and oq.no_pointsource_distance
+                and 'classical' in oq.calculation_mode):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
+        elif 'classical' in oq.calculation_mode:
+            logging.info('Using pointsource_distance=%s',
+                         oq.pointsource_distance)
 
     def read_inputs(self):
         """
@@ -464,10 +468,10 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                mags_by_trt = csm.get_mags_by_trt()
-                for trt in mags_by_trt:
+                oq.mags_by_trt = csm.get_mags_by_trt()
+                for trt in oq.mags_by_trt:
                     self.datastore['source_mags/' + trt] = numpy.array(
-                        mags_by_trt[trt])
+                        oq.mags_by_trt[trt])
                     interp = oq.maximum_distance(trt)
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (

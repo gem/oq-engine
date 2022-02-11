@@ -51,6 +51,6 @@ def get_portable_gsims():
     '''
     portable = {}
     for cls in registry.values():
-        if 'get_mean_and_stddevs' in cls.__dict__:
+        if 'ctx' not in cls.compute.__annotations__:
             portable[cls.__name__] = cls
     return portable

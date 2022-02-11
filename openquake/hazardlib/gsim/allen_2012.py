@@ -38,11 +38,10 @@ def _compute_mean(C, mag, rrup):
     m_ref = mag - 4
     r1 = R1 + C['c8'] * m_ref
     r2 = R2 + C['c11'] * m_ref
-    assert r1 > 0
-    assert r2 > 0
+    assert (r1 > 0).all()
+    assert (r2 > 0).all()
     g0 = np.log10(
-        np.sqrt(np.minimum(rrup, r1) ** 2 + (1 + C['c5'] * m_ref) ** 2)
-    )
+        np.sqrt(np.minimum(rrup, r1) ** 2 + (1 + C['c5'] * m_ref) ** 2))
     g1 = np.maximum(np.log10(rrup / r1), 0)
     g2 = np.maximum(np.log10(rrup / r2), 0)
 
@@ -96,18 +95,16 @@ class Allen2012(GMPE):
     #: 'Regression of Model Coefficients', page 32
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
         for m, imt in enumerate(imts):
-            if ctx.hypo_depth < 10:
-                C = self.COEFFS_SHALLOW[imt]
-            else:
-                C = self.COEFFS_DEEP[imt]
-
+            C = np.where(ctx.hypo_depth < 10,
+                         self.COEFFS_SHALLOW[imt],
+                         self.COEFFS_DEEP[imt])
             mean[m] = _compute_mean(C, ctx.mag, ctx.rrup)
             sig[m] = np.log(10 ** C['sigma'])
             # standard deviation is converted from log10 to ln
