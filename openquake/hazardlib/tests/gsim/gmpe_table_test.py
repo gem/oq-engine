@@ -27,7 +27,6 @@ from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.gmpe_table import (
     GMPETable, todict, _return_tables)
 from openquake.hazardlib.gsim.base import RuptureContext
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import imt as imt_module
 
 

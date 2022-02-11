@@ -1,8 +1,8 @@
 # The OpenQuake Engine Server and WebUI
 
-## Advanced configurations
+## Advanced configurations and Authentication support
 
-### Authentication support
+### Installation from packages
 
 The OpenQuake Engine server supports authentication provided by [Django](https://docs.djangoproject.com/en/stable/topics/auth/) and its backends.
 
@@ -23,15 +23,47 @@ $ cd /usr/share/openquake/engine
 $ sudo -u openquake oq webui createsuperuser
 ```
 
-#### Running from sources
+Setup static files in Django
 
-When running the OpenQuake Engine from sources the `local_settings.py` file must be located under `openquake/server/local_settings.py` and `oq` commands must be as current user (without `sudo`).
+Open the file `/usr/share/openquake/engine/local_settings.py` and add:
+```python
+# Static Folder
+STATIC_ROOT = '/var/www/webui'
+```
+STATIC_ROOT is the full, absolute path to your static files folder.
+Then issue the commands:
+
+```bash
+$ cd /usr/share/openquake/engine
+$ sudo -u openquake oq webui collectstatic
+```
+
+### Installation with the universal installer
+
+When installing the OpenQuake Engine with the universal installer the `local_settings.py` file must be located under the folder `openquake/server` of the oq-engine repository.
+
+For example if you clone the repository in the folder `/opt/openquake/src/oq-engine/` you must place the file in `/opt/openquake/src/oq-engine/openquake/server`
+
+The `oq` commands must be run as root user and the installation must be of kind `server` or `devel_server`.
+
+On that folder there is a template file `local_settings.py.pam` that you can rename o copy to `local_settings.py` to enable only the requested features.
 
 if, for any reason, the `oq` command isn't available in the path you can use the following syntax:
 
 ```bash
 $ python3 -m openquake.server.manage <subcommand> 
 ```
+An example configuration is the follow:
+
+```python
+# Enable authentication
+LOCKDOWN = True
+
+# Static Folder
+STATIC_ROOT = '/var/www/webui'
+```
+
+After the creation of the files, please perform the same steps of the package installation to set up the environment with the user root.
 
 ##### Groups support
 

@@ -20,7 +20,6 @@ Module exports :class:`NGAEastUSGSGMPE`
 """
 import os
 import numpy as np
-from scipy.interpolate import interp1d
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.nga_east import (
@@ -163,15 +162,11 @@ def _get_mean(kind, data, dists, table_dists):
     :param table_dists:
         The distance table for the given magnitude and IMT
     """
-    # For values outside of the interpolation range use -999. to ensure
-    # value is identifiable and outside of potential real values
     # For extremely short distance (rrup = 0) use an arbitrarily small
     # distance measure (1.0E-5 used by US NSHMP code)
     table_dists[table_dists < 1.0E-5] = 1.0E-5
-    interpolator_mean = interp1d(np.log10(table_dists), np.log(data),
-                                 bounds_error=False,
-                                 fill_value=-999.)
-    mean = np.exp(interpolator_mean(np.log10(dists)))
+    mean = np.exp(
+        np.interp(np.log10(dists), np.log10(table_dists), np.log(data)))
     # For those distances less than or equal to the shortest distance
     # extrapolate the shortest distance value
     mean[dists <= table_dists[0]] = data[0]
@@ -184,7 +179,7 @@ def _get_mean(kind, data, dists, table_dists):
     return mean
 
 
-def _get_stddevs(sigma_model, ctx, imt):
+def _get_stddevs(sigma_model, mag, ctx, imt):
     """
     Returns the standard deviations according to the choice of aleatory
     uncertainty model. Note that for compatibility with the US NSHMP
@@ -193,10 +188,10 @@ def _get_stddevs(sigma_model, ctx, imt):
     """
     if sigma_model in ("EPRI", "COLLAPSED"):
         # EPRI recommended aleatory uncertainty model
-        tau_epri, phi_epri = get_epri_tau_phi(imt, ctx.mag)
+        tau_epri, phi_epri = get_epri_tau_phi(imt, mag)
     if sigma_model in ("PANEL", "COLLAPSED"):
         # Panel recommended model
-        tau_panel, phi0_panel = get_panel_tau_phi(imt, ctx.mag)
+        tau_panel, phi0_panel = get_panel_tau_phi(imt, mag)
         phis2s = get_stewart_2019_phis2s(imt, ctx.vs30)
         phi_panel = np.sqrt(phi0_panel ** 2. + phis2s ** 2.)
     if sigma_model == "EPRI":
@@ -240,12 +235,13 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
         super().__init__(**kwargs)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
+        [mag] = np.unique(np.round(ctx.mag, 6))
         for m, imt in enumerate(imts):
-            imean, site_amp, pga_r = get_mean_amp(self, ctx, imt)
+            imean, site_amp, pga_r = get_mean_amp(self, mag, ctx, imt)
 
             # Get the coefficients for the IMT
             C_LIN = self.COEFFS_LINEAR[imt]
@@ -267,7 +263,8 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
 
             # Get standard deviation model
             sig[m], tau[m], phi[m] = _get_stddevs(
-                self.sigma_model, ctx, imt)
+                self.sigma_model, mag, ctx, imt)
+
 
 lines = '''\
 NGAEastUSGSSeedSP15 SP15

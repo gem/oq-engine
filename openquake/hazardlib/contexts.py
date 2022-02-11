@@ -21,6 +21,7 @@ import re
 import abc
 import copy
 import time
+import operator
 import warnings
 import itertools
 import functools
@@ -34,7 +35,7 @@ except ImportError:
     numba = None
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, RecordBuilder, block_splitter)
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, get_slices
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -106,6 +107,23 @@ def get_num_distances(gsims):
     for gsim in gsims:
         dists.update(gsim.REQUIRES_DISTANCES)
     return len(dists)
+
+
+def split_by_mag(ctx: numpy.recarray):
+    """
+    >>> arr = numpy.zeros(5, [('mag', float), ('dst', float)])
+    >>> arr['mag'] = [4.4, 4.4, 4.5, 4.5, 4.5]
+    >>> arr['dst'] = [100., 101., 102., 103., 104.]
+    >>> for a in split_by_mag(arr.view(numpy.recarray)):
+    ...     print(a)
+    [(4.4, 100.) (4.4, 101.)]
+    [(4.5, 102.) (4.5, 103.) (4.5, 104.)]
+    """
+    # assume the ctx recarray is already ordered by mag
+    out = []
+    for [(i1, i2)] in get_slices(numpy.uint32(ctx.mag * 100)).values():
+        out.append(ctx[i1:i2])
+    return out
 
 
 def use_recarray(gsim):
@@ -426,7 +444,7 @@ class ContextMaker(object):
         :param src_id:
             the numeric ID of the source (to be assigned to the ruptures)
         :returns:
-            fat RuptureContexts
+            fat RuptureContexts sorted by mag
         """
         if hasattr(src_or_ruptures, 'source_id'):
             irups = self._gen_rups(src_or_ruptures, sitecol)
@@ -479,6 +497,7 @@ class ContextMaker(object):
                 ctx.clon = closest.lons[ctx.sids]
                 ctx.clat = closest.lats[ctx.sids]
             ctxs.append(ctx)
+        ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
     # this is used with pointsource_distance approximation for close distances,
@@ -642,10 +661,14 @@ class ContextMaker(object):
                     gsim.set_parameters(ctx)
                 lst.append(ctx.roundup(self.minimum_distance))
             recarray = self.recarray(lst) if any_recarray(self.gsims) else 0
+        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
+            recarrays = split_by_mag(recarray)
+        else:
+            recarrays = [recarray]
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
-            for ctx in ([recarray] if use_recarray(gsim) else ctxs):
+            for ctx in (recarrays if use_recarray(gsim) else ctxs):
                 slc = slice(start, start + len(ctx))
                 compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 start = slc.stop

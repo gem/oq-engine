@@ -434,7 +434,6 @@ class KiteSurface(BaseSurface):
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
                       align=False, sec_id=''):
-        # TODO split this function into smaller components.
         """
         This method creates a quadrilateral mesh from a set of profiles. The
         construction of the mesh is done trying to get quadrilaterals as much
@@ -595,13 +594,26 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     last = False if ref_idx < len(rprof) - 1 else True
     if ref_idx > 0:
         prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl, last)
+    prf = prfl + prfr
 
     # Create the whole mesh
-    prf = prfl + prfr
-    msh = np.array(prf)
+    if len(prf) > 1:
 
-    # Check output profiles
-    assert len(prf) > 1
+        msh = np.array(prf)
+
+    else:
+
+        # Check the profiles have the same number of samples
+        chk1 = np.all(np.array([len(p) for p in rprof]) == len(rprof[0]))
+        top_depths = np.array([p[0, 0] for p in rprof])
+
+        # Check profiles have the same top depth
+        chk2 = np.all(np.abs(top_depths - rprof[0][0, 0]) < 0.1*edge_sd)
+
+        if chk1 and chk2:
+            msh = np.array(rprof)
+        else:
+            raise ValueError('Cannot build the mesh')
 
     # Convert from profiles to edges
     msh = msh.swapaxes(0, 1)
@@ -646,7 +658,7 @@ def _fix_profiles(profiles, profile_sd, align, idl):
         dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
                        pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
 
-        # Check that all the distances are within a tolerance
+        # Check that all the distances are within a given tolerance
         np.testing.assert_allclose(dst, profile_sd, rtol=1.)
 
     # Find the delta needed to align profiles if requested
