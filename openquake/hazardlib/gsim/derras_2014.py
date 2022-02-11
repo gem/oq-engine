@@ -44,7 +44,7 @@ def rhypo_to_rjb(rhypo, mag):
     Converts hypocentral distance to an equivalent Joyner-Boore distance
     dependent on the magnitude
     """
-    epsilon = rhypo - (4.853 + 1.347E-6 * (mag ** 8.163))
+    epsilon = rhypo - (4.853 + 1.347E-6 * mag ** 8.163)
     rjb = np.zeros_like(rhypo)
     idx = epsilon >= 3.
     rjb[idx] = np.sqrt((epsilon[idx] ** 2.) - 9.0)
@@ -59,7 +59,7 @@ def _get_normalised_term(pval, pmax, pmin):
     N.B. This is given as 0.5 * (...) - 1 in the paper, but the Electronic
     Supplement implements it as 2.0 * (...) - 1
     """
-    return 2.0 * ((pval - pmin) / (pmax - pmin)) - 1
+    return 2.0 * (pval - pmin) / (pmax - pmin) - 1
 
 
 def _get_sof_dummy_variable(rake):
@@ -67,21 +67,18 @@ def _get_sof_dummy_variable(rake):
     Authors use a style of faulting dummy variable of 1 for normal
     faulting, 2 for reverse faulting and 3 for strike-slip
     """
-    if (rake > 45.0) and (rake < 135.0):
-        # Reverse faulting
-        return 3.0
-    elif (rake < -45.0) and (rake > -135.0):
-        # Normal faulting
-        return 1.0
-    else:
-        # Strike slip
-        return 4.0
+    res = np.full_like(rake, 4.0)  # strike slip
+    res[(rake > 45.0) & (rake < 135.0)] = 3.0  # reverse
+    res[(rake < -45.) & (rake > -135.)] = 1.0  # normal
+    return res
 
 
 def get_pn(region, ctx, sof):
     """
     Normalise the input parameters within their upper and lower
-    defined range
+    defined range.
+
+    :returns: an array of shape (N, 5) with rjb, magn, vs30, depth, sof
     """
     p_n = np.zeros((len(ctx), 5))
     rjb = np.copy(ctx.rjb)
@@ -89,6 +86,7 @@ def get_pn(region, ctx, sof):
         rjb[ctx.width <= 1E-3] = rhypo_to_rjb(
             ctx.rhypo, ctx.mag)[ctx.width <= 1E-3]
     rjb[rjb < 0.1] = 0.1  # must be clipped at 0.1 km
+
     p_n[:, 0] = _get_normalised_term(
         np.log10(rjb), CONSTANTS["logMaxR"], CONSTANTS["logMinR"])
     p_n[:, 1] = _get_normalised_term(
@@ -108,18 +106,12 @@ def get_mean(region, W_1, B_1, C, ctx):
     Returns the mean ground motion in terms of log10 m/s/s, implementing
     equation 2 (page 502)
     """
-    # W2 needs to be a 1 by 5 matrix (not a vector
-    w_2 = np.array([
-        [C["W_21"], C["W_22"], C["W_23"], C["W_24"], C["W_25"]]])
-    # Gets the style of faulting dummy variable
-    sof = _get_sof_dummy_variable(ctx.rake)
-    # Get the normalised coefficients
-    p_n = get_pn(region,  ctx, sof)
+    w_2 = np.array([C["W_21"], C["W_22"], C["W_23"], C["W_24"], C["W_25"]])
+    p_n = get_pn(region, ctx, _get_sof_dummy_variable(ctx.rake))
     mean = np.zeros_like(ctx.rhypo if region == "germany" else ctx.rjb)
-    for idx, p_n_i in enumerate(p_n):
-        mean_i = np.dot(w_2, np.tanh(np.dot(W_1, p_n_i) + B_1))
-        mean[idx] = (0.5 * (mean_i + C["B_2"] + 1.0) *
-                     (C["tmax"] - C["tmin"])) + C["tmin"]
+    for i, p_n_i in enumerate(p_n):
+        mean[i] = (w_2 @ np.tanh(W_1 @ p_n_i + B_1) + C["B_2"] + 1.0) * (
+            C["tmax"] - C["tmin"]) / 2 + C["tmin"]
     return mean
 
 
@@ -166,7 +158,7 @@ class DerrasEtAl2014(GMPE):
 
     adjustment_factor = 0.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
