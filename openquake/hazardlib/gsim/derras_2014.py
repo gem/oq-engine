@@ -21,10 +21,8 @@ Module exports :class:`DerrasEtAl2014`
 """
 import numpy as np
 from scipy.constants import g
-
-from openquake.baselib.general import CallableDict
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 # Constants used to normalise the input parameters
@@ -80,78 +78,29 @@ def _get_sof_dummy_variable(rake):
         return 4.0
 
 
-get_pn = CallableDict()  # overridden in germany_2008
-
-
-@get_pn.add("base")
-def get_pn_base(region, ctx, sof):
+def get_pn(region, ctx, sof):
     """
     Normalise the input parameters within their upper and lower
     defined range
     """
-    # List must be in following order
-    p_n = []
-    # Rjb
-    # Note that Rjb must be clipped at 0.1 km
+    p_n = np.zeros((len(ctx), 5))
     rjb = np.copy(ctx.rjb)
-    rjb[rjb < 0.1] = 0.1
-    p_n.append(_get_normalised_term(np.log10(rjb),
-                                    CONSTANTS["logMaxR"],
-                                    CONSTANTS["logMinR"]))
-    # Magnitude
-    p_n.append(_get_normalised_term(ctx.mag,
-                                    CONSTANTS["maxMw"],
-                                    CONSTANTS["minMw"]))
-    # Vs30
-    p_n.append(_get_normalised_term(np.log10(ctx.vs30),
-                                    CONSTANTS["logMaxVs30"],
-                                    CONSTANTS["logMinVs30"]))
-    # Depth
-    p_n.append(_get_normalised_term(ctx.hypo_depth,
-                                    CONSTANTS["maxD"],
-                                    CONSTANTS["minD"]))
-    # Style of Faulting
-    p_n.append(_get_normalised_term(sof,
-                                    CONSTANTS["maxFM"],
-                                    CONSTANTS["minFM"]))
-    return p_n
+    if region == 'germany':
+        rjb[ctx.width <= 1E-3] = rhypo_to_rjb(
+            ctx.rhypo, ctx.mag)[ctx.width <= 1E-3]
+    rjb[rjb < 0.1] = 0.1  # must be clipped at 0.1 km
+    p_n[:, 0] = _get_normalised_term(
+        np.log10(rjb), CONSTANTS["logMaxR"], CONSTANTS["logMinR"])
+    p_n[:, 1] = _get_normalised_term(
+        ctx.mag, CONSTANTS["maxMw"], CONSTANTS["minMw"])
+    p_n[:, 2] = _get_normalised_term(
+        np.log10(ctx.vs30), CONSTANTS["logMaxVs30"], CONSTANTS["logMinVs30"])
+    p_n[:, 3] = _get_normalised_term(
+        ctx.hypo_depth, CONSTANTS["maxD"], CONSTANTS["minD"])
+    p_n[:, 4] = _get_normalised_term(
+        sof, CONSTANTS["maxFM"], CONSTANTS["minFM"])
 
-
-@get_pn.add("germany")
-def get_pn_germany(region, ctx, sof):
-    """
-    Normalise the input parameters within their upper and lower
-    defined range
-    """
-    # List must be in following order
-    p_n = []
-    # Rjb
-    # Note that Rjb must be clipped at 0.1 km
-    if ctx.width > 1.0E-3:
-        rjb = np.copy(ctx.rjb)
-    else:
-        rjb = rhypo_to_rjb(ctx.rhypo, ctx.mag)
-    rjb[rjb < 0.1] = 0.1
-    p_n.append(_get_normalised_term(np.log10(rjb),
-                                    CONSTANTS["logMaxR"],
-                                    CONSTANTS["logMinR"]))
-    # Magnitude
-    p_n.append(_get_normalised_term(ctx.mag,
-                                    CONSTANTS["maxMw"],
-                                    CONSTANTS["minMw"]))
-    # Vs30
-    p_n.append(_get_normalised_term(np.log10(ctx.vs30),
-                                    CONSTANTS["logMaxVs30"],
-                                    CONSTANTS["logMinVs30"]))
-    # Depth
-    p_n.append(_get_normalised_term(ctx.hypo_depth,
-                                    CONSTANTS["maxD"],
-                                    CONSTANTS["minD"]))
-    # Style of Faulting
-    p_n.append(_get_normalised_term(sof,
-                                    CONSTANTS["maxFM"],
-                                    CONSTANTS["minFM"]))
-    return p_n
+    return p_n  # must be clipped at 0.1 km
 
 
 def get_mean(region, W_1, B_1, C, ctx):
@@ -167,12 +116,7 @@ def get_mean(region, W_1, B_1, C, ctx):
     # Get the normalised coefficients
     p_n = get_pn(region,  ctx, sof)
     mean = np.zeros_like(ctx.rhypo if region == "germany" else ctx.rjb)
-    # Need to loop over ctx - maybe this can be improved in future?
-    # ndenumerate is used to allow for application to 2-D arrays
-    for idx, rval in np.ndenumerate(p_n[0]):
-        # Place normalised coefficients into a single array
-        p_n_i = np.array([rval, p_n[1], p_n[2][idx], p_n[3], p_n[4]])
-        # Executes the main ANN model
+    for idx, p_n_i in enumerate(p_n):
         mean_i = np.dot(w_2, np.tanh(np.dot(W_1, p_n_i) + B_1))
         mean[idx] = (0.5 * (mean_i + C["B_2"] + 1.0) *
                      (C["tmax"] - C["tmin"])) + C["tmin"]

@@ -19,7 +19,7 @@ import copy
 import unittest
 import numpy as np
 from openquake.hazardlib.imt import SA, PGA
-from openquake.hazardlib import const, contexts
+from openquake.hazardlib import contexts
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014RhypoGermany
@@ -97,6 +97,7 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
         self.ctx = RuptureContext()
         self.ctx.sids = np.arange(5)
         self.ctx.rhypo = np.array([5., 10., 20., 50., 100.])
+        self.ctx.rjb = np.array([5., 10., 20., 50., 95.])
         self.ctx.vs30 = 800.0 * np.ones(5)
 
     def check_gmpe_adjustments(self, adj_gmpe_set, original_gmpe):
