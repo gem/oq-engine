@@ -378,6 +378,10 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     """
     Computes the coordinate shift for each line in the multiline. This is
     used to compute coordinates in the GC2 system
+
+    :returns:
+        A :class:`np.ndarray`instance with cardinality equal to the number of
+        sections (i.e. the length of the lines list in input)
     """
 
     # For each line in the multi line, get the distance along the average

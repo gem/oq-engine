@@ -387,13 +387,14 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        # TODO evaluate the effectiveness of this since the performance
-        # improvement seems minimal (if not totally absent)
         if (isinstance(rup.surface, MultiSurface) and
                 hasattr(rup.surface.surfaces[0], 'suid')):
             tmp, self.dcache = get_dst_multi(
                 rup, sites, ['rrup'], self.dcache)
             distances = tmp['rrup']
+            # Check this. This is de-facto bypassing the filtering of sites
+            # per rupture.
+            return sites, DistancesContext([('rrup', distances)])
         else:
             distances = get_distances(rup, sites, 'rrup')
         mdist = self.maximum_distance(rup.mag)
@@ -457,6 +458,8 @@ class ContextMaker(object):
         dcache = {}
 
         for rup in irups:
+            caching = (isinstance(rup.surface, MultiSurface) and
+                       hasattr(rup.surface.surfaces[0], 'suid'))
             sites = getattr(rup, 'sites', sitecol)
             try:
                 r_sites, dctx = self.filter(sites, rup)
@@ -466,8 +469,7 @@ class ContextMaker(object):
             ctx.sites = r_sites
 
             # In case of a multifault source we use a cache with distances
-            if (isinstance(rup.surface, MultiSurface) and
-                    hasattr(rup.surface.surfaces[0], 'suid')):
+            if caching:
                 params = self.REQUIRES_DISTANCES - {'rrup'}
                 distances, dcache = get_dst_multi(rup, r_sites, params, dcache)
                 for key in distances:
