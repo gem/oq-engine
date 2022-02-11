@@ -390,7 +390,7 @@ class ContextMaker(object):
         # TODO evaluate the effectiveness of this since the performance
         # improvement seems minimal (if not totally absent)
         if (isinstance(rup.surface, MultiSurface) and
-                hasattr(rup.surface, 'suid')):
+                hasattr(rup.surface.surfaces[0], 'suid')):
             tmp, self.dcache = get_dst_multi(
                 rup, sites, ['rrup'], self.dcache)
             distances = tmp['rrup']
@@ -467,7 +467,7 @@ class ContextMaker(object):
 
             # In case of a multifault source we use a cache with distances
             if (isinstance(rup.surface, MultiSurface) and
-                    hasattr(rup.surface, 'suid')):
+                    hasattr(rup.surface.surfaces[0], 'suid')):
                 params = self.REQUIRES_DISTANCES - {'rrup'}
                 distances, dcache = get_dst_multi(rup, r_sites, params, dcache)
                 for key in distances:
