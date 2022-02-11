@@ -318,7 +318,6 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
     # TODO
     def test_get_dip(self):
         dip = self.srfc.get_dip()
-        print(dip)
 
 
 class KiteSurfaceSimpleTests(unittest.TestCase):
