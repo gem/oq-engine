@@ -21,6 +21,7 @@ import re
 import abc
 import copy
 import time
+import operator
 import warnings
 import itertools
 import functools
@@ -34,7 +35,7 @@ except ImportError:
     numba = None
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, RecordBuilder, block_splitter)
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, get_slices
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -107,6 +108,23 @@ def get_num_distances(gsims):
     return len(dists)
 
 
+def split_by_mag(ctx: numpy.recarray):
+    """
+    >>> arr = numpy.zeros(5, [('mag', float), ('dst', float)])
+    >>> arr['mag'] = [4.4, 4.4, 4.5, 4.5, 4.5]
+    >>> arr['dst'] = [100., 101., 102., 103., 104.]
+    >>> for a in split_by_mag(arr.view(numpy.recarray)):
+    ...     print(a)
+    [(4.4, 100.) (4.4, 101.)]
+    [(4.5, 102.) (4.5, 103.) (4.5, 104.)]
+    """
+    # assume the ctx recarray is already ordered by mag
+    out = []
+    for [(i1, i2)] in get_slices(numpy.uint32(ctx.mag * 100)).values():
+        out.append(ctx[i1:i2])
+    return out
+
+
 def use_recarray(gsim):
     """
     :returns: True if the gsim or its underlying require a recarray
@@ -168,7 +186,8 @@ class ContextMaker(object):
     NB: the trt can be different from the tectonic region type for which
     the underlying GSIMs are defined. This is intentional.
     """
-    REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
+    REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS',
+                'COMPUTED_PARAMETERS']
     rup_indep = True
     tom = None
 
@@ -182,6 +201,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         if isinstance(oq, dict):
             param = oq
+            self.mags = param.get('mags', ())
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
             param = vars(oq)
@@ -191,7 +211,18 @@ class ContextMaker(object):
             param['af'] = getattr(oq, 'af', None)
             self.cross_correl = oq.cross_correl
             self.imtls = oq.imtls
-
+            try:
+                self.mags = oq.mags_by_trt[trt]
+            except AttributeError:
+                self.mags = ()
+            except KeyError:  # missing TRT but there is only one
+                [(_, self.mags)] = oq.mags_by_trt.items()
+        if 'imtls' in param:
+            self.imtls = param['imtls']
+        elif 'hazard_imtls' in param:
+            self.imtls = DictArray(param['hazard_imtls'])
+        elif not hasattr(self, 'imtls'):
+            raise KeyError('Missing imtls in ContextMaker!')
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -201,6 +232,9 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
+        for gsim in gsims:
+            if hasattr(gsim, 'set_tables'):
+                gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
@@ -228,12 +262,6 @@ class ContextMaker(object):
                             'apply_swiss_amplification' in gsim.params):
                         reqset.add('amplfactor')
             setattr(self, 'REQUIRES_' + req, reqset)
-        if 'imtls' in param:
-            self.imtls = param['imtls']
-        elif 'hazard_imtls' in param:
-            self.imtls = DictArray(param['hazard_imtls'])
-        elif not hasattr(self, 'imtls'):
-            raise KeyError('Missing imtls in ContextMaker!')
         try:
             self.min_iml = param['min_iml']
         except KeyError:
@@ -243,18 +271,18 @@ class ContextMaker(object):
             self.REQUIRES_DISTANCES.add('repi')
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
                 sorted(self.REQUIRES_SITES_PARAMETERS | set(extraparams)) +
+                sorted(self.REQUIRES_COMPUTED_PARAMETERS) +
                 sorted(self.REQUIRES_DISTANCES))
         dic = {}
         for req in reqs:
             if req in site_param_dt:
                 dt = site_param_dt[req]
                 if isinstance(dt, tuple):  # (string_, size)
-                    dic[req] = b''
+                    dic[req] = b'X' * dt[1]
                 else:
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
-        #dic['occurrence_rate'] = numpy.float64(0)
         dic['sids'] = numpy.uint32(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -308,7 +336,8 @@ class ContextMaker(object):
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                getattr(ra, par)[slc] = getattr(ctx, par)
+                val = getattr(ctx, par)
+                getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
         return ra
@@ -320,6 +349,7 @@ class ContextMaker(object):
         params = {'occurrence_rate', 'sids_', 'src_id',
                   'probs_occur_', 'clon_', 'clat_', 'rrup_'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
+        params.update(self.REQUIRES_COMPUTED_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
             params.add(dparam + '_')
         return params
@@ -403,7 +433,7 @@ class ContextMaker(object):
         :param src_id:
             the numeric ID of the source (to be assigned to the ruptures)
         :returns:
-            fat RuptureContexts
+            fat RuptureContexts sorted by mag
         """
         if hasattr(src_or_ruptures, 'source_id'):
             irups = self._gen_rups(src_or_ruptures, sitecol)
@@ -441,6 +471,7 @@ class ContextMaker(object):
                 ctx.clon = closest.lons[ctx.sids]
                 ctx.clat = closest.lats[ctx.sids]
             ctxs.append(ctx)
+        ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
     # this is used with pointsource_distance approximation for close distances,
@@ -595,15 +626,23 @@ class ContextMaker(object):
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
         if len(ctxs) == 1 and isinstance(ctxs[0], numpy.recarray):
-            # happens in event_based/case_22
+            # in event_based/case_22
             recarray = ctxs[0]
         else:
-            ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
-            recarray = self.recarray(ctxs) if any_recarray(self.gsims) else 0
+            lst = []
+            for ctx in ctxs:
+                for gsim in self.gsims:
+                    gsim.set_parameters(ctx)
+                lst.append(ctx.roundup(self.minimum_distance))
+            recarray = self.recarray(lst) if any_recarray(self.gsims) else 0
+        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
+            recarrays = split_by_mag(recarray)
+        else:
+            recarrays = [recarray]
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
-            for ctx in ([recarray] if use_recarray(gsim) else ctxs):
+            for ctx in (recarrays if use_recarray(gsim) else ctxs):
                 slc = slice(start, start + len(ctx))
                 compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 start = slc.stop
@@ -1053,18 +1092,20 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsim, ctx, imts):
+def get_mean_stds(gsim, ctx, imts, mags=()):
     """
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N
     :param imts: a list of M IMTs
+    :param mags: a list of magnitudes as strings (used only in GMPETables)
     :returns:
         an array of shape (4, M, N) obtained by applying the
         given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)
     """
     imtls = {imt.string: [0] for imt in imts}
     single = hasattr(gsim, 'compute')
-    cmaker = ContextMaker('*', [gsim] if single else gsim, {'imtls': imtls})
+    cmaker = ContextMaker('*', [gsim] if single else gsim,
+                          {'imtls': imtls, 'mags': mags})
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
     return out[:, 0] if single else out
 
@@ -1278,6 +1319,8 @@ def read_cmakers(dstore, full_lt=None):
             oq.af = AmplFunction.from_dframe(df)
         else:
             oq.af = None
+        oq.mags_by_trt = {k: decode(v[:])
+                          for k, v in dstore['source_mags'].items()}
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.tom = registry[decode(toms[grp_id])](oq.investigation_time)
         cmaker.trti = trti

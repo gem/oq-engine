@@ -311,15 +311,12 @@ class ClassicalCalculator(base.HazardCalculator):
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
                   'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
+
         for trt, gsims in gsims_by_trt.items():
             cm = ContextMaker(trt, gsims, self.oqparam)
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             for dparam in cm.REQUIRES_DISTANCES:
                 params.add(dparam + '_')
-        mags = set()
-        for trt, dset in self.datastore['source_mags'].items():
-            mags.update(dset[:])
-        mags = sorted(mags)
         if self.few_sites:
             descr = []  # (param, dt)
             for param in params:

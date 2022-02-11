@@ -127,8 +127,9 @@ def read_cmaker_df(gsim, csvfnames):
     assert imts
     imtls = {im: [0] for im in sorted(imts)}
     trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
+    mags = ['%.2f' % mag for mag in df.rup_mag.unique()]
     cmaker = contexts.ContextMaker(
-        trt.value if trt else "*", [gsim], {'imtls': imtls},
+        trt.value if trt else "*", [gsim], {'imtls': imtls, 'mags': mags},
         extraparams={col[5:] for col in df.columns if col.startswith('site_')})
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
