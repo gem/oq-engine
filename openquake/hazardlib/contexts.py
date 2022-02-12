@@ -50,6 +50,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 
+F64 = numpy.float64
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
@@ -610,23 +611,21 @@ class ContextMaker(object):
         :param probmap: if not None, update it
         :returns: a new ProbabilityMap if probmap is None
         """
-        tom = self.tom
         rup_indep = self.rup_indep
         if probmap is None:  # create new pmap
             pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
         for block in block_splitter(ctxs, 20_000, len):
-            for ctx, poes in self.gen_poes(block):
+            for poes, pnes, sids, weight in self.gen_poes(block):
                 # pnes and poes of shape (N, L, G)
                 with self.pne_mon:
-                    pnes = get_probability_no_exceedance(ctx, poes, tom)
-                    for sid, pne in zip(ctx.sids, pnes):
+                    for sid, pne in zip(sids, pnes):
                         probs = pmap.setdefault(sid, self.rup_indep).array
                         if rup_indep:
                             probs *= pne
                         else:  # rup_mutex
-                            probs += (1. - pne) * ctx.weight
+                            probs += (1. - pne) * weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -735,7 +734,7 @@ class ContextMaker(object):
     def gen_poes(self, ctxs):
         """
         :param ctxs: a list of C context objects
-        :yields: pairs (ctx, array(N, L, G))
+        :yields: poes, pnes, sids, weight with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
@@ -748,14 +747,17 @@ class ContextMaker(object):
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
                     if hasattr(gsim, 'adjustment'):  # NSHM14
-                        ctx.adjustment = gsim.adjustment[s:s+n]
+                        adj = gsim.adjustment[s:s+n]
+                    else:
+                        adj = None
                     ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctx)
-            yield ctx, poes
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
+            pnes = get_probability_no_exceedance(ctx, poes, self.tom)
+            yield poes, pnes, ctx.sids, ctx.weight
             s += n
 
     def estimate_weight(self, src, srcfilter):
@@ -1213,40 +1215,27 @@ def get_probability_no_exceedance(ctx, poes, tom):
         ground motion level at a site. First dimension represent sites,
         second dimension intensity measure levels. ``poes`` can be obtained
         calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
-
     :param tom:
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
-    rate = ctx.occurrence_rate
-    try:
-        n = len(rate)
-    except TypeError:  # float' has no len()
-        if numpy.isnan(rate):  # nonparametric rupture
-            # Uses the formula
-            #
-            #    ∑ p(k|T) * p(X<x|rup)^k
-            #
-            # where `p(k|T)` is the probability that the rupture occurs k times
-            # in the time span `T`, `p(X<x|rup)` is the probability that a
-            # rupture occurrence does not cause a ground motion exceedance, and
-            # thesummation `∑` is done over the number of occurrences `k`.
-            #
-            # `p(k|T)` is given by the attribute probs_occur and
-            # `p(X<x|rup)` is computed as ``1 - poes``.
-            prob_no_exceed = numpy.float64(
-                [v * (1 - poes) ** i for i, v in enumerate(ctx.probs_occur)]
-            ).sum(axis=0)
-            return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
-        else:
-            return tom.get_probability_no_exceedance(rate, poes)
-
-    # passed a recarray context, poes has shape (n, L, G)
-    assert len(poes) == n
-    res = numpy.zeros_like(poes)
-    for i in range(n):
-        res[i] = tom.get_probability_no_exceedance(rate[i], poes[i])
-    return res
+    if numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
+        # Uses the formula
+        #
+        #    ∑ p(k|T) * p(X<x|rup)^k
+        #
+        # where `p(k|T)` is the probability that the rupture occurs k times
+        # in the time span `T`, `p(X<x|rup)` is the probability that a
+        # rupture occurrence does not cause a ground motion exceedance, and
+        # thesummation `∑` is done over the number of occurrences `k`.
+        #
+        # `p(k|T)` is given by the attribute probs_occur and
+        # `p(X<x|rup)` is computed as ``1 - poes``.
+        prob_no_exceed = F64(
+            [v * (1 - poes) ** i for i, v in enumerate(ctx.probs_occur)]
+        ).sum(axis=0)
+        return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
+    return tom.get_probability_no_exceedance(ctx.occurrence_rate, poes)
 
 
 class Effect(object):
@@ -1313,8 +1302,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     for t, trt in enumerate(trts):
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.max_intensity(
-            sitecol1, [float(mag) for mag in mags], dist_bins)
+        gmv[:, :, t] = cmaker.max_intensity(sitecol1, F64(mags), dist_bins)
     return dict(zip(mags, gmv))
 
 
