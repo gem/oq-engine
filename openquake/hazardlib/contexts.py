@@ -48,6 +48,7 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
+F64 = numpy.float64
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
@@ -1189,40 +1190,27 @@ def get_probability_no_exceedance(ctx, poes, tom):
         ground motion level at a site. First dimension represent sites,
         second dimension intensity measure levels. ``poes`` can be obtained
         calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
-
     :param tom:
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
-    rate = ctx.occurrence_rate
-    try:
-        n = len(rate)
-    except TypeError:  # float' has no len()
-        if numpy.isnan(rate):  # nonparametric rupture
-            # Uses the formula
-            #
-            #    ∑ p(k|T) * p(X<x|rup)^k
-            #
-            # where `p(k|T)` is the probability that the rupture occurs k times
-            # in the time span `T`, `p(X<x|rup)` is the probability that a
-            # rupture occurrence does not cause a ground motion exceedance, and
-            # thesummation `∑` is done over the number of occurrences `k`.
-            #
-            # `p(k|T)` is given by the attribute probs_occur and
-            # `p(X<x|rup)` is computed as ``1 - poes``.
-            prob_no_exceed = numpy.float64(
-                [v * (1 - poes) ** i for i, v in enumerate(ctx.probs_occur)]
-            ).sum(axis=0)
-            return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
-        else:
-            return tom.get_probability_no_exceedance(rate, poes)
-
-    # passed a recarray context, poes has shape (n, L, G)
-    assert len(poes) == n
-    res = numpy.zeros_like(poes)
-    for i in range(n):
-        res[i] = tom.get_probability_no_exceedance(rate[i], poes[i])
-    return res
+    if numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
+        # Uses the formula
+        #
+        #    ∑ p(k|T) * p(X<x|rup)^k
+        #
+        # where `p(k|T)` is the probability that the rupture occurs k times
+        # in the time span `T`, `p(X<x|rup)` is the probability that a
+        # rupture occurrence does not cause a ground motion exceedance, and
+        # thesummation `∑` is done over the number of occurrences `k`.
+        #
+        # `p(k|T)` is given by the attribute probs_occur and
+        # `p(X<x|rup)` is computed as ``1 - poes``.
+        prob_no_exceed = F64(
+            [v * (1 - poes) ** i for i, v in enumerate(ctx.probs_occur)]
+        ).sum(axis=0)
+        return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
+    return tom.get_probability_no_exceedance(ctx.occurrence_rate, poes)
 
 
 class Effect(object):
@@ -1289,8 +1277,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     for t, trt in enumerate(trts):
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.max_intensity(
-            sitecol1, [float(mag) for mag in mags], dist_bins)
+        gmv[:, :, t] = cmaker.max_intensity(sitecol1, F64(mags), dist_bins)
     return dict(zip(mags, gmv))
 
 
