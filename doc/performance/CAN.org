@@ -24,6 +24,22 @@ compute stats              2_383     0.0       138_284
 Engine 3.12
 -----------
 
+| calc_44682, maxmem=84.3 GB | time_sec  | memory_mb | counts     |
+|----------------------------+-----------+-----------+------------|
+| total classical            | 1_710_256 | 639.8     | 376        |
+| computing mean_std         | 1_413_992 | 0.0       | 39_861     |
+| get_poes                   | 161_001   | 0.0       | 36_736_209 |
+| composing pnes             | 97_648    | 0.0       | 36_736_209 |
+| ClassicalCalculator.run    | 17_933    | 3_236     | 1          |
+| make_contexts              | 15_787    | 0.0       | 36_739_040 |
+| total build_hazard         | 7_615     | 60.6      | 240        |
+
+| operation-duration | counts | mean    | stddev | min     | max     |
+|--------------------+--------+---------+--------+---------+---------|
+| build_hazard       | 240    | 31.7    | 14%    | 13.1    | 48.5    |
+| classical          | 376    | 4_549   | 39%    | 121.0   | 7_025   |
+| preclassical       | 29     | 25.4    | 148%   | 0.07336 | 145.9   |
+
 Engine 3.13
 -----------
 
