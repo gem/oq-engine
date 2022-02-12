@@ -19,6 +19,7 @@
 import os
 import re
 import abc
+import sys
 import copy
 import time
 import operator
@@ -47,7 +48,7 @@ from openquake.hazardlib.calc.filters import (
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.geo.surface.multi import get_dst_multi, MultiSurface
+from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
@@ -389,12 +390,10 @@ class ContextMaker(object):
         """
         if (isinstance(rup.surface, MultiSurface) and
                 hasattr(rup.surface.surfaces[0], 'suid')):
-            tmp, self.dcache = get_dst_multi(
-                rup, sites, ['rrup'], self.dcache)
-            distances = tmp['rrup']
+            distdic = get_distdic(rup, sites, ['rrup'], self.dcache)
             # Check this. This is de-facto bypassing the filtering of sites
             # per rupture.
-            return sites, DistancesContext([('rrup', distances)])
+            return sites, DistancesContext([('rrup', distdic['rrup'])])
         else:
             distances = get_distances(rup, sites, 'rrup')
         mdist = self.maximum_distance(rup.mag)
@@ -456,7 +455,6 @@ class ContextMaker(object):
 
         # Create the distance cache. A dictionary of dictionaries
         dcache = {}
-
         for rup in irups:
             caching = (isinstance(rup.surface, MultiSurface) and
                        hasattr(rup.surface.surfaces[0], 'suid'))
@@ -471,9 +469,7 @@ class ContextMaker(object):
             # In case of a multifault source we use a cache with distances
             if caching:
                 params = self.REQUIRES_DISTANCES - {'rrup'}
-                distances, dcache = get_dst_multi(rup, r_sites, params, dcache)
-                for key in distances:
-                    setattr(dctx, key, distances[key])
+                vars(dctx).update(get_distdic(rup, r_sites, params, dcache))
             else:
                 for param in self.REQUIRES_DISTANCES - {'rrup'}:
                     distances = get_distances(rup, r_sites, param)

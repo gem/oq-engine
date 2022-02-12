@@ -415,9 +415,9 @@ class MultiSurface(BaseSurface):
 """
 
 
-def get_dst_multi(rup, sites, params, dcache):
+def get_distdic(rup, sites, params, dcache):
     """
-    Calculates the distances for multi-surfaces using a cache of distances.
+    Calculates the distances for multi-surfaces using a cache.
 
     :param rup:
         An instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
@@ -428,12 +428,10 @@ def get_dst_multi(rup, sites, params, dcache):
     :param dcache:
         A dictionary of dictionaries with the distances. The first key is the
         surface ID and the second one is the type of distance. In a traditional
-        calculation dcache is instatiated by in the `get_ctxs` method of the
+        calculation dcache is instatianted by in the `get_ctxs` method of the
         :class:`openquake.hazardlib.contexts.ContextMaker`
     :returns:
-        A tuple containing a dictionary with the computed distances for the
-        rupture in input and an updated instance of the dictionary with the
-        cache of distances
+        A dictionary with the computed distances for the rupture in input
     """
     # This is a list with the IDs of the surfaces representing the geometry of
     # the rupture in question
@@ -456,18 +454,18 @@ def get_dst_multi(rup, sites, params, dcache):
     # Computing distances using the cache
     output = {}
     for param in params:
-        if param not in output.keys():
+        if param not in output:
             distances, keys = _get_distances_from_cache(dcache, suids, param)
             for dst, key in zip(distances, keys):
                 output[key] = dst
-    return output, dcache
+    return output
 
 
 def _get_distances_from_cache(dcache: dict, suids: list, param: str):
     """
     :param dcache:
         See description in
-        :method:`openquake.hazardlib.geo.surface.multi.get_dst_multi`
+        :method:`openquake.hazardlib.geo.surface.multi.get_distdic`
     :param suids:
         A list with the IDs of the surfaces to consider
     :param param:
@@ -523,17 +521,16 @@ def _get_distances(surface, sites, param):
     return dists
 
 
-def _get_rx_ry0_from_cache(dbuf, suids, param):
+def _get_rx_ry0_from_cache(dcache, suids, param):
     """
     See :function:`openquake.hazardlib.geo.surface.multi._get_distances`
 
     :returns:
         Two lists. One with distances and one with the corresponding distance
-        definitions
+        names.
     """
-
     # Retrieve info from the cache
-    lines = [dbuf[key]['tor'] for key in suids]
+    lines = [dcache[key]['tor'] for key in suids]
 
     # Create the multiline
     multil = MultiLine(lines)
@@ -542,10 +539,10 @@ def _get_rx_ry0_from_cache(dbuf, suids, param):
     revert = revert[soidx]
 
     # Load data in cache
-    tupps = [dbuf[suids[i]]['t_upp'] for i in soidx]
-    uupps = [dbuf[suids[i]]['u_upp'] for i in soidx]
-    weis = [dbuf[suids[i]]['wei'] for i in soidx]
-    umax = [dbuf[suids[i]]['umax'] for i in soidx]
+    tupps = [dcache[suids[i]]['t_upp'] for i in soidx]
+    uupps = [dcache[suids[i]]['u_upp'] for i in soidx]
+    weis = [dcache[suids[i]]['wei'] for i in soidx]
+    umax = [dcache[suids[i]]['umax'] for i in soidx]
 
     # Change sign to reverted surface traces
     for i, flag in enumerate(revert):
@@ -566,7 +563,4 @@ def _get_rx_ry0_from_cache(dbuf, suids, param):
     rx = multil.get_rx_distance()
     ry0 = multil.get_ry0_distance()
 
-    dists = [rx, ry0]
-    params = ['rx', 'ry0']
-
-    return dists, params
+    return [rx, ry0], ['rx', 'ry0']
