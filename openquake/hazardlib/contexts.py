@@ -285,6 +285,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
+        dic['occurrence_rate'] = numpy.float64(0)
         dic['sids'] = numpy.uint32(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -625,9 +626,9 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        if len(ctxs) == 1 and isinstance(ctxs[0], numpy.recarray):
+        if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
             # in event_based/case_22
-            recarray = ctxs[0]
+            recarrays = ctxs
         else:
             lst = []
             for ctx in ctxs:
@@ -635,10 +636,10 @@ class ContextMaker(object):
                     gsim.set_parameters(ctx)
                 lst.append(ctx.roundup(self.minimum_distance))
             recarray = self.recarray(lst) if any_recarray(self.gsims) else 0
-        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
-            recarrays = split_by_mag(recarray)
-        else:
-            recarrays = [recarray]
+            if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
+                recarrays = split_by_mag(recarray)
+            else:
+                recarrays = [recarray]
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
@@ -734,7 +735,7 @@ class ContextMaker(object):
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
             pnes = get_probability_no_exceedance(ctx, poes, self.tom)
-            yield poes, pnes, ctx.sids, ctx.weight
+            yield poes, pnes, ctx.sids, getattr(ctx, 'weight', None)
             s += n
 
     def estimate_weight(self, src, srcfilter):
@@ -873,6 +874,10 @@ class PmapMaker(object):
     def _get_ctxs(self, rups, sites, srcid):
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
+            if numpy.isnan([ctx.occurrence_rate for ctx in ctxs]).any():
+                pass
+            else:
+                ctxs = split_by_mag(self.cmaker.recarray(ctxs))
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
             out = []
@@ -944,7 +949,7 @@ class PmapMaker(object):
                 if par == 'probs_occur_':
                     lst = [getattr(ctx, pa, []) for ctx in ctxs]
                 else:
-                    lst =  [getattr(ctx, pa) for ctx in ctxs]
+                    lst = [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
@@ -1196,7 +1201,12 @@ def get_probability_no_exceedance(ctx, poes, tom):
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
-    if numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
+    if isinstance(ctx, numpy.recarray):
+        pnes = numpy.zeros_like(poes)
+        for i, rate in enumerate(ctx.occurrence_rate):
+            pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
+        return pnes
+    elif numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
         # Uses the formula
         #
         #    ∑ p(k|T) * p(X<x|rup)^k
