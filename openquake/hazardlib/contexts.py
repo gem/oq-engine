@@ -587,7 +587,6 @@ class ContextMaker(object):
         :param probmap: if not None, update it
         :returns: a new ProbabilityMap if probmap is None
         """
-        tom = self.tom
         rup_indep = self.rup_indep
         if probmap is None:  # create new pmap
             pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
@@ -597,7 +596,7 @@ class ContextMaker(object):
             for ctx, poes in self.gen_poes(block):
                 # pnes and poes of shape (N, L, G)
                 with self.pne_mon:
-                    pnes = get_probability_no_exceedance(ctx, poes, tom)
+                    pnes = get_probability_no_exceedance(ctx, poes, self.tom)
                     for sid, pne in zip(ctx.sids, pnes):
                         probs = pmap.setdefault(sid, self.rup_indep).array
                         if rup_indep:
