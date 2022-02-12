@@ -724,13 +724,15 @@ class ContextMaker(object):
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
                     if hasattr(gsim, 'adjustment'):  # NSHM14
-                        ctx.adjustment = gsim.adjustment[s:s+n]
+                        adj = gsim.adjustment[s:s+n]
+                    else:
+                        adj = None
                     ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctx)
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
             pnes = get_probability_no_exceedance(ctx, poes, self.tom)
             yield poes, pnes, ctx.sids, ctx.weight
             s += n

@@ -463,7 +463,7 @@ class GMPE(GroundShakingIntensityModel):
         raise NotImplementedError
 
     # the ctxs are used in avg_poe_gmpe
-    def get_poes(self, mean_std, cmaker, ctx):
+    def get_poes(self, mean_std, cmaker, ctx, adj):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -474,8 +474,10 @@ class GMPE(GroundShakingIntensityModel):
             for the sites and intensity measure types
         :param cmaker:
             A ContextMaker instance
-        :param ctxs:
+        :param ctx:
             Context objects used to compute mean_std
+        :param adj:
+            Adjustment vector (None except for NSHMP14)
         :returns:
             array of PoEs of shape (N, L)
         :raises ValueError:
@@ -498,7 +500,7 @@ class GMPE(GroundShakingIntensityModel):
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, m] += s * ctx.adjustment
+                    ms[0, m] += s * adj
                 outs.append(_get_poes(ms, loglevels, truncation_level))
             arr[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
