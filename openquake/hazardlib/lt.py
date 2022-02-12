@@ -21,7 +21,7 @@ import itertools
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict, BASE64
+from openquake.baselib.general import CallableDict, BASE94
 from openquake.hazardlib import geo, source as ohs
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -781,7 +781,7 @@ class CompositeLogicTree(object):
         for bsno, bset in enumerate(branchsets):
             for brno, br in enumerate(bset.branches):
                 path = ['*'] * nb
-                path[bsno] = br.short_id = BASE64[brno]
+                path[bsno] = br.short_id = BASE94[brno]
                 paths.append(''.join(path))
         self.basepaths = paths
 

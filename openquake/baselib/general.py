@@ -48,7 +48,8 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
-BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+BASE94 = ''.join(chr(i) for i in range(65, 127)) + ''.join(
+    chr(i) for i in range(33, 65))
 mp = multiprocessing.get_context('spawn')
 
 
@@ -1376,7 +1377,7 @@ def categorize(values, nchars=2):
     if len(uvalues) > mvalues:
         raise ValueError(
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
-    prod = itertools.product(*[BASE64] * nchars)
+    prod = itertools.product(*[BASE94] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 

@@ -1,0 +1,31 @@
+Engine 3.11
+-----------
+
+calc_44685, maxmem=138.3 GB time_sec memory_mb counts   
+=========================== ======== ========= =========
+total classical             319_085  1_124     661      
+get_poes                    183_431  0.0       1_429_999
+total build_hazard          93_453   85        240      
+combine pmaps               90_731   0.0       94_480   
+composing pnes              60_185   0.0       227_943  
+computing mean_std          49_645   0.0       1_429_999
+make_contexts               20_247   0.0       229_559  
+ClassicalCalculator.run     14_626   4_466     1        
+
+operation-duration counts mean    stddev min     max   
+================== ====== ======= ====== ======= ======
+build_hazard       240    389     2%     319     404   
+classical          661    482     139%   15      13_578
+preclassical       8      11      132%   0.00351 37    
+
+Has terrible slow tasks.
+
+Engine 3.12
+-----------
+
+Engine 3.13
+-----------
+
+Engine 3.14
+-----------
+

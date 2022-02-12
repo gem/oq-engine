@@ -784,8 +784,8 @@ class ContextMaker(object):
         try:
             ctxs = self.get_ctxs(rups, sites)
         except ValueError:
-            raise ValueError('Invalid magnitude %s in source %s' %
-                             ({r.mag for r in rups}, src.source_id))
+            sys.stderr.write('In source %s\n' % src.source_id)
+            raise
         if not ctxs:
             return nrups if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
