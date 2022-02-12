@@ -473,7 +473,7 @@ class GMPE(GroundShakingIntensityModel):
             An array of shape (2, M, N) with mean and standard deviations
             for the sites and intensity measure types
         :param cmaker:
-            A ContextMaker instance
+            A ContextMaker instance, used only in avg_poe_gmpe
         :param ctx:
             Context objects used to compute mean_std
         :param adj:
