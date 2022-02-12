@@ -19,6 +19,7 @@
 import os
 import re
 import abc
+import sys
 import copy
 import time
 import operator
@@ -593,16 +594,15 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         for block in block_splitter(ctxs, 20_000, len):
-            for ctx, poes in self.gen_poes(block):
+            for poes, pnes, sids, weight in self.gen_poes(block):
                 # pnes and poes of shape (N, L, G)
                 with self.pne_mon:
-                    pnes = get_probability_no_exceedance(ctx, poes, self.tom)
-                    for sid, pne in zip(ctx.sids, pnes):
+                    for sid, pne in zip(sids, pnes):
                         probs = pmap.setdefault(sid, self.rup_indep).array
                         if rup_indep:
                             probs *= pne
                         else:  # rup_mutex
-                            probs += (1. - pne) * ctx.weight
+                            probs += (1. - pne) * weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -711,7 +711,7 @@ class ContextMaker(object):
     def gen_poes(self, ctxs):
         """
         :param ctxs: a list of C context objects
-        :yields: pairs (ctx, array(N, L, G))
+        :yields: poes, pnes, sids, weight with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
@@ -731,7 +731,8 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx)
-            yield ctx, poes
+            pnes = get_probability_no_exceedance(ctx, poes, self.tom)
+            yield poes, pnes, ctx.sids, ctx.weight
             s += n
 
     def estimate_weight(self, src, srcfilter):
