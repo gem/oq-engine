@@ -492,7 +492,7 @@ class GMPE(GroundShakingIntensityModel):
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        if hasattr(self, 'weights_signs'):
+        if hasattr(self, 'weights_signs'):  # for nshmp_2014
             outs = []
             weights, signs = zip(*self.weights_signs)
             for s in signs:
