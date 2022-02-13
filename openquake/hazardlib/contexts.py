@@ -627,7 +627,7 @@ class ContextMaker(object):
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
-            # in event_based/case_22
+            # already vectorized
             recarrays = ctxs
         else:
             lst = []
@@ -874,10 +874,11 @@ class PmapMaker(object):
     def _get_ctxs(self, rups, sites, srcid):
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
-            if numpy.isnan([ctx.occurrence_rate for ctx in ctxs]).any():
-                pass
+            if ctxs and hasattr(ctxs[0], 'sites') or numpy.isnan(
+                    [ctx.occurrence_rate for ctx in ctxs]).any():
+                pass  # do not vectorize
             else:
-                ctxs = split_by_mag(self.cmaker.recarray(ctxs))
+                ctxs = [self.cmaker.recarray(ctxs)]
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
             out = []
