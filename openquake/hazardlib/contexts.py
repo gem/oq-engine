@@ -391,10 +391,8 @@ class ContextMaker(object):
         """
         if (isinstance(rup.surface, MultiSurface) and
                 hasattr(rup.surface.surfaces[0], 'suid')):
-            distdic = get_distdic(rup, sites, ['rrup'], self.dcache)
-            # Check this. This is de-facto bypassing the filtering of sites
-            # per rupture.
-            return sites, DistancesContext([('rrup', distdic['rrup'])])
+            distdic = get_distdic(rup, sites.complete, ['rrup'], self.dcache)
+            distances = distdic['rrup'][sites.sids]
         else:
             distances = get_distances(rup, sites, 'rrup')
         mdist = self.maximum_distance(rup.mag)
@@ -470,7 +468,9 @@ class ContextMaker(object):
             # In case of a multifault source we use a cache with distances
             if caching:
                 params = self.REQUIRES_DISTANCES - {'rrup'}
-                vars(dctx).update(get_distdic(rup, r_sites, params, dcache))
+                distdic = get_distdic(rup, r_sites.complete, params, dcache)
+                for key, val in distdic.items():
+                    setattr(dctx, key, val[r_sites.sids])
             else:
                 for param in self.REQUIRES_DISTANCES - {'rrup'}:
                     distances = get_distances(rup, r_sites, param)
