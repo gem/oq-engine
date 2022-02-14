@@ -338,12 +338,9 @@ def get_phi_ss(imt, mag, params):
     and intensity measure type according to equation 5.14 of Al Atik (2015)
     """
     C = params[imt]
-    if mag <= 5.0:
-        phi = C["a"]
-    elif mag > 6.5:
-        phi = C["b"]
-    else:
-        phi = C["a"] + (mag - 5.0) * ((C["b"] - C["a"]) / 1.5)
+    phi = C["a"] + (mag - 5.0) * ((C["b"] - C["a"]) / 1.5)
+    phi[mag <= 5.0] = C["a"]
+    phi[mag > 6.5] = C["b"]
     return phi
 
 
