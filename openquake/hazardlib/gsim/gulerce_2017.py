@@ -331,10 +331,7 @@ def _get_top_of_rupture_depth_term(C, imt, ctx):
     Compute and return top-of-rupture depth term, see section
     "Deph Scaling Effects".
     """
-    if ctx.ztor >= 20.0:
-        return C['a15']
-    else:
-        return C['a15'] * ctx.ztor / 20.0
+    return np.where(ctx.ztor >= 20., C['a15'], C['a15'] * ctx.ztor / 20.)
 
 
 def _get_vs30star(vs30, imt):
