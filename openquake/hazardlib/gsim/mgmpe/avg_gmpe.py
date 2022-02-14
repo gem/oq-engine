@@ -99,7 +99,7 @@ class AvgGMPE(GMPE):
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = def_for_stddevs[0]
         self.weights = np.array(weights)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Call the underlying GMPEs and return the weighted mean and stddev
         """
