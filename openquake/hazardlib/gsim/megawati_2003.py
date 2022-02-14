@@ -83,7 +83,7 @@ class MegawatiEtAl2003(GMPE):
     #: Required distance measure is hypocentral distance, and azimuth
     REQUIRES_DISTANCES = {'rhypo', 'azimuth'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

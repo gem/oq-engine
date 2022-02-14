@@ -47,7 +47,7 @@ def _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model, imt, mag):
     # -> if phi < 0.4 in middle branch and T is below 0.5 s
     # -> preserve separation between high and low phi values
     if imt.period < 0.5 and phi_ss_quantile == 0.5:
-        phi = max(phi, 0.4)
+        phi[:] = np.maximum(phi, 0.4)
 
     elif imt.period < 0.5 and phi_ss_quantile != 0.5:
         # compute phi at quantile 0.5 and take the maximum comp to 0.4
@@ -56,11 +56,11 @@ def _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model, imt, mag):
         phi_0p5 = get_phi_ss(imt, mag, PHI_SS_0p5)
 
         # make adjustment if needed
-        phi = 0.4 + phi - phi_0p5 if phi_0p5 < 0.4 else phi
+        phi[:] = np.where(phi_0p5 < 0.4, 0.4 + phi - phi_0p5, phi)
 
     if ergodic:
         C = PHI_S2SS[imt]
-        phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
+        phi[:] = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
 
     return phi
 
@@ -263,6 +263,7 @@ class AlAtikSigmaModel(GMPE):
         kappa value corresponding to a column header in kappa_file
     """
     adapted = True
+    gmpe_table = True  # use split_by_mag
 
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
@@ -304,10 +305,11 @@ class AlAtikSigmaModel(GMPE):
                 data = myfile.read().decode('utf-8')
             self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        [mag] = np.unique(np.round(ctx.mag, 6))
         for m, imt in enumerate(imts):
 
-            cornerp = get_corner_period(ctx.mag)
+            cornerp = get_corner_period(mag)
             # capping period only compares
             # - highest period with a coefficient
             # - corner period
