@@ -302,7 +302,7 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.poe_mon = monitor('get_poes', measuremem=False)
+        self.poe_mon = monitor('get_pnes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
 
@@ -734,8 +734,8 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
-            pnes = get_probability_no_exceedance(ctx, poes, self.tom)
-            yield poes, pnes, ctx.sids, getattr(ctx, 'weight', None)
+                pnes = get_probability_no_exceedance(ctx, poes, self.tom)
+            yield poes, pnes, ctx.sids, ctx.weight
             s += n
 
     def estimate_weight(self, src, srcfilter):
@@ -874,11 +874,6 @@ class PmapMaker(object):
     def _get_ctxs(self, rups, sites, srcid):
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
-            if ctxs and hasattr(ctxs[0], 'sites') or numpy.isnan(
-                    [ctx.occurrence_rate for ctx in ctxs]).any():
-                pass  # do not vectorize
-            else:
-                ctxs = [self.cmaker.recarray(ctxs)]
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
             out = []
@@ -950,7 +945,7 @@ class PmapMaker(object):
                 if par == 'probs_occur_':
                     lst = [getattr(ctx, pa, []) for ctx in ctxs]
                 else:
-                    lst = [getattr(ctx, pa) for ctx in ctxs]
+                    lst =  [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
@@ -1202,12 +1197,7 @@ def get_probability_no_exceedance(ctx, poes, tom):
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
-    if isinstance(ctx, numpy.recarray):
-        pnes = numpy.zeros_like(poes)
-        for i, rate in enumerate(ctx.occurrence_rate):
-            pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
-        return pnes
-    elif numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
+    if numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
         # Uses the formula
         #
         #    ∑ p(k|T) * p(X<x|rup)^k

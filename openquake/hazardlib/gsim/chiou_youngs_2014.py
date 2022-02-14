@@ -557,7 +557,7 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
     """
     adapted = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
