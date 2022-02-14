@@ -29,7 +29,8 @@ from openquake.hazardlib.imt import PGA, SA
 
 
 # TODO: Check whether lower validity bound is 4 or 7 km
-def _compute(self, ctx, imts, mean, sig, tau, phi, mag_conversion_sigma=0.):
+def _compute(self, ctx: np.recarray, imts, mean, sig, tau, phi,
+             mag_conversion_sigma=0.):
     for m, imt in enumerate(imts):
         C = self.COEFFS[imt]
 
