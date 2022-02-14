@@ -108,16 +108,15 @@ def global_tau(imt, mag, params):
         C = params["PGV"]
     else:
         C = params["SA"]
-    if mag > 6.5:
-        return C["tau4"]
-    elif mag > 5.5 and mag <= 6.5:
-        return ITPL(mag, C["tau4"], C["tau3"], 5.5, 1.0)
-    elif mag > 5.0 and mag <= 5.5:
-        return ITPL(mag, C["tau3"], C["tau2"], 5.0, 0.5)
-    elif mag > 4.5 and mag <= 5.0:
-        return ITPL(mag, C["tau2"], C["tau1"], 4.5, 0.5)
-    else:
-        return C["tau1"]
+    tau = np.full_like(mag, C["tau1"])
+    tau[mag > 6.5] = C["tau4"]
+    idx = (mag > 5.5) & (mag <= 6.5)
+    tau[idx] = ITPL(mag[idx], C["tau4"], C["tau3"], 5.5, 1.0)
+    idx = (mag > 5.0) & (mag <= 5.5)
+    tau[idx] = ITPL(mag[idx], C["tau3"], C["tau2"], 5.0, 0.5)
+    idx = (mag > 4.5) & (mag <= 5.0)
+    tau[idx] = ITPL(mag[idx], C["tau2"], C["tau1"], 4.5, 0.5)
+    return tau
 
 
 def cena_constant_tau(imt, mag, params):
