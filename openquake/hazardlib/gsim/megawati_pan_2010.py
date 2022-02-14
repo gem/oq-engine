@@ -38,7 +38,7 @@ def _get_distance_scaling(C, mag, rhypo):
     """
     Returns the distance scalig term
     """
-    return (C["a3"] * np.log(rhypo)) + (C["a4"] + C["a5"] * mag) * rhypo
+    return C["a3"] * np.log(rhypo) + (C["a4"] + C["a5"] * mag) * rhypo
 
 
 class MegawatiPan2010(GMPE):
@@ -80,7 +80,7 @@ class MegawatiPan2010(GMPE):
     #: see equation 1 page 834.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
