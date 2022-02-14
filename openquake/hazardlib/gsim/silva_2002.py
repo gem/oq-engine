@@ -168,7 +168,7 @@ class SilvaEtAl2002DoubleCornerSaturation(SilvaEtAl2002MwNSHMP2008):
     """
     kind = "Mw"
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mag = _convert_magnitude(self.kind, ctx.mag)
