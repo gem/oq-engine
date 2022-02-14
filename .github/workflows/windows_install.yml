@@ -10,7 +10,7 @@ on:
   schedule:
     - cron: "00 22 * * *"
   push:
-    branches: [ test_os, master ]
+    branches: [ test_os ]
 
 jobs:
   install_and_test:
@@ -64,15 +64,15 @@ jobs:
           write-Host "Branch to test $Env:BRANCH " 
           if ($Env:BRANCH)
           {
-            Write-Host "not empty"
-            Write-Host "python install.py devel"
+            Write-Host "Install with workflow_dispatch"
             Write-Host "python install.py devel --version ${env:BRANCH}"
+            python install.py devel --version ${env:BRANCH}
           }
           else
           {
-            Write-Host " empty"
-            Write-Host "python install.py devel"
-            Write-Host "python install.py devel --version ${env:BRANCH}"
+            Write-Host "Install on scheduled task"
+            Write-Host "python install.py devel "
+            python install.py devel
           }
       - name: Run demos to test installation
         run: |
