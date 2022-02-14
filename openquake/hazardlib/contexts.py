@@ -301,7 +301,7 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.poe_mon = monitor('get_poes', measuremem=False)
+        self.poe_mon = monitor('get_pnes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
 
@@ -733,7 +733,7 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
-            pnes = get_probability_no_exceedance(ctx, poes, self.tom)
+                pnes = get_probability_no_exceedance(ctx, poes, self.tom)
             yield poes, pnes, ctx.sids, ctx.weight
             s += n
 
