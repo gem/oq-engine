@@ -828,6 +828,12 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
     #: not have code that can be made available.
     non_verified = True
 
+    def set_parameters(self, rup):
+        """
+        Check if the rupture is located in the CSHM region
+        """
+        self.in_cshm = _check_in_cshm_polygon(rup)
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -837,9 +843,7 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         ctx = copy.copy(ctx)
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         name = self.__class__.__name__
-        # Check if any part of source is located within CSHM region
-        in_cshm = _check_in_cshm_polygon(ctx)
-        # Check if site is located in the CBD polygon
+        # Check if the sites are located in the CBD polygon
         in_cbd = _check_in_cbd_polygon(ctx.lon, ctx.lat)
         # Fix CBD site terms before dS2S modification.
         ctx.vs30[in_cbd == 1] = 250
@@ -860,11 +864,11 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
             b13_mean = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
             # Adjust mean and standard deviation
             mean[m] = _adjust_mean_model(
-                self.region, in_cshm, in_cbd, imt_per, b13_mean)
+                self.region, self.in_cshm, in_cbd, imt_per, b13_mean)
             mean[m] += convert_to_LHC(imt)
             set_adjusted_stddevs(
                 name, self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
-                in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
+                self.in_cshm, in_cbd, imt_per, sig[m], tau[m], phi[m])
 
 
 class Bradley2013bChchMapsAdditionalSigma(Bradley2013bChchMaps):
