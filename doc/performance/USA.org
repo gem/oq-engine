@@ -23,6 +23,24 @@ Has a terrible slow task.
 Engine 3.12
 -----------
 
+| calc_44689, maxmem=169.5 GB | time_sec | memory_mb | counts     |
+|-----------------------------+----------+-----------+------------|
+| total classical             | 686_118  | 1_310     | 420        |
+| computing mean_std          | 298_153  | 0.0       | 10_159     |
+| get_poes                    | 248_119  | 0.0       | 17_423_053 |
+| composing pnes              | 71_637   | 0.0       | 17_423_053 |
+| make_contexts               | 54_701   | 0.0       | 17_424_669 |
+| ClassicalCalculator.run     | 8_410    | 3_386     | 1          |
+| total build_hazard          | 2_856    | 98.2      | 240        |
+
+| operation-duration | counts | mean    | stddev | min     | max   | slowfac |
+|--------------------+--------+---------+--------+---------+-------+---------|
+| classical          | 420    | 1_634   | 90%    | 36.9    | 5_614 | 3.43633 |
+| build_hazard       | 240    | 11.9    | 6%     | 9.27248 | 15.2  | 1.27602 |
+| preclassical       | 8      | 11.3    | 132%   | 0.00328 | 37.0  | 3.27968 |
+
+The task distribution is much better, as well as build_hazard.
+
 Engine 3.13
 -----------
 
