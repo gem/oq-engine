@@ -108,16 +108,15 @@ def global_tau(imt, mag, params):
         C = params["PGV"]
     else:
         C = params["SA"]
-    if mag > 6.5:
-        return C["tau4"]
-    elif mag > 5.5 and mag <= 6.5:
-        return ITPL(mag, C["tau4"], C["tau3"], 5.5, 1.0)
-    elif mag > 5.0 and mag <= 5.5:
-        return ITPL(mag, C["tau3"], C["tau2"], 5.0, 0.5)
-    elif mag > 4.5 and mag <= 5.0:
-        return ITPL(mag, C["tau2"], C["tau1"], 4.5, 0.5)
-    else:
-        return C["tau1"]
+    tau = np.full_like(mag, C["tau1"])
+    tau[mag > 6.5] = C["tau4"]
+    idx = (mag > 5.5) & (mag <= 6.5)
+    tau[idx] = ITPL(mag[idx], C["tau4"], C["tau3"], 5.5, 1.0)
+    idx = (mag > 5.0) & (mag <= 5.5)
+    tau[idx] = ITPL(mag[idx], C["tau3"], C["tau2"], 5.0, 0.5)
+    idx = (mag > 4.5) & (mag <= 5.0)
+    tau[idx] = ITPL(mag[idx], C["tau2"], C["tau1"], 4.5, 0.5)
+    return tau
 
 
 def cena_constant_tau(imt, mag, params):
@@ -138,14 +137,13 @@ def cena_tau(imt, mag, params):
         C = params["PGV"]
     else:
         C = params["SA"]
-    if mag > 6.5:
-        return C["tau3"]
-    elif mag > 5.5 and mag <= 6.5:
-        return ITPL(mag, C["tau3"], C["tau2"], 5.5, 1.0)
-    elif mag > 5.0 and mag <= 5.5:
-        return ITPL(mag, C["tau2"], C["tau1"], 5.0, 0.5)
-    else:
-        return C["tau1"]
+    tau = np.full_like(mag, C["tau1"])
+    tau[mag > 6.5] = C["tau3"]
+    idx = (mag > 5.5) & (mag <= 6.5)
+    tau[idx] = ITPL(mag[idx], C["tau3"], C["tau2"], 5.5, 1.0)
+    idx = (mag > 5.0) & (mag <= 5.5)
+    tau[idx] = ITPL(mag[idx], C["tau2"], C["tau1"], 5.0, 0.5)
+    return tau
 
 
 def get_tau_at_quantile(mean, stddev, quantile):
@@ -340,12 +338,9 @@ def get_phi_ss(imt, mag, params):
     and intensity measure type according to equation 5.14 of Al Atik (2015)
     """
     C = params[imt]
-    if mag <= 5.0:
-        phi = C["a"]
-    elif mag > 6.5:
-        phi = C["b"]
-    else:
-        phi = C["a"] + (mag - 5.0) * ((C["b"] - C["a"]) / 1.5)
+    phi = C["a"] + (mag - 5.0) * (C["b"] - C["a"]) / 1.5
+    phi[mag <= 5.0] = C["a"]
+    phi[mag > 6.5] = C["b"]
     return phi
 
 
@@ -724,7 +719,7 @@ class NGAEastGMPE(GMPETable):
         for m, imt in enumerate(imts):
             mean[m], _, _ = get_mean_amp(self, mag, ctx, imt)
             # Get standard deviation model
-            sig[m], tau[m], phi[m] = get_stddevs(self, mag, imt)
+            sig[m], tau[m], phi[m] = get_stddevs(self, ctx.mag, imt)
 
     # Seven constants: vref, vL, vU, vw1, vw2, wt1 and wt2
     CONSTANTS = {"vref": 760., "vL": 200., "vU": 2000.0,
@@ -878,18 +873,14 @@ def _get_tau_vector(self, tau_mean, tau_std, imt_list):
     Gets the vector of mean and variance of tau values corresponding to
     the specific model and returns them as dictionaries
     """
-    self.magnitude_limits = MAG_LIMS_KEYS[self.tau_model]["mag"]
+    self.magnitude_limits = np.array(MAG_LIMS_KEYS[self.tau_model]["mag"])
     self.tau_keys = MAG_LIMS_KEYS[self.tau_model]["keys"]
     t_bar = {}
     t_std = {}
+    tau_model = TAU_EXECUTION[self.tau_model]
     for imt in imt_list:
-        t_bar[imt] = []
-        t_std[imt] = []
-        for mag, key in zip(self.magnitude_limits, self.tau_keys):
-            t_bar[imt].append(
-                TAU_EXECUTION[self.tau_model](imt, mag, tau_mean))
-            t_std[imt].append(
-                TAU_EXECUTION[self.tau_model](imt, mag, tau_std))
+        t_bar[imt] = tau_model(imt, self.magnitude_limits, tau_mean)
+        t_std[imt] = tau_model(imt, self.magnitude_limits, tau_std)
     return t_bar, t_std
 
 
@@ -901,24 +892,17 @@ def _get_phi_vector(self, phi_mean, phi_std, imt_list):
     p_bar = {}
     p_std = {}
     for imt in imt_list:
-        p_bar[imt] = []
-        p_std[imt] = []
-        for mag in self.magnitude_limits:
-            phi_ss_mean = get_phi_ss(imt, mag, phi_mean)
-            phi_ss_std = get_phi_ss(imt, mag, phi_std)
-            if self.ergodic:
-                # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
-                # of Al Atik (2015)
-                phi_ss_mean = np.sqrt(
-                    phi_ss_mean ** 2. +
-                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.
-                    )
-                phi_ss_std = np.sqrt(
-                    phi_ss_std ** 2. +
-                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.
-                    )
-            p_bar[imt].append(phi_ss_mean)
-            p_std[imt].append(phi_ss_std)
+        p_bar[imt] = ss_mean = get_phi_ss(imt, self.magnitude_limits, phi_mean)
+        p_std[imt] = ss_std = get_phi_ss(imt, self.magnitude_limits, phi_std)
+        if self.ergodic:
+            # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
+            # of Al Atik (2015)
+            ss_mean[:] = np.sqrt(
+                ss_mean ** 2. +
+                PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.)
+            ss_std[:] = np.sqrt(
+                ss_std ** 2. +
+                PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.)
     return p_bar, p_std
 
 
@@ -927,6 +911,7 @@ def _get_total_sigma(self, imt, mag):
     Returns the estimated total standard deviation for a given intensity
     measure type and magnitude
     """
+    [mag] = np.unique(np.round(mag, 6))  # by construction
     C = self.SIGMA[imt]
     if mag <= self.magnitude_limits[0]:
         # The CENA constant model is always returned here
