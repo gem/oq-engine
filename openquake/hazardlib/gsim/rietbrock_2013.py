@@ -70,7 +70,7 @@ def _get_magnitude_scaling_term(C, mag):
     Returns the magnitude scaling component of the model
     Equation 10, Page 63
     """
-    return C["c1"] + (C["c2"] * mag) + (C["c3"] * (mag ** 2.0))
+    return C["c1"] + C["c2"] * mag + C["c3"] * mag ** 2
 
 
 class RietbrockEtAl2013SelfSimilar(GMPE):
@@ -114,7 +114,7 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
