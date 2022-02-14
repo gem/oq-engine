@@ -61,14 +61,18 @@ jobs:
           python -m pip install pip wheel setuptools --upgrade
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
-          write-Host "Branch to test ${env:BRANCH} " ${env:BRANCH}
+          write-Host "Branch to test $Env:BRANCH " 
           if ($Env:BRANCH)
           {
-            python install.py devel
+            Write-Host "not empty"
+            Write-Host "python install.py devel"
+            Write-Host "python install.py devel --version ${env:BRANCH}"
           }
           else
           {
-            python install.py devel --version ${env:BRANCH}
+            Write-Host " empty"
+            Write-Host "python install.py devel"
+            Write-Host "python install.py devel --version ${env:BRANCH}"
           }
       - name: Run demos to test installation
         run: |
