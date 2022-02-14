@@ -1,6 +1,6 @@
   [Michele Simionato]
+  * Vectorized all GMPEs and forbidden non-vectorized GMPEs
   * Raised the limit to 94 GMPEs per tectonic region type
-  * Vectorized all GMPEs in the GEM mosaic
   * Optimized the NBCC2015_AA13 GMPEs
   * Optimized the GMPETable and the derived NGAEast GMPEs
   * Fixed a 32/64 bit bug in `oq export loss_maps-stats`
