@@ -62,7 +62,7 @@ jobs:
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
           write-Host "Branch to test ${env:BRANCH} " ${env:BRANCH}
-          if ( ${env:BRANCH} -eq $null)
+          if ($Env:BRANCH)
           {
             python install.py devel
           }
