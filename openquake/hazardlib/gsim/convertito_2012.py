@@ -32,7 +32,7 @@ def _compute_magnitude_scaling(C, mag):
     """
     Returns the magnitude scaling term
     """
-    return C["a"] + (C["b"] * mag)
+    return C["a"] + C["b"] * mag
 
 
 def _compute_distance_scaling(C, rhypo):
@@ -40,8 +40,8 @@ def _compute_distance_scaling(C, rhypo):
     Returns the distance scaling term accounting for geometric and
     anelastic attenuation
     """
-    return C["c"] * np.log10(np.sqrt((rhypo ** 2.) + (C["h"] ** 2.))) +\
-        (C["d"] * rhypo)
+    return C["c"] * np.log10(np.sqrt(rhypo ** 2 + C["h"] ** 2)) + (
+        C["d"] * rhypo)
 
 
 def _compute_site_scaling(C, vs30):
