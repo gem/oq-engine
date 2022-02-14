@@ -338,7 +338,7 @@ def get_phi_ss(imt, mag, params):
     and intensity measure type according to equation 5.14 of Al Atik (2015)
     """
     C = params[imt]
-    phi = C["a"] + (mag - 5.0) * ((C["b"] - C["a"]) / 1.5)
+    phi = C["a"] + (mag - 5.0) * (C["b"] - C["a"]) / 1.5
     phi[mag <= 5.0] = C["a"]
     phi[mag > 6.5] = C["b"]
     return phi
@@ -719,7 +719,7 @@ class NGAEastGMPE(GMPETable):
         for m, imt in enumerate(imts):
             mean[m], _, _ = get_mean_amp(self, mag, ctx, imt)
             # Get standard deviation model
-            sig[m], tau[m], phi[m] = get_stddevs(self, mag, imt)
+            sig[m], tau[m], phi[m] = get_stddevs(self, ctx.mag, imt)
 
     # Seven constants: vref, vL, vU, vw1, vw2, wt1 and wt2
     CONSTANTS = {"vref": 760., "vL": 200., "vU": 2000.0,
@@ -892,24 +892,17 @@ def _get_phi_vector(self, phi_mean, phi_std, imt_list):
     p_bar = {}
     p_std = {}
     for imt in imt_list:
-        p_bar[imt] = []
-        p_std[imt] = []
-        for mag in self.magnitude_limits:
-            phi_ss_mean = get_phi_ss(imt, mag, phi_mean)
-            phi_ss_std = get_phi_ss(imt, mag, phi_std)
-            if self.ergodic:
-                # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
-                # of Al Atik (2015)
-                phi_ss_mean = np.sqrt(
-                    phi_ss_mean ** 2. +
-                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.
-                    )
-                phi_ss_std = np.sqrt(
-                    phi_ss_std ** 2. +
-                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.
-                    )
-            p_bar[imt].append(phi_ss_mean)
-            p_std[imt].append(phi_ss_std)
+        p_bar[imt] = ss_mean = get_phi_ss(imt, self.magnitude_limits, phi_mean)
+        p_std[imt] = ss_std = get_phi_ss(imt, self.magnitude_limits, phi_std)
+        if self.ergodic:
+            # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
+            # of Al Atik (2015)
+            ss_mean[:] = np.sqrt(
+                ss_mean ** 2. +
+                PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.)
+            ss_std[:] = np.sqrt(
+                ss_std ** 2. +
+                PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.)
     return p_bar, p_std
 
 
@@ -918,6 +911,7 @@ def _get_total_sigma(self, imt, mag):
     Returns the estimated total standard deviation for a given intensity
     measure type and magnitude
     """
+    [mag] = np.unique(np.round(mag, 6))  # by construction
     C = self.SIGMA[imt]
     if mag <= self.magnitude_limits[0]:
         # The CENA constant model is always returned here
