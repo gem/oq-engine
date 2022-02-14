@@ -62,9 +62,7 @@ def _check_in_cbd_polygon(lons, lats):
          (172.6220, -43.5233)])
     points = [shapely.geometry.Point(lons[ind], lats[ind])
               for ind in np.arange(len(lons))]
-    in_cbd = np.asarray([polygon.contains(point)
-                         for point in points])
-
+    in_cbd = np.asarray([polygon.contains(point) for point in points])
     return in_cbd
 
 
@@ -328,11 +326,13 @@ def _get_ln_y_ref(trt, ctx, C):
     rtvz = ctx.rrup if trt == const.TRT.VOLCANIC else 0.
 
     # reverse faulting flag
-    Frv = 1 if 30 <= ctx.rake <= 150 else 0
+    Frv = np.zeros_like(ctx.rake)
+    Frv[(30 <= ctx.rake) & (ctx.rake <= 150)] = 1.
     # normal faulting flag
-    Fnm = 1 if -120 <= ctx.rake <= -60 else 0
+    Fnm = np.zeros_like(ctx.rake)
+    Fnm[(-120 <= ctx.rake) & (ctx.rake <= -60)] = 1.
     # hanging wall flag
-    Fhw = (ctx.rx >= 0)
+    Fhw = ctx.rx >= 0
     # aftershock flag. always zero since we only consider main shock
     AS = 0
 
@@ -352,12 +352,12 @@ def _get_ln_y_ref(trt, ctx, C):
         + C['c4']
         * np.log(ctx.rrup
                  + C['c5']
-                 * np.cosh(C['c6'] * max(ctx.mag - C['chm'], 0)))
+                 * np.cosh(C['c6'] * np.maximum(ctx.mag - C['chm'], 0)))
         # fourth line
         + (C['c4a'] - C['c4'])
         * np.log(np.sqrt(ctx.rrup ** 2 + C['crb'] ** 2))
         # fifth line
-        + (C['cg1'] + C['cg2'] / (np.cosh(max(ctx.mag - C['cg3'], 0))))
+        + (C['cg1'] + C['cg2'] / (np.cosh(np.maximum(ctx.mag - C['cg3'], 0))))
         # sixth line
         * ((1 + C['ctvz'] * (rtvz / ctx.rrup)) * ctx.rrup)
         # seventh line
@@ -512,7 +512,7 @@ class Bradley2013(GMPE):
 
     additional_sigma = 0.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -603,7 +603,7 @@ class Bradley2013LHC(Bradley2013):
     #: model has not been published, nor is independent code available.
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -644,10 +644,10 @@ def convert_to_LHC(imt):
     R4 = 1.241
     R5 = 1.241
 
-    Ratio = max(R1,
-                max(min(R1+(R2-R1)/np.log(T2/T1)*np.log(t/T1),
-                        R2+(R3-R2)/np.log(T3/T2)*np.log(t/T2)),
-                    min(R3+(R4-R3)/np.log(T4/T3)*np.log(t/T3), R5)))
+    min1 = min(R1 + (R2 - R1) / np.log(T2 / T1) * np.log(t / T1),
+               R2 + (R3 - R2) / np.log(T3 / T2) * np.log(t / T2))
+    min2 = min(R3 + (R4 - R3) / np.log(T4 / T3) * np.log(t / T3), R5)
+    Ratio = max(R1, max(min1, min2))
     SF = np.log(Ratio)
 
     return SF
@@ -681,7 +681,7 @@ class Bradley2013bChchCBD(Bradley2013LHC):
     region = "CBD"
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -828,7 +828,7 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
     #: not have code that can be made available.
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
