@@ -137,14 +137,13 @@ def cena_tau(imt, mag, params):
         C = params["PGV"]
     else:
         C = params["SA"]
-    if mag > 6.5:
-        return C["tau3"]
-    elif mag > 5.5 and mag <= 6.5:
-        return ITPL(mag, C["tau3"], C["tau2"], 5.5, 1.0)
-    elif mag > 5.0 and mag <= 5.5:
-        return ITPL(mag, C["tau2"], C["tau1"], 5.0, 0.5)
-    else:
-        return C["tau1"]
+    tau = np.full_like(mag, C["tau1"])
+    tau[mag > 6.5] = C["tau3"]
+    idx = (mag > 5.5) & (mag <= 6.5)
+    tau[idx] = ITPL(mag[idx], C["tau3"], C["tau2"], 5.5, 1.0)
+    idx = (mag > 5.0) & (mag <= 5.5)
+    tau[idx] = ITPL(mag[idx], C["tau2"], C["tau1"], 5.0, 0.5)
+    return tau
 
 
 def get_tau_at_quantile(mean, stddev, quantile):
@@ -877,18 +876,14 @@ def _get_tau_vector(self, tau_mean, tau_std, imt_list):
     Gets the vector of mean and variance of tau values corresponding to
     the specific model and returns them as dictionaries
     """
-    self.magnitude_limits = MAG_LIMS_KEYS[self.tau_model]["mag"]
+    self.magnitude_limits = np.array(MAG_LIMS_KEYS[self.tau_model]["mag"])
     self.tau_keys = MAG_LIMS_KEYS[self.tau_model]["keys"]
     t_bar = {}
     t_std = {}
+    tau_model = TAU_EXECUTION[self.tau_model]
     for imt in imt_list:
-        t_bar[imt] = []
-        t_std[imt] = []
-        for mag, key in zip(self.magnitude_limits, self.tau_keys):
-            t_bar[imt].append(
-                TAU_EXECUTION[self.tau_model](imt, mag, tau_mean))
-            t_std[imt].append(
-                TAU_EXECUTION[self.tau_model](imt, mag, tau_std))
+        t_bar[imt] = tau_model(imt, self.magnitude_limits, tau_mean)
+        t_std[imt] = tau_model(imt, self.magnitude_limits, tau_std)
     return t_bar, t_std
 
 
