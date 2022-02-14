@@ -236,13 +236,10 @@ def _fmag(region, C, mag, pga=False):
     """
     Magnitude term.
     """
-    a4 = C['a4']
-    if region == 'jptw':
-        a4 += C['a4_del']
-
-    if mag <= C['mref']:
-        return a4 * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
-    return C['a5'] * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
+    a4 = C['a4'] + (C['a4_del'] if region == 'jptw' else 0)
+    return np.where(mag <= C['mref'],
+                    a4 * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2,
+                    C['a5'] * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2)
 
 
 def _fp(trt, region, s, C, mag, rrup, pga=False):
@@ -299,8 +296,8 @@ def _fztor(trt, C, ztor):
     Ztor factor for subduction interface.
     """
     if trt == const.TRT.SUBDUCTION_INTRASLAB:
-        return C['a11'] * (min(ztor, 80) - 40)
-    return C['a10'] * (min(ztor, 40) - 20)
+        return C['a11'] * (np.minimum(ztor, 80) - 40)
+    return C['a10'] * (np.minimum(ztor, 40) - 20)
 
 
 def pga_rock(trt, region, s, C_PGA, mag, rrup, ztor, vs30):
@@ -348,7 +345,7 @@ class PhungEtAl2020SInter(GMPE):
         # 'jptw', 'tw' (Japan/Taiwan joined, Taiwan)
         self.region = region
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
