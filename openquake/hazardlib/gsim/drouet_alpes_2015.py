@@ -50,10 +50,7 @@ def _compute_mean(C, mag, r):
     """
     Compute mean value according to equation 30, page 1021.
     """
-    mean = (C['c1'] +
-            _compute_term1(C, mag) +
-            _compute_term2(C, mag, r))
-    return mean
+    return C['c1'] + _compute_term1(C, mag) + _compute_term2(C, mag, r)
 
 
 def _compute_term1(C, mag):
@@ -113,7 +110,7 @@ class DrouetAlpes2015Rjb(GMPE):
     #: 30 page 1021.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
