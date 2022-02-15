@@ -44,5 +44,15 @@ Engine 3.12
 Engine 3.13
 -----------
 
+| calc_44691, maxmem=78.6 GB | time_sec | memory_mb | counts     |
+|----------------------------+----------+-----------+------------|
+| total classical            | 273_969  | 578.1     | 978        |
+| computing mean_std         | 91_497   | 0.0       | 392_081    |
+| get_poes                   | 89_659   | 0.0       | 24_771_392 |
+| composing pnes             | 55_166   | 0.0       | 24_771_392 |
+| make_contexts              | 36_597   | 439.1     | 13_526     |
+| ClassicalCalculator.run    | 3_362    | 4_926     | 1          |
+| total preclassical         | 1_344    | 104.6     | 424        |
+
 Engine 3.14
 -----------
