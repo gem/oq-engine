@@ -109,7 +109,7 @@ class AvgPoeGMPE(GMPE):
         :returns: an array of shape (N, L)
         """
         cm = copy.copy(cmaker)
-        cm.poe_mon = performance.Monitor()  # avoid double counts
+        cm.pne_mon = performance.Monitor()  # avoid double counts
         cm.gsims = self.gsims
         avgs = []
         for poes, pnes, sids, weight in cm.gen_poes([ctx]):
