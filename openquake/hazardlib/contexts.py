@@ -110,20 +110,21 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def split_by_mag(ctx: numpy.recarray):
+def split_by_mag(ctxs):
     """
     >>> arr = numpy.zeros(5, [('mag', float), ('dst', float)])
     >>> arr['mag'] = [4.4, 4.4, 4.5, 4.5, 4.5]
     >>> arr['dst'] = [100., 101., 102., 103., 104.]
-    >>> for a in split_by_mag(arr.view(numpy.recarray)):
+    >>> for a in split_by_mag([arr.view(numpy.recarray)]):
     ...     print(a)
     [(4.4, 100.) (4.4, 101.)]
     [(4.5, 102.) (4.5, 103.) (4.5, 104.)]
     """
-    # assume the ctx recarray is already ordered by mag
+    # assume the ctxs are already ordered by mag
     out = []
-    for [(i1, i2)] in get_slices(numpy.uint32(ctx.mag * 100)).values():
-        out.append(ctx[i1:i2])
+    for ctx in ctxs:
+        for [(i1, i2)] in get_slices(numpy.uint32(ctx.mag * 100)).values():
+            out.append(ctx[i1:i2])
     return out
 
 
@@ -622,11 +623,9 @@ class ContextMaker(object):
                 for gsim in self.gsims:
                     gsim.set_parameters(ctx)
                 lst.append(ctx)
-            recarray = self.recarray(lst)
-            if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
-                recarrays = split_by_mag(recarray)
-            else:
-                recarrays = [recarray]
+            recarrays = [self.recarray(lst)]
+        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
+            recarrays = split_by_mag(recarrays)
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0

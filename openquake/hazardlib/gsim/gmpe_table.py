@@ -212,7 +212,7 @@ class GMPETable(GMPE):
             self.stddev = todict(fle["Total"])
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        [mag] = np.unique(ctx.mag)  # constructed unique in the ContextMaker
+        [mag] = np.unique(np.round(ctx.mag, 6))  # constructed unique
         idx = np.searchsorted(self.m_w, mag)
         table_dists = self.distances[:, 0, idx - 1]
         dists = getattr(ctx, self.distance_type)
