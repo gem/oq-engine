@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Vectorized all GMPEs
+  * Vectorized all GMPEs and forbidden non-vectorized GMPEs
   * Raised the limit to 94 GMPEs per tectonic region type
   * Optimized the NBCC2015_AA13 GMPEs
   * Optimized the GMPETable and the derived NGAEast GMPEs
