@@ -607,20 +607,18 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        if len(ctxs) == 1 and isinstance(ctxs[0], numpy.recarray):
-            # in event_based/case_22
-            recarray = ctxs[0]
-        else:
+        if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
+            # contexts already vectorized
+            recarrays = ctxs
+        else:  # vectorize the contexts
             lst = []
             for ctx in ctxs:
                 for gsim in self.gsims:
                     gsim.set_parameters(ctx)
                 lst.append(ctx.roundup(self.minimum_distance))
-            recarray = self.recarray(lst)
+            recarrays = [self.recarray(lst)]
         if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
-            recarrays = split_by_mag(recarray)
-        else:
-            recarrays = [recarray]
+            recarrays = sum([split_by_mag(ra) for ra in recarrays], [])
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0

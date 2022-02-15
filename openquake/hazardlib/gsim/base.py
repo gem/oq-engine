@@ -24,6 +24,7 @@ different kinds of :class:`ground shaking intensity models
 import sys
 import abc
 import inspect
+import logging
 import warnings
 import functools
 import numpy
@@ -156,8 +157,9 @@ class MetaGSIM(abc.ABCMeta):
             print('%s cannot contain the methods %s' % (name, bad),
                   file=sys.stderr)
         for k, v in dic.items():
-            if k == 'compute':
-                assert v.__annotations__.get("ctx") is numpy.recarray, name
+            if (k == 'compute' and v.__annotations__.get("ctx")
+                    is not numpy.recarray):
+                logging.error('%s.compute is not vectorized' % name)
             elif isinstance(v, set):
                 dic[k] = frozenset(v)
                 if k == 'REQUIRES_DISTANCES':
