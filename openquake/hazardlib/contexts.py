@@ -319,10 +319,12 @@ class ContextMaker(object):
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
         start = 0
         for ctx in ctxs:
+            if hasattr(ctx, 'roundup'):  # always except UCERF
+                ctx = ctx.roundup(self.minimum_distance)
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
                 if par == 'occurrence_rate':
-                    val = getattr(ctx, par, numpy.nan)
+                    val = getattr(ctx, par, numpy.nan)  # nan in rare tests
                 else:
                     val = getattr(ctx, par)
                 getattr(ra, par)[slc] = val
@@ -619,8 +621,6 @@ class ContextMaker(object):
             for ctx in ctxs:
                 for gsim in self.gsims:
                     gsim.set_parameters(ctx)
-                if hasattr(ctx, 'roundup'):  # always except UCERF
-                    ctx = ctx.roundup(self.minimum_distance)
                 lst.append(ctx)
             recarray = self.recarray(lst)
             if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
@@ -863,9 +863,7 @@ class PmapMaker(object):
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
-            if numpy.isnan([ctx.occurrence_rate for ctx in ctxs]).any():
-                pass
-            else:
+            if not numpy.isnan([ctx.occurrence_rate for ctx in ctxs]).any():
                 ctxs = [self.cmaker.recarray(ctxs)]
             out = []
             for ctx in ctxs:
@@ -886,17 +884,16 @@ class PmapMaker(object):
             if self.fewsites:
                 sites = sites.complete
             ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
-            nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
-            self.source_data['nrupts'].append(nctxs)
+            self.source_data['nrupts'].append(nsites)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
-            timer.save(src, nctxs, nsites, dt, cm.task_no)
+            timer.save(src, nsites, nsites, dt, cm.task_no)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
