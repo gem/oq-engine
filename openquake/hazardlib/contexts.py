@@ -582,16 +582,15 @@ class ContextMaker(object):
             pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        for block in block_splitter(ctxs, 20_000, len):
-            for poes, pnes, sids, weight in self.gen_poes(block):
-                # pnes and poes of shape (N, L, G)
-                with self.pne_mon:
-                    for sid, pne in zip(sids, pnes):
-                        probs = pmap.setdefault(sid, self.rup_indep).array
-                        if rup_indep:
-                            probs *= pne
-                        else:  # rup_mutex
-                            probs += (1. - pne) * weight
+        for poes, pnes, sids, weight in self.gen_poes(ctxs):
+            # pnes and poes of shape (N, L, G)
+            with self.pne_mon:
+                for sid, pne in zip(sids, pnes):
+                    probs = pmap.setdefault(sid, self.rup_indep).array
+                    if rup_indep:
+                        probs *= pne
+                    else:  # rup_mutex
+                        probs += (1. - pne) * weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -863,7 +862,10 @@ class PmapMaker(object):
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
             if not numpy.isnan([ctx.occurrence_rate for ctx in ctxs]).any():
-                ctxs = [self.cmaker.recarray(ctxs)]
+                if self.fewsites:
+                    ctxs = [self.cmaker.recarray(ctxs)]
+                else:
+                    ctxs = split_by_mag([self.cmaker.recarray(ctxs)])
             out = []
             for ctx in ctxs:
                 if self.fewsites:  # keep the contexts in memory

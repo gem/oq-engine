@@ -211,7 +211,8 @@ def _update(params, items, base_path):
             params[key] = value
 
     if 'reqv' in params['inputs']:
-        params['pointsource_distance'] = '0'
+        pass
+        # params['pointsource_distance'] = '0'
 
 
 # NB: this function must NOT log, since it is called when the logging
