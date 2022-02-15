@@ -127,24 +127,6 @@ def split_by_mag(ctx: numpy.recarray):
     return out
 
 
-def use_recarray(gsim):
-    """
-    :returns: True if the gsim or its underlying require a recarray
-    """
-    if gsim.compute.__annotations__.get("ctx") is numpy.recarray:
-        return True
-    if hasattr(gsim, 'gmpe'):  # for NRCanSiteTerm
-        return gsim.gmpe.compute.__annotations__.get("ctx") is numpy.recarray
-
-
-def any_recarray(gsims):
-    """
-    :returns:
-        True if the `ctx` argument of gsim.compute is a recarray for any gsim
-    """
-    return any(use_recarray(gsim) for gsim in gsims)
-
-
 def csdict(M, N, P, start, stop):
     """
     :param M: number of IMTs
@@ -301,7 +283,7 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.poe_mon = monitor('get_pnes', measuremem=False)
+        self.pne_mon = monitor('get_pnes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
 
@@ -625,24 +607,22 @@ class ContextMaker(object):
         M = len(self.imtls)
         G = len(self.gsims)
         out = numpy.zeros((4, G, M, N))
-        if len(ctxs) == 1 and isinstance(ctxs[0], numpy.recarray):
-            # in event_based/case_22
-            recarray = ctxs[0]
-        else:
+        if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
+            # contexts already vectorized
+            recarrays = ctxs
+        else:  # vectorize the contexts
             lst = []
             for ctx in ctxs:
                 for gsim in self.gsims:
                     gsim.set_parameters(ctx)
                 lst.append(ctx.roundup(self.minimum_distance))
-            recarray = self.recarray(lst) if any_recarray(self.gsims) else 0
+            recarrays = [self.recarray(lst)]
         if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
-            recarrays = split_by_mag(recarray)
-        else:
-            recarrays = [recarray]
+            recarrays = sum([split_by_mag(ra) for ra in recarrays], [])
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
-            for ctx in (recarrays if use_recarray(gsim) else ctxs):
+            for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
                 compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 start = slc.stop
@@ -720,7 +700,7 @@ class ContextMaker(object):
         s = 0
         for ctx in ctxs:
             n = len(ctx)
-            with self.poe_mon:
+            with self.pne_mon:
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
                     if hasattr(gsim, 'adjustment'):  # NSHM14
