@@ -127,24 +127,6 @@ def split_by_mag(ctx: numpy.recarray):
     return out
 
 
-def use_recarray(gsim):
-    """
-    :returns: True if the gsim or its underlying require a recarray
-    """
-    if gsim.compute.__annotations__.get("ctx") is numpy.recarray:
-        return True
-    if hasattr(gsim, 'gmpe'):  # for NRCanSiteTerm
-        return gsim.gmpe.compute.__annotations__.get("ctx") is numpy.recarray
-
-
-def any_recarray(gsims):
-    """
-    :returns:
-        True if the `ctx` argument of gsim.compute is a recarray for any gsim
-    """
-    return any(use_recarray(gsim) for gsim in gsims)
-
-
 def csdict(M, N, P, start, stop):
     """
     :param M: number of IMTs
@@ -640,7 +622,7 @@ class ContextMaker(object):
                 if hasattr(ctx, 'roundup'):  # always except UCERF
                     ctx = ctx.roundup(self.minimum_distance)
                 lst.append(ctx)
-            recarray = self.recarray(lst) if any_recarray(self.gsims) else 0
+            recarray = self.recarray(lst)
             if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
                 recarrays = split_by_mag(recarray)
             else:
@@ -648,7 +630,7 @@ class ContextMaker(object):
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
-            for ctx in (recarrays if use_recarray(gsim) else ctxs):
+            for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
                 compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 start = slc.stop
