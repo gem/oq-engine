@@ -44,8 +44,21 @@ The task distribution is much better, as well as build_hazard.
 Engine 3.13
 -----------
 
+| calc_44690, maxmem=149.6 GB | time_sec | memory_mb | counts     |
+|-----------------------------+----------+-----------+------------|
+| total classical             | 977_396  | 1_127     | 1_164      |
+| get_poes                    | 417_821  | 0.0       | 17_719_863 |
+| computing mean_std          | 345_899  | 0.0       | 400_468    |
+| composing pnes              | 119_075  | 0.0       | 17_719_863 |
+| make_contexts               | 89_070   | 696.0     | 10_642     |
+| ClassicalCalculator.run     | 10_085   | 6_664     | 1          |
+| total postclassical         | 3_357    | 1.37500   | 240        |
 
-The task distribution is finally good.
+| operation-duration | counts |    mean | stddev |       min |   max | slowfac |
+|--------------------+--------+---------+--------+-----------+-------+---------|
+| classical          |    666 |   1_468 |    35% |   0.61383 | 3_251 | 2.21544 |
+| postclassical      |    240 |    14.0 |    24% |   8.56907 |  21.8 | 1.55594 |
+| preclassical       |    205 | 3.91217 |   587% | 1.717E-04 | 313.0 |    80.0 |
 
 Engine 3.14
 -----------
@@ -73,3 +86,11 @@ $ oq compare uhs 44685 44687
 | 0.00211 | 0.03481  | 0.67516  |
 +---------+----------+----------+
 
+$ oq compare uhs 44690 44687
++---------+-----------+----------+
+| poe     | rms-diff  | max-diff |
++---------+-----------+----------+
+| 0.00211 | 9.308E-06 | 0.00500  |
++---------+-----------+----------+
+
+I run again with time_per_task=1500 and get
