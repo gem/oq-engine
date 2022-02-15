@@ -428,7 +428,6 @@ class ContextMaker(object):
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
             setattr(ctx, param, value)
-        # ctx.occurrence_rate = rupture.occurrence_rate
         return ctx
 
     def get_ctxs(self, src_or_ruptures, sitecol, src_id=None):
