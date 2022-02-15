@@ -265,7 +265,7 @@ class PitilakisEtAl2018(GMPE):
             setattr(self, name,
                     frozenset(getattr(self, name) | getattr(self.gsim, name)))
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations calling the input GMPE
         for the mean acceleration for PGA and Sa (1.0) on the reference rock,
@@ -564,7 +564,7 @@ class SandikkayaDinsever2018(GMPE):
         else:
             self.region = region
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """

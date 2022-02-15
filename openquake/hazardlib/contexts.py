@@ -339,7 +339,10 @@ class ContextMaker(object):
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                val = getattr(ctx, par)
+                if par == 'occurrence_rate':
+                    val = getattr(ctx, par, numpy.nan)
+                else:
+                    val = getattr(ctx, par)
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
@@ -425,6 +428,7 @@ class ContextMaker(object):
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
             setattr(ctx, param, value)
+        # ctx.occurrence_rate = rupture.occurrence_rate
         return ctx
 
     def get_ctxs(self, src_or_ruptures, sitecol, src_id=None):
@@ -634,7 +638,9 @@ class ContextMaker(object):
             for ctx in ctxs:
                 for gsim in self.gsims:
                     gsim.set_parameters(ctx)
-                lst.append(ctx.roundup(self.minimum_distance))
+                if hasattr(ctx, 'roundup'):  # always except UCERF
+                    ctx = ctx.roundup(self.minimum_distance)
+                lst.append(ctx)
             recarray = self.recarray(lst) if any_recarray(self.gsims) else 0
             if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
                 recarrays = split_by_mag(recarray)
@@ -735,7 +741,7 @@ class ContextMaker(object):
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
                 pnes = get_probability_no_exceedance(ctx, poes, self.tom)
-            yield poes, pnes, ctx.sids, ctx.weight
+            yield poes, pnes, ctx.sids, getattr(ctx, 'weight', numpy.nan)
             s += n
 
     def estimate_weight(self, src, srcfilter):
@@ -876,6 +882,10 @@ class PmapMaker(object):
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
+            if numpy.isnan([ctx.occurrence_rate for ctx in ctxs]).any():
+                pass
+            else:
+                ctxs = [self.cmaker.recarray(ctxs)]
             out = []
             for ctx in ctxs:
                 if self.fewsites:  # keep the contexts in memory
@@ -945,7 +955,7 @@ class PmapMaker(object):
                 if par == 'probs_occur_':
                     lst = [getattr(ctx, pa, []) for ctx in ctxs]
                 else:
-                    lst =  [getattr(ctx, pa) for ctx in ctxs]
+                    lst = [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
@@ -1197,6 +1207,11 @@ def get_probability_no_exceedance(ctx, poes, tom):
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
+    if isinstance(ctx.occurrence_rate, numpy.ndarray):
+        pnes = numpy.zeros_like(poes)
+        for i, rate in enumerate(ctx.occurrence_rate):
+            pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
+        return pnes
     if numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
         # Uses the formula
         #

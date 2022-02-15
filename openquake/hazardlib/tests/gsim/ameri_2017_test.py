@@ -20,11 +20,11 @@
 Implements the tests for the set of GMPE classes included within the
 GMPE of Ameri et al (2017)
 """
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 import pathlib
-from openquake.hazardlib import gsim, imt, const
-import numpy as np
 import unittest
+import numpy as np
+from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib import gsim, imt, const, contexts
 
 
 data = pathlib.Path(__file__).parent / 'data'
@@ -85,7 +85,6 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
     def test_calculation_mean(self):
 
         DATA_FILE = data / "AMERI2017/A17_Rjb_Homoscedastic_MEAN.csv"
-        stddev_types = [const.StdDev.TOTAL]  # Unused here
         ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
@@ -101,12 +100,13 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                 arr = np.float_(arr_str)
 
                 # Setting ground-motion attributes:
-                setattr(ctx, 'mag', arr[0])
-                setattr(ctx, 'rake', arr[1])
+                ctx.mag = arr[0]
+                ctx.rake = arr[1]
                 stress_drop = arr[2]
-                setattr(ctx, 'rjb', arr[3])
-                setattr(ctx, 'vs30', np.array([arr[4]]))
+                ctx.rjb = arr[3]
+                ctx.vs30 = np.array([arr[4]])
                 ctx.sids = [0]
+                ctx.occurrence_rate = 1E-6
                 damp = arr[6]
 
                 # Compute ground-motion:
@@ -120,23 +120,20 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    mean = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
-                                                     stddev_types)[0]
+                    mean = contexts.get_mean_stds(gmpe, ctx, [P])[0]
                     np.testing.assert_almost_equal(
                         mean, value, decimal=MEAN_DECIMAL)
 
     def test_calculation_std_total(self):
 
         DATA_FILE = data / "AMERI2017/A17_Rjb_Homoscedastic_TOTAL_STDDEV.csv"
-        stddev_types = [const.StdDev.TOTAL]
         ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
 
             # Read periods from header:
             header = f.readline()
-            periods = header.strip().split(',')[7:] # Periods in s.
-
+            periods = header.strip().split(',')[7:]  # Periods in s.
             for line in f:
                 arr_str = line.strip().split(',')
                 arr_str[5] = "9999"
@@ -150,6 +147,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'rjb', arr[3])
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 ctx.sids = [0]
+                ctx.occurrence_rate = 1E-6
                 damp = arr[6]
 
                 # Compute ground-motion:
@@ -162,8 +160,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
-                                                    stddev_types)[1][0]
+                    std = contexts.get_mean_stds(gmpe, ctx, [P])[1]
                     np.testing.assert_almost_equal(
                         std, value, decimal=STDDEV_DECIMAL)
 
@@ -171,8 +168,6 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
         DATA_FILE = (data / "AMERI2017/A17_Rjb_Homoscedastic_"
                      "INTRA_EVENT_STDDEV.csv")
-        stddev_types = [const.StdDev.INTRA_EVENT]
-
         ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
@@ -195,6 +190,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
                 ctx.sids = [0]
+                ctx.occurrence_rate = 1E-6
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RjbStressDrop(
@@ -206,8 +202,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
-                                                    stddev_types)[1][0]
+                    std = contexts.get_mean_stds(gmpe, ctx, [P])[3]
                     np.testing.assert_almost_equal(
                         std, value, decimal=STDDEV_DECIMAL)
 
@@ -215,8 +210,6 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
 
         DATA_FILE = (data /
                      "AMERI2017/A17_Rjb_Homoscedastic_INTER_EVENT_STDDEV.csv")
-        stddev_types = [const.StdDev.INTER_EVENT]
-
         ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
@@ -239,6 +232,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
                 ctx.sids = [0]
+                ctx.occurrence_rate = 1E-6
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RjbStressDrop(
@@ -250,8 +244,7 @@ class AmeriEtAl2017RjbStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
-                                                    stddev_types)[1][0]
+                    std = contexts.get_mean_stds(gmpe, ctx, [P])[2]
                     np.testing.assert_almost_equal(
                         std, value, decimal=STDDEV_DECIMAL)
 
@@ -266,8 +259,6 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
     def test_calculation_mean(self):
 
         DATA_FILE = data / "AMERI2017/A17_Repi_Homoscedastic_MEAN.csv"
-        stddev_types = [const.StdDev.TOTAL]  # Unused here
-
         ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
@@ -290,6 +281,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
                 ctx.sids = [0]
+                ctx.occurrence_rate = 1E-6
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
@@ -302,16 +294,13 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    mean = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
-                                                     stddev_types)[0]
+                    mean = contexts.get_mean_stds(gmpe, ctx, [P])[0]
                     np.testing.assert_almost_equal(
                         mean, value, decimal=MEAN_DECIMAL)
 
     def test_calculation_std_total(self):
 
         DATA_FILE = data/"AMERI2017/A17_Repi_Homoscedastic_TOTAL_STDDEV.csv"
-        stddev_types = [const.StdDev.TOTAL]
-
         ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
@@ -334,6 +323,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
                 ctx.sids = [0]
+                ctx.occurrence_rate = 1E-6
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
@@ -345,8 +335,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
-                                                    stddev_types)[1][0]
+                    std = contexts.get_mean_stds(gmpe, ctx, [P])[1]
                     np.testing.assert_almost_equal(
                         std, value, decimal=STDDEV_DECIMAL)
 
@@ -354,8 +343,6 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
         DATA_FILE = (data /
                      "AMERI2017/A17_Repi_Homoscedastic_INTRA_EVENT_STDDEV.csv")
-        stddev_types = [const.StdDev.INTRA_EVENT]
-
         ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
@@ -378,6 +365,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
                 ctx.sids = [0]
+                ctx.occurrence_rate = 1E-6
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
@@ -389,8 +377,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
-                                                    stddev_types)[1][0]
+                    std = contexts.get_mean_stds(gmpe, ctx, [P])[3]
                     np.testing.assert_almost_equal(
                         std, value, decimal=STDDEV_DECIMAL)
 
@@ -398,8 +385,6 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
 
         DATA_FILE = (data /
                      "AMERI2017/A17_Repi_Homoscedastic_INTER_EVENT_STDDEV.csv")
-        stddev_types = [const.StdDev.INTER_EVENT]
-
         ctx = gsim.base.RuptureContext()
 
         with open(DATA_FILE, 'r') as f:
@@ -422,6 +407,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                 setattr(ctx, 'vs30', np.array([arr[4]]))
                 damp = arr[6]
                 ctx.sids = [0]
+                ctx.occurrence_rate = 1E-6
 
                 # Compute ground-motion:
                 gmpe = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop(
@@ -433,8 +419,7 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.PGA()
                     else:
                         P = imt.SA(period=np.float_(per), damping=damp)
-                    std = gmpe.get_mean_and_stddevs(ctx, ctx, ctx, P,
-                                                    stddev_types)[1][0]
+                    std = contexts.get_mean_stds(gmpe, ctx, [P])[2]
                     np.testing.assert_almost_equal(std, value,
                                                    decimal=STDDEV_DECIMAL)
 

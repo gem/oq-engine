@@ -173,7 +173,7 @@ class NRCan15SiteTerm(GMPE):
             assert (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 760 and
                     self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 800)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

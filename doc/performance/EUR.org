@@ -1,0 +1,45 @@
+Engine 3.11
+-----------
+
+| calc_44693, maxmem=56.0 GB | time_sec | memory_mb | counts    |
+|----------------------------+----------+-----------+-----------|
+| total classical            | 138_323  | 433.4     | 628       |
+| computing mean_std         | 58_789   | 0.0       | 8_774_965 |
+| get_poes                   | 44_372   | 0.0       | 8_774_965 |
+| total build_hazard         | 24_471   | 23.5      | 240       |
+| combine pmaps              | 22_560   | 0.0       | 99_146    |
+| composing pnes             | 18_833   | 0.0       | 9_557_628 |
+| make_contexts              | 9_691    | 0.0       | 9_575_311 |
+| ClassicalCalculator.run    | 1_971    | 4_718     | 1         |
+| total preclassical         | 865.9    | 179.6     | 18        |
+
+| operation-duration | counts | mean  | stddev | min     | max   | slowfac |
+|--------------------+--------+-------+--------+---------+-------+---------|
+| classical          | 628    | 220.3 | 36%    | 3.34743 | 476.6 | 2.16371 |
+| build_hazard       | 240    | 102.0 | 3%     | 50.7    | 107.0 | 1.04966 |
+| preclassical       | 18     | 48.1  | 156%   | 0.02039 | 262.5 | 5.45623 |
+| read_source_model  | 4      | 24.4  | 160%   | 1.37037 | 92.5  | 3.78688 |
+
+Engine 3.12
+-----------
+
+Engine 3.13
+-----------
+
+| calc_44692, maxmem=84.6 GB | time_sec | memory_mb | counts    |
+|----------------------------+----------+-----------+-----------|
+| total classical            | 136_306  | 235.2     | 814       |
+| computing mean_std         | 52_897   | 0.0       | 129_108   |
+| get_poes                   | 43_823   | 0.0       | 9_844_084 |
+| composing pnes             | 23_815   | 0.0       | 9_844_084 |
+| make_contexts              | 15_127   | 108.9     | 22_472    |
+| ClassicalCalculator.run    | 1_877    | 5_696     | 1         |
+| total preclassical         | 1_060    | 173.1     | 273       |
+| total postclassical        | 902.8    | 4.64062   | 240       |
+
+| operation-duration | counts |    mean | stddev |       min |     max | slowfac |
+|--------------------+--------+---------+--------+-----------+---------+---------|
+| classical          |    298 |   457.4 |    51% |   0.93573 |   902.4 | 1.97293 |
+| postclassical      |    240 | 3.76147 |    19% |   0.82156 | 5.29270 | 1.40708 |
+| preclassical       |    150 | 7.06832 |   340% | 1.645E-04 |   189.8 |    26.9 |
+| read_source_model  |      4 |    25.0 |   161% |   1.42391 |    94.9 | 3.79120 |

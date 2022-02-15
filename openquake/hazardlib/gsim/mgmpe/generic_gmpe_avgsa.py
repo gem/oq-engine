@@ -96,7 +96,7 @@ class GenericGmpeAvgSA(GMPE):
         # Check if this GMPE has the necessary requirements
         # TO-DO
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         :param imts: must be a single IMT of kind AvgSA
         """
