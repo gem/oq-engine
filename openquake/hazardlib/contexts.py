@@ -283,7 +283,7 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.pne_mon = monitor('get_pnes', measuremem=False)
+        self.poe_mon = monitor('get_pnes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
 
@@ -700,7 +700,7 @@ class ContextMaker(object):
         s = 0
         for ctx in ctxs:
             n = len(ctx)
-            with self.pne_mon:
+            with self.poe_mon:
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
                     if hasattr(gsim, 'adjustment'):  # NSHM14
