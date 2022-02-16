@@ -626,13 +626,18 @@ class ContextMaker(object):
             recarrays = ctxs
         else:  # vectorize the contexts
             recarrays = split_by_mag(self.recarray(ctxs))
+        self.adj = [[] for g in range(G)]  # NSHM2014 adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
             for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
                 compute(gsim, ctx, self.imts, *out[:, g, :, slc])
+                if hasattr(gsim, 'adjustment'):
+                    self.adj[g].append(gsim.adjustment)
                 start = slc.stop
+        self.adj = [numpy.concatenate(adj) if len(adj) else []
+                    for adj in self.adj]
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
@@ -710,16 +715,13 @@ class ContextMaker(object):
             with self.poe_mon:
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
-                    if hasattr(gsim, 'adjustment'):  # NSHM14
-                        adj = gsim.adjustment[s:s+n]
-                    else:
-                        adj = None
+                    adj = self.adj[g]  # NSHM14, case_72
                     ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method for single site
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj[s:s+n])
                 pnes = get_probability_no_exceedance(ctx, poes, self.tom)
             yield poes, pnes, ctx
             s += n
