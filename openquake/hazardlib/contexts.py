@@ -330,7 +330,6 @@ class ContextMaker(object):
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
-        print([ctx.mag for ctx in ctxs], '-----------------------')
         return ra
 
     def get_ctx_params(self):
