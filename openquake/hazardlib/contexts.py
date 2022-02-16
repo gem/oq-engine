@@ -35,7 +35,7 @@ try:
 except ImportError:
     numba = None
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, RecordBuilder)
+    AccumDict, DictArray, groupby, block_splitter, RecordBuilder)
 from openquake.baselib.performance import Monitor, get_slices
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import imt as imt_module
@@ -581,15 +581,16 @@ class ContextMaker(object):
             pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        for poes, pnes, ctx in self.gen_poes(ctxs):
-            # pnes and poes of shape (N, L, G)
-            with self.pne_mon:
-                for sid, pne in zip(ctx.sids, pnes):
-                    probs = pmap.setdefault(sid, self.rup_indep).array
-                    if rup_indep:
-                        probs *= pne
-                    else:  # rup_mutex
-                        probs += (1. - pne) * ctx.weight
+        for block in block_splitter(ctxs, 20_000, len):
+            for poes, pnes, ctx in self.gen_poes(block):
+                # pnes and poes of shape (N, L, G)
+                with self.pne_mon:
+                    for sid, pne in zip(ctx.sids, pnes):
+                        probs = pmap.setdefault(sid, self.rup_indep).array
+                        if rup_indep:
+                            probs *= pne
+                        else:  # rup_mutex
+                            probs += (1. - pne) * ctx.weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
