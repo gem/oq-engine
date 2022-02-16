@@ -128,5 +128,5 @@ jobs:
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax ../sphinx/build/html/ docs@ci.openquake.org:${DEST}
             echo "Create symlink for $BUILD manual"
             echo "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@ci.openquake.org 'cd ${HTDOCS} ; ln -vs ${VER} ${BUILD}'"
-            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@ci.openquake.org bash -lx "cd ${HTDOCS} && pwd && ls ${VER} && ln -vs ${VER} ${BUILD}"
+            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@ci.openquake.org bash -lcx "cd ${HTDOCS} && pwd && ls ${VER} && ln -vs ${VER} ${BUILD}"
           fi
