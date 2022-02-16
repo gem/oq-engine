@@ -306,7 +306,8 @@ class ContextMaker(object):
             for par in sitecol.array.dtype.names:
                 setattr(ctx, par, sitecol[par][ctx.sids])
             ctxs.append(ctx)
-        ctxs.sort(key=operator.attrgetter('mag'))  # ensure ordering
+        # NB: sorting the contexts break the disaggregation! (see case_1)
+        # ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
     def recarray(self, ctxs):
