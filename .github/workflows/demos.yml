@@ -7,8 +7,12 @@ on:
         description: Git Ref
         default: master
         required: true
+      oq-release:
+        description: OQ Release (latest or LTS)
+        default: latest
+        required: true
   push:
-    branches: [ master, docs ]
+    branches: [ docs ]
 jobs:
   demos:
     runs-on: ubuntu-latest
@@ -84,6 +88,7 @@ jobs:
           GITHUB_HD_REF:  ${{ github.head_ref }}
           GITHUB_BS_REF:  ${{ github.base_ref }}
           UPLOAD: ${{ github.event.inputs.git-ref }}
+          BUILD: ${{ github.event.inputs.oq-release }}
         run: |
           if [ -z "$GITHUB_HD_REF" ]
              then
@@ -118,6 +123,7 @@ jobs:
             VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])") 
             HTDOCS=/var/www/docs.openquake.org/oq-engine                                                                                                              
             DEST=${HTDOCS}/${VER}
+            echo " Building docs of oq-engine for version ${BUILD}"
             echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax  ../sphinx/build/html/ docs@ci.openquake.org:${DEST}"
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax ../sphinx/build/html/ docs@ci.openquake.org:${DEST}
           fi
