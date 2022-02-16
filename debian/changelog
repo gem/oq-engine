@@ -1,3 +1,6 @@
+  [Prajacta Jadhav]
+  * Added GMPE Youd et al. (2002) and the corresponding site parameters
+
   [Michele Simionato]
   * Fixed the exporter `aggrisk-stats` in the case of zero losses
   * Vectorized all GMPEs and forbidden non-vectorized GMPEs
