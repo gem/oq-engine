@@ -95,13 +95,9 @@ class YoudEtAl2002(GMPE):
     #: not verified warning
     non_verified = True
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
-
-            if ctx.hypo_depth >= 50.0:
-                ctx.repi.setflags(write=1)
-                ctx.repi[ctx.repi < 5.0] = 5.0
-
+            ctx.repi[(ctx.repi < 5.) & (ctx.hypo_depth >= 50.)] = 5.0
             R = (10 ** ((0.89 * ctx.mag) - 5.64)) + ctx.repi
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
