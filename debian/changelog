@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the exporter `aggrisk-stats` in the case of zero losses
   * Vectorized all GMPEs and forbidden non-vectorized GMPEs
   * Raised the limit to 94 GMPEs per tectonic region type
   * Optimized the NBCC2015_AA13 GMPEs
