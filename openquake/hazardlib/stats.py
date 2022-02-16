@@ -277,13 +277,16 @@ def calc_stats(df, kfields, stats, weights):
     """
     acc = AccumDict(accum=[])
     vfields = [f for f in df.columns if f not in kfields and f != 'rlz_id']
+    # in aggrisk kfields=['agg_id', 'loss_type']
+    # in aggcurves kfields=['agg_id', 'return_period', 'loss_type']
     for key, group in df.groupby(kfields):
-        ws = weights[group.rlz_id]
         for name, func in stats.items():
             for k, kf in zip(key, kfields):
                 acc[kf].append(k)
             for vf in vfields:
-                v = apply_stat(func, getattr(group, vf).to_numpy(), ws)
+                values = numpy.zeros_like(weights)  # shape R
+                values[group.rlz_id] = getattr(group, vf).to_numpy()
+                v = apply_stat(func, values, weights)
                 acc[vf].append(v)
             acc['stat'].append(name)
     return pandas.DataFrame(acc)

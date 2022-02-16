@@ -350,6 +350,16 @@ agg_id
         sig3 = numpy.sqrt(alt[alt.taxonomy == 3].variance.to_numpy()).sum()
         aac(sig1 ** 2 + sig2 ** 2 + sig3 ** 2, tot.variance)
 
+        # check aggcurves-stats
+        [fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
+                              fname, delta=1E-5)
+
+        # check aggrisk-stats
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
+                              fname, delta=1E-5)
+
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'

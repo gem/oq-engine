@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the exporter `aggrisk-stats` in the case of zero losses
   * Raised the limit to 94 GMPEs per tectonic region type
 
 python3-oq-engine (3.13.0-1~xenial01) xenial; urgency=low
