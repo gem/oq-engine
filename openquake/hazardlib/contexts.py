@@ -856,7 +856,8 @@ class PmapMaker(object):
             if self.fewsites:  # keep the contexts in memory
                 for ctx in ctxs:
                     self.rupdata.append(ctx)
-            if not numpy.isnan([ctx.occurrence_rate for ctx in ctxs]).any():
+            if not self.af and not numpy.isnan(
+                    [ctx.occurrence_rate for ctx in ctxs]).any():
                 # vectorize poissonian contexts and split them by magnitude
                 ctxs = split_by_mag(self.cmaker.recarray(ctxs))
         return ctxs
