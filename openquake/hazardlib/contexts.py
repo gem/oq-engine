@@ -713,7 +713,7 @@ class ContextMaker(object):
                         adj = None
                     ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
-                    if self.af:  # kernel amplification method
+                    if self.af:  # kernel amplification method for single site
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
