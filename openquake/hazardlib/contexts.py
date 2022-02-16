@@ -35,7 +35,7 @@ try:
 except ImportError:
     numba = None
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, RecordBuilder, block_splitter)
+    AccumDict, DictArray, groupby, block_splitter, RecordBuilder)
 from openquake.baselib.performance import Monitor, get_slices
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import imt as imt_module
@@ -121,10 +121,8 @@ def split_by_mag(ctx: numpy.recarray):
     [(4.5, 102.) (4.5, 103.) (4.5, 104.)]
     """
     # assume the ctx recarray is already ordered by mag
-    out = []
-    for [(i1, i2)] in get_slices(numpy.uint32(ctx.mag * 100)).values():
-        out.append(ctx[i1:i2])
-    return out
+    slicedic = get_slices(numpy.uint32(ctx.mag * 100))
+    return [ctx[i1:i2] for [(i1, i2)] in slicedic.values()]
 
 
 def csdict(M, N, P, start, stop):
@@ -268,6 +266,7 @@ class ContextMaker(object):
             else:
                 dic[req] = 0.
         dic['sids'] = numpy.uint32(0)
+        dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
@@ -307,6 +306,8 @@ class ContextMaker(object):
             for par in sitecol.array.dtype.names:
                 setattr(ctx, par, sitecol[par][ctx.sids])
             ctxs.append(ctx)
+        # NB: sorting the contexts break the disaggregation! (see case_1)
+        # ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
     def recarray(self, ctxs):
@@ -318,9 +319,15 @@ class ContextMaker(object):
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
         start = 0
         for ctx in ctxs:
+            ctx = ctx.roundup(self.minimum_distance)
+            for gsim in self.gsims:
+                gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                val = getattr(ctx, par)
+                if par == 'occurrence_rate':  # missing in scenario
+                    val = getattr(ctx, par, 0.)
+                else:  # never missing
+                    val = getattr(ctx, par)
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
@@ -382,10 +389,10 @@ class ContextMaker(object):
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
         ctx = RuptureContext()
-        vars(ctx).update(vars(rupture))
+        vars(ctx).update(vars(rupture))  # this also adds .weight
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
-                value = rupture.mag
+                value = numpy.round(rupture.mag, 6)
             elif param == 'strike':
                 value = rupture.surface.get_strike()
             elif param == 'dip':
@@ -488,7 +495,7 @@ class ContextMaker(object):
         out = []
         for values in groupby(ctxs, params).values():
             out.extend(_collapse(values))
-        return out
+        return sorted(out, key=operator.attrgetter('mag'))
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -575,16 +582,21 @@ class ContextMaker(object):
             pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        for block in block_splitter(ctxs, 20_000, len):
-            for poes, pnes, sids, weight in self.gen_poes(block):
+        for ctx in ctxs:
+            # split large context arrays to avoid running out of memory
+            if isinstance(ctx, numpy.ndarray) and len(ctx) > 20_000:
+                block = numpy.array_split(ctx, 10)
+            else:
+                block = [ctx]
+            for poes, pnes, ctx in self.gen_poes(block):
                 # pnes and poes of shape (N, L, G)
                 with self.pne_mon:
-                    for sid, pne in zip(sids, pnes):
+                    for sid, pne in zip(ctx.sids, pnes):
                         probs = pmap.setdefault(sid, self.rup_indep).array
                         if rup_indep:
                             probs *= pne
                         else:  # rup_mutex
-                            probs += (1. - pne) * weight
+                            probs += (1. - pne) * ctx.weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -611,21 +623,19 @@ class ContextMaker(object):
             # contexts already vectorized
             recarrays = ctxs
         else:  # vectorize the contexts
-            lst = []
-            for ctx in ctxs:
-                for gsim in self.gsims:
-                    gsim.set_parameters(ctx)
-                lst.append(ctx.roundup(self.minimum_distance))
-            recarrays = [self.recarray(lst)]
-        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
-            recarrays = sum([split_by_mag(ra) for ra in recarrays], [])
+            recarrays = split_by_mag(self.recarray(ctxs))
+        self.adj = [[] for g in range(G)]  # NSHM2014 adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
             for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
                 compute(gsim, ctx, self.imts, *out[:, g, :, slc])
+                if hasattr(gsim, 'adjustment'):
+                    self.adj[g].append(gsim.adjustment)
                 start = slc.stop
+        self.adj = [numpy.concatenate(adj) if len(adj) else []
+                    for adj in self.adj]
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
@@ -691,7 +701,7 @@ class ContextMaker(object):
     def gen_poes(self, ctxs):
         """
         :param ctxs: a list of C context objects
-        :yields: poes, pnes, sids, weight with poes and pnes of shape (N, L, G)
+        :yields: poes, pnes, ctx with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
@@ -703,18 +713,15 @@ class ContextMaker(object):
             with self.poe_mon:
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
-                    if hasattr(gsim, 'adjustment'):  # NSHM14
-                        adj = gsim.adjustment[s:s+n]
-                    else:
-                        adj = None
+                    adj = self.adj[g]  # NSHM14, case_72
                     ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
-                    if self.af:  # kernel amplification method
+                    if self.af:  # kernel amplification method for single site
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj[s:s+n])
                 pnes = get_probability_no_exceedance(ctx, poes, self.tom)
-            yield poes, pnes, ctx.sids, ctx.weight
+            yield poes, pnes, ctx
             s += n
 
     def estimate_weight(self, src, srcfilter):
@@ -855,12 +862,14 @@ class PmapMaker(object):
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
-            out = []
-            for ctx in ctxs:
-                if self.fewsites:  # keep the contexts in memory
+            if self.fewsites:  # keep rupdata in memory
+                for ctx in ctxs:
                     self.rupdata.append(ctx)
-                out.append(ctx)
-        return out
+            if not self.af and not numpy.isnan(
+                    [ctx.occurrence_rate for ctx in ctxs]).any():
+                # vectorize poissonian contexts and split them by magnitude
+                ctxs = split_by_mag(self.cmaker.recarray(ctxs))
+        return ctxs
 
     def _make_src_indep(self):
         # sources with the same ID
@@ -916,15 +925,16 @@ class PmapMaker(object):
         dic = {'src_id': []}  # par -> array
         if not ctxs:
             return dic
+        ctx = ctxs[0]
         for par in self.cmaker.get_ctx_params():
             pa = par[:-1] if par.endswith('_') else par
-            if pa not in vars(ctxs[0]):
+            if pa not in vars(ctx):
                 continue
             elif par.endswith('_'):
                 if par == 'probs_occur_':
                     lst = [getattr(ctx, pa, []) for ctx in ctxs]
                 else:
-                    lst =  [getattr(ctx, pa) for ctx in ctxs]
+                    lst = [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
@@ -1150,6 +1160,7 @@ class RuptureContext(BaseContext):
         return ctx
 
 
+# called in calc.disagg too
 def get_probability_no_exceedance(ctx, poes, tom):
     """
     Compute and return the probability that in the time span for which the
@@ -1167,7 +1178,7 @@ def get_probability_no_exceedance(ctx, poes, tom):
     :param ctx:
         an object with attributes .occurrence_rate and possibly .probs_occur
     :param poes:
-        2D numpy array containing conditional probabilities the the a
+        array of shape (n, L, G) containing conditional probabilities that a
         rupture occurrence causes a ground shaking value exceeding a
         ground motion level at a site. First dimension represent sites,
         second dimension intensity measure levels. ``poes`` can be obtained
@@ -1176,6 +1187,11 @@ def get_probability_no_exceedance(ctx, poes, tom):
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
+    if isinstance(ctx.occurrence_rate, numpy.ndarray):
+        pnes = numpy.zeros_like(poes)
+        for i, rate in enumerate(ctx.occurrence_rate):
+            pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
+        return pnes
     if numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
         # Uses the formula
         #
