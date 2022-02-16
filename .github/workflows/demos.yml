@@ -12,7 +12,7 @@ on:
         default: latest
         required: true
   push:
-    branches: [ docs ]
+    branches: [ master ]
 jobs:
   demos:
     runs-on: ubuntu-latest
