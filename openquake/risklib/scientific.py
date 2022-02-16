@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1002,23 +1002,24 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
       4. if the given probability is greater than the highest PoE
          defined it returns zero.
 
-    :param loss_ratios: an iterable over non-decreasing loss ratio
-                        values (float)
-    :param poes: an iterable over non-increasing probability of
-                 exceedance values (float)
+    :param loss_ratios: non-decreasing loss ratio values (float32)
+    :param poes: non-increasing probabilities of exceedance values (float32)
     :param float probability: the probability value used to
                               interpolate the loss curve
     """
     assert len(loss_ratios) >= 3, loss_ratios
+    probability = numpy.float32(probability)
+    if not isinstance(loss_ratios, numpy.ndarray):
+        loss_ratios = numpy.float32(loss_ratios)
+    if not isinstance(poes, numpy.ndarray):
+        poes = numpy.float32(poes)
     rpoes = poes[::-1]
     if probability > poes[0]:  # max poes
         return 0.0
     elif probability < poes[-1]:  # min PoE
         return loss_ratios[-1]
     if probability in poes:
-        return max([loss
-                    for i, loss in enumerate(loss_ratios)
-                    if probability == poes[i]])
+        return loss_ratios[probability == poes].max()
     else:
         interval_index = bisect.bisect_right(rpoes, probability)
 

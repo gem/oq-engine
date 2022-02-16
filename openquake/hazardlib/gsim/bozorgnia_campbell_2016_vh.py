@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,14 +39,9 @@ def _get_tau_vh(C, mag, tau_v, tau_h):
     """
     rhob1 = C['rhob1']
     rhob2 = C['rhob2']
-
-    if mag <= 4.5:
-        rhob = rhob1
-    elif 4.5 < mag < 5.5:
-        rhob = rhob2 + (rhob1 - rhob2)*(5.5 - mag)
-    else:
-        rhob = rhob2
-
+    rhob = rhob2 + (rhob1 - rhob2)*(5.5 - mag)
+    rhob[mag <= 4.5] = rhob1
+    rhob[mag >= 5.5] = rhob2
     return np.sqrt(tau_v ** 2 + tau_h ** 2 - 2 * rhob * tau_v * tau_h)
 
 
@@ -57,14 +52,9 @@ def _get_phi_vh(C, mag, phi_v, phi_h):
     """
     rhow1 = C['rhow1']
     rhow2 = C['rhow2']
-
-    if mag <= 4.5:
-        rhow = rhow1
-    elif 4.5 < mag < 5.5:
-        rhow = rhow2 + (rhow1 - rhow2) * (5.5 - mag)
-    else:
-        rhow = rhow2
-
+    rhow = rhow2 + (rhow1 - rhow2) * (5.5 - mag)
+    rhow[mag <= 4.5] = rhow1
+    rhow[mag >= 5.5] = rhow2
     return np.sqrt(phi_v ** 2 + phi_h ** 2 - 2 * rhow * phi_v * phi_h)
 
 
@@ -124,7 +114,7 @@ class BozorgniaCampbell2016VH(GMPE):
         VGMPE.REQUIRES_DISTANCES |
         HGMPE.REQUIRES_DISTANCES)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

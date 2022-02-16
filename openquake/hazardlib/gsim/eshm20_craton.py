@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -59,10 +59,9 @@ def get_magnitude_scaling(C, mag):
     Returns the magnitude scaling term
     """
     d_m = mag - CONSTANTS["Mh"]
-    if mag <= CONSTANTS["Mh"]:
-        return C["e1"] + C["b1"] * d_m + C["b2"] * (d_m ** 2.0)
-    else:
-        return C["e1"] + C["b3"] * d_m
+    return np.where(mag <= CONSTANTS["Mh"],
+                    C["e1"] + C["b1"] * d_m + C["b2"] * d_m ** 2.0,
+                    C["e1"] + C["b3"] * d_m)
 
 
 def get_site_amplification(site_epsilon, imt, pga_r, ctx):
@@ -238,7 +237,7 @@ class ESHM20Craton(GMPE):
         self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
                                              self.phi_ss_quantile)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
@@ -293,5 +292,3 @@ class ESHM20Craton(GMPE):
     7.500  -4.876430881706430  2.373219226144200   -0.0645988540118558   1.529692859278580   -1.10750011821578    0.131643152520841   -0.0000488890402107   0.531853282981450
     10.00  -5.489149076214530  2.381480607871230   -0.0633541563175792   1.620019767639500   -1.12740443208222    0.141291747206530    0.0059559626930461   0.560198970449326
     """)
-
-

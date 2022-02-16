@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="WUSOnlyLT"
+    >
+        <logicTreeBranchingLevel
+        branchingLevelID="gms1"
+        >
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Active Shallow Crust"
+            branchSetID="wus_asc"
+            uncertaintyType="gmpeModel"
+            >
+                <logicTreeBranch branchID="ASK14U" >
+                    <uncertaintyModel> AbrahamsonEtAl2014NSHMPUpper </uncertaintyModel>
+                    <uncertaintyWeight> 0.333 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="ASK14C" >
+                    <uncertaintyModel> AbrahamsonEtAl2014 </uncertaintyModel>
+                    <uncertaintyWeight> 0.334 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="ASK14L" >
+                    <uncertaintyModel> AbrahamsonEtAl2014NSHMPLower </uncertaintyModel>
+                    <uncertaintyWeight> 0.333 </uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

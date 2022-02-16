@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -125,7 +125,7 @@ class GmfComputer(object):
         ctxs = cmaker.get_ctxs([rupture], sitecol, self.source_id)
         if not ctxs:
             raise FarAwayRupture
-        self.ctx = ctxs[0]
+        [self.ctx] = ctxs
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(

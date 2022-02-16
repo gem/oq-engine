@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -74,7 +74,7 @@ def _compute_magnitude(ctx, C):
 
     "c1 + (c2 * M) + (c3 * M**2) "
     """
-    return C['c1'] + (C['c2'] * ctx.mag) + (C['c3'] * (ctx.mag ** 2))
+    return C['c1'] + C['c2'] * ctx.mag + C['c3'] * (ctx.mag ** 2)
 
 
 def _compute_standard_dev(ctx, imt, C):
@@ -82,11 +82,10 @@ def _compute_standard_dev(ctx, imt, C):
     Compute the the standard deviation in terms of magnitude
     described on p. 1866, eq. 6
     """
-    sigma_mean = 0.
-    if ctx.mag <= 7.0:
-        sigma_mean = (C['c12'] * ctx.mag) + C['c13']
-    elif ctx.mag > 7.0:
-        sigma_mean = (-0.00695 * ctx.mag) + C['c14']
+    sigma_mean = np.zeros_like(ctx.mag)
+    below = ctx.mag <= 7.0
+    sigma_mean[below] = (C['c12'] * ctx.mag[below]) + C['c13']
+    sigma_mean[~below] = (-0.00695 * ctx.mag[~below]) + C['c14']
     return sigma_mean
 
 
@@ -138,7 +137,7 @@ class PezeshkEtAl2011(GMPE):
     #: 1861, eq. 5 page 1866).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -195,7 +194,7 @@ class PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

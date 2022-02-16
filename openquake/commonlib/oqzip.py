@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,8 @@ def zip_all(directory):
     zips = []
     for cwd, dirs, files in os.walk(directory):
         if 'ssmLT.xml' in files:
-            zips.append(zip_source_model(os.path.join(cwd, 'ssmLT.xml')))
+            zips.append(zip_source_model(os.path.join(cwd, 'ssmLT.xml'),
+                                         cleanup=False))
         for f in files:
             if f.endswith('.xml') and 'exposure' in f.lower():
                 zips.append(zip_exposure(os.path.join(cwd, f)))
@@ -61,7 +62,7 @@ def zip_all_jobs(directory):
     logging.info('Generated %s of zipped data', general.humansize(total))
 
 
-def zip_source_model(ssmLT, archive_zip='', log=logging.info):
+def zip_source_model(ssmLT, archive_zip='', log=logging.info, cleanup=True):
     """
     Zip the source model files starting from the smmLT.xml file
     """
@@ -86,7 +87,7 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     with open(checkfile, 'w') as f:
         f.write(str(checksum))
     files.extend([os.path.abspath(ssmLT), os.path.abspath(checkfile)])
-    general.zipfiles(files, archive_zip, log=log, cleanup=True)
+    general.zipfiles(files, archive_zip, log=log, cleanup=cleanup)
     return archive_zip
 
 

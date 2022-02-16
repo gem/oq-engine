@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,7 +38,6 @@ import itertools
 import subprocess
 import collections
 import multiprocessing
-from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
@@ -49,7 +48,8 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
-BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+BASE94 = ''.join(chr(i) for i in range(65, 127)) + ''.join(
+    chr(i) for i in range(33, 65))
 mp = multiprocessing.get_context('spawn')
 
 
@@ -463,23 +463,6 @@ def run_in_process(code, *args):
         # produce escape sequences in stdout, see for instance
         # https://bugs.python.org/issue19884
         return eval(out, {}, {})
-
-
-@contextmanager
-def start_many(func, allargs, **kw):
-    """
-    Start multiple processes simultaneously
-    """
-    procs = []
-    for args in allargs:
-        proc = mp.Process(target=func, args=args, kwargs=kw)
-        proc.start()
-        procs.append(proc)
-    try:
-        yield
-    finally:
-        for proc in procs:
-            proc.join()
 
 
 class CodeDependencyError(Exception):
@@ -1394,7 +1377,7 @@ def categorize(values, nchars=2):
     if len(uvalues) > mvalues:
         raise ValueError(
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
-    prod = itertools.product(*[BASE64] * nchars)
+    prod = itertools.product(*[BASE94] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
@@ -1457,7 +1440,7 @@ class RecordBuilder(object):
             self.names.append(name)
             self.values.append(value)
             if isinstance(value, (str, bytes)):
-                tp = (numpy.string_, len(value))
+                tp = (numpy.string_, len(value) or 1)
             elif isinstance(value, numpy.ndarray):
                 tp = value.dtype
             else:

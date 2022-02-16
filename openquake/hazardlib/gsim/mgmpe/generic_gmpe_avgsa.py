@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -96,7 +96,7 @@ class GenericGmpeAvgSA(GMPE):
         # Check if this GMPE has the necessary requirements
         # TO-DO
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         :param imts: must be a single IMT of kind AvgSA
         """

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,10 +28,7 @@ class GarciaEtAl2005SSlabTestCase(BaseGSIMTestCase):
     # provided by Daniel Garcia
 
     def test_all(self):
-        self.check('GA05/GA05SSlab_MEAN.csv',
-                   'GA05/GA05SSlab_STD_TOTAL.csv',
-                   'GA05/GA05SSlab_STD_INTRA.csv',
-                   'GA05/GA05SSlab_STD_INTER.csv',
+        self.check('GarciaEtAl2005SSlab.csv',
                    max_discrep_percentage=0.2,
                    std_discrep_percentage=0.1)
 
@@ -43,9 +40,6 @@ class GarciaEtAl2005SSlabVertTestCase(BaseGSIMTestCase):
     # provided by Daniel Garcia
 
     def test_all(self):
-        self.check('GA05/GA05SSlabV_MEAN.csv',
-                   'GA05/GA05SSlabV_STD_TOTAL.csv',
-                   'GA05/GA05SSlabV_STD_INTRA.csv',
-                   'GA05/GA05SSlabV_STD_INTER.csv',
+        self.check('GarciaEtAl2005SSlabVert.csv',
                    max_discrep_percentage=0.2,
                    std_discrep_percentage=0.1)

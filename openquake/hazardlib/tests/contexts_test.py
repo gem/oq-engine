@@ -222,6 +222,7 @@ class CollapseTestCase(unittest.TestCase):
             ctx.vs30 = numpy.array([760.])
             ctx.rrup = numpy.array([100.])
             ctx.rjb = numpy.array([99.])
+            ctx.weight = 0.
             ctxs.append(ctx)
         cmaker = ContextMaker(
             'TRT', gsims, dict(imtls=imtls, truncation_level=truncation_level))

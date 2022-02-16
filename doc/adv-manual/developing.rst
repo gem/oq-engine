@@ -20,7 +20,7 @@ contributing is still nontrivial, and it absolutely necessary
 to know git and the tools of Open Source development in
 general, in particular about testing. If this is not the
 case, you should do some study on your own and come back later. There
-is a huge amount of resources in the net about these topics. This
+is a huge amount of resources on the net about these topics. This
 manual will focus solely on the OpenQuake engine and it assume that
 you already know how to use it, i.e. you have read the User Manual
 first.
@@ -71,17 +71,16 @@ following command::
 
  $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini 
 
-You should notice that we used here the command `oq run` while the engine
-manual recommend the usage of `oq engine --run`. There is no contradiction.
-The command `oq engine --run` is meant for production usage, it will work
-with the WebUI and store the logs of the calculation in the engine database.
-But here we are doing development, so the recommended command is `oq run`
-which will not interact with the database, will be easier to debug and
-accept the essential flag ``--pdb``, which will start the python debugger
+You should notice that we used here the command ``oq run`` while the engine
+manual recommend the usage of ``oq engine --run``. There is no contradiction.
+The command ``oq engine --run`` is meant for production usage, 
+but here we are doing development, so the recommended command is ``oq run``
+which will will be easier to debug thanks to the
+flag ``--pdb``, which will start the python debugger
 should the calculation fail. Since during development is normal to have
-errors and problems in the calculation, so this ability is invaluable.
+errors and problems in the calculation, this ability is invaluable.
 
-Then, if you want to understand what happened during the calculation
+If you want to understand what happened during the calculation
 you should generate the associated .rst report, which can be seen with
 the command
 
@@ -90,7 +89,7 @@ the command
 There you will find a lot of interesting information that it is worth studying
 and we will discuss in detail in the rest of this manual. The most important
 section of the report is probably the last one, titled "Slowest operations".
-For that one can understand the bottlenecks of the calculation and, with
+For that one can understand the bottlenecks of a calculation and, with
 experience, he can understand which part of the engine he needs to optimize.
 Also, it is very useful to play with the parameters of the calculation
 (like the maximum distance, the area discretization, the magnitude binning,

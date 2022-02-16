@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,9 +34,6 @@ calc_path = None  # set only when the flag --slowest is given
 
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
-
-oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
-    base.calculators)
 
 
 def get_pstats(pstatfile, n):

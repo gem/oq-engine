@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -127,15 +127,17 @@ def read_cmaker_df(gsim, csvfnames):
     assert imts
     imtls = {im: [0] for im in sorted(imts)}
     trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
+    mags = ['%.2f' % mag for mag in df.rup_mag.unique()]
     cmaker = contexts.ContextMaker(
-        trt.value if trt else "*", [gsim], {'imtls': imtls})
+        trt.value if trt else "*", [gsim], {'imtls': imtls, 'mags': mags},
+        extraparams={col[5:] for col in df.columns if col.startswith('site_')})
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
         logging.info(name, df[name].unique())
-    for dist in cmaker.REQUIRES_SITES_PARAMETERS:
-        name = 'site_' + dist
-        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
+    for sitepar in cmaker.REQUIRES_SITES_PARAMETERS:
+        name = 'site_' + sitepar
+        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[sitepar])
         logging.info(name, df[name].unique())
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
@@ -151,8 +153,9 @@ def read_cmaker_df(gsim, csvfnames):
 def gen_ctxs(df):
     """
     :param df: a DataFrame with a specific structure
-    :yields: RuptureContexts
+    :returns: a list of RuptureContexts
     """
+    ctxs = []
     rrp = [col for col in df.columns if col.startswith('rup_')]
     pars = [col for col in df.columns if col.startswith(('dist_', 'site_'))]
     outs = df.result_type.unique()
@@ -181,7 +184,8 @@ def gen_ctxs(df):
             setattr(ctx, par[5:], value)  # dist_, site_ parameters
         ctx.sids = np.arange(len(gr))
         assert len(gr) == len(grp) / num_outs, (len(gr), len(gr) / num_outs)
-        yield ctx
+        ctxs.append(ctx)
+    return ctxs
 
 
 class BaseGSIMTestCase(unittest.TestCase):

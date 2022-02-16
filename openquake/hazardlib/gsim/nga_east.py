@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,15 +24,14 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
-from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, _return_tables, _get_mean)
+from openquake.hazardlib.gsim.gmpe_table import GMPETable, _get_mean
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
 # Common interpolation function
 def ITPL(mag, tu, tl, ml, f):
-    return tl + (tu - tl) * ((mag - ml) / f)
+    return tl + (tu - tl) * (mag - ml) / f
 
 
 def _scaling(mean_tau, sd_tau2):
@@ -40,7 +39,7 @@ def _scaling(mean_tau, sd_tau2):
     Returns the chi-2 scaling factor from the mean and variance of the
     uncertainty model, as reported in equation 5.4 of Al Atik (2015)
     """
-    return (sd_tau2 ** 2.) / (2.0 * mean_tau ** 2.)
+    return sd_tau2 ** 2. / (2.0 * mean_tau ** 2.)
 
 
 def _dof(mean_tau, sd_tau2):
@@ -49,7 +48,7 @@ def _dof(mean_tau, sd_tau2):
     variance of the uncertainty model, as reported in equation 5.5 of Al Atik
     (2015)
     """
-    return (2.0 * mean_tau ** 4.) / (sd_tau2 ** 2.)
+    return 2.0 * mean_tau ** 4. / sd_tau2 ** 2.
 
 
 def _at_percentile(tau, var_tau, percentile):
@@ -58,7 +57,7 @@ def _at_percentile(tau, var_tau, percentile):
     percentile from the mean and variance of the uncertainty model, as
     reported in equations 5.1 - 5.3 of Al Atik (2015)
     """
-    assert (percentile >= 0.0) and (percentile <= 1.0)
+    assert percentile >= 0.0 and percentile <= 1.0
     c_val = _scaling(tau, var_tau)
     k_val = _dof(tau, var_tau)
     return np.sqrt(c_val * chi2.ppf(percentile, df=k_val))
@@ -109,16 +108,15 @@ def global_tau(imt, mag, params):
         C = params["PGV"]
     else:
         C = params["SA"]
-    if mag > 6.5:
-        return C["tau4"]
-    elif (mag > 5.5) and (mag <= 6.5):
-        return ITPL(mag, C["tau4"], C["tau3"], 5.5, 1.0)
-    elif (mag > 5.0) and (mag <= 5.5):
-        return ITPL(mag, C["tau3"], C["tau2"], 5.0, 0.5)
-    elif (mag > 4.5) and (mag <= 5.0):
-        return ITPL(mag, C["tau2"], C["tau1"], 4.5, 0.5)
-    else:
-        return C["tau1"]
+    tau = np.full_like(mag, C["tau1"])
+    tau[mag > 6.5] = C["tau4"]
+    idx = (mag > 5.5) & (mag <= 6.5)
+    tau[idx] = ITPL(mag[idx], C["tau4"], C["tau3"], 5.5, 1.0)
+    idx = (mag > 5.0) & (mag <= 5.5)
+    tau[idx] = ITPL(mag[idx], C["tau3"], C["tau2"], 5.0, 0.5)
+    idx = (mag > 4.5) & (mag <= 5.0)
+    tau[idx] = ITPL(mag[idx], C["tau2"], C["tau1"], 4.5, 0.5)
+    return tau
 
 
 def cena_constant_tau(imt, mag, params):
@@ -139,14 +137,13 @@ def cena_tau(imt, mag, params):
         C = params["PGV"]
     else:
         C = params["SA"]
-    if mag > 6.5:
-        return C["tau3"]
-    elif (mag > 5.5) and (mag <= 6.5):
-        return ITPL(mag, C["tau3"], C["tau2"], 5.5, 1.0)
-    elif (mag > 5.0) and (mag <= 5.5):
-        return ITPL(mag, C["tau2"], C["tau1"], 5.0, 0.5)
-    else:
-        return C["tau1"]
+    tau = np.full_like(mag, C["tau1"])
+    tau[mag > 6.5] = C["tau3"]
+    idx = (mag > 5.5) & (mag <= 6.5)
+    tau[idx] = ITPL(mag[idx], C["tau3"], C["tau2"], 5.5, 1.0)
+    idx = (mag > 5.0) & (mag <= 5.5)
+    tau[idx] = ITPL(mag[idx], C["tau2"], C["tau1"], 5.0, 0.5)
+    return tau
 
 
 def get_tau_at_quantile(mean, stddev, quantile):
@@ -341,12 +338,9 @@ def get_phi_ss(imt, mag, params):
     and intensity measure type according to equation 5.14 of Al Atik (2015)
     """
     C = params[imt]
-    if mag <= 5.0:
-        phi = C["a"]
-    elif mag > 6.5:
-        phi = C["b"]
-    else:
-        phi = C["a"] + (mag - 5.0) * ((C["b"] - C["a"]) / 1.5)
+    phi = C["a"] + (mag - 5.0) * (C["b"] - C["a"]) / 1.5
+    phi[mag <= 5.0] = C["a"]
+    phi[mag > 6.5] = C["b"]
     return phi
 
 
@@ -456,19 +450,19 @@ def get_nonlinear_stddev(C_NL, vs30):
     return sigma_f2
 
 
-def get_hard_rock_mean(self, ctx, imt):
+def get_hard_rock_mean(self, mag, ctx, imt):
     """
     Returns the mean and standard deviations for the reference very hard
     rock condition (Vs30 = 3000 m/s)
     """
-    # Return Distance Tables
-    imls = _return_tables(self, ctx.mag, imt, "IMLs")
+    # return Distance Tables
+    imls = self.mean_table['%.2f' % mag, imt.string]
     # Get distance vector for the given magnitude
-    idx = np.searchsorted(self.m_w, ctx.mag)
+    idx = np.searchsorted(self.m_w, mag)
     dists = self.distances[:, 0, idx - 1]
-    # Get mean and standard deviations
-    mean = _get_mean(self.kind, self.distance_type, imls, ctx, dists)
-    return np.log(mean)
+    dst = getattr(ctx, self.distance_type)
+    # get log(mean)
+    return np.log(_get_mean(self.kind, imls, dst, dists))
 
 
 def get_site_amplification(self, imt, pga_r, sites):
@@ -554,19 +548,19 @@ def _get_phi(self, imt, mag):
     return phi
 
 
-def get_mean_amp(self, ctx, imt):
+def get_mean_amp(self, mag, ctx, imt):
     # Get the PGA on the reference rock condition
     if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
         rock_imt = PGA()
     else:
         rock_imt = SA(0.01)
-    pga_r = get_hard_rock_mean(self, ctx, rock_imt)
+    pga_r = get_hard_rock_mean(self, mag, ctx, rock_imt)
 
     # Get the desired spectral acceleration on rock
     if imt.string != "PGA":
         # Calculate the ground motion at required spectral period for
         # the reference rock
-        mean = get_hard_rock_mean(self, ctx, imt)
+        mean = get_hard_rock_mean(self, mag, ctx, imt)
     else:
         # Avoid re-calculating PGA if that was already done!
         mean = np.copy(pga_r)
@@ -717,12 +711,13 @@ class NGAEastGMPE(GMPETable):
             assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
         super().__init__(**kwargs)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
+        [mag] = np.unique(np.round(ctx.mag, 6))  # by construction
         for m, imt in enumerate(imts):
-            mean[m], _, _ = get_mean_amp(self, ctx, imt)
+            mean[m], _, _ = get_mean_amp(self, mag, ctx, imt)
             # Get standard deviation model
             sig[m], tau[m], phi[m] = get_stddevs(self, ctx.mag, imt)
 
@@ -878,18 +873,14 @@ def _get_tau_vector(self, tau_mean, tau_std, imt_list):
     Gets the vector of mean and variance of tau values corresponding to
     the specific model and returns them as dictionaries
     """
-    self.magnitude_limits = MAG_LIMS_KEYS[self.tau_model]["mag"]
+    self.magnitude_limits = np.array(MAG_LIMS_KEYS[self.tau_model]["mag"])
     self.tau_keys = MAG_LIMS_KEYS[self.tau_model]["keys"]
     t_bar = {}
     t_std = {}
+    tau_model = TAU_EXECUTION[self.tau_model]
     for imt in imt_list:
-        t_bar[imt] = []
-        t_std[imt] = []
-        for mag, key in zip(self.magnitude_limits, self.tau_keys):
-            t_bar[imt].append(
-                TAU_EXECUTION[self.tau_model](imt, mag, tau_mean))
-            t_std[imt].append(
-                TAU_EXECUTION[self.tau_model](imt, mag, tau_std))
+        t_bar[imt] = tau_model(imt, self.magnitude_limits, tau_mean)
+        t_std[imt] = tau_model(imt, self.magnitude_limits, tau_std)
     return t_bar, t_std
 
 
@@ -901,24 +892,17 @@ def _get_phi_vector(self, phi_mean, phi_std, imt_list):
     p_bar = {}
     p_std = {}
     for imt in imt_list:
-        p_bar[imt] = []
-        p_std[imt] = []
-        for mag in self.magnitude_limits:
-            phi_ss_mean = get_phi_ss(imt, mag, phi_mean)
-            phi_ss_std = get_phi_ss(imt, mag, phi_std)
-            if self.ergodic:
-                # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
-                # of Al Atik (2015)
-                phi_ss_mean = np.sqrt(
-                    phi_ss_mean ** 2. +
-                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.
-                    )
-                phi_ss_std = np.sqrt(
-                    phi_ss_std ** 2. +
-                    PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.
-                    )
-            p_bar[imt].append(phi_ss_mean)
-            p_std[imt].append(phi_ss_std)
+        p_bar[imt] = ss_mean = get_phi_ss(imt, self.magnitude_limits, phi_mean)
+        p_std[imt] = ss_std = get_phi_ss(imt, self.magnitude_limits, phi_std)
+        if self.ergodic:
+            # Add on the phi_s2ss term according to Eqs. 5.15 and 5.16
+            # of Al Atik (2015)
+            ss_mean[:] = np.sqrt(
+                ss_mean ** 2. +
+                PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.)
+            ss_std[:] = np.sqrt(
+                ss_std ** 2. +
+                PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.)
     return p_bar, p_std
 
 
@@ -927,6 +911,7 @@ def _get_total_sigma(self, imt, mag):
     Returns the estimated total standard deviation for a given intensity
     measure type and magnitude
     """
+    [mag] = np.unique(np.round(mag, 6))  # by construction
     C = self.SIGMA[imt]
     if mag <= self.magnitude_limits[0]:
         # The CENA constant model is always returned here

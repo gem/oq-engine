@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -171,7 +171,8 @@ site_param_dt = {
 
     # other parameters
     'custom_site_id': (numpy.string_, 6),
-    'region': numpy.uint32
+    'region': numpy.uint32,
+    'in_cshm': bool  # used in mcverry
 }
 
 

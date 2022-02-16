@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,8 +31,8 @@ def get_base_term(trt, C):
     Returns the constant term of the GMM.
     Depends on tectonic type
     """
-    return C["e"] +\
-        (C["d0"] if trt == const.TRT.SUBDUCTION_INTERFACE else C["d1"])
+    return C["e"] + (C["d0"] if trt == const.TRT.SUBDUCTION_INTERFACE else
+                     C["d1"])
 
 
 def get_magnitude_scaling_term(C, imt, mag):
@@ -70,7 +70,7 @@ def get_anelastic_attenuation_term(C, rrup):
     return C["c_attn"] * rrup
 
 
-def get_moho_depth(rup):
+def get_moho_depth(ctx):
     """
     get Moho depth dependent on hypocenter location
     for now, return 30km everywhere
@@ -78,20 +78,19 @@ def get_moho_depth(rup):
     return 30.0
 
 
-def get_geometric_attenuation_term(C, rup, rrup):
+def get_geometric_attenuation_term(C, ctx):
     """
     Returns the geometric attenuation term (Eq. 3.13/3.14)
     Period dependent coefficients are calculated and added to the
     coefficients table.
     """
-    mref = np.where(rup.mag < 8.3, rup.mag, 8.3)
+    mref = np.where(ctx.mag < 8.3, ctx.mag, 8.3)
     c = C["c_gs"] * 10.0 ** (0.5 * mref)
-
-    zmoho = get_moho_depth(rup)
-    idx = (rup.hypo_depth > zmoho) & (rrup >= (1.7 * rup.hypo_depth))
-    fgs = -1.0 * np.log10(rrup + c)
-    fgs[idx] = 0.6 * np.log10(1.7 * rup.hypo_depth + c) -\
-        1.6 * np.log10(rrup[idx] + c)
+    zmoho = get_moho_depth(ctx)
+    fgs = -1.0 * np.log10(ctx.rrup + c)
+    idx = (ctx.hypo_depth > zmoho) & (ctx.rrup >= (1.7 * ctx.hypo_depth))
+    fgs[idx] = (0.6 * np.log10(1.7 * ctx.hypo_depth[idx] + c[idx]) -
+                1.6 * np.log10(ctx.rrup[idx] + c[idx]))
     return fgs
 
 
@@ -125,30 +124,30 @@ def get_basin_response_term(C, z_value):
     return C["Cd"] + C["Dd"] * z_value
 
 
-def _get_pga_rock(C, trt, imt, sites, rup, dists):
+def _get_pga_rock(C, trt, imt, ctx):
     """
     Returns the PGA on rock for site response
     """
     mean = (get_base_term(trt, C) +
-            get_magnitude_scaling_term(C, imt, rup.mag) +
-            get_geometric_attenuation_term(C, rup, dists.rrup) +
-            get_basin_response_term(C, sites.z2pt5) +
-            get_depth_scaling_term(C, rup.hypo_depth) +
-            get_anelastic_attenuation_term(C, dists.rrup))
+            get_magnitude_scaling_term(C, imt, ctx.mag) +
+            get_geometric_attenuation_term(C, ctx) +
+            get_basin_response_term(C, ctx.z2pt5) +
+            get_depth_scaling_term(C, ctx.hypo_depth) +
+            get_anelastic_attenuation_term(C, ctx.rrup))
     return 10.0 ** mean
 
 
-def get_mean_values(C, trt, imt, sites, rup, dists, a760):
+def get_mean_values(C, trt, imt, ctx, a760):
     """
     Returns the mean values for a specific IMT
     """
     mean = np.log(10.0) * (get_base_term(trt, C) +
-                           get_magnitude_scaling_term(C, imt, rup.mag) +
-                           get_depth_scaling_term(C, rup.hypo_depth) +
-                           get_geometric_attenuation_term(C, rup, dists.rrup) +
-                           get_anelastic_attenuation_term(C, dists.rrup) +
-                           get_basin_response_term(C, sites.z2pt5) +
-                           get_shallow_site_response_term(C, sites.vs30, a760))
+                           get_magnitude_scaling_term(C, imt, ctx.mag) +
+                           get_depth_scaling_term(C, ctx.hypo_depth) +
+                           get_geometric_attenuation_term(C, ctx) +
+                           get_anelastic_attenuation_term(C, ctx.rrup) +
+                           get_basin_response_term(C, ctx.z2pt5) +
+                           get_shallow_site_response_term(C, ctx.vs30, a760))
 
     return mean
 
@@ -191,7 +190,7 @@ class SiEtAl2020SInter(GMPE):
     #: Required distance measure is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -202,13 +201,13 @@ class SiEtAl2020SInter(GMPE):
         # intensity measure type and for PGA
         C_PGA = self.COEFFS[PGA()]
         # Get mean PGA on rock (Vs30 760 m/s)
-        pga760 = _get_pga_rock(C_PGA, trt, PGA(), ctx, ctx, ctx)
+        pga760 = _get_pga_rock(C_PGA, trt, PGA(), ctx)
 
         for m, imt in enumerate(imts):
             # Get the coefficients for the IMT
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
-            mean[m] = get_mean_values(C, trt, imt, ctx, ctx, ctx, pga760)
+            mean[m] = get_mean_values(C, trt, imt, ctx, pga760)
             tau[m] = C["tau"]
             phi[m] = C["phi"]
         sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)

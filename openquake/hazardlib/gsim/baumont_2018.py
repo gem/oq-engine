@@ -85,7 +85,7 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
 
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

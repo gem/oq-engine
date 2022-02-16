@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2012-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -43,7 +43,6 @@ def _compute_mag_dist_terms(ctx, coeffs):
 
     ``log(pre) = c + a*M + b*X - log(X + d*10^(e*M)) + epsilon``
     """
-
     log_pre = coeffs['c'] + coeffs['a']*ctx.mag + coeffs['b']*ctx.rrup \
         - np.log10(ctx.rrup + coeffs['d']*10**(coeffs['e']*ctx.mag))
 
@@ -56,7 +55,6 @@ def _compute_site_amplification(ctx, coeffs):
 
     ``G = p*log(VS30) + q``
     """
-
     return coeffs['p']*np.log10(ctx.vs30) + coeffs['q']
 
 
@@ -117,7 +115,7 @@ class Kanno2006Shallow(GMPE):
     #: earthquakes for which the fault model is not available." (p. 880)
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,7 @@ import copy
 import unittest
 import numpy as np
 from openquake.hazardlib.imt import SA, PGA
-from openquake.hazardlib import const
+from openquake.hazardlib import contexts
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.base import RuptureContext
 from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014RhypoGermany
@@ -97,6 +97,7 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
         self.ctx = RuptureContext()
         self.ctx.sids = np.arange(5)
         self.ctx.rhypo = np.array([5., 10., 20., 50., 100.])
+        self.ctx.rjb = np.array([5., 10., 20., 50., 95.])
         self.ctx.vs30 = 800.0 * np.ones(5)
 
     def check_gmpe_adjustments(self, adj_gmpe_set, original_gmpe):
@@ -107,7 +108,6 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
         and styles of fauling.
         """
         low_gsim, mid_gsim, high_gsim = adj_gmpe_set
-        tot_std = [const.StdDev.TOTAL]
         for imt in self.imts:
             for mag in self.mags:
                 for rake in self.rakes:
@@ -116,28 +116,24 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
                     ctx.rake = rake
                     ctx.hypo_depth = 10.
                     ctx.width = 0.0001
+                    ctx.rrup = [100.]
                     # Get "original" values
-                    mean = original_gmpe.get_mean_and_stddevs(
-                        ctx, ctx, ctx, imt, tot_std)[0]
+                    mean = contexts.get_mean_stds(original_gmpe, ctx, [imt])[0]
                     mean = np.exp(mean)
                     # Get "low" adjustments (0.75 times the original)
-                    low_mean = low_gsim.get_mean_and_stddevs(
-                        ctx, ctx, ctx, imt, tot_std)[0]
+                    low_mean = contexts.get_mean_stds(low_gsim, ctx, [imt])[0]
                     np.testing.assert_array_almost_equal(
                         np.exp(low_mean) / mean, 0.75 * np.ones_like(low_mean))
 
                     # Get "middle" adjustments (1.25 times the original)
-                    mid_mean = mid_gsim.get_mean_and_stddevs(
-                        ctx, ctx, ctx, imt, tot_std)[0]
+                    mid_mean = contexts.get_mean_stds(mid_gsim, ctx, [imt])[0]
                     np.testing.assert_array_almost_equal(
                         np.exp(mid_mean) / mean, 1.25 * np.ones_like(mid_mean))
 
                     # Get "high" adjustments (1.5 times the original)
-                    high_mean = high_gsim.get_mean_and_stddevs(
-                        ctx, ctx, ctx, imt, tot_std)[0]
+                    hi_mean = contexts.get_mean_stds(high_gsim, ctx, [imt])[0]
                     np.testing.assert_array_almost_equal(
-                        np.exp(high_mean) / mean,
-                        1.5 * np.ones_like(high_mean))
+                        np.exp(hi_mean) / mean, 1.5 * np.ones_like(hi_mean))
 
     def test_akkar_germany_adjustments(self):
         adj_gmpes = [AkkarEtAlRhyp2014(adjustment_factor=0.75),

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,9 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.bahrampouri_2021_duration import BahrampouriEtAldm2021Asc
-from openquake.hazardlib.gsim.bahrampouri_2021_duration import BahrampouriEtAldm2021SInter
-from openquake.hazardlib.gsim.bahrampouri_2021_duration import BahrampouriEtAldm2021SSlab
+from openquake.hazardlib.gsim.bahrampouri_2021_duration import (
+    BahrampouriEtAldm2021Asc, BahrampouriEtAldm2021SInter,
+    BahrampouriEtAldm2021SSlab)
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1
@@ -31,8 +31,7 @@ class BahrampouriEtAl2021RSDTestCase(BaseGSIMTestCase):
     MEAN_FILE = "BMG20/BMG20_D_ASC_mean.csv"
 
     def test_all(self):
-        self.check(self.MEAN_FILE,
-        max_discrep_percentage=MEAN_DISCREP)
+        self.check(self.MEAN_FILE, max_discrep_percentage=MEAN_DISCREP)
 
 
 class BahrampouriEtAl2021RSDInterTestCase(BaseGSIMTestCase):
@@ -41,8 +40,7 @@ class BahrampouriEtAl2021RSDInterTestCase(BaseGSIMTestCase):
     MEAN_FILE = "BMG20/BMG20_D_SInter_mean.csv"
 
     def test_all(self):
-        self.check(self.MEAN_FILE,
-        max_discrep_percentage=MEAN_DISCREP)
+        self.check(self.MEAN_FILE, max_discrep_percentage=MEAN_DISCREP)
 
 
 class BahrampouriEtAl2021RSDSlabTestCase(BaseGSIMTestCase):
@@ -51,5 +49,4 @@ class BahrampouriEtAl2021RSDSlabTestCase(BaseGSIMTestCase):
     MEAN_FILE = "BMG20/BMG20_D_SSlab_mean.csv"
 
     def test_all(self):
-        self.check(self.MEAN_FILE,
-        max_discrep_percentage=MEAN_DISCREP)
+        self.check(self.MEAN_FILE, max_discrep_percentage=MEAN_DISCREP)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,7 +35,7 @@ def _compute_distance(ctx, C):
     """
     rref = 1.0
     c31 = -1.7
-    return (c31 * np.log10(ctx.rhypo) + C['c32'] * (ctx.rhypo - rref))
+    return c31 * np.log10(ctx.rhypo) + C['c32'] * (ctx.rhypo - rref)
 
 
 def _compute_magnitude(ctx, C):
@@ -45,7 +45,7 @@ def _compute_magnitude(ctx, C):
     c1 + c2(M-5.5)
     """
     m_h = 5.5
-    return C['c1'] + (C['c2'] * (ctx.mag - m_h))
+    return C['c1'] + C['c2'] * (ctx.mag - m_h)
 
 
 def _get_site_amplification(ctx, C):
@@ -59,8 +59,7 @@ def _get_site_amplification(ctx, C):
     Coefficents for categories A and B are set to zero
     """
     S, SS = _get_site_type_dummy_variables(ctx)
-
-    return (C['c61'] * S) + (C['c62'] * SS)
+    return C['c61'] * S + C['c62'] * SS
 
 
 def _get_site_type_dummy_variables(ctx):
@@ -108,27 +107,21 @@ def _compute_forearc_backarc_term(C, ctx):
     ind4 = (ctx.rhypo >= 240)
     flag4[ind4] = 1.0
 
-    A = flag1 * ((205 - ctx.rhypo)/150) + flag2
-    B = flag3 * ((140 - ctx.rhypo)/100) + flag4
-    if (ctx.hypo_depth < 80):
-        FHR = A
-    else:
-        FHR = B
+    A = flag1 * (205 - ctx.rhypo) / 150 + flag2
+    B = flag3 * (140 - ctx.rhypo) / 100 + flag4
+    FHR = np.where(ctx.hypo_depth < 80, A, B)
 
     H0 = 100
     # Heaviside function
-    if (ctx.hypo_depth >= H0):
-        H = 1
-    else:
-        H = 0
+    H = np.where(ctx.hypo_depth >= H0, 1., 0.)
 
     # ARC = 0 for back-arc - ARC = 1 for forearc
     ARC = np.zeros(len(ctx.backarc))
     idxarc = (ctx.backarc == 1)
     ARC[idxarc] = 1.0
 
-    return ((C['c41'] * (1 - ARC) * H) + (C['c42'] * (1 - ARC) * H * FHR) +
-            (C['c51'] * ARC * H) + (C['c52'] * ARC * H * FHR))
+    return (C['c41'] * (1 - ARC) * H + C['c42'] * (1 - ARC) * H * FHR +
+            C['c51'] * ARC * H + C['c52'] * ARC * H * FHR)
 
 
 class SkarlatoudisEtAlSSlab2013(GMPE):
@@ -170,7 +163,7 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
     #: Required distance measure is Rhypo.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

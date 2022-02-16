@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -82,7 +82,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         Fast version of iter_ruptures used in estimate_weight
         """
         for i, (rup, pmf) in enumerate(self.data):
-            if i % 25 == 0 and rup.mag >= self.min_mag:
+            if i % 50 == 0 and rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
                     rup.hypocenter, rup.surface, pmf, weight=rup.weight)
@@ -117,13 +117,12 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def get_bounding_box(self, maxdist):
         """
-        Bounding box containing all surfaces, enlarged by the maximum distance
+        Bounding box containing the surfaces, enlarged by the maximum distance
         """
         surfaces = []
         for rup, _ in self.data:
             if isinstance(rup.surface, MultiSurface):
-                for s in rup.surface.surfaces:
-                    surfaces.append(s)
+                surfaces.extend(rup.surface.surfaces)
             else:
                 surfaces.append(rup.surface)
         multi_surf = MultiSurface(surfaces)
@@ -196,10 +195,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
     @property
     def mesh_size(self):
         """
-        :returns: the number of points in the underlying mesh
+        :returns: the number of points in the underlying meshes (reduced)
         """
         n = 0
-        for rup, pmf in self.data:
+        for rup in self.few_ruptures():
             if isinstance(rup.surface, MultiSurface):
                 for sfc in rup.surface.surfaces:
                     n += len(sfc.mesh)
@@ -210,11 +209,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
     @property
     def polygon(self):
         """
-        The convex hull of the underlying mesh of points
+        The convex hull of a few subsurfaces
         """
         lons, lats = [], []
-        for rup, pmf in self.data:
-
+        for rup in self.few_ruptures():
             if isinstance(rup.surface, MultiSurface):
                 for sfc in rup.surface.surfaces:
                     lons.extend(sfc.mesh.lons.flat)

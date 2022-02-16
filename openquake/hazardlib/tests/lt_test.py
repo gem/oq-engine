@@ -109,28 +109,28 @@ class CollapseTestCase(unittest.TestCase):
     # this tests also the collapsing of the ruptures happening in contexts.py
     def test_point_source_full_enum(self):
         # compute the mean curve
-        mean, srcs, effrups, weights = self.full_enum()
+        mean, srcs, effctxs, weights = self.full_enum()
         assert weights == [.2, .2, .6]
         assert scaling_rates(srcs) == [1, 1, 1]
-        self.assertEqual(effrups, 22)  # less then 8 x 3 = 24
+        self.assertEqual(effctxs, 7)
 
         # compute the partially collapsed curve
         self.bs1.collapsed = True
-        coll1, srcs, effrups, weights = self.full_enum()
+        coll1, srcs, effctxs, weights = self.full_enum()
         assert weights == [.4, .6]  # two rlzs
         # self.plot(mean, coll1)
         assert scaling_rates(srcs) == [1.0, 0.5, 0.5, 1.0]
-        self.assertEqual(effrups, 28)  # less then 8 x 4 = 32
+        self.assertEqual(effctxs, 9)
         numpy.testing.assert_allclose(mean, coll1, atol=.1)
 
         # compute the fully collapsed curve
         self.bs0.collapsed = True
         self.bs1.collapsed = True
-        coll2, srcs, effrups, weights = self.full_enum()
+        coll2, srcs, effctxs, weights = self.full_enum()
         assert weights == [1]  # one rlz
         # self.plot(mean, coll2)
         assert scaling_rates(srcs) == [0.4, 0.6, 0.5, 0.5]
-        self.assertEqual(effrups, 28)  # much less then 8 x 4 = 32
+        self.assertEqual(effctxs, 9)
         numpy.testing.assert_allclose(mean, coll2, atol=.21)  # big diff
 
     def plot(self, mean, coll):

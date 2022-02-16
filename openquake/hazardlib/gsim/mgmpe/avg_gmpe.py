@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2021 GEM Foundation
+# Copyright (C) 2018-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -99,7 +99,7 @@ class AvgGMPE(GMPE):
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = def_for_stddevs[0]
         self.weights = np.array(weights)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Call the underlying GMPEs and return the weighted mean and stddev
         """

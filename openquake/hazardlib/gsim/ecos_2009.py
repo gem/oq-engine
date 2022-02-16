@@ -75,7 +75,7 @@ class ECOS2009(GMPE):
 
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -107,7 +107,7 @@ class ECOS2009Highest(ECOS2009):
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(C, ctx, imt)

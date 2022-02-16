@@ -1,0 +1,69 @@
+$ oqe mosaic/CAN/in/job_vs30.ini
+
+Engine 3.11
+-----------
+
+calc_44681, maxmem=64.2 GB time_sec  memory_mb counts    
+========================== ========= ========= ==========
+total classical            1_799_685 614       619       
+computing mean_std         1_477_473 0.0       17_030_373
+get_poes                   179_701   0.0       17_030_373
+total build_hazard         121_919   54        240       
+combine pmaps              112_917   0.0       138_284   
+composing pnes             100_147   0.0       36_736_209
+ClassicalCalculator.run    18_060    2_623     1         
+make_contexts              16_085    0.0       36_739_040
+compute stats              2_383     0.0       138_284   
+
+| operation-duration | counts | mean    | stddev | min     | max     |
+|--------------------+--------+---------+--------+---------+---------|
+| build_hazard       | 240    | 508.0   | 2%     | 350.4   | 534.3   |
+| classical          | 619    | 2_907   | 36%    | 125.6   | 4_398   |
+| preclassical       | 29     | 25.4    | 149%   | 0.07409 | 148.9   |
+
+Engine 3.12
+-----------
+
+| calc_44682, maxmem=84.3 GB | time_sec  | memory_mb | counts     |
+|----------------------------+-----------+-----------+------------|
+| total classical            | 1_710_256 | 639.8     | 376        |
+| computing mean_std         | 1_413_992 | 0.0       | 39_861     |
+| get_poes                   | 161_001   | 0.0       | 36_736_209 |
+| composing pnes             | 97_648    | 0.0       | 36_736_209 |
+| ClassicalCalculator.run    | 17_933    | 3_236     | 1          |
+| make_contexts              | 15_787    | 0.0       | 36_739_040 |
+| total build_hazard         | 7_615     | 60.6      | 240        |
+
+| operation-duration | counts | mean    | stddev | min     | max     |
+|--------------------+--------+---------+--------+---------+---------|
+| build_hazard       | 240    | 31.7    | 14%    | 13.1    | 48.5    |
+| classical          | 376    | 4_549   | 39%    | 121.0   | 7_025   |
+| preclassical       | 29     | 25.4    | 148%   | 0.07336 | 145.9   |
+
+Engine 3.13
+-----------
+
+| calc_44670, maxmem=82.6 GB | time_sec  | memory_mb | counts     |
+|----------------------------+-----------+-----------+------------|
+| total classical            | 1_610_175 | 518.1     | 1_188      |
+| computing mean_std         | 1_358_162 | 0.0       | 714_752    |
+| get_poes                   | 129_574   | 0.0       | 35_566_874 |
+| composing pnes             | 85_176    | 0.0       | 35_566_874 |
+| make_contexts              | 35_876    | 177.9     | 40_030     |
+| ClassicalCalculator.run    | 14_950    | 5_175     | 1          |
+
+Engine 3.14
+-----------
+
+Thanks to the vectorization, "computing mean_std" is 14x faster!
+
+| calc_44676, maxmem=96.0 GB | time_sec | memory_mb | counts     |
+|----------------------------+----------+-----------+------------|
+| total classical            | 376_656  | 454.3     | 1_074      |
+| get_poes                   | 145_504  | 0.0       | 35_566_874 |
+| composing pnes             | 96_355   | 0.0       | 35_566_874 |
+| computing mean_std         | 96_198   | 0.0       | 714_752    |
+| make_contexts              | 36_747   | 186.9     | 40_030     |
+| total postclassical        | 7_857    | 25.3      | 240        |
+| combine pmaps              | 5_679    | 0.0       | 138_284    |
+| ClassicalCalculator.run    | 4_133    | 5_171     | 1          |

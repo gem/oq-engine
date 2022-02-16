@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2021 GEM Foundation
+# Copyright (C) 2013-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -67,6 +67,7 @@ class FromFile(object):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     REQUIRES_SITES_PARAMETERS = set()
+    REQUIRES_COMPUTED_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     DEFINED_FOR_REFERENCE_VELOCITY = None
     kwargs = {}

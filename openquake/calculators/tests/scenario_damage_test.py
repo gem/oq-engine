@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -104,26 +104,19 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assert_ok(case_4, 'job_haz.ini,job_risk.ini')
 
     def test_case_4b(self):
+        # sensitive to shapely version
         self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
 
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=5E-5)
-
-        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=5E-5)
+                              delta=5E-4)
 
         return  # TODO: fix avg_losses
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # one per realization
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=5E-5)
-
-        #df = view('portfolio_damage_error', self.calc.datastore)
-        #fname = gettemp(text_table(df))
-        #self.assertEqualFiles('expected/portfolio_damage.rst', fname)
+                                  delta=2E-4)
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:

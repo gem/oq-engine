@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,7 +44,6 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    # host = socket.gethostbyname(config.dbserver.host)
     sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect')
     with sock:
         res = sock.send((action,) + args)
@@ -63,7 +62,11 @@ def get_datadir():
     if not datadir:
         shared_dir = config.directory.shared_dir
         if shared_dir:
-            datadir = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
+            user = getpass.getuser()
+            if user == 'openquake':  # use /opt/openquake/oqdata
+                datadir = os.path.join(shared_dir, 'oqdata')
+            else:
+                datadir = os.path.join(shared_dir, user, 'oqdata')
         else:  # use the home of the user
             datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
     return datadir

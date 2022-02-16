@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2021 GEM Foundation
+# Copyright (C) 2017-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -65,7 +65,7 @@ class MunsonThurber1997(GMPE):
     #: see page 18 in Atkinson and Boore's manuscript
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -99,7 +99,7 @@ class MunsonThurber1997Hawaii(MunsonThurber1997):
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -109,10 +109,10 @@ class MunsonThurber1997Hawaii(MunsonThurber1997):
 
         # Magnitude term
         M = ctx.mag - 6
-        if ctx.mag > 7. and ctx.mag <= 7.7:
-            mean[:] = (0.171 * (1 - M)) / LOG10E + mean
-        elif ctx.mag > 7.7:
-            mean[:] = (0.1512 + 0.387 * (1 - M)) / LOG10E + mean
+        right = ctx.mag > 7.7
+        center = (ctx.mag > 7.) & (ctx.mag <= 7.7)
+        mean[:, center] += (0.171 * (1 - M[center])) / LOG10E
+        mean[:, right] += (0.1512 + 0.387 * (1 - M[right])) / LOG10E
 
         for m, imt in enumerate(imts):
             # define natural log of SA 0.3 sec and 0.2 sec

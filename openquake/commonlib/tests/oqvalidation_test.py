@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,11 +42,6 @@ GST = {'gsim_logic_tree': gettemp('''\
 </nrml>'''),
        "job_ini": "job.ini",
        "source_model_logic_tree": "fake"}
-
-# hard-coded to avoid a dependency from openquake.calculators
-OqParam.calculation_mode.validator.choices = (
-    'classical', 'disaggregation', 'scenario', 'scenario_damage',
-    'event_based', 'event_based_risk', 'classical_risk')
 
 fakeinputs = {"job_ini": "job.ini", "source_model_logic_tree": "fake"}
 

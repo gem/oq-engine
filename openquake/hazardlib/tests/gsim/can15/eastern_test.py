@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,9 +15,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.can15.eastern import (EasternCan15Mid,
-                                                    EasternCan15Upp,
-                                                    EasternCan15Low)
+from openquake.hazardlib.gsim.can15.eastern import (
+    EasternCan15Mid, EasternCan15Upp, EasternCan15Low)
 
 
 class EasternCan15LowTestCase(BaseGSIMTestCase):
@@ -25,7 +24,7 @@ class EasternCan15LowTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAN15/GMPEt_ENA_low.csv',
-                       max_discrep_percentage=170.)
+                   max_discrep_percentage=170.)
 
 
 class EasternCan15HighTestCase(BaseGSIMTestCase):
@@ -33,7 +32,7 @@ class EasternCan15HighTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAN15/GMPEt_ENA_high.csv',
-                       max_discrep_percentage=170.)
+                   max_discrep_percentage=170.)
 
 
 class EasternCan15MidTestCase(BaseGSIMTestCase):
@@ -41,4 +40,4 @@ class EasternCan15MidTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('CAN15/GMPEt_ENA_med.csv',
-                       max_discrep_percentage=100.)
+                   max_discrep_percentage=100.)

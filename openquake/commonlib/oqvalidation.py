@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,7 @@ import collections
 import multiprocessing
 import numpy
 
-from openquake.baselib import __version__, hdf5, python3compat
+from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
@@ -728,6 +728,10 @@ width_of_mfd_bin:
   Default: None
 """ % __version__
 
+try:
+    PSDIST = config.performance.pointsource_distance
+except AttributeError:
+    PSDIST = 1000
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 TWO32 = 2 ** 32
@@ -736,6 +740,24 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
+ALL_CALCULATORS = ['classical_risk',
+                   'classical_damage',
+                   'classical',
+                   'ucerf_classical',
+                   'event_based',
+                   'scenario',
+                   'ucerf_hazard',
+                   'post_risk',
+                   'ebrisk',
+                   'scenario_risk',
+                   'event_based_risk',
+                   'disaggregation',
+                   'multi_risk',
+                   'classical_bcr',
+                   'preclassical',
+                   'conditional_spectrum',
+                   'event_based_damage',
+                   'scenario_damage']
 
 
 def check_same_levels(imtls):
@@ -803,7 +825,7 @@ class OqParam(valid.ParamSet):
     assets_per_site_limit = valid.Param(valid.positivefloat, 1000)
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
-    calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
+    calculation_mode = valid.Param(valid.Choice(*ALL_CALCULATORS))
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), '0')
     collect_rlzs = valid.Param(valid.boolean, None)
@@ -879,7 +901,7 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.floatdict, {'default': 1000})
+    pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
     ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)

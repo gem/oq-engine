@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,8 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
-    case_66, case_67, case_68, case_70, case_71, case_72, case_73, case_74)
+    case_66, case_67, case_68, case_70, case_71, case_72, case_73, case_74,
+    case_75)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -223,7 +224,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_13(self):
         self.assert_curves_ok(
             ['hazard_curve-mean_PGA.csv', 'hazard_curve-mean_SA(0.2).csv',
-             'hazard_map-mean.csv'], case_13.__file__)
+             'hazard_map-mean.csv'], case_13.__file__, delta=1E-5)
 
         # test recomputing the hazard maps
         self.run_calc(
@@ -501,7 +502,7 @@ hazard_uhs-std.csv
         # check what QGIS will be seeing
         aw = extract(self.calc.datastore, 'rupture_info')
         poly = gzip.decompress(aw.boundaries).decode('ascii')
-        self.assertEqual(poly, '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04006, 0.00000 0.08013, 0.00000 0.12019, 0.00000 0.16025, 0.00000 0.20032, 0.00000 0.24038, 0.00000 0.28045, 0.04512 0.28045, 0.08980 0.28045, 0.13492 0.28045, 0.17961 0.28045, 0.17961 0.24038, 0.17961 0.20032, 0.17961 0.16025, 0.17961 0.12019, 0.17961 0.08013, 0.17961 0.04006, 0.17961 0.00000, 0.17961 0.10000, 0.13492 0.10000, 0.08980 0.10000, 0.04512 0.10000, 0.00000 0.10000, 0.00000 0.14006, 0.00000 0.18013, 0.00000 0.22019, 0.00000 0.26025, 0.00000 0.30032, 0.00000 0.34038, 0.00000 0.38045, 0.04512 0.38045, 0.08980 0.38045, 0.13492 0.38045, 0.17961 0.38045, 0.17961 0.34038, 0.17961 0.30032, 0.17961 0.26025, 0.17961 0.22019, 0.17961 0.18013, 0.17961 0.14006, 0.17961 0.10000))''')
+        self.assertEqual(poly, '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04006, 0.00000 0.08013, 0.00000 0.12019, 0.00000 0.16025, 0.00000 0.20032, 0.00000 0.24038, 0.00000 0.28045, 0.04512 0.28045, 0.08980 0.28045, 0.13492 0.28045, 0.17961 0.28045, 0.17961 0.24038, 0.17961 0.20032, 0.17961 0.16025, 0.17961 0.12019, 0.17961 0.08013, 0.17961 0.04006, 0.17961 0.00000, 0.00000 0.10000, 0.04512 0.10000, 0.08980 0.10000, 0.13492 0.10000, 0.17961 0.10000, 0.17961 0.14006, 0.17961 0.18013, 0.17961 0.22019, 0.17961 0.26025, 0.17961 0.30032, 0.17961 0.34038, 0.17961 0.38045, 0.13492 0.38045, 0.08980 0.38045, 0.04512 0.38045, 0.00000 0.38045, 0.00000 0.34038, 0.00000 0.30032, 0.00000 0.26025, 0.00000 0.22019, 0.00000 0.18013, 0.00000 0.14006, 0.00000 0.10000))''')
 
         # then perform a classical calculation
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
@@ -521,7 +522,7 @@ hazard_uhs-std.csv
         # IMT-dependent weights with sampling by cheating
         self.assert_curves_ok(
             ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-            case_30.__file__, number_of_logic_tree_samples='10')
+            case_30.__file__, number_of_logic_tree_samples='10', delta=1E-5)
 
     def test_case_31(self):
         # source specific logic tree
@@ -610,7 +611,7 @@ hazard_uhs-std.csv
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
         data = self.calc.datastore.read_df('source_data')
-        self.assertEqual(data.nrupts.sum(), 5020)  # number of contexts
+        self.assertEqual(data.nrupts.sum(), 538)  # number of contexts
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -992,5 +993,11 @@ hazard_uhs-std.csv
     def test_case_74(self):
         # test calculation with EAS
         self.run_calc(case_74.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+    def test_case_75(self):
+        # test calculation with multi-fault
+        self.run_calc(case_75.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)

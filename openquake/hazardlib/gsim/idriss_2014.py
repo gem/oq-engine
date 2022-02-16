@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2021 GEM Foundation
+# Copyright (C) 2015-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,22 +30,19 @@ def _get_magnitude_scaling_term(C, mag):
     """
     Returns the magnitude scaling term defined in equation 3
     """
-    if mag < 6.75:
-        return C["a1_lo"] + C["a2_lo"] * mag + C["a3"] *\
-            ((8.5 - mag) ** 2.0)
-    else:
-        return C["a1_hi"] + C["a2_hi"] * mag + C["a3"] *\
-            ((8.5 - mag) ** 2.0)
+    res = C["a1_hi"] + C["a2_hi"] * mag + C["a3"] * (8.5 - mag) ** 2.0
+    below = mag < 6.75
+    res[below] = (C["a1_lo"] + C["a2_lo"] * mag[below] + C["a3"] *
+                  (8.5 - mag[below]) ** 2.0)
+    return res
 
 
 def _get_distance_scaling_term(C, mag, rrup):
     """
     Returns the magnitude dependent distance scaling term
     """
-    if mag < 6.75:
-        mag_factor = -(C["b1_lo"] + C["b2_lo"] * mag)
-    else:
-        mag_factor = -(C["b1_hi"] + C["b2_hi"] * mag)
+    mag_factor = -(C["b1_hi"] + C["b2_hi"] * mag)
+    mag_factor[mag < 6.75] = -(C["b1_lo"] + C["b2_lo"] * mag[mag < 6.75])
     return mag_factor * np.log(rrup + 10.0) + (C["gamma"] * rrup)
 
 
@@ -55,10 +52,9 @@ def _get_style_of_faulting_term(C, rake):
     normal/strike-slip. Returns the style-of-faulting factor only for
     reverse events
     """
-    if (rake > 30.0) and (rake < 150.0):
-        return C["phi"]
-    else:
-        return 0.0
+    res = np.zeros_like(rake)
+    res[(rake > 30.) & (rake < 150.)] = C["phi"]
+    return res
 
 
 def _get_site_scaling_term(C, vs30):
@@ -83,11 +79,7 @@ def _get_stddev(imt, mag):
     periods (T > 3.0) it is assumed to be equal to the case in which
     T = 3.0
     """
-    if mag < 5.0:
-        stddev_mag = 5.0
-    else:
-        stddev_mag = mag
-
+    stddev_mag = np.clip(mag, 5.0, None)
     if imt.string == "PGA" or imt.period < 0.05:
         total_sigma = 1.18 + 0.035 * np.log(0.05) - 0.06 * stddev_mag
     elif imt.period > 3.0:
@@ -134,7 +126,7 @@ class Idriss2014(GMPE):
     #: The reference Vs30. See paper.
     DEFINED_FOR_REFERENCE_VELOCITY = 2000
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

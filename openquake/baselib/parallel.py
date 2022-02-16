@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2021 GEM Foundation
+# Copyright (C) 2010-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -773,6 +773,8 @@ class Starmap(object):
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
+        self.host_ip = socket.gethostbyname(
+            config.dbserver.receiver_host or socket.gethostname())
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
@@ -810,7 +812,7 @@ class Starmap(object):
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
-                config.dbserver.host, self.socket.port)
+                self.host_ip, self.socket.port)
             self.monitor.version = version
             self.monitor.config = config
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,7 @@ def get_nl(C, ln_y_ref, exp1, exp2):
 
 def get_tau(C, ctx):
     # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(ctx.mag, 5.0), 7.0) - 5.0
+    mag_test = np.clip(ctx.mag - 5., 0., 2.)
     tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
     return tau
 
@@ -80,7 +80,7 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         ctx.vs30 = 620 * np.ones(len(ctx.vs30))
         log_phi_ss = 1
         super().compute(ctx, imts, mean, sig, tau, phi)

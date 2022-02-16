@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,7 +69,7 @@ def _compute_magnitude_scaling_term(C, mag):
     Compute magnitude scaling term as defined in equation 19, page 2291
     (Tavakoli and Pezeshk, 2005)
     """
-    if mag > 8.5:
+    if (mag > 8.5).any():
         raise ValueError('Magnitude %s > 8.5' % mag)
     return C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
 
@@ -108,7 +108,7 @@ class TavakoliPezeshk2005(GMPE):
 
     kind = 'base'
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -140,7 +140,7 @@ class TavakoliPezeshk2005(GMPE):
                 mean[m] = clip_mean(imt, mean[m])
 
             # computing the total standard deviation
-            sig[m] = (C['c14'] + C['c15'] * mag) if mag < 7.2 else C['c16']
+            sig[m] = np.where(mag < 7.2, C['c14'] + C['c15'] * mag, C['c16'])
 
     #: Coefficient table is constructed from an excel spreadsheet available
     #: on Pezeshk's website http://www.ce.memphis.edu/pezeshk
