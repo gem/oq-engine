@@ -920,9 +920,10 @@ class PmapMaker(object):
         dic = {'src_id': []}  # par -> array
         if not ctxs:
             return dic
+        ctx = ctxs[0]
         for par in self.cmaker.get_ctx_params():
             pa = par[:-1] if par.endswith('_') else par
-            if pa not in vars(ctxs[0]):
+            if pa not in vars(ctx):
                 continue
             elif par.endswith('_'):
                 if par == 'probs_occur_':
@@ -1154,6 +1155,7 @@ class RuptureContext(BaseContext):
         return ctx
 
 
+# called in calc.disagg too
 def get_probability_no_exceedance(ctx, poes, tom):
     """
     Compute and return the probability that in the time span for which the
@@ -1171,7 +1173,7 @@ def get_probability_no_exceedance(ctx, poes, tom):
     :param ctx:
         an object with attributes .occurrence_rate and possibly .probs_occur
     :param poes:
-        2D numpy array containing conditional probabilities the the a
+        array of shape (n, L, G) containing conditional probabilities that a
         rupture occurrence causes a ground shaking value exceeding a
         ground motion level at a site. First dimension represent sites,
         second dimension intensity measure levels. ``poes`` can be obtained
