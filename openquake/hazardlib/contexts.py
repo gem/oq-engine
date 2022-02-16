@@ -862,7 +862,7 @@ class PmapMaker(object):
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
-            if self.fewsites:  # keep the contexts in memory
+            if self.fewsites:  # keep rupdata in memory
                 for ctx in ctxs:
                     self.rupdata.append(ctx)
             if not self.af and not numpy.isnan(

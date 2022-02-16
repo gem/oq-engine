@@ -73,6 +73,7 @@ def conditional_spectrum(dstore, slc, cmaker, imti, imls, monitor):
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs = cmaker.read_ctxs(dstore, slc)
+        ctxs.sort(key=operator.attrgetter('mag'))
     return cmaker.get_cs_contrib(ctxs, imti, imls)
 
 
