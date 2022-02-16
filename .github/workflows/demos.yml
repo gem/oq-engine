@@ -120,13 +120,13 @@ jobs:
             echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/"
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/
           else
-            VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])") 
-            HTDOCS=/var/www/docs.openquake.org/oq-engine                                                                                                              
-            DEST=${HTDOCS}/${VER}
+            VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
+            HTDOCS=/var/www/docs.openquake.org/oq-engine/
+            DEST=${HTDOCS}${VER}
             echo " Building docs of oq-engine for version ${BUILD}"
             echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax  ../sphinx/build/html/ docs@ci.openquake.org:${DEST}"
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax ../sphinx/build/html/ docs@ci.openquake.org:${DEST}
             echo "Create symlink for $BUILD manual"
-            echo "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@ci.openquake.org 'cd ${HTDOCS} && ln -vs ${VER} ${BUILD}'"
-            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@ci.openquake.org bash -x "cd ${HTDOCS} && ln -vs ${VER} ${BUILD}"
+            echo "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@ci.openquake.org 'cd ${HTDOCS} ; ln -vs ${VER} ${BUILD}'"
+            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@ci.openquake.org bash -lx "cd ${HTDOCS} && pwd && ls ${VER} && ln -vs ${VER} ${BUILD}"
           fi
