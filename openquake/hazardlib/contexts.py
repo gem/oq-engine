@@ -321,7 +321,10 @@ class ContextMaker(object):
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                val = getattr(ctx, par)
+                if par == 'occurrence_rate':  # missing in scenario
+                    val = getattr(ctx, par, 0.)
+                else:  # never missing
+                    val = getattr(ctx, par)
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
