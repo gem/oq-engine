@@ -268,6 +268,7 @@ class ContextMaker(object):
             else:
                 dic[req] = 0.
         dic['sids'] = numpy.uint32(0)
+        dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
@@ -924,7 +925,7 @@ class PmapMaker(object):
                 if par == 'probs_occur_':
                     lst = [getattr(ctx, pa, []) for ctx in ctxs]
                 else:
-                    lst =  [getattr(ctx, pa) for ctx in ctxs]
+                    lst = [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
