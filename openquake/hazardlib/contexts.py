@@ -581,7 +581,15 @@ class ContextMaker(object):
             pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        for block in block_splitter(ctxs, 20_000, len):
+
+        # split large context arrays to avoid running out of memory
+        allctxs = []
+        for ctx in ctxs:
+            if isinstance(ctx, numpy.ndarray) and len(ctx) > 20_000:
+                allctxs.extend(numpy.array_split(ctx, 10))
+            else:
+                allctxs.append(ctx)
+        for block in block_splitter(allctxs, 20_000, len):
             for poes, pnes, ctx in self.gen_poes(block):
                 # pnes and poes of shape (N, L, G)
                 with self.pne_mon:

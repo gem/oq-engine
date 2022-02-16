@@ -64,3 +64,22 @@ Engine 3.13
 Engine 3.14
 -----------
 
+| calc_44704, maxmem=86.9 GB | time_sec | memory_mb | counts    |
+|----------------------------+----------+-----------+-----------|
+| total classical            | 102_060  | 258.3     | 750       |
+| get_pnes                   | 61_961   | 0.0       | 9_844_084 |
+| computing mean_std         | 16_503   | 0.0       | 129_108   |
+| make_contexts              | 15_071   | 119.1     | 22_472    |
+| composing pnes             | 7_791    | 0.0       | 9_844_084 |
+| ClassicalCalculator.run    | 1_679    | 5_891     | 1         |
+| total preclassical         | 1_060    | 172.5     | 273       |
+| total postclassical        | 886.6    | 1.32812   | 240       |
+
+| operation-duration | counts | mean    | stddev | min       | max     | slowfac |
+|--------------------+--------+---------+--------+-----------+---------+---------|
+| classical          | 234    | 436.2   | 58%    | 0.94479   | 838.2   | 1.92183 |
+| postclassical      | 240    | 3.69417 | 19%    | 0.93605   | 5.11311 | 1.38410 |
+| preclassical       | 150    | 7.06995 | 340%   | 1.531E-04 | 188.5   | 26.7    |
+| read_source_model  | 4      | 24.4    | 160%   | 1.42699   | 92.3    | 3.78267 |
+
+"computing mean_std" is much faster.
