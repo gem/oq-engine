@@ -115,7 +115,7 @@ jobs:
           echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
           # publish
-          if [ -z "$UPLOAD" ]
+          if [ "$UPLOAD" == "master" ]
           then
             echo "rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/"
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/${UPLOAD}/
