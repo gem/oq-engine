@@ -54,5 +54,28 @@ Engine 3.13
 | ClassicalCalculator.run    | 3_362    | 4_926     | 1          |
 | total preclassical         | 1_344    | 104.6     | 424        |
 
+| operation-duration | counts | mean    | stddev | min       | max     | slowfac |
+|--------------------+--------+---------+--------+-----------+---------+---------|
+| classical          | 477    | 574.4   | 42%    | 49.9      | 1_215   | 2.11541 |
+| postclassical      | 239    | 1.31905 | 47%    | 0.01112   | 2.55502 | 1.93702 |
+| preclassical       | 199    | 6.75472 | 389%   | 1.981E-04 | 232.3   | 34.4    |
+| read_source_model  | 193    | 1.46129 | 106%   | 0.00545   | 7.78720 | 5.32899 |
+
 Engine 3.14
 -----------
+
+| calc_44705, maxmem=79.2 GB | time_sec | memory_mb | counts     |
+|----------------------------+----------+-----------+------------|
+| total classical            | 224_445  | 575.1     | 962        |
+| get_pnes                   | 131_143  | 0.0       | 24_789_885 |
+| make_contexts              | 37_291   | 410.0     | 13_712     |
+| computing mean_std         | 31_341   | 0.0       | 394_567    |
+| composing pnes             | 23_386   | 0.0       | 24_789_885 |
+| ClassicalCalculator.run    | 2_710    | 4_973     | 1          |
+| total preclassical         | 1_320    | 104.3     | 423        |
+
+| operation-duration | counts | mean    | stddev | min       | max     | slowfac |
+|--------------------+--------+---------+--------+-----------+---------+---------|
+| classical          | 461    | 486.9   | 44%    | 50.3      | 1_086   | 2.22982 |
+| postclassical      | 239    | 1.28478 | 45%    | 0.01495   | 2.48119 | 1.93121 |
+| preclassical       | 198    | 6.66908 | 400%   | 2.105E-04 | 235.4   | 35.3    |
