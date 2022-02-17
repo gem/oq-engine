@@ -834,6 +834,10 @@ class PmapMaker(object):
     def _get_ctxs(self, rups, sites, srcid):
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
+            n = sum(len(ctx) for ctx in ctxs)
+            if self.collapse_level == 0:  # no collapse
+                self.cfactor[0] += n
+                self.cfactor[1] += n
             if self.fewsites:  # keep rupdata in memory
                 for ctx in ctxs:
                     self.rupdata.append(ctx)

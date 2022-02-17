@@ -25,7 +25,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, RuptureContext, _collapse, ContextMaker, get_distances,
+    Effect, RuptureContext, ContextMaker, get_distances,
     get_probability_no_exceedance, collapse_array, split_by_mag)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
@@ -173,40 +173,6 @@ class EffectTestCase(unittest.TestCase):
 def compose(ctxs, poe):
     pnes = [get_probability_no_exceedance(ctx, poe, tom) for ctx in ctxs]
     return 1. - numpy.prod(pnes), pnes
-
-
-class CollapseTestCase(unittest.TestCase):
-    def test_param(self):
-        ctxs = [RuptureContext([('occurrence_rate', .001)]),
-                RuptureContext([('occurrence_rate', .002)])]
-        for poe in (.1, .5, .9):
-            c1, pnes1 = compose(ctxs, poe)
-            c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2)  # the same
-
-    def test_nonparam(self):
-        ctxs = [RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.999, .001])]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.998, .002])]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.997, .003])])]
-        for poe in (.1, .5, .9):
-            c1, pnes1 = compose(ctxs, poe)
-            c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2)  # the same
-
-    def test_mixed(self):
-        ctxs = [RuptureContext([('occurrence_rate', .001)]),
-                RuptureContext([('occurrence_rate', .002)]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.999, .001])]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.998, .002])])]
-        for poe in (.1, .5, .9):
-            c1, pnes1 = compose(ctxs, poe)
-            c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2)  # the same
 
     def test_get_pmap(self):
         truncation_level = 3
