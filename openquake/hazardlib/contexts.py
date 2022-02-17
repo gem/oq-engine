@@ -881,7 +881,6 @@ class PmapMaker(object):
         return nbytes
 
     def _get_ctxs(self, rups, sites, srcid):
-        cfactor = numpy.zeros(2)
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
             if self.collapse_level > 1:
@@ -892,9 +891,8 @@ class PmapMaker(object):
             if not self.af and not numpy.isnan(
                     [ctx.occurrence_rate for ctx in ctxs]).any():
                 # vectorize poissonian contexts and split them by magnitude
-                ctxs = [collapse_array(ctx, cfactor)
+                ctxs = [collapse_array(ctx, self.cfactor)
                         for ctx in split_by_mag(self.cmaker.recarray(ctxs))]
-        print('*******', cfactor)
         return ctxs
 
     def _make_src_indep(self):
@@ -968,12 +966,14 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
+        self.cfactor = numpy.zeros(2)
         self.source_data = AccumDict(accum=[])
         if self.src_mutex:
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
         dic = {'pmap': pmap,
+               'cfactor': self.cfactor,
                'rup_data': self.dictarray(self.rupdata),
                'source_data': self.source_data,
                'task_no': self.task_no,
