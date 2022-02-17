@@ -35,10 +35,10 @@ try:
 except ImportError:
     numba = None
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, block_splitter, RecordBuilder)
+    AccumDict, DictArray, groupby, group_array, block_splitter, RecordBuilder)
 from openquake.baselib.performance import Monitor, get_slices
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
@@ -123,6 +123,25 @@ def split_by_mag(ctx: numpy.recarray):
     # assume the ctx recarray is already ordered by mag
     slicedic = get_slices(numpy.uint32(ctx.mag * 100))
     return [ctx[i1:i2] for [(i1, i2)] in slicedic.values()]
+
+
+def collapse_array(array, cfactor):
+    """
+    Collapse a structured array with uniform magnitude
+    """
+    out = []
+    names = array.dtype.names
+    idx = names.index('occurrence_rate')
+    for (sid, dbi), arr in group_array(array, 'sids', 'dbi').items():
+        occrates = arr['occurrence_rate']
+        occrate = occrates.sum()
+        # weighted average using the occrates as weights
+        lst = [(occrates * arr[n]).sum() / occrate for n in names]
+        lst[idx] = occrate
+        out.append(tuple(lst))
+        cfactor[0] += 1
+        cfactor[1] += len(occrates)
+    return numpy.array(out, array.dtype).view(numpy.recarray)
 
 
 def csdict(M, N, P, start, stop):
@@ -218,6 +237,7 @@ class ContextMaker(object):
             if hasattr(gsim, 'set_tables'):
                 gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
+        self.dist_bins = valid.sqrscale(0, self.maximum_distance(10), 100)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
         else:
@@ -265,6 +285,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
+        dic['dbi'] = numpy.uint8(0)  # distance bin index
         dic['sids'] = numpy.uint32(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
@@ -324,7 +345,9 @@ class ContextMaker(object):
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                if par == 'occurrence_rate':  # missing in scenario
+                if par == 'dbi':  # set a few lines below
+                    val = numpy.searchsorted(self.dist_bins, ctx.rrup)
+                elif par == 'occurrence_rate':  # missing in scenario
                     val = getattr(ctx, par, 0.)
                 else:  # never missing
                     val = getattr(ctx, par)
@@ -713,13 +736,13 @@ class ContextMaker(object):
             with self.poe_mon:
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
-                    adj = self.adj[g]  # NSHM14, case_72
+                    adj = self.adj[g][s:s+n]  # NSHM14, case_72
                     ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method for single site
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj[s:s+n])
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
                 pnes = get_probability_no_exceedance(ctx, poes, self.tom)
             yield poes, pnes, ctx
             s += n
@@ -858,6 +881,7 @@ class PmapMaker(object):
         return nbytes
 
     def _get_ctxs(self, rups, sites, srcid):
+        cfactor = numpy.zeros(2)
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
             if self.collapse_level > 1:
@@ -868,7 +892,9 @@ class PmapMaker(object):
             if not self.af and not numpy.isnan(
                     [ctx.occurrence_rate for ctx in ctxs]).any():
                 # vectorize poissonian contexts and split them by magnitude
-                ctxs = split_by_mag(self.cmaker.recarray(ctxs))
+                ctxs = [collapse_array(ctx, cfactor)
+                        for ctx in split_by_mag(self.cmaker.recarray(ctxs))]
+        print('*******', cfactor)
         return ctxs
 
     def _make_src_indep(self):
