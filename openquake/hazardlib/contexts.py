@@ -25,7 +25,6 @@ import time
 import operator
 import warnings
 import itertools
-import functools
 import collections
 import numpy
 import pandas
@@ -496,38 +495,6 @@ class ContextMaker(object):
         ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
-    # this is used with pointsource_distance approximation for close distances,
-    # when there are many ruptures affecting few sites
-    def collapse_the_ctxs(self, ctxs):
-        """
-        Collapse contexts with similar parameters and distances.
-
-        :param ctxs: a list of pairs (rup, dctx)
-        :returns: collapsed contexts
-        """
-        if len(ctxs) == 1:
-            return ctxs
-
-        if self.collapse_level >= 3:  # hack, ignore everything except mag
-            rrp = ['mag']
-            rnd = 0  # round distances to 1 km
-        else:
-            rrp = self.REQUIRES_RUPTURE_PARAMETERS
-            rnd = 1  # round distances to 100 m
-
-        def params(ctx):
-            lst = []
-            for par in rrp:
-                lst.append(getattr(ctx, par))
-            for dst in self.REQUIRES_DISTANCES:
-                lst.extend(numpy.round(getattr(ctx, dst), rnd))
-            return tuple(lst)
-
-        out = []
-        for values in groupby(ctxs, params).values():
-            out.extend(_collapse(values))
-        return sorted(out, key=operator.attrgetter('mag'))
-
     def max_intensity(self, sitecol1, mags, dists):
         """
         :param sitecol1: a SiteCollection instance with a single site
@@ -803,6 +770,7 @@ class ContextMaker(object):
 
 
 # see contexts_tests.py for examples of collapse
+# probs_occur = functools.reduce(combine_pmf, (r.probs_occur for r in rups))
 def combine_pmf(o1, o2):
     """
     Combine probabilities of occurrence; used to collapse nonparametric
@@ -822,32 +790,6 @@ def combine_pmf(o1, o2):
         for j in range(n2):
             o[i + j] += o1[i] * o2[j]
     return o
-
-
-def _collapse(ctxs):
-    # collapse a list of contexts into a single context
-    if len(ctxs) < 2:  # nothing to collapse
-        return ctxs
-    prups, nrups, out = [], [], []
-    for ctx in ctxs:
-        if numpy.isnan(ctx.occurrence_rate):  # nonparametric
-            nrups.append(ctx)
-        else:  # parametric
-            prups.append(ctx)
-    if len(prups) > 1:
-        ctx = copy.copy(prups[0])
-        ctx.occurrence_rate = sum(r.occurrence_rate for r in prups)
-        out.append(ctx)
-    else:
-        out.extend(prups)
-    if len(nrups) > 1:
-        ctx = copy.copy(nrups[0])
-        ctx.probs_occur = functools.reduce(
-            combine_pmf, (n.probs_occur for n in nrups))
-        out.append(ctx)
-    else:
-        out.extend(nrups)
-    return out
 
 
 def print_finite_size(rups):
@@ -892,8 +834,6 @@ class PmapMaker(object):
     def _get_ctxs(self, rups, sites, srcid):
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
-            if self.collapse_level > 1:
-                ctxs = self.cmaker.collapse_the_ctxs(ctxs)
             if self.fewsites:  # keep rupdata in memory
                 for ctx in ctxs:
                     self.rupdata.append(ctx)
@@ -901,6 +841,9 @@ class PmapMaker(object):
                     [ctx.occurrence_rate for ctx in ctxs]).any():
                 # vectorize poissonian contexts and split them by magnitude
                 ctxs = split_by_mag(self.cmaker.recarray(ctxs))
+                if self.collapse_level:
+                    ctxs = [collapse_array(ctx, self.cfactor) for ctx in ctxs]
+
         return ctxs
 
     def _make_src_indep(self):
