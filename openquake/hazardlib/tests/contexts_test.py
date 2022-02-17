@@ -248,7 +248,10 @@ class SetWeightTestCase(unittest.TestCase):
             weights, [3.04, 3.04, 3.04, 1, 1, 1])
 
 
-class GetCtxsTestCase(unittest.TestCase):
+class GetCtxs01TestCase(unittest.TestCase):
+    """
+    Test for calculation of distances with caching
+    """
 
     def setUp(self):
 
@@ -256,6 +259,63 @@ class GetCtxsTestCase(unittest.TestCase):
         path = '../../qa_tests_data/classical/case_75/ruptures_0.xml'
         rup_path = os.path.join(BASE_PATH, path)
         path = '../../qa_tests_data/classical/case_75/ruptures_0_sections.xml'
+        geom_path = os.path.join(BASE_PATH, path)
+
+        # Create source
+        sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
+        ssm = to_python(rup_path, sc)
+        geom = to_python(geom_path, sc)
+        src = ssm[0][0]
+        src.set_sections(geom.sections)
+        self.src = src
+
+        # Create site-collection
+        site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
+                    vs30measured=True)
+        self.sitec = SiteCollection([site])
+
+        # Create the context maker
+        gmm = AbrahamsonEtAl2014()
+        param = dict(imtls={'PGA':[]})
+        cm = ContextMaker('boh', [gmm], param)
+
+        # With this we get a list with six RuptureContexts
+        ctxs = cm.get_ctxs(self.src, self.sitec)
+
+        # Find index of rupture with three sections
+        for i, ctx in enumerate(ctxs):
+            if ctx.mag == 7.0:
+                idx = i
+        self.ctx = ctxs[idx]
+
+    def test_rjb_distance(self):
+        rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
+
+    def test_rrup_distance(self):
+        rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
+
+    def test_rx_distance(self):
+        rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rx, self.ctx.rx, delta=1e-3)
+
+    def test_ry0_distance(self):
+        dst = self.ctx.surface.get_ry0_distance(self.sitec.mesh)
+        self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
+
+
+class GetCtxs02TestCase(unittest.TestCase):
+    """
+    Test for calculation of distances with caching
+    """
+
+    def setUp(self):
+
+        # Set paths
+        path = './data/context02/ruptures_0.xml'
+        rup_path = os.path.join(BASE_PATH, path)
+        path = './data/context02/ruptures_0_sections.xml'
         geom_path = os.path.join(BASE_PATH, path)
 
         # Create source
