@@ -179,11 +179,11 @@ def _get_stress_term(C, mag, norm_stress_drop):
     (2015)
     """
     if norm_stress_drop <= 1:
-        e = C['s0'] + C['s1'] * mag + C['s2'] * (mag**2) + \
-            C['s3'] * (mag**3) + C['s4'] * (mag**4)
+        e = C['s0'] + C['s1'] * mag + C['s2'] * mag**2 + \
+            C['s3'] * mag**3 + C['s4'] * mag**4
     else:
-        e = C['s5'] + C['s6'] * mag + C['s7'] * (mag**2) + \
-            C['s8'] * (mag**3) + C['s9'] * (mag**4)
+        e = C['s5'] + C['s6'] * mag + C['s7'] * mag**2 + \
+            C['s8'] * mag**3 + C['s9'] * mag**4
     return e * np.log10(norm_stress_drop)
 
 
@@ -242,7 +242,7 @@ class AmeriEtAl2017Rjb(GMPE):
 
     kind = "rjb"
 
-    def __init__(self, norm_stress_drop=0., adjustment_factor=1.0, **kwargs):
+    def __init__(self, norm_stress_drop=0.1, adjustment_factor=1.0, **kwargs):
         super().__init__(norm_stress_drop=norm_stress_drop,
                          adjustment_factor=adjustment_factor, **kwargs)
         self.norm_stress_drop = norm_stress_drop
@@ -261,7 +261,7 @@ class AmeriEtAl2017Rjb(GMPE):
             imean = _get_mean(self.kind, self.norm_stress_drop,
                               C, C_STRESS, ctx)
             # Convert mean to ln(SA) with SA in units of g:
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] = np.log(10.0 ** (imean - 2.0) / g)
             mean[m] += self.adjustment_factor
             s, t, p = _get_stddevs(self.kind, C_SIGMA, ctx.mag)
             sig[m] = np.log(10.0 ** s)
@@ -518,7 +518,7 @@ class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
 
     REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
-    def __init__(self, norm_stress_drop, adjustment_factor=1.0):
+    def __init__(self, norm_stress_drop=1.1, adjustment_factor=1.0):
         super().__init__(adjustment_factor=adjustment_factor)
         self.norm_stress_drop = norm_stress_drop
 
