@@ -282,7 +282,7 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.poe_mon = monitor('get_pnes', measuremem=False)
+        self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
 
@@ -713,13 +713,14 @@ class ContextMaker(object):
             with self.poe_mon:
                 poes = numpy.zeros((n, L, G))
                 for g, gsim in enumerate(self.gsims):
-                    adj = self.adj[g]  # NSHM14, case_72
+                    adj = self.adj[g][s:s+n]  # NSHM14, case_72
                     ms = mean_stdt[:2, g, :, s:s+n]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method for single site
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj[s:s+n])
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
+            with self.pne_mon:
                 pnes = get_probability_no_exceedance(ctx, poes, self.tom)
             yield poes, pnes, ctx
             s += n
