@@ -26,7 +26,7 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
     Effect, RuptureContext, _collapse, ContextMaker, get_distances,
-    get_probability_no_exceedance)
+    get_probability_no_exceedance, collapse_array, split_by_mag)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -233,12 +233,41 @@ class CollapseTestCase(unittest.TestCase):
 
 class SetWeightTestCase(unittest.TestCase):
 
-    def test(self):
-        inp = read_input(JOB)
+    def test_set_weight(self):
+        inp = read_input(JOB)  # has pointsource_distance=50
         [[trt, cmaker]] = inp.cmakerdict.items()
         [[area]] = inp.groups  # there is a single AreaSource
         srcs = list(area)  # split in 3+3 PointSources
+        # there is a single site
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
             weights, [3.04, 3.04, 3.04, 1, 1, 1])
+
+    def test_collapse(self):
+        inp = read_input(JOB, pointsource_distance=dict(default=1000))
+        [[trt, cmaker]] = inp.cmakerdict.items()
+        [[area]] = inp.groups  # there is a single AreaSource
+        srcs = list(area)  # split in 6 PointSources
+        # there is a single site
+        cmaker.set_weight(srcs, inp.sitecol)
+        weights = [src.weight for src in srcs]  # 3 within, 3 outside
+        numpy.testing.assert_allclose(
+            weights, [9.16, 9.16, 9.16, 1, 1, 1])
+
+        # get the contexts, sort by magnitude, build recarrays, collapse
+        # and compare the collapsed curve with the original curve
+        ctxs = cmaker.from_srcs(srcs, inp.sitecol)
+        ctxs.sort(key=lambda x: x.mag)
+        ctxs = split_by_mag(cmaker.recarray(ctxs))
+        pcurve0 = cmaker.get_pmap(ctxs)[0]
+        cfactor = numpy.zeros(2)
+        new = []
+        for ctx in ctxs:
+            new.append(collapse_array(ctx, cfactor))
+        print(ctx.dtype.names)
+        for n in new:
+            print(n)
+        pcurve1 = cmaker.get_pmap(new)[0]
+        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
+        numpy.testing.assert_equal(cfactor, [12, 120])

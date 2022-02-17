@@ -35,7 +35,7 @@ try:
 except ImportError:
     numba = None
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, group_array, block_splitter, RecordBuilder)
+    AccumDict, DictArray, groupby, group_array, RecordBuilder)
 from openquake.baselib.performance import Monitor, get_slices
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -54,6 +54,14 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
+
+
+def size(imtls):
+    """
+    :returns: size of the dictionary of arrays imtls
+    """
+    imls = imtls[next(iter(imtls))]
+    return len(imls) * len(imtls)
 
 
 class Timer(object):
@@ -602,7 +610,7 @@ class ContextMaker(object):
         """
         rup_indep = self.rup_indep
         if probmap is None:  # create new pmap
-            pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
+            pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
         for ctx in ctxs:
@@ -891,13 +899,12 @@ class PmapMaker(object):
             if not self.af and not numpy.isnan(
                     [ctx.occurrence_rate for ctx in ctxs]).any():
                 # vectorize poissonian contexts and split them by magnitude
-                ctxs = [collapse_array(ctx, self.cfactor)
-                        for ctx in split_by_mag(self.cmaker.recarray(ctxs))]
+                ctxs = split_by_mag(self.cmaker.recarray(ctxs))
         return ctxs
 
     def _make_src_indep(self):
         # sources with the same ID
-        pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
+        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         # split the sources only if there is more than 1 site
         filt = (self.srcfilter.filter if not self.split_sources or self.N == 1
                 else self.srcfilter.split)
@@ -921,7 +928,7 @@ class PmapMaker(object):
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
-        pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
+        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         cm = self.cmaker
         for src, sites in self.srcfilter.filter(self.group):
             t0 = time.time()
