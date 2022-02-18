@@ -252,6 +252,7 @@ class ContextMaker(object):
                 gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         self.dist_bins = valid.sqrscale(0, self.maximum_distance(10), 100)
+        self.cfactor = numpy.zeros(2)  # used to compute the collapse factor
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
         else:
