@@ -11,7 +11,7 @@ Index: oq-engine/openquake/engine/openquake.cfg
  # daemon bind address; must be a valid IP address
  # example: 0.0.0.0
  listen = 127.0.0.1
-@@ -55,9 +55,10 @@
+@@ -51,9 +51,10 @@
  # of the master node (on the master node cfg too)
  # example: master.hpc
  host = localhost
