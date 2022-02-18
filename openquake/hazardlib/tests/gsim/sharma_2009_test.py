@@ -81,7 +81,7 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         # set reasonable default values
         gmpe = self.GSIM_CLASS()
         ctx.mag = np.array([6.5])
-        ctx.rjb = np.array([100.])
+        ctx.rjb = ctx.rrup = np.array([100.])
         ctx.vs30 = np.array([2000.])
         ctx.sids = [0]
         im_type = sorted(gmpe.COEFFS.sa_coeffs)[0]

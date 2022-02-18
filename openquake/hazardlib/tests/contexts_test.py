@@ -25,8 +25,8 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, RuptureContext, _collapse, ContextMaker, get_distances,
-    get_probability_no_exceedance)
+    Effect, RuptureContext, ContextMaker, get_distances,
+    get_probability_no_exceedance, collapse_array, split_by_mag)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -174,40 +174,6 @@ def compose(ctxs, poe):
     pnes = [get_probability_no_exceedance(ctx, poe, tom) for ctx in ctxs]
     return 1. - numpy.prod(pnes), pnes
 
-
-class CollapseTestCase(unittest.TestCase):
-    def test_param(self):
-        ctxs = [RuptureContext([('occurrence_rate', .001)]),
-                RuptureContext([('occurrence_rate', .002)])]
-        for poe in (.1, .5, .9):
-            c1, pnes1 = compose(ctxs, poe)
-            c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2)  # the same
-
-    def test_nonparam(self):
-        ctxs = [RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.999, .001])]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.998, .002])]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.997, .003])])]
-        for poe in (.1, .5, .9):
-            c1, pnes1 = compose(ctxs, poe)
-            c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2)  # the same
-
-    def test_mixed(self):
-        ctxs = [RuptureContext([('occurrence_rate', .001)]),
-                RuptureContext([('occurrence_rate', .002)]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.999, .001])]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.998, .002])])]
-        for poe in (.1, .5, .9):
-            c1, pnes1 = compose(ctxs, poe)
-            c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2)  # the same
-
     def test_get_pmap(self):
         truncation_level = 3
         imtls = DictArray({'PGA': [0.01]})
@@ -233,12 +199,44 @@ class CollapseTestCase(unittest.TestCase):
 
 class SetWeightTestCase(unittest.TestCase):
 
-    def test(self):
-        inp = read_input(JOB)
+    def test_set_weight(self):
+        inp = read_input(JOB)  # has pointsource_distance=50
         [[trt, cmaker]] = inp.cmakerdict.items()
         [[area]] = inp.groups  # there is a single AreaSource
         srcs = list(area)  # split in 3+3 PointSources
+        # there is a single site
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
             weights, [3.04, 3.04, 3.04, 1, 1, 1])
+
+    def test_collapse(self):
+        inp = read_input(JOB, pointsource_distance=dict(default=1000))
+        [[trt, cmaker]] = inp.cmakerdict.items()
+        [[area]] = inp.groups  # there is a single AreaSource with 5 hypodepths
+        srcs = list(area)  # split in 6 PointSources with 40 rups each
+        # there is a single site
+        cmaker.set_weight(srcs, inp.sitecol)
+        weights = [src.weight for src in srcs]  # 3 within, 3 outside
+        numpy.testing.assert_allclose(
+            weights, [9.16, 9.16, 9.16, 1, 1, 1])
+
+        # get the contexts, sort by magnitude, build recarrays, collapse
+        # and compare the collapsed curve with the original curve
+        ctxs = cmaker.from_srcs(srcs, inp.sitecol)
+        numpy.testing.assert_equal(len(ctxs), 120)  # 3x40 ruptures
+        ctxs.sort(key=lambda x: x.mag)
+        ctxs = split_by_mag(cmaker.recarray(ctxs))
+        numpy.testing.assert_equal(len(ctxs), 10)  # 10 magnitudes
+        pcurve0 = cmaker.get_pmap(ctxs)[0]
+        cfactor = numpy.zeros(2)
+        new = []
+        for ctx in ctxs:
+            new.append(collapse_array(ctx, cfactor))
+        print(ctx.dtype.names)
+        for n in new:
+            # magnitude 5.3 and 5.9 are partially collapsed, the others totally
+            print(n)
+        pcurve1 = cmaker.get_pmap(new)[0]
+        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
+        numpy.testing.assert_equal(cfactor, [12, 120])

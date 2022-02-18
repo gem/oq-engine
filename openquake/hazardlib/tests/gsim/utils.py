@@ -158,6 +158,10 @@ def gen_ctxs(df):
     ctxs = []
     rrp = [col for col in df.columns if col.startswith('rup_')]
     pars = [col for col in df.columns if col.startswith(('dist_', 'site_'))]
+    if 'dist_rrup' not in pars:
+        dist_type = [p for p in pars if p.startswith('dist_')][0][5:]
+    else:
+        dist_type = 'rrup'
     outs = df.result_type.unique()
     num_outs = len(outs)
     for rup_params, grp in df.groupby(rrp):
@@ -183,6 +187,8 @@ def gen_ctxs(df):
             value = grp[grp.result_type == outs[0]][par].to_numpy()
             setattr(ctx, par[5:], value)  # dist_, site_ parameters
         ctx.sids = np.arange(len(gr))
+        if dist_type != 'rrup':
+            ctx.rrup = getattr(ctx, dist_type)
         assert len(gr) == len(grp) / num_outs, (len(gr), len(gr) / num_outs)
         ctxs.append(ctx)
     return ctxs

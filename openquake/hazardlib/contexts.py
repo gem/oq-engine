@@ -25,7 +25,6 @@ import time
 import operator
 import warnings
 import itertools
-import functools
 import collections
 import numpy
 import pandas
@@ -35,10 +34,10 @@ try:
 except ImportError:
     numba = None
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, block_splitter, RecordBuilder)
+    AccumDict, DictArray, groupby, group_array, RecordBuilder)
 from openquake.baselib.performance import Monitor, get_slices
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.site import site_param_dt
@@ -54,6 +53,14 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
+
+
+def size(imtls):
+    """
+    :returns: size of the dictionary of arrays imtls
+    """
+    imls = imtls[next(iter(imtls))]
+    return len(imls) * len(imtls)
 
 
 class Timer(object):
@@ -123,6 +130,25 @@ def split_by_mag(ctx: numpy.recarray):
     # assume the ctx recarray is already ordered by mag
     slicedic = get_slices(numpy.uint32(ctx.mag * 100))
     return [ctx[i1:i2] for [(i1, i2)] in slicedic.values()]
+
+
+def collapse_array(array, cfactor):
+    """
+    Collapse a structured array with uniform magnitude
+    """
+    out = []
+    names = array.dtype.names
+    idx = names.index('occurrence_rate')
+    for (sid, dbi), arr in group_array(array, 'sids', 'dbi').items():
+        occrates = arr['occurrence_rate']
+        occrate = occrates.sum()
+        # weighted average using the occrates as weights
+        lst = [(occrates * arr[n]).sum() / occrate for n in names]
+        lst[idx] = occrate
+        out.append(tuple(lst))
+        cfactor[0] += 1
+        cfactor[1] += len(occrates)
+    return numpy.array(out, array.dtype).view(numpy.recarray)
 
 
 def csdict(M, N, P, start, stop):
@@ -218,6 +244,7 @@ class ContextMaker(object):
             if hasattr(gsim, 'set_tables'):
                 gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
+        self.dist_bins = valid.sqrscale(0, self.maximum_distance(10), 100)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
         else:
@@ -265,6 +292,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
+        dic['dbi'] = numpy.uint8(0)  # distance bin index
         dic['sids'] = numpy.uint32(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
@@ -324,7 +352,9 @@ class ContextMaker(object):
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                if par == 'occurrence_rate':  # missing in scenario
+                if par == 'dbi':  # set a few lines below
+                    val = numpy.searchsorted(self.dist_bins, ctx.rrup)
+                elif par == 'occurrence_rate':  # missing in scenario
                     val = getattr(ctx, par, 0.)
                 else:  # never missing
                     val = getattr(ctx, par)
@@ -465,38 +495,6 @@ class ContextMaker(object):
         ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
-    # this is used with pointsource_distance approximation for close distances,
-    # when there are many ruptures affecting few sites
-    def collapse_the_ctxs(self, ctxs):
-        """
-        Collapse contexts with similar parameters and distances.
-
-        :param ctxs: a list of pairs (rup, dctx)
-        :returns: collapsed contexts
-        """
-        if len(ctxs) == 1:
-            return ctxs
-
-        if self.collapse_level >= 3:  # hack, ignore everything except mag
-            rrp = ['mag']
-            rnd = 0  # round distances to 1 km
-        else:
-            rrp = self.REQUIRES_RUPTURE_PARAMETERS
-            rnd = 1  # round distances to 100 m
-
-        def params(ctx):
-            lst = []
-            for par in rrp:
-                lst.append(getattr(ctx, par))
-            for dst in self.REQUIRES_DISTANCES:
-                lst.extend(numpy.round(getattr(ctx, dst), rnd))
-            return tuple(lst)
-
-        out = []
-        for values in groupby(ctxs, params).values():
-            out.extend(_collapse(values))
-        return sorted(out, key=operator.attrgetter('mag'))
-
     def max_intensity(self, sitecol1, mags, dists):
         """
         :param sitecol1: a SiteCollection instance with a single site
@@ -579,7 +577,7 @@ class ContextMaker(object):
         """
         rup_indep = self.rup_indep
         if probmap is None:  # create new pmap
-            pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
+            pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
         for ctx in ctxs:
@@ -772,6 +770,7 @@ class ContextMaker(object):
 
 
 # see contexts_tests.py for examples of collapse
+# probs_occur = functools.reduce(combine_pmf, (r.probs_occur for r in rups))
 def combine_pmf(o1, o2):
     """
     Combine probabilities of occurrence; used to collapse nonparametric
@@ -791,32 +790,6 @@ def combine_pmf(o1, o2):
         for j in range(n2):
             o[i + j] += o1[i] * o2[j]
     return o
-
-
-def _collapse(ctxs):
-    # collapse a list of contexts into a single context
-    if len(ctxs) < 2:  # nothing to collapse
-        return ctxs
-    prups, nrups, out = [], [], []
-    for ctx in ctxs:
-        if numpy.isnan(ctx.occurrence_rate):  # nonparametric
-            nrups.append(ctx)
-        else:  # parametric
-            prups.append(ctx)
-    if len(prups) > 1:
-        ctx = copy.copy(prups[0])
-        ctx.occurrence_rate = sum(r.occurrence_rate for r in prups)
-        out.append(ctx)
-    else:
-        out.extend(prups)
-    if len(nrups) > 1:
-        ctx = copy.copy(nrups[0])
-        ctx.probs_occur = functools.reduce(
-            combine_pmf, (n.probs_occur for n in nrups))
-        out.append(ctx)
-    else:
-        out.extend(nrups)
-    return out
 
 
 def print_finite_size(rups):
@@ -861,8 +834,10 @@ class PmapMaker(object):
     def _get_ctxs(self, rups, sites, srcid):
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
-            if self.collapse_level > 1:
-                ctxs = self.cmaker.collapse_the_ctxs(ctxs)
+            n = sum(len(ctx) for ctx in ctxs)
+            if self.collapse_level == 0:  # no collapse
+                self.cfactor[0] += n
+                self.cfactor[1] += n
             if self.fewsites:  # keep rupdata in memory
                 for ctx in ctxs:
                     self.rupdata.append(ctx)
@@ -870,11 +845,14 @@ class PmapMaker(object):
                     [ctx.occurrence_rate for ctx in ctxs]).any():
                 # vectorize poissonian contexts and split them by magnitude
                 ctxs = split_by_mag(self.cmaker.recarray(ctxs))
+                if self.collapse_level:
+                    ctxs = [collapse_array(ctx, self.cfactor) for ctx in ctxs]
+
         return ctxs
 
     def _make_src_indep(self):
         # sources with the same ID
-        pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
+        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         # split the sources only if there is more than 1 site
         filt = (self.srcfilter.filter if not self.split_sources or self.N == 1
                 else self.srcfilter.split)
@@ -898,7 +876,7 @@ class PmapMaker(object):
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
-        pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
+        pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         cm = self.cmaker
         for src, sites in self.srcfilter.filter(self.group):
             t0 = time.time()
@@ -943,12 +921,14 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
+        self.cfactor = numpy.zeros(2)
         self.source_data = AccumDict(accum=[])
         if self.src_mutex:
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
         dic = {'pmap': pmap,
+               'cfactor': self.cfactor,
                'rup_data': self.dictarray(self.rupdata),
                'source_data': self.source_data,
                'task_no': self.task_no,

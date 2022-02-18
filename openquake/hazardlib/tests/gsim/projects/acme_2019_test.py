@@ -22,7 +22,7 @@ class AlAtikSigmaModelTest(unittest.TestCase):
                                kappa_val='high')
         sites = Dummy.get_site_collection(4, vs30=760.)
         rup = Dummy.get_rupture(mag=6.0)
-        rup.rjb = np.array([1., 10., 30., 70.])
+        rup.rjb = rup.rrup = np.array([1., 10., 30., 70.])
         rup.vs30 = sites.vs30
         imt = SA(0.1)
         stdt = [const.StdDev.TOTAL]
@@ -39,7 +39,7 @@ class AlAtikSigmaModelTest(unittest.TestCase):
                                kappa_val='high')
         sites = Dummy.get_site_collection(4, vs30=760.)
         rup = Dummy.get_rupture(mag=6.0)
-        rup.rjb = np.array([1., 10., 30., 70.])
+        rup.rjb = rup.rrup = np.array([1., 10., 30., 70.])
         rup.rrup = np.array([1., 10., 30., 70.])
         rup.vs30 = sites.vs30
         imt = SA(0.1)

@@ -48,7 +48,7 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         ctx.rake = 0
         ctx.occurrence_rate = .0001
         ctx.rhypo = numpy.array([0.0, 10.0, 16.0])
-        ctx.rhypo.flags.writeable = False
+        ctx.rrup = numpy.array([0.0, 10.0, 17.0])
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
             ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
         mean_15, stds_15 = self.GSIM_CLASS().get_mean_and_stddevs(
