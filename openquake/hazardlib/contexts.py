@@ -35,7 +35,7 @@ except ImportError:
     numba = None
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, group_array, RecordBuilder)
-from openquake.baselib.performance import Monitor, get_slices
+from openquake.baselib.performance import Monitor, get_slices, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -139,7 +139,8 @@ def collapse_array(array, cfactor):
     out = []
     names = array.dtype.names
     idx = names.index('occurrence_rate')
-    for (sid, dbi), arr in group_array(array, 'sids', 'dbi').items():
+    array.sort(order=['sids', 'dbi'])
+    for arr in split_array(array, array['sids'] * 256 + array['dbi']):
         occrates = arr['occurrence_rate']
         occrate = occrates.sum()
         # weighted average using the occrates as weights
