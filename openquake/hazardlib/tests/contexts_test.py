@@ -20,7 +20,7 @@ import os
 import unittest
 import numpy
 from openquake.baselib.general import DictArray
-from openquake.hazardlib import read_input
+from openquake.hazardlib import read_input, calc
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
@@ -197,7 +197,7 @@ def compose(ctxs, poe):
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
 
 
-class SetWeightTestCase(unittest.TestCase):
+class CollapseTestCase(unittest.TestCase):
 
     def test_set_weight(self):
         inp = read_input(JOB)  # has pointsource_distance=50
@@ -210,7 +210,7 @@ class SetWeightTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             weights, [3.04, 3.04, 3.04, 1, 1, 1])
 
-    def test_collapse(self):
+    def test_collapse_small(self):
         inp = read_input(JOB, pointsource_distance=dict(default=1000))
         [[trt, cmaker]] = inp.cmakerdict.items()
         [[area]] = inp.groups  # there is a single AreaSource with 5 hypodepths
@@ -240,3 +240,39 @@ class SetWeightTestCase(unittest.TestCase):
         pcurve1 = cmaker.get_pmap(new)[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
         numpy.testing.assert_equal(cfactor, [12, 120])
+
+    def test_collapse_big(self):
+        smpath = os.path.join(os.path.dirname(__file__),
+                              'data/context/source_model.xml')
+        params = dict(
+            sites=[(0, 1), (0, 2)],
+            maximum_distance=calc.filters.IntegrationDistance.new('300'),
+            imtls=dict(PGA=numpy.arange(.1, 5, .1)),
+            investigation_time=50.,
+            gsim='BooreAtkinson2008',
+            reference_vs30_value=600.,
+            source_model_file=smpath,
+            area_source_discretization=1.,
+            pointsource_distance=dict(default=1000))
+        inp = read_input(params)
+        [[trt, cmaker]] = inp.cmakerdict.items()
+        [srcs] = inp.groups  # a single area source
+        # get the contexts, sort by magnitude, build recarrays, collapse
+        # and compare the collapsed curve with the original curve
+        ctxs = cmaker.from_srcs(srcs, inp.sitecol)
+        numpy.testing.assert_equal(len(ctxs), 5808)
+        ctxs.sort(key=lambda x: x.mag)
+        ctxs = split_by_mag(cmaker.recarray(ctxs))
+        numpy.testing.assert_equal(len(ctxs), 2)  # 2 magnitudes
+        pcurve0 = cmaker.get_pmap(ctxs)[0]
+        cfactor = numpy.zeros(2)
+        new = []
+        for ctx in ctxs:
+            new.append(collapse_array(ctx, cfactor))
+        print(ctx.dtype.names)
+        for collapsed in new:
+            # mag, rake, vs30, rjb, dbi, sids, occurrence_rate
+            print(collapsed)
+        pcurve1 = cmaker.get_pmap(new)[0]
+        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
+        numpy.testing.assert_equal(cfactor, [24, 11616])
