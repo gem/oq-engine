@@ -252,6 +252,7 @@ class ContextMaker(object):
                 gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         self.dist_bins = valid.sqrscale(0, self.maximum_distance(10), 100)
+        self.cfactor = numpy.zeros(2)  # used to compute the collapse factor
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
         else:
@@ -348,7 +349,7 @@ class ContextMaker(object):
     def recarray(self, ctxs):
         """
         :params ctxs: a list of contexts
-        :returns: a recarray
+        :returns: a recarray, possibly collapsed
         """
         C = sum(len(ctx) for ctx in ctxs)
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
@@ -368,7 +369,12 @@ class ContextMaker(object):
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
-        return ra
+        if self.collapse_level:
+            out = numpy.concatenate([collapse_array(a, self.cfactor)
+                                     for a in split_by_mag(ra)])
+            return out.view(numpy.recarray)
+        else:
+            return ra
 
     def get_ctx_params(self):
         """
@@ -628,7 +634,10 @@ class ContextMaker(object):
             # contexts already vectorized
             recarrays = ctxs
         else:  # vectorize the contexts
-            recarrays = split_by_mag(self.recarray(ctxs))
+            recarrays = [self.recarray(ctxs)]
+        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
+            assert len(recarrays) == 1, len(recarrays)
+            recarrays = split_by_mag(recarrays[0])
         self.adj = [[] for g in range(G)]  # NSHM2014 adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
@@ -851,9 +860,7 @@ class PmapMaker(object):
             if not self.af and not numpy.isnan(
                     [ctx.occurrence_rate for ctx in ctxs]).any():
                 # vectorize poissonian contexts and split them by magnitude
-                ctxs = split_by_mag(self.cmaker.recarray(ctxs))
-                if self.collapse_level:
-                    ctxs = [collapse_array(ctx, self.cfactor) for ctx in ctxs]
+                ctxs = [self.cmaker.recarray(ctxs)]
 
         return ctxs
 
@@ -871,7 +878,8 @@ class PmapMaker(object):
             ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            cm.get_pmap(ctxs, pmap)
+            if nsites:
+                cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
@@ -891,7 +899,8 @@ class PmapMaker(object):
             ctxs = self._get_ctxs(cm._ruptures(src), sites, src.id)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            cm.get_pmap(ctxs, pm)
+            if nsites:
+                cm.get_pmap(ctxs, pm)
             p = pm
             if cm.rup_indep:
                 p = ~p
@@ -928,7 +937,7 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
-        self.cfactor = numpy.zeros(2)
+        self.cfactor = self.cmaker.cfactor = numpy.zeros(2)
         self.source_data = AccumDict(accum=[])
         if self.src_mutex:
             pmap = self._make_src_mutex()

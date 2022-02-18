@@ -112,7 +112,7 @@ class CollapseTestCase(unittest.TestCase):
         mean, srcs, effctxs, weights = self.full_enum()
         assert weights == [.2, .2, .6]
         assert scaling_rates(srcs) == [1, 1, 1]
-        self.assertEqual(effctxs, 7)
+        self.assertEqual(effctxs, 3)
 
         # compute the partially collapsed curve
         self.bs1.collapsed = True
@@ -120,7 +120,7 @@ class CollapseTestCase(unittest.TestCase):
         assert weights == [.4, .6]  # two rlzs
         # self.plot(mean, coll1)
         assert scaling_rates(srcs) == [1.0, 0.5, 0.5, 1.0]
-        self.assertEqual(effctxs, 9)
+        self.assertEqual(effctxs, 4)
         numpy.testing.assert_allclose(mean, coll1, atol=.1)
 
         # compute the fully collapsed curve
@@ -130,7 +130,7 @@ class CollapseTestCase(unittest.TestCase):
         assert weights == [1]  # one rlz
         # self.plot(mean, coll2)
         assert scaling_rates(srcs) == [0.4, 0.6, 0.5, 0.5]
-        self.assertEqual(effctxs, 9)
+        self.assertEqual(effctxs, 4)
         numpy.testing.assert_allclose(mean, coll2, atol=.21)  # big diff
 
     def plot(self, mean, coll):
