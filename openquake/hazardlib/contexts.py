@@ -344,13 +344,13 @@ class ContextMaker(object):
         :returns: a recarray
         """
         C = sum(len(ctx) for ctx in ctxs)
-        zeros = self.ctx_builder.zeros(C)
-        df = pandas.DataFrame({n: zeros[n] for n in zeros.dtype.names})
+        arr = self.ctx_builder.zeros(C)
         start = 0
         for ctx in ctxs:
-            ctx = ctx.roundup(self.minimum_distance)
-            for gsim in self.gsims:
-                gsim.set_parameters(ctx)
+            if hasattr(ctx, 'roundup'):
+                ctx = ctx.roundup(self.minimum_distance)
+                for gsim in self.gsims:
+                    gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
                 if par == 'dbi':  # set a few lines below
@@ -359,10 +359,10 @@ class ContextMaker(object):
                     val = getattr(ctx, par, 0.)
                 else:  # never missing
                     val = getattr(ctx, par)
-                df[par][slc] = val
-            df['sids'][slc] = ctx.sids
+                arr[par][slc] = val
+            arr['sids'][slc] = ctx.sids
             start = slc.stop
-        return df
+        return pandas.DataFrame({n: arr[n] for n in arr.dtype.names})
 
     def get_ctx_params(self):
         """
@@ -1171,7 +1171,7 @@ def get_probability_no_exceedance(ctx, poes, tom):
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
-    if isinstance(ctx.occurrence_rate, numpy.ndarray):
+    if isinstance(ctx.occurrence_rate, (pandas.Series, numpy.ndarray)):
         pnes = numpy.zeros_like(poes)
         for i, rate in enumerate(ctx.occurrence_rate):
             pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
