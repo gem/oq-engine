@@ -154,7 +154,7 @@ def collapse_array(array, cfactor):
             for name in names:
                 o[name] = (occrates * arr[name]).sum() / occrate
             o['occurrence_rate'] = occrate
-    return numpy.array(out, array.dtype).view(numpy.recarray)
+    return out.view(numpy.recarray)
 
 
 def csdict(M, N, P, start, stop):
