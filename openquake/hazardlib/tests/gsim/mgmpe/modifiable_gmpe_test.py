@@ -324,8 +324,7 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
             4, amplfactor=[-1.0, 1.5, 0.00, -1.99])
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
-        ctx.rhypo = np.array([1., 10., 30., 70.])
-        ctx.repi = np.array([1., 10., 30., 70.])
+        ctx.rhypo = ctx.rrup = ctx.repi = np.array([1., 10., 30., 70.])
         self.imt = MMI()
 
     def test_get_mean_std(self):

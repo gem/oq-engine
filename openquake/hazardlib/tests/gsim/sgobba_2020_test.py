@@ -23,7 +23,6 @@ import pandas as pd
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo import Point
-# from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.sgobba_2020 import SgobbaEtAl2020
 
@@ -43,7 +42,7 @@ def get_ctx(subset_df):
     sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
     rup = Dummy.get_rupture(
         mag=row.rup_mag, hypo_lat=row.lat_epi, hypo_lon=row.lon_epi)
-    rup.rjb = np.array(rjb)
+    rup.rjb = rup.rrup = np.array(rjb)
     return contexts.full_context(sites, rup)
 
 
