@@ -136,17 +136,18 @@ def collapse_array(array, cfactor):
     """
     Collapse a structured array with uniform magnitude
     """
-    out = []
     names = array.dtype.names
-    idx = names.index('occurrence_rate')
     array.sort(order=['sids', 'dbi'])
-    for arr in split_array(array, array['sids'] * 256 + array['dbi']):
+    arrays = split_array(array, array['sids'] * 256 + array['dbi'])
+    out = numpy.zeros(len(arrays), array.dtype)
+    for a, arr in enumerate(arrays):
+        o = out[a]
         occrates = arr['occurrence_rate']
         occrate = occrates.sum()
         # weighted average using the occrates as weights
-        lst = [(occrates * arr[n]).sum() / occrate for n in names]
-        lst[idx] = occrate
-        out.append(tuple(lst))
+        for n in names:
+            o[n] = (occrates * arr[n]).sum() / occrate
+        o['occurrence_rate'] = occrate
         cfactor[0] += 1
         cfactor[1] += len(occrates)
     return numpy.array(out, array.dtype).view(numpy.recarray)
