@@ -345,10 +345,10 @@ class ContextMaker(object):
         # ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
-    def recarrays(self, ctxs):
+    def recarray(self, ctxs):
         """
         :params ctxs: a list of contexts
-        :returns: a list of recarrays
+        :returns: a recarray, possibly collapsed
         """
         C = sum(len(ctx) for ctx in ctxs)
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
@@ -368,11 +368,12 @@ class ContextMaker(object):
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
-        if self.collapse_level or any(
-                hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
-            return split_by_mag(ra)
+        if self.collapse_level:
+            out = numpy.concatenate([collapse_array(a, self.cfactor)
+                                     for a in split_by_mag(ra)])
+            return out.view(numpy.recarray)
         else:
-            return [ra]
+            return ra
 
     def get_ctx_params(self):
         """
@@ -632,7 +633,10 @@ class ContextMaker(object):
             # contexts already vectorized
             recarrays = ctxs
         else:  # vectorize the contexts
-            recarrays = self.recarrays(ctxs)
+            recarrays = [self.recarray(ctxs)]
+        if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
+            assert len(recarrays) == 1, len(recarrays)
+            recarrays = split_by_mag(recarrays[0])
         self.adj = [[] for g in range(G)]  # NSHM2014 adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
@@ -855,9 +859,7 @@ class PmapMaker(object):
             if not self.af and not numpy.isnan(
                     [ctx.occurrence_rate for ctx in ctxs]).any():
                 # vectorize poissonian contexts and split them by magnitude
-                ctxs = self.cmaker.recarrays(ctxs)
-                if self.collapse_level:
-                    ctxs = [collapse_array(ctx, self.cfactor) for ctx in ctxs]
+                ctxs = [self.cmaker.recarray(ctxs)]
 
         return ctxs
 
@@ -932,7 +934,7 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
-        self.cfactor = numpy.zeros(2)
+        self.cfactor = self.cmaker.cfactor = numpy.zeros(2)
         self.source_data = AccumDict(accum=[])
         if self.src_mutex:
             pmap = self._make_src_mutex()
