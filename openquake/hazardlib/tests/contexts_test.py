@@ -17,8 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import time
 import unittest
 import numpy
+
 from openquake.baselib.general import DictArray
 from openquake.hazardlib import read_input, calc
 from openquake.hazardlib.pmf import PMF
@@ -242,6 +244,7 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_equal(cfactor, [12, 120])
 
     def test_collapse_big(self):
+        from openquake.calculators.views import text_table
         smpath = os.path.join(os.path.dirname(__file__),
                               'data/context/source_model.xml')
         params = dict(
@@ -267,12 +270,14 @@ class CollapseTestCase(unittest.TestCase):
         pcurve0 = cmaker.get_pmap(ctxs)[0]
         cfactor = numpy.zeros(2)
         new = []
+        t0 = time.time()
         for ctx in ctxs:
             new.append(collapse_array(ctx, cfactor))
-        print(ctx.dtype.names)
+        dt = time.time() - t0
+        print('Collapse time = %.5f' % dt)
         for collapsed in new:
             # mag, rake, vs30, rjb, dbi, sids, occurrence_rate
-            print(collapsed)
+            print(text_table(collapsed, ext='org'))
         pcurve1 = cmaker.get_pmap(new)[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
         numpy.testing.assert_equal(cfactor, [24, 11616])
