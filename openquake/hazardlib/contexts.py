@@ -141,15 +141,19 @@ def collapse_array(array, cfactor):
     arrays = split_array(array, array['sids'] * 256 + array['dbi'])
     out = numpy.zeros(len(arrays), array.dtype)
     for a, arr in enumerate(arrays):
-        o = out[a]
-        occrates = arr['occurrence_rate']
-        occrate = occrates.sum()
-        # weighted average using the occrates as weights
-        for n in names:
-            o[n] = (occrates * arr[n]).sum() / occrate
-        o['occurrence_rate'] = occrate
+        n = len(arr)
         cfactor[0] += 1
-        cfactor[1] += len(occrates)
+        cfactor[1] += n
+        if n == 1:
+            out[a] = arr
+        else:
+            o = out[a]
+            occrates = arr['occurrence_rate']
+            occrate = occrates.sum()
+            # weighted average using the occrates as weights
+            for name in names:
+                o[name] = (occrates * arr[name]).sum() / occrate
+            o['occurrence_rate'] = occrate
     return numpy.array(out, array.dtype).view(numpy.recarray)
 
 
