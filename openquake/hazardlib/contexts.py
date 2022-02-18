@@ -136,6 +136,7 @@ def collapse_array(array, cfactor):
     """
     Collapse a structured array with uniform magnitude
     """
+    # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
     names = array.dtype.names
     array.sort(order=['sids', 'dbi'])
     arrays = split_array(array, array['sids'] * 256 + array['dbi'])
