@@ -26,7 +26,7 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
     Effect, RuptureContext, ContextMaker, get_distances,
-    get_probability_no_exceedance, collapse_array, split_by_mag)
+    get_probability_no_exceedance, collapse_dframe, split_by_mag)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -232,7 +232,7 @@ class SetWeightTestCase(unittest.TestCase):
         cfactor = numpy.zeros(2)
         new = []
         for ctx in ctxs:
-            new.append(collapse_array(ctx, cfactor))
+            new.append(collapse_dframe(ctx, cfactor))
         print(ctx.dtype.names)
         for n in new:
             # magnitude 5.3 and 5.9 are partially collapsed, the others totally

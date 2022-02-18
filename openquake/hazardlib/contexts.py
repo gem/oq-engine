@@ -132,15 +132,14 @@ def split_by_mag(ctx: numpy.recarray):
     return [ctx[i1:i2] for [(i1, i2)] in slicedic.values()]
 
 
-def collapse_array(array, cfactor):
+def collapse_dframe(dframe, dtype, cfactor):
     """
-    Collapse a structured array with uniform magnitude
+    Collapse a dataframe with uniform magnitude
     """
     out = []
-    names = array.dtype.names
-    idx = names.index('occurrence_rate')
-    df = pandas.DataFrame({n: array[n] for n in names})
-    for (sid, dbi), arr in df.groupby(['sids', 'dbi']):
+    names = dframe.columns
+    idx = numpy.where(names == 'occurrence_rate')[0][0]
+    for (sid, dbi), arr in dframe.groupby(['sids', 'dbi']):
         occrates = arr['occurrence_rate']
         occrate = occrates.sum()
         # weighted average using the occrates as weights
@@ -149,7 +148,7 @@ def collapse_array(array, cfactor):
         out.append(tuple(lst))
         cfactor[0] += 1
         cfactor[1] += len(occrates)
-    return numpy.array(out, array.dtype).view(numpy.recarray)
+    return numpy.array(out, dtype).view(numpy.recarray)
 
 
 def csdict(M, N, P, start, stop):
@@ -345,7 +344,8 @@ class ContextMaker(object):
         :returns: a recarray
         """
         C = sum(len(ctx) for ctx in ctxs)
-        ra = self.ctx_builder.zeros(C).view(numpy.recarray)
+        zeros = self.ctx_builder.zeros(C)
+        df = pandas.DataFrame({n: zeros[n] for n in zeros.dtype.names})
         start = 0
         for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
@@ -359,10 +359,10 @@ class ContextMaker(object):
                     val = getattr(ctx, par, 0.)
                 else:  # never missing
                     val = getattr(ctx, par)
-                getattr(ra, par)[slc] = val
-            ra.sids[slc] = ctx.sids
+                df[par][slc] = val
+            df['sids'][slc] = ctx.sids
             start = slc.stop
-        return ra
+        return df
 
     def get_ctx_params(self):
         """
@@ -847,7 +847,9 @@ class PmapMaker(object):
                 # vectorize poissonian contexts and split them by magnitude
                 ctxs = split_by_mag(self.cmaker.recarray(ctxs))
                 if self.collapse_level:
-                    ctxs = [collapse_array(ctx, self.cfactor) for ctx in ctxs]
+                    ctxs = [collapse_dframe(
+                        ctx, self.ctx_builder.dtype, self.cfactor)
+                            for ctx in ctxs]
 
         return ctxs
 
