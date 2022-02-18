@@ -345,10 +345,10 @@ class ContextMaker(object):
         # ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
-    def recarray(self, ctxs):
+    def recarrays(self, ctxs):
         """
         :params ctxs: a list of contexts
-        :returns: a recarray
+        :returns: a list of recarrays
         """
         C = sum(len(ctx) for ctx in ctxs)
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
@@ -368,7 +368,11 @@ class ContextMaker(object):
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
-        return ra
+        if self.collapse_level or any(
+                hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
+            return split_by_mag(ra)
+        else:
+            return [ra]
 
     def get_ctx_params(self):
         """
@@ -628,7 +632,7 @@ class ContextMaker(object):
             # contexts already vectorized
             recarrays = ctxs
         else:  # vectorize the contexts
-            recarrays = split_by_mag(self.recarray(ctxs))
+            recarrays = self.recarrays(ctxs)
         self.adj = [[] for g in range(G)]  # NSHM2014 adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
@@ -851,7 +855,7 @@ class PmapMaker(object):
             if not self.af and not numpy.isnan(
                     [ctx.occurrence_rate for ctx in ctxs]).any():
                 # vectorize poissonian contexts and split them by magnitude
-                ctxs = split_by_mag(self.cmaker.recarray(ctxs))
+                ctxs = self.cmaker.recarrays(ctxs)
                 if self.collapse_level:
                     ctxs = [collapse_array(ctx, self.cfactor) for ctx in ctxs]
 
