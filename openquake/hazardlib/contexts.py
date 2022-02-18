@@ -877,7 +877,8 @@ class PmapMaker(object):
             ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            cm.get_pmap(ctxs, pmap)
+            if nsites:
+                cm.get_pmap(ctxs, pmap)
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
@@ -897,7 +898,8 @@ class PmapMaker(object):
             ctxs = self._get_ctxs(cm._ruptures(src), sites, src.id)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            cm.get_pmap(ctxs, pm)
+            if nsites:
+                cm.get_pmap(ctxs, pm)
             p = pm
             if cm.rup_indep:
                 p = ~p
