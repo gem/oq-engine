@@ -35,7 +35,7 @@ except ImportError:
     numba = None
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, group_array, RecordBuilder)
-from openquake.baselib.performance import Monitor, get_slices
+from openquake.baselib.performance import Monitor, get_slices, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -136,19 +136,26 @@ def collapse_array(array, cfactor):
     """
     Collapse a structured array with uniform magnitude
     """
-    out = []
+    # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
     names = array.dtype.names
-    idx = names.index('occurrence_rate')
-    for (sid, dbi), arr in group_array(array, 'sids', 'dbi').items():
-        occrates = arr['occurrence_rate']
-        occrate = occrates.sum()
-        # weighted average using the occrates as weights
-        lst = [(occrates * arr[n]).sum() / occrate for n in names]
-        lst[idx] = occrate
-        out.append(tuple(lst))
+    array.sort(order=['sids', 'dbi'])
+    arrays = split_array(array, array['sids'] * 256 + array['dbi'])
+    out = numpy.zeros(len(arrays), array.dtype)
+    for a, arr in enumerate(arrays):
+        n = len(arr)
         cfactor[0] += 1
-        cfactor[1] += len(occrates)
-    return numpy.array(out, array.dtype).view(numpy.recarray)
+        cfactor[1] += n
+        if n == 1:
+            out[a] = arr
+        else:
+            o = out[a]
+            occrates = arr['occurrence_rate']
+            occrate = occrates.sum()
+            # weighted average using the occrates as weights
+            for name in names:
+                o[name] = (occrates * arr[name]).sum() / occrate
+            o['occurrence_rate'] = occrate
+    return out.view(numpy.recarray)
 
 
 def csdict(M, N, P, start, stop):

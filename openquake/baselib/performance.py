@@ -363,7 +363,7 @@ else:
         return lambda func: func
 
 
-@compile("int64[:, :](uint32[:])")
+@compile(["int64[:, :](uint32[:])", "int64[:, :](int64[:])"])
 def _idx_start_stop(integers):
     # given an array of integers returns an array of shape (n, 3)
     out = []
@@ -376,6 +376,22 @@ def _idx_start_stop(integers):
         prev = val
     out.append((I64(prev), start, i + 1))
     return numpy.array(out)
+
+
+def split_array(arr, ordered_indices):
+    """
+    :param indices: a set of ordered integers with repetitions
+    :returns: a list of arrays, split on the integers
+
+    >>> arr = numpy.array([.1, .2, .3, .4, .5])
+    >>> idx = numpy.array([1, 1, 2, 2, 3])
+    >>> split_array(arr, idx)
+    [array([0.1, 0.2]), array([0.3, 0.4]), array([0.5])]
+    """
+    out = []
+    for idx, start, stop in _idx_start_stop(ordered_indices):
+        out.append(arr[start:stop])
+    return out
 
 
 # this is absurdly fast if you have numba
