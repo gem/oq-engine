@@ -33,9 +33,8 @@ try:
     import numba
 except ImportError:
     numba = None
-from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, group_array, RecordBuilder)
-from openquake.baselib.performance import Monitor, get_slices, split_array
+from openquake.baselib.general import AccumDict, DictArray, RecordBuilder
+from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -48,6 +47,7 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
+U32 = numpy.uint32
 F64 = numpy.float64
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
@@ -115,21 +115,6 @@ def get_num_distances(gsims):
     for gsim in gsims:
         dists.update(gsim.REQUIRES_DISTANCES)
     return len(dists)
-
-
-def split_by_mag(ctx: numpy.recarray):
-    """
-    >>> arr = numpy.zeros(5, [('mag', float), ('dst', float)])
-    >>> arr['mag'] = [4.4, 4.4, 4.5, 4.5, 4.5]
-    >>> arr['dst'] = [100., 101., 102., 103., 104.]
-    >>> for a in split_by_mag(arr.view(numpy.recarray)):
-    ...     print(a)
-    [(4.4, 100.) (4.4, 101.)]
-    [(4.5, 102.) (4.5, 103.) (4.5, 104.)]
-    """
-    # assume the ctx recarray is already ordered by mag
-    slicedic = get_slices(numpy.uint32(ctx.mag * 100))
-    return [ctx[i1:i2] for [(i1, i2)] in slicedic.values()]
 
 
 def collapse_array(array, cfactor):
@@ -301,7 +286,7 @@ class ContextMaker(object):
             else:
                 dic[req] = 0.
         dic['dbi'] = numpy.uint8(0)  # distance bin index
-        dic['sids'] = numpy.uint32(0)
+        dic['sids'] = U32(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -369,12 +354,7 @@ class ContextMaker(object):
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
-        if self.collapse_level:
-            out = numpy.concatenate([collapse_array(a, self.cfactor)
-                                     for a in split_by_mag(ra)])
-            return out.view(numpy.recarray)
-        else:
-            return ra
+        return ra
 
     def get_ctx_params(self):
         """
@@ -404,6 +384,7 @@ class ContextMaker(object):
                 rctxs.append(self.make_rctx(rup))
                 cnt += 1
             allctxs.extend(self.get_ctxs(rctxs, sitecol, src.id))
+        allctxs.sort(key=operator.attrgetter('mag'))
         return allctxs
 
     def filter(self, sites, rup):
@@ -594,12 +575,7 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         for ctx in ctxs:
-            # split large context arrays to avoid running out of memory
-            if isinstance(ctx, numpy.ndarray) and len(ctx) > 20_000:
-                block = numpy.array_split(ctx, 10)
-            else:
-                block = [ctx]
-            for poes, pnes, ctx in self.gen_poes(block):
+            for poes, pnes, ctx in self.gen_poes(ctx):
                 # pnes and poes of shape (N, L, G)
                 with self.pne_mon:
                     for sid, pne in zip(ctx.sids, pnes):
@@ -637,7 +613,7 @@ class ContextMaker(object):
             recarrays = [self.recarray(ctxs)]
         if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
             assert len(recarrays) == 1, len(recarrays)
-            recarrays = split_by_mag(recarrays[0])
+            recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
         self.adj = [[] for g in range(G)]  # NSHM2014 adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
@@ -712,13 +688,31 @@ class ContextMaker(object):
                         c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
 
-    def gen_poes(self, ctxs):
+    def gen_poes(self, ctx):
         """
-        :param ctxs: a list of C context objects
+        :param ctx: a context object, possibly vectorized
         :yields: poes, pnes, ctx with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
+
+        # collapse if possible
+        if isinstance(ctx, numpy.ndarray) and self.collapse_level:
+            ctx = numpy.concatenate([
+                collapse_array(a, self.cfactor)
+                for a in split_array(ctx, U32(ctx.mag*100))]
+            ).view(numpy.recarray)
+        else:  # no collapse
+            self.cfactor[0] += len(ctx)
+            self.cfactor[1] += len(ctx)
+
+        # split large context arrays to avoid running out of memory
+        if isinstance(ctx, numpy.ndarray) and len(ctx) > 20_000:
+            ctxs = numpy.array_split(ctx, 10)
+        else:
+            ctxs = [ctx]
+
+        # compute mean_stdt
         with self.gmf_mon:
             mean_stdt = self.get_mean_stds(ctxs)
         s = 0
@@ -850,16 +844,12 @@ class PmapMaker(object):
     def _get_ctxs(self, rups, sites, srcid):
         with self.cmaker.ctx_mon:
             ctxs = self.cmaker.get_ctxs(rups, sites, srcid)
-            n = sum(len(ctx) for ctx in ctxs)
-            if self.collapse_level == 0:  # no collapse
-                self.cfactor[0] += n
-                self.cfactor[1] += n
             if self.fewsites:  # keep rupdata in memory
                 for ctx in ctxs:
                     self.rupdata.append(ctx)
             if not self.af and not numpy.isnan(
                     [ctx.occurrence_rate for ctx in ctxs]).any():
-                # vectorize poissonian contexts and split them by magnitude
+                # vectorize poissonian contexts
                 ctxs = [self.cmaker.recarray(ctxs)]
 
         return ctxs
