@@ -695,7 +695,7 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
-        maxsize = 1E6 / L / G
+        maxsize = 1E9 / L / G
 
         # collapse if possible
         if isinstance(ctx, numpy.ndarray) and self.collapse_level:
