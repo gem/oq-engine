@@ -712,17 +712,14 @@ class ContextMaker(object):
         else:
             ctxs = [ctx]
 
-        # compute mean_stdt
-        with self.gmf_mon:
-            mean_stdt = self.get_mean_stds(ctxs)
-        s = 0
         for ctx in ctxs:
-            n = len(ctx)
+            with self.gmf_mon:
+                mean_stdt = self.get_mean_stds([ctx])
             with self.poe_mon:
-                poes = numpy.zeros((n, L, G))
+                poes = numpy.zeros((len(ctx), L, G))
                 for g, gsim in enumerate(self.gsims):
-                    adj = self.adj[g][s:s+n]  # NSHM14, case_72
-                    ms = mean_stdt[:2, g, :, s:s+n]
+                    adj = self.adj[g]  # NSHM14, case_72
+                    ms = mean_stdt[:2, g]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method for single site
                         poes[:, :, g] = get_poes_site(ms, self, ctx)
@@ -731,7 +728,6 @@ class ContextMaker(object):
             with self.pne_mon:
                 pnes = get_probability_no_exceedance(ctx, poes, self.tom)
             yield poes, pnes, ctx
-            s += n
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
