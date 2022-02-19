@@ -28,7 +28,7 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
     Effect, RuptureContext, ContextMaker, get_distances,
-    get_probability_no_exceedance, collapse_array, split_by_mag)
+    get_probability_no_exceedance)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -217,31 +217,26 @@ class CollapseTestCase(unittest.TestCase):
         [[trt, cmaker]] = inp.cmakerdict.items()
         [[area]] = inp.groups  # there is a single AreaSource with 5 hypodepths
         srcs = list(area)  # split in 6 PointSources with 40 rups each
-        # there is a single site
+
+        # check the weights
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
             weights, [9.16, 9.16, 9.16, 1, 1, 1])
 
-        # get the contexts, sort by magnitude, build recarrays, collapse
-        # and compare the collapsed curve with the original curve
-        ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        numpy.testing.assert_equal(len(ctxs), 120)  # 3x40 ruptures
-        ctxs.sort(key=lambda x: x.mag)
-        ctxs = split_by_mag(cmaker.recarray(ctxs))
-        numpy.testing.assert_equal(len(ctxs), 10)  # 10 magnitudes
-        pcurve0 = cmaker.get_pmap(ctxs)[0]
-        cfactor = numpy.zeros(2)
-        new = []
-        for ctx in ctxs:
-            new.append(collapse_array(ctx, cfactor))
-        print(ctx.dtype.names)
-        for n in new:
-            # magnitude 5.3 and 5.9 are partially collapsed, the others totally
-            print(n)
-        pcurve1 = cmaker.get_pmap(new)[0]
+        ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
+        numpy.testing.assert_equal(len(ctx), 120)  # 3x40 ruptures
+
+        # compute original curve
+        pcurve0 = cmaker.get_pmap([ctx])[0]
+        numpy.testing.assert_equal(cmaker.cfactor, [120, 120])
+
+        # compute collapsed curve
+        cmaker.cfactor = numpy.zeros(2)
+        cmaker.collapse_level = 1
+        pcurve1 = cmaker.get_pmap([ctx])[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
-        numpy.testing.assert_equal(cfactor, [12, 120])
+        numpy.testing.assert_equal(cmaker.cfactor, [12, 120])
 
     def test_collapse_big(self):
         from openquake.calculators.views import text_table
@@ -260,24 +255,12 @@ class CollapseTestCase(unittest.TestCase):
         inp = read_input(params)
         [[trt, cmaker]] = inp.cmakerdict.items()
         [srcs] = inp.groups  # a single area source
-        # get the contexts, sort by magnitude, build recarrays, collapse
-        # and compare the collapsed curve with the original curve
-        ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        numpy.testing.assert_equal(len(ctxs), 5808)
-        ctxs.sort(key=lambda x: x.mag)
-        ctxs = split_by_mag(cmaker.recarray(ctxs))
-        numpy.testing.assert_equal(len(ctxs), 2)  # 2 magnitudes
-        pcurve0 = cmaker.get_pmap(ctxs)[0]
-        cfactor = numpy.zeros(2)
-        new = []
-        t0 = time.time()
-        for ctx in ctxs:
-            new.append(collapse_array(ctx, cfactor))
-        dt = time.time() - t0
-        print('Collapse time = %.5f' % dt)
-        for collapsed in new:
-            # mag, rake, vs30, rjb, dbi, sids, occurrence_rate
-            print(text_table(collapsed, ext='org'))
-        pcurve1 = cmaker.get_pmap(new)[0]
+        # get the context
+        ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
+        numpy.testing.assert_equal(len(ctx), 11616)
+        pcurve0 = cmaker.get_pmap([ctx])[0]
+        cmaker.cfactor = numpy.zeros(2)
+        cmaker.collapse_level = 1
+        pcurve1 = cmaker.get_pmap([ctx])[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
-        numpy.testing.assert_equal(cfactor, [24, 11616])
+        numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])
