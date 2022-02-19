@@ -239,7 +239,6 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_equal(cmaker.cfactor, [12, 120])
 
     def test_collapse_big(self):
-        from openquake.calculators.views import text_table
         smpath = os.path.join(os.path.dirname(__file__),
                               'data/context/source_model.xml')
         params = dict(

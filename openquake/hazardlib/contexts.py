@@ -695,6 +695,7 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
+        maxsize = 1E6 / L / G
 
         # collapse if possible
         if isinstance(ctx, numpy.ndarray) and self.collapse_level:
@@ -706,9 +707,9 @@ class ContextMaker(object):
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
 
-        # split large context arrays to avoid running out of memory
-        if isinstance(ctx, numpy.ndarray) and len(ctx) > 20_000:
-            ctxs = numpy.array_split(ctx, 10)
+        # split large context arrays to avoid filling the CPU cache
+        if isinstance(ctx, numpy.ndarray) and ctx.nbytes > maxsize:
+            ctxs = numpy.array_split(ctx, numpy.ceil(ctx.nbytes / maxsize))
         else:
             ctxs = [ctx]
 
@@ -1171,6 +1172,9 @@ def get_probability_no_exceedance(ctx, poes, tom):
         is parametric
     """
     if isinstance(ctx.occurrence_rate, numpy.ndarray):
+        if len(numpy.unique(ctx.occurrence_rate)) == 1:
+            return tom.get_probability_no_exceedance(
+                ctx.occurrence_rate[0], poes)
         pnes = numpy.zeros_like(poes)
         for i, rate in enumerate(ctx.occurrence_rate):
             pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
