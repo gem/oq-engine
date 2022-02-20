@@ -575,15 +575,13 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         for ctx in ctxs:
-            for poes, pnes, ctx in self.gen_poes(ctx):
-                # pnes and poes of shape (N, L, G)
-                with self.pne_mon:
-                    for sid, pne in zip(ctx.sids, pnes):
-                        probs = pmap.setdefault(sid, self.rup_indep).array
-                        if rup_indep:
-                            probs *= pne
-                        else:  # rup_mutex
-                            probs += (1. - pne) * ctx.weight
+            for poe, pne, sid, ctx in self.gen_poes(ctx):
+                # pnes and poes of shape (L, G)
+                probs = pmap.setdefault(sid, self.rup_indep).array
+                if rup_indep:
+                    probs *= pne
+                else:  # rup_mutex
+                    probs += (1. - pne) * ctx.weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -694,8 +692,8 @@ class ContextMaker(object):
         :yields: poes, pnes, ctx with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
-        L, G = self.loglevels.size, len(self.gsims)
-        maxsize = 1E9 / L / G
+        M, L, G = len(self.imtls), self.loglevels.size, len(self.gsims)
+        maxsize = 1E9 / M / G
 
         # collapse if possible
         if isinstance(ctx, numpy.ndarray) and self.collapse_level:
@@ -727,8 +725,10 @@ class ContextMaker(object):
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
             with self.pne_mon:
-                pnes = get_probability_no_exceedance(ctx, poes, self.tom)
-            yield poes, pnes, ctx
+                for poe, rate, sid in zip(poes, ctx.occurrence_rate, ctx.sids):
+                    # this is slow
+                    pne = get_probability_no_exceedance(rate, poe, self.tom)
+                    yield poe, pne, sid, ctx
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
@@ -1171,15 +1171,14 @@ def get_probability_no_exceedance(ctx, poes, tom):
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
-    if isinstance(ctx.occurrence_rate, numpy.ndarray):
-        if len(numpy.unique(ctx.occurrence_rate)) == 1:
-            return tom.get_probability_no_exceedance(
-                ctx.occurrence_rate[0], poes)
+    if isinstance(ctx, numpy.float64):  # occurrence rate
+        return tom.get_probability_no_exceedance(ctx, poes)
+    elif isinstance(ctx.occurrence_rate, numpy.ndarray):
         pnes = numpy.zeros_like(poes)
         for i, rate in enumerate(ctx.occurrence_rate):
             pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
         return pnes
-    if numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
+    elif numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
         # Uses the formula
         #
         #    ∑ p(k|T) * p(X<x|rup)^k
