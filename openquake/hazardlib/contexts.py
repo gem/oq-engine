@@ -694,7 +694,7 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         M, L, G = len(self.imtls), self.loglevels.size, len(self.gsims)
-        maxsize = 1E9 / M / G
+        maxsize = 1E8 / M / G  # heuristic
         isarray = isinstance(ctx, numpy.ndarray)
 
         # collapse if possible
