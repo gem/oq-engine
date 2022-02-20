@@ -33,7 +33,8 @@ try:
     import numba
 except ImportError:
     numba = None
-from openquake.baselib.general import AccumDict, DictArray, RecordBuilder
+from openquake.baselib.general import (
+    AccumDict, DictArray, RecordBuilder, gen_slices)
 from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -123,9 +124,10 @@ def collapse_array(array, cfactor):
     """
     # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
     names = array.dtype.names
-    array.sort(order=['sids', 'dbi'])
-    arrays = split_array(array, array['sids'] * 256 + array['dbi'])
+    array.sort(order='dbi')
+    arrays = split_array(array, array['dbi'])
     out = numpy.zeros(len(arrays), array.dtype)
+    allsids = []
     for a, arr in enumerate(arrays):
         n = len(arr)
         cfactor[0] += 1
@@ -139,8 +141,9 @@ def collapse_array(array, cfactor):
             # weighted average using the occrates as weights
             for name in names:
                 o[name] = (occrates * arr[name]).sum() / occrate
-            o['occurrence_rate'] = occrate
-    return out.view(numpy.recarray)
+            # o['occurrence_rate'] = occrate
+        allsids.append(arr['sids'])
+    return out.view(numpy.recarray), allsids
 
 
 def csdict(M, N, P, start, stop):
@@ -576,13 +579,14 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         for ctx in ctxs:
-            for poe, pne, sid, ctx in self.gen_poes(ctx):
+            for poe, pne, sids, ctx in self.gen_poes(ctx):
                 # pnes and poes of shape (L, G)
-                probs = pmap.setdefault(sid, self.rup_indep).array
-                if rup_indep:
-                    probs *= pne
-                else:  # rup_mutex
-                    probs += (1. - pne) * ctx.weight
+                for sid in sids:
+                    probs = pmap.setdefault(sid, self.rup_indep).array
+                    if rup_indep:
+                        probs *= pne
+                    else:  # rup_mutex
+                        probs += (1. - pne) * ctx.weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -700,39 +704,47 @@ class ContextMaker(object):
         # collapse if possible
         if isarray and self.collapse_level:
             with self.col_mon:
-                ctx = numpy.concatenate([
-                    collapse_array(a, self.cfactor)
-                    for a in split_array(ctx, U32(ctx.mag*100))]
-                ).view(numpy.recarray)
+                arrays, allsids = [], []
+                for a in split_array(ctx, U32(ctx.mag*100)):
+                    array, sids_ = collapse_array(a, self.cfactor)
+                    arrays.append(array)
+                    allsids.extend(sids_)
+                ctx = numpy.concatenate(arrays).view(numpy.recarray)
         else:  # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
+            allsids = [[sid] for sid in ctx.sids]
 
         # split large context arrays to avoid filling the CPU cache
         if isarray and ctx.nbytes > maxsize:
-            ctxs = numpy.array_split(ctx, numpy.ceil(ctx.nbytes / maxsize))
+            slices = gen_slices(0, len(ctx), maxsize)
         else:
-            ctxs = [ctx]
+            slices = [slice(None)]
 
-        for ctx in ctxs:
+        for slc in slices:
+            slcsids = allsids[slc]
+            try:
+                ctxt = ctx[slc]
+            except TypeError:  # not sliceable
+                ctxt = ctx
             with self.gmf_mon:
-                mean_stdt = self.get_mean_stds([ctx])
+                mean_stdt = self.get_mean_stds([ctxt])
             with self.poe_mon:
-                poes = numpy.zeros((len(ctx), L, G))
+                poes = numpy.zeros((len(ctxt), L, G))
                 for g, gsim in enumerate(self.gsims):
                     adj = self.adj[g]  # NSHM14, case_72
                     ms = mean_stdt[:2, g]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method for single site
-                        poes[:, :, g] = get_poes_site(ms, self, ctx)
+                        poes[:, :, g] = get_poes_site(ms, self, ctxt)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctxt, adj)
             with self.pne_mon:
                 for i, poe in enumerate(poes):  # slow
                     pne = get_probability_no_exceedance(
-                        ctx.occurrence_rate[i] if isarray else ctx,
+                        ctxt.occurrence_rate[i] if isarray else ctxt,
                         poe, self.tom)
-                    yield poe, pne, ctx.sids[i], ctx
+                    yield poe, pne, slcsids[i], ctxt
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)

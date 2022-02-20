@@ -363,7 +363,9 @@ else:
         return lambda func: func
 
 
-@compile(["int64[:, :](uint32[:])", "int64[:, :](int64[:])"])
+@compile(["int64[:, :](uint8[:])",
+          "int64[:, :](uint32[:])",
+          "int64[:, :](int64[:])"])
 def _idx_start_stop(integers):
     # given an array of integers returns an array of shape (n, 3)
     out = []

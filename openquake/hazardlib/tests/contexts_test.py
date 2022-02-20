@@ -235,7 +235,7 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.cfactor = numpy.zeros(2)
         cmaker.collapse_level = 1
         pcurve1 = cmaker.get_pmap([ctx])[0]
-        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
+        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-3)
         numpy.testing.assert_equal(cmaker.cfactor, [12, 120])
 
     def test_collapse_big(self):
