@@ -124,8 +124,8 @@ def collapse_array(array, cfactor):
     """
     # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
     names = array.dtype.names
-    array.sort(order='dbi')
-    arrays = split_array(array, array['dbi'])
+    array.sort(order=['vs30', 'dbi'])
+    arrays = split_array(array, U32(U32(array['vs30']) * 256 + array['dbi']))
     out = numpy.zeros(len(arrays), array.dtype)
     allsids = []
     for a, arr in enumerate(arrays):
@@ -136,12 +136,8 @@ def collapse_array(array, cfactor):
             out[a] = arr
         else:
             o = out[a]
-            occrates = arr['occurrence_rate']
-            occrate = occrates.sum()
-            # weighted average using the occrates as weights
             for name in names:
-                o[name] = (occrates * arr[name]).sum() / occrate
-            # o['occurrence_rate'] = occrate
+                o[name] = arr[name].mean()
         allsids.append(arr['sids'])
     return out.view(numpy.recarray), allsids
 
