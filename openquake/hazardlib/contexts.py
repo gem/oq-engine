@@ -302,6 +302,7 @@ class ContextMaker(object):
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=True)
+        self.col_mon = monitor('collapsing', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
@@ -694,19 +695,21 @@ class ContextMaker(object):
         from openquake.hazardlib.site_amplification import get_poes_site
         M, L, G = len(self.imtls), self.loglevels.size, len(self.gsims)
         maxsize = 1E9 / M / G
+        isarray = isinstance(ctx, numpy.ndarray)
 
         # collapse if possible
-        if isinstance(ctx, numpy.ndarray) and self.collapse_level:
-            ctx = numpy.concatenate([
-                collapse_array(a, self.cfactor)
-                for a in split_array(ctx, U32(ctx.mag*100))]
-            ).view(numpy.recarray)
+        if isarray and self.collapse_level:
+            with self.col_mon:
+                ctx = numpy.concatenate([
+                    collapse_array(a, self.cfactor)
+                    for a in split_array(ctx, U32(ctx.mag*100))]
+                ).view(numpy.recarray)
         else:  # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
 
         # split large context arrays to avoid filling the CPU cache
-        if isinstance(ctx, numpy.ndarray) and ctx.nbytes > maxsize:
+        if isarray and ctx.nbytes > maxsize:
             ctxs = numpy.array_split(ctx, numpy.ceil(ctx.nbytes / maxsize))
         else:
             ctxs = [ctx]
@@ -725,10 +728,11 @@ class ContextMaker(object):
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
             with self.pne_mon:
-                for poe, rate, sid in zip(poes, ctx.occurrence_rate, ctx.sids):
-                    # this is slow
-                    pne = get_probability_no_exceedance(rate, poe, self.tom)
-                    yield poe, pne, sid, ctx
+                for i, poe in enumerate(poes):  # slow
+                    pne = get_probability_no_exceedance(
+                        ctx.occurrence_rate[i] if isarray else ctx,
+                        poe, self.tom)
+                    yield poe, pne, ctx.sids[i], ctx
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
