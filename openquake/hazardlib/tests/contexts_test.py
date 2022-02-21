@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import time
 import unittest
 import numpy
 
@@ -50,6 +49,10 @@ intensities = {
     '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
 tom = PoissonTOM(50.)
 JOB = os.path.join(os.path.dirname(__file__), 'data/context/job.ini')
+
+
+def rms(delta):
+    return numpy.sqrt((delta**2).sum())
 
 
 class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
@@ -213,7 +216,7 @@ class CollapseTestCase(unittest.TestCase):
             weights, [3.04, 3.04, 3.04, 1, 1, 1])
 
     def test_collapse_small(self):
-        inp = read_input(JOB, pointsource_distance=dict(default=1000))
+        inp = read_input(JOB, pointsource_distance=dict(default=10))
         [[trt, cmaker]] = inp.cmakerdict.items()
         [[area]] = inp.groups  # there is a single AreaSource with 5 hypodepths
         srcs = list(area)  # split in 6 PointSources with 40 rups each
@@ -222,21 +225,24 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
-            weights, [9.16, 9.16, 9.16, 1, 1, 1])
+            weights, [3.04, 3.04, 3.04, 1, 1, 1])
 
+        # set different vs30s on the two sites
+        inp.sitecol.array['vs30'] = [600., 700.]
         ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
-        numpy.testing.assert_equal(len(ctx), 120)  # 3x40 ruptures
+        numpy.testing.assert_equal(len(ctx), 240)  # 3x40 ruptures x 2 sites
 
-        # compute original curve
-        pcurve0 = cmaker.get_pmap([ctx])[0]
-        numpy.testing.assert_equal(cmaker.cfactor, [120, 120])
+        # compute original curves
+        pmap = cmaker.get_pmap([ctx])
+        numpy.testing.assert_equal(cmaker.cfactor, [240, 240])
 
-        # compute collapsed curve
+        # compute collapsed curves
         cmaker.cfactor = numpy.zeros(2)
         cmaker.collapse_level = 1
-        pcurve1 = cmaker.get_pmap([ctx])[0]
-        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
-        numpy.testing.assert_equal(cmaker.cfactor, [12, 120])
+        cmap = cmaker.get_pmap([ctx])
+        self.assertLess(rms(pmap[0].array - cmap[0].array), 1E-6)
+        self.assertLess(rms(pmap[1].array - cmap[1].array), 1E-7)
+        numpy.testing.assert_equal(cmaker.cfactor, [30, 240])
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
@@ -250,7 +256,7 @@ class CollapseTestCase(unittest.TestCase):
             reference_vs30_value=600.,
             source_model_file=smpath,
             area_source_discretization=1.,
-            pointsource_distance=dict(default=1000))
+            pointsource_distance=dict(default=10))
         inp = read_input(params)
         [[trt, cmaker]] = inp.cmakerdict.items()
         [srcs] = inp.groups  # a single area source

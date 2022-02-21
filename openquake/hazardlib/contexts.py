@@ -33,7 +33,8 @@ try:
     import numba
 except ImportError:
     numba = None
-from openquake.baselib.general import AccumDict, DictArray, RecordBuilder
+from openquake.baselib.general import (
+    AccumDict, DictArray, RecordBuilder, gen_slices)
 from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -123,10 +124,31 @@ def collapse_array(array, cfactor):
     """
     # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
     names = array.dtype.names
-    array.sort(order=['sids', 'dbi'])
-    arrays = split_array(array, array['sids'] * 256 + array['dbi'])
-    out = numpy.zeros(len(arrays), array.dtype)
-    for a, arr in enumerate(arrays):
+    if 'rake' not in names or len(numpy.unique(array['rake'])) == 1:
+        # collapse all
+        far = array
+        close = numpy.zeros(0, array.dtype)
+    else:
+        # collapse far away ruptures
+        tocollapse = array['rrup'] >= array['mag'] * 10
+        far = array[tocollapse]
+        close = array[~tocollapse]
+    C = len(close)
+    if len(far):
+        if 'vs30' in names:
+            far.sort(order=['vs30', 'dbi'])
+            arrays = split_array(far, U32(U32(far['vs30']) * 256 + far['dbi']))
+        else:  # for ToroEtAl2002
+            far.sort(order='dbi')
+            arrays = split_array(far, far['dbi'])
+    else:
+        arrays = []
+    cfactor[0] += len(close)
+    cfactor[1] += len(close)
+    out = numpy.zeros(len(close) + len(arrays), array.dtype)
+    out[:C] = close
+    allsids = [U32([sid]) for sid in close['sids']]
+    for a, arr in enumerate(arrays, C):
         n = len(arr)
         cfactor[0] += 1
         cfactor[1] += n
@@ -134,13 +156,10 @@ def collapse_array(array, cfactor):
             out[a] = arr
         else:
             o = out[a]
-            occrates = arr['occurrence_rate']
-            occrate = occrates.sum()
-            # weighted average using the occrates as weights
             for name in names:
-                o[name] = (occrates * arr[name]).sum() / occrate
-            o['occurrence_rate'] = occrate
-    return out.view(numpy.recarray)
+                o[name] = arr[name].mean()
+        allsids.append(arr['sids'])
+    return out.view(numpy.recarray), allsids
 
 
 def csdict(M, N, P, start, stop):
@@ -287,6 +306,7 @@ class ContextMaker(object):
                 dic[req] = 0.
         dic['dbi'] = numpy.uint8(0)  # distance bin index
         dic['sids'] = U32(0)
+        dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -302,6 +322,7 @@ class ContextMaker(object):
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=True)
+        self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
@@ -575,15 +596,14 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         for ctx in ctxs:
-            for poes, pnes, ctx in self.gen_poes(ctx):
-                # pnes and poes of shape (N, L, G)
-                with self.pne_mon:
-                    for sid, pne in zip(ctx.sids, pnes):
-                        probs = pmap.setdefault(sid, self.rup_indep).array
-                        if rup_indep:
-                            probs *= pne
-                        else:  # rup_mutex
-                            probs += (1. - pne) * ctx.weight
+            for poe, pne, sids, ctx in self.gen_poes(ctx):
+                # pnes and poes of shape (L, G)
+                for sid in sids:
+                    probs = pmap.setdefault(sid, self.rup_indep).array
+                    if rup_indep:
+                        probs *= pne
+                    else:  # rup_mutex
+                        probs += (1. - pne) * ctx.weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -694,41 +714,54 @@ class ContextMaker(object):
         :yields: poes, pnes, ctx with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
-        L, G = self.loglevels.size, len(self.gsims)
-        maxsize = 1E9 / L / G
+        M, L, G = len(self.imtls), self.loglevels.size, len(self.gsims)
+        maxsize = 5E8 / M / G  # heuristic
+        isarray = isinstance(ctx, numpy.ndarray)
 
         # collapse if possible
-        if isinstance(ctx, numpy.ndarray) and self.collapse_level:
-            ctx = numpy.concatenate([
-                collapse_array(a, self.cfactor)
-                for a in split_array(ctx, U32(ctx.mag*100))]
-            ).view(numpy.recarray)
+        if isarray and self.collapse_level:
+            with self.col_mon:
+                arrays, allsids = [], []
+                for a in split_array(ctx, U32(ctx.mag*100)):
+                    array, sids_ = collapse_array(a, self.cfactor)
+                    arrays.append(array)
+                    allsids.extend(sids_)
+                ctx = numpy.concatenate(arrays).view(numpy.recarray)
         else:  # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
+            allsids = [[sid] for sid in ctx.sids]
 
         # split large context arrays to avoid filling the CPU cache
-        if isinstance(ctx, numpy.ndarray) and ctx.nbytes > maxsize:
-            ctxs = numpy.array_split(ctx, numpy.ceil(ctx.nbytes / maxsize))
+        if isarray and ctx.nbytes > maxsize:
+            slices = gen_slices(0, len(ctx), maxsize)
         else:
-            ctxs = [ctx]
+            slices = [slice(None)]
 
-        for ctx in ctxs:
+        for slc in slices:
+            slcsids = allsids[slc]
+            try:
+                ctxt = ctx[slc]
+            except TypeError:  # not sliceable
+                ctxt = ctx
             with self.gmf_mon:
-                mean_stdt = self.get_mean_stds([ctx])
+                mean_stdt = self.get_mean_stds([ctxt])
             with self.poe_mon:
-                poes = numpy.zeros((len(ctx), L, G))
+                poes = numpy.zeros((len(ctxt), L, G))
                 for g, gsim in enumerate(self.gsims):
                     adj = self.adj[g]  # NSHM14, case_72
                     ms = mean_stdt[:2, g]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method for single site
-                        poes[:, :, g] = get_poes_site(ms, self, ctx)
+                        poes[:, :, g] = get_poes_site(ms, self, ctxt)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctx, adj)
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctxt, adj)
             with self.pne_mon:
-                pnes = get_probability_no_exceedance(ctx, poes, self.tom)
-            yield poes, pnes, ctx
+                for i, poe in enumerate(poes):  # slow
+                    pne = get_probability_no_exceedance(
+                        ctxt.occurrence_rate[i] if isarray else ctxt,
+                        poe, self.tom)
+                    yield poe, pne, slcsids[i], ctxt
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
@@ -1171,15 +1204,14 @@ def get_probability_no_exceedance(ctx, poes, tom):
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
-    if isinstance(ctx.occurrence_rate, numpy.ndarray):
-        if len(numpy.unique(ctx.occurrence_rate)) == 1:
-            return tom.get_probability_no_exceedance(
-                ctx.occurrence_rate[0], poes)
+    if isinstance(ctx, numpy.float64):  # occurrence rate
+        return tom.get_probability_no_exceedance(ctx, poes)
+    elif isinstance(ctx.occurrence_rate, numpy.ndarray):
         pnes = numpy.zeros_like(poes)
         for i, rate in enumerate(ctx.occurrence_rate):
             pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
         return pnes
-    if numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
+    elif numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
         # Uses the formula
         #
         #    ∑ p(k|T) * p(X<x|rup)^k
