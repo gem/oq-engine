@@ -748,7 +748,7 @@ class ContextMaker(object):
                 mean_stdt = self.get_mean_stds([ctxt])
             with self.poe_mon:
                 poes = numpy.zeros((len(ctxt), L, G))
-                print(poes.shape / 1024**2)
+                print(poes.nbytes / 1024**2)
                 for g, gsim in enumerate(self.gsims):
                     adj = self.adj[g]  # NSHM14, case_72
                     ms = mean_stdt[:2, g]
