@@ -129,6 +129,7 @@ def collapse_array(array, cfactor):
     tocollapse = array['rrup'] >= array['mag'] * 10
     far = array[tocollapse]
     close = array[~tocollapse]
+    C = len(close)
     if len(far):
         arrays = split_array(far, U32(U32(far['vs30']) * 256 + far['dbi']))
     else:
@@ -136,9 +137,9 @@ def collapse_array(array, cfactor):
     cfactor[0] += len(close)
     cfactor[1] += len(close)
     out = numpy.zeros(len(close) + len(arrays), array.dtype)
-    out[:len(close)] = close
+    out[:C] = close
     allsids = [U32([sid]) for sid in close['sids']]
-    for a, arr in enumerate(arrays):
+    for a, arr in enumerate(arrays, C):
         n = len(arr)
         cfactor[0] += 1
         cfactor[1] += n
