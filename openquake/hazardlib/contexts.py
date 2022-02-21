@@ -730,7 +730,7 @@ class ContextMaker(object):
         else:  # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
-            allsids = [[sid] for sid in ctx.sids]
+            allsids = ctx.sids.reshape(-1, 1)
 
         # split large context arrays to avoid filling the CPU cache
         if isarray and ctx.nbytes > maxsize:
