@@ -118,16 +118,24 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def collapse_array(array, cfactor):
+def collapse_array(array, cfactor, psdist):
     """
     Collapse a structured array with uniform magnitude
     """
     # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
     names = array.dtype.names
     array.sort(order=['vs30', 'dbi'])
-    arrays = split_array(array, U32(U32(array['vs30']) * 256 + array['dbi']))
-    out = numpy.zeros(len(arrays), array.dtype)
-    allsids = []
+    close = array[array['rrup'] < psdist]
+    far = array[array['rrup'] >= psdist]
+    if len(far):
+        arrays = split_array(far, U32(U32(far['vs30']) * 256 + far['dbi']))
+    else:
+        arrays = []
+    cfactor[0] += len(close)
+    cfactor[1] += len(close)
+    out = numpy.zeros(len(close) + len(arrays), array.dtype)
+    out[:len(close)] = close
+    allsids = [U32([sid]) for sid in close['sids']]
     for a, arr in enumerate(arrays):
         n = len(arr)
         cfactor[0] += 1
@@ -286,6 +294,7 @@ class ContextMaker(object):
                 dic[req] = 0.
         dic['dbi'] = numpy.uint8(0)  # distance bin index
         dic['sids'] = U32(0)
+        dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -702,7 +711,8 @@ class ContextMaker(object):
             with self.col_mon:
                 arrays, allsids = [], []
                 for a in split_array(ctx, U32(ctx.mag*100)):
-                    array, sids_ = collapse_array(a, self.cfactor)
+                    array, sids_ = collapse_array(
+                        a, self.cfactor, self.pointsource_distance)
                     arrays.append(array)
                     allsids.extend(sids_)
                 ctx = numpy.concatenate(arrays).view(numpy.recarray)

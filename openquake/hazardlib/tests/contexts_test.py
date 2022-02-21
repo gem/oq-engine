@@ -216,7 +216,7 @@ class CollapseTestCase(unittest.TestCase):
             weights, [3.04, 3.04, 3.04, 1, 1, 1])
 
     def test_collapse_small(self):
-        inp = read_input(JOB, pointsource_distance=dict(default=1000))
+        inp = read_input(JOB, pointsource_distance=dict(default=10))
         [[trt, cmaker]] = inp.cmakerdict.items()
         [[area]] = inp.groups  # there is a single AreaSource with 5 hypodepths
         srcs = list(area)  # split in 6 PointSources with 40 rups each
@@ -225,7 +225,7 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
-            weights, [9.16, 9.16, 9.16, 1, 1, 1])
+            weights, [3.04, 3.04, 3.04, 1, 1, 1])
 
         # set different vs30s on the two sites
         inp.sitecol.array['vs30'] = [600., 700.]
@@ -256,7 +256,7 @@ class CollapseTestCase(unittest.TestCase):
             reference_vs30_value=600.,
             source_model_file=smpath,
             area_source_discretization=1.,
-            pointsource_distance=dict(default=1000))
+            pointsource_distance=dict(default=10))
         inp = read_input(params)
         [[trt, cmaker]] = inp.cmakerdict.items()
         [srcs] = inp.groups  # a single area source
