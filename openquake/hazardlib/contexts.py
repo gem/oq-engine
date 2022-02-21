@@ -124,10 +124,12 @@ def collapse_array(array, cfactor):
     """
     # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
     names = array.dtype.names
-    if len(numpy.unique(array['rake'])) == 1:  # collapse all
+    if 'rake' not in names or len(numpy.unique(array['rake'])) == 1:
+        # collapse all
         far = array
         close = numpy.zeros(0, array.dtype)
-    else:  # collapse far away ruptures
+    else:
+        # collapse far away ruptures
         tocollapse = array['rrup'] >= array['mag'] * 10
         far = array[tocollapse]
         close = array[~tocollapse]
