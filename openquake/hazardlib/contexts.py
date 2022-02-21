@@ -125,8 +125,10 @@ def collapse_array(array, cfactor, psdist):
     # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
     names = array.dtype.names
     array.sort(order=['vs30', 'dbi'])
-    close = array[array['rrup'] < psdist]
-    far = array[array['rrup'] >= psdist]
+    # heuristic addition to the pointsource_distance for mag > 4
+    ok = array['rrup'] >= psdist + (array['mag'] - 4.) * 10
+    far = array[ok]
+    close = array[~ok]
     if len(far):
         arrays = split_array(far, U32(U32(far['vs30']) * 256 + far['dbi']))
     else:
