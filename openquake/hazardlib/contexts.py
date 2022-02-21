@@ -138,7 +138,7 @@ def collapse_array(array, cfactor):
         if 'vs30' in names:
             far.sort(order=['vs30', 'dbi'])
             arrays = split_array(far, U32(U32(far['vs30']) * 256 + far['dbi']))
-        else:
+        else:  # for ToroEtAl2002
             far.sort(order='dbi')
             arrays = split_array(far, far['dbi'])
     else:
