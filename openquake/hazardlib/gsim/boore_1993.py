@@ -64,7 +64,7 @@ class BooreEtAl1993GSCBest(GMPE):
     #: see paragraph 'Predictor Variables', page 6.
     REQUIRES_DISTANCES = {'rjb'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -283,6 +283,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data += sdata
         grp_id = dic.pop('grp_id')
         self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
+        self.cfactor += dic.pop('cfactor')
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']['src_id']):
@@ -335,6 +336,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
         self.Ns = len(self.csm.source_info)
+        self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
@@ -448,6 +450,9 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Finished tile %d of %d', t, len(tiles))
         self.store_info()
         self.haz.store_disagg(acc)
+        logging.info('Collapse factor = %d/%d = %.4f',
+                     self.cfactor[0], self.cfactor[1],
+                     self.cfactor[0] / self.cfactor[1])
         return True
 
     def store_info(self):

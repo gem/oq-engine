@@ -451,9 +451,10 @@ hazard_uhs-std.csv
                               case_24.__file__, delta=1E-5)
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3
+        self.assertEqual(len(self.calc.datastore['rup/mag']), 780)
+        numpy.testing.assert_equal(self.calc.cfactor, [210, 1560])
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['rup/mag']), 174)
 
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -532,7 +533,7 @@ hazard_uhs-std.csv
         # IMT-dependent weights with sampling by cheating
         self.assert_curves_ok(
             ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-            case_30.__file__, number_of_logic_tree_samples='10')
+            case_30.__file__, number_of_logic_tree_samples='10', delta=1E-5)
 
     def test_case_31(self):
         # source specific logic tree
@@ -621,7 +622,7 @@ hazard_uhs-std.csv
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
         data = self.calc.datastore.read_df('source_data')
-        self.assertEqual(data.nrupts.sum(), 5020)  # number of contexts
+        self.assertEqual(data.nrupts.sum(), 164)  # number of contexts
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)

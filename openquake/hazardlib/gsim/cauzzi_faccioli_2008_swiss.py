@@ -70,7 +70,7 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

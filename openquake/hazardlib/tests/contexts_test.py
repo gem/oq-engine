@@ -19,13 +19,14 @@
 import os
 import unittest
 import numpy
+
 from openquake.baselib.general import DictArray
-from openquake.hazardlib import read_input
+from openquake.hazardlib import read_input, calc
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, RuptureContext, _collapse, ContextMaker, get_distances,
+    Effect, RuptureContext, ContextMaker, get_distances,
     get_probability_no_exceedance)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
@@ -52,6 +53,10 @@ intensities = {
 tom = PoissonTOM(50.)
 JOB = os.path.join(os.path.dirname(__file__), 'data/context/job.ini')
 BASE_PATH = os.path.dirname(__file__)
+
+
+def rms(delta):
+    return numpy.sqrt((delta**2).sum())
 
 
 class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
@@ -173,45 +178,6 @@ class EffectTestCase(unittest.TestCase):
         dist = list(effect.dist_by_mag(1.1).values())
         numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
 
-
-def compose(ctxs, poe):
-    pnes = [get_probability_no_exceedance(ctx, poe, tom) for ctx in ctxs]
-    return 1. - numpy.prod(pnes), pnes
-
-
-class CollapseTestCase(unittest.TestCase):
-    def test_param(self):
-        ctxs = [RuptureContext([('occurrence_rate', .001)]),
-                RuptureContext([('occurrence_rate', .002)])]
-        for poe in (.1, .5, .9):
-            c1, pnes1 = compose(ctxs, poe)
-            c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2)  # the same
-
-    def test_nonparam(self):
-        ctxs = [RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.999, .001])]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.998, .002])]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.997, .003])])]
-        for poe in (.1, .5, .9):
-            c1, pnes1 = compose(ctxs, poe)
-            c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2)  # the same
-
-    def test_mixed(self):
-        ctxs = [RuptureContext([('occurrence_rate', .001)]),
-                RuptureContext([('occurrence_rate', .002)]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.999, .001])]),
-                RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.998, .002])])]
-        for poe in (.1, .5, .9):
-            c1, pnes1 = compose(ctxs, poe)
-            c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2)  # the same
-
     def test_get_pmap(self):
         truncation_level = 3
         imtls = DictArray({'PGA': [0.01]})
@@ -235,13 +201,14 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
 
 
-class SetWeightTestCase(unittest.TestCase):
+class CollapseTestCase(unittest.TestCase):
 
-    def test(self):
-        inp = read_input(JOB)
+    def test_set_weight(self):
+        inp = read_input(JOB)  # has pointsource_distance=50
         [[trt, cmaker]] = inp.cmakerdict.items()
         [[area]] = inp.groups  # there is a single AreaSource
         srcs = list(area)  # split in 3+3 PointSources
+        # there is a single site
         cmaker.set_weight(srcs, inp.sitecol)
         weights = [src.weight for src in srcs]  # 3 within, 3 outside
         numpy.testing.assert_allclose(
@@ -276,27 +243,28 @@ class GetCtxsTestCase(unittest.TestCase):
         param = dict(imtls={'PGA':[]})
         cm = ContextMaker('boh', [gmm], param)
 
-        # With this we get a list with six RuptureContexts
-        ctxs = cm.get_ctxs(self.src, self.sitec)
-
-        # Find index of rupture with three sections
-        for i, ctx in enumerate(ctxs):
-            if ctx.mag == 7.0:
-                idx = i
-        self.ctx = ctxs[idx]
-
-    def test_rjb_distance(self):
-        rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
-        self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
-
-    def test_rrup_distance(self):
-        rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
-        self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
-
-    def test_rx_distance(self):
-        rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
-        self.assertAlmostEqual(rx, self.ctx.rx, delta=1e-3)
-
-    def test_ry0_distance(self):
-        dst = self.ctx.surface.get_ry0_distance(self.sitec.mesh)
-        self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
+    def test_collapse_big(self):
+        smpath = os.path.join(os.path.dirname(__file__),
+                              'data/context/source_model.xml')
+        params = dict(
+            sites=[(0, 1), (0, 2)],
+            maximum_distance=calc.filters.IntegrationDistance.new('300'),
+            imtls=dict(PGA=numpy.arange(.1, 5, .1)),
+            investigation_time=50.,
+            gsim='BooreAtkinson2008',
+            reference_vs30_value=600.,
+            source_model_file=smpath,
+            area_source_discretization=1.,
+            pointsource_distance=dict(default=10))
+        inp = read_input(params)
+        [[trt, cmaker]] = inp.cmakerdict.items()
+        [srcs] = inp.groups  # a single area source
+        # get the context
+        ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
+        numpy.testing.assert_equal(len(ctx), 11616)
+        pcurve0 = cmaker.get_pmap([ctx])[0]
+        cmaker.cfactor = numpy.zeros(2)
+        cmaker.collapse_level = 1
+        pcurve1 = cmaker.get_pmap([ctx])[0]
+        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
+        numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])

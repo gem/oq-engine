@@ -353,7 +353,7 @@ class File(h5py.File):
         names = []
         for name, value in nametypes:
             is_array = isinstance(value, numpy.ndarray)
-            if is_array and isinstance(value[0], str):
+            if is_array and len(value) and isinstance(value[0], str):
                 dt = vstr
             elif is_array:
                 dt = value.dtype

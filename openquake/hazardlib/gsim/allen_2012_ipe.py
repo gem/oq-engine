@@ -57,7 +57,7 @@ def _compute_magnitude_term(C, mag):
     """
     Returns the magnitude scaling term
     """
-    return C["c0"] + (C["c1"] * mag)
+    return C["c0"] + C["c1"] * mag
 
 
 class AllenEtAl2012(GMPE):
@@ -93,7 +93,7 @@ class AllenEtAl2012(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -115,7 +115,7 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
         self.ctx = RuptureContext()
         self.ctx.mag = 6.5
         self.ctx.rake = 0.
-        self.ctx.rjb = np.array([5., 10., 20., 50., 100.])
+        self.ctx.rjb = self.ctx.rrup = np.array([5., 10., 20., 50., 100.])
         self.ctx.vs30 = 500. * np.ones(5)
         self.ctx.sids = np.arange(5)
 
@@ -174,7 +174,7 @@ class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
         self.ctx = RuptureContext()
         self.ctx.mag = 6.5
         self.ctx.rake = 0.
-        self.ctx.rjb = np.array([5., 10., 20., 50., 100.])
+        self.ctx.rjb = self.ctx.rrup = np.array([5., 10., 20., 50., 100.])
         self.ctx.vs30 = 500. * np.ones(5)
         self.ctx.sids = np.arange(5)
 

@@ -18,7 +18,6 @@ import numpy as np
 import unittest
 
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
-from openquake.hazardlib import const
 from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.contexts import RuptureContext, get_mean_stds
@@ -98,19 +97,19 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
     def test_gm_calculationBA08(self):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
         ctx = self.ctx(4, vs30=400.)
-        ctx.rjb = np.array([1., 10., 30., 70.])
+        ctx.rjb = ctx.rrup = np.array([1., 10., 30., 70.])
         check(mgmpe, ctx, gmpe=BooreAtkinson2008())
 
     def test_gm_calculationBA08_1site(self):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
         ctx = self.ctx(1, vs30=400.)
-        ctx.rjb = np.array([10])
+        ctx.rjb = ctx.rrup = np.array([10])
         check(mgmpe, ctx, gmpe=BooreAtkinson2008())
 
     def test_gm_calculationBA08_vs30variable(self):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
         ctx = self.ctx(3, vs30=[400., 600, 1000])
-        ctx.rjb = np.array([10., 10., 10.])
+        ctx.rjb = ctx.rrup = np.array([10., 10., 10.])
         check(mgmpe, ctx, gmpe=BooreAtkinson2008(), slc=slice(0, -1))
 
     def test_raise_error(self):

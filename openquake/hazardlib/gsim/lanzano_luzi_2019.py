@@ -128,7 +128,7 @@ class LanzanoLuzi2019shallow(GMPE):
     #: Required distance measure is Rhypo.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
