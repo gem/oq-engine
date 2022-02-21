@@ -715,7 +715,7 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
-        maxsize = int(5E8 / L / G)  # heuristic
+        maxsize = 50_000  # heuristic
         isarray = isinstance(ctx, numpy.ndarray)
 
         # collapse if possible
@@ -748,7 +748,6 @@ class ContextMaker(object):
                 mean_stdt = self.get_mean_stds([ctxt])
             with self.poe_mon:
                 poes = numpy.zeros((len(ctxt), L, G))
-                print(poes.nbytes / 1024**2)
                 for g, gsim in enumerate(self.gsims):
                     adj = self.adj[g]  # NSHM14, case_72
                     ms = mean_stdt[:2, g]
@@ -758,11 +757,7 @@ class ContextMaker(object):
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctxt, adj)
             with self.pne_mon:
-                pnes = numpy.zeros((len(ctxt), L, G))
-                for i, poe in enumerate(poes):  # slow
-                    pnes[i] = get_probability_no_exceedance(
-                        ctxt.occurrence_rate[i] if isarray else ctxt,
-                        poe, self.tom)
+                pnes = get_probability_no_exceedance(ctxt, poes, self.tom)
             yield poes, pnes, slcsids, ctxt
 
     def estimate_weight(self, src, srcfilter):
