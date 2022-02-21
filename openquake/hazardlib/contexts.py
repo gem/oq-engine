@@ -596,14 +596,14 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         for ctx in ctxs:
-            for poe, pne, sids, ctx in self.gen_poes(ctx):
-                # pnes and poes of shape (L, G)
-                for sid in sids:
-                    probs = pmap.setdefault(sid, self.rup_indep).array
-                    if rup_indep:
-                        probs *= pne
-                    else:  # rup_mutex
-                        probs += (1. - pne) * ctx.weight
+            for poes, pnes, allsids, ctx in self.gen_poes(ctx):
+                for poe, pne, sids in zip(poes, pnes, allsids):
+                    for sid in sids:
+                        probs = pmap.setdefault(sid, self.rup_indep).array
+                        if rup_indep:
+                            probs *= pne
+                        else:  # rup_mutex
+                            probs += (1. - pne) * ctx.weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -714,8 +714,8 @@ class ContextMaker(object):
         :yields: poes, pnes, ctx with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
-        M, L, G = len(self.imtls), self.loglevels.size, len(self.gsims)
-        maxsize = 5E8 / M / G  # heuristic
+        L, G = self.loglevels.size, len(self.gsims)
+        maxsize = 5E8 / L / G  # heuristic
         isarray = isinstance(ctx, numpy.ndarray)
 
         # collapse if possible
@@ -748,6 +748,7 @@ class ContextMaker(object):
                 mean_stdt = self.get_mean_stds([ctxt])
             with self.poe_mon:
                 poes = numpy.zeros((len(ctxt), L, G))
+                print(poes.shape / 1024**2)
                 for g, gsim in enumerate(self.gsims):
                     adj = self.adj[g]  # NSHM14, case_72
                     ms = mean_stdt[:2, g]
@@ -757,11 +758,12 @@ class ContextMaker(object):
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctxt, adj)
             with self.pne_mon:
+                pnes = numpy.zeros((len(ctxt), L, G))
                 for i, poe in enumerate(poes):  # slow
-                    pne = get_probability_no_exceedance(
+                    pnes[i] = get_probability_no_exceedance(
                         ctxt.occurrence_rate[i] if isarray else ctxt,
                         poe, self.tom)
-                    yield poe, pne, slcsids[i], ctxt
+            yield poes, pnes, slcsids, ctxt
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
