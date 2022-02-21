@@ -124,13 +124,13 @@ def collapse_array(array, cfactor):
     """
     # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
     names = array.dtype.names
-    array.sort(order=['vs30', 'dbi'])
     # heuristic pointsource_distance
     tocollapse = array['rrup'] >= array['mag'] * 10
     far = array[tocollapse]
     close = array[~tocollapse]
     C = len(close)
     if len(far):
+        far.sort(order=['vs30', 'dbi'])
         arrays = split_array(far, U32(U32(far['vs30']) * 256 + far['dbi']))
     else:
         arrays = []
