@@ -543,12 +543,6 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Compute the statistical hazard curves
         """
-        # first of all, a sanity check on the rupture IDs
-        rup_id = self.datastore['rup/id']
-        tot = len(rup_id)
-        if 0 < tot < 1_000_000:
-            uniq = len(numpy.unique(rup_id[:]))
-            assert tot == uniq, (tot, uniq)
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
             dur = task_info.loc[b'classical'].duration
@@ -568,6 +562,12 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('%s', nr)
         if '_poes' in self.datastore:
             self.post_classical()
+            # sanity check on the rupture IDs
+            rup_id = self.datastore['rup/id']
+            tot = len(rup_id)
+            if 0 < tot < 1_000_000:
+                uniq = len(numpy.unique(rup_id[:]))
+                assert tot == uniq, (tot, uniq)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
