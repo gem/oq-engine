@@ -178,11 +178,6 @@ class EffectTestCase(unittest.TestCase):
         dist = list(effect.dist_by_mag(1.1).values())
         numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
 
-
-def compose(ctxs, poe):
-    pnes = [get_probability_no_exceedance(ctx, poe, tom) for ctx in ctxs]
-    return 1. - numpy.prod(pnes), pnes
-
     def test_get_pmap(self):
         truncation_level = 3
         imtls = DictArray({'PGA': [0.01]})
@@ -219,11 +214,6 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             weights, [3.04, 3.04, 3.04, 1, 1, 1])
 
-    def test_collapse_small(self):
-        inp = read_input(JOB, pointsource_distance=dict(default=10))
-        [[trt, cmaker]] = inp.cmakerdict.items()
-        [[area]] = inp.groups  # there is a single AreaSource with 5 hypodepths
-        srcs = list(area)  # split in 6 PointSources with 40 rups each
 
         # check the weights
         cmaker.set_weight(srcs, inp.sitecol)
@@ -338,6 +328,31 @@ class GetCtxs02TestCase(unittest.TestCase):
     """
 
     def setUp(self):
+    def test_collapse_big(self):
+        smpath = os.path.join(os.path.dirname(__file__),
+                              'data/context/source_model.xml')
+        params = dict(
+            sites=[(0, 1), (0, 2)],
+            maximum_distance=calc.filters.IntegrationDistance.new('300'),
+            imtls=dict(PGA=numpy.arange(.1, 5, .1)),
+            investigation_time=50.,
+            gsim='BooreAtkinson2008',
+            reference_vs30_value=600.,
+            source_model_file=smpath,
+            area_source_discretization=1.,
+            pointsource_distance=dict(default=10))
+        inp = read_input(params)
+        [[trt, cmaker]] = inp.cmakerdict.items()
+        [srcs] = inp.groups  # a single area source
+        # get the context
+        ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
+        numpy.testing.assert_equal(len(ctx), 11616)
+        pcurve0 = cmaker.get_pmap([ctx])[0]
+        cmaker.cfactor = numpy.zeros(2)
+        cmaker.collapse_level = 1
+        pcurve1 = cmaker.get_pmap([ctx])[0]
+        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
+        numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])
 
         # Set paths
         path = './data/context02/ruptures_0.xml'
