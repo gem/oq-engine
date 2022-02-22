@@ -151,6 +151,8 @@ class MultiLine():
         """
         This is needed to compute Ry0
         """
+
+        # This is the same in both cases
         if self.shift is None:
             self._set_coordinate_shift()
 
@@ -192,7 +194,7 @@ class MultiLine():
         """
         if self.uut is None:
             assert mesh is not None
-            self._set_tu(mesh)
+            self.set_tu(mesh)
         rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
         return rx
 

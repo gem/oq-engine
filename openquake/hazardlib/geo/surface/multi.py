@@ -98,7 +98,6 @@ class MultiSurface(BaseSurface):
         self.tol = tol
         self._set_tor()
         self.areas = None
-        self.tors = None
         self.tut = None
         self.uut = None
         self.site_mesh = None
@@ -415,6 +414,31 @@ class MultiSurface(BaseSurface):
 """
 
 
+def _update_cache(rup, sites, params, dcache):
+    """ Updating distance cache """
+
+    # This is a list with the IDs of the surfaces representing the geometry of
+    # the rupture in question
+    suids = []
+
+    # Updating the cache with the distances for the surfaces not yet
+    # considered
+    for srf in rup.surface.surfaces:
+        suids.append(srf.suid)
+        if srf.suid not in dcache:
+            dcache[srf.suid] = {}
+            for param in params:
+                # This function returns the distances that will be added to the
+                # cache. In case of Rx and Ry0, the information cache will
+                # include the ToR of each surface as well as the GC2 t and u
+                # coordinates for each section.
+                distances = _get_distances(srf, sites, param)
+                # Save information into the cache for the current surfac.
+                for key in distances.keys():
+                    dcache[srf.suid][key] = distances[key]
+    return dcache, suids
+
+
 def get_distdic(rup, sites, params, dcache):
     """
     Calculates the distances for multi-surfaces using a cache.
@@ -433,24 +457,10 @@ def get_distdic(rup, sites, params, dcache):
     :returns:
         A dictionary with the computed distances for the rupture in input
     """
-    # This is a list with the IDs of the surfaces representing the geometry of
-    # the rupture in question
-    suids = []
-    # Updating the cache with the distances for the surfaces not yet
-    # considered
-    for srf in rup.surface.surfaces:
-        suids.append(srf.suid)
-        if srf.suid not in dcache:
-            dcache[srf.suid] = {}
-            for param in params:
-                # This function returns the distances that will be added to the
-                # cache. In case of Rx and Ry0, the information cache will
-                # include the ToR of each surface as well as the GC2 t and u
-                # coordinates for each section.
-                distances = _get_distances(srf, sites, param)
-                # Save information into the cache for the current surfac.
-                for key in distances.keys():
-                    dcache[srf.suid][key] = distances[key]
+
+    # Update the distance cache
+    dcache, suids = _update_cache(rup, sites, params, dcache)
+
     # Computing distances using the cache
     output = {}
     for param in params:
@@ -529,6 +539,22 @@ def _get_rx_ry0_from_cache(dcache, suids, param):
         Two lists. One with distances and one with the corresponding distance
         names.
     """
+
+    # Get the multiline used to compute distances
+    multil = _get_multi_line(dcache, suids)
+
+    # Get GC coordinates
+    multil.set_tu()
+
+    # Get Rx and Ry0
+    rx = multil.get_rx_distance()
+    ry0 = multil.get_ry0_distance()
+
+    return [rx, ry0], ['rx', 'ry0']
+
+
+def _get_multi_line(dcache, suids):
+
     # Retrieve info from the cache
     lines = [dcache[key]['tor'] for key in suids]
 
@@ -544,7 +570,7 @@ def _get_rx_ry0_from_cache(dcache, suids, param):
     weis = [dcache[suids[i]]['wei'] for i in soidx]
     umax = [dcache[suids[i]]['umax'] for i in soidx]
 
-    # Change sign to reverted surface traces
+    # Change sign to the reverted surface traces
     for i, flag in enumerate(revert):
         if flag:
             tupps[i] = -tupps[i]
@@ -552,15 +578,9 @@ def _get_rx_ry0_from_cache(dcache, suids, param):
 
     # Fixing shift
     multil._set_coordinate_shift()
+    multil.set_u_max()
     multil.tupps = tupps
     multil.uupps = uupps
     multil.weis = weis
 
-    # Get GC coordinates
-    multil.set_tu()
-
-    # Get Rx and Ry0
-    rx = multil.get_rx_distance()
-    ry0 = multil.get_ry0_distance()
-
-    return [rx, ry0], ['rx', 'ry0']
+    return multil
