@@ -19,6 +19,7 @@
 Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 :class:`MultiSurface`.
 """
+import copy
 import numpy as np
 from shapely.geometry import Polygon
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -559,7 +560,7 @@ def _get_multi_line(dcache, suids):
     lines = [dcache[key]['tor'] for key in suids]
 
     # Create the multiline
-    multil = MultiLine(lines)
+    multil = MultiLine(copy.deepcopy(lines))
     revert = multil.set_overall_strike()
     soidx = multil._set_origin()
     revert = revert[soidx]
@@ -581,6 +582,6 @@ def _get_multi_line(dcache, suids):
     multil.set_u_max()
     multil.tupps = tupps
     multil.uupps = uupps
-    multil.weis = weis
+    multil.weis = copy.deepcopy(weis)
 
     return multil

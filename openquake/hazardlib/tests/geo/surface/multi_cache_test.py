@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import copy
 import numpy
 import unittest
 import pandas as pd
@@ -29,7 +30,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 
 from openquake.hazardlib.geo.surface.multi import (
-    _get_multi_line, _update_cache)
+    _get_multi_line, _update_cache, get_distdic)
 from openquake.hazardlib.geo.multiline import get_tus
 
 aac = numpy.testing.assert_allclose
@@ -68,6 +69,72 @@ class GetRxRy0FromCacheTestCase(unittest.TestCase):
         self.src.set_sections(geom.sections)
 
     def test_multi_cache_01(self):
+        """ Tests results remain stable after multiple calls """
+
+        # Get rupture and top of ruptures
+        rup = [r for r in self.src.iter_ruptures()][0]
+        tors = rup.surface.tors
+        tors._set_coordinate_shift()
+        tors.set_tu(self.sitec.mesh)
+
+        # Create the contexts
+        gmm = AbrahamsonEtAl2014()
+        param = dict(imtls={'PGA': []})
+        cm = ContextMaker('boh', [gmm], param)
+
+        # Get the cache
+        dcache, suids = _update_cache(rup, self.sitec, ['ry0'], {})
+
+        # Get the expected ry0 distance
+        expected = tors.get_ry0_distance()
+
+        # Test Ry0
+        cache_save = copy.deepcopy(dcache)
+        dd = get_distdic(rup, self.sitec, ['ry0'], dcache)
+        aae(dd['ry0'], expected, decimal=3)
+
+        # Get cached distances
+        tupps = [dcache[i]['t_upp'] for i in suids]
+        uupps = [dcache[i]['u_upp'] for i in suids]
+        weis = [dcache[i]['wei'] for i in suids]
+        umax = [dcache[i]['umax'] for i in suids]
+        lines = [dcache[key]['tor'] for key in suids]
+
+        # Expected distances
+        e_tupps = [cache_save[i]['t_upp'] for i in suids]
+        e_uupps = [cache_save[i]['u_upp'] for i in suids]
+        e_weis = [cache_save[i]['wei'] for i in suids]
+        e_umax = [cache_save[i]['umax'] for i in suids]
+        e_lines = [cache_save[key]['tor'] for key in suids]
+
+        # Check that data in the caches is the same
+        aae(tupps, e_tupps, decimal=3)
+        aae(uupps, e_uupps, decimal=3)
+        aae(weis, e_weis, decimal=3)
+        aae(umax, e_umax, decimal=3)
+        for l1, l2 in zip(lines, e_lines):
+            aae(l1.coo, l2.coo, decimal=3)
+
+        # Check the attributes of the multiline
+        ml1 = _get_multi_line(cache_save, suids)
+        ml2 = _get_multi_line(dcache, suids)
+        aae(ml1.u_max, ml2.u_max, decimal=3)
+        aae(ml1.weis, ml2.weis, decimal=3)
+        aae(ml1.shift, ml2.shift, decimal=3)
+        aae(ml1.uupps, ml2.uupps, decimal=3)
+        aae(ml1.tupps, ml2.tupps, decimal=3)
+
+        # Check T and U
+        ml1.set_tu()
+        ml2.set_tu()
+        #aae(ml1.uut, ml2.uut, decimal=3)
+        #aae(ml1.tut, ml2.tut, decimal=3)
+
+        # Check the recomputed ry0
+        dd = get_distdic(rup, self.sitec, ['ry0'], dcache)
+        aae(dd['ry0'], expected, decimal=3)
+
+    def test_multi_cache_02(self):
         """ UCERF3 rupture """
 
         rup = [r for r in self.src.iter_ruptures()][0]
