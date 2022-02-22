@@ -950,6 +950,7 @@ class PmapMaker(object):
                 dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
+        dic['id'] = numpy.arange(len(ctxs)) * 65536 + self.task_no
         return dic
 
     def make(self):
