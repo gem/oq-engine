@@ -562,7 +562,9 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('%s', nr)
         if '_poes' in self.datastore:
             self.post_classical()
-            # sanity check on the rupture IDs
+
+        # sanity check on the rupture IDs
+        if 'rup' in self.datastore:
             rup_id = self.datastore['rup/id']
             tot = len(rup_id)
             if 0 < tot < 1_000_000:
