@@ -325,7 +325,7 @@ class ContextMaker(object):
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
-        self.pne_mon = monitor('composing pnes', measuremem=False)
+        self.pne_mon = monitor('computing pnes', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
 
     def read_ctxs(self, dstore, slc=None):
