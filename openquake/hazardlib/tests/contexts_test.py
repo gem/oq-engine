@@ -328,7 +328,6 @@ class GetCtxs02TestCase(unittest.TestCase):
     """
 
     def setUp(self):
-    def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
                               'data/context/source_model.xml')
         params = dict(
