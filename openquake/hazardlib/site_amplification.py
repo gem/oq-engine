@@ -432,7 +432,7 @@ def get_poes_site(mean_std, cmaker, ctx):
     sigma = cmaker.af.get_max_sigma()
     mags = [ctx.mag]
     rrups = ctx.rrup
-    ampcode = ctx.sites['ampcode'][0]
+    [ampcode] = ctx.sites['ampcode']
     for m, imt in enumerate(loglevels):
 
         # Get the values of ground-motion used to compute the probability

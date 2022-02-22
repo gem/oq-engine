@@ -162,6 +162,13 @@ site_param_dt = {
     'precip': numpy.float64,
     'fpeak': numpy.float64,
 
+    # parameters for YoudEtAl2002
+    'freeface_ratio': numpy.float64,
+    'T_15': numpy.float64,
+    'D50_15': numpy.float64,
+    'F_15': numpy.float64,
+    'T_eq': numpy.float64,
+
     # other parameters
     'custom_site_id': (numpy.string_, 6),
     'region': numpy.uint32,

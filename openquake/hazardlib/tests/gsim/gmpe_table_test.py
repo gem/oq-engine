@@ -195,7 +195,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         mags = ['6.00']
         ctx.mag = 6.0
         # Test values at the given distances and those outside range
-        ctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
+        ctx.rjb = ctx.rrup = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
         ctx.vs30 = 1000. * np.ones(5)
         ctx.sids = np.arange(5)
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])

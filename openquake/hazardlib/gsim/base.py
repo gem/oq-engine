@@ -156,7 +156,10 @@ class MetaGSIM(abc.ABCMeta):
             print('%s cannot contain the methods %s' % (name, bad),
                   file=sys.stderr)
         for k, v in dic.items():
-            if isinstance(v, set):
+            if (k == 'compute' and v.__annotations__.get("ctx")
+                    is not numpy.recarray):
+                raise TypeError('%s.compute is not vectorized' % name)
+            elif isinstance(v, set):
                 dic[k] = frozenset(v)
                 if k == 'REQUIRES_DISTANCES':
                     missing = v - KNOWN_DISTANCES
@@ -448,7 +451,7 @@ class GMPE(GroundShakingIntensityModel):
                 else:
                     setattr(self, key, val)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         """
         :param ctx: a RuptureContext object or a numpy recarray of size N
         :param imts: a list of M Intensity Measure Types

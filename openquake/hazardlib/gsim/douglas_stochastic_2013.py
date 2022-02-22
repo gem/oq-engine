@@ -76,8 +76,8 @@ def get_magnitude_scaling_term(C, mag):
     Returns the magnitude scaling term (equation 1)
     """
     mval = mag - 3.0
-    return C['b1'] + C['b2'] * mval + C['b3'] * (mval ** 2.0) +\
-        C['b4'] * (mval ** 3.0)
+    return (C['b1'] + C['b2'] * mval + C['b3'] * (mval ** 2.0) +
+            C['b4'] * mval ** 3.0)
 
 
 def get_stddevs(C_SIG):
@@ -174,7 +174,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
     #: Definined for a reference velocity of 1100 m/s (Table 4)
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

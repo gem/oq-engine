@@ -35,18 +35,18 @@ def _compute_magnitude(ctx, C, trt):
     """
 
     if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
-        fsource = (C['a1'] + (C['a2'] * ctx.mag) +
-                   (C['a3'] * max((ctx.mag - C['a4']), 0)) +
-                   (C['a7'] * np.log((ctx.ztor) + 1)))
+        fsource = (C['a1'] + C['a2'] * ctx.mag +
+                   C['a3'] * np.maximum((ctx.mag - C['a4']), 0) +
+                   C['a7'] * np.log((ctx.ztor) + 1))
     else:
         if trt == const.TRT.SUBDUCTION_INTERFACE:
             Finter = 1
         elif trt == const.TRT.SUBDUCTION_INTRASLAB:
             Finter = 0
-        fsource = (C['a1'] + (C['a2'] * ctx.mag) +
-                   (C['a3'] * max((ctx.mag - C['a4']), 0)) +
-                   (C['a5'] * max((ctx.mag - C['a6']), 0)) +
-                   (C['a7'] * np.log((ctx.ztor) + 1)) + (C['a8'] * Finter))
+        fsource = (C['a1'] + C['a2'] * ctx.mag +
+                   C['a3'] * np.maximum((ctx.mag - C['a4']), 0) +
+                   C['a5'] * np.maximum((ctx.mag - C['a6']), 0) +
+                   C['a7'] * np.log((ctx.ztor) + 1) + C['a8'] * Finter)
     return fsource
 
 
@@ -54,15 +54,14 @@ def _get_source_saturation_term(ctx, C):
     """
     Compute the near source saturation as described in Eq. 11
     """
-    if ctx.mag <= C['b7']:
-        h = C['b5'] + C['b6'] * (ctx.mag-C['b7'])
-    elif ctx.mag < C['b7'] and ctx.mag <= C['b8']:
-        h = (C['b9'] + (C['b10']*(ctx.mag-C['b7'])) +
-             (C['b11']*(ctx.mag-C['b7'])**2) +
-             (C['b12']*(ctx.mag-C['b7'])**3))
-    else:
-        h = C['b13'] + (C['b14'] * (ctx.mag - C['b8']))
-
+    h = np.zeros_like(ctx.mag)
+    h = (C['b9'] + C['b10'] * (ctx.mag - C['b7']) +
+         C['b11'] * (ctx.mag - C['b7'])**2 +
+         C['b12'] * (ctx.mag - C['b7'])**3)
+    before = ctx.mag <= C['b7']
+    after = ctx.mag > C['b8']
+    h[before] = C['b5'] + C['b6'] * (ctx.mag[before] - C['b7'])
+    h[after] = C['b13'] + C['b14'] * (ctx.mag[after] - C['b8'])
     return h
 
 
@@ -72,7 +71,7 @@ def _get_site_term(ctx, C):
     Fsite = c1*ln(vs30)
 
     """
-    fsite = C['c1']*np.log(ctx.vs30)
+    fsite = C['c1'] * np.log(ctx.vs30)
     return fsite
 
 
@@ -174,7 +173,7 @@ class BahrampouriEtAl2021Asc(GMPE):
     #: page 1031).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -231,7 +230,7 @@ class BahrampouriEtAl2021SInter(GMPE):
     #: page 1031).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -287,7 +286,7 @@ class BahrampouriEtAl2021SSlab(GMPE):
     #: page 1031).
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

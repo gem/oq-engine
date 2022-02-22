@@ -32,7 +32,7 @@ def _get_magnitude_term(C, mag):
     """
     Returns the magnitude scaling term
     """
-    return C["c0"] + (C["c1"] * mag) + (C["c2"] * (mag ** 2.0))
+    return C["c0"] + C["c1"] * mag + C["c2"] * mag ** 2.0
 
 
 def _get_distance_term(C, rhypo, mag):
@@ -51,10 +51,7 @@ def _get_effective_distance(mag):
     overwritten in sub-classes
     """
     h_eff = 10.0 ** (-1.72 + 0.43 * mag)
-    if h_eff > 1.0:
-        return h_eff
-    else:
-        return 1.0
+    return np.where(h_eff > 1.0, h_eff, 1.0)
 
 
 def _get_stddevs(C):
@@ -97,7 +94,7 @@ class Atkinson2015(GMPE):
     #: Required distance measure is hypocentral distance
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
