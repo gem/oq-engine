@@ -24,6 +24,8 @@ from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
+from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
+                                           get_spherical_bounding_box)
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
@@ -125,8 +127,13 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 surfaces.extend(rup.surface.surfaces)
             else:
                 surfaces.append(rup.surface)
-        multi_surf = MultiSurface(surfaces)
-        west, east, north, south = multi_surf.get_bounding_box()
+        lons = []
+        lats = []
+        for surf in surfaces:
+            lo1, lo2, la1, la2 = surf.get_bounding_box()
+            lons.extend([lo1, lo2])
+            lats.extend([la1, la2])
+        west, east, north, south = get_spherical_bounding_box(lons, lats)
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1

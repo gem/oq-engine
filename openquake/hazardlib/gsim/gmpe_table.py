@@ -120,7 +120,7 @@ def _return_tables(self, mag, imt, which):
 
     # Get magnitude values
     if (mag < self.m_w[0]).any() or (mag > self.m_w[-1]).any():
-        raise ValueError("Magnitude %s outside of supported range "
+        raise ValueError("Magnitude %.2f outside of supported range "
                          "(%.2f to %.2f)" % (mag, self.m_w[0], self.m_w[-1]))
     # It is assumed that log10 of the spectral acceleration scales
     # linearly (or approximately linearly) with magnitude

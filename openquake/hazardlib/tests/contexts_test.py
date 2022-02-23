@@ -38,6 +38,9 @@ from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.nrml import to_python
+from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 
 
 aac = numpy.testing.assert_allclose
@@ -49,6 +52,7 @@ intensities = {
     '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
 tom = PoissonTOM(50.)
 JOB = os.path.join(os.path.dirname(__file__), 'data/context/job.ini')
+BASE_PATH = os.path.dirname(__file__)
 
 
 def rms(delta):
@@ -174,11 +178,6 @@ class EffectTestCase(unittest.TestCase):
         dist = list(effect.dist_by_mag(1.1).values())
         numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
 
-
-def compose(ctxs, poe):
-    pnes = [get_probability_no_exceedance(ctx, poe, tom) for ctx in ctxs]
-    return 1. - numpy.prod(pnes), pnes
-
     def test_get_pmap(self):
         truncation_level = 3
         imtls = DictArray({'PGA': [0.01]})
@@ -215,11 +214,6 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             weights, [3.04, 3.04, 3.04, 1, 1, 1])
 
-    def test_collapse_small(self):
-        inp = read_input(JOB, pointsource_distance=dict(default=10))
-        [[trt, cmaker]] = inp.cmakerdict.items()
-        [[area]] = inp.groups  # there is a single AreaSource with 5 hypodepths
-        srcs = list(area)  # split in 6 PointSources with 40 rups each
 
         # check the weights
         cmaker.set_weight(srcs, inp.sitecol)
@@ -269,3 +263,141 @@ class CollapseTestCase(unittest.TestCase):
         pcurve1 = cmaker.get_pmap([ctx])[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
         numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])
+
+
+class GetCtxs01TestCase(unittest.TestCase):
+    """
+    Test for calculation of distances with caching
+    """
+
+    def setUp(self):
+
+        # Set paths
+        path = '../../qa_tests_data/classical/case_75/ruptures_0.xml'
+        rup_path = os.path.join(BASE_PATH, path)
+        path = '../../qa_tests_data/classical/case_75/ruptures_0_sections.xml'
+        geom_path = os.path.join(BASE_PATH, path)
+
+        # Create source
+        sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
+        ssm = to_python(rup_path, sc)
+        geom = to_python(geom_path, sc)
+        src = ssm[0][0]
+        src.set_sections(geom.sections)
+        self.src = src
+
+        # Create site-collection
+        site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
+                    vs30measured=True)
+        self.sitec = SiteCollection([site])
+
+        # Create the context maker
+        gmm = AbrahamsonEtAl2014()
+        param = dict(imtls={'PGA':[]})
+        cm = ContextMaker('boh', [gmm], param)
+
+        # With this we get a list with six RuptureContexts
+        ctxs = cm.get_ctxs(self.src, self.sitec)
+
+        # Find index of rupture with three sections
+        for i, ctx in enumerate(ctxs):
+            if ctx.mag == 7.0:
+                idx = i
+        self.ctx = ctxs[idx]
+
+    def test_rjb_distance(self):
+        rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
+
+    def test_rrup_distance(self):
+        rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
+
+    def test_rx_distance(self):
+        rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rx, self.ctx.rx, delta=1e-3)
+
+    def test_ry0_distance(self):
+        dst = self.ctx.surface.get_ry0_distance(self.sitec.mesh)
+        self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
+
+
+class GetCtxs02TestCase(unittest.TestCase):
+    """
+    Test for calculation of distances with caching
+    """
+
+    def setUp(self):
+        smpath = os.path.join(os.path.dirname(__file__),
+                              'data/context/source_model.xml')
+        params = dict(
+            sites=[(0, 1), (0, 2)],
+            maximum_distance=calc.filters.IntegrationDistance.new('300'),
+            imtls=dict(PGA=numpy.arange(.1, 5, .1)),
+            investigation_time=50.,
+            gsim='BooreAtkinson2008',
+            reference_vs30_value=600.,
+            source_model_file=smpath,
+            area_source_discretization=1.,
+            pointsource_distance=dict(default=10))
+        inp = read_input(params)
+        [[trt, cmaker]] = inp.cmakerdict.items()
+        [srcs] = inp.groups  # a single area source
+        # get the context
+        ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
+        numpy.testing.assert_equal(len(ctx), 11616)
+        pcurve0 = cmaker.get_pmap([ctx])[0]
+        cmaker.cfactor = numpy.zeros(2)
+        cmaker.collapse_level = 1
+        pcurve1 = cmaker.get_pmap([ctx])[0]
+        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
+        numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])
+
+        # Set paths
+        path = './data/context02/ruptures_0.xml'
+        rup_path = os.path.join(BASE_PATH, path)
+        path = './data/context02/ruptures_0_sections.xml'
+        geom_path = os.path.join(BASE_PATH, path)
+
+        # Create source
+        sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
+        ssm = to_python(rup_path, sc)
+        geom = to_python(geom_path, sc)
+        src = ssm[0][0]
+        src.set_sections(geom.sections)
+        self.src = src
+
+        # Create site-collection
+        site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
+                    vs30measured=True)
+        self.sitec = SiteCollection([site])
+
+        # Create the context maker
+        gmm = AbrahamsonEtAl2014()
+        param = dict(imtls={'PGA':[]})
+        cm = ContextMaker('boh', [gmm], param)
+
+        # With this we get a list with six RuptureContexts
+        ctxs = cm.get_ctxs(self.src, self.sitec)
+
+        # Find index of rupture with three sections
+        for i, ctx in enumerate(ctxs):
+            if ctx.mag == 7.0:
+                idx = i
+        self.ctx = ctxs[idx]
+
+    def test_rjb_distance(self):
+        rjb = self.ctx.surface.get_joyner_boore_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rjb, self.ctx.rjb, delta=1e-3)
+
+    def test_rrup_distance(self):
+        rrup = self.ctx.surface.get_min_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rrup, self.ctx.rrup, delta=1e-3)
+
+    def test_rx_distance(self):
+        rx = self.ctx.surface.get_rx_distance(self.sitec.mesh)
+        self.assertAlmostEqual(rx, self.ctx.rx, delta=1e-3)
+
+    def test_ry0_distance(self):
+        dst = self.ctx.surface.get_ry0_distance(self.sitec.mesh)
+        self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)

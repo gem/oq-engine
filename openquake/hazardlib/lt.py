@@ -127,7 +127,7 @@ def complexGeom(utype, node, filename):
 @parse_uncertainty.add('characteristicFaultGeometryAbsolute')
 def charGeom(utype, node, filename):
     surfaces = []
-    for geom_node in node.surface:
+    for i, geom_node in enumerate(node.surface):
         if "simpleFaultGeometry" in geom_node.tag:
             _validate_simple_fault_geometry(utype, geom_node, filename)
             trace, usd, lsd, dip, spacing = parse_uncertainty(
@@ -150,6 +150,7 @@ def charGeom(utype, node, filename):
             top_left, top_right, bottom_right, bottom_left = tuple(nodes)
             surface = geo.PlanarSurface.from_corner_points(
                 top_left, top_right, bottom_right, bottom_left)
+            surface.suid = f'{i}'
             surfaces.append(surface)
         else:
             raise LogicTreeError(

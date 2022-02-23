@@ -47,6 +47,7 @@ from openquake.hazardlib.calc.filters import (
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 
 U32 = numpy.uint32
 F64 = numpy.float64
@@ -238,6 +239,8 @@ class ContextMaker(object):
             self.imtls = DictArray(param['hazard_imtls'])
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
+
+        self.dcache = {}
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -425,7 +428,12 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        distances = get_distances(rup, sites, 'rrup')
+        if (isinstance(rup.surface, MultiSurface) and
+                hasattr(rup.surface.surfaces[0], 'suid')):
+            distdic = get_distdic(rup, sites.complete, ['rrup'], self.dcache)
+            distances = distdic['rrup'][sites.sids]
+        else:
+            distances = get_distances(rup, sites, 'rrup')
         mdist = self.maximum_distance(rup.mag)
         mask = distances <= mdist
         if mask.any():
@@ -482,7 +490,12 @@ class ContextMaker(object):
             irups = src_or_ruptures
         ctxs = []
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
+
+        # Create the distance cache. A dictionary of dictionaries
+        dcache = {}
         for rup in irups:
+            caching = (isinstance(rup.surface, MultiSurface) and
+                       hasattr(rup.surface.surfaces[0], 'suid'))
             sites = getattr(rup, 'sites', sitecol)
             try:
                 r_sites, dctx = self.filter(sites, rup)
@@ -490,9 +503,19 @@ class ContextMaker(object):
                 continue
             ctx = self.make_rctx(rup)
             ctx.sites = r_sites
-            for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                distances = get_distances(rup, r_sites, param)
-                setattr(dctx, param, distances)
+
+            # In case of a multifault source we use a cache with distances
+            if caching:
+                params = self.REQUIRES_DISTANCES - {'rrup'}
+                distdic = get_distdic(rup, r_sites.complete, params, dcache)
+                for key, val in distdic.items():
+                    setattr(dctx, key, val[r_sites.sids])
+            else:
+                for param in self.REQUIRES_DISTANCES - {'rrup'}:
+                    distances = get_distances(rup, r_sites, param)
+                    setattr(dctx, param, distances)
+
+            # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
             if reqv_obj and isinstance(rup.surface, PlanarSurface):
                 reqv = reqv_obj.get(dctx.repi, rup.mag)
