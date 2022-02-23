@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed sorting bug in the `/v1/calc/run` web API
   * Internal: introduced limited unique rupture IDs in classical calculations
     with few sites
 

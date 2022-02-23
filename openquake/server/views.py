@@ -138,7 +138,8 @@ def store(request_files, ini, calc_id):
     if arch is None:
         # move each file to calc_dir using the upload file names
         inifiles = []
-        for each_file in sorted(request_files.values()):
+        # NB: request_files.values() Django objects are not sortable
+        for each_file in request_files.values():
             new_path = os.path.join(calc_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
             if each_file.name.endswith(ini):
