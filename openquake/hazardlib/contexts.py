@@ -50,6 +50,7 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 
 U32 = numpy.uint32
 F64 = numpy.float64
+FOUR_GB = 4_294_967_296  # 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
@@ -327,6 +328,7 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('computing pnes', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
+        self.out_no = getattr(monitor, 'out_no', self.task_no)
 
     def read_ctxs(self, dstore, slc=None):
         """
@@ -950,7 +952,7 @@ class PmapMaker(object):
                 dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
-        dic['id'] = numpy.arange(len(ctxs)) * 65536 + self.task_no
+        dic['id'] = numpy.arange(len(ctxs)) * FOUR_GB + self.cmaker.out_no
         return dic
 
     def make(self):

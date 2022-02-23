@@ -320,7 +320,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for dparam in cm.REQUIRES_DISTANCES:
                 params.add(dparam + '_')
         if self.few_sites:
-            self.oqparam.time_per_task = 1_000_000  # disable task splitting
+            # self.oqparam.time_per_task = 1_000_000  # disable task splitting
             descr = [('id', I64)]  # (param, dt)
             for param in params:
                 if param == 'sids_':
