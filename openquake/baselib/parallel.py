@@ -841,8 +841,9 @@ class Starmap(object):
         Submit the given arguments to the underlying task
         """
         self.monitor.operation = self.task_func.__name__ + '_'
-        self.submit((args[0], self.task_func, args[1:], duration, outs_per_task),
-                    split_task)
+        self.submit(
+            (args[0], self.task_func, args[1:], duration, outs_per_task),
+            split_task)
 
     def submit_all(self):
         """
@@ -967,11 +968,12 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
     # see how long it takes to run the first slice
     t0 = time.time()
     for i, elems in enumerate(split_elems):
+        monitor.out_no = monitor.task_no + i * 65536
         res = func(elems, *args, monitor=monitor)
         dt = time.time() - t0
         yield res
         if dt > duration:
-            # spawn subtasks for the rest and exit
+            # spawn subtasks for the rest and exit, used in classical/case_14
             for els in split_elems[i + 1:]:
                 ls = List(els)
                 ls.weight = sum(getattr(el, 'weight', 1.) for el in els)

@@ -41,6 +41,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+I64 = numpy.int64
 TWO32 = 2 ** 32
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
@@ -319,7 +320,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for dparam in cm.REQUIRES_DISTANCES:
                 params.add(dparam + '_')
         if self.few_sites:
-            descr = []  # (param, dt)
+            # self.oqparam.time_per_task = 1_000_000  # disable task splitting
+            descr = [('id', I64)]  # (param, dt)
             for param in params:
                 if param == 'sids_':
                     dt = hdf5.vuint16
@@ -560,6 +562,14 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('%s', nr)
         if '_poes' in self.datastore:
             self.post_classical()
+
+        # sanity check on the rupture IDs
+        if 'rup' in self.datastore:
+            rup_id = self.datastore['rup/id']
+            tot = len(rup_id)
+            if 0 < tot < 1_000_000:
+                uniq = len(numpy.unique(rup_id[:]))
+                assert tot == uniq, (tot, uniq)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam

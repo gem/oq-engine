@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Internal: introduced limited unique rupture IDs in classical calculations
+    with few sites
+
   [Prajacta Jadhav, Dharma Wijewickreme]
   * Added GMPE Youd et al. (2002) and the corresponding site parameters
 

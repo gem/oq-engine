@@ -189,8 +189,8 @@ def compare_rups(calc_1: int, calc_2: int):
     Compare the ruptures of two calculations as pandas DataFrames
     """
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
-        df1 = ds1.read_df('rup').sort_values(['src_id', 'mag'])
-        df2 = ds2.read_df('rup').sort_values(['src_id', 'mag'])
+        df1 = ds1.read_df('rup', 'id').sort_index()
+        df2 = ds2.read_df('rup', 'id').sort_index()
     cols = [col for col in df1.columns if col not in
             {'probs_occur_', 'clon_', 'clat_'}]
     for col in cols:
