@@ -123,7 +123,7 @@ def collapse_array(array, cfactor):
     """
     Collapse a structured array with uniform magnitude
     """
-    # i.e. mag, rake, vs30, rjb, dbi, sids, occurrence_rate
+    # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
     names = array.dtype.names
     if 'rake' not in names or len(numpy.unique(array['rake'])) == 1:
         # collapse all
@@ -136,12 +136,7 @@ def collapse_array(array, cfactor):
         close = array[~tocollapse]
     C = len(close)
     if len(far):
-        if 'vs30' in names:
-            far.sort(order=['vs30', 'dbi'])
-            arrays = split_array(far, U32(U32(far['vs30']) * 256 + far['dbi']))
-        else:  # for ToroEtAl2002
-            far.sort(order='dbi')
-            arrays = split_array(far, far['dbi'])
+        arrays = split_array(far, far['mdvbin'])
     else:
         arrays = []
     cfactor[0] += len(close)
@@ -256,7 +251,9 @@ class ContextMaker(object):
             if hasattr(gsim, 'set_tables'):
                 gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
-        self.dist_bins = valid.sqrscale(0, self.maximum_distance(10), 100)
+        # TODO: try to raise the 100 below to 255
+        self.dst_bins = valid.sqrscale(0, self.maximum_distance(MAXMAG), 100)
+        self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 255)
         self.cfactor = numpy.zeros(2)  # used to compute the collapse factor
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
@@ -305,7 +302,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
-        dic['dbi'] = numpy.uint8(0)  # distance bin index
+        dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
@@ -361,6 +358,7 @@ class ContextMaker(object):
         """
         C = sum(len(ctx) for ctx in ctxs)
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
+        vs30 = "vs30" in ra.dtype.names
         start = 0
         for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
@@ -368,8 +366,13 @@ class ContextMaker(object):
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                if par == 'dbi':  # set a few lines below
-                    val = numpy.searchsorted(self.dist_bins, ctx.rrup)
+                if par == 'mdvbin':  # set a few lines below
+                    magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
+                    dstbin = numpy.searchsorted(self.dst_bins, ctx.rrup)
+                    if vs30:
+                        val = (magbin * 256 + dstbin) * 65536 + U32(ctx.vs30)
+                    else:
+                        val = (magbin * 256 + dstbin) * 65536
                 elif par == 'occurrence_rate':  # missing in scenario
                     val = getattr(ctx, par, 0.)
                 else:  # never missing
@@ -723,12 +726,8 @@ class ContextMaker(object):
         # collapse if possible
         if isarray and self.collapse_level:
             with self.col_mon:
-                arrays, allsids = [], []
-                for a in split_array(ctx, U32(ctx.mag*100)):
-                    array, sids_ = collapse_array(a, self.cfactor)
-                    arrays.append(array)
-                    allsids.extend(sids_)
-                ctx = numpy.concatenate(arrays).view(numpy.recarray)
+                ctx.sort(order='mdvbin')
+                ctx, allsids = collapse_array(ctx, self.cfactor)
         else:  # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)

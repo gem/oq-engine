@@ -1001,17 +1001,20 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
-def fast_agg3(structured_array, kfield, vfields, factor=None):
+def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)
-    and some value fields (the vfields).
+    and some value fields (the vfields). If vfields is not passed,
+    use all fields except the kfield.
 
     >>> data = numpy.array([(1, 2.4), (1, 1.6), (2, 2.5)],
     ...                    [('aid', U16), ('val', F32)])
-    >>> fast_agg3(data, 'aid', ['val'])
+    >>> fast_agg3(data, 'aid')
     array([(1, 4. ), (2, 2.5)], dtype=[('aid', '<u2'), ('val', '<f4')])
     """
     allnames = structured_array.dtype.names
+    if vfields is None:
+        vfields = [name for name in allnames if name != kfield]
     assert kfield in allnames, kfield
     for vfield in vfields:
         assert vfield in allnames, vfield
