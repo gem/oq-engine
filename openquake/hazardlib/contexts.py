@@ -358,6 +358,7 @@ class ContextMaker(object):
         """
         C = sum(len(ctx) for ctx in ctxs)
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
+        vs30 = "vs30" in ra.dtype.names
         start = 0
         for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
@@ -368,7 +369,9 @@ class ContextMaker(object):
                 if par == 'mdvbin':  # set a few lines below
                     magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
                     dstbin = numpy.searchsorted(self.dst_bins, ctx.rrup)
-                    val = (magbin * 256 + dstbin) * 65536 + U32(ctx.vs30)
+                    val = (magbin * 256 + dstbin) * 65536
+                    if vs30:
+                        val += U32(ctx.vs30)
                 elif par == 'occurrence_rate':  # missing in scenario
                     val = getattr(ctx, par, 0.)
                 else:  # never missing
