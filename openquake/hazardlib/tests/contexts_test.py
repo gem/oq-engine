@@ -203,17 +203,11 @@ class EffectTestCase(unittest.TestCase):
 
 class CollapseTestCase(unittest.TestCase):
 
-    def test_set_weight(self):
+    def test_collapse_small(self):
         inp = read_input(JOB)  # has pointsource_distance=50
         [[trt, cmaker]] = inp.cmakerdict.items()
         [[area]] = inp.groups  # there is a single AreaSource
         srcs = list(area)  # split in 3+3 PointSources
-        # there is a single site
-        cmaker.set_weight(srcs, inp.sitecol)
-        weights = [src.weight for src in srcs]  # 3 within, 3 outside
-        numpy.testing.assert_allclose(
-            weights, [3.04, 3.04, 3.04, 1, 1, 1])
-
 
         # check the weights
         cmaker.set_weight(srcs, inp.sitecol)
