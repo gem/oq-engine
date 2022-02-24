@@ -380,23 +380,6 @@ def _idx_start_stop(integers):
     return numpy.array(out)
 
 
-def split_array(arr, ordered_indices):
-    """
-    :param arr: an array with N elements
-    :param indices: a set of ordered integers with repetitions
-    :returns: a list of K arrays, split on the integers
-
-    >>> arr = numpy.array([.1, .2, .3, .4, .5])
-    >>> idx = numpy.array([1, 1, 2, 2, 3])
-    >>> split_array(arr, idx)
-    [array([0.1, 0.2]), array([0.3, 0.4]), array([0.5])]
-    """
-    out = []
-    for idx, start, stop in _idx_start_stop(ordered_indices):
-        out.append(arr[start:stop])
-    return out
-
-
 # this is absurdly fast if you have numba
 def get_slices(uint32s):
     """
@@ -429,13 +412,20 @@ def _split3(uint32s, indices, counts, cumcounts):
     return out
 
 
-def split_array3(uint32s, indices, counts):
+def split_array(arr, indices, counts=None):
     """
-    :param uint32s: an array of N integers of kind uint32
-    :param indices: array of indices extracted from numpy.unique (size N)
-    :param counts: array of counts extracted from numpy.unique (size K)
-    :returns: a list of K arrays of integers of kind uint32
+    :param arr: an array with N elements
+    :param indices: a set of integers with repetitions
+    :param counts: if None the indices MUST be ordered
+    :returns: a list of K arrays, split on the integers
+
+    >>> arr = numpy.array([.1, .2, .3, .4, .5])
+    >>> idx = numpy.array([1, 1, 2, 2, 3])
+    >>> split_array(arr, idx)
+    [array([0.1, 0.2]), array([0.3, 0.4]), array([0.5])]
     """
+    if counts is None:  # ordered indices
+        return [arr[s1:s2] for i, s1, s2 in _idx_start_stop(indices)]
     cumcounts = counts.cumsum()
-    out = _split3(uint32s, indices, counts, cumcounts)
+    out = _split3(arr, indices, counts, cumcounts)
     return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]

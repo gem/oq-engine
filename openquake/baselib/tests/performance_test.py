@@ -19,7 +19,7 @@ import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import Monitor, split_array3
+from openquake.baselib.performance import Monitor, split_array
 
 
 class MonitorTestCase(unittest.TestCase):
@@ -75,7 +75,7 @@ class SplitArray3TestCase(unittest.TestCase):
         arr['sids'] = rng.integers(1000, size=N)
         uniq, indices, counts = numpy.unique(
             arr['mdvbin'], return_inverse=True, return_counts=True)
-        sids = split_array3(arr['sids'], indices, counts)
+        sids = split_array(arr['sids'], indices, counts)
         expected_sids = [[631, 858, 450], [276], [887, 554], [92],
                          [827], [227], [63]]
         numpy.testing.assert_equal(sids, expected_sids)
