@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed parentdir bug in event_based_damage
   * Fixed sorting bug in the `/v1/calc/run` web API
   * Fixed the exporter `aggrisk-stats` in the case of zero losses
   * Raised the limit to 94 GMPEs per tectonic region type
