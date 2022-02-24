@@ -54,7 +54,6 @@ def nrcan15_site_term(self, ctx, imt, kind):
     """
     This function adds a site term to GMMs missing it
     """
-    #kind = 'base'
     C = NRCan15SiteTerm.COEFFS_BA08[imt]
     C2 = NRCan15SiteTerm.COEFFS_AB06r[imt]
     fa = BA08_AB06(kind, C, C2, ctx.vs30, imt, np.exp(self.mean))
