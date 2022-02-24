@@ -971,7 +971,8 @@ def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     if M is None:
         M = max(indices) + 1
     if not shp:
-        return numpy.bincount(indices, values, M)
+        return numpy.bincount(
+            indices, values if factor is None else values * factor, M)
     lst = list(shp)
     lst.insert(axis, M)
     res = numpy.zeros(lst, values.dtype)
@@ -1029,6 +1030,29 @@ def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     res[kfield] = uniq
     for name in dic:
         res[name] = dic[name]
+    return res
+
+
+def kmean(structured_array, kfield):
+    """
+    Given a structured array of N elements with a discrete kfield with
+    K <= N unique values, returns a structured array of K elements
+    obtained by averaging the values associated to the kfield.
+    """
+    allnames = structured_array.dtype.names
+    assert kfield in allnames, kfield
+    vfields = [name for name in allnames if name != kfield]
+    uniq, indices, counts = numpy.unique(
+        structured_array[kfield], return_inverse=True, return_counts=True)
+    dic = {}
+    dtlist = [(kfield, structured_array.dtype[kfield])]
+    for name in vfields:
+        dic[name] = fast_agg(indices, structured_array[name])
+        dtlist.append((name, structured_array.dtype[name]))
+    res = numpy.zeros(len(uniq), dtlist)
+    res[kfield] = uniq
+    for name in dic:
+        res[name] = dic[name] / counts
     return res
 
 

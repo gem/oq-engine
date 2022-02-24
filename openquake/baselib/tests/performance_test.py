@@ -19,6 +19,7 @@ import time
 import unittest
 import pickle
 import numpy
+from openquake.baselib.general import kmean
 from openquake.baselib.performance import Monitor
 
 
@@ -60,3 +61,41 @@ class MonitorTestCase(unittest.TestCase):
 
     def test_pickleable(self):
         pickle.loads(pickle.dumps(self.mon))
+
+
+class GroupArrayTestCase(unittest.TestCase):
+    def test_small(self):
+        # build a small structured array
+        dtlist = [('mdvbin', numpy.uint32), ('rake', numpy.float64),
+                  ('sids', numpy.uint32)]
+        N = 10
+        arr = numpy.zeros(N, dtlist)
+        rng = numpy.random.default_rng(42)
+        arr['mdvbin'] = rng.integers(50, size=N)
+        arr['rake'] = rng.random(N) * 360
+        arr['sids'] = rng.integers(1000, size=N)
+        sids = []
+        for rec in kmean(arr, 'mdvbin'):
+            sids.append(arr['sids'][arr['mdvbin'] == rec['mdvbin']])
+        expected_sids = [[450, 858, 631], [276], [554, 887], [92],
+                         [827], [227], [63]]
+        numpy.testing.assert_equal(sids, expected_sids)
+
+    def test_big(self):
+        # build a very large structured array
+        dtlist = [('mdvbin', numpy.uint32), ('rake', numpy.float64),
+                  ('sids', numpy.uint32)]
+        N = 10_000_000
+        arr = numpy.zeros(N, dtlist)
+        rng = numpy.random.default_rng(42)
+        arr['mdvbin'] = rng.integers(50, size=N)
+        arr['rake'] = rng.random(N) * 360
+        arr['sids'] = rng.integers(1000, size=N)
+        t0 = time.time()
+        mean = kmean(arr, 'mdvbin')
+        sids = []
+        for mdvbin in mean['mdvbin']:
+            sids.append(arr['sids'][arr['mdvbin'] == mdvbin])
+        print([len(s) for s in sids])
+        dt = time.time() - t0
+        print('Grouped %d elements in %.1f seconds' % (N, dt))
