@@ -1041,18 +1041,19 @@ def kmean(structured_array, kfield):
     """
     allnames = structured_array.dtype.names
     assert kfield in allnames, kfield
-    vfields = [name for name in allnames if name != kfield]
     uniq, indices, counts = numpy.unique(
         structured_array[kfield], return_inverse=True, return_counts=True)
     dic = {}
-    dtlist = [(kfield, structured_array.dtype[kfield])]
-    for name in vfields:
-        dic[name] = fast_agg(indices, structured_array[name])
+    dtlist = []
+    for name in allnames:
+        if name == kfield:
+            dic[kfield] = uniq
+        else:
+            dic[name] = fast_agg(indices, structured_array[name]) / counts
         dtlist.append((name, structured_array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
-    res[kfield] = uniq
     for name in dic:
-        res[name] = dic[name] / counts
+        res[name] = dic[name]
     return res
 
 

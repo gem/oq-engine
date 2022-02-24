@@ -34,7 +34,7 @@ try:
 except ImportError:
     numba = None
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices)
+    AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -137,25 +137,19 @@ def collapse_array(array, cfactor):
         close = array[~tocollapse]
     C = len(close)
     if len(far):
-        arrays = split_array(far, far['mdvbin'])
+        mean = kmean(far, 'mdvbin')
     else:
-        arrays = []
-    cfactor[0] += len(close)
-    cfactor[1] += len(close)
-    out = numpy.zeros(len(close) + len(arrays), array.dtype)
+        mean = numpy.zeros(0, array.dtype)
+    cfactor[0] += len(close) + len(mean)
+    cfactor[1] += len(array)
+    out = numpy.zeros(len(close) + len(mean), array.dtype)
     out[:C] = close
+    out[C:] = mean
     allsids = [U32([sid]) for sid in close['sids']]
-    for a, arr in enumerate(arrays, C):
-        n = len(arr)
-        cfactor[0] += 1
-        cfactor[1] += n
-        if n == 1:
-            out[a] = arr
-        else:
-            o = out[a]
-            for name in names:
-                o[name] = arr[name].mean()
-        allsids.append(arr['sids'])
+    sids = array['sids']
+    mdvbins = array['mdvbin']
+    for mdvbin in mean['mdvbin']:
+        allsids.append(sids[mdvbins == mdvbin])
     return out.view(numpy.recarray), allsids
 
 
