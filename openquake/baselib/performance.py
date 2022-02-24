@@ -430,7 +430,7 @@ def split_array(arr, indices, counts=None):
     if counts is None:  # ordered indices
         return [arr[s1:s2] for i, s1, s2 in _idx_start_stop(indices)]
     # indices and counts coming from numpy.unique(arr)
-    # this part can be slow
+    # this part can be slow, but it is still 10x faster than pandas for EUR!
     cumcounts = counts.cumsum()
     out = _split(arr, indices, counts, cumcounts)
     return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]
