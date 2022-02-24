@@ -53,7 +53,7 @@ def event_based_damage(df, oqparam, monitor):
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
-    dstore = datastore.read(oqparam.hdf5path)
+    dstore = datastore.read(oqparam.hdf5path, parentdir=oqparam.parentdir)
     K = oqparam.K
     with monitor('reading gmf_data'):
         if hasattr(df, 'start'):  # it is actually a slice
@@ -184,6 +184,9 @@ class DamageCalculator(EventBasedRiskCalculator):
                 'you cannot use dicrete_damage_distribution=true' % num_floats)
         oq.R = self.R  # 1 if collect_rlzs
         oq.float_dmg_dist = not oq.discrete_damage_distribution
+        if oq.hazard_calculation_id:
+            oq.parentdir = self.datastore.ppath
+            import pdb; pdb.set_trace()
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
