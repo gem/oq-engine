@@ -120,36 +120,37 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def collapse_array(array, cfactor):
+def collapse_array(array, cfactor, mon):
     """
     Collapse a structured array with uniform magnitude
     """
-    # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
-    names = array.dtype.names
-    if 'rake' not in names or len(numpy.unique(array['rake'])) == 1:
-        # collapse all
-        far = array
-        close = numpy.zeros(0, array.dtype)
-    else:
-        # collapse far away ruptures
-        tocollapse = array['rrup'] >= array['mag'] * 10
-        far = array[tocollapse]
-        close = array[~tocollapse]
-    C = len(close)
-    if len(far):
-        mean = kmean(far, 'mdvbin')
-    else:
-        mean = numpy.zeros(0, array.dtype)
-    cfactor[0] += len(close) + len(mean)
-    cfactor[1] += len(array)
-    out = numpy.zeros(len(close) + len(mean), array.dtype)
-    out[:C] = close
-    out[C:] = mean
-    allsids = [U32([sid]) for sid in close['sids']]
-    sids = array['sids']
-    mdvbins = array['mdvbin']
-    for mdvbin in mean['mdvbin']:
-        allsids.append(sids[mdvbins == mdvbin])
+    with mon:
+        # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
+        names = array.dtype.names
+        if 'rake' not in names or len(numpy.unique(array['rake'])) == 1:
+            # collapse all
+            far = array
+            close = numpy.zeros(0, array.dtype)
+        else:
+            # collapse far away ruptures
+            tocollapse = array['rrup'] >= array['mag'] * 10
+            far = array[tocollapse]
+            close = array[~tocollapse]
+        C = len(close)
+        if len(far):
+            mean = kmean(far, 'mdvbin')
+        else:
+            mean = numpy.zeros(0, array.dtype)
+        cfactor[0] += len(close) + len(mean)
+        cfactor[1] += len(array)
+        out = numpy.zeros(len(close) + len(mean), array.dtype)
+        out[:C] = close
+        out[C:] = mean
+
+        allsids = [[sid] for sid in close['sids']]
+        df = pandas.DataFrame({'sids': array['sids']}, index=array['mdvbin'])
+        for _, rows in df.groupby(df.index):
+            allsids.append(rows['sids'])
     return out.view(numpy.recarray), allsids
 
 
@@ -742,9 +743,7 @@ class ContextMaker(object):
 
         # collapse if possible
         if isarray and self.collapse_level:
-            with self.col_mon:
-                ctx.sort(order='mdvbin')
-                ctx, allsids = collapse_array(ctx, self.cfactor)
+            ctx, allsids = collapse_array(ctx, self.cfactor, self.col_mon)
         else:  # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
