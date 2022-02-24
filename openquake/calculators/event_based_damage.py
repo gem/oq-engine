@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import logging
 import numpy
 import pandas
@@ -185,8 +186,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         oq.R = self.R  # 1 if collect_rlzs
         oq.float_dmg_dist = not oq.discrete_damage_distribution
         if oq.hazard_calculation_id:
-            oq.parentdir = self.datastore.ppath
-            import pdb; pdb.set_trace()
+            oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
