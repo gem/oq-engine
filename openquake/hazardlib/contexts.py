@@ -34,7 +34,7 @@ try:
 except ImportError:
     numba = None
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices)
+    AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -120,42 +120,37 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def collapse_array(array, cfactor):
+def collapse_array(array, cfactor, mon):
     """
     Collapse a structured array with uniform magnitude
     """
-    # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
-    names = array.dtype.names
-    if 'rake' not in names or len(numpy.unique(array['rake'])) == 1:
-        # collapse all
-        far = array
-        close = numpy.zeros(0, array.dtype)
-    else:
-        # collapse far away ruptures
-        tocollapse = array['rrup'] >= array['mag'] * 10
-        far = array[tocollapse]
-        close = array[~tocollapse]
-    C = len(close)
-    if len(far):
-        arrays = split_array(far, far['mdvbin'])
-    else:
-        arrays = []
-    cfactor[0] += len(close)
-    cfactor[1] += len(close)
-    out = numpy.zeros(len(close) + len(arrays), array.dtype)
-    out[:C] = close
-    allsids = [U32([sid]) for sid in close['sids']]
-    for a, arr in enumerate(arrays, C):
-        n = len(arr)
-        cfactor[0] += 1
-        cfactor[1] += n
-        if n == 1:
-            out[a] = arr
+    with mon:
+        # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
+        names = array.dtype.names
+        if 'rake' not in names or len(numpy.unique(array['rake'])) == 1:
+            # collapse all
+            far = array
+            close = numpy.zeros(0, array.dtype)
         else:
-            o = out[a]
-            for name in names:
-                o[name] = arr[name].mean()
-        allsids.append(arr['sids'])
+            # collapse far away ruptures
+            tocollapse = array['rrup'] >= array['mag'] * 10
+            far = array[tocollapse]
+            close = array[~tocollapse]
+        C = len(close)
+        if len(far):
+            uic = numpy.unique(  # this is fast
+                far['mdvbin'], return_inverse=True, return_counts=True)
+            mean = kmean(far, 'mdvbin', uic)
+        else:
+            mean = numpy.zeros(0, array.dtype)
+        cfactor[0] += len(close) + len(mean)
+        cfactor[1] += len(array)
+        out = numpy.zeros(len(close) + len(mean), array.dtype)
+        out[:C] = close
+        out[C:] = mean
+        allsids = [[sid] for sid in close['sids']]
+        if len(far):  # this is slow
+            allsids.extend(split_array(far['sids'], uic[1], uic[2]))
     return out.view(numpy.recarray), allsids
 
 
@@ -748,9 +743,7 @@ class ContextMaker(object):
 
         # collapse if possible
         if isarray and self.collapse_level:
-            with self.col_mon:
-                ctx.sort(order='mdvbin')
-                ctx, allsids = collapse_array(ctx, self.cfactor)
+            ctx, allsids = collapse_array(ctx, self.cfactor, self.col_mon)
         else:  # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
