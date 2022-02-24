@@ -62,7 +62,7 @@ class MonitorTestCase(unittest.TestCase):
         pickle.loads(pickle.dumps(self.mon))
 
 
-class SplitArray3TestCase(unittest.TestCase):
+class SplitArrayTestCase(unittest.TestCase):
     def test(self):
         # build a small structured array
         dtlist = [('mdvbin', numpy.uint32), ('rake', numpy.float64),

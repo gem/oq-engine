@@ -1033,6 +1033,7 @@ def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     return res
 
 
+# this is fast
 def kmean(structured_array, kfield, uniq_indices_counts=()):
     """
     Given a structured array of N elements with a discrete kfield with
