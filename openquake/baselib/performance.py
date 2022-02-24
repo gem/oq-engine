@@ -382,8 +382,9 @@ def _idx_start_stop(integers):
 
 def split_array(arr, ordered_indices):
     """
+    :param arr: an array with N elements
     :param indices: a set of ordered integers with repetitions
-    :returns: a list of arrays, split on the integers
+    :returns: a list of K arrays, split on the integers
 
     >>> arr = numpy.array([.1, .2, .3, .4, .5])
     >>> idx = numpy.array([1, 1, 2, 2, 3])
@@ -414,3 +415,27 @@ def get_slices(uint32s):
             indices[idx] = []
         indices[idx].append((start, stop))
     return indices
+
+
+@compile("uint32[:](uint32[:], int64[:], int64[:], int64[:])")
+def _split3(uint32s, indices, counts, cumcounts):
+    n = len(uint32s)
+    assert len(indices) == n
+    assert len(counts) <= n
+    out = numpy.zeros(n, numpy.uint32)
+    for idx, val in zip(indices, uint32s):
+        cumcounts[idx] -= 1
+        out[cumcounts[idx]] = val
+    return out
+
+
+def split_array3(uint32s, indices, counts):
+    """
+    :param uint32s: an array of N integers of kind uint32
+    :param indices: array of indices extracted from numpy.unique (size N)
+    :param counts: array of counts extracted from numpy.unique (size K)
+    :returns: a list of K arrays of integers of kind uint32
+    """
+    cumcounts = counts.cumsum()
+    out = _split3(uint32s, indices, counts, cumcounts)
+    return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]

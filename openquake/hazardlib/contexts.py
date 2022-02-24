@@ -35,7 +35,7 @@ except ImportError:
     numba = None
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
-from openquake.baselib.performance import Monitor, split_array
+from openquake.baselib.performance import Monitor, split_array, split_array3
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -138,7 +138,9 @@ def collapse_array(array, cfactor, mon):
             close = array[~tocollapse]
         C = len(close)
         if len(far):
-            mean = kmean(far, 'mdvbin')
+            uic = numpy.unique(
+                far['mdvbin'], return_inverse=True, return_counts=True)
+            mean = kmean(far, 'mdvbin', uic)
         else:
             mean = numpy.zeros(0, array.dtype)
         cfactor[0] += len(close) + len(mean)
@@ -146,11 +148,9 @@ def collapse_array(array, cfactor, mon):
         out = numpy.zeros(len(close) + len(mean), array.dtype)
         out[:C] = close
         out[C:] = mean
-
         allsids = [[sid] for sid in close['sids']]
-        df = pandas.DataFrame({'sids': array['sids']}, index=array['mdvbin'])
-        for _, rows in df.groupby(df.index):
-            allsids.append(rows['sids'])
+        if len(far):
+            allsids.extend(split_array3(far['sids'], uic[1], uic[2]))
     return out.view(numpy.recarray), allsids
 
 

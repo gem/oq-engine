@@ -1033,7 +1033,7 @@ def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     return res
 
 
-def kmean(structured_array, kfield):
+def kmean(structured_array, kfield, uniq_indices_counts=()):
     """
     Given a structured array of N elements with a discrete kfield with
     K <= N unique values, returns a structured array of K elements
@@ -1041,8 +1041,11 @@ def kmean(structured_array, kfield):
     """
     allnames = structured_array.dtype.names
     assert kfield in allnames, kfield
-    uniq, indices, counts = numpy.unique(
-        structured_array[kfield], return_inverse=True, return_counts=True)
+    if uniq_indices_counts:
+        uniq, indices, counts = uniq_indices_counts
+    else:
+        uniq, indices, counts = numpy.unique(
+            structured_array[kfield], return_inverse=True, return_counts=True)
     dic = {}
     dtlist = []
     for name in allnames:
