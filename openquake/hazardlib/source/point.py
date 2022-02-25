@@ -506,7 +506,7 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     grp_id = sources[0].grp_id
     for src in sources[1:]:
         assert src.grp_id == grp_id, (src.grp_id, grp_id)
-    if ps_grid_spacing is None:
+    if not ps_grid_spacing:
         return {grp_id: sources}
     out = [src for src in sources if not hasattr(src, 'location')]
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])

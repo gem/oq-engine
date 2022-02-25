@@ -517,7 +517,7 @@ ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
   *pointsource_distance* to be set too.
   Example: *ps_grid_spacing = 50*.
-  Default: no default
+  Default: 0, meaning no grid
 
 quantiles:
   List of probabilities used to compute the quantiles across realizations.
@@ -902,7 +902,7 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
-    ps_grid_spacing = valid.Param(valid.positivefloat, None)
+    ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
