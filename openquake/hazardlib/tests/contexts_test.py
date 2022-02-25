@@ -257,6 +257,8 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])
 
     def test_collapse_simple_fault(self):
+        # YuEtAl2013Ms has an azimuth distance causing a lower precision
+        # in the collapse
         src = '''\
         <simpleFaultSource
         id="3"
