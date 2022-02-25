@@ -1735,7 +1735,7 @@ class OqParam(valid.ParamSet):
         """
         `ps_grid_spacing` must be smaller than the `pointsource_distance`
         """
-        if self.ps_grid_spacing is None:
+        if not self.ps_grid_spacing:
             return True
         return self.ps_grid_spacing <= calc.filters.getdefault(
             self.pointsource_distance, 'default')
