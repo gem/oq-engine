@@ -1135,16 +1135,17 @@ def get_mean_stds(gsim, ctx, imts, mags=()):
     return out[:, 0] if single else out
 
 
-def get_poes(gsim, srcs, sitecol, imtls, return_cmaker=False, **kw):
+def get_poes(gsim, srcs, sitecol, imtls, invtime, return_cmaker=False, **kw):
     """
     :param gsim: a GSIM instance
     :param srcs: a list of sources with the same TRT
     :param sitecol: a SiteCollection instance with N sites
     :param imtls: a dictionary imt (string) -> levels (list or array)
+    :param invtime: investigation time
     :param return_cmaker: if set, return the underlying ContextMaker too
     :returns: an array of PoEs of shape (N, L)
     """
-    param = {'imtls': imtls}
+    param = {'imtls': imtls, 'investigation_time': invtime}
     param.update(kw)
     cmaker = ContextMaker('*', [gsim], param)
     poissonian, other = [], []
