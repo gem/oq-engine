@@ -47,6 +47,7 @@ class Line(object):
             raise ValueError(
                 "At least two distinct points are needed for a line!")
         self.coo = np.array([[p.longitude, p.latitude] for p in self.points])
+        self.coo.flags.writeable = False  # avoid dirty coding
 
     def __eq__(self, other):
         """

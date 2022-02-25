@@ -560,7 +560,7 @@ def _get_multi_line(dcache, suids):
     lines = [dcache[key]['tor'] for key in suids]
 
     # Create the multiline
-    multil = MultiLine(copy.deepcopy(lines))
+    multil = MultiLine(lines)
     revert = multil.set_overall_strike()
     soidx = multil._set_origin()
     revert = revert[soidx]
@@ -582,6 +582,6 @@ def _get_multi_line(dcache, suids):
     multil.set_u_max()
     multil.tupps = tupps
     multil.uupps = uupps
-    multil.weis = copy.deepcopy(weis)
-
+    multil.weis = np.array(weis)  # shape (N, 3)
+    multil.weis.flags.writeable = False  # nobody must change the weights
     return multil
