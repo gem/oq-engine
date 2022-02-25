@@ -1135,6 +1135,26 @@ def get_mean_stds(gsim, ctx, imts, mags=()):
     return out[:, 0] if single else out
 
 
+def get_poes(gsim, srcs, sitecol, imtls, collapse_level=0):
+    """
+    :param gsim: a GSIM instance
+    :param srcs: a list of sources with the same TRT
+    :param sitecol: a SiteCollection instance
+    :param imtls: a dictionary imt (string) -> levels (list or array)
+    """
+    # returns an array of PoEs of shape (N, L)
+    cmaker = ContextMaker('*', [gsim], {'imtls': imtls})
+    cmaker.collapse_level = collapse_level
+    poissonian, other = [], []
+    for ctx in cmaker.from_srcs(srcs, sitecol):
+        if not hasattr(ctx, 'probs_occur'):
+            poissonian.append(ctx)
+        else:
+            other.append(ctx)
+    ctxs = [cmaker.recarray(poissonian)] + other
+    return cmaker.get_pmap(ctxs).array(len(sitecol))[:, :, 0]
+
+
 # mock of a rupture used in the tests and in the SMTK
 class RuptureContext(BaseContext):
     """

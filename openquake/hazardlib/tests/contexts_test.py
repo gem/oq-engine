@@ -263,9 +263,7 @@ class GetCtxs01TestCase(unittest.TestCase):
     """
     Test for calculation of distances with caching
     """
-
     def setUp(self):
-
         # Set paths
         path = '../../qa_tests_data/classical/case_75/ruptures_0.xml'
         rup_path = os.path.join(BASE_PATH, path)
@@ -287,8 +285,8 @@ class GetCtxs01TestCase(unittest.TestCase):
 
         # Create the context maker
         gmm = AbrahamsonEtAl2014()
-        param = dict(imtls={'PGA':[]})
-        cm = ContextMaker('boh', [gmm], param)
+        param = dict(imtls={'PGA': []})
+        cm = ContextMaker('*', [gmm], param)
 
         # With this we get a list with six RuptureContexts
         ctxs = cm.get_ctxs(self.src, self.sitec)
@@ -320,33 +318,7 @@ class GetCtxs02TestCase(unittest.TestCase):
     """
     Test for calculation of distances with caching
     """
-
     def setUp(self):
-        smpath = os.path.join(os.path.dirname(__file__),
-                              'data/context/source_model.xml')
-        params = dict(
-            sites=[(0, 1), (0, 2)],
-            maximum_distance=calc.filters.IntegrationDistance.new('300'),
-            imtls=dict(PGA=numpy.arange(.1, 5, .1)),
-            investigation_time=50.,
-            gsim='BooreAtkinson2008',
-            reference_vs30_value=600.,
-            source_model_file=smpath,
-            area_source_discretization=1.,
-            pointsource_distance=dict(default=10))
-        inp = read_input(params)
-        [[trt, cmaker]] = inp.cmakerdict.items()
-        [srcs] = inp.groups  # a single area source
-        # get the context
-        ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
-        numpy.testing.assert_equal(len(ctx), 11616)
-        pcurve0 = cmaker.get_pmap([ctx])[0]
-        cmaker.cfactor = numpy.zeros(2)
-        cmaker.collapse_level = 1
-        pcurve1 = cmaker.get_pmap([ctx])[0]
-        self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
-        numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])
-
         # Set paths
         path = './data/context02/ruptures_0.xml'
         rup_path = os.path.join(BASE_PATH, path)
@@ -368,8 +340,8 @@ class GetCtxs02TestCase(unittest.TestCase):
 
         # Create the context maker
         gmm = AbrahamsonEtAl2014()
-        param = dict(imtls={'PGA':[]})
-        cm = ContextMaker('boh', [gmm], param)
+        param = dict(imtls={'PGA': []})
+        cm = ContextMaker('*', [gmm], param)
 
         # With this we get a list with six RuptureContexts
         ctxs = cm.get_ctxs(self.src, self.sitec)
