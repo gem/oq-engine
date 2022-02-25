@@ -41,7 +41,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 
-
+PLOTTING = False
 aac = numpy.testing.assert_allclose
 dists = numpy.array([0, 10, 20, 30, 40, 50])
 intensities = {
@@ -231,10 +231,6 @@ class CollapseTestCase(unittest.TestCase):
         self.assertLess(rms(pmap[1].array - cmap[1].array), 1E-7)
         numpy.testing.assert_equal(cmaker.cfactor, [30, 240])
 
-        # test get_poes
-        poes = cmaker.get_poes(srcs, inp.sitecol)
-        self.assertEqual(poes.shape, (2, 20, 1))  # 2 sites, 20 levels, 1 gsim
-
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
                               'data/context/source_model.xml')
@@ -246,8 +242,7 @@ class CollapseTestCase(unittest.TestCase):
             gsim='BooreAtkinson2008',
             reference_vs30_value=600.,
             source_model_file=smpath,
-            area_source_discretization=1.,
-            pointsource_distance=dict(default=10))
+            area_source_discretization=1.)
         inp = read_input(params)
         [[trt, cmaker]] = inp.cmakerdict.items()
         [srcs] = inp.groups  # a single area source
@@ -260,6 +255,73 @@ class CollapseTestCase(unittest.TestCase):
         pcurve1 = cmaker.get_pmap([ctx])[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
         numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])
+
+    def test_collapse_azimuth(self):
+        # YuEtAl2013Ms has an azimuth distance causing a lower precision
+        # in the collapse
+        src = '''\
+        <simpleFaultSource
+        id="3"
+        name="Simple Fault Source"
+        tectonicRegion="Active Shallow Crust"
+        >
+        <simpleFaultGeometry>
+        <gml:LineString>
+        <gml:posList>
+          1 -0.2 1.4 0 1.7 0
+        </gml:posList>
+        </gml:LineString>
+        <dip>
+          3
+        </dip>
+        <upperSeismoDepth>
+          5
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          15
+        </lowerSeismoDepth>
+        </simpleFaultGeometry>
+        <magScaleRel>
+          WC1994
+        </magScaleRel>
+        <ruptAspectRatio>
+          2
+        </ruptAspectRatio>
+        <truncGutenbergRichterMFD
+          aValue="4.2" bValue=".9" maxMag="7" minMag="6.5"/>
+        <rake>
+          90
+        </rake>
+        </simpleFaultSource>'''
+        params = dict(
+            sites=[(1.1, -1.1), (1.1, -1.9)],
+            maximum_distance=calc.filters.IntegrationDistance.new('300'),
+            imtls=dict(PGA=numpy.arange(.001, .45, .001)),
+            investigation_time=50.,
+            source_string=src,
+            rupture_mesh_spacing=10,
+            width_of_mfd_bin=.5,  # so that there is a single magnitude
+            gsim='YuEtAl2013Ms',
+            reference_vs30_value=600.)
+        inp = read_input(params)
+        cmaker = inp.cmaker
+        [grp] = inp.groups
+        self.assertEqual(len(grp.sources), 1)  # not splittable source
+        poes = cmaker.get_poes(grp, inp.sitecol)
+        cmaker.collapse_level = 1
+        newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
+        if PLOTTING:
+            import matplotlib.pyplot as plt
+            imls = cmaker.imtls['PGA']
+            plt.plot(imls, poes[0, :, 0], '-', label='0-old')
+            plt.plot(imls, newpoes[0, :, 0], '-', label='0-new')
+            plt.plot(imls, poes[1, :, 0], '-', label='1-old')
+            plt.plot(imls, newpoes[1, :, 0], '-', label='1-new')
+            plt.legend()
+            plt.show()
+        maxdiff = (newpoes - poes).max(axis=(1, 2))
+        print('maxdiff =', maxdiff)
+        numpy.testing.assert_equal(cmaker.cfactor, [276, 456])
 
 
 class GetCtxs01TestCase(unittest.TestCase):
