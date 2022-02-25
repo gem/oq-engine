@@ -256,7 +256,7 @@ class CollapseTestCase(unittest.TestCase):
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
         numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])
 
-    def test_collapse_simple_fault(self):
+    def test_collapse_azimuth(self):
         # YuEtAl2013Ms has an azimuth distance causing a lower precision
         # in the collapse
         src = '''\
