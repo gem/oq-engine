@@ -35,7 +35,7 @@ class MultiLine():
     """
 
     def __init__(self, lines):
-        self.lines = copy.deepcopy(lines)
+        self.lines = [copy.copy(ln) for ln in lines]
         self.strike_to_east = None
         self.overall_strike = None
         self.olon = None
