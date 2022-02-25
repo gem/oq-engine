@@ -607,6 +607,21 @@ class ContextMaker(object):
                     yield [rup], far
                     yield self._ruptures(src, rup.mag, point_rup), close
 
+    def get_poes(self, srcs, sitecol):
+        """
+        :param srcs: a list of sources with the same TRT
+        :param sitecol: a SiteCollection instance with N sites
+        :returns: an array of PoEs of shape (N, L, G)
+        """
+        poissonian, other = [], []
+        for ctx in self.from_srcs(srcs, sitecol):
+            if not hasattr(ctx, 'probs_occur'):
+                poissonian.append(ctx)
+            else:
+                other.append(ctx)
+        ctxs = [self.recarray(poissonian)] + other
+        return self.get_pmap(ctxs).array(len(sitecol))
+
     def get_pmap(self, ctxs, probmap=None):
         """
         :param ctxs: a list of contexts
@@ -1133,33 +1148,6 @@ def get_mean_stds(gsim, ctx, imts, mags=()):
                           {'imtls': imtls, 'mags': mags})
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
     return out[:, 0] if single else out
-
-
-def get_poes(gsim, srcs, sitecol, imtls, invtime, return_cmaker=False, **kw):
-    """
-    :param gsim: a GSIM instance
-    :param srcs: a list of sources with the same TRT
-    :param sitecol: a SiteCollection instance with N sites
-    :param imtls: a dictionary imt (string) -> levels (list or array)
-    :param invtime: investigation time
-    :param return_cmaker: if set, return the underlying ContextMaker too
-    :returns: an array of PoEs of shape (N, L)
-    """
-    param = {'imtls': imtls, 'investigation_time': invtime}
-    param.update(kw)
-    cmaker = ContextMaker('*', [gsim], param)
-    poissonian, other = [], []
-    for ctx in cmaker.from_srcs(srcs, sitecol):
-        if not hasattr(ctx, 'probs_occur'):
-            poissonian.append(ctx)
-        else:
-            other.append(ctx)
-    ctxs = [cmaker.recarray(poissonian)] + other
-    poes = cmaker.get_pmap(ctxs).array(len(sitecol))[:, :, 0]
-    if return_cmaker:
-        cmaker.ctxs = ctxs
-        return poes, cmaker
-    return poes
 
 
 # mock of a rupture used in the tests and in the SMTK

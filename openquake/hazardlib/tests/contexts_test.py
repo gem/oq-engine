@@ -26,7 +26,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, RuptureContext, ContextMaker, get_distances, get_poes)
+    Effect, RuptureContext, ContextMaker, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -232,10 +232,8 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_equal(cmaker.cfactor, [30, 240])
 
         # test get_poes
-        [gsim] = cmaker.gsims
-        poes = get_poes(
-            gsim, srcs, inp.sitecol, cmaker.imtls, cmaker.investigation_time)
-        self.assertEqual(poes.shape, (2, 20))  # 2 sites, 20 levels
+        poes = cmaker.get_poes(srcs, inp.sitecol)
+        self.assertEqual(poes.shape, (2, 20, 1))  # 2 sites, 20 levels, 1 gsim
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
