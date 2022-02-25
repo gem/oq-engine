@@ -1139,10 +1139,10 @@ def get_poes(gsim, srcs, sitecol, imtls, collapse_level=0):
     """
     :param gsim: a GSIM instance
     :param srcs: a list of sources with the same TRT
-    :param sitecol: a SiteCollection instance
+    :param sitecol: a SiteCollection instance with N sites
     :param imtls: a dictionary imt (string) -> levels (list or array)
+    :returns: an array of PoEs of shape (N, L)
     """
-    # returns an array of PoEs of shape (N, L)
     cmaker = ContextMaker('*', [gsim], {'imtls': imtls})
     cmaker.collapse_level = collapse_level
     poissonian, other = [], []
