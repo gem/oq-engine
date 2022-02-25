@@ -35,7 +35,7 @@ class MultiLine():
     """
 
     def __init__(self, lines):
-        self.lines = lines
+        self.lines = [copy.copy(ln) for ln in lines]
         self.strike_to_east = None
         self.overall_strike = None
         self.olon = None
@@ -409,7 +409,6 @@ def get_tu(shifts, tupps, uupps, weis):
     # Processing
     arg = zip(shifts, tupps, uupps, weis)
     for i, (shift, tupp, uupp, wei_sum) in enumerate(arg):
-
         if len(wei_sum.shape) > 1:
             wei_sum = np.squeeze(wei_sum)
 
@@ -417,7 +416,7 @@ def get_tu(shifts, tupps, uupps, weis):
         if i == 0:
             uut = (uupp + shift) * wei_sum
             tut = tupp * wei_sum
-            wet = wei_sum
+            wet = copy.copy(wei_sum)
         else:
             uut += (uupp + shift) * wei_sum
             tut += tupp * wei_sum
