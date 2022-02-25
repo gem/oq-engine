@@ -19,6 +19,7 @@
 Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
+import copy
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.contexts import STD_TYPES, get_mean_stds
@@ -26,6 +27,8 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.const import IMC
+from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
+    NRCan15SiteTerm, BA08_AB06)
 
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
@@ -45,6 +48,16 @@ COEFF_PGA_PGV = {IMC.AVERAGE_HORIZONTAL: [1, 0.01, 1, 1, 0.01, 1],
                  IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
                  IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
                  IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
+
+
+def nrcan15_site_term(self, ctx, imt, kind):
+    """
+    This function adds a site term to GMMs missing it
+    """
+    C = NRCan15SiteTerm.COEFFS_BA08[imt]
+    C2 = NRCan15SiteTerm.COEFFS_AB06r[imt]
+    fa = BA08_AB06(kind, C, C2, ctx.vs30, imt, np.exp(self.mean))
+    self.mean = np.log(np.exp(self.mean) * fa)
 
 
 def horiz_comp_to_geom_mean(self, ctx, imt):
@@ -297,6 +310,7 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+
         if ('set_between_epsilon' in self.params or
             'set_total_std_as_tau_plus_delta' in self.params) and (
                 StdDev.INTER_EVENT not in
@@ -307,10 +321,17 @@ class ModifiableGMPE(GMPE):
             self.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
             self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
+        ctx_rock = copy.copy(ctx)
+        if 'nrcan15_site_term' in self.params:
+            ctx_rock.vs30 = np.full_like(ctx.vs30, 760.)
+
         # Compute the original mean and standard deviations
-        mean[:], sig[:], tau[:], phi[:] = get_mean_stds(self.gmpe, ctx, imts)
+        mean[:], sig[:], tau[:], phi[:] = get_mean_stds(
+            self.gmpe, ctx_rock, imts)
+
         g = globals()
         for m, imt in enumerate(imts):
+
             # Save mean and stds
             kvs = list(zip(STD_TYPES, [sig[m], tau[m], phi[m]]))
             self.mean = mean[m]
