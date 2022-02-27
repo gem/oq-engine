@@ -67,15 +67,15 @@ def size(imtls):
 
 
 class Collapser(object):
-    def __init__(self, collapse_level, maxdist, has_vs30, mon):
+    def __init__(self, collapse_level, has_vs30=True, mon=Monitor()):
         self.collapse_level = collapse_level
-        self.dst_bins = valid.sqrscale(0, maxdist, 100)
-        self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 255)
+        self.dst_bins = valid.sqrscale(0, 1000, 256)
+        self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
         self.has_vs30 = has_vs30
         self.cfactor = numpy.zeros(2)
         self.mon = mon
 
-    def mdvbin(self, ctx):
+    def calc_mdvbin(self, ctx):
         """
         :param ctx: a recarray
         :return: an array of integers mdvbin
@@ -89,8 +89,9 @@ class Collapser(object):
 
     def collapse(self, ctx):
         """
-        Collapse a recarray if possible.
+        Collapse a context recarray if possible.
 
+        :param ctx: a recarray with fields "mdvbin" and "sids"
         :returns: the collapsed array and a list of arrays with site IDs
         """
         if not (isinstance(ctx, numpy.ndarray) and self.collapse_level):
@@ -330,8 +331,8 @@ class ContextMaker(object):
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.collapser = Collapser(
-            self.collapse_level, self.maximum_distance(MAXMAG),
-            'vs30' in dic, monitor('collapsing contexts', measuremem=False))
+            self.collapse_level, 'vs30' in dic,
+            monitor('collapsing contexts', measuremem=False))
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
@@ -390,8 +391,8 @@ class ContextMaker(object):
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                if par == 'mdvbin':  # set a few lines below
-                    val = self.collapser.mdvbin(ctx)
+                if par == 'mdvbin':
+                    val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'occurrence_rate':  # missing in scenario
                     val = getattr(ctx, par, 0.)
                 else:  # never missing

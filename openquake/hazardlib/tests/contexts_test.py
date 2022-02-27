@@ -221,15 +221,15 @@ class CollapseTestCase(unittest.TestCase):
 
         # compute original curves
         pmap = cmaker.get_pmap([ctx])
-        numpy.testing.assert_equal(cmaker.cfactor, [240, 240])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [240, 240])
 
         # compute collapsed curves
-        cmaker.cfactor = numpy.zeros(2)
-        cmaker.collapse_level = 1
+        cmaker.collapser.cfactor = numpy.zeros(2)
+        cmaker.collapser.collapse_level = 1
         cmap = cmaker.get_pmap([ctx])
         self.assertLess(rms(pmap[0].array - cmap[0].array), 1E-6)
-        self.assertLess(rms(pmap[1].array - cmap[1].array), 1E-7)
-        numpy.testing.assert_equal(cmaker.cfactor, [30, 240])
+        self.assertLess(rms(pmap[1].array - cmap[1].array), 1E-6)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [29, 240])
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
@@ -250,15 +250,15 @@ class CollapseTestCase(unittest.TestCase):
         ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
         numpy.testing.assert_equal(len(ctx), 11616)
         pcurve0 = cmaker.get_pmap([ctx])[0]
-        cmaker.cfactor = numpy.zeros(2)
-        cmaker.collapse_level = 1
+        cmaker.collapser.cfactor = numpy.zeros(2)
+        cmaker.collapser.collapse_level = 1
         pcurve1 = cmaker.get_pmap([ctx])[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
-        numpy.testing.assert_equal(cmaker.cfactor, [24, 11616])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 11616])
 
     def test_collapse_azimuth(self):
         # YuEtAl2013Ms has an azimuth distance causing a lower precision
-        # in the collapse
+        # in the collapse even if we are collapsing far less than before
         src = '''\
         <simpleFaultSource
         id="3"
@@ -308,7 +308,7 @@ class CollapseTestCase(unittest.TestCase):
         [grp] = inp.groups
         self.assertEqual(len(grp.sources), 1)  # not splittable source
         poes = cmaker.get_poes(grp, inp.sitecol)
-        cmaker.collapse_level = 1
+        cmaker.collapser.collapse_level = 1
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
             import matplotlib.pyplot as plt
@@ -321,7 +321,7 @@ class CollapseTestCase(unittest.TestCase):
             plt.show()
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
-        numpy.testing.assert_equal(cmaker.cfactor, [276, 456])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [292, 456])
 
 
 class GetCtxs01TestCase(unittest.TestCase):
