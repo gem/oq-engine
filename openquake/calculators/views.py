@@ -1287,3 +1287,14 @@ def view_rup_stats(token, dstore):
     rups = dstore['ruptures'][:]
     out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
     return numpy.array(out, dt('kind counts mean stddev min max'))
+
+
+@view.add('collapsed_rups')
+def view_collapsed_rups(token, dstore):
+    """
+    Show the statistics of event based ruptures
+    """
+    sitecol = dstore['sitecol']
+    rup_df = dstore.read_df('rup', 'id').sort_index()
+
+    return numpy.array(out, dt('kind counts mean stddev min max'))
