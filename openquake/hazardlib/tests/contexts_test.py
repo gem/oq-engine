@@ -200,6 +200,7 @@ class EffectTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
 
 
+# see also classical/case_24 and classical/case_69
 class CollapseTestCase(unittest.TestCase):
 
     def test_collapse_small(self):
@@ -322,6 +323,81 @@ class CollapseTestCase(unittest.TestCase):
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [292, 456])
+
+    def test_collapse_area(self):
+        # collapse an area source
+        src = '''\
+        <areaSource
+          id="1"
+          name="Area Source"
+          tectonicRegion="Active Shallow Crust"
+        >
+        <areaGeometry>
+        <gml:Polygon>
+        <gml:exterior>
+        <gml:LinearRing>
+        <gml:posList>
+          -.5 -.5 -.3 -.1 .1 .2 .3 -.8
+        </gml:posList>
+        </gml:LinearRing>
+        </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>
+        0
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+        10
+        </lowerSeismoDepth>
+        </areaGeometry>
+        <magScaleRel>
+        WC1994
+        </magScaleRel>
+        <ruptAspectRatio>
+        1
+        </ruptAspectRatio>
+        <truncGutenbergRichterMFD
+          aValue="4.5" bValue="1" maxMag="6.5" minMag="5"/>
+        <nodalPlaneDist>
+        <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+        </nodalPlaneDist>
+        <hypoDepthDist>
+        <hypoDepth depth="5" probability="1"/>
+        </hypoDepthDist>
+        </areaSource>
+        '''
+        params = dict(
+            sites=[(1.1, -1.1), (1.1, -1.9)],
+            maximum_distance=calc.filters.IntegrationDistance.new('300'),
+            imtls=dict(PGA=numpy.arange(.001, .45, .001)),
+            investigation_time=50.,
+            source_string=src,
+            area_source_discretization=10,
+            width_of_mfd_bin=.5,  # so that there are only 3 magnitudes
+            gsim='YuEtAl2013Ms',
+            reference_vs30_value=600.)
+        inp = read_input(params)
+        cmaker = inp.cmaker
+        [grp] = inp.groups
+        self.assertEqual(len(grp.sources), 52)  # point sources
+        poes = cmaker.get_poes(grp, inp.sitecol)
+        cmaker.collapser.collapse_level = 1
+        newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
+        if PLOTTING:
+            import matplotlib.pyplot as plt
+            imls = cmaker.imtls['PGA']
+            plt.plot(imls, poes[0, :, 0], '-', label='0-old')
+            plt.plot(imls, newpoes[0, :, 0], '-', label='0-new')
+            plt.plot(imls, poes[1, :, 0], '-', label='1-old')
+            plt.plot(imls, newpoes[1, :, 0], '-', label='1-new')
+            plt.legend()
+            plt.show()
+        maxdiff = (newpoes - poes).max(axis=(1, 2))
+        print('maxdiff =', maxdiff)
+        # this is a case where the precision on site 0 is perfect, while
+        # on on site 1 if far from perfect
+        self.assertLess(maxdiff[0], 1E-15)
+        self.assertLess(maxdiff[0], 2E-3)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [437, 624])
 
 
 class GetCtxs01TestCase(unittest.TestCase):
