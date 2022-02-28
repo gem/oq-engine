@@ -942,15 +942,19 @@ class PmapMaker(object):
         filt = (self.srcfilter.filter if not self.split_sources or self.N == 1
                 else self.srcfilter.split)
         cm = self.cmaker
+        allctxs = []
+        maxsize = 25
         for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
             ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
+            allctxs.extend(ctxs)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            if nsites:
-                cm.get_pmap(ctxs, pmap)
+            if nsites and sum(len(ctx) for ctx in allctxs) > maxsize:
+                cm.get_pmap(allctxs, pmap)
+                allctxs.clear()
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
@@ -959,6 +963,8 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
             timer.save(src, nctxs, nsites, dt, cm.task_no)
+        if allctxs:
+            cm.get_pmap(allctxs, pmap)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
