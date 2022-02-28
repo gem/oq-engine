@@ -114,8 +114,8 @@ class Collapser(object):
             return ctx, ctx.sids.reshape(-1, 1)
 
         # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
-        if trivial(ctx, 'rake') and trivial(ctx, 'dip') and \
-           trivial('hypo_depth'):
+        other = set(ctx.dtype.names) - {'mag', 'rrup', 'vs30'}
+        if all(trivial(ctx, param) for param in other):
             # collapse all
             far = ctx
             close = numpy.zeros(0, ctx.dtype)
