@@ -1289,8 +1289,8 @@ def view_rup_stats(token, dstore):
     return numpy.array(out, dt('kind counts mean stddev min max'))
 
 
-@view.add('collapse_factor')
-def view_collapse_factor(token, dstore):
+@view.add('collapsible')
+def view_collapsible(token, dstore):
     """
     Show how much the ruptures are collapsed for each site
     """

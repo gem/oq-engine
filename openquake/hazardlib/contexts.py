@@ -330,9 +330,6 @@ class ContextMaker(object):
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
-        self.collapser = Collapser(
-            self.collapse_level, 'vs30' in dic,
-            monitor('collapsing contexts', measuremem=False))
         self.ctx_builder = RecordBuilder(**dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
@@ -343,10 +340,13 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
         self.init_monitoring(monitor)
+        self.collapser = Collapser(
+            self.collapse_level, 'vs30' in dic, self.col_mon)
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
         self.ctx_mon = monitor('make_contexts', measuremem=True)
+        self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('computing pnes', measuremem=False)
