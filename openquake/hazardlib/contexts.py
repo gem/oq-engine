@@ -67,6 +67,17 @@ def size(imtls):
     return len(imls) * len(imtls)
 
 
+def trivial(ctx, name):
+    """
+    :param ctx: a recarray
+    :param name: name of a parameter
+    :returns: True if the parameter is missing or single valued
+    """
+    if name not in ctx.dtype.names:
+        return True
+    return len(numpy.unique(numpy.float32(ctx[name]))) == 1
+
+
 class Collapser(object):
     def __init__(self, collapse_level, has_vs30=True):
         self.collapse_level = collapse_level
@@ -103,8 +114,7 @@ class Collapser(object):
             return ctx, ctx.sids.reshape(-1, 1)
 
         # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
-        names = ctx.dtype.names
-        if 'rake' not in names or len(numpy.unique(ctx['rake'])) == 1:
+        if trivial(ctx, 'rake') and trivial(ctx, 'dip'):
             # collapse all
             far = ctx
             close = numpy.zeros(0, ctx.dtype)
