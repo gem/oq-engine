@@ -51,6 +51,7 @@ from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 
 U32 = numpy.uint32
 F64 = numpy.float64
+MAXSIZE = 500_000  # used when collapsing
 FOUR_GB = 4_294_967_296  # 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
@@ -127,6 +128,7 @@ class Collapser(object):
         allsids = [[sid] for sid in close['sids']]
         if len(far):  # this is slow
             allsids.extend(split_array(far['sids'], uic[1], uic[2]))
+        print(len(out), len(ctx))
         return out.view(numpy.recarray), allsids
 
 
@@ -937,7 +939,6 @@ class PmapMaker(object):
                 else self.srcfilter.split)
         cm = self.cmaker
         allctxs = []
-        maxsize = 250_000
         for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
@@ -946,7 +947,7 @@ class PmapMaker(object):
             allctxs.extend(ctxs)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            if nsites and sum(len(ctx) for ctx in allctxs) > maxsize:
+            if nsites and sum(len(ctx) for ctx in allctxs) > MAXSIZE:
                 cm.get_pmap(allctxs, pmap)
                 allctxs.clear()
             dt = time.time() - t0
