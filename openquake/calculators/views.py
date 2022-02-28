@@ -33,7 +33,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
@@ -1287,3 +1287,32 @@ def view_rup_stats(token, dstore):
     rups = dstore['ruptures'][:]
     out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
     return numpy.array(out, dt('kind counts mean stddev min max'))
+
+
+@view.add('collapsible')
+def view_collapsible(token, dstore):
+    """
+    Show how much the ruptures are collapsed for each site
+    """
+    def recarray(mag, rrups, vs30s, dtype=dt('mag rrup vs30')):
+        out = [(mag, rrups[sid], vs30) for sid, vs30 in enumerate(vs30s)]
+        return numpy.array(out, dtype).view(numpy.recarray)
+
+    sitecol = dstore['sitecol']
+    rup_arr = dstore['rup/id'][:]
+    mag_arr = dstore['rup/mag'][:]
+    rrup_arr = dstore['rup/rrup_'][:]
+    sids_arr = dstore['rup/sids_'][:]
+    c1 = Collapser(1)
+    dic = dict(rup_id=[], site_id=[], mdvbin=[])
+    for id, mag, rrup, sids in zip(rup_arr, mag_arr, rrup_arr, sids_arr):
+        mdvbin = c1.calc_mdvbin(recarray(mag, rrup, sitecol.vs30[sids]))
+        for sid, mdv in zip(sids, mdvbin):
+            dic['rup_id'].append(id)
+            dic['site_id'].append(sid)
+            dic['mdvbin'].append(mdv)
+    out = []
+    for sid, df in pandas.DataFrame(dic).groupby('site_id'):
+        n, u = len(df), len(df.mdvbin.unique())
+        out.append((sid, u, n, n / u))
+    return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))

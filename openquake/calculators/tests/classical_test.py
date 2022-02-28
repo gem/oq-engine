@@ -39,8 +39,8 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
-    case_66, case_67, case_68, case_70, case_71, case_72, case_73, case_74,
-    case_75)
+    case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
+    case_74, case_75)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -452,7 +452,7 @@ hazard_uhs-std.csv
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3
         self.assertEqual(len(self.calc.datastore['rup/mag']), 780)
-        numpy.testing.assert_equal(self.calc.cfactor, [210, 1560])
+        numpy.testing.assert_equal(self.calc.cfactor, [443, 1560])
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
 
@@ -965,6 +965,12 @@ hazard_uhs-std.csv
     def test_case_68(self):
         # expandModel feature
         self.run_calc(case_68.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+    def test_case_69(self):
+        # collapse areaSource with no nodal planes/hypocenters
+        self.run_calc(case_69.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 

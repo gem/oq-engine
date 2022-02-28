@@ -66,6 +66,70 @@ def size(imtls):
     return len(imls) * len(imtls)
 
 
+class Collapser(object):
+    def __init__(self, collapse_level, has_vs30=True):
+        self.collapse_level = collapse_level
+        self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
+        self.dist_bins = valid.sqrscale(0, 1000, 256)
+        self.vs30_bins = numpy.linspace(0, 32767, 65536)
+        self.has_vs30 = has_vs30
+        self.cfactor = numpy.zeros(2)
+
+    def calc_mdvbin(self, ctx):
+        """
+        :param ctx: a recarray
+        :return: an array of integers mdvbin
+        """
+        magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
+        distbin = numpy.searchsorted(self.dist_bins, ctx.rrup)
+        if self.has_vs30:
+            vs30bin = numpy.searchsorted(self.vs30_bins, ctx.rrup)
+            return magbin * 16777216 + distbin * 65536 + vs30bin
+        else:
+            return magbin * 16777216 + distbin * 65536
+
+    def collapse(self, ctx):
+        """
+        Collapse a context recarray if possible.
+
+        :param ctx: a recarray with fields "mdvbin" and "sids"
+        :returns: the collapsed array and a list of arrays with site IDs
+        """
+        if not (isinstance(ctx, numpy.ndarray) and self.collapse_level):
+            # no collapse
+            self.cfactor[0] += len(ctx)
+            self.cfactor[1] += len(ctx)
+            return ctx, ctx.sids.reshape(-1, 1)
+
+        # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
+        names = ctx.dtype.names
+        if 'rake' not in names or len(numpy.unique(ctx['rake'])) == 1:
+            # collapse all
+            far = ctx
+            close = numpy.zeros(0, ctx.dtype)
+        else:
+            # collapse far away ruptures
+            tocollapse = ctx['rrup'] >= ctx['mag'] * 10
+            far = ctx[tocollapse]
+            close = ctx[~tocollapse]
+        C = len(close)
+        if len(far):
+            uic = numpy.unique(  # this is fast
+                far['mdvbin'], return_inverse=True, return_counts=True)
+            mean = kmean(far, 'mdvbin', uic)
+        else:
+            mean = numpy.zeros(0, ctx.dtype)
+        self.cfactor[0] += len(close) + len(mean)
+        self.cfactor[1] += len(ctx)
+        out = numpy.zeros(len(close) + len(mean), ctx.dtype)
+        out[:C] = close
+        out[C:] = mean
+        allsids = [[sid] for sid in close['sids']]
+        if len(far):  # this is slow
+            allsids.extend(split_array(far['sids'], uic[1], uic[2]))
+        return out.view(numpy.recarray), allsids
+
+
 class Timer(object):
     """
     Timer used to save the time needed to process each source and to
@@ -118,40 +182,6 @@ def get_num_distances(gsims):
     for gsim in gsims:
         dists.update(gsim.REQUIRES_DISTANCES)
     return len(dists)
-
-
-def collapse_array(array, cfactor, mon):
-    """
-    Collapse a structured array with uniform magnitude
-    """
-    with mon:
-        # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
-        names = array.dtype.names
-        if 'rake' not in names or len(numpy.unique(array['rake'])) == 1:
-            # collapse all
-            far = array
-            close = numpy.zeros(0, array.dtype)
-        else:
-            # collapse far away ruptures
-            tocollapse = array['rrup'] >= array['mag'] * 10
-            far = array[tocollapse]
-            close = array[~tocollapse]
-        C = len(close)
-        if len(far):
-            uic = numpy.unique(  # this is fast
-                far['mdvbin'], return_inverse=True, return_counts=True)
-            mean = kmean(far, 'mdvbin', uic)
-        else:
-            mean = numpy.zeros(0, array.dtype)
-        cfactor[0] += len(close) + len(mean)
-        cfactor[1] += len(array)
-        out = numpy.zeros(len(close) + len(mean), array.dtype)
-        out[:C] = close
-        out[C:] = mean
-        allsids = [[sid] for sid in close['sids']]
-        if len(far):  # this is slow
-            allsids.extend(split_array(far['sids'], uic[1], uic[2]))
-    return out.view(numpy.recarray), allsids
 
 
 def csdict(M, N, P, start, stop):
@@ -249,10 +279,6 @@ class ContextMaker(object):
             if hasattr(gsim, 'set_tables'):
                 gsim.set_tables(self.mags, self.imtls)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
-        # TODO: try to raise the 100 below to 255
-        self.dst_bins = valid.sqrscale(0, self.maximum_distance(MAXMAG), 100)
-        self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 255)
-        self.cfactor = numpy.zeros(2)  # used to compute the collapse factor
         if 'pointsource_distance' not in param:
             self.pointsource_distance = 1000.
         else:
@@ -305,6 +331,7 @@ class ContextMaker(object):
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
+        self.collapser = Collapser(self.collapse_level, 'vs30' in dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -356,7 +383,6 @@ class ContextMaker(object):
         """
         C = sum(len(ctx) for ctx in ctxs)
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
-        vs30 = "vs30" in ra.dtype.names
         start = 0
         for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
@@ -364,13 +390,8 @@ class ContextMaker(object):
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                if par == 'mdvbin':  # set a few lines below
-                    magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
-                    dstbin = numpy.searchsorted(self.dst_bins, ctx.rrup)
-                    if vs30:
-                        val = (magbin * 256 + dstbin) * 65536 + U32(ctx.vs30)
-                    else:
-                        val = (magbin * 256 + dstbin) * 65536
+                if par == 'mdvbin':
+                    val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'occurrence_rate':  # missing in scenario
                     val = getattr(ctx, par, 0.)
                 else:  # never missing
@@ -757,12 +778,8 @@ class ContextMaker(object):
         isarray = isinstance(ctx, numpy.ndarray)
 
         # collapse if possible
-        if isarray and self.collapse_level:
-            ctx, allsids = collapse_array(ctx, self.cfactor, self.col_mon)
-        else:  # no collapse
-            self.cfactor[0] += len(ctx)
-            self.cfactor[1] += len(ctx)
-            allsids = ctx.sids.reshape(-1, 1)
+        with self.col_mon:
+            ctx, allsids = self.collapser.collapse(ctx)
 
         # split large context arrays to avoid filling the CPU cache
         if isarray and ctx.nbytes > maxsize:
@@ -987,14 +1004,13 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
-        self.cfactor = self.cmaker.cfactor = numpy.zeros(2)
         self.source_data = AccumDict(accum=[])
         if self.src_mutex:
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
         dic = {'pmap': pmap,
-               'cfactor': self.cfactor,
+               'cfactor': self.cmaker.collapser.cfactor,
                'rup_data': self.dictarray(self.rupdata),
                'source_data': self.source_data,
                'task_no': self.task_no,
