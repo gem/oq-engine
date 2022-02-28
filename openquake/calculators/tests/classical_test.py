@@ -452,7 +452,7 @@ hazard_uhs-std.csv
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3
         self.assertEqual(len(self.calc.datastore['rup/mag']), 780)
-        numpy.testing.assert_equal(self.calc.cfactor, [1244, 1560])
+        numpy.testing.assert_equal(self.calc.cfactor, [443, 1560])
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
 

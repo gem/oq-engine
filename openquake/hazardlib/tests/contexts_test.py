@@ -322,7 +322,7 @@ class CollapseTestCase(unittest.TestCase):
             plt.show()
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [333, 456])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [292, 456])
 
     def test_collapse_area(self):
         # collapse an area source

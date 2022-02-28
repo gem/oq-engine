@@ -57,6 +57,7 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
+RUP_PARAMS = {'mag', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
 
 
 def size(imtls):
@@ -114,7 +115,7 @@ class Collapser(object):
             return ctx, ctx.sids.reshape(-1, 1)
 
         # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
-        other = set(ctx.dtype.names) - {'mag', 'rrup', 'vs30'}
+        other = set(ctx.dtype.names) - RUP_PARAMS - KNOWN_DISTANCES
         if all(trivial(ctx, param) for param in other):
             # collapse all
             far = ctx
