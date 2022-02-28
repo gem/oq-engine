@@ -654,6 +654,16 @@ class ContextMaker(object):
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
+        poissonian, other = [], []
+        for ctx in ctxs:
+            if not hasattr(ctx, 'probs_occur') and not self.af:
+                poissonian.append(ctx)
+            else:
+                other.append(ctx)
+        if poissonian:
+            ctxs = [self.recarray(poissonian)] + other
+        else:
+            ctxs = other
         for ctx in ctxs:
             for poes, pnes, allsids, ctx in self.gen_poes(ctx):
                 for poe, pne, sids in zip(poes, pnes, allsids):
@@ -923,11 +933,6 @@ class PmapMaker(object):
             if self.fewsites:  # keep rupdata in memory
                 for ctx in ctxs:
                     self.rupdata.append(ctx)
-            if not self.af and not numpy.isnan(
-                    [ctx.occurrence_rate for ctx in ctxs]).any():
-                # vectorize poissonian contexts
-                ctxs = [self.cmaker.recarray(ctxs)]
-
         return ctxs
 
     def _make_src_indep(self):
