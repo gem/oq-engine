@@ -128,7 +128,7 @@ class Collapser(object):
         allsids = [[sid] for sid in close['sids']]
         if len(far):  # this is slow
             allsids.extend(split_array(far['sids'], uic[1], uic[2]))
-        print(len(out), len(ctx))
+        # print(len(out), len(ctx))
         return out.view(numpy.recarray), allsids
 
 
