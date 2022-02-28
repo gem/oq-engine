@@ -634,13 +634,7 @@ class ContextMaker(object):
         :param sitecol: a SiteCollection instance with N sites
         :returns: an array of PoEs of shape (N, L, G)
         """
-        poissonian, other = [], []
-        for ctx in self.from_srcs(srcs, sitecol):
-            if not hasattr(ctx, 'probs_occur'):
-                poissonian.append(ctx)
-            else:
-                other.append(ctx)
-        ctxs = [self.recarray(poissonian)] + other
+        ctxs = self.from_srcs(srcs, sitecol)
         return self.get_pmap(ctxs).array(len(sitecol))
 
     def get_pmap(self, ctxs, probmap=None):
@@ -943,7 +937,7 @@ class PmapMaker(object):
                 else self.srcfilter.split)
         cm = self.cmaker
         allctxs = []
-        maxsize = 25
+        maxsize = 250_000
         for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
