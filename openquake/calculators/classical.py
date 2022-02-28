@@ -34,8 +34,7 @@ from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc
-from openquake.calculators import getters
-from openquake.calculators import base
+from openquake.calculators import base, getters, views
 
 U16 = numpy.uint16
 U32 = numpy.uint32

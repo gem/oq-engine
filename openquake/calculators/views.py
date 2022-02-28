@@ -1294,19 +1294,20 @@ def view_collapse_factor(token, dstore):
     """
     Show how much the ruptures are collapsed for each site
     """
-    def recarray(mag, rrups, vs30s):
+    def recarray(mag, rrups, vs30s, dtype=dt('mag rrup vs30')):
         out = [(mag, rrups[sid], vs30) for sid, vs30 in enumerate(vs30s)]
-        return numpy.array(out, dt('mag rrup vs30')).view(numpy.recarray)
+        return numpy.array(out, dtype).view(numpy.recarray)
 
     sitecol = dstore['sitecol']
     rup_arr = dstore['rup/id'][:]
     mag_arr = dstore['rup/mag'][:]
     rrup_arr = dstore['rup/rrup_'][:]
+    sids_arr = dstore['rup/sids_'][:]
     c1 = Collapser(1)
     dic = dict(rup_id=[], site_id=[], mdvbin=[])
-    for id, mag, rrup in zip(rup_arr, mag_arr, rrup_arr):
-        mdvbin = c1.calc_mdvbin(recarray(mag, rrup, sitecol.vs30))
-        for sid, mdv in zip(sitecol.sids, mdvbin):
+    for id, mag, rrup, sids in zip(rup_arr, mag_arr, rrup_arr, sids_arr):
+        mdvbin = c1.calc_mdvbin(recarray(mag, rrup, sitecol.vs30[sids]))
+        for sid, mdv in zip(sids, mdvbin):
             dic['rup_id'].append(id)
             dic['site_id'].append(sid)
             dic['mdvbin'].append(mdv)
