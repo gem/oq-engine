@@ -217,17 +217,17 @@ class CollapseTestCase(unittest.TestCase):
 
         # set different vs30s on the two sites
         inp.sitecol.array['vs30'] = [600., 700.]
-        ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
-        numpy.testing.assert_equal(len(ctx), 240)  # 3x40 ruptures x 2 sites
+        ctxs = cmaker.from_srcs(srcs, inp.sitecol)
+        numpy.testing.assert_equal(len(ctxs), 120)  # 3x40 ruptures
 
         # compute original curves
-        pmap = cmaker.get_pmap([ctx])
+        pmap = cmaker.get_pmap(ctxs)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [240, 240])
 
         # compute collapsed curves
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
-        cmap = cmaker.get_pmap([ctx])
+        cmap = cmaker.get_pmap(ctxs)
         self.assertLess(rms(pmap[0].array - cmap[0].array), 2E-4)
         self.assertLess(rms(pmap[1].array - cmap[1].array), 2E-4)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [45, 240])
@@ -248,12 +248,12 @@ class CollapseTestCase(unittest.TestCase):
         [[trt, cmaker]] = inp.cmakerdict.items()
         [srcs] = inp.groups  # a single area source
         # get the context
-        ctx = cmaker.recarray(cmaker.from_srcs(srcs, inp.sitecol))
-        numpy.testing.assert_equal(len(ctx), 11616)
-        pcurve0 = cmaker.get_pmap([ctx])[0]
+        ctxs = cmaker.from_srcs(srcs, inp.sitecol)
+        numpy.testing.assert_equal(len(ctxs), 5808)
+        pcurve0 = cmaker.get_pmap(ctxs)[0]
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
-        pcurve1 = cmaker.get_pmap([ctx])[0]
+        pcurve1 = cmaker.get_pmap(ctxs)[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [214, 11616])
 

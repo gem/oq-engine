@@ -1050,6 +1050,8 @@ class OqParam(valid.ParamSet):
                 'pointsource_distance' not in names_vals):
             raise InvalidFile('%s: ps_grid_spacing requires setting a '
                               'pointsource_distance!' % self.inputs['job_ini'])
+        if self.collapse_level:
+            self.time_per_task = 1_000_000  # disable task_splitting
 
         self._risk_files = get_risk_files(self.inputs)
         if self.risk_files:

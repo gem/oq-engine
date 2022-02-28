@@ -634,13 +634,7 @@ class ContextMaker(object):
         :param sitecol: a SiteCollection instance with N sites
         :returns: an array of PoEs of shape (N, L, G)
         """
-        poissonian, other = [], []
-        for ctx in self.from_srcs(srcs, sitecol):
-            if not hasattr(ctx, 'probs_occur'):
-                poissonian.append(ctx)
-            else:
-                other.append(ctx)
-        ctxs = [self.recarray(poissonian)] + other
+        ctxs = self.from_srcs(srcs, sitecol)
         return self.get_pmap(ctxs).array(len(sitecol))
 
     def get_pmap(self, ctxs, probmap=None):
@@ -654,6 +648,16 @@ class ContextMaker(object):
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
+        poissonian, other = [], []
+        for ctx in ctxs:
+            if not hasattr(ctx, 'probs_occur') and not self.af:
+                poissonian.append(ctx)
+            else:
+                other.append(ctx)
+        if poissonian:
+            ctxs = [self.recarray(poissonian)] + other
+        else:
+            ctxs = other
         for ctx in ctxs:
             for poes, pnes, allsids, ctx in self.gen_poes(ctx):
                 for poe, pne, sids in zip(poes, pnes, allsids):
@@ -923,11 +927,6 @@ class PmapMaker(object):
             if self.fewsites:  # keep rupdata in memory
                 for ctx in ctxs:
                     self.rupdata.append(ctx)
-            if not self.af and not numpy.isnan(
-                    [ctx.occurrence_rate for ctx in ctxs]).any():
-                # vectorize poissonian contexts
-                ctxs = [self.cmaker.recarray(ctxs)]
-
         return ctxs
 
     def _make_src_indep(self):
@@ -937,15 +936,19 @@ class PmapMaker(object):
         filt = (self.srcfilter.filter if not self.split_sources or self.N == 1
                 else self.srcfilter.split)
         cm = self.cmaker
+        allctxs = []
+        maxsize = 250_000
         for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
             ctxs = self._get_ctxs(cm._gen_rups(src, sites), sites, src.id)
+            allctxs.extend(ctxs)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            if nsites:
-                cm.get_pmap(ctxs, pmap)
+            if nsites and sum(len(ctx) for ctx in allctxs) > maxsize:
+                cm.get_pmap(allctxs, pmap)
+                allctxs.clear()
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['nsites'].append(nsites)
@@ -954,6 +957,8 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
             timer.save(src, nctxs, nsites, dt, cm.task_no)
+        if allctxs:
+            cm.get_pmap(allctxs, pmap)
         return ~pmap if cm.rup_indep else pmap
 
     def _make_src_mutex(self):
