@@ -52,7 +52,7 @@ from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 U32 = numpy.uint32
 F64 = numpy.float64
 MAXSIZE = 500_000  # used when collapsing
-FOUR_GB = 4_294_967_296  # 2**32
+TWO32 = 4_294_967_296  # 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
@@ -83,7 +83,7 @@ class Collapser(object):
     def __init__(self, collapse_level, has_vs30=True):
         self.collapse_level = collapse_level
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-        self.dist_bins = valid.sqrscale(0, 1000, 256)
+        self.dist_bins = valid.sqrscale(0, 1000, 65536)
         self.vs30_bins = numpy.linspace(0, 32767, 65536)
         self.has_vs30 = has_vs30
         self.cfactor = numpy.zeros(2)
@@ -97,9 +97,9 @@ class Collapser(object):
         distbin = numpy.searchsorted(self.dist_bins, ctx.rrup)
         if self.has_vs30:
             vs30bin = numpy.searchsorted(self.vs30_bins, ctx.rrup)
-            return magbin * 16777216 + distbin * 65536 + vs30bin
+            return magbin * TWO32 + distbin * 65536 + vs30bin
         else:
-            return magbin * 16777216 + distbin * 65536
+            return magbin * TWO32 + distbin * 65536
 
     def collapse(self, ctx):
         """
@@ -1017,7 +1017,7 @@ class PmapMaker(object):
                 dic[par] = numpy.array(lst, dtype=object)
             else:
                 dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
-        dic['id'] = numpy.arange(len(ctxs)) * FOUR_GB + self.cmaker.out_no
+        dic['id'] = numpy.arange(len(ctxs)) * TWO32 + self.cmaker.out_no
         return dic
 
     def make(self):
