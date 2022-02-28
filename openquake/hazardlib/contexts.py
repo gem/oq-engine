@@ -67,13 +67,12 @@ def size(imtls):
 
 
 class Collapser(object):
-    def __init__(self, collapse_level, has_vs30=True, mon=Monitor()):
+    def __init__(self, collapse_level, has_vs30=True):
         self.collapse_level = collapse_level
         self.dst_bins = valid.sqrscale(0, 1000, 256)
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
         self.has_vs30 = has_vs30
         self.cfactor = numpy.zeros(2)
-        self.mon = mon
 
     def calc_mdvbin(self, ctx):
         """
@@ -100,33 +99,32 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        with self.mon:
-            # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
-            names = ctx.dtype.names
-            if 'rake' not in names or len(numpy.unique(ctx['rake'])) == 1:
-                # collapse all
-                far = ctx
-                close = numpy.zeros(0, ctx.dtype)
-            else:
-                # collapse far away ruptures
-                tocollapse = ctx['rrup'] >= ctx['mag'] * 10
-                far = ctx[tocollapse]
-                close = ctx[~tocollapse]
-            C = len(close)
-            if len(far):
-                uic = numpy.unique(  # this is fast
-                    far['mdvbin'], return_inverse=True, return_counts=True)
-                mean = kmean(far, 'mdvbin', uic)
-            else:
-                mean = numpy.zeros(0, ctx.dtype)
-            self.cfactor[0] += len(close) + len(mean)
-            self.cfactor[1] += len(ctx)
-            out = numpy.zeros(len(close) + len(mean), ctx.dtype)
-            out[:C] = close
-            out[C:] = mean
-            allsids = [[sid] for sid in close['sids']]
-            if len(far):  # this is slow
-                allsids.extend(split_array(far['sids'], uic[1], uic[2]))
+        # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
+        names = ctx.dtype.names
+        if 'rake' not in names or len(numpy.unique(ctx['rake'])) == 1:
+            # collapse all
+            far = ctx
+            close = numpy.zeros(0, ctx.dtype)
+        else:
+            # collapse far away ruptures
+            tocollapse = ctx['rrup'] >= ctx['mag'] * 10
+            far = ctx[tocollapse]
+            close = ctx[~tocollapse]
+        C = len(close)
+        if len(far):
+            uic = numpy.unique(  # this is fast
+                far['mdvbin'], return_inverse=True, return_counts=True)
+            mean = kmean(far, 'mdvbin', uic)
+        else:
+            mean = numpy.zeros(0, ctx.dtype)
+        self.cfactor[0] += len(close) + len(mean)
+        self.cfactor[1] += len(ctx)
+        out = numpy.zeros(len(close) + len(mean), ctx.dtype)
+        out[:C] = close
+        out[C:] = mean
+        allsids = [[sid] for sid in close['sids']]
+        if len(far):  # this is slow
+            allsids.extend(split_array(far['sids'], uic[1], uic[2]))
         return out.view(numpy.recarray), allsids
 
 
@@ -331,6 +329,7 @@ class ContextMaker(object):
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
+        self.collapser = Collapser(self.collapse_level, 'vs30' in dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -340,8 +339,6 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
         self.init_monitoring(monitor)
-        self.collapser = Collapser(
-            self.collapse_level, 'vs30' in dic, self.col_mon)
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
@@ -779,7 +776,8 @@ class ContextMaker(object):
         isarray = isinstance(ctx, numpy.ndarray)
 
         # collapse if possible
-        ctx, allsids = self.collapser.collapse(ctx)
+        with self.col_mon:
+            ctx, allsids = self.collapser.collapse(ctx)
 
         # split large context arrays to avoid filling the CPU cache
         if isarray and ctx.nbytes > maxsize:
