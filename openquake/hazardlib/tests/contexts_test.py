@@ -228,9 +228,9 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
         cmap = cmaker.get_pmap([ctx])
-        self.assertLess(rms(pmap[0].array - cmap[0].array), 1E-6)
-        self.assertLess(rms(pmap[1].array - cmap[1].array), 1E-6)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [29, 240])
+        self.assertLess(rms(pmap[0].array - cmap[0].array), 2E-4)
+        self.assertLess(rms(pmap[1].array - cmap[1].array), 2E-4)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [45, 240])
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
@@ -255,7 +255,7 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.collapser.collapse_level = 1
         pcurve1 = cmaker.get_pmap([ctx])[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 11616])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [214, 11616])
 
     def test_collapse_azimuth(self):
         # YuEtAl2013Ms has an azimuth distance causing a lower precision

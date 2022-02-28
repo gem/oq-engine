@@ -69,8 +69,9 @@ def size(imtls):
 class Collapser(object):
     def __init__(self, collapse_level, has_vs30=True):
         self.collapse_level = collapse_level
-        self.dst_bins = valid.sqrscale(0, 1000, 256)
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
+        self.dist_bins = valid.sqrscale(0, 1000, 256)
+        self.vs30_bins = numpy.linspace(0, 32767, 65536)
         self.has_vs30 = has_vs30
         self.cfactor = numpy.zeros(2)
 
@@ -80,11 +81,12 @@ class Collapser(object):
         :return: an array of integers mdvbin
         """
         magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
-        dstbin = numpy.searchsorted(self.dst_bins, ctx.rrup)
+        distbin = numpy.searchsorted(self.dist_bins, ctx.rrup)
         if self.has_vs30:
-            return (magbin * 256 + dstbin) * 65536 + U32(ctx.vs30)
+            vs30bin = numpy.searchsorted(self.vs30_bins, ctx.rrup)
+            return magbin * 16777216 + distbin * 65536 + vs30bin
         else:
-            return (magbin * 256 + dstbin) * 65536
+            return magbin * 16777216 + distbin * 65536
 
     def collapse(self, ctx):
         """
