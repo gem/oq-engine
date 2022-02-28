@@ -18,6 +18,7 @@
 
 import os
 import logging
+import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.python3compat import encode
@@ -158,6 +159,7 @@ def run_preclassical(calc):
             # check if OQ_SAMPLE_SOURCES is set
             ss = os.environ.get('OQ_SAMPLE_SOURCES')
             if ss:
+                srcs.sort(key=operator.attrgetter('source_id'))
                 logging.info('Sampled sources for group #%d', grp_id)
                 srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
             newsg = SourceGroup(srcs[0].tectonic_region_type)
