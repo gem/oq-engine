@@ -560,7 +560,8 @@ def get_site_collection(oqparam, h5=None):
         sitecol.make_complete()
     if h5:
         h5['sitecol'] = sitecol
-    if 'vs30' in sitecol.array.dtype.names:
+    if ('vs30' in sitecol.array.dtype.names and
+            not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
     return sitecol
 
