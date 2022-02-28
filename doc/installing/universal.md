@@ -1,12 +1,12 @@
 # Universal installation script
 
-Since version 3.11 there is a universal installation script that works on any platform, provided you have Python 3.7, 3.8 or 3.9 installed.
+Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have Python 3.7, Python 3.8, or Python 3.9 installed.
 
 - **Note 1**: Python 3.6 may work but it is untested and deprecated; Python 3.10 is not supported yet.
-- **Note 2**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake engine should install those packages within this virtual environment.
+- **Note 2**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake-engine should install those packages within this virtual environment.
 - **Note 3**: The virtual environment `openquake` and its corresponding folder will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts.
 - **Note 4**: Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html
-- ** Note 5**: conda is not supported; some users have been able to run the engin with conda but GEM is not using and not testing conda; you are on your own.
+- **Note 5**: Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own.
 
 The script allows the user to select between three different kinds of installations:
 
@@ -17,9 +17,9 @@ The script allows the user to select between three different kinds of installati
 
 A few notes about macOS:
 
-- macOS 11 (Big Sur) is not officially supported but many people have
-managed to install the engine on it using the system Python (version
-3.8).
+- macOS 11.x (Big Sur) and macOS 12.x (Monterey) are not officially supported 
+but users have managed to install the engine on both operating systems
+using the system provided Python (version 3.8).
 - new Macs with the M1 CPU are unsupported
 - make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS).
 
@@ -57,7 +57,7 @@ It should now be possible to develop with the engine. Calculation data will be s
 
 ## `user` installation
 
-If you do not need to modify the engine codebase or develop new features with the engine, but intend to use it as an application, you should perform an `user` installation (on Windows / macOS) or a `server` installation (on Linux). The `user` installation is also the recommended option for Linux, in the case where you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
+If you do not need to modify the engine codebase or develop new features with the engine, but intend to use it as an application, you should perform a `user` installation (on Windows / macOS) or a `server` installation (on Linux). The `user` installation is also the recommended option for Linux, in the case where you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
 
 on macOS and Linux:
 ```
@@ -136,11 +136,11 @@ $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine && sudo -H /usr/bin/python3 install.py devel_server
 ```
 
-## cluster installations
+## Cluster installation
 
 It is possible to install the engine on a Linux cluster, but it requires additional steps. You should see the page about [clusters](cluster.md).
 
-## Cloud
+## Cloud installation
 
 A set of [Docker containers](docker.md) is available for installing the engine in the cloud.
 
