@@ -34,7 +34,7 @@ from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc
-from openquake.calculators import base, getters, views
+from openquake.calculators import base, getters
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -448,7 +448,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
             logging.debug("busy time: %s", smap.busytime)
-            logging.info('Finished tile %d of %d', t, len(tiles))
+            if len(tiles) > 1:
+                logging.info('Finished tile %d of %d', t, len(tiles))
         self.store_info()
         self.haz.store_disagg(acc)
         logging.info('Collapse factor = %d/%d = %.1f',
