@@ -57,7 +57,7 @@ STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
-RUP_PARAMS = {'mag', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
 
 
 def size(imtls):
@@ -119,8 +119,8 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
-        other = set(ctx.dtype.names) - RUP_PARAMS - KNOWN_DISTANCES
+        # names are mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate, ...
+        other = set(ctx.dtype.names) - IGNORE_PARAMS
         if all(trivial(ctx, param) for param in other):
             # collapse all
             far = ctx
@@ -128,7 +128,7 @@ class Collapser(object):
             self.nfull += 1
         else:
             # collapse far away ruptures
-            tocollapse = ctx['rrup'] >= ctx['mag'] * 10
+            tocollapse = ctx['rrup'] >= ctx['mag'] * 20
             far = ctx[tocollapse]
             close = ctx[~tocollapse]
             self.npartial += 1
