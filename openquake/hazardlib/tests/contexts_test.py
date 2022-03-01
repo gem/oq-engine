@@ -309,7 +309,7 @@ class CollapseTestCase(unittest.TestCase):
         [grp] = inp.groups
         self.assertEqual(len(grp.sources), 1)  # not splittable source
         poes = cmaker.get_poes(grp, inp.sitecol)
-        cmaker.collapser.collapse_level = 1
+        cmaker.collapser = Collapser(collapse_level=1)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
             import matplotlib.pyplot as plt
@@ -322,7 +322,7 @@ class CollapseTestCase(unittest.TestCase):
             plt.show()
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [292, 456])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [154, 228])
 
     def test_collapse_area(self):
         # collapse an area source
