@@ -379,7 +379,8 @@ class CollapseTestCase(unittest.TestCase):
         cmaker = inp.cmaker
         [grp] = inp.groups
         self.assertEqual(len(grp.sources), 52)  # point sources
-        poes = cmaker.get_poes(grp, inp.sitecol)
+        poes = cmaker.get_poes(grp, inp.sitecol)  # no collapse
+
         cmaker.collapser.collapse_level = 1
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
@@ -395,7 +396,7 @@ class CollapseTestCase(unittest.TestCase):
         print('maxdiff =', maxdiff)
         # this is a case where the precision on site 0 is perfect, while
         # on on site 1 if far from perfect
-        self.assertLess(maxdiff[0], 1E-15)
+        self.assertLess(maxdiff[0], 1E-14)
         self.assertLess(maxdiff[0], 2E-3)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [437, 624])
 

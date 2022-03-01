@@ -83,10 +83,15 @@ class Collapser(object):
     def __init__(self, collapse_level, has_vs30=True):
         self.collapse_level = collapse_level
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-        self.dist_bins = valid.sqrscale(0, 1000, 65536)
+        if collapse_level == 1:
+            self.dist_bins = valid.sqrscale(0, 1000, 256)
+        else:  # collapse_level = 2
+            self.dist_bins = valid.sqrscale(0, 1000, 65536)
         self.vs30_bins = numpy.linspace(0, 32767, 65536)
         self.has_vs30 = has_vs30
         self.cfactor = numpy.zeros(2)
+        self.npartial = 0
+        self.nfull = 0
 
     def calc_mdvbin(self, ctx):
         """
@@ -120,11 +125,13 @@ class Collapser(object):
             # collapse all
             far = ctx
             close = numpy.zeros(0, ctx.dtype)
+            self.nfull += 1
         else:
             # collapse far away ruptures
             tocollapse = ctx['rrup'] >= ctx['mag'] * 10
             far = ctx[tocollapse]
             close = ctx[~tocollapse]
+            self.npartial += 1
         C = len(close)
         if len(far):
             uic = numpy.unique(  # this is fast
@@ -340,7 +347,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
-        dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
+        dic['mdvbin'] = numpy.int64(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
