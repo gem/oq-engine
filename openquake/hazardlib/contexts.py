@@ -83,7 +83,7 @@ class Collapser(object):
     def __init__(self, collapse_level, has_vs30=True):
         self.collapse_level = collapse_level
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-        if collapse_level == 1:
+        if collapse_level <= 1:
             self.dist_bins = valid.sqrscale(0, 1000, 256)
         else:  # collapse_level = 2
             self.dist_bins = valid.sqrscale(0, 1000, 65536)
@@ -103,7 +103,7 @@ class Collapser(object):
         if self.has_vs30:
             vs30bin = numpy.searchsorted(self.vs30_bins, ctx.rrup)
             return magbin * TWO32 + distbin * 65536 + vs30bin
-        else:
+        else:  # in test_collapse_area
             return magbin * TWO32 + distbin * 65536
 
     def collapse(self, ctx):
