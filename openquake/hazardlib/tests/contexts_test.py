@@ -26,7 +26,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, RuptureContext, ContextMaker, get_distances)
+    Effect, RuptureContext, ContextMaker, Collapser, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -309,7 +309,7 @@ class CollapseTestCase(unittest.TestCase):
         [grp] = inp.groups
         self.assertEqual(len(grp.sources), 1)  # not splittable source
         poes = cmaker.get_poes(grp, inp.sitecol)
-        cmaker.collapser.collapse_level = 1
+        cmaker.collapser = Collapser(collapse_level=1)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
             import matplotlib.pyplot as plt
@@ -322,7 +322,7 @@ class CollapseTestCase(unittest.TestCase):
             plt.show()
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [292, 456])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [154, 228])
 
     def test_collapse_area(self):
         # collapse an area source
@@ -379,8 +379,11 @@ class CollapseTestCase(unittest.TestCase):
         cmaker = inp.cmaker
         [grp] = inp.groups
         self.assertEqual(len(grp.sources), 52)  # point sources
-        poes = cmaker.get_poes(grp, inp.sitecol)
+        poes = cmaker.get_poes(grp, inp.sitecol)  # no collapse
+
+        # collapse_level = 1
         cmaker.collapser.collapse_level = 1
+        cmaker.collapser.cfactor = numpy.zeros(2)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
             import matplotlib.pyplot as plt
@@ -395,9 +398,20 @@ class CollapseTestCase(unittest.TestCase):
         print('maxdiff =', maxdiff)
         # this is a case where the precision on site 0 is perfect, while
         # on on site 1 if far from perfect
-        self.assertLess(maxdiff[0], 1E-15)
-        self.assertLess(maxdiff[0], 2E-3)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [437, 624])
+        self.assertLess(maxdiff[0], 1E-14)
+        self.assertLess(maxdiff[1], 2E-3)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [125, 312])
+
+        # collapse_level = 2
+        cmaker.collapser = Collapser(collapse_level=2, has_vs30=False)
+        newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
+        maxdiff = (newpoes - poes).max(axis=(1, 2))
+        print('maxdiff =', maxdiff)
+        # this is a case where the precision on site 0 is perfect, while
+        # on on site 1 if far from perfect
+        self.assertLess(maxdiff[0], 1E-14)
+        self.assertLess(maxdiff[1], 1E-14)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [312, 312])
 
 
 class GetCtxs01TestCase(unittest.TestCase):
