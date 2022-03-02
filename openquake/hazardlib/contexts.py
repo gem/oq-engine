@@ -52,7 +52,8 @@ from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 U32 = numpy.uint32
 F64 = numpy.float64
 MAXSIZE = 500_000  # used when collapsing
-TWO32 = 4_294_967_296  # 2**32
+TWO24 = 2**24
+TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
@@ -83,10 +84,7 @@ class Collapser(object):
     def __init__(self, collapse_level, has_vs30=True):
         self.collapse_level = collapse_level
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-        if collapse_level <= 1:
-            self.dist_bins = valid.sqrscale(0, 1000, 256)
-        else:  # collapse_level = 2
-            self.dist_bins = valid.sqrscale(0, 1000, 65536)
+        self.dist_bins = valid.sqrscale(1, 600, 255)
         self.vs30_bins = numpy.linspace(0, 32767, 65536)
         self.has_vs30 = has_vs30
         self.cfactor = numpy.zeros(2)
@@ -102,9 +100,9 @@ class Collapser(object):
         distbin = numpy.searchsorted(self.dist_bins, ctx.rrup)
         if self.has_vs30:
             vs30bin = numpy.searchsorted(self.vs30_bins, ctx.rrup)
-            return magbin * TWO32 + distbin * 65536 + vs30bin
+            return magbin * TWO24 + distbin * 65536 + vs30bin
         else:  # in test_collapse_area
-            return magbin * TWO32 + distbin * 65536
+            return magbin * TWO24 + distbin * 65536
 
     def collapse(self, ctx):
         """
@@ -128,9 +126,9 @@ class Collapser(object):
             self.nfull += 1
         else:
             # collapse far away ruptures
-            tocollapse = ctx['rrup'] >= ctx['mag'] * 20
-            far = ctx[tocollapse]
-            close = ctx[~tocollapse]
+            dst = ctx.mag * 20 if self.collapse_level <= 1 else ctx.mag * 40
+            far = ctx[ctx['rrup'] >= dst]
+            close = ctx[ctx['rrup'] < dst]
             self.npartial += 1
         C = len(close)
         if len(far):
@@ -347,7 +345,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
-        dic['mdvbin'] = numpy.int64(0)  # velocity-magnitude-distance bin
+        dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
