@@ -77,10 +77,13 @@ def trivial(ctx, name):
     """
     if name not in ctx.dtype.names:
         return True
-    return len(numpy.unique(numpy.float32(ctx[name]))) == 1
+    return len(numpy.unique(numpy.round(ctx[name], 6))) == 1
 
 
 class Collapser(object):
+    """
+    Class managing the collapsing logic.
+    """
     def __init__(self, collapse_level, has_vs30=True):
         self.collapse_level = collapse_level
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
@@ -91,15 +94,15 @@ class Collapser(object):
         self.npartial = 0
         self.nfull = 0
 
-    def calc_mdvbin(self, ctx):
+    def calc_mdvbin(self, rup):
         """
-        :param ctx: a recarray
-        :return: an array of integers mdvbin
+        :param rup: a RuptureContext
+        :return: an array of dtype numpy.uint32
         """
-        magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
-        distbin = numpy.searchsorted(self.dist_bins, ctx.rrup)
+        magbin = numpy.searchsorted(self.mag_bins, rup.mag)
+        distbin = numpy.searchsorted(self.dist_bins, rup.rrup)
         if self.has_vs30:
-            vs30bin = numpy.searchsorted(self.vs30_bins, ctx.rrup)
+            vs30bin = numpy.searchsorted(self.vs30_bins, rup.rrup)
             return magbin * TWO24 + distbin * 65536 + vs30bin
         else:  # in test_collapse_area
             return magbin * TWO24 + distbin * 65536
@@ -118,8 +121,8 @@ class Collapser(object):
             return ctx, ctx.sids.reshape(-1, 1)
 
         # names are mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate, ...
-        other = set(ctx.dtype.names) - IGNORE_PARAMS
-        if all(trivial(ctx, param) for param in other):
+        relevant = set(ctx.dtype.names) - IGNORE_PARAMS
+        if all(trivial(ctx, param) for param in relevant):
             # collapse all
             far = ctx
             close = numpy.zeros(0, ctx.dtype)
