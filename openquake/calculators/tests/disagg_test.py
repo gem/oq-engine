@@ -63,7 +63,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         return out
 
     def test_case_1(self):
-        # case with split_source=false and slow_collapse=2
+        # case with split_source=false and collapse_level=2
         self.assert_curves_ok(
             ['Lon_Lat-0.csv', 'Mag-0.csv', 'Mag_Dist-0.csv'], case_1.__file__)
 
