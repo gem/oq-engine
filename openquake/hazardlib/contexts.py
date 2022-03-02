@@ -52,12 +52,13 @@ from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 U32 = numpy.uint32
 F64 = numpy.float64
 MAXSIZE = 500_000  # used when collapsing
-TWO32 = 4_294_967_296  # 2**32
+TWO24 = 2**24
+TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
-RUP_PARAMS = {'mag', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
 
 
 def size(imtls):
@@ -80,31 +81,31 @@ def trivial(ctx, name):
 
 
 class Collapser(object):
+    """
+    Class managing the collapsing logic.
+    """
     def __init__(self, collapse_level, has_vs30=True):
         self.collapse_level = collapse_level
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
-        if collapse_level <= 1:
-            self.dist_bins = valid.sqrscale(0, 1000, 256)
-        else:  # collapse_level = 2
-            self.dist_bins = valid.sqrscale(0, 1000, 65536)
+        self.dist_bins = valid.sqrscale(1, 600, 255)
         self.vs30_bins = numpy.linspace(0, 32767, 65536)
         self.has_vs30 = has_vs30
         self.cfactor = numpy.zeros(2)
         self.npartial = 0
         self.nfull = 0
 
-    def calc_mdvbin(self, ctx):
+    def calc_mdvbin(self, rup):
         """
-        :param ctx: a recarray
-        :return: an array of integers mdvbin
+        :param rup: a RuptureContext
+        :return: an array of dtype numpy.uint32
         """
-        magbin = numpy.searchsorted(self.mag_bins, ctx.mag)
-        distbin = numpy.searchsorted(self.dist_bins, ctx.rrup)
+        magbin = numpy.searchsorted(self.mag_bins, rup.mag)
+        distbin = numpy.searchsorted(self.dist_bins, rup.rrup)
         if self.has_vs30:
-            vs30bin = numpy.searchsorted(self.vs30_bins, ctx.rrup)
-            return magbin * TWO32 + distbin * 65536 + vs30bin
+            vs30bin = numpy.searchsorted(self.vs30_bins, rup.rrup)
+            return magbin * TWO24 + distbin * 65536 + vs30bin
         else:  # in test_collapse_area
-            return magbin * TWO32 + distbin * 65536
+            return magbin * TWO24 + distbin * 65536
 
     def collapse(self, ctx):
         """
@@ -113,24 +114,24 @@ class Collapser(object):
         :param ctx: a recarray with fields "mdvbin" and "sids"
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        if not (isinstance(ctx, numpy.ndarray) and self.collapse_level):
+        if not isinstance(ctx, numpy.ndarray) or self.collapse_level < 0:
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        # i.e. mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate
-        other = set(ctx.dtype.names) - RUP_PARAMS - KNOWN_DISTANCES
-        if all(trivial(ctx, param) for param in other):
+        # names are mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate, ...
+        relevant = set(ctx.dtype.names) - IGNORE_PARAMS
+        if all(trivial(ctx, param) for param in relevant):
             # collapse all
             far = ctx
             close = numpy.zeros(0, ctx.dtype)
             self.nfull += 1
         else:
             # collapse far away ruptures
-            tocollapse = ctx['rrup'] >= ctx['mag'] * 10
-            far = ctx[tocollapse]
-            close = ctx[~tocollapse]
+            dst = ctx.mag * 10 * self.collapse_level
+            far = ctx[ctx.rrup >= dst]
+            close = ctx[ctx.rrup < dst]
             self.npartial += 1
         C = len(close)
         if len(far):
@@ -292,7 +293,7 @@ class ContextMaker(object):
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
         self.time_per_task = param.get('time_per_task', 60)
         self.disagg_by_src = param.get('disagg_by_src')
-        self.collapse_level = int(param.get('collapse_level', 0))
+        self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
@@ -347,7 +348,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
-        dic['mdvbin'] = numpy.int64(0)  # velocity-magnitude-distance bin
+        dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
