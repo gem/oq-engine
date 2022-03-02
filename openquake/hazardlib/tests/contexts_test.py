@@ -321,8 +321,7 @@ class CollapseTestCase(unittest.TestCase):
             plt.legend()
             plt.show()
         maxdiff = (newpoes - poes).max(axis=(1, 2))
-        print('maxdiff =', maxdiff)
-        # numpy.testing.assert_equal(cmaker.collapser.cfactor, [172, 228])
+        print('maxdiff =', maxdiff, cmaker.collapser.cfactor)
 
         # collapse_level=2
         cmaker.collapser = Collapser(collapse_level=2)

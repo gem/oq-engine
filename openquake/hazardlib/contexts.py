@@ -130,8 +130,8 @@ class Collapser(object):
         else:
             # collapse far away ruptures
             dst = ctx.mag * 10 * self.collapse_level
-            far = ctx[ctx['rrup'] >= dst]
-            close = ctx[ctx['rrup'] < dst]
+            far = ctx[ctx.rrup >= dst]
+            close = ctx[ctx.rrup < dst]
             self.npartial += 1
         C = len(close)
         if len(far):
