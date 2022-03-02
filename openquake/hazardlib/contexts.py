@@ -84,8 +84,8 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, has_vs30=True):
-        self.collapse_level = collapse_level
+    def __init__(self, collapse_slow, has_vs30=True):
+        self.collapse_slow = collapse_slow
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
         self.dist_bins = valid.sqrscale(1, 600, 255)
         self.vs30_bins = numpy.linspace(0, 32767, 65536)
@@ -114,7 +114,7 @@ class Collapser(object):
         :param ctx: a recarray with fields "mdvbin" and "sids"
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        if not isinstance(ctx, numpy.ndarray) or self.collapse_level < 0:
+        if not isinstance(ctx, numpy.ndarray) or self.collapse_slow < 0:
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
@@ -129,7 +129,7 @@ class Collapser(object):
             self.nfull += 1
         else:
             # collapse far away ruptures
-            dst = ctx.mag * 10 * self.collapse_level
+            dst = ctx.mag * 10 * self.collapse_slow
             far = ctx[ctx['rrup'] >= dst]
             close = ctx[ctx['rrup'] < dst]
             self.npartial += 1
@@ -293,7 +293,7 @@ class ContextMaker(object):
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
         self.time_per_task = param.get('time_per_task', 60)
         self.disagg_by_src = param.get('disagg_by_src')
-        self.collapse_level = int(param.get('collapse_level', -1))
+        self.collapse_slow = int(param.get('collapse_slow', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
@@ -353,7 +353,7 @@ class ContextMaker(object):
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
         self.ctx_builder = RecordBuilder(**dic)
-        self.collapser = Collapser(self.collapse_level, 'vs30' in dic)
+        self.collapser = Collapser(self.collapse_slow, 'vs30' in dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():

@@ -122,7 +122,7 @@ calculation_mode:
 collapse_gsim_logic_tree:
   INTERNAL
 
-collapse_level:
+collapse_slow:
   INTERNAL
 
 collect_rlzs:
@@ -827,7 +827,7 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*ALL_CALCULATORS))
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
-    collapse_level = valid.Param(int, -1)
+    collapse_slow = valid.Param(int, -1)
     collect_rlzs = valid.Param(valid.boolean, None)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
@@ -1050,7 +1050,7 @@ class OqParam(valid.ParamSet):
                 'pointsource_distance' not in names_vals):
             raise InvalidFile('%s: ps_grid_spacing requires setting a '
                               'pointsource_distance!' % self.inputs['job_ini'])
-        if self.collapse_level:
+        if self.collapse_slow >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
         self._risk_files = get_risk_files(self.inputs)
