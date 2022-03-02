@@ -55,11 +55,12 @@ echo "Displaying the exposed values in the ebrisk demo"
 oq show agg_values
 
 # recompute losses
-# oq reaggregate -1 NAME_1
+oq reaggregate -1 NAME_1
 oq engine --list-outputs -1
 
-echo "Testing csm2rup"
-OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
+#echo "Testing csm2rup"
+#commented because missing export_outputs and breaking QGIS
+#OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
 
 # display the calculations
 oq db find %
