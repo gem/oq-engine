@@ -114,7 +114,7 @@ class Collapser(object):
         :param ctx: a recarray with fields "mdvbin" and "sids"
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        if not (isinstance(ctx, numpy.ndarray) and self.collapse_level):
+        if not isinstance(ctx, numpy.ndarray) or self.collapse_level < 0:
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
@@ -129,7 +129,7 @@ class Collapser(object):
             self.nfull += 1
         else:
             # collapse far away ruptures
-            dst = ctx.mag * 20 if self.collapse_level <= 1 else ctx.mag * 40
+            dst = ctx.mag * 10 * self.collapse_level
             far = ctx[ctx['rrup'] >= dst]
             close = ctx[ctx['rrup'] < dst]
             self.npartial += 1
@@ -293,7 +293,7 @@ class ContextMaker(object):
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
         self.time_per_task = param.get('time_per_task', 60)
         self.disagg_by_src = param.get('disagg_by_src')
-        self.collapse_level = int(param.get('collapse_level', 0))
+        self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.trt = trt
         self.gsims = gsims
