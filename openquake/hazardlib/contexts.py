@@ -77,7 +77,7 @@ def trivial(ctx, name):
     """
     if name not in ctx.dtype.names:
         return True
-    return len(numpy.unique(numpy.round(ctx[name], 6))) == 1
+    return len(numpy.unique(numpy.float32(ctx[name]))) == 1
 
 
 class Collapser(object):
