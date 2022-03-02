@@ -321,6 +321,8 @@ class ContextMaker(object):
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
+                if self.af and req == 'SITES_PARAMETERS':
+                    reqset.add('ampcode')
                 if hasattr(gsim, 'gmpe') and hasattr(gsim, 'params'):
                     # ModifiableGMPE
                     if (req == 'SITES_PARAMETERS' and
@@ -398,10 +400,10 @@ class ContextMaker(object):
         # ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
-    def recarray(self, ctxs):
+    def recarrays(self, ctxs, split_by_mag=False):
         """
         :params ctxs: a list of contexts
-        :returns: a recarray, possibly collapsed
+        :returns: one or more recarrays, possibly collapsed
         """
         C = sum(len(ctx) for ctx in ctxs)
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
@@ -421,7 +423,11 @@ class ContextMaker(object):
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
-        return ra
+        if split_by_mag:
+            ra.sort(order='mag')
+            magidx = numpy.searchsorted(self.collapser.mag_bins, ra.mag)
+            return split_array(ra, magidx)
+        return [ra]
 
     def get_ctx_params(self):
         """
@@ -672,12 +678,12 @@ class ContextMaker(object):
             pmap = probmap
         poissonian, other = [], []
         for ctx in ctxs:
-            if not hasattr(ctx, 'probs_occur') and not self.af:
+            if not hasattr(ctx, 'probs_occur'):
                 poissonian.append(ctx)
             else:
                 other.append(ctx)
         if poissonian:
-            ctxs = [self.recarray(poissonian)] + other
+            ctxs = self.recarrays(poissonian) + other
         else:
             ctxs = other
         for ctx in ctxs:
@@ -715,7 +721,7 @@ class ContextMaker(object):
             # contexts already vectorized
             recarrays = ctxs
         else:  # vectorize the contexts
-            recarrays = [self.recarray(ctxs)]
+            recarrays = self.recarrays(ctxs)
         if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
             assert len(recarrays) == 1, len(recarrays)
             recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
@@ -1284,6 +1290,18 @@ def get_probability_no_exceedance(ctx, poes, tom):
             pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
         return pnes
     elif numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
+        return get_probability_no_exceedance_np([poes], [ctx.probs_occur])[0]
+    return tom.get_probability_no_exceedance(ctx.occurrence_rate, poes)
+
+
+def get_probability_no_exceedance_np(allpoes, probs_occur):
+    """
+    Probabilities of no exceedence for nonpoissonian ruptures
+    """
+    n = len(probs_occur)
+    assert n == len(allpoes)
+    prob_no_exceed = numpy.zeros((n,) + allpoes[0].shape)
+    for i, poes in enumerate(allpoes):
         # Uses the formula
         #
         #    ∑ p(k|T) * p(X<x|rup)^k
@@ -1295,11 +1313,10 @@ def get_probability_no_exceedance(ctx, poes, tom):
         #
         # `p(k|T)` is given by the attribute probs_occur and
         # `p(X<x|rup)` is computed as ``1 - poes``.
-        prob_no_exceed = F64(
-            [v * (1 - poes) ** i for i, v in enumerate(ctx.probs_occur)]
+        prob_no_exceed[i] = F64(
+            [v * (1 - poes) ** i for i, v in enumerate(probs_occur[i])]
         ).sum(axis=0)
-        return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
-    return tom.get_probability_no_exceedance(ctx.occurrence_rate, poes)
+    return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
 
 
 class Effect(object):
