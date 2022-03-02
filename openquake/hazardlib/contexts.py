@@ -400,7 +400,7 @@ class ContextMaker(object):
         # ctxs.sort(key=operator.attrgetter('mag'))
         return ctxs
 
-    def recarrays(self, ctxs, split_by_mag=False):
+    def recarray(self, ctxs):
         """
         :params ctxs: a list of contexts
         :returns: one or more recarrays, possibly collapsed
@@ -423,11 +423,7 @@ class ContextMaker(object):
                 getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
-        if split_by_mag:
-            ra.sort(order='mag')
-            magidx = numpy.searchsorted(self.collapser.mag_bins, ra.mag)
-            return split_array(ra, magidx)
-        return [ra]
+        return ra
 
     def get_ctx_params(self):
         """
@@ -676,25 +672,19 @@ class ContextMaker(object):
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        poissonian, other = [], []
+        probs_occur, sizes = [], []
         for ctx in ctxs:
-            if not hasattr(ctx, 'probs_occur'):
-                poissonian.append(ctx)
-            else:
-                other.append(ctx)
-        if poissonian:
-            ctxs = self.recarrays(poissonian) + other
-        else:
-            ctxs = other
-        for ctx in ctxs:
-            for poes, pnes, allsids, ctx in self.gen_poes(ctx):
-                for poe, pne, sids in zip(poes, pnes, allsids):
-                    for sid in sids:
-                        probs = pmap.setdefault(sid, self.rup_indep).array
-                        if rup_indep:
-                            probs *= pne
-                        else:  # rup_mutex
-                            probs += (1. - pne) * ctx.weight
+            probs_occur.append(getattr(ctx, 'probs_occur', []))
+            sizes.append(len(ctx))
+        ctx = self.recarray(ctxs)
+        for poes, pnes, allsids, ctx in self.gen_poes(ctx, probs_occur, sizes):
+            for poe, pne, sids in zip(poes, pnes, allsids):
+                for sid in sids:
+                    probs = pmap.setdefault(sid, self.rup_indep).array
+                    if rup_indep:
+                        probs *= pne
+                    else:  # rup_mutex
+                        probs += (1. - pne) * ctx.weight
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -721,7 +711,7 @@ class ContextMaker(object):
             # contexts already vectorized
             recarrays = ctxs
         else:  # vectorize the contexts
-            recarrays = self.recarrays(ctxs)
+            recarrays = [self.recarray(ctxs)]
         if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
             assert len(recarrays) == 1, len(recarrays)
             recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
@@ -799,7 +789,7 @@ class ContextMaker(object):
                         c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
 
-    def gen_poes(self, ctx):
+    def gen_poes(self, ctx, probs_occur, sizes):
         """
         :param ctx: a context object, possibly vectorized
         :yields: poes, pnes, ctx with poes and pnes of shape (N, L, G)
@@ -807,24 +797,28 @@ class ContextMaker(object):
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
         maxsize = 50_000  # heuristic
-        isarray = isinstance(ctx, numpy.ndarray)
-
-        # collapse if possible
-        with self.col_mon:
-            ctx, allsids = self.collapser.collapse(ctx)
-
-        # split large context arrays to avoid filling the CPU cache
-        if isarray and ctx.nbytes > maxsize:
-            slices = gen_slices(0, len(ctx), maxsize)
+        nonparametric = sum(len(po) for po in probs_occur)
+        if nonparametric:
+            # do not collapse
+            allsids = ctx.sids.reshape(-1, 1)
+            stop = numpy.cumsum(sizes)
+            start = stop - numpy.array(sizes)
+            # split in nonparametric ruptures
+            slices = [slice(s1, s2) for s1, s2 in zip(start, stop)]
+            self.collapser.cfactor += numpy.array([len(ctx), len(ctx)])
         else:
-            slices = [slice(None)]
+            # collapse if possible
+            with self.col_mon:
+                ctx, allsids = self.collapser.collapse(ctx)
+            # split large context arrays to avoid filling the CPU cache
+            if ctx.nbytes > maxsize:
+                slices = gen_slices(0, len(ctx), maxsize)
+            else:
+                slices = [slice(None)]
 
-        for slc in slices:
+        for i, slc in enumerate(slices):
             slcsids = allsids[slc]
-            try:
-                ctxt = ctx[slc]
-            except TypeError:  # not sliceable
-                ctxt = ctx
+            ctxt = ctx[slc]
             with self.gmf_mon:
                 mean_stdt = self.get_mean_stds([ctxt])
             with self.poe_mon:
@@ -838,7 +832,11 @@ class ContextMaker(object):
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctxt, adj)
             with self.pne_mon:
-                pnes = get_probability_no_exceedance(ctxt, poes, self.tom)
+                if len(probs_occur[i]):
+                    [pnes] = get_probability_no_exceedance_np(
+                        [poes], [probs_occur[i]])
+                else:
+                    pnes = get_probability_no_exceedance(ctxt, poes, self.tom)
             yield poes, pnes, slcsids, ctxt
 
     def estimate_weight(self, src, srcfilter):
