@@ -226,7 +226,7 @@ class CollapseTestCase(unittest.TestCase):
 
         # compute collapsed curves
         cmaker.collapser.cfactor = numpy.zeros(2)
-        cmaker.collapser.collapse_slow = 1
+        cmaker.collapser.slow_collapse = 1
         cmap = cmaker.get_pmap(ctxs)
         self.assertLess(rms(pmap[0].array - cmap[0].array), 2E-4)
         self.assertLess(rms(pmap[1].array - cmap[1].array), 2E-4)
@@ -252,7 +252,7 @@ class CollapseTestCase(unittest.TestCase):
         numpy.testing.assert_equal(len(ctxs), 5808)
         pcurve0 = cmaker.get_pmap(ctxs)[0]
         cmaker.collapser.cfactor = numpy.zeros(2)
-        cmaker.collapser.collapse_slow = 1
+        cmaker.collapser.slow_collapse = 1
         pcurve1 = cmaker.get_pmap(ctxs)[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [221, 11616])
@@ -309,7 +309,7 @@ class CollapseTestCase(unittest.TestCase):
         [grp] = inp.groups
         self.assertEqual(len(grp.sources), 1)  # not splittable source
         poes = cmaker.get_poes(grp, inp.sitecol)
-        cmaker.collapser = Collapser(collapse_slow=1)
+        cmaker.collapser = Collapser(slow_collapse=1)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
             import matplotlib.pyplot as plt
@@ -324,8 +324,8 @@ class CollapseTestCase(unittest.TestCase):
         print('maxdiff =', maxdiff)
         # numpy.testing.assert_equal(cmaker.collapser.cfactor, [172, 228])
 
-        # collapse_slow=2
-        cmaker.collapser = Collapser(collapse_slow=2)
+        # slow_collapse=2
+        cmaker.collapser = Collapser(slow_collapse=2)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff, cmaker.collapser.cfactor)
@@ -387,8 +387,8 @@ class CollapseTestCase(unittest.TestCase):
         self.assertEqual(len(grp.sources), 52)  # point sources
         poes = cmaker.get_poes(grp, inp.sitecol)  # no collapse
 
-        # collapse_slow = 1
-        cmaker.collapser.collapse_slow = 1
+        # slow_collapse = 1
+        cmaker.collapser.slow_collapse = 1
         cmaker.collapser.cfactor = numpy.zeros(2)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
@@ -408,8 +408,8 @@ class CollapseTestCase(unittest.TestCase):
         self.assertLess(maxdiff[1], 2E-3)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [148, 312])
 
-        # collapse_slow = 4
-        cmaker.collapser = Collapser(collapse_slow=4, has_vs30=False)
+        # slow_collapse = 4
+        cmaker.collapser = Collapser(slow_collapse=4, has_vs30=False)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
