@@ -132,7 +132,9 @@ def run_preclassical(calc):
                 pointlike.append(src)
             elif hasattr(src, 'sections'):  # multifault
                 # this is essential to make the preclassical in UCERF fast
-                multifaults[grp_id].extend(split_source(src))
+                for ss in split_source(src):
+                    ss.num_ruptures = ss.count_ruptures()
+                    multifaults[grp_id].append(ss)
             else:
                 others.append(src)
         if calc.oqparam.ps_grid_spacing:
