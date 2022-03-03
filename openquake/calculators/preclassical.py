@@ -115,12 +115,14 @@ def run_preclassical(calc):
             atomic_sources.extend(sg)
         else:
             normal_sources.extend(sg)
+
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
     if csm.sitecol:
         logging.info('Sending %s', sites)
     smap = parallel.Starmap(preclassical, h5=h5)
+    multifaults = AccumDict(accum=[])  # grp_id => multifaultsources
     for (grp_id, msr), srcs in sources_by_grp.items():
         pointsources, pointlike, others = [], [], []
         for src in srcs:
@@ -128,17 +130,25 @@ def run_preclassical(calc):
                 pointsources.append(src)
             elif hasattr(src, 'nodal_plane_distribution'):
                 pointlike.append(src)
+            elif hasattr(src, 'sections'):  # multifault
+                # this is essential to make the preclassical in UCERF fast
+                splits = (split_source(src) if calc.oqparam.split_sources else
+                          [src])
+                for ss in splits:
+                    ss.num_ruptures = ss.count_ruptures()
+                    multifaults[grp_id].append(ss)
             else:
                 others.append(src)
         if calc.oqparam.ps_grid_spacing:
             if pointsources or pointlike:
                 smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
         else:
-            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 100)
+            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 320)
             for src in pointlike:  # area, multipoint
                 smap.submit(([src], sites, cmakers[grp_id]))
-        smap.submit_split((others, sites, cmakers[grp_id]), 10, 100)
-    normal = smap.reduce()
+        if others:
+            smap.submit_split((others, sites, cmakers[grp_id]), 10, 320)
+    normal = smap.reduce() + multifaults
     if atomic_sources:  # case_35
         n = len(atomic_sources)
         atomic = AccumDict({'before': n, 'after': n})
@@ -148,7 +158,7 @@ def run_preclassical(calc):
     else:
         atomic = AccumDict()
     res = normal + atomic
-    if res['before'] != res['after']:
+    if 'before' in res and 'after' in res and res['before'] != res['after']:
         logging.info('Reduced the number of point sources from {:_d} -> {:_d}'.
                      format(res['before'], res['after']))
     acc = AccumDict(accum=0)

@@ -32,6 +32,8 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
 BLOCKSIZE = 1000
+# the BLOCKSIZE has to be large to reduce the number of sources and
+# therefore the redundant data transfer in the .sections attribute
 
 
 class FaultSection(object):
