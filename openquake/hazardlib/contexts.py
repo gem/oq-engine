@@ -1302,12 +1302,12 @@ def get_probability_no_exceedance(ctx, poes, probs_or_tom):
                     rate, poes[i])
             return pnes
         else:  # in disaggregation ctx is a RuptureContext
-            if numpy.isnan(ctx.occurrence_rate):
+            if numpy.isnan(ctx.occurrence_rate):  # nonparametric
                 return get_probability_no_exceedance_np(ctx.probs_occur, poes)
-            else:
+            else:  # parametric
                 return probs_or_tom.get_probability_no_exceedance(
                     ctx.occurrence_rate, poes)
-    else:  # nonparametric rupture, npdata is an array (probs_occur, weight)
+    else:  # nonparametric rupture
         pnes = numpy.zeros_like(poes)
         for i, probs_occur in enumerate(probs_or_tom):
             pnes[i] = get_probability_no_exceedance_np(probs_occur, poes[i])
