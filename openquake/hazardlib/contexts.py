@@ -117,7 +117,7 @@ class Collapser(object):
         :param ctx: a recarray with fields "mdvbin" and "sids"
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        if npdata is None or self.collapse_level < 0:
+        if npdata is not None or self.collapse_level < 0:
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
