@@ -113,6 +113,11 @@ base_path:
 cachedir:
   INTERNAL
 
+cache_distances:
+  Useful in UCERF calculations.
+  Example: *cache_distances = true*.
+  Default: False
+
 calculation_mode:
   One of classical, disaggregation, event_based, scenario, scenario_risk,
   scenario_damage, event_based_risk, classical_risk, classical_bcr.
