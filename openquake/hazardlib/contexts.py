@@ -61,6 +61,9 @@ KNOWN_DISTANCES = frozenset(
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
 
 
+npdata = numpy.dtype([('probs_occur', object), ('weight', float)])
+
+
 def size(imtls):
     """
     :returns: size of the dictionary of arrays imtls
@@ -350,6 +353,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
+        dic['rup_id'] = U32(0)  # used in nonparametric ruptures
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
@@ -408,13 +412,15 @@ class ContextMaker(object):
         C = sum(len(ctx) for ctx in ctxs)
         ra = self.ctx_builder.zeros(C).view(numpy.recarray)
         start = 0
-        for ctx in ctxs:
+        for i, ctx in enumerate(ctxs):
             ctx = ctx.roundup(self.minimum_distance)
             for gsim in self.gsims:
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
             for par in self.ctx_builder.names:
-                if par == 'mdvbin':
+                if par == 'rup_id':
+                    val = i
+                elif par == 'mdvbin':
                     val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'occurrence_rate':  # missing in scenario
                     val = getattr(ctx, par, 0.)
