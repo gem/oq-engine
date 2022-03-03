@@ -836,7 +836,7 @@ class ContextMaker(object):
             ctx, allsids = self.collapser.collapse(ctx, npdata)
 
         # split large context arrays to avoid filling the CPU cache
-        if npdata is None and ctx.nbytes > maxsize:
+        if ctx.nbytes > maxsize:
             slices = gen_slices(0, len(ctx), maxsize)
         else:
             slices = [slice(None)]
