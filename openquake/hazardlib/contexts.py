@@ -694,12 +694,13 @@ class ContextMaker(object):
                           numpy.array(npdata, npdata_dt)))
         for ctx, npdata in pairs:
             for poes, pnes, allsids, ctx in self.gen_poes(ctx, npdata):
-                if rup_indep:  # parametric rupture
+                if rup_indep:  # regular case
                     for poe, pne, sids in zip(poes, pnes, allsids):
                         for sid in sids:
                             probs = pmap.setdefault(sid, self.rup_indep).array
                             probs *= pne
                 else:  # mutex nonparametric rupture
+                    # this is used in the USA model, New Madrid cluster
                     weights = npdata['weight'][ctx.rup_id]
                     for poe, pne, w, sids in zip(poes, pnes, weights, allsids):
                         for sid in sids:
