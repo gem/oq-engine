@@ -31,7 +31,7 @@ from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
-BLOCKSIZE = 500
+BLOCKSIZE = 1000
 
 
 class FaultSection(object):
@@ -150,8 +150,8 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Fast version of iter_ruptures used in estimate_weight
         """
-        s = self.sections
-        for i in range(0, len(self.mags), BLOCKSIZE // 5):
+        s = self.sections  # use one rupture every 500
+        for i in range(0, len(self.mags), BLOCKSIZE // 2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = self.sections[idxs[0]].surface
