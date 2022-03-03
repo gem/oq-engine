@@ -61,7 +61,7 @@ KNOWN_DISTANCES = frozenset(
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
 
 
-npdata = numpy.dtype([('probs_occur', object), ('weight', float)])
+npdata_dt = numpy.dtype([('probs_occur', object), ('weight', float)])
 
 
 def size(imtls):
@@ -110,14 +110,14 @@ class Collapser(object):
         else:  # in test_collapse_area
             return magbin * TWO24 + distbin * 65536
 
-    def collapse(self, ctx):
+    def collapse(self, ctx, npdata):
         """
         Collapse a context recarray if possible.
 
         :param ctx: a recarray with fields "mdvbin" and "sids"
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        if not isinstance(ctx, numpy.ndarray) or self.collapse_level < 0:
+        if npdata is None or self.collapse_level < 0:
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
@@ -678,25 +678,33 @@ class ContextMaker(object):
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        poissonian, other = [], []
+        parametric, nonparametric = [], []
+        npdata = []
         for ctx in ctxs:
-            if not hasattr(ctx, 'probs_occur'):
-                poissonian.append(ctx)
+            if hasattr(ctx, 'probs_occur'):
+                nonparametric.append(ctx)
+                npdata.append((ctx.probs_occur, ctx.weight))
             else:
-                other.append(ctx)
-        if poissonian:
-            ctxs = [self.recarray(poissonian)] + other
-        else:
-            ctxs = other
-        for ctx in ctxs:
-            for poes, pnes, allsids, ctx in self.gen_poes(ctx):
-                for poe, pne, sids in zip(poes, pnes, allsids):
-                    for sid in sids:
-                        probs = pmap.setdefault(sid, self.rup_indep).array
-                        if rup_indep:
+                parametric.append(ctx)
+        pairs = []
+        if parametric:
+            pairs.append((self.recarray(parametric), None))
+        if nonparametric:
+            pairs.append((self.recarray(nonparametric),
+                          numpy.array(npdata, npdata_dt)))
+        for ctx, npdata in pairs:
+            for poes, pnes, allsids, ctx in self.gen_poes(ctx, npdata):
+                if rup_indep:  # parametric rupture
+                    for poe, pne, sids in zip(poes, pnes, allsids):
+                        for sid in sids:
+                            probs = pmap.setdefault(sid, self.rup_indep).array
                             probs *= pne
-                        else:  # rup_mutex
-                            probs += (1. - pne) * ctx.weight
+                else:  # mutex nonparametric rupture
+                    weights = npdata['weight'][ctx.rup_id]
+                    for poe, pne, w, sids in zip(poes, pnes, weights, allsids):
+                        for sid in sids:
+                            probs = pmap.setdefault(sid, self.rup_indep).array
+                            probs += (1. - pne) * w
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -801,32 +809,29 @@ class ContextMaker(object):
                         c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
 
-    def gen_poes(self, ctx):
+    def gen_poes(self, ctx, npdata=None):
         """
-        :param ctx: a context object, possibly vectorized
+        :param ctx: a vectorized context (recarray)
+        :param npdata: array for nonparametric ruptures
         :yields: poes, pnes, ctx with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
         maxsize = 50_000  # heuristic
-        isarray = isinstance(ctx, numpy.ndarray)
 
         # collapse if possible
         with self.col_mon:
-            ctx, allsids = self.collapser.collapse(ctx)
+            ctx, allsids = self.collapser.collapse(ctx, npdata)
 
         # split large context arrays to avoid filling the CPU cache
-        if isarray and ctx.nbytes > maxsize:
+        if npdata is None and ctx.nbytes > maxsize:
             slices = gen_slices(0, len(ctx), maxsize)
         else:
             slices = [slice(None)]
 
         for slc in slices:
             slcsids = allsids[slc]
-            try:
-                ctxt = ctx[slc]
-            except TypeError:  # not sliceable
-                ctxt = ctx
+            ctxt = ctx[slc]
             with self.gmf_mon:
                 mean_stdt = self.get_mean_stds([ctxt])
             with self.poe_mon:
@@ -840,7 +845,8 @@ class ContextMaker(object):
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctxt, adj)
             with self.pne_mon:
-                pnes = get_probability_no_exceedance(ctxt, poes, self.tom)
+                pnes = get_probability_no_exceedance(
+                    ctxt, poes, self.tom if npdata is None else npdata)
             yield poes, pnes, slcsids, ctxt
 
     def estimate_weight(self, src, srcfilter):
@@ -1258,7 +1264,7 @@ class RuptureContext(BaseContext):
 
 
 # called in calc.disagg too
-def get_probability_no_exceedance(ctx, poes, tom):
+def get_probability_no_exceedance(ctx, poes, npdata_or_tom):
     """
     Compute and return the probability that in the time span for which the
     rupture is defined, the rupture itself never generates a ground motion
@@ -1284,14 +1290,12 @@ def get_probability_no_exceedance(ctx, poes, tom):
         temporal occurrence model instance, used only if the rupture
         is parametric
     """
-    if isinstance(ctx, numpy.float64):  # occurrence rate
-        return tom.get_probability_no_exceedance(ctx, poes)
-    elif isinstance(ctx.occurrence_rate, numpy.ndarray):
-        pnes = numpy.zeros_like(poes)
+    pnes = numpy.zeros_like(poes)
+    if hasattr(npdata_or_tom, 'get_probability_no_exceedance'):
         for i, rate in enumerate(ctx.occurrence_rate):
-            pnes[i] = tom.get_probability_no_exceedance(rate, poes[i])
+            pnes[i] = npdata_or_tom.get_probability_no_exceedance(rate, poes[i])
         return pnes
-    elif numpy.isnan(ctx.occurrence_rate):  # nonparametric rupture
+    else:  # nonparametric rupture
         # Uses the formula
         #
         #    ∑ p(k|T) * p(X<x|rup)^k
@@ -1303,11 +1307,13 @@ def get_probability_no_exceedance(ctx, poes, tom):
         #
         # `p(k|T)` is given by the attribute probs_occur and
         # `p(X<x|rup)` is computed as ``1 - poes``.
-        prob_no_exceed = F64(
-            [v * (1 - poes) ** i for i, v in enumerate(ctx.probs_occur)]
-        ).sum(axis=0)
-        return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
-    return tom.get_probability_no_exceedance(ctx.occurrence_rate, poes)
+        rupids = numpy.unique(ctx.rup_id)
+        for i, rup_id in enumerate(ctx.rup_id):
+            probs_occur = npdata_or_tom[rup_id]['probs_occur']
+            pnes[i] = F64(
+                [v * (1 - poes[i]) ** p for p, v in enumerate(probs_occur)]
+            ).sum(axis=0)
+    return numpy.clip(pnes, 0., 1.)  # avoid numeric issues
 
 
 class Effect(object):
