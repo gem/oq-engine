@@ -130,7 +130,8 @@ def run_preclassical(calc):
             elif hasattr(src, 'nodal_plane_distribution'):
                 pointlike.append(src)
             elif hasattr(src, 'sections'):  # MultiFaultSource
-                smap.submit(([src], sites, cmakers[grp_id]))
+                for ss in split_source(src):
+                    smap.submit(([ss], sites, cmakers[grp_id]))
             else:
                 others.append(src)
         if calc.oqparam.ps_grid_spacing:
