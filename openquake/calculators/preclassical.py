@@ -114,7 +114,11 @@ def run_preclassical(calc):
             cmakers[grp_id].set_weight(sg, sites)
             atomic_sources.extend(sg)
         else:
-            normal_sources.extend(sg)
+            for src in sg.sources:
+                if src.__class__.__name__.startswith('Multi'):
+                    normal_sources.extend(split_source(src))
+                else:
+                    normal_sources.append(src)
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
@@ -134,10 +138,10 @@ def run_preclassical(calc):
             if pointsources or pointlike:
                 smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
         else:
-            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 100)
+            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 320)
             for src in pointlike:  # area, multipoint
                 smap.submit(([src], sites, cmakers[grp_id]))
-        smap.submit_split((others, sites, cmakers[grp_id]), 10, 100)
+        smap.submit_split((others, sites, cmakers[grp_id]), 10, 320)
     normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
