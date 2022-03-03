@@ -114,11 +114,8 @@ def run_preclassical(calc):
             cmakers[grp_id].set_weight(sg, sites)
             atomic_sources.extend(sg)
         else:
-            for src in sg.sources:
-                if src.__class__.__name__.startswith('Multi'):
-                    normal_sources.extend(split_source(src))
-                else:
-                    normal_sources.append(src)
+            normal_sources.extend(sg)
+
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
@@ -132,6 +129,8 @@ def run_preclassical(calc):
                 pointsources.append(src)
             elif hasattr(src, 'nodal_plane_distribution'):
                 pointlike.append(src)
+            elif hasattr(src, 'sections'):  # MultiFaultSource
+                smap.submit(([src], sites, cmakers[grp_id]))
             else:
                 others.append(src)
         if calc.oqparam.ps_grid_spacing:
@@ -141,7 +140,8 @@ def run_preclassical(calc):
             smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 320)
             for src in pointlike:  # area, multipoint
                 smap.submit(([src], sites, cmakers[grp_id]))
-        smap.submit_split((others, sites, cmakers[grp_id]), 10, 320)
+        if others:
+            smap.submit_split((others, sites, cmakers[grp_id]), 10, 320)
     normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
