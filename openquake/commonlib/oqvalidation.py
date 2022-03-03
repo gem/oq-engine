@@ -113,6 +113,11 @@ base_path:
 cachedir:
   INTERNAL
 
+cache_distances:
+  Useful in UCERF calculations.
+  Example: *cache_distances = true*.
+  Default: False
+
 calculation_mode:
   One of classical, disaggregation, event_based, scenario, scenario_risk,
   scenario_damage, event_based_risk, classical_risk, classical_bcr.
@@ -838,6 +843,7 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
+    cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,

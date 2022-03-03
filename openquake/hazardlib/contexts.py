@@ -291,6 +291,7 @@ class ContextMaker(object):
             raise KeyError('Missing imtls in ContextMaker!')
 
         self.dcache = {}
+        self.cache_distances = param.get('cache_distances', False)
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.max_sites_per_tile = param.get('max_sites_per_tile', 50_000)
@@ -379,6 +380,16 @@ class ContextMaker(object):
         self.pne_mon = monitor('computing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
+
+    def dcache_size(self):
+        """
+        :returns: the size in bytes of the distance cache
+        """
+        nbytes = 0
+        for suid, dic in self.dcache.items():
+            for dst, arr in dic.items():
+                nbytes += arr.nbytes
+        return nbytes
 
     def read_ctxs(self, dstore, slc=None):
         """
@@ -474,7 +485,7 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        if (isinstance(rup.surface, MultiSurface) and
+        if (self.cache_distances and isinstance(rup.surface, MultiSurface) and
                 hasattr(rup.surface.surfaces[0], 'suid')):
             distdic = get_distdic(rup, sites.complete, ['rrup'], self.dcache)
             distances = distdic['rrup'][sites.sids]
