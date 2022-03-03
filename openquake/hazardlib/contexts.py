@@ -846,8 +846,11 @@ class ContextMaker(object):
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctxt, adj)
             with self.pne_mon:
-                pnes = get_probability_no_exceedance(
-                    ctxt, poes, self.tom if npdata is None else npdata)
+                if npdata is None:  # parametric
+                    probs_or_tom = self.tom
+                else:  # nonparametric ruptures
+                    probs_or_tom = npdata[ctxt.rup_id]['probs_occur']
+                pnes = get_probability_no_exceedance(ctxt, poes, probs_or_tom)
             yield poes, pnes, slcsids, ctxt
 
     def estimate_weight(self, src, srcfilter):
@@ -1265,7 +1268,7 @@ class RuptureContext(BaseContext):
 
 
 # called in calc.disagg too
-def get_probability_no_exceedance(ctx, poes, npdata_or_tom):
+def get_probability_no_exceedance(ctx, poes, probs_or_tom):
     """
     Compute and return the probability that in the time span for which the
     rupture is defined, the rupture itself never generates a ground motion
@@ -1287,27 +1290,26 @@ def get_probability_no_exceedance(ctx, poes, npdata_or_tom):
         ground motion level at a site. First dimension represent sites,
         second dimension intensity measure levels. ``poes`` can be obtained
         calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
-    :param tom:
-        temporal occurrence model instance, used only if the rupture
-        is parametric
+    :param probs_or_tom:
+        temporal occurrence model if the rupture is parametric,
+        list of probabilities of occurrence otherwise
     """
-    if hasattr(npdata_or_tom, 'get_probability_no_exceedance'):
+    if hasattr(probs_or_tom, 'get_probability_no_exceedance'):
         if isinstance(ctx.occurrence_rate, numpy.ndarray):
             pnes = numpy.zeros_like(poes)
             for i, rate in enumerate(ctx.occurrence_rate):
-                pnes[i] = npdata_or_tom.get_probability_no_exceedance(
+                pnes[i] = probs_or_tom.get_probability_no_exceedance(
                     rate, poes[i])
             return pnes
         else:  # in disaggregation ctx is a RuptureContext
             if numpy.isnan(ctx.occurrence_rate):
                 return get_probability_no_exceedance_np(ctx.probs_occur, poes)
             else:
-                return npdata_or_tom.get_probability_no_exceedance(
+                return probs_or_tom.get_probability_no_exceedance(
                     ctx.occurrence_rate, poes)
     else:  # nonparametric rupture, npdata is an array (probs_occur, weight)
         pnes = numpy.zeros_like(poes)
-        pos = npdata_or_tom[ctx.rup_id]['probs_occur']
-        for i, probs_occur in enumerate(pos):
+        for i, probs_occur in enumerate(probs_or_tom):
             pnes[i] = get_probability_no_exceedance_np(probs_occur, poes[i])
         return pnes
 
