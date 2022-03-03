@@ -144,7 +144,7 @@ def run_preclassical(calc):
                 smap.submit(([src], sites, cmakers[grp_id]))
         if others:
             smap.submit_split((others, sites, cmakers[grp_id]), 10, 320)
-    normal = smap.reduce(acc=multifaults)
+    normal = smap.reduce() + multifaults
     if atomic_sources:  # case_35
         n = len(atomic_sources)
         atomic = AccumDict({'before': n, 'after': n})
