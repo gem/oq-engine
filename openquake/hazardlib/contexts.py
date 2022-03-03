@@ -558,8 +558,7 @@ class ContextMaker(object):
                     setattr(dctx, key, val[r_sites.sids])
             else:
                 for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                    distances = get_distances(rup, r_sites, param)
-                    setattr(dctx, param, distances)
+                    setattr(dctx, param, get_distances(rup, r_sites, param))
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
