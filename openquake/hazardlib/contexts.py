@@ -321,6 +321,8 @@ class ContextMaker(object):
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
+                if self.af and req == 'SITES_PARAMETERS':
+                    reqset.add('ampcode')
                 if hasattr(gsim, 'gmpe') and hasattr(gsim, 'params'):
                     # ModifiableGMPE
                     if (req == 'SITES_PARAMETERS' and
@@ -671,7 +673,7 @@ class ContextMaker(object):
             pmap = probmap
         poissonian, other = [], []
         for ctx in ctxs:
-            if not hasattr(ctx, 'probs_occur') and not self.af:
+            if not hasattr(ctx, 'probs_occur'):
                 poissonian.append(ctx)
             else:
                 other.append(ctx)
