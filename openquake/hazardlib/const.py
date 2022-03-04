@@ -48,7 +48,7 @@ class IMC(Enum):
     #: Usually defined as the geometric average of the maximum
     #: of the two horizontal components (which may not occur
     #: at the same time).
-    AVERAGE_HORIZONTAL = 'Average horizontal'
+    GEOMETRIC_MEAN = 'Average Horizontal'
     #: An orientation-independent alternative to :attr:`AVERAGE_HORIZONTAL`.
     #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
     #: and is used for all the NGA GMPEs.
