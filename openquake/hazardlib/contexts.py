@@ -903,11 +903,11 @@ class ContextMaker(object):
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
+            elif src.code == b'F':   # special case for MultiFaultSources
+                src.weight = src.num_ruptures
             else:
                 with mon:
                     src.weight = 1. + self.estimate_weight(src, srcfilter)
-                if src.code == b'F':   # hack for China model
-                    src.weight *= 20 / len(self.imtls)
 
 
 # see contexts_tests.py for examples of collapse
