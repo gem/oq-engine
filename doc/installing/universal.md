@@ -3,10 +3,11 @@
 Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have Python 3.7, Python 3.8, or Python 3.9 installed.
 
 - **Note 1**: Python 3.6 may work but it is untested and deprecated; Python 3.10 is not supported yet.
-- **Note 2**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake-engine should install those packages within this virtual environment.
-- **Note 3**: The virtual environment `openquake` and its corresponding folder will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts.
-- **Note 4**: Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html
-- **Note 5**: Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own.
+- **Note 2**: on some Linux distributions (i.e. Ubuntu) you may need to install the package `python3-venv` before running the installer
+- **Note 3**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake-engine should install those packages within this virtual environment.
+- **Note 4**: For `user` and `devel` installation methods, the virtual environment `openquake` will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts.
+- **Note 5**: Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html
+- **Note 6**: Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own.
 
 The script allows the user to select between three different kinds of installations:
 

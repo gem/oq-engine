@@ -45,6 +45,11 @@ import argparse
 import subprocess
 from urllib.request import urlopen
 try:
+    import ensurepip
+except ImportError:
+    sys.exit("ensurepip is missing; on Ubuntu the solution is to install "
+             "python3-venv with apt")
+try:
     import venv
 except ImportError:
     # check platform
