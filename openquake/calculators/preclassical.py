@@ -135,7 +135,7 @@ def run_preclassical(calc):
                 splits = (split_source(src) if calc.oqparam.split_sources else
                           [src])
                 for ss in splits:
-                    ss.num_ruptures = ss.count_ruptures()
+                    cmakers[grp_id].set_weight([ss], sites)
                     multifaults[grp_id].append(ss)
             else:
                 others.append(src)
