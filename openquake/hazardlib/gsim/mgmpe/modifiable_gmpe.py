@@ -123,7 +123,12 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
                     conv_sigma = (C[2] + (C[3]-C[2]) *
                                   np.log10(T/0.15)/np.log10(0.8/0.15))
                 rstd = C[4]
+    elif comp in ['AVERAGE_HORIZONTAL']:
+        conv_median = 1
+        conv_sigma = 1
     else:
+        conv_median = 1
+        conv_sigma = 1
         msg = f'Conversion not applicable for {comp}'
         warnings.warn(msg, UserWarning)
 
