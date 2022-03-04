@@ -39,7 +39,7 @@ from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.tom import registry
+from openquake.hazardlib.tom import registry, get_probability_no_exceedance
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
@@ -1276,74 +1276,6 @@ class RuptureContext(BaseContext):
                     array.flags.writeable = False
                 setattr(ctx, dist, array)
         return ctx
-
-
-# called in calc.disagg too
-def get_probability_no_exceedance(ctx, poes, probs_or_tom):
-    """
-    Compute and return the probability that in the time span for which the
-    rupture is defined, the rupture itself never generates a ground motion
-    value higher than a given level at a given site.
-
-    Such calculation is performed starting from the conditional probability
-    that an occurrence of the current rupture is producing a ground motion
-    value higher than the level of interest at the site of interest.
-    The actual formula used for such calculation depends on the temporal
-    occurrence model the rupture is associated with.
-    The calculation can be performed for multiple intensity measure levels
-    and multiple sites in a vectorized fashion.
-
-    :param ctx:
-        an object with attribute .occurrence_rate
-    :param poes:
-        array of shape (n, L, G) containing conditional probabilities that a
-        rupture occurrence causes a ground shaking value exceeding a
-        ground motion level at a site. First dimension represent sites,
-        second dimension intensity measure levels. ``poes`` can be obtained
-        calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
-    :param probs_or_tom:
-        temporal occurrence model if the rupture is parametric,
-        list of probabilities of occurrence otherwise
-    """
-    if hasattr(probs_or_tom, 'get_probability_no_exceedance'):
-        if isinstance(ctx.occurrence_rate, numpy.ndarray):
-            pnes = numpy.zeros_like(poes)
-            for i, rate in enumerate(ctx.occurrence_rate):
-                pnes[i] = probs_or_tom.get_probability_no_exceedance(
-                    rate, poes[i])
-            return pnes
-        else:  # in disaggregation ctx is a RuptureContext
-            if numpy.isnan(ctx.occurrence_rate):  # nonparametric
-                return get_probability_no_exceedance_np(ctx.probs_occur, poes)
-            else:  # parametric
-                return probs_or_tom.get_probability_no_exceedance(
-                    ctx.occurrence_rate, poes)
-    else:  # nonparametric rupture
-        pnes = numpy.zeros_like(poes)
-        for i, probs_occur in enumerate(probs_or_tom):
-            pnes[i] = get_probability_no_exceedance_np(probs_occur, poes[i])
-        return pnes
-
-
-def get_probability_no_exceedance_np(probs_occur, poes):
-    """
-    :param probs_occur: an array of probabilities
-    :param poes: an array of PoEs
-    :returns: an array of PNEs computed as ∑ p(k|T) * p(X<x|rup)^k
-    """
-    # Uses the formula
-    #
-    #    ∑ p(k|T) * p(X<x|rup)^k
-    #
-    # where `p(k|T)` is the probability that the rupture occurs k times
-    # in the time span `T`, `p(X<x|rup)` is the probability that a
-    # rupture occurrence does not cause a ground motion exceedance, and
-    # the summation `∑` is done over the number of occurrences `k`.
-    #
-    # `p(k|T)` is given by the attribute probs_occur and
-    # `p(X<x|rup)` is computed as ``1 - poes``.
-    pnes = F64([v * (1 - poes) ** p for p, v in enumerate(probs_occur)])
-    return numpy.clip(pnes.sum(axis=0), 0., 1.)  # avoid numeric issues
 
 
 class Effect(object):
