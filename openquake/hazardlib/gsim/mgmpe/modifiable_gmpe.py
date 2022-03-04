@@ -36,16 +36,14 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
 
-COEFF = {IMC.GEOMETRIC_MEAN: [1, 1, 0.01, 0.02, 1],
-         IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
+COEFF = {IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
          IMC.RANDOM_HORIZONTAL: [1, 1, 0.07, 0.11, 1.05],
          IMC.GREATER_OF_TWO_HORIZONTAL:
          [0.1, 1.117, 0.53, 1.165, 4.48, 1.195, 8.70, 1.266, 1.266],
          IMC.RotD50:
          [0.09, 1.009, 0.58, 1.028, 4.59, 1.042, 8.93, 1.077, 1.077]}
 
-COEFF_PGA_PGV = {IMC.GEOMETRIC_MEAN: [1, 0.01, 1, 1, 0.01, 1],
-                 IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
+COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
                  IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
                  IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
                  IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
