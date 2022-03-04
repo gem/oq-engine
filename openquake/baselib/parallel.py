@@ -773,8 +773,11 @@ class Starmap(object):
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
-        self.host_ip = socket.gethostbyname(
-            config.dbserver.receiver_host or socket.gethostname())
+        if self.distribute in ('no', 'processpool'):
+            self.return_ip = '127.0.0.1'  # zmq returns data to localhost
+        else:  # zmq returns data to the receiver_host
+            self.return_ip = socket.gethostbyname(
+                config.dbserver.receiver_host or socket.gethostname())
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
@@ -812,7 +815,7 @@ class Starmap(object):
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
-                self.host_ip, self.socket.port)
+                self.return_ip, self.socket.port)
             self.monitor.version = version
             self.monitor.config = config
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
