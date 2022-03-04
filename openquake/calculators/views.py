@@ -641,16 +641,28 @@ def view_task_info(token, dstore):
         data, dt('operation-duration counts mean stddev min max slowfac'))
 
 
+def reduce_srcids(srcids):
+    s = set()
+    for srcid in srcids:
+        s.add(srcid.split(':')[0])
+    return ' '.join(sorted(s))
+
+
 @view.add('task_durations')
 def view_task_durations(token, dstore):
     """
     Display the raw task durations. Here is an example of usage::
 
-      $ oq show task_durations:classical
+      $ oq show task_durations
     """
-    task = token.split(':')[1]  # called as task_duration:task_name
-    array = get_array(dstore['task_info'][()], taskname=task)['duration']
-    return '\n'.join(map(str, array))
+    df = dstore.read_df('source_data')
+    out = []
+    for taskno, rows in df.groupby('taskno'):
+        srcids = reduce_srcids(rows.src_id.to_numpy())
+        out.append((taskno, rows.ctimes.sum(), srcids))
+    arr = numpy.array(out, dt('taskno duration srcids'))
+    arr.sort(order='duration')
+    return arr
 
 
 @view.add('task')
