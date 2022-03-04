@@ -96,9 +96,9 @@ class GarciaEtAl2005SSlab(GMPE):
 
     #: Supported intensity measure component is the geometric average of
     #  the maximum of the two horizontal components
-    #: :attr:`openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: :attr:`openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
     #: see Data processing in page 2274.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total

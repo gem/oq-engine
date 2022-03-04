@@ -20,6 +20,7 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
 import copy
+import warnings
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.contexts import STD_TYPES, get_mean_stds
@@ -35,16 +36,14 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
 
-COEFF = {IMC.AVERAGE_HORIZONTAL: [1, 1, 0.01, 0.02, 1],
-         IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
+COEFF = {IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
          IMC.RANDOM_HORIZONTAL: [1, 1, 0.07, 0.11, 1.05],
          IMC.GREATER_OF_TWO_HORIZONTAL:
          [0.1, 1.117, 0.53, 1.165, 4.48, 1.195, 8.70, 1.266, 1.266],
          IMC.RotD50:
          [0.09, 1.009, 0.58, 1.028, 4.59, 1.042, 8.93, 1.077, 1.077]}
 
-COEFF_PGA_PGV = {IMC.AVERAGE_HORIZONTAL: [1, 0.01, 1, 1, 0.01, 1],
-                 IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
+COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
                  IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
                  IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
                  IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
@@ -75,20 +74,21 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
     # IMT period
     T = imt.period
 
-    # Conversion coefficients
-    C = COEFF[horcom]
-    C_PGA_PGV = COEFF_PGA_PGV[horcom]
 
     # Get the string defining the horizontal component
     comp = str(horcom).split('.')[1]
 
     # List of the horizontal component definitions that can be converted into
     # geometric mean
-    tmp = ['AVERAGE_HORIZONTAL', 'GMRotI50', 'RANDOM_HORIZONTAL',
+    tmp = ['GMRotI50', 'RANDOM_HORIZONTAL',
            'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
 
     # Apply the conversion
     if comp in tmp:
+        # Conversion coefficients
+        C = COEFF[horcom]
+        C_PGA_PGV = COEFF_PGA_PGV[horcom]
+
         imt_name = imt.__repr__()
         if imt_name == 'PGA':
             conv_median = C_PGA_PGV[0]
@@ -122,9 +122,16 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
                     conv_sigma = (C[2] + (C[3]-C[2]) *
                                   np.log10(T/0.15)/np.log10(0.8/0.15))
                 rstd = C[4]
+    elif comp in ['GEOMETRIC_MEAN']:
+        conv_median = 1
+        conv_sigma = 0
+        rstd = 1
     else:
+        conv_median = 1
+        conv_sigma = 0
+        rstd = 1
         msg = f'Conversion not applicable for {comp}'
-        raise ValueError(msg)
+        warnings.warn(msg, UserWarning)
 
     # Original total STD
     total_stddev = getattr(self, const.StdDev.TOTAL)

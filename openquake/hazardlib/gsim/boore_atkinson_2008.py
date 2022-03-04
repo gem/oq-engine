@@ -223,7 +223,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
 
     #: Supported intensity measure component is geometric mean, see paragraph
     #: 'Response Variables', page 100 and table 8, pag 121.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VECTORIAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total
     #: see equation 2, pag 106.

@@ -91,7 +91,7 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
 
     #: Supported intensity measure component is the average horizontal
     #: component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

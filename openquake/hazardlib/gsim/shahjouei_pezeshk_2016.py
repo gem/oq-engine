@@ -108,7 +108,7 @@ class ShahjoueiPezeshk2016(GMPE):
     #: and peak ground acceleration. See Table 7 on page 743
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
-    #: An orientation-independent alternative to :attr:`AVERAGE_HORIZONTAL`.
+    #: An orientation-independent alternative to :attr:`GEOMETRIC_MEAN`.
     #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
     #: and is used for all the NGA GMPEs. See page 742.
     #: :attr:'~openquake.hazardlib.const.IMC.RotD50'.

@@ -87,9 +87,9 @@ class YoungsEtAl1997SInter(GMPE):
 
     #: Supported intensity measure component is the average horizontal
     #: component
-    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see
+    #: attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`, see
     #: paragraph: 'Analysis of peak horizontal accelerations', p. 59.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total, table 2, page 67.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

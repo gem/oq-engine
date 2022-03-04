@@ -72,7 +72,7 @@ class VanHoutteEtAl2018RSD(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([RSD575])
 
     #: Supported intensity measure component is RotD50
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are total, inter and intra-event
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {

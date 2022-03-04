@@ -142,7 +142,7 @@ class AbrahamsonSilva1997(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components (see paragraph 'Regression Model', page 105)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is Total (see equations 13 pp. 106
     #: and table 4, page 109).

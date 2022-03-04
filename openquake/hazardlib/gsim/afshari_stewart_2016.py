@@ -177,7 +177,7 @@ class AfshariStewart2016(GMPE):
 
     #: Supported intensity measure component is the geometric mean horizontal
     #: component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see table 7, page 35
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {

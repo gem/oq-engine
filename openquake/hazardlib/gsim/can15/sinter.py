@@ -70,9 +70,9 @@ class SInterCan15Mid(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components :
-    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see paragraph
+    #: attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`, see paragraph
     #: 'Development of Base Model', p. 901.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Required site parameters is Vs30.
     #: See table 2, p. 901.

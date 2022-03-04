@@ -140,7 +140,7 @@ class KaleEtAl2015Turkey(GMPE):
 
     #: The supported intensity measure component is 'geometric mean', see
     #: section 'Functional Form of the GMPEs and Regression Analyses', page 970
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: The supported standard deviations are total, inter and intra event, see
     #: table 3 and equations 8 & 9, pages 972 and 971
