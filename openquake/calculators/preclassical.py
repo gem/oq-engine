@@ -119,8 +119,7 @@ def run_preclassical(calc):
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
-    if csm.sitecol:
-        logging.info('Sending %s', sites)
+    logging.info('Starting preclassical')
     smap = parallel.Starmap(preclassical, h5=h5)
     multifaults = AccumDict(accum=[])  # grp_id => multifaultsources
     for (grp_id, msr), srcs in sources_by_grp.items():
