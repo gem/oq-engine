@@ -80,7 +80,7 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
 
     # List of the horizontal component definitions that can be converted into
     # geometric mean
-    tmp = ['GEOMETRIC_MEAN', 'GMRotI50', 'RANDOM_HORIZONTAL',
+    tmp = ['GMRotI50', 'RANDOM_HORIZONTAL',
            'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
 
     # Apply the conversion
