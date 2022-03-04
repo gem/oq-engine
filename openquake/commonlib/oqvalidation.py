@@ -710,7 +710,7 @@ time_per_task:
   Used in calculatins with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=600*
-  Default: 300
+  Default: 2000
 
 truncation_level:
   Truncation level used in the GMPEs.
@@ -955,7 +955,7 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
-    time_per_task = valid.Param(valid.positivefloat, 600)
+    time_per_task = valid.Param(valid.positivefloat, 2000)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
