@@ -141,7 +141,7 @@ class DerrasEtAl2014(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: The supported intensity measure component is 'average horizontal',
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: The supported standard deviations are total, inter and intra event
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {

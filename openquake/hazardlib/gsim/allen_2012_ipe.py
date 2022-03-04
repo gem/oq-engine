@@ -79,7 +79,7 @@ class AllenEtAl2012(GMPE):
 
     #: Supported intensity measure component is not considered for IPEs, so
     #: we assume equivalent to 'average horizontal'
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

@@ -153,8 +153,8 @@ class TravasarouEtAl2003(GMPE):
 
     #: Supported intensity measure component is actually the arithmetic mean of
     #: two horizontal components - we find this to be equivalent to
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equations 13 - 15

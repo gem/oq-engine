@@ -67,7 +67,7 @@ class SomervilleEtAl2009NonCratonic(GMPE):
 
     #: The supported intensity measure component is set to 'average
     #: horizontal', however the original paper does not report this information
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: The supported standard deviations is total, see tables 3
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

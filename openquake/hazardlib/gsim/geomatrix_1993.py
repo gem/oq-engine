@@ -66,7 +66,7 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
 
     #: Supported intensity measure component is the geometric mean of
     #: two horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

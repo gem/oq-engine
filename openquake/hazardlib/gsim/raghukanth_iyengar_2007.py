@@ -151,9 +151,9 @@ class RaghukanthIyengar2007(GMPE):
     #: This is not clear in the paper, but Figure 7 shows the model
     #: "compared with the average of the response spectrum of
     #: the two horizontal components" of a particular recording.
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
     #: see p. 211.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Although "the coefficients of [equation (1)] are obtained
     #: from the simulated database of SA by a two-step stratified

@@ -36,7 +36,7 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
 
-COEFF = {IMC.AVERAGE_HORIZONTAL: [1, 1, 0.01, 0.02, 1],
+COEFF = {IMC.GEOMETRIC_MEAN: [1, 1, 0.01, 0.02, 1],
          IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
          IMC.RANDOM_HORIZONTAL: [1, 1, 0.07, 0.11, 1.05],
          IMC.GREATER_OF_TWO_HORIZONTAL:
@@ -44,7 +44,7 @@ COEFF = {IMC.AVERAGE_HORIZONTAL: [1, 1, 0.01, 0.02, 1],
          IMC.RotD50:
          [0.09, 1.009, 0.58, 1.028, 4.59, 1.042, 8.93, 1.077, 1.077]}
 
-COEFF_PGA_PGV = {IMC.AVERAGE_HORIZONTAL: [1, 0.01, 1, 1, 0.01, 1],
+COEFF_PGA_PGV = {IMC.GEOMETRIC_MEAN: [1, 0.01, 1, 1, 0.01, 1],
                  IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
                  IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
                  IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
@@ -85,7 +85,7 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
 
     # List of the horizontal component definitions that can be converted into
     # geometric mean
-    tmp = ['AVERAGE_HORIZONTAL', 'GMRotI50', 'RANDOM_HORIZONTAL',
+    tmp = ['GEOMETRIC_MEAN', 'GMRotI50', 'RANDOM_HORIZONTAL',
            'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
 
     # Apply the conversion
@@ -123,7 +123,7 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
                     conv_sigma = (C[2] + (C[3]-C[2]) *
                                   np.log10(T/0.15)/np.log10(0.8/0.15))
                 rstd = C[4]
-    elif comp in ['AVERAGE_HORIZONTAL']:
+    elif comp in ['GEOMETRIC_MEAN']:
         conv_median = 1
         conv_sigma = 1
     else:

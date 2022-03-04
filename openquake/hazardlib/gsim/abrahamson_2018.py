@@ -227,7 +227,7 @@ class AbrahamsonEtAl2018SInter(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see section 4.5

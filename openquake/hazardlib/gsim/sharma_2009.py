@@ -163,9 +163,9 @@ class SharmaEtAl2009(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
     #: see p. 1200.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Only total standard deviation is supported, see Table 2, p. 1202.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

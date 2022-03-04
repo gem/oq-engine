@@ -284,7 +284,7 @@ class YenierAtkinson2015BSSA(GMPE):
     #: Supported intensity measure component is orientation-independent
     #: average horizontal :attr:`~openquake.hazardlib.const.IMC.RotD50`,
     #: see page 1025.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page

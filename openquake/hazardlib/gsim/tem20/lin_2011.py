@@ -58,7 +58,7 @@ class Lin2011foot(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components, see equation 10 page 226.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total, see equation 10 page 226.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}

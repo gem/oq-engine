@@ -319,7 +319,7 @@ class ParkerEtAl2020SInter(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV, PGA, SA}
 
     #: Supported intensity measure component is the geometric mean component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}

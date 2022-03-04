@@ -147,7 +147,7 @@ class BindiEtAl2014Rjb(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total

@@ -150,7 +150,7 @@ class AkkarEtAlRjb2014(GMPE):
 
     #: The supported intensity measure component is 'average horizontal', see
     #: section 'A New Generation of European Ground-Motion Models', page 8
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: The supported standard deviations are total, inter and intra event, see
     #: table 4.a, pages 22-23

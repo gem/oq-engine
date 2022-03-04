@@ -66,7 +66,7 @@ class Campbell1997(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
 
     #: Supported intensity measure component is the horizontal component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see equation 4, pg 164
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
