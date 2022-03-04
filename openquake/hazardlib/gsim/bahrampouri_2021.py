@@ -154,7 +154,7 @@ class BahrampouriEtAl2021Asc(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA}
 
     #: Supported intensity measure component is geometric mean
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page
@@ -211,7 +211,7 @@ class BahrampouriEtAl2021SInter(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA}
 
     #: Supported intensity measure component is geometric mean
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page
@@ -260,14 +260,14 @@ class BahrampouriEtAl2021SSlab(GMPE):
     Kik-net database'.
     """
 
-    #: Supported tectonic region type is SUBDUCTION INTERFACE, see title!
+    #: Supported tectonic region type is SUBDUCTION INTERSLAB, see title!
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Supported intensity measure types are areas intensity
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA}
 
     #: Supported intensity measure component is geometric mean
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page
