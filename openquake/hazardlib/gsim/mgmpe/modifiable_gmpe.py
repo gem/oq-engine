@@ -20,6 +20,7 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
 import copy
+import warnings
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.contexts import STD_TYPES, get_mean_stds
@@ -124,7 +125,7 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
                 rstd = C[4]
     else:
         msg = f'Conversion not applicable for {comp}'
-        raise ValueError(msg)
+        warnings.warn(msg, UserWarning)
 
     # Original total STD
     total_stddev = getattr(self, const.StdDev.TOTAL)
