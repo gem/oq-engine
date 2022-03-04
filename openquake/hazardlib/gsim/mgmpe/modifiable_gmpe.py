@@ -76,9 +76,6 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
     # IMT period
     T = imt.period
 
-    # Conversion coefficients
-    C = COEFF[horcom]
-    C_PGA_PGV = COEFF_PGA_PGV[horcom]
 
     # Get the string defining the horizontal component
     comp = str(horcom).split('.')[1]
@@ -90,6 +87,10 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
 
     # Apply the conversion
     if comp in tmp:
+        # Conversion coefficients
+        C = COEFF[horcom]
+        C_PGA_PGV = COEFF_PGA_PGV[horcom]
+
         imt_name = imt.__repr__()
         if imt_name == 'PGA':
             conv_median = C_PGA_PGV[0]
@@ -125,10 +126,12 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
                 rstd = C[4]
     elif comp in ['GEOMETRIC_MEAN']:
         conv_median = 1
-        conv_sigma = 1
+        conv_sigma = 0
+        rstd = 1
     else:
         conv_median = 1
-        conv_sigma = 1
+        conv_sigma = 0
+        rstd = 1
         msg = f'Conversion not applicable for {comp}'
         warnings.warn(msg, UserWarning)
 
