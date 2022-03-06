@@ -18,6 +18,7 @@
 
 import os
 import re
+import ast
 import abc
 import sys
 import copy
@@ -473,6 +474,16 @@ class ContextMaker(object):
         allctxs.sort(key=operator.attrgetter('mag'))
         return allctxs
 
+    def from_string(self, data):
+        """
+        :returns: a pair (recarray, npdata) from a string of data
+        """
+        header, *body = data.splitlines()
+        header = header.replace(',', ' ')  # ignore commas
+        dt = numpy.dtype([(col, self.dtype[col]) for col in header.split()])
+        arr = numpy.array([ast.literal_eval(line) for line in body], dt)
+        return arr, None
+
     def filter(self, sites, rup):
         """
         Filter the site collection with respect to the rupture.
@@ -677,9 +688,9 @@ class ContextMaker(object):
         ctxs = self.from_srcs(srcs, sitecol)
         return self.get_pmap(ctxs).array(len(sitecol))
 
-    def get_pmap(self, ctxs, probmap=None):
+    def get_pmap(self, ctxs_or_pair, probmap=None):
         """
-        :param ctxs: a list of contexts
+        :param ctxs_or_pair: a list of contexts or a pair (recarray, npdata)
         :param probmap: if not None, update it
         :returns: a new ProbabilityMap if probmap is None
         """
@@ -688,20 +699,24 @@ class ContextMaker(object):
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        parametric, nonparametric = [], []
-        npdata = []
-        for ctx in ctxs:
-            if hasattr(ctx, 'probs_occur'):
-                nonparametric.append(ctx)
-                npdata.append((ctx.probs_occur, ctx.weight))
-            else:
-                parametric.append(ctx)
-        pairs = []
-        if parametric:
-            pairs.append((self.recarray(parametric), None))
-        if nonparametric:
-            pairs.append((self.recarray(nonparametric),
-                          numpy.array(npdata, npdata_dt)))
+        if isinstance(ctxs_or_pair, tuple):
+            assert len(ctxs_or_pair) == 2
+            pairs = [ctxs_or_pair]
+        else:
+            parametric, nonparametric = [], []
+            npdata = []
+            for ctx in ctxs_or_pair:
+                if hasattr(ctx, 'probs_occur'):
+                    nonparametric.append(ctx)
+                    npdata.append((ctx.probs_occur, ctx.weight))
+                else:
+                    parametric.append(ctx)
+            pairs = []
+            if parametric:
+                pairs.append((self.recarray(parametric), None))
+            if nonparametric:
+                pairs.append((self.recarray(nonparametric),
+                              numpy.array(npdata, npdata_dt)))
         for ctx, npdata in pairs:
             for poes, pnes, allsids, ctx in self.gen_poes(ctx, npdata):
                 if rup_indep:  # regular case
@@ -871,7 +886,9 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        if src.code in b'pP':
+        if src.code == b'F':  # MultiFaultSources
+            return src.num_ruptures * len(sites) / N
+        elif src.code in b'pP':
             allrups = []
             for irups, r_sites in self._cps_rups(src, sites, point_rup=True):
                 for rup in irups:
@@ -903,10 +920,6 @@ class ContextMaker(object):
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
-            elif src.code == b'F':   # special case for MultiFaultSources
-                src.weight = src.num_ruptures
-                if len(srcfilter.sitecol) < 100:  # few sites, slow distances
-                    src.weight *= 10
             else:
                 with mon:
                     src.weight = 1. + self.estimate_weight(src, srcfilter)

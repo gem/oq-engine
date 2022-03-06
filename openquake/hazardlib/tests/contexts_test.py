@@ -200,6 +200,17 @@ class EffectTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
 
 
+class FromStringTestCase(unittest.TestCase):
+    def test(self):
+        cmaker = read_input(JOB).cmaker
+        pair = cmaker.from_string("""\
+mag, rrup,   vs30, occurrence_rate, sids
+4.5, [112],  [600],  1E-5,          [0]
+4.5, [113],  [600],  1E-5,          [0]""")
+        print(pair)
+        print(cmaker.get_pmap(pair))
+
+
 # see also classical/case_24 and classical/case_69
 class CollapseTestCase(unittest.TestCase):
 
