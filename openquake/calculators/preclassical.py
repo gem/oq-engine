@@ -121,7 +121,6 @@ def run_preclassical(calc):
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
     logging.info('Starting preclassical')
     smap = parallel.Starmap(preclassical, h5=h5)
-    multifaults = AccumDict(accum=[])  # grp_id => multifaultsources
     for (grp_id, msr), srcs in sources_by_grp.items():
         pointsources, pointlike, others = [], [], []
         for src in srcs:
@@ -129,13 +128,6 @@ def run_preclassical(calc):
                 pointsources.append(src)
             elif hasattr(src, 'nodal_plane_distribution'):
                 pointlike.append(src)
-            elif hasattr(src, 'sections'):  # multifault
-                # this is essential to make the preclassical in UCERF fast
-                splits = (split_source(src) if calc.oqparam.split_sources else
-                          [src])
-                for ss in splits:
-                    cmakers[grp_id].set_weight([ss], sites)
-                    multifaults[grp_id].append(ss)
             else:
                 others.append(src)
         if calc.oqparam.ps_grid_spacing:
@@ -147,7 +139,7 @@ def run_preclassical(calc):
                 smap.submit(([src], sites, cmakers[grp_id]))
         if others:
             smap.submit_split((others, sites, cmakers[grp_id]), 10, 320)
-    normal = smap.reduce() + multifaults
+    normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
         atomic = AccumDict({'before': n, 'after': n})
