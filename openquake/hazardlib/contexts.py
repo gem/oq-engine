@@ -886,7 +886,11 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        if src.code in b'pP':
+        if src.code == b'F':
+            # for MultiFaultSources get_close_sites filters nothing
+            # using .few_ruptures() would be too slow
+            return src.num_ruptures * len(sites) / N
+        elif src.code in b'pP':
             allrups = []
             for irups, r_sites in self._cps_rups(src, sites, point_rup=True):
                 for rup in irups:
