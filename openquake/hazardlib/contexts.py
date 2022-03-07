@@ -903,10 +903,6 @@ class ContextMaker(object):
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
-            elif src.code == b'F':   # special case for MultiFaultSources
-                src.weight = src.num_ruptures
-                if len(srcfilter.sitecol) < 100:  # few sites, slow distances
-                    src.weight *= 10
             else:
                 with mon:
                     src.weight = 1. + self.estimate_weight(src, srcfilter)
