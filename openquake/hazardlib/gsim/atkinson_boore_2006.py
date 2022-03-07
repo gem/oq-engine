@@ -385,9 +385,9 @@ class AtkinsonBoore2006(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is horizontal
-    #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
-    #: see paragraph 'Results', pag 2190, and caption to table 6, p. 2192
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
+    #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`,
+    #: personal communication with Gail Atkinson
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is total, see table 6
     #: and 9, p. 2192 and 2202, respectively.
