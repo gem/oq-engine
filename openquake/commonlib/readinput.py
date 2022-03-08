@@ -673,7 +673,7 @@ def get_full_lt(oqparam, branchID=None):
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
     for trt in reqv:
-        if trt in oqparam.discard_trts:
+        if trt in oqparam.discard_trts.split(','):
             continue
         elif trt.lower() not in trts_lower:
             raise ValueError('Unknown TRT=%s in %s [reqv]' %

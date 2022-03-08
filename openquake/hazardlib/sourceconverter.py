@@ -658,7 +658,7 @@ class SourceConverter(RuptureConverter):
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 source_id=None, discard_trts='',
+                 source_id=None, discard_trts=(),
                  floating_x_step=0, floating_y_step=0):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
