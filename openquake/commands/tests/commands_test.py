@@ -32,14 +32,15 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
+from openquake.commonlib.readinput import get_params
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
+from openquake.qa_tests_data.event_based_damage import case_15
 from openquake.qa_tests_data.classical import case_1, case_9, case_18, case_56
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import (
-    case_2, case_5, case_16, case_21)
+from openquake.qa_tests_data.event_based import case_5, case_16, case_21
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
@@ -579,11 +580,13 @@ Source Loss Table'''.splitlines())
 
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored
-        job_ini = os.path.join(os.path.dirname(case_2.__file__), 'job_2.ini')
+        job_ini = os.path.join(os.path.dirname(case_15.__file__), 'job.ini')
+        dic = get_params(job_ini)
+        dic['calculation_mode'] = 'event_based'
         tempdir = tempfile.mkdtemp()
         dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
-            [job] = run_jobs(create_jobs([job_ini], 'error'))
+            [job] = run_jobs(create_jobs([dic], 'error'))
             job = commonlib.logs.dbcmd('get_job', job.calc_id)
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
@@ -591,6 +594,10 @@ Source Loss Table'''.splitlines())
             sap.runline(f'openquake.commands export ruptures {job.id} '
                         f'-e csv --export-dir={tempdir}')
         self.assertIn('Exported', str(p))
+
+        # run the damage part; emulate using a different user for the hazard
+        dic['calculation_mode'] = 'event_based_damage'
+        run_jobs(create_jobs([dic], 'error', hc_id=job.id))
         shutil.rmtree(tempdir)
 
 
