@@ -210,7 +210,7 @@ def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4, ctx, imt):
     mean += get_fs_SeyhanStewart2014(C, imt, pga_rock, vs30)
     if adapted:
         # acme_2019 considers the SoF correction
-        famp = get_sof_adjustment(ctx.rake, imt)
+        famp = [get_sof_adjustment(rake, imt) for rake in ctx.rake]
         mean += np.log(famp)
     return mean
 
