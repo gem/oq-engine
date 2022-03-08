@@ -659,8 +659,8 @@ def view_task_durations(token, dstore):
     out = []
     for taskno, rows in df.groupby('taskno'):
         srcids = reduce_srcids(rows.src_id.to_numpy())
-        out.append((taskno, rows.ctimes.sum(), srcids))
-    arr = numpy.array(out, dt('taskno duration srcids'))
+        out.append((taskno, rows.ctimes.sum(), rows.weight.sum(), srcids))
+    arr = numpy.array(out, dt('taskno duration weight srcids'))
     arr.sort(order='duration')
     return arr
 

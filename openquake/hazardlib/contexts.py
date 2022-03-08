@@ -904,8 +904,8 @@ class ContextMaker(object):
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
-            elif N <= self.max_sites_disagg and src.code == 'F':  # test_ucerf
-                src.weight = src.num_ruptures * 10
+            elif N <= self.max_sites_disagg and src.code == b'F':  # test_ucerf
+                src.weight = src.num_ruptures * 20
             else:
                 with mon:
                     src.weight = 1. + self.estimate_weight(src, srcfilter)
