@@ -64,8 +64,8 @@ reaggregate_by:
 amplification_method:
   Used in classical PSHA calculations to amplify the hazard curves with
   the convolution or kernel method.
-  Example: *amplification_method = convolution*.
-  Default: None
+  Example: *amplification_method = kernel*.
+  Default: "convolution"
 
 area_source_discretization:
   Discretization parameters (in km) for area sources.
@@ -821,7 +821,7 @@ class OqParam(valid.ParamSet):
     aggregate_by = valid.Param(valid.namelist, [])
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
-        valid.Choice('convolution', 'kernel'), None)
+        valid.Choice('convolution', 'kernel'), 'convolution')
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
@@ -1202,12 +1202,6 @@ class OqParam(valid.ParamSet):
                 self.calculation_mode in ['classical', 'classical_risk',
                                           'disaggregation']):
             check_same_levels(self.imtls)
-
-        if ('amplification' in self.inputs and
-            self.amplification_method == 'convolution' and not
-                self.soil_intensities):
-            raise InvalidFile('%s: The soil_intensities must be defined'
-                              % job_ini)
 
     def validate(self):
         """
@@ -1750,9 +1744,13 @@ class OqParam(valid.ParamSet):
 
     def is_valid_soil_intensities(self):
         """
-        soil_intensities can be set only if amplification_method=convolution
+        soil_intensities must be defined if amplification_method=convolution
+        and must not be defined if amplification_method=kernel
         """
-        if self.amplification_method == 'convolution':
+        classical = ('classical' in self.calculation_mode or
+                     'disaggregation' in self.calculation_mode)
+        if (classical and 'amplification' in self.inputs and
+                self.amplification_method == 'convolution'):
             return len(self.soil_intensities) > 1
         else:
             return self.soil_intensities is None
