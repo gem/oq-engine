@@ -1203,12 +1203,6 @@ class OqParam(valid.ParamSet):
                                           'disaggregation']):
             check_same_levels(self.imtls)
 
-        if ('amplification' in self.inputs and
-            self.amplification_method == 'convolution' and not
-                self.soil_intensities):
-            raise InvalidFile('%s: The soil_intensities must be defined'
-                              % job_ini)
-
     def validate(self):
         """
         Set self.loss_types
@@ -1750,9 +1744,12 @@ class OqParam(valid.ParamSet):
 
     def is_valid_soil_intensities(self):
         """
-        soil_intensities can be set only if amplification_method=convolution
+        soil_intensities must be defined if amplification_method=convolution
+        and must not be defined if amplification_method=kernel
         """
-        if ('amplification' in self.inputs and
+        classical = ('classical' in self.calculation_mode or
+                     'disaggregation' in self.calculation_mode)
+        if (classical and 'amplification' in self.inputs and
                 self.amplification_method == 'convolution'):
             return len(self.soil_intensities) > 1
         else:
