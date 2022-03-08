@@ -217,6 +217,9 @@ class BaseGSIMTestCase(unittest.TestCase):
             ctx.occurrence_rate = 0
             out = cmaker.get_mean_stds([ctx])[:, 0]
             for o, out_type in enumerate(out_types):
+                # YenierAtkinson2015BSSA has TOTAL_STDDEV == 0
+                # if out_type == 'TOTAL_STDDEV' and (out[o] == 0).any():
+                #    raise ValueError('TOTAL_STDDEV=0 for %s' % gsim)
                 if not hasattr(ctx, out_type):
                     # for instance MEAN is missing in zhao_2016_test
                     continue
