@@ -1035,11 +1035,14 @@ def extract_relevant_events(dstore, dummy=None):
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/events
     """
-    events = dstore['events'][:]
+    all_events = dstore['events'][:]
     if 'relevant_events' not in dstore:
-        return events
+        all_events.sort(order='id')
+        return all_events
     rel_events = dstore['relevant_events'][:]
-    return events[rel_events]
+    events = all_events[rel_events]
+    events.sort(order='id')
+    return events
 
 
 @extract.add('event_info')
