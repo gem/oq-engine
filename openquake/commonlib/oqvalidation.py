@@ -64,8 +64,8 @@ reaggregate_by:
 amplification_method:
   Used in classical PSHA calculations to amplify the hazard curves with
   the convolution or kernel method.
-  Example: *amplification_method = convolution*.
-  Default: None
+  Example: *amplification_method = kernel*.
+  Default: "convolution"
 
 area_source_discretization:
   Discretization parameters (in km) for area sources.
@@ -821,7 +821,7 @@ class OqParam(valid.ParamSet):
     aggregate_by = valid.Param(valid.namelist, [])
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
-        valid.Choice('convolution', 'kernel'), None)
+        valid.Choice('convolution', 'kernel'), 'convolution')
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
