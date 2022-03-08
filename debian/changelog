@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed /extract/events to return events sorted by ID
   * Changed the default amplification method to "convolution"
   * Fixed a bug with discard_trts sometimes discarding too much
   * Raised a helpful error message when ensurepip is missing
