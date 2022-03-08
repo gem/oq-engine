@@ -1752,7 +1752,8 @@ class OqParam(valid.ParamSet):
         """
         soil_intensities can be set only if amplification_method=convolution
         """
-        if self.amplification_method == 'convolution':
+        if ('amplification' in self.inputs and
+                self.amplification_method == 'convolution'):
             return len(self.soil_intensities) > 1
         else:
             return self.soil_intensities is None
