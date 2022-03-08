@@ -161,6 +161,8 @@ class EngineServerTestCase(unittest.TestCase):
         # check eids_by_gsim
         resp = self.c.get(extract_url + 'eids_by_gsim')
         dic = dict(loadnpz(resp.streaming_content))
+        for gsim, eids in dic.items():
+            numpy.testing.assert_equal(eids, numpy.sort(eids)), gsim
         self.assertEqual(len(dic['[AtkinsonBoore2003SInter]']), 7)
 
         # check extract/composite_risk_model.attrs
