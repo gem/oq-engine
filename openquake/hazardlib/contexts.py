@@ -899,10 +899,13 @@ class ContextMaker(object):
         """
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
+        N = len(srcfilter.sitecol)
         for src in sources:
             src.num_ruptures = src.count_ruptures()
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.weight = .001
+            elif N <= self.max_sites_disagg and src.code == 'F':  # test_ucerf
+                src.weight = src.num_ruptures * 10
             else:
                 with mon:
                     src.weight = 1. + self.estimate_weight(src, srcfilter)
