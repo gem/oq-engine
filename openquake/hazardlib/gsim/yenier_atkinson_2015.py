@@ -222,8 +222,8 @@ def _get_stress_drop_adjstment(region, focal_depth, C, imt, m):
     """
     if region == 'CENA':
         d = focal_depth
-        t1 = np.clip(0.290*(d - 10.), None, 0)
-        t2 = np.clip(0.229*(m - 5.), None, 0)
+        t1 = np.clip(0.290 * (d - 10.), None, 0)
+        t2 = np.clip(0.229 * (m - 5.), None, 0)
         delta_sigma = np.exp(5.704 + t1 + t2)
         edelta = _get_edelta(C, m, delta_sigma)
         return edelta * np.log(delta_sigma/100.)
@@ -279,7 +279,7 @@ class YenierAtkinson2015BSSA(GMPE):
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground velocity and peak ground acceleration, see tables 4
     #: pages 1036
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: average horizontal :attr:`~openquake.hazardlib.const.IMC.RotD50`,
@@ -289,7 +289,7 @@ class YenierAtkinson2015BSSA(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page
     #: 1046.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameter is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -318,11 +318,13 @@ class YenierAtkinson2015BSSA(GMPE):
 
             # Compute focal depth if not set at the initialization level
             if self.focal_depth is None:
-                self.focal_depth = ctx.hypo_depth
+                focal_depth = ctx.hypo_depth
+            else:
+                focal_depth = np.full_like(ctx.hypo_depth, self.focal_depth)
 
             # Compute mean and std
             mean[m] = _get_mean_on_soil(
-                self.adapted, self.region, self.focal_depth, self.gmpe,
+                self.adapted, self.region, focal_depth, self.gmpe,
                 C2, C3, C4, ctx, imt)
 
     COEFFS_TAB2 = CoeffsTable(sa_damping=5, table="""\
