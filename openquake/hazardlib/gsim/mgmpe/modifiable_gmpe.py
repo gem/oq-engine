@@ -342,6 +342,7 @@ class ModifiableGMPE(GMPE):
 
             # Phi SS
             phi_model = self.params[key].get("phi_model", "global")
+            del self.params[key]["phi_model"]
             phi_ss_quantile = self.params[key].get("phi_ss_quantile", None)
             self.params[key]['phi_ss_coetab'] = get_phi_ss_at_quantile(
                 PHI_SETUP[phi_model], phi_ss_quantile)
