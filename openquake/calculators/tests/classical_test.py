@@ -35,7 +35,7 @@ from openquake.qa_tests_data.classical import (
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
-    case_58, case_59, case_60, case_61, case_62)
+    case_58, case_59, case_60, case_61, case_62, case_76)
 
 aac = numpy.testing.assert_allclose
 
@@ -864,4 +864,17 @@ hazard_uhs-std.csv
         # multisurface with kite faults
         self.run_calc(case_62.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f)    
+        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+
+    def test_case_76(self):
+        # CanadaSHM6
+        self.run_calc(case_76.__file__, 'job.ini')
+        branches = self.calc.datastore['full_lt/gsim_lt'].branches
+        gsims = [br.gsim for br in branches]
+        _poes = self.calc.datastore['_poes'][:, 0, :]  # shape (20, 200)
+        for gsim, poes in zip(gsims, _poes):
+            csv = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
+            gsim_str = gsim.__class__.__name__
+            if hasattr(gsim, 'submodel'):
+                gsim_str += '_' + gsim.submodel
+            self.assertEqualFiles('expected/%s.csv' % gsim_str, csv)
