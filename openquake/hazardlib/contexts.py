@@ -770,18 +770,18 @@ class ContextMaker(object):
         if any(hasattr(gsim, 'gmpe_table') for gsim in self.gsims):
             assert len(recarrays) == 1, len(recarrays)
             recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
-        self.adj = [[] for g in range(G)]  # NSHM2014 adjustments
+        self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014 adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
             for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
-                compute(gsim, ctx, self.imts, *out[:, g, :, slc])
-                if hasattr(gsim, 'adjustment'):
-                    self.adj[g].append(gsim.adjustment)
+                adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
+                if adj is not None:
+                    self.adj[gsim].append(adj)
                 start = slc.stop
-        self.adj = [numpy.concatenate(adj) if len(adj) else []
-                    for adj in self.adj]
+            if self.adj[gsim]:
+                self.adj[gsim] = numpy.concatenate(self.adj[gsim])
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
@@ -873,13 +873,12 @@ class ContextMaker(object):
             with self.poe_mon:
                 poes = numpy.zeros((len(ctxt), L, G))
                 for g, gsim in enumerate(self.gsims):
-                    adj = self.adj[g]  # NSHM14, case_72
                     ms = mean_stdt[:2, g]
                     # builds poes of shape (n, L, G)
                     if self.af:  # kernel amplification method for single site
                         poes[:, :, g] = get_poes_site(ms, self, ctxt)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctxt, adj)
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctxt, npdata)
             with self.pne_mon:
                 if npdata is None:  # parametric
                     probs_or_tom = self.tom
