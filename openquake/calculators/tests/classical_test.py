@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75)
+    case_74, case_75, case_76)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -1018,3 +1018,18 @@ hazard_uhs-std.csv
         self.run_calc(case_75.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+    def test_case_76(self):
+        # reserving the test number for CanadaSHM6
+        """
+        self.run_calc(case_76.__file__, 'job.ini')
+        branches = self.calc.datastore['full_lt/gsim_lt'].branches
+        gsims = [br.gsim for br in branches]
+        _poes = self.calc.datastore['_poes'][:, 0, :]  # shape (20, 200)
+        for gsim, poes in zip(gsims, _poes):
+            csv = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
+            gsim_str = gsim.__class__.__name__
+            if hasattr(gsim, 'submodel'):
+                gsim_str += '_' + gsim.submodel
+            self.assertEqualFiles('expected/%s.csv' % gsim_str, csv)
+        """
