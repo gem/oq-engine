@@ -110,6 +110,7 @@ class AvgPoeGMPE(GMPE):
         """
         cm = copy.copy(cmaker)
         cm.poe_mon = performance.Monitor()  # avoid double counts
+        cm.pne_mon = performance.Monitor()  # avoid double counts
         cm.gsims = self.gsims
         avgs = []
         for poes, pnes, allsids, ctx in cm.gen_poes(ctx):

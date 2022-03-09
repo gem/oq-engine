@@ -677,6 +677,44 @@ class ContextMaker(object):
         ctxs = self.from_srcs(srcs, sitecol)
         return self.get_pmap(ctxs).array(len(sitecol))
 
+    def convert(self, ctxs, kind='any', collapse=False):
+        """
+        :param ctxs: a list of RuptureContexts
+        :param kind: 'p', 'np' or 'any'
+        :returns: a triple or a list of triples
+        """
+        assert kind in ('p', 'np', 'any'), kind
+        parametric, nonparametric = [], []
+        npdata = []
+        for ctx in ctxs:
+            if hasattr(ctx, 'probs_occur'):
+                nonparametric.append(ctx)
+                npdata.append((ctx.probs_occur, ctx.weight))
+            else:
+                parametric.append(ctx)
+        if kind == 'p':
+            ctx = self.recarray(parametric)
+            if collapse:
+                return self.collapser.collapse(ctx)
+            else:
+                return ctx, ctx.sids.reshape(-1, 1)
+        elif kind == 'np':
+            ctx = self.recarray(nonparametric)
+            npd = numpy.array(npdata, npdata_dt)
+            if collapse:
+                return self.collapser.collapse(ctx, npd)
+            else:
+                return ctx, ctx.sids.reshape(-1, 1)
+
+        pairs = []
+        if parametric:
+            pairs.append(self.collapser.collapse(self.recarray(parametric)))
+        if nonparametric:
+            ctx = self.recarray(nonparametric)
+            pairs.append(self.collapser.collapse(
+                ctx, numpy.array(npdata, npdata_dt)))
+        return pairs  # [(ctx, allsids, npdata), ...]
+
     def get_pmap(self, ctxs, probmap=None):
         """
         :param ctxs: a list of contexts
@@ -688,31 +726,17 @@ class ContextMaker(object):
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        parametric, nonparametric = [], []
-        npdata = []
-        for ctx in ctxs:
-            if hasattr(ctx, 'probs_occur'):
-                nonparametric.append(ctx)
-                npdata.append((ctx.probs_occur, ctx.weight))
-            else:
-                parametric.append(ctx)
-        pairs = []
-        if parametric:
-            pairs.append((self.recarray(parametric), None))
-        if nonparametric:
-            pairs.append((self.recarray(nonparametric),
-                          numpy.array(npdata, npdata_dt)))
-        for ctx, npdata in pairs:
-            for poes, pnes, allsids, ctx in self.gen_poes(ctx, npdata):
+        for ctx, npdata in self.convert(ctxs):
+            for poes, pnes, slcsids, ctx in self.gen_poes(ctx, npdata):
                 if rup_indep:  # regular case
-                    for poe, pne, sids in zip(poes, pnes, allsids):
+                    for poe, pne, sids in zip(poes, pnes, slcsids):
                         for sid in sids:
                             probs = pmap.setdefault(sid, self.rup_indep).array
                             probs *= pne
                 else:  # mutex nonparametric rupture
                     # this is used in the USA model, New Madrid cluster
                     weights = npdata['weight'][ctx.rup_id]
-                    for poe, pne, w, sids in zip(poes, pnes, weights, allsids):
+                    for poe, pne, w, sids in zip(poes, pnes, weights, slcsids):
                         for sid in sids:
                             probs = pmap.setdefault(sid, self.rup_indep).array
                             probs += (1. - pne) * w
@@ -820,10 +844,10 @@ class ContextMaker(object):
                         c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
 
-    def gen_poes(self, ctx, npdata=None):
+    def gen_poes(self, ctx, allsids=None, npdata=None):
         """
-        :param ctx: a vectorized context (recarray)
-        :param npdata: array for nonparametric ruptures
+        :param ctx: a vectorized context (recarray) of size N
+        :param npdata: None or recarray with fields "probs_occur", "weight"
         :yields: poes, pnes, ctx with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
