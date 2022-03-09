@@ -726,14 +726,16 @@ class ContextMaker(object):
             pmap = probmap
         for ctx, npdata in self.convert(ctxs):
             for poes, pnes, weights, slcsids in self.gen_poes(ctx, npdata):
-                for poe, pne, w, sids in zip(poes, pnes, weights, slcsids):
+                # the following is relatively fast
+                for poe, pne, wei, sids in zip(poes, pnes, weights, slcsids):
+                    # sids has length 1 unless there is collapsing
                     for sid in sids:
                         probs = pmap.setdefault(sid, rup_indep).array  # (L, G)
                         if rup_indep:
                             probs *= pne
                         else:  # mutex nonparametric rupture
                             # USAmodel, New Madrid cluster
-                            probs += (1. - pne) * w
+                            probs += (1. - pne) * wei
 
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
@@ -843,7 +845,7 @@ class ContextMaker(object):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param npdata: None or recarray with fields "probs_occur", "weight"
-        :yields: poes, pnes, slcsids with poes and pnes of shape (N, L, G)
+        :yields: poes, pnes, weights, slcsids with poes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
@@ -877,7 +879,7 @@ class ContextMaker(object):
             with self.pne_mon:
                 if npdata is None:  # parametric
                     probs_or_tom = self.tom
-                    weights = [None] * len(ctxt)
+                    weights = numpy.zeros(len(ctxt))
                 else:  # nonparametric ruptures
                     data = npdata[ctxt.rup_id]
                     probs_or_tom = data['probs_occur']
