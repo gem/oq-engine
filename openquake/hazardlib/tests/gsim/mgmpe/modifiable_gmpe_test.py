@@ -29,6 +29,52 @@ from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
 
+class ModifiableGMPEAlAtik2015SigmaTest(unittest.TestCase):
+
+    def setUp(self):
+        self.ctx = ctx = RuptureContext()
+        ctx.mag = 6.
+        ctx.rake = 0.
+        ctx.hypo_depth = 10.
+        ctx.occurrence_rate = .001
+        sites = Dummy.get_site_collection(4, vs30=760.)
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
+        ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.rjb = np.array([1., 10., 30., 70.])
+        self.imt = PGA()
+
+    def test_sigma_model_alatik2015_01(self):
+        """ Checks that the modified GMM provides the expected values """
+        stds_types = [const.StdDev.TOTAL, const.StdDev.INTRA_EVENT,
+                      const.StdDev.INTER_EVENT]
+        params = {"tau_model": "global", "ergodic": False}
+        gmm = ModifiableGMPE(gmpe={'YenierAtkinson2015BSSA': {}},
+                             sigma_model_alatik2015=params)
+        out = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                       self.imt, stds_types)
+        # Expected results hand computed
+        expected_with = np.ones(4) * 0.41623333
+        expected_betw = np.ones(4) * 0.36855
+        aae = np.testing.assert_array_almost_equal
+        aae(expected_betw, out[1][2])
+        aae(expected_with, out[1][1])
+
+    def test_sigma_model_alatik2015_02(self):
+        """ Checks that the modified GMM provides the expected values """
+        stds_types = [const.StdDev.TOTAL, const.StdDev.INTRA_EVENT,
+                      const.StdDev.INTER_EVENT]
+        params = {"tau_model": "cena", "ergodic": True}
+        gmm = ModifiableGMPE(gmpe={'YenierAtkinson2015BSSA': {}},
+                             sigma_model_alatik2015=params)
+        out = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                       self.imt, stds_types)
+        # Expected results hand computed
+        expected_betw = np.ones(4) * 0.32195
+        aae = np.testing.assert_array_almost_equal
+        aae(expected_betw, out[1][2])
+
+
 class ModifiableGMPEAddWithBetweenTest(unittest.TestCase):
 
     def setUp(self):

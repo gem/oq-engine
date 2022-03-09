@@ -31,6 +31,11 @@ from openquake.hazardlib.const import IMC
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
 
+from openquake.hazardlib.gsim.nga_east import (
+    TAU_EXECUTION, get_phi_ss, TAU_SETUP, PHI_SETUP, get_tau_at_quantile,
+    get_phi_ss_at_quantile)
+from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
+
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
@@ -47,6 +52,21 @@ COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
                  IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
                  IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
                  IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
+
+
+def sigma_model_alatik2015(self, ctx, imt, ergodic, tau_model, phi_ss_coetab,
+                           tau_coetab):
+    """
+    """
+    phi = get_phi_ss(imt, ctx.mag, phi_ss_coetab)
+    if ergodic:
+        phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
+        phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+    tau = TAU_EXECUTION[tau_model](imt, ctx.mag, tau_coetab)
+    std_total = np.sqrt(tau ** 2. + phi ** 2.)
+    setattr(self, const.StdDev.TOTAL, std_total)
+    setattr(self, const.StdDev.INTER_EVENT, tau)
+    setattr(self, const.StdDev.INTRA_EVENT, phi)
 
 
 def nrcan15_site_term(self, ctx, imt, kind):
@@ -300,6 +320,30 @@ class ModifiableGMPE(GMPE):
         self.gmpe = registry[gmpe_name](**kw)
         self.set_parameters()
         self.mean = None
+
+        # This is required by the `sigma_model_alatik2015` function
+        key = 'sigma_model_alatik2015'
+        if key in self.params:
+
+            # Phi S2SS and ergodic param
+            # self.params[key]['phi_s2ss'] = None
+            self.params[key]['ergodic'] = self.params[key].get("ergodic", True)
+
+            # Tau
+            tau_model = self.params[key].get("tau_model", "global")
+            tau_quantile = self.params[key].get("tau_quantile", None)
+            self.params[key]['tau_coetab'] = get_tau_at_quantile(
+                TAU_SETUP[tau_model]["MEAN"],
+                TAU_SETUP[tau_model]["STD"],
+                tau_quantile)
+
+            # Phi SS
+            phi_model = self.params[key].get("phi_model", "global")
+            phi_ss_quantile = self.params[key].get("phi_ss_quantile", None)
+            self.params[key]['phi_ss_coetab'] = get_phi_ss_at_quantile(
+                PHI_SETUP[phi_model], phi_ss_quantile)
+
+        # Set params
         for key in self.params:
             if key in IMT_DEPENDENT_KEYS:
                 # If the modification is period-dependent
