@@ -104,15 +104,16 @@ class AvgPoeGMPE(GMPE):
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """Do nothing: the work is done in get_poes"""
 
-    def get_poes(self, mean_std, cmaker, ctx, adj):
+    def get_poes(self, mean_std, cmaker, ctx, npdata=None):
         """
         :returns: an array of shape (N, L)
         """
         cm = copy.copy(cmaker)
         cm.poe_mon = performance.Monitor()  # avoid double counts
+        cm.pne_mon = performance.Monitor()  # avoid double counts
         cm.gsims = self.gsims
         avgs = []
-        for poes, pnes, allsids, ctx in cm.gen_poes(ctx):
+        for poes, pnes, allsids, ctx in cm.gen_poes(ctx, npdata):
             # poes has shape N, L, G
             avgs.append(poes @ self.weights)
         return np.concatenate(avgs)
