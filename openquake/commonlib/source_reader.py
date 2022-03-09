@@ -117,7 +117,8 @@ def get_csm(oq, full_lt, h5=None):
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
-        oq.source_id, discard_trts=oq.discard_trts,
+        oq.source_id,
+        discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
         floating_y_step=oq.floating_y_step)
     classical = not oq.is_event_based()

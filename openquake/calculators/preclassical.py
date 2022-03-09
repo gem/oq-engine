@@ -121,7 +121,6 @@ def run_preclassical(calc):
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
     logging.info('Starting preclassical')
     smap = parallel.Starmap(preclassical, h5=h5)
-    multifaults = AccumDict(accum=[])  # grp_id => multifaultsources
     for (grp_id, msr), srcs in sources_by_grp.items():
         pointsources, pointlike, others = [], [], []
         for src in srcs:
@@ -129,25 +128,21 @@ def run_preclassical(calc):
                 pointsources.append(src)
             elif hasattr(src, 'nodal_plane_distribution'):
                 pointlike.append(src)
-            elif hasattr(src, 'sections'):  # multifault
-                # this is essential to make the preclassical in UCERF fast
-                splits = (split_source(src) if calc.oqparam.split_sources else
-                          [src])
-                for ss in splits:
-                    cmakers[grp_id].set_weight([ss], sites)
-                    multifaults[grp_id].append(ss)
+            elif src.code in b'FN':  # multifault, nonparametric
+                others.extend(split_source(src) if calc.oqparam.split_sources
+                              else [src])
             else:
                 others.append(src)
         if calc.oqparam.ps_grid_spacing:
             if pointsources or pointlike:
                 smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
         else:
-            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 320)
+            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 160)
             for src in pointlike:  # area, multipoint
                 smap.submit(([src], sites, cmakers[grp_id]))
         if others:
-            smap.submit_split((others, sites, cmakers[grp_id]), 10, 320)
-    normal = smap.reduce() + multifaults
+            smap.submit_split((others, sites, cmakers[grp_id]), 10, 160)
+    normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
         atomic = AccumDict({'before': n, 'after': n})
@@ -163,12 +158,14 @@ def run_preclassical(calc):
     acc = AccumDict(accum=0)
     code2cls = get_code2cls()
     for grp_id, srcs in res.items():
+        # NB: grp_id can be the string "before" or "after"
+        if not isinstance(grp_id, str):
+            srcs.sort(key=operator.attrgetter('source_id'))
         # srcs can be empty if the minimum_magnitude filter is on
         if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
             # check if OQ_SAMPLE_SOURCES is set
             ss = os.environ.get('OQ_SAMPLE_SOURCES')
             if ss:
-                srcs.sort(key=operator.attrgetter('source_id'))
                 logging.info('Sampled sources for group #%d', grp_id)
                 srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
             newsg = SourceGroup(srcs[0].tectonic_region_type)

@@ -205,7 +205,7 @@ class CollapseTestCase(unittest.TestCase):
 
     def test_collapse_small(self):
         inp = read_input(JOB)  # has pointsource_distance=50
-        [[trt, cmaker]] = inp.cmakerdict.items()
+        cmaker = inp.cmaker
         [[area]] = inp.groups  # there is a single AreaSource
         srcs = list(area)  # split in 3+3 PointSources
 
@@ -232,6 +232,10 @@ class CollapseTestCase(unittest.TestCase):
         self.assertLess(rms(pmap[1].array - cmap[1].array), 2E-4)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [46, 240])
 
+        # test convert
+        ctx, allsids, npd = cmaker.convert(ctxs, 'p', collapse_level=2)
+        self.assertEqual(len(ctx), 46)
+
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
                               'data/context/source_model.xml')
@@ -245,7 +249,7 @@ class CollapseTestCase(unittest.TestCase):
             source_model_file=smpath,
             area_source_discretization=1.)
         inp = read_input(params)
-        [[trt, cmaker]] = inp.cmakerdict.items()
+        cmaker = inp.cmaker
         [srcs] = inp.groups  # a single area source
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)

@@ -64,8 +64,8 @@ reaggregate_by:
 amplification_method:
   Used in classical PSHA calculations to amplify the hazard curves with
   the convolution or kernel method.
-  Example: *amplification_method = convolution*.
-  Default: None
+  Example: *amplification_method = kernel*.
+  Default: "convolution"
 
 area_source_discretization:
   Discretization parameters (in km) for area sources.
@@ -710,7 +710,7 @@ time_per_task:
   Used in calculatins with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=600*
-  Default: 300
+  Default: 2000
 
 truncation_level:
   Truncation level used in the GMPEs.
@@ -821,7 +821,7 @@ class OqParam(valid.ParamSet):
     aggregate_by = valid.Param(valid.namelist, [])
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
-        valid.Choice('convolution', 'kernel'), None)
+        valid.Choice('convolution', 'kernel'), 'convolution')
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
@@ -955,7 +955,7 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
-    time_per_task = valid.Param(valid.positivefloat, 600)
+    time_per_task = valid.Param(valid.positivefloat, 2000)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -1056,7 +1056,7 @@ class OqParam(valid.ParamSet):
                 'pointsource_distance' not in names_vals):
             raise InvalidFile('%s: ps_grid_spacing requires setting a '
                               'pointsource_distance!' % self.inputs['job_ini'])
-        if self.cache_distances or self.collapse_level >= 0:
+        if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
         self._risk_files = get_risk_files(self.inputs)
@@ -1202,12 +1202,6 @@ class OqParam(valid.ParamSet):
                 self.calculation_mode in ['classical', 'classical_risk',
                                           'disaggregation']):
             check_same_levels(self.imtls)
-
-        if ('amplification' in self.inputs and
-            self.amplification_method == 'convolution' and not
-                self.soil_intensities):
-            raise InvalidFile('%s: The soil_intensities must be defined'
-                              % job_ini)
 
     def validate(self):
         """
@@ -1750,9 +1744,13 @@ class OqParam(valid.ParamSet):
 
     def is_valid_soil_intensities(self):
         """
-        soil_intensities can be set only if amplification_method=convolution
+        soil_intensities must be defined if amplification_method=convolution
+        and must not be defined if amplification_method=kernel
         """
-        if self.amplification_method == 'convolution':
+        classical = ('classical' in self.calculation_mode or
+                     'disaggregation' in self.calculation_mode)
+        if (classical and 'amplification' in self.inputs and
+                self.amplification_method == 'convolution'):
             return len(self.soil_intensities) > 1
         else:
             return self.soil_intensities is None
