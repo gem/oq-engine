@@ -110,14 +110,16 @@ class Collapser(object):
         else:  # in test_collapse_area
             return magbin * TWO24 + distbin * 65536
 
-    def collapse(self, ctx, npdata):
+    def collapse(self, ctx, npdata=None, collapse_level=None):
         """
         Collapse a context recarray if possible.
 
         :param ctx: a recarray with fields "mdvbin" and "sids"
+        :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        if npdata is not None or self.collapse_level < 0:
+        clevel = collapse_level or self.collapse_level
+        if npdata is not None or clevel < 0:
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
@@ -677,11 +679,12 @@ class ContextMaker(object):
         ctxs = self.from_srcs(srcs, sitecol)
         return self.get_pmap(ctxs).array(len(sitecol))
 
-    def convert(self, ctxs, kind='any', collapse=False):
+    def convert(self, ctxs, kind='any', collapse_level=None):
         """
         :param ctxs: a list of RuptureContexts
         :param kind: 'p', 'np' or 'any'
-        :returns: a triple or a list of triples
+        :param collapse_level: if None, use .collapse_level
+        :returns: a triplet (ctx, allsids, npdata) or a list of pairs
         """
         assert kind in ('p', 'np', 'any'), kind
         parametric, nonparametric = [], []
@@ -694,26 +697,21 @@ class ContextMaker(object):
                 parametric.append(ctx)
         if kind == 'p':
             ctx = self.recarray(parametric)
-            if collapse:
-                return self.collapser.collapse(ctx)
-            else:
-                return ctx, ctx.sids.reshape(-1, 1)
+            return self.collapser.collapse(ctx, None, collapse_level) + (None,)
         elif kind == 'np':
             ctx = self.recarray(nonparametric)
             npd = numpy.array(npdata, npdata_dt)
-            if collapse:
-                return self.collapser.collapse(ctx, npd)
-            else:
-                return ctx, ctx.sids.reshape(-1, 1)
+            return self.collapser.collapse(ctx, npd, collapse_level) + (npd,)
 
+        # regular case, collapse later, in gen_poes
         pairs = []
         if parametric:
-            pairs.append(self.collapser.collapse(self.recarray(parametric)))
+            pairs.append((self.recarray(parametric), None))
         if nonparametric:
             ctx = self.recarray(nonparametric)
-            pairs.append(self.collapser.collapse(
-                ctx, numpy.array(npdata, npdata_dt)))
-        return pairs  # [(ctx, allsids, npdata), ...]
+            npd = numpy.array(npdata, npdata_dt)
+            pairs.append((ctx, npd))
+        return pairs  # [(ctx, npdata), ...]
 
     def get_pmap(self, ctxs, probmap=None):
         """
@@ -727,18 +725,18 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         for ctx, npdata in self.convert(ctxs):
-            for poes, pnes, slcsids, ctx in self.gen_poes(ctx, npdata):
+            for poes, pnes, slcsids in self.gen_poes(ctx, npdata):
                 if rup_indep:  # regular case
                     for poe, pne, sids in zip(poes, pnes, slcsids):
                         for sid in sids:
-                            probs = pmap.setdefault(sid, self.rup_indep).array
+                            probs = pmap.setdefault(sid, True).array
                             probs *= pne
                 else:  # mutex nonparametric rupture
                     # this is used in the USA model, New Madrid cluster
                     weights = npdata['weight'][ctx.rup_id]
                     for poe, pne, w, sids in zip(poes, pnes, weights, slcsids):
                         for sid in sids:
-                            probs = pmap.setdefault(sid, self.rup_indep).array
+                            probs = pmap.setdefault(sid, False).array
                             probs += (1. - pne) * w
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
@@ -848,7 +846,7 @@ class ContextMaker(object):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param npdata: None or recarray with fields "probs_occur", "weight"
-        :yields: poes, pnes, ctx with poes and pnes of shape (N, L, G)
+        :yields: poes, pnes, slcsids with poes and pnes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
@@ -885,7 +883,7 @@ class ContextMaker(object):
                 else:  # nonparametric ruptures
                     probs_or_tom = npdata[ctxt.rup_id]['probs_occur']
                 pnes = get_probability_no_exceedance(ctxt, poes, probs_or_tom)
-            yield poes, pnes, slcsids, ctxt
+            yield poes, pnes, slcsids
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
