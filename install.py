@@ -79,6 +79,7 @@ class server:
     CONFIG = '''[dbserver]
     port = %d
     file = %s
+    [directory]
     shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
 
@@ -106,6 +107,7 @@ class devel_server:
     CONFIG = '''[dbserver]
     port = %d
     file = %s
+    [directory]
     shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
     exit = server.exit
