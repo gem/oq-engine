@@ -78,14 +78,12 @@ class NSHMP2014(base.GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
+        Compute mean, sig, tau, phi and returns the so called adjustment
         """
         self.gsim.compute(ctx, imts, mean, sig, tau, phi)
-        self.adjustment = nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
-        mean[:] += self.sgn * self.adjustment
-
+        adjustment = nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
+        mean[:] += self.sgn * adjustment
+        return adjustment
 
 # populate gsim_aliases
 # for instance "AbrahamsonEtAl2014NSHMPMean" is associated to the TOML string
