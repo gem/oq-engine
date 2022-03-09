@@ -725,19 +725,16 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         for ctx, npdata in self.convert(ctxs):
-            for poes, pnes, slcsids in self.gen_poes(ctx, npdata):
-                if rup_indep:  # regular case
-                    for poe, pne, sids in zip(poes, pnes, slcsids):
-                        for sid in sids:
-                            probs = pmap.setdefault(sid, True).array
+            for poes, pnes, weights, slcsids in self.gen_poes(ctx, npdata):
+                for poe, pne, w, sids in zip(poes, pnes, weights, slcsids):
+                    for sid in sids:
+                        probs = pmap.setdefault(sid, rup_indep).array  # (L, G)
+                        if rup_indep:
                             probs *= pne
-                else:  # mutex nonparametric rupture
-                    # this is used in the USA model, New Madrid cluster
-                    weights = npdata['weight'][ctx.rup_id]
-                    for poe, pne, w, sids in zip(poes, pnes, weights, slcsids):
-                        for sid in sids:
-                            probs = pmap.setdefault(sid, False).array
+                        else:  # mutex nonparametric rupture
+                            # USAmodel, New Madrid cluster
                             probs += (1. - pne) * w
+
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
@@ -842,7 +839,7 @@ class ContextMaker(object):
                         c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
 
-    def gen_poes(self, ctx, allsids=None, npdata=None):
+    def gen_poes(self, ctx, npdata=None):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param npdata: None or recarray with fields "probs_occur", "weight"
@@ -880,10 +877,13 @@ class ContextMaker(object):
             with self.pne_mon:
                 if npdata is None:  # parametric
                     probs_or_tom = self.tom
+                    weights = [None] * len(ctxt)
                 else:  # nonparametric ruptures
-                    probs_or_tom = npdata[ctxt.rup_id]['probs_occur']
+                    data = npdata[ctxt.rup_id]
+                    probs_or_tom = data['probs_occur']
+                    weights = data['weight']
                 pnes = get_probability_no_exceedance(ctxt, poes, probs_or_tom)
-            yield poes, pnes, slcsids
+            yield poes, pnes, weights, slcsids
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
