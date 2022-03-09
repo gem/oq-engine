@@ -158,12 +158,14 @@ def run_preclassical(calc):
     acc = AccumDict(accum=0)
     code2cls = get_code2cls()
     for grp_id, srcs in res.items():
+        # NB: grp_id can be the string "before" or "after"
+        if not isinstance(grp_id, str):
+            srcs.sort(key=operator.attrgetter('source_id'))
         # srcs can be empty if the minimum_magnitude filter is on
         if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
             # check if OQ_SAMPLE_SOURCES is set
             ss = os.environ.get('OQ_SAMPLE_SOURCES')
             if ss:
-                srcs.sort(key=operator.attrgetter('source_id'))
                 logging.info('Sampled sources for group #%d', grp_id)
                 srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
             newsg = SourceGroup(srcs[0].tectonic_region_type)
