@@ -67,7 +67,7 @@ def from_string(imt, _damping=5.0):
         Intensity Measure Type.
     """
     m = re.match(FREQUENCY_PATTERN, imt)
-    if m:
+    if m:  # float interpreted as frequency
         if m.group(1) == 'EAS':
             im = EAS(float(m.group(2)))
         elif m.group(1) == 'FAS':
