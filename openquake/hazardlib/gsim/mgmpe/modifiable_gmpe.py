@@ -334,6 +334,8 @@ class ModifiableGMPE(GMPE):
 
             # Tau
             tau_model = self.params[key].get("tau_model", "global")
+            if "tau_model" not in self.params:
+                self.params[key]['tau_model'] = tau_model
             tau_quantile = self.params[key].get("tau_quantile", None)
             self.params[key]['tau_coetab'] = get_tau_at_quantile(
                 TAU_SETUP[tau_model]["MEAN"],

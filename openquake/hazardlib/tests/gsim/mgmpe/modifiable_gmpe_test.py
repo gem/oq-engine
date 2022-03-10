@@ -74,6 +74,20 @@ class ModifiableGMPEAlAtik2015SigmaTest(unittest.TestCase):
         aae = np.testing.assert_array_almost_equal
         aae(expected_betw, out[1][2])
 
+    def test_sigma_model_alatik2015_03(self):
+        """ Checks that the modified GMM provides the expected values """
+        stds_types = [const.StdDev.TOTAL, const.StdDev.INTRA_EVENT,
+                      const.StdDev.INTER_EVENT]
+        params = {}
+        gmm = ModifiableGMPE(gmpe={'YenierAtkinson2015BSSA': {}},
+                             sigma_model_alatik2015=params)
+        out = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
+                                       self.imt, stds_types)
+        # Expected results hand computed
+        expected_betw = np.ones(4) * 0.36855
+        aae = np.testing.assert_array_almost_equal
+        aae(expected_betw, out[1][2])
+
 
 class ModifiableGMPEAddWithBetweenTest(unittest.TestCase):
 
