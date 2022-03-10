@@ -67,7 +67,7 @@ def from_string(imt, _damping=5.0):
         Intensity Measure Type.
     """
     m = re.match(FREQUENCY_PATTERN, imt)
-    if m:  # float interpreted as frequency
+    if m:  # passed float interpreted as frequency
         if m.group(1) == 'EAS':
             im = EAS(float(m.group(2)))
         elif m.group(1) == 'FAS':
@@ -75,7 +75,7 @@ def from_string(imt, _damping=5.0):
         elif m.group(1) == 'DRVT':
             im = DRVT(float(m.group(2)))
         return im
-    elif re.match(r'[ \+\d\.]+', imt):  # float interpreted as period
+    elif re.match(r'[ \+\d\.]+', imt):  # passed float interpreted as period
         return SA(float(imt))
     return IMT(*imt2tup(imt))
 
