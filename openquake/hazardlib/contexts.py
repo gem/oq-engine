@@ -747,14 +747,7 @@ class ContextMaker(object):
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         if not hasattr(self, 'imts'):
-            tmp = []
-            for im in self.imtls:
-                m = re.match(imt_module.FREQUENCY_PATTERN, im)
-                if m:
-                    im = '{:s}({:.6f})'.format(
-                        m.group(1), 1./float(m.group(2)))
-                tmp.append(imt_module.from_string(im))
-            self.imts = tuple(tmp)
+            self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imtls)
         G = len(self.gsims)
