@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_67, case_68, case_69, case_70, case_71, case_72, case_73,
-    case_74, case_75, case_76)
+    case_74, case_75, case_76, case_77)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -1033,3 +1033,10 @@ hazard_uhs-std.csv
                 gsim_str += '_' + gsim.submodel
             self.assertEqualFiles('expected/%s.csv' % gsim_str, csv)
         """
+
+    def test_case_77(self):
+        # applyToSourceType, 9 realizations
+        self.run_calc(case_77.__file__, 'job.ini')
+        self.assertEqual(len(self.calc.datastore['weights']), 9)
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
