@@ -50,7 +50,7 @@ from openquake.hazardlib.lt import (
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
-SOURCE_TYPE_REGEX = re.compile(r'<(\w+Source)\b')
+SOURCE_TYPE_REGEX = re.compile(r'<(\w+)Source\b')
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -561,13 +561,6 @@ class SourceModelLogicTree(object):
                     "source models don't define sources of tectonic region "
                     "type '%s'" % f['applyToTectonicRegionType'])
 
-        if uncertainty_type in self.ABSOLUTE_UNCERTAINTIES:
-            if not f or not list(f) == ['applyToSources'] \
-                    or not len(f['applyToSources'].split()) == 1:
-                raise LogicTreeError(
-                    branchset_node, self.filename,
-                    "uncertainty of type '%s' must define 'applyToSources' "
-                    "with only one source id" % uncertainty_type)
         if uncertainty_type in ('simpleFaultDipRelative',
                                 'simpleFaultDipAbsolute'):
             if not f or (not ('applyToSources' in f) and
