@@ -415,6 +415,8 @@ class ContextMaker(object):
             for par, arr in params.items():
                 if par.endswith('_'):
                     par = par[:-1]
+                elif par == 'probs_occur' and len(arr) == 0:  # poissonian
+                    continue
                 setattr(ctx, par, arr[u])
             for par in sitecol.array.dtype.names:
                 setattr(ctx, par, sitecol[par][ctx.sids])
@@ -425,13 +427,16 @@ class ContextMaker(object):
 
     def recarray(self, ctxs):
         """
-        :params ctxs: a list of contexts
+        :params ctxs: a non-empty list of homogeneous contexts
         :returns: a recarray, possibly collapsed
         """
-        if ctxs and hasattr(ctxs[0], 'probs_occur'):
-            num_probs = max(len(ctx.probs_occur) for ctx in ctxs)
-            self.defaultdict['probs_occur'] = numpy.zeros(num_probs)
-            self.defaultdict['weight'] = 0.
+        assert ctxs
+        noweight = not hasattr(ctxs[0], 'weight')
+        if hasattr(ctxs[0], 'probs_occur'):
+            np = max(len(ctx.probs_occur) for ctx in ctxs)
+            if np:  # nonparametric rupture
+                self.defaultdict['probs_occur'] = numpy.zeros(np)
+                self.defaultdict['weight'] = 0.
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**self.defaultdict).zeros(C)
         start = 0
@@ -443,8 +448,8 @@ class ContextMaker(object):
             for par in self.defaultdict:
                 if par == 'mdvbin':
                     val = self.collapser.calc_mdvbin(ctx)
-                elif par == 'occurrence_rate':  # missing in scenario
-                    val = getattr(ctx, par, 0.)
+                elif par == 'weight' and noweight:
+                    val = 0.
                 else:  # never missing
                     val = getattr(ctx, par)
                 getattr(ra, par)[slc] = val
