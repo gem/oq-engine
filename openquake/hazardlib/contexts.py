@@ -370,7 +370,6 @@ class ContextMaker(object):
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
-        dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.collapser = Collapser(self.collapse_level, 'vs30' in dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -435,13 +434,23 @@ class ContextMaker(object):
         :returns: a recarray, possibly collapsed
         """
         assert ctxs
-        noweight = not hasattr(ctxs[0], 'weight')
-        norate = not hasattr(ctxs[0], 'occurrence_rate')
+        if hasattr(ctxs[0], 'weight'):
+            self.defaultdict['weight'] = numpy.float64(0.)
+            noweight = False
+        else:
+            noweight = True
+
+        if hasattr(ctxs[0], 'occurrence_rate'):
+            self.defaultdict['occurrence_rate'] = numpy.float64(0)
+            norate = False
+        else:
+            norate = True
+
         if hasattr(ctxs[0], 'probs_occur'):
             np = max(len(ctx.probs_occur) for ctx in ctxs)
             if np:  # nonparametric rupture
                 self.defaultdict['probs_occur'] = numpy.zeros(np)
-                self.defaultdict['weight'] = 0.
+
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**self.defaultdict).zeros(C)
         start = 0
@@ -526,7 +535,7 @@ class ContextMaker(object):
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
         ctx = RuptureContext()
-        vars(ctx).update(vars(rupture))  # this also adds .weight
+        vars(ctx).update(vars(rupture))
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
                 value = numpy.round(rupture.mag, 6)
@@ -888,10 +897,9 @@ class ContextMaker(object):
             with self.pne_mon:
                 if hasattr(ctx, 'probs_occur'):  # nonparametric
                     probs_or_tom = ctxt.probs_occur
-                    weights = ctxt.weight
                 else:  # parametric ruptures
                     probs_or_tom = self.tom
-                    weights = numpy.zeros(len(ctxt))
+                weights = getattr(ctxt, 'weight', numpy.zeros(len(ctxt)))
                 pnes = get_probability_no_exceedance(ctxt, poes, probs_or_tom)
             yield poes, pnes, weights, slcsids
 
