@@ -350,6 +350,8 @@ class NonParametricProbabilisticRupture(BaseRupture):
             rupture_slip_direction, weight)
         # an array of probabilities with sum 1
         self.probs_occur = numpy.array([prob for (prob, occ) in pmf.data])
+        if weight is not None:
+            self.weight = weight
 
     def sample_number_of_occurrences(self, n=1):
         """

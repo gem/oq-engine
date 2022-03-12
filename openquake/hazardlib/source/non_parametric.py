@@ -77,7 +77,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
                     rup.hypocenter, rup.surface, pmf,
-                    getattr(rup, 'weight', 0.))
+                    weight=getattr(rup, 'weight', 0.))
 
     def few_ruptures(self):
         """
