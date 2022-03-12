@@ -222,7 +222,7 @@ class CollapseTestCase(unittest.TestCase):
 
         # compute original curves
         pmap = cmaker.get_pmap(ctxs)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [240, 240])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [46, 240])
 
         # compute collapsed curves
         cmaker.collapser.cfactor = numpy.zeros(2)
