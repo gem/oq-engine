@@ -1500,6 +1500,18 @@ class RecordBuilder(object):
                 rec[name] = self.values[i]
         return rec
 
+
+def rmsdiff(a, b):
+    """
+    :param a: an array of shape (N, ...)
+    :param b: an array with the same shape of a
+    :returns: an array of shape (N,) with the root mean squares of a-b
+    """
+    assert a.shape == b.shape
+    axis = tuple(range(1, len(a.shape)))
+    rms = numpy.sqrt(((a - b)**2).mean(axis=axis))
+    return rms
+
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
