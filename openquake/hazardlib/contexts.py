@@ -711,7 +711,7 @@ class ContextMaker(object):
             out.append(self.recarray(nonparametric))
         return out
 
-    def collapse3(self, ctxs, collapse_level=None):
+    def collapse2(self, ctxs, collapse_level=None):
         """
         :param ctxs: a list of RuptureContexts
         :param collapse_level: if None, use .collapse_level
