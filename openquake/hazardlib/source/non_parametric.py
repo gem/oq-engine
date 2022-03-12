@@ -76,7 +76,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
             if rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
+                    rup.hypocenter, rup.surface, pmf,
+                    getattr(rup, 'weight', 0.))
 
     def few_ruptures(self):
         """
@@ -86,7 +87,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
             if i % 50 == 0 and rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
+                    rup.hypocenter, rup.surface, pmf,
+                    weight=getattr(rup, 'weight', 0.))
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split
