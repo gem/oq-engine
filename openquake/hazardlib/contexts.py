@@ -123,17 +123,18 @@ class Collapser(object):
         mbin, dbin, vbin = expand_mdvbin(mdvbin)
         return self.mag_bins[mbin], self.dist_bins[dbin], self.vs30bins[vbin]
 
-    def collapse(self, ctx, collapse_level=None):
+    def collapse(self, ctx, rup_indep, collapse_level=None):
         """
         Collapse a context recarray if possible.
 
         :param ctx: a recarray with fields "mdvbin" and "sids"
+        :param rup_indep: False if the ruptures are mutually exclusive
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
         clevel = (collapse_level if collapse_level is not None
                   else self.collapse_level)
-        if clevel < 0:
+        if not rup_indep or clevel < 0:
             # no collapse
             self.cfactor[0] += len(ctx)
             self.cfactor[1] += len(ctx)
@@ -718,7 +719,7 @@ class ContextMaker(object):
         :returns: a list of pairs (ctx, allsids)
         """
         self.collapser.cfactor = numpy.zeros(2)
-        lst = [self.collapser.collapse(ctx, collapse_level)
+        lst = [self.collapser.collapse(ctx, self.rup_indep, collapse_level)
                for ctx in self.recarrays(ctxs)]
         return lst
 
@@ -855,7 +856,7 @@ class ContextMaker(object):
 
         # collapse if possible
         with self.col_mon:
-            ctx, allsids = self.collapser.collapse(ctx)
+            ctx, allsids = self.collapser.collapse(ctx, self.rup_indep)
 
         # split large context arrays to avoid filling the CPU cache
         if ctx.nbytes > maxsize:
