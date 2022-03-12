@@ -1474,14 +1474,14 @@ class RecordBuilder(object):
             if isinstance(value, (str, bytes)):
                 tp = (numpy.string_, len(value) or 1)
             elif isinstance(value, numpy.ndarray):
-                tp = value.dtype
+                tp = (value.dtype, len(value))
             else:
                 tp = type(value)
             dtypes.append(tp)
         self.dtype = numpy.dtype([(n, d) for n, d in zip(self.names, dtypes)])
 
     def zeros(self, shape):
-        return numpy.zeros(shape, self.dtype)
+        return numpy.zeros(shape, self.dtype).view(numpy.recarray)
 
     def dictarray(self, shape):
         return {n: numpy.ones(shape, self.dtype[n]) for n in self.names}

@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import abc
 import sys
 import copy
@@ -277,13 +276,6 @@ class ContextMaker(object):
     rup_indep = True
     tom = None
 
-    @property
-    def dtype(self):
-        """
-        :returns: dtype of the underlying ctx_builder
-        """
-        return self.ctx_builder.dtype
-
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         if isinstance(oq, dict):
             param = oq
@@ -379,7 +371,7 @@ class ContextMaker(object):
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         dic['occurrence_rate'] = numpy.float64(0)
-        self.ctx_builder = RecordBuilder(**dic)
+        self.defaultdict = dic
         self.collapser = Collapser(self.collapse_level, 'vs30' in dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
@@ -440,15 +432,19 @@ class ContextMaker(object):
         :params ctxs: a list of contexts
         :returns: a recarray, possibly collapsed
         """
+        if ctxs and len(ctxs[0].probs_occur):
+            num_probs = max(len(ctx.probs_occur) for ctx in ctxs)
+            self.defaultdict['probs_occur'] = numpy.zeros(num_probs)
+            self.defaultdict['weight'] = 0.
         C = sum(len(ctx) for ctx in ctxs)
-        ra = self.ctx_builder.zeros(C).view(numpy.recarray)
+        ra = RecordBuilder(**self.defaultdict).zeros(C)
         start = 0
         for i, ctx in enumerate(ctxs):
             ctx = ctx.roundup(self.minimum_distance)
             for gsim in self.gsims:
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
-            for par in self.ctx_builder.names:
+            for par in self.defaultdict:
                 if par == 'rup_id':
                     val = i
                 elif par == 'mdvbin':
