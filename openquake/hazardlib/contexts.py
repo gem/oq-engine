@@ -436,6 +436,7 @@ class ContextMaker(object):
         """
         assert ctxs
         noweight = not hasattr(ctxs[0], 'weight')
+        norate = not hasattr(ctxs[0], 'occurrence_rate')
         if hasattr(ctxs[0], 'probs_occur'):
             np = max(len(ctx.probs_occur) for ctx in ctxs)
             if np:  # nonparametric rupture
@@ -454,6 +455,8 @@ class ContextMaker(object):
                     val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'weight' and noweight:
                     val = 0.
+                elif par == 'occurrence_rate' and norate:
+                    val = numpy.nan
                 else:  # never missing
                     val = getattr(ctx, par)
                 getattr(ra, par)[slc] = val

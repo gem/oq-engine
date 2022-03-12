@@ -23,7 +23,7 @@ import unittest
 
 import numpy as np
 import pandas
-from openquake.baselib.general import all_equals
+from openquake.baselib.general import all_equals, RecordBuilder
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
@@ -131,20 +131,21 @@ def read_cmaker_df(gsim, csvfnames):
     cmaker = contexts.ContextMaker(
         trt.value if trt else "*", [gsim], {'imtls': imtls, 'mags': mags},
         extraparams={col[5:] for col in df.columns if col.startswith('site_')})
+    dtype = RecordBuilder(**cmaker.defaultdict).zeros(0).dtype
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
-        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
+        df[name] = np.array(df[name].to_numpy(), dtype[dist])
         logging.info(name, df[name].unique())
     for sitepar in cmaker.REQUIRES_SITES_PARAMETERS:
         name = 'site_' + sitepar
-        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[sitepar])
+        df[name] = np.array(df[name].to_numpy(), dtype[sitepar])
         logging.info(name, df[name].unique())
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
         if name not in df.columns:  # i.e. missing rake
-            df[name] = np.zeros(len(df), cmaker.dtype[par])
+            df[name] = np.zeros(len(df), dtype[par])
         else:
-            df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
+            df[name] = np.array(df[name].to_numpy(), dtype[par])
         logging.info(name, df[name].unique())
     logging.info('result_type', df['result_type'].unique())
     return cmaker, df.rename(columns=cmap)
