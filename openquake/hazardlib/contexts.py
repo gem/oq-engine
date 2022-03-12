@@ -139,7 +139,7 @@ class Collapser(object):
                   else self.collapse_level)
         if not rup_indep or clevel < 0:
             # no collapse
-            self.cfactor[0] += len(ctx)
+            self.cfactor[0] += len(numpy.unique(ctx.mdvbin))
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
