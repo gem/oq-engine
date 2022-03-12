@@ -25,6 +25,8 @@ import operator
 import warnings
 import itertools
 import collections
+from unittest.mock import patch
+
 import numpy
 import pandas
 from scipy.interpolate import interp1d
@@ -32,6 +34,7 @@ try:
     import numba
 except ImportError:
     numba = None
+
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array
@@ -140,7 +143,7 @@ class Collapser(object):
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        # names are mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate, ...
+        # names are mag, rake, vs30, rjb, mdvbin, sids, ...
         relevant = set(ctx.dtype.names) - IGNORE_PARAMS
         if all(trivial(ctx, param) for param in relevant):
             # collapse all
@@ -684,8 +687,8 @@ class ContextMaker(object):
                     yield [rup], far
                     yield self._ruptures(src, rup.mag, point_rup), close
 
-    # not used by engine, is is meant for notebooks
-    def get_poes(self, srcs, sitecol):
+    # not used by the engine, is is meant for notebooks
+    def get_poes(self, srcs, sitecol, collapse_level=-1):
         """
         :param srcs: a list of sources with the same TRT
         :param sitecol: a SiteCollection instance with N sites
@@ -693,7 +696,8 @@ class ContextMaker(object):
         """
         self.collapser.cfactor = numpy.zeros(2)
         ctxs = self.from_srcs(srcs, sitecol)
-        return self.get_pmap(ctxs).array(len(sitecol))
+        with patch.object(self.collapser, 'collapse_level', collapse_level):
+            return self.get_pmap(ctxs).array(len(sitecol))
 
     def recarrays(self, ctxs):
         """

@@ -1053,7 +1053,9 @@ def kmean(structured_array, kfield, uniq_indices_counts=()):
         if name == kfield:
             dic[kfield] = uniq
         else:
-            dic[name] = fast_agg(indices, structured_array[name]) / counts
+            values = structured_array[name]
+            dic[name] = fast_agg(indices, values) / (
+                counts if len(values.shape) == 1 else counts.reshape(-1, 1))
         dtlist.append((name, structured_array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
     for name in dic:
