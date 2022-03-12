@@ -238,12 +238,12 @@ def get_probability_no_exceedance(ctx, poes, probs_or_tom):
         list of N probability mass functions otherwise
     """
     pnes = numpy.zeros_like(poes)
-    if hasattr(probs_or_tom, 'get_probability_no_exceedance'):
+    if hasattr(probs_or_tom, 'get_probability_no_exceedance'):  # poissonian
         for i, rate in enumerate(ctx.occurrence_rate):
             pnes[i] = probs_or_tom.get_probability_no_exceedance(
                 rate, poes[i])
         return pnes
-    else:  # nonparametric rupture
+    else:  # nonpoissonian
         for i, probs_occur in enumerate(probs_or_tom):
             pnes[i] = get_probability_no_exceedance_np(probs_occur, poes[i])
         return pnes

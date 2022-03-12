@@ -26,7 +26,7 @@ import numpy
 from operator import attrgetter
 from collections import namedtuple
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, assert_close, kmean,
+    block_splitter, split_in_blocks, assert_close, kmean, rmsdiff,
     deprecated, DeprecationWarning, cached_property, compress, decompress)
 
 
@@ -242,3 +242,13 @@ class KmeanTestCase(unittest.TestCase):
         print([len(s) for s in sids])
         dt = time.time() - t0
         print('Grouped %d elements in %.1f seconds' % (N, dt))
+
+
+class RmsDiffTestCase(unittest.TestCase):
+    def test(self):
+        a = numpy.array([[.1, .2, .3],
+                         [1.1, 1.2, 1.3]])
+        b = numpy.array([[.11, .21, .31],
+                         [1.1, 1.21, 1.31]])
+        rms, index = rmsdiff(a, b)
+        print(rms, index)

@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import abc
 import sys
 import copy
@@ -26,6 +25,8 @@ import operator
 import warnings
 import itertools
 import collections
+from unittest.mock import patch
+
 import numpy
 import pandas
 from scipy.interpolate import interp1d
@@ -33,6 +34,7 @@ try:
     import numba
 except ImportError:
     numba = None
+
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
 from openquake.baselib.performance import Monitor, split_array
@@ -52,6 +54,7 @@ from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 U32 = numpy.uint32
 F64 = numpy.float64
 MAXSIZE = 500_000  # used when collapsing
+TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
@@ -59,9 +62,6 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
-
-
-npdata_dt = numpy.dtype([('probs_occur', object), ('weight', float)])
 
 
 def size(imtls):
@@ -81,6 +81,15 @@ def trivial(ctx, name):
     if name not in ctx.dtype.names:
         return True
     return len(numpy.unique(numpy.float32(ctx[name]))) == 1
+
+
+def expand_mdvbin(mdvbin):
+    """
+    :returns: a triple of integers (magbin, distbin, vs30bin)
+    """
+    magbin, rest = numpy.divmod(mdvbin, TWO24)
+    distbin, vs30bin = numpy.divmod(rest, TWO16)
+    return magbin, distbin, vs30bin
 
 
 class Collapser(object):
@@ -106,26 +115,35 @@ class Collapser(object):
         distbin = numpy.searchsorted(self.dist_bins, rup.rrup)
         if self.has_vs30:
             vs30bin = numpy.searchsorted(self.vs30_bins, rup.rrup)
-            return magbin * TWO24 + distbin * 65536 + vs30bin
+            return magbin * TWO24 + distbin * TWO16 + vs30bin
         else:  # in test_collapse_area
-            return magbin * TWO24 + distbin * 65536
+            return magbin * TWO24 + distbin * TWO16
 
-    def collapse(self, ctx, npdata=None, collapse_level=None):
+    def expand(self, mdvbin):
+        """
+        :returns: mag, dist and vs30 corresponding to mdvbin
+        """
+        mbin, dbin, vbin = expand_mdvbin(mdvbin)
+        return self.mag_bins[mbin], self.dist_bins[dbin], self.vs30bins[vbin]
+
+    def collapse(self, ctx, rup_indep, collapse_level=None):
         """
         Collapse a context recarray if possible.
 
         :param ctx: a recarray with fields "mdvbin" and "sids"
+        :param rup_indep: False if the ruptures are mutually exclusive
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and a list of arrays with site IDs
         """
-        clevel = collapse_level or self.collapse_level
-        if npdata is not None or clevel < 0:
+        clevel = (collapse_level if collapse_level is not None
+                  else self.collapse_level)
+        if not rup_indep or clevel < 0:
             # no collapse
-            self.cfactor[0] += len(ctx)
+            self.cfactor[0] += len(numpy.unique(ctx.mdvbin))
             self.cfactor[1] += len(ctx)
             return ctx, ctx.sids.reshape(-1, 1)
 
-        # names are mag, rake, vs30, rjb, mdvbin, sids, occurrence_rate, ...
+        # names are mag, rake, vs30, rjb, mdvbin, sids, ...
         relevant = set(ctx.dtype.names) - IGNORE_PARAMS
         if all(trivial(ctx, param) for param in relevant):
             # collapse all
@@ -259,13 +277,6 @@ class ContextMaker(object):
     rup_indep = True
     tom = None
 
-    @property
-    def dtype(self):
-        """
-        :returns: dtype of the underlying ctx_builder
-        """
-        return self.ctx_builder.dtype
-
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         if isinstance(oq, dict):
             param = oq
@@ -356,12 +367,10 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
-        dic['rup_id'] = U32(0)  # used in nonparametric ruptures
         dic['mdvbin'] = U32(0)  # velocity-magnitude-distance bin
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
-        dic['occurrence_rate'] = numpy.float64(0)
-        self.ctx_builder = RecordBuilder(**dic)
+        self.defaultdict = dic
         self.collapser = Collapser(self.collapse_level, 'vs30' in dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
@@ -409,6 +418,8 @@ class ContextMaker(object):
             for par, arr in params.items():
                 if par.endswith('_'):
                     par = par[:-1]
+                elif par == 'probs_occur' and len(arr) == 0:  # poissonian
+                    continue
                 setattr(ctx, par, arr[u])
             for par in sitecol.array.dtype.names:
                 setattr(ctx, par, sitecol[par][ctx.sids])
@@ -419,24 +430,43 @@ class ContextMaker(object):
 
     def recarray(self, ctxs):
         """
-        :params ctxs: a list of contexts
+        :params ctxs: a non-empty list of homogeneous contexts
         :returns: a recarray, possibly collapsed
         """
+        assert ctxs
+        dd = self.defaultdict.copy()
+        if hasattr(ctxs[0], 'weight'):
+            dd['weight'] = numpy.float64(0.)
+            noweight = False
+        else:
+            noweight = True
+
+        if hasattr(ctxs[0], 'occurrence_rate'):
+            dd['occurrence_rate'] = numpy.float64(0)
+            norate = False
+        else:
+            norate = True
+
+        if hasattr(ctxs[0], 'probs_occur'):
+            np = max(len(ctx.probs_occur) for ctx in ctxs)
+            if np:  # nonparametric rupture
+                dd['probs_occur'] = numpy.zeros(np)
+
         C = sum(len(ctx) for ctx in ctxs)
-        ra = self.ctx_builder.zeros(C).view(numpy.recarray)
+        ra = RecordBuilder(**dd).zeros(C)
         start = 0
-        for i, ctx in enumerate(ctxs):
+        for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
             for gsim in self.gsims:
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
-            for par in self.ctx_builder.names:
-                if par == 'rup_id':
-                    val = i
-                elif par == 'mdvbin':
+            for par in dd:
+                if par == 'mdvbin':
                     val = self.collapser.calc_mdvbin(ctx)
-                elif par == 'occurrence_rate':  # missing in scenario
-                    val = getattr(ctx, par, 0.)
+                elif par == 'weight' and noweight:
+                    val = 0.
+                elif par == 'occurrence_rate' and norate:
+                    val = numpy.nan
                 else:  # never missing
                     val = getattr(ctx, par)
                 getattr(ra, par)[slc] = val
@@ -506,7 +536,7 @@ class ContextMaker(object):
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
         ctx = RuptureContext()
-        vars(ctx).update(vars(rupture))  # this also adds .weight
+        vars(ctx).update(vars(rupture))
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
                 value = numpy.round(rupture.mag, 6)
@@ -670,48 +700,45 @@ class ContextMaker(object):
                     yield [rup], far
                     yield self._ruptures(src, rup.mag, point_rup), close
 
-    def get_poes(self, srcs, sitecol):
+    # not used by the engine, is is meant for notebooks
+    def get_poes(self, srcs, sitecol, collapse_level=-1):
         """
         :param srcs: a list of sources with the same TRT
         :param sitecol: a SiteCollection instance with N sites
         :returns: an array of PoEs of shape (N, L, G)
         """
+        self.collapser.cfactor = numpy.zeros(2)
         ctxs = self.from_srcs(srcs, sitecol)
-        return self.get_pmap(ctxs).array(len(sitecol))
+        with patch.object(self.collapser, 'collapse_level', collapse_level):
+            return self.get_pmap(ctxs).array(len(sitecol))
 
-    def convert(self, ctxs, kind='any', collapse_level=None):
+    def recarrays(self, ctxs):
         """
-        :param ctxs: a list of RuptureContexts
-        :param kind: 'p', 'np' or 'any'
-        :param collapse_level: if None, use .collapse_level
-        :returns: a triplet (ctx, allsids, npdata) or a list of pairs
+        :returns: a list of one or two recarrays
         """
-        assert kind in ('p', 'np', 'any'), kind
-        parametric, nonparametric = [], []
-        npdata = []
+        parametric, nonparametric, out = [], [], []
         for ctx in ctxs:
+            assert not isinstance(ctx, numpy.recarray), ctx
             if hasattr(ctx, 'probs_occur'):
                 nonparametric.append(ctx)
-                npdata.append((ctx.probs_occur, ctx.weight))
             else:
                 parametric.append(ctx)
-        if kind == 'p':
-            ctx = self.recarray(parametric)
-            return self.collapser.collapse(ctx, None, collapse_level) + (None,)
-        elif kind == 'np':
-            ctx = self.recarray(nonparametric)
-            npd = numpy.array(npdata, npdata_dt)
-            return self.collapser.collapse(ctx, npd, collapse_level) + (npd,)
-
-        # regular case, collapse later, in gen_poes
-        pairs = []
         if parametric:
-            pairs.append((self.recarray(parametric), None))
+            out.append(self.recarray(parametric))
         if nonparametric:
-            ctx = self.recarray(nonparametric)
-            npd = numpy.array(npdata, npdata_dt)
-            pairs.append((ctx, npd))
-        return pairs  # [(ctx, npdata), ...]
+            out.append(self.recarray(nonparametric))
+        return out
+
+    def collapse2(self, ctxs, collapse_level=None):
+        """
+        :param ctxs: a list of RuptureContexts
+        :param collapse_level: if None, use .collapse_level
+        :returns: a list of pairs (ctx, allsids)
+        """
+        self.collapser.cfactor = numpy.zeros(2)
+        lst = [self.collapser.collapse(ctx, self.rup_indep, collapse_level)
+               for ctx in self.recarrays(ctxs)]
+        return lst
 
     def get_pmap(self, ctxs, probmap=None):
         """
@@ -724,8 +751,8 @@ class ContextMaker(object):
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        for ctx, npdata in self.convert(ctxs):
-            for poes, pnes, weights, slcsids in self.gen_poes(ctx, npdata):
+        for ctx in self.recarrays(ctxs):
+            for poes, pnes, weights, slcsids in self.gen_poes(ctx):
                 # the following is relatively fast
                 for poe, pne, wei, sids in zip(poes, pnes, weights, slcsids):
                     # sids has length 1 unless there is collapsing
@@ -834,10 +861,9 @@ class ContextMaker(object):
                         c[m, n, 1, p] = ws @ (sig[m]**2 * (1. - rho[m]**2))
         return out
 
-    def gen_poes(self, ctx, npdata=None):
+    def gen_poes(self, ctx):
         """
         :param ctx: a vectorized context (recarray) of size N
-        :param npdata: None or recarray with fields "probs_occur", "weight"
         :yields: poes, pnes, weights, slcsids with poes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
@@ -847,7 +873,7 @@ class ContextMaker(object):
 
         # collapse if possible
         with self.col_mon:
-            ctx, allsids = self.collapser.collapse(ctx, npdata)
+            ctx, allsids = self.collapser.collapse(ctx, self.rup_indep)
 
         # split large context arrays to avoid filling the CPU cache
         if ctx.nbytes > maxsize:
@@ -868,15 +894,13 @@ class ContextMaker(object):
                     if self.af:  # kernel amplification method for single site
                         poes[:, :, g] = get_poes_site(ms, self, ctxt)
                     else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctxt, npdata)
+                        poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
             with self.pne_mon:
-                if npdata is None:  # parametric
+                if hasattr(ctx, 'probs_occur'):  # nonparametric
+                    probs_or_tom = ctxt.probs_occur
+                else:  # parametric ruptures
                     probs_or_tom = self.tom
-                    weights = numpy.zeros(len(ctxt))
-                else:  # nonparametric ruptures
-                    data = npdata[ctxt.rup_id]
-                    probs_or_tom = data['probs_occur']
-                    weights = data['weight']
+                weights = getattr(ctxt, 'weight', numpy.zeros(len(ctxt)))
                 pnes = get_probability_no_exceedance(ctxt, poes, probs_or_tom)
             yield poes, pnes, weights, slcsids
 

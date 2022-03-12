@@ -284,7 +284,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.hypocenter = hypocenter
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
-        self.weight = weight
         self.ruid = None
 
     @property
@@ -351,7 +350,8 @@ class NonParametricProbabilisticRupture(BaseRupture):
             rupture_slip_direction, weight)
         # an array of probabilities with sum 1
         self.probs_occur = numpy.array([prob for (prob, occ) in pmf.data])
-        self.occurrence_rate = numpy.nan
+        if weight is not None:
+            self.weight = weight
 
     def sample_number_of_occurrences(self, n=1):
         """
@@ -605,7 +605,6 @@ class PointRupture(ParametricProbabilisticRupture):
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
         self.surface = PointSurface(hypocenter, strike)
-        self.weight = None  # no mutex
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,

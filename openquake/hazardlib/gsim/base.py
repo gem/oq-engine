@@ -465,7 +465,7 @@ class GMPE(GroundShakingIntensityModel):
         """
         raise NotImplementedError
 
-    def get_poes(self, mean_std, cmaker, ctx, npdata=None):
+    def get_poes(self, mean_std, cmaker, ctx):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -477,8 +477,6 @@ class GMPE(GroundShakingIntensityModel):
         :param cmaker:
             A ContextMaker instance, used only in nhsm_2014
         :param ctx:
-            A recarray used only in  avg_poe_gmpe
-        :param npdata:
             A recarray used only in  avg_poe_gmpe
         :returns:
             array of PoEs of shape (N, L)

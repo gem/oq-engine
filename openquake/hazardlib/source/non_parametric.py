@@ -26,7 +26,6 @@ from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            get_spherical_bounding_box)
-from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.pmf import PMF
@@ -77,7 +76,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
             if rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
+                    rup.hypocenter, rup.surface, pmf,
+                    weight=getattr(rup, 'weight', 0.))
 
     def few_ruptures(self):
         """
@@ -87,7 +87,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
             if i % 50 == 0 and rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
+                    rup.hypocenter, rup.surface, pmf,
+                    weight=getattr(rup, 'weight', 0.))
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split
