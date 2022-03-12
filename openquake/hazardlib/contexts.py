@@ -434,14 +434,15 @@ class ContextMaker(object):
         :returns: a recarray, possibly collapsed
         """
         assert ctxs
+        dd = self.defaultdict.copy()
         if hasattr(ctxs[0], 'weight'):
-            self.defaultdict['weight'] = numpy.float64(0.)
+            dd['weight'] = numpy.float64(0.)
             noweight = False
         else:
             noweight = True
 
         if hasattr(ctxs[0], 'occurrence_rate'):
-            self.defaultdict['occurrence_rate'] = numpy.float64(0)
+            dd['occurrence_rate'] = numpy.float64(0)
             norate = False
         else:
             norate = True
@@ -449,17 +450,17 @@ class ContextMaker(object):
         if hasattr(ctxs[0], 'probs_occur'):
             np = max(len(ctx.probs_occur) for ctx in ctxs)
             if np:  # nonparametric rupture
-                self.defaultdict['probs_occur'] = numpy.zeros(np)
+                dd['probs_occur'] = numpy.zeros(np)
 
         C = sum(len(ctx) for ctx in ctxs)
-        ra = RecordBuilder(**self.defaultdict).zeros(C)
+        ra = RecordBuilder(**dd).zeros(C)
         start = 0
         for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
             for gsim in self.gsims:
                 gsim.set_parameters(ctx)
             slc = slice(start, start + len(ctx))
-            for par in self.defaultdict:
+            for par in dd:
                 if par == 'mdvbin':
                     val = self.collapser.calc_mdvbin(ctx)
                 elif par == 'weight' and noweight:
