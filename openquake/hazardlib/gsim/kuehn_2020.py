@@ -567,7 +567,7 @@ class KuehnEtAl2020SInter(GMPE):
     - Alaska (USA-AK)
     - Cascadia (CAS)
     - Central America & Mexico (CAM)
-    - Japan (JPM)
+    - Japan (JPN)
     - New Zealand (NZL)
     - South America (SAM)
     - Taiwan (TWN)
