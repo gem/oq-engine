@@ -639,8 +639,8 @@ class KuehnEtAl2020SInter(GMPE):
         self.region = region
 
         # For some regions a basin depth term is defined
-        if self.region in ("CAS", "JAP"):
-            # If region is CAS or JAP then the GMPE needs Z2.5
+        if self.region in ("CAS", "JPN"):
+            # If region is CAS or JPN then the GMPE needs Z2.5
             self.REQUIRES_SITES_PARAMETERS = \
                  self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
         elif self.region in ("NZL", "TWN"):
