@@ -57,6 +57,8 @@ COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
 def sigma_model_alatik2015(self, ctx, imt, ergodic, tau_model, phi_ss_coetab,
                            tau_coetab):
     """
+    This function uses the sigma model of Al Atik (2015) as the standard
+    deviation of a specified GMPE
     """
     phi = get_phi_ss(imt, ctx.mag, phi_ss_coetab)
     if ergodic:
@@ -93,7 +95,6 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
 
     # IMT period
     T = imt.period
-
 
     # Get the string defining the horizontal component
     comp = str(horcom).split('.')[1]
