@@ -103,6 +103,7 @@ class AvgPoeGMPE(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """Do nothing: the work is done in get_poes"""
+        sig[:] = 1E-10  # to stop the error for zero sigma
 
     def get_poes(self, mean_std, cmaker, ctx):
         """
