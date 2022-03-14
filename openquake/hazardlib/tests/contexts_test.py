@@ -222,19 +222,19 @@ class CollapseTestCase(unittest.TestCase):
 
         # compute original curves
         pmap = cmaker.get_pmap(ctxs)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [46, 240])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 240])
 
         # compute collapsed curves
         cmaker.collapser.cfactor = numpy.zeros(2)
         cmaker.collapser.collapse_level = 1
         cmap = cmaker.get_pmap(ctxs)
-        self.assertLess(rms(pmap[0].array - cmap[0].array), 2E-4)
-        self.assertLess(rms(pmap[1].array - cmap[1].array), 2E-4)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [46, 240])
+        self.assertLess(rms(pmap[0].array - cmap[0].array), 3E-4)
+        self.assertLess(rms(pmap[1].array - cmap[1].array), 3E-4)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [34, 240])
 
         # test collapse2
         [(ctx, allsids)] = cmaker.collapse2(ctxs, collapse_level=2)
-        self.assertEqual(len(ctx), 46)
+        self.assertEqual(len(ctx), 34)
 
     def test_collapse_big(self):
         smpath = os.path.join(os.path.dirname(__file__),
@@ -259,7 +259,7 @@ class CollapseTestCase(unittest.TestCase):
         cmaker.collapser.collapse_level = 1
         pcurve1 = cmaker.get_pmap(ctxs)[0]
         self.assertLess(numpy.abs(pcurve0.array - pcurve1.array).sum(), 1E-6)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [221, 11616])
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [218, 11616])
 
     def test_collapse_azimuth(self):
         # YuEtAl2013Ms has an azimuth distance causing a lower precision
@@ -313,7 +313,7 @@ class CollapseTestCase(unittest.TestCase):
         [grp] = inp.groups
         self.assertEqual(len(grp.sources), 1)  # not splittable source
         poes = cmaker.get_poes(grp, inp.sitecol)
-        cmaker.collapser = Collapser(collapse_level=1)
+        cmaker.collapser = Collapser(collapse_level=1, dist_type='azimuth')
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         if PLOTTING:
             import matplotlib.pyplot as plt
@@ -328,7 +328,7 @@ class CollapseTestCase(unittest.TestCase):
         print('maxdiff =', maxdiff, cmaker.collapser.cfactor)
 
         # collapse_level=2
-        cmaker.collapser = Collapser(collapse_level=2)
+        cmaker.collapser = Collapser(collapse_level=2, dist_type='azimuth')
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol)
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff, cmaker.collapser.cfactor)
@@ -403,14 +403,14 @@ class CollapseTestCase(unittest.TestCase):
             plt.show()
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
-        # this is a case where the precision on site 0 is perfect, while
-        # on on site 1 if far from perfect
-        self.assertLess(maxdiff[0], 1E-14)
-        self.assertLess(maxdiff[1], 2E-3)
-        numpy.testing.assert_equal(cmaker.collapser.cfactor, [148, 312])
+        # this is a case where the precision on site 1 is perfect, while
+        # on on site 0 if far from perfect
+        self.assertLess(maxdiff[0], 3E-3)
+        self.assertLess(maxdiff[1], 5E-10)
+        numpy.testing.assert_equal(cmaker.collapser.cfactor, [63, 312])
 
         # collapse_level = 4
-        cmaker.collapser = Collapser(collapse_level=4, has_vs30=False)
+        cmaker.collapser = Collapser(4, 'azimuth', False)
         newpoes = cmaker.get_poes(inp.groups[0], inp.sitecol, collapse_level=4)
         maxdiff = (newpoes - poes).max(axis=(1, 2))
         print('maxdiff =', maxdiff)
