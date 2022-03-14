@@ -37,5 +37,13 @@ class YenierAtkinson2015BSSA(BaseGSIMTestCase):
         ctx = np.array(
             [(10., 4., 760., 1.00, 0),
              (10., 4., 760., 1.26, 1)], dt).view(np.recarray)
+        gsim = self.GSIM_CLASS()
+
         with self.assertRaises(ValueError):  # Total StdDev is zero
-            get_mean_stds(self.GSIM_CLASS(), ctx, [PGA()], truncation_level=3)
+            get_mean_stds(gsim, ctx, [PGA()], truncation_level=3)
+
+        # no error if truncation_level=0
+        m, s, t, p = get_mean_stds(gsim, ctx, [PGA()], truncation_level=0)
+        np.testing.assert_equal(s, 0)
+        np.testing.assert_equal(t, 0)
+        np.testing.assert_equal(p, 0)
