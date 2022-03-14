@@ -1,7 +1,10 @@
+  [Michele Simionato]
+  * Raised an error when the total standard deviation is zero, unless
+    truncation_level is set to zero
+
   [Tom Son]
   * Fixed a typo within Kuehn et al. (2020) model to include Z2.5 when the given
-    region is JAPAN while converting CTX(a new style full RuptureContext)
-    to `numpy.recarray`.
+    region is JAPAN
 
   [Michele Simionato]
   * Changed /extract/events to return events sorted by ID
