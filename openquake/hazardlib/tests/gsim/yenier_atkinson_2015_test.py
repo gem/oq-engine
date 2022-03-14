@@ -31,7 +31,7 @@ class YenierAtkinson2015BSSA(BaseGSIMTestCase):
     def test_mean(self):
         self.check('YA15/ya15_mean_cena.csv', max_discrep_percentage=0.3)
 
-    def test_poes(self):
+    def test_error(self):
         dt = [('hypo_depth', '<f8'), ('mag', '<f8'), ('vs30', '<f8'),
               ('rrup', '<f8'), ('sids', '<u4')]
         ctx = np.array(
