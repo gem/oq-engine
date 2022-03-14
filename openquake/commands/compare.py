@@ -18,6 +18,7 @@
 import sys
 import collections
 import numpy
+from openquake.baselib.general import rmsdiff
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
@@ -217,8 +218,8 @@ def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
     if len(arrays) and len(calc_ids) == 2:
         # each array has shape (N, M)
         ms = numpy.mean((arrays[0] - arrays[1])**2)
-        maxdiff = numpy.abs(arrays[0] - arrays[1]).max()
-        argmax = numpy.abs(arrays[0] - arrays[1]).argmax(axis=0)[0]
+        maxdiff = rmsdiff(arrays[0], arrays[1]).max()
+        argmax = rmsdiff(arrays[0], arrays[1]).argmax()
         row = ('%.5f' % c.oq.poes[poe_id], numpy.sqrt(ms), maxdiff, argmax)
         print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site']))
 

@@ -96,8 +96,9 @@ class Collapser(object):
     """
     Class managing the collapsing logic.
     """
-    def __init__(self, collapse_level, has_vs30=True):
+    def __init__(self, collapse_level, dist_type, has_vs30=True):
         self.collapse_level = collapse_level
+        self.dist_type = dist_type  # first in REQUIRES_DISTANCES
         self.mag_bins = numpy.linspace(MINMAG, MAXMAG, 256)
         self.dist_bins = valid.sqrscale(1, 600, 255)
         self.vs30_bins = numpy.linspace(0, 32767, 65536)
@@ -111,10 +112,11 @@ class Collapser(object):
         :param rup: a RuptureContext
         :return: an array of dtype numpy.uint32
         """
+        dist = getattr(rup, self.dist_type)
         magbin = numpy.searchsorted(self.mag_bins, rup.mag)
-        distbin = numpy.searchsorted(self.dist_bins, rup.rrup)
+        distbin = numpy.searchsorted(self.dist_bins, dist)
         if self.has_vs30:
-            vs30bin = numpy.searchsorted(self.vs30_bins, rup.rrup)
+            vs30bin = numpy.searchsorted(self.vs30_bins, dist)
             return magbin * TWO24 + distbin * TWO16 + vs30bin
         else:  # in test_collapse_area
             return magbin * TWO24 + distbin * TWO16
@@ -353,10 +355,11 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
+        REQUIRES_DISTANCES = sorted(self.REQUIRES_DISTANCES)
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
                 sorted(self.REQUIRES_SITES_PARAMETERS | set(extraparams)) +
                 sorted(self.REQUIRES_COMPUTED_PARAMETERS) +
-                sorted(self.REQUIRES_DISTANCES))
+                REQUIRES_DISTANCES)
         dic = {}
         for req in reqs:
             if req in site_param_dt:
@@ -371,7 +374,8 @@ class ContextMaker(object):
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
         self.defaultdict = dic
-        self.collapser = Collapser(self.collapse_level, 'vs30' in dic)
+        self.collapser = Collapser(
+            self.collapse_level, REQUIRES_DISTANCES[0], 'vs30' in dic)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -884,6 +888,11 @@ class ContextMaker(object):
         for slc in slices:
             slcsids = allsids[slc]
             ctxt = ctx[slc]
+            ok = numpy.array([712 in sids for sids in slcsids])
+            if ok.any():
+                print(ctxt.dtype.names)
+                print(numpy.sort(ctxt[ok], order='mdvbin'))
+                
             with self.gmf_mon:
                 mean_stdt = self.get_mean_stds([ctxt])
             with self.poe_mon:

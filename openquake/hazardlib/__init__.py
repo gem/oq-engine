@@ -38,12 +38,20 @@ from openquake.hazardlib.calc.filters import IntegrationDistance
 def cmaker(self):
     if len(self.cmakerdict) == 1:
         return list(self.cmakerdict.values())[0]
-    raise TypeError('There are multi cmakers inside %s' % self.cmakerdict)
+    raise TypeError('There are multiple cmakers inside %s' % self.cmakerdict)
+
+
+@property
+def group(self):
+    if len(self.groups) == 1:
+        return self.groups[0]
+    raise TypeError('There are multiple groups inside %s' % self.groups)
 
 
 bytrt = operator.attrgetter('tectonic_region_type')
 Input = collections.namedtuple('Input', 'groups sitecol gsim_lt cmakerdict')
 Input.cmaker = cmaker
+Input.group = group
 
 
 def _get_site_model(fname, req_site_params):
@@ -146,10 +154,10 @@ def read_hparams(job_ini):
 
 def read_input(hparams, **extra):
     """
-    :param hparams: a dictionary of hazard parameters
+    :param hparams: path to a job.ini file or dictionary of hazard parameters
     :returns: an Input namedtuple (groups, sitecol, gsim_lt, cmakerdict)
 
-    The dictionary must contain the keys
+    The dictionary hparams must contain the keys
 
     - "maximum_distance"
     - "imtls"
