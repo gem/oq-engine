@@ -355,7 +355,8 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        REQUIRES_DISTANCES = sorted(self.REQUIRES_DISTANCES)
+        # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
+        REQUIRES_DISTANCES = sorted(self.REQUIRES_DISTANCES) or ['rrup']
         reqs = (sorted(self.REQUIRES_RUPTURE_PARAMETERS) +
                 sorted(self.REQUIRES_SITES_PARAMETERS | set(extraparams)) +
                 sorted(self.REQUIRES_COMPUTED_PARAMETERS) +
