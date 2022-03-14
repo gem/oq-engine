@@ -888,11 +888,6 @@ class ContextMaker(object):
         for slc in slices:
             slcsids = allsids[slc]
             ctxt = ctx[slc]
-            ok = numpy.array([712 in sids for sids in slcsids])
-            if ok.any():
-                print(ctxt.dtype.names)
-                print(numpy.sort(ctxt[ok], order='mdvbin'))
-                
             with self.gmf_mon:
                 mean_stdt = self.get_mean_stds([ctxt])
             with self.poe_mon:
