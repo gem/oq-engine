@@ -804,6 +804,8 @@ class ContextMaker(object):
                 start = slc.stop
             if self.adj[gsim]:
                 self.adj[gsim] = numpy.concatenate(self.adj[gsim])
+            if self.truncation_level and (out[1, g] == 0.).any():
+                raise ValueError('Total StdDev is zero for %s' % gsim)
         return out
 
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
@@ -1249,7 +1251,7 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsim, ctx, imts, mags=()):
+def get_mean_stds(gsim, ctx, imts, **kw):
     """
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N
@@ -1261,8 +1263,8 @@ def get_mean_stds(gsim, ctx, imts, mags=()):
     """
     imtls = {imt.string: [0] for imt in imts}
     single = hasattr(gsim, 'compute')
-    cmaker = ContextMaker('*', [gsim] if single else gsim,
-                          {'imtls': imtls, 'mags': mags})
+    kw['imtls'] = imtls
+    cmaker = ContextMaker('*', [gsim] if single else gsim, kw)
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
     return out[:, 0] if single else out
 
