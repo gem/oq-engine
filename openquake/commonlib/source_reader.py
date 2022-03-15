@@ -239,6 +239,7 @@ def _build_groups(full_lt, smdict):
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:
                 src.trt_smr = trt_smr
+                src.smweight = rlz.weight
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
