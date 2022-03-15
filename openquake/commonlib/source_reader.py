@@ -132,6 +132,7 @@ def get_csm(oq, full_lt, h5=None):
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
             src.checksum = src.grp_id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
+            src.smweight = sm_rlz.weight
             logging.info('Reading sections and rupture planes for %s', src)
             planes = src.get_planes()
             if classical:
@@ -239,6 +240,7 @@ def _build_groups(full_lt, smdict):
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:
                 src.trt_smr = trt_smr
+                src.smweight = rlz.weight
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
@@ -264,7 +266,7 @@ def reduce_sources(sources_with_same_id):
     out = []
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr samples'}
+               if k not in 'source_id trt_smr smweight samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
