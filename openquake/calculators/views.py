@@ -1328,3 +1328,19 @@ def view_collapsible(token, dstore):
         n, u = len(df), len(df.mdvbin.unique())
         out.append((sid, u, n, n / u))
     return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
+
+
+@view.add('event_based_mfd')
+def view_event_based_mfd(token, dstore):
+    """
+    Compare n_occ/eff_time with occurrence_rate
+    """
+    oq = dstore['oqparam']
+    R = len(dstore['weights'])
+    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
+    # print(oq.investigation_time, oq.ses_per_logic_tree_path, R, eff_time)
+    rup_df = dstore.read_df('ruptures', 'id')
+    out = []
+    for mag, df in rup_df.groupby('mag'):
+        out.append((mag, df.n_occ.sum() / eff_time, df.occurrence_rate.sum()))
+    return numpy.array(out, dt('mag frequency occur_rate'))
