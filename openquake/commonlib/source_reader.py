@@ -265,7 +265,7 @@ def reduce_sources(sources_with_same_id):
     out = []
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr samples'}
+               if k not in 'source_id trt_smr smweight samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
