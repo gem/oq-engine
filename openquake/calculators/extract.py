@@ -934,6 +934,7 @@ def extract_damages_npz(dstore, what):
             assets, damages)
 
 
+# tested on oq-risk-tests event_based/etna
 @extract.add('event_based_mfd')
 def extract_mfd(dstore, what):
     """

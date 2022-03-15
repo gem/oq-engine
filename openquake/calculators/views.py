@@ -1344,3 +1344,13 @@ def view_event_based_mfd(token, dstore):
     for mag, df in rup_df.groupby('mag'):
         out.append((mag, df.n_occ.sum() / eff_time, df.occurrence_rate.sum()))
     return numpy.array(out, dt('mag frequency occur_rate'))
+
+
+@view.add('eb_mfd')
+def view_eb_mfd(token, dstore):
+    """
+    Compare n_occ/eff_time with occurrence_rate
+    """
+    aw = extract(dstore, 'event_based_mfd?kind=mean')
+    tbl = list(zip(aw.magnitudes, aw.mean_frequency))
+    return numpy.array(tbl, dt('mag freq'))
