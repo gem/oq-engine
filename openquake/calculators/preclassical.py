@@ -205,28 +205,6 @@ class PreClassicalCalculator(base.HazardCalculator):
     core_task = preclassical
     accept_precalc = []
 
-    def get_source_ids(self):
-        """
-        :returns: the unique source IDs contained in the composite model
-        """
-        oq = self.oqparam
-        self.M = len(oq.imtls)
-        self.L1 = oq.imtls.size // self.M
-        sources = encode([src_id for src_id in self.csm.source_info])
-        size, msg = get_nbytes_msg(
-            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
-        ps = 'pointSource' in self.full_lt.source_model_lt.source_types
-        if size > TWO32 and not ps:
-            raise RuntimeError('The matrix disagg_by_src is too large: %s'
-                               % msg)
-        elif size > TWO32:
-            msg = ('The source model contains point sources: you cannot set '
-                   'disagg_by_src=true unless you convert them to multipoint '
-                   'sources with the command oq upgrade_nrml --multipoint %s'
-                   ) % oq.base_path
-            raise RuntimeError(msg)
-        return sources
-
     def init(self):
         super().init()
         if self.oqparam.hazard_calculation_id:
