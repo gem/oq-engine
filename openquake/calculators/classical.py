@@ -360,7 +360,7 @@ class ClassicalCalculator(base.HazardCalculator):
         sources = list(self.csm.source_info)
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
-        ps = 'pointSource' in self.full_lt.source_model_lt.source_types
+        ps = any(src.code == b'P' for src in self.csm.get_sources())
         if size > TWO32 and not ps:
             raise RuntimeError('The matrix disagg_by_src is too large: %s'
                                % msg)
