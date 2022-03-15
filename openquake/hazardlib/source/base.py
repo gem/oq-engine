@@ -117,7 +117,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 if hasattr(rup, 'occurrence_rate'):
                     # defined only for poissonian sources
                     rup.occurrence_rate *= self.smweight
-                rup.occurrence_rate *= self.smweight
                 seed += 1
                 yield rup, trt_smr, num_occ
 
