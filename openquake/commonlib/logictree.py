@@ -50,7 +50,6 @@ from openquake.hazardlib.lt import (
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
-SOURCE_TYPE_REGEX = re.compile(r'<(\w+Source)\b')
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -272,8 +271,7 @@ class SourceModelLogicTree(object):
 
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
-               'applyToBranches',
-               'applyToSourceType')
+               'applyToBranches')
 
     ABSOLUTE_UNCERTAINTIES = ('abGRAbsolute', 'bGRAbsolute',
                               'maxMagGRAbsolute',
@@ -312,7 +310,6 @@ class SourceModelLogicTree(object):
         self.bsetdict = {}
         self.previous_branches = []
         self.tectonic_region_types = set()
-        self.source_types = set()
         self.root_branchset = None
         root = nrml.read(filename)
         try:
@@ -535,8 +532,6 @@ class SourceModelLogicTree(object):
           exist in source models.
         * Filter "applyToTectonicRegionType" must mention only tectonic
           region types that exist in source models.
-        * Filter "applyToSourceType" must mention only source types
-          that exist in source models.
         """
         f = filters.copy()
 
@@ -570,20 +565,11 @@ class SourceModelLogicTree(object):
                     "with only one source id" % uncertainty_type)
         if uncertainty_type in ('simpleFaultDipRelative',
                                 'simpleFaultDipAbsolute'):
-            if not f or (not ('applyToSources' in f) and
-                         'applyToSourceType' not in f):
+            if not f or 'applyToSources' not in f:
                 raise LogicTreeError(
                     branchset_node, self.filename,
-                    "uncertainty of type '%s' must define either"
-                    "'applyToSources' or 'applyToSourceType'"
+                    "uncertainty of type '%s' must define 'applyToSources'"
                     % uncertainty_type)
-
-        if 'applyToSourceType' in f:
-            if not f['applyToSourceType'] in self.source_types:
-                raise LogicTreeError(
-                    branchset_node, self.filename,
-                    "source models don't define sources of type '%s'" %
-                    f['applyToSourceType'])
 
         if 'applyToSources' in f:
             for source_id in f['applyToSources'].split():
@@ -672,7 +658,6 @@ class SourceModelLogicTree(object):
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         for src_id in ID_REGEX.findall(xml):
             self.source_ids[src_id].append(branch_id)
-        self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
     def collapse(self, branchset_ids):
         """

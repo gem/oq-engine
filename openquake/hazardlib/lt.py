@@ -557,10 +557,6 @@ class BranchSet(object):
             This filter is required for absolute uncertainties (also
             only one source can be used for those). Value should be the list
             of source ids. Can be used only in source model logic tree.
-        applyToSourceType
-            Can be used in the source model logic tree definition. Allows
-            to specify to which source type (area, point, simple fault,
-            complex fault) the uncertainty applies to.
         applyToTectonicRegionType
             Can be used in both the source model and GMPE logic trees. Allows
             to specify to which tectonic region type (Active Shallow Crust,
@@ -656,26 +652,6 @@ class BranchSet(object):
             if key == 'applyToTectonicRegionType':
                 if value != source.tectonic_region_type:
                     return False
-            elif key == 'applyToSourceType':
-                if value == 'area':
-                    if not isinstance(source, ohs.AreaSource):
-                        return False
-                elif value == 'point':
-                    # area source extends point source
-                    if (not isinstance(source, ohs.PointSource)
-                            or isinstance(source, ohs.AreaSource)):
-                        return False
-                elif value == 'simpleFault':
-                    if not isinstance(source, ohs.SimpleFaultSource):
-                        return False
-                elif value == 'complexFault':
-                    if not isinstance(source, ohs.ComplexFaultSource):
-                        return False
-                elif value == 'characteristicFault':
-                    if not isinstance(source, ohs.CharacteristicFaultSource):
-                        return False
-                else:
-                    raise AssertionError("unknown source type '%s'" % value)
             elif key == 'applyToSources':
                 if source and source.source_id not in value:
                     return False
