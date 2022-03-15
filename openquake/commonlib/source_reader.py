@@ -132,6 +132,7 @@ def get_csm(oq, full_lt, h5=None):
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
             src.checksum = src.grp_id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
+            src.smweight = sm_rlz.weight
             logging.info('Reading sections and rupture planes for %s', src)
             planes = src.get_planes()
             if classical:
