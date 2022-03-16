@@ -210,9 +210,6 @@ def _update(params, items, base_path):
         else:
             params[key] = value
 
-    if 'reqv' in params['inputs']:
-        params['pointsource_distance'] = '0'
-
 
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
@@ -263,7 +260,7 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
+def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -272,9 +269,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
         dictionary of parameters with a key "calculation_mode"
     :param pkg:
         Python package where to find the configuration file (optional)
-    :param calculators:
-        Sequence of calculator names (optional) used to restrict the
-        valid choices for `calculation_mode`
     :param kw:
         Dictionary of strings to override the job parameters
     :returns:
@@ -284,11 +278,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
         absolute paths to all of the files referenced in the job.ini, keyed by
         the parameter name.
     """
-    # UGLY: this is here to avoid circular imports
-    from openquake.calculators import base
-
-    OqParam.calculation_mode.validator.choices = tuple(
-        calculators or base.calculators)
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
@@ -508,14 +497,17 @@ def get_site_model(oqparam):
     return numpy.concatenate(arrays)
 
 
-def count_no_vect(gsim_lt):
-    # count the number of nonvectorized GMPEs
-    no = 0
+def get_no_vect(gsim_lt):
+    """
+    :returns: the names of the non-vectorized GMPEs
+    """
+    names = set()
     for gsims in gsim_lt.values.values():
         for gsim in gsims:
             compute = getattr(gsim.__class__, 'compute')
-            no += 'ctx' not in compute.__annotations__
-    return no
+            if 'ctx' not in compute.__annotations__:
+                names.add(gsim.__class__.__name__)
+    return names
 
 
 def get_site_collection(oqparam, h5=None):
@@ -568,6 +560,9 @@ def get_site_collection(oqparam, h5=None):
         sitecol.make_complete()
     if h5:
         h5['sitecol'] = sitecol
+    if ('vs30' in sitecol.array.dtype.names and
+            not numpy.isnan(sitecol.vs30).any()):
+        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
     return sitecol
 
 
@@ -619,9 +614,9 @@ def get_gsim_lt(oqparam, trts=('*',)):
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     gsim_lt_cache[key] = gsim_lt
     if trts != ('*',):  # not in get_input_files
-        no_vect = count_no_vect(gsim_lt)
+        no_vect = get_no_vect(gsim_lt)
         if no_vect:
-            logging.info('There are %d not vectorized GMPEs', no_vect)
+            logging.info('The following GMPEs are not vectorized: %s', no_vect)
     return gsim_lt
 
 
@@ -654,10 +649,10 @@ def get_source_model_lt(oqparam, branchID=None):
     args = (fname, oqparam.random_seed, oqparam.number_of_logic_tree_samples,
             oqparam.sampling_method, False, branchID)
     smlt = logictree.SourceModelLogicTree(*args)
-    if oqparam.discard_trts:
-        trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
+    discard_trts = set(s.strip() for s in oqparam.discard_trts.split(','))
+    if discard_trts:
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
-        smlt.tectonic_region_types = smlt.tectonic_region_types - trts
+        smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
     if oqparam.is_ucerf():
         smlt.tectonic_region_types = {'Active Shallow Crust'}
     return smlt
@@ -678,7 +673,7 @@ def get_full_lt(oqparam, branchID=None):
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
     for trt in reqv:
-        if trt in oqparam.discard_trts:
+        if trt in oqparam.discard_trts.split(','):
             continue
         elif trt.lower() not in trts_lower:
             raise ValueError('Unknown TRT=%s in %s [reqv]' %

@@ -73,17 +73,15 @@ def compute_magnitude_term(slab, C, mag):
         # Returns the magnitude scaling term, this time using the constant
         # "C1slab" as the hinge magnitude
         f_mag = C["a13"] * ((10.0 - mag) ** 2.)
-        if mag <= CONSTANTS["C1slab"]:
-            return C["a4"] * (mag - CONSTANTS["C1slab"]) + f_mag
-        else:
-            # parameter "a5" is zero, so linear term disappears
-            return f_mag
-    f_mag = C["a13"] * ((10.0 - mag) ** 2.)
-    if mag <= C["C1inter"]:
-        return C["a4"] * (mag - C["C1inter"]) + f_mag
-    else:
-        # C["a5"] is zero so linear term disappears
-        return f_mag
+        return np.where(mag <= CONSTANTS["C1slab"],
+                        C["a4"] * (mag - CONSTANTS["C1slab"]) + f_mag,
+                        # parameter "a5" is zero, so linear term disappears
+                        f_mag)
+    f_mag = C["a13"] * (10.0 - mag) ** 2.
+    return np.where(mag <= C["C1inter"],
+                    C["a4"] * (mag - C["C1inter"]) + f_mag,
+                    # C["a5"] is zero so linear term disappears
+                    f_mag)
 
 
 def compute_distance_term(slab, C, rrup, mag):
@@ -111,11 +109,9 @@ def compute_depth_term(slab, C, ctx):
     No top of rupture depth term for interface events
     """
     if slab:  # Equation on P11
-        if ctx.ztor <= 100.0:
-            return C["a11"] * (ctx.ztor - 60.0)
-        else:
-            return C["a11"] * (100.0 - 60.0)
-
+        return np.where(ctx.ztor <= 100.0,
+                        C["a11"] * (ctx.ztor - 60.0),
+                        C["a11"] * (100.0 - 60.0))
     return 0.0
 
 
@@ -231,7 +227,7 @@ class AbrahamsonEtAl2018SInter(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see section 4.5
@@ -255,7 +251,7 @@ class AbrahamsonEtAl2018SInter(GMPE):
     #: Adjustment variable to match Cascadia to global average
     CASCADIA_ADJUSTMENT = "adj_int"
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

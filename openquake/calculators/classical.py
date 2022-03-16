@@ -34,13 +34,13 @@ from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc
-from openquake.calculators import getters
-from openquake.calculators import base
+from openquake.calculators import base, getters
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+I64 = numpy.int64
 TWO32 = 2 ** 32
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
@@ -283,6 +283,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data += sdata
         grp_id = dic.pop('grp_id')
         self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
+        self.cfactor += dic.pop('cfactor')
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']['src_id']):
@@ -311,17 +312,15 @@ class ClassicalCalculator(base.HazardCalculator):
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
                   'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
+
         for trt, gsims in gsims_by_trt.items():
             cm = ContextMaker(trt, gsims, self.oqparam)
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             for dparam in cm.REQUIRES_DISTANCES:
                 params.add(dparam + '_')
-        mags = set()
-        for trt, dset in self.datastore['source_mags'].items():
-            mags.update(dset[:])
-        mags = sorted(mags)
         if self.few_sites:
-            descr = []  # (param, dt)
+            # self.oqparam.time_per_task = 1_000_000  # disable task splitting
+            descr = [('id', I64)]  # (param, dt)
             for param in params:
                 if param == 'sids_':
                     dt = hdf5.vuint16
@@ -338,6 +337,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
         self.Ns = len(self.csm.source_info)
+        self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
@@ -360,7 +360,7 @@ class ClassicalCalculator(base.HazardCalculator):
         sources = list(self.csm.source_info)
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
-        ps = 'pointSource' in self.full_lt.source_model_lt.source_types
+        ps = any(src.code == b'P' for src in self.csm.get_sources())
         if size > TWO32 and not ps:
             raise RuntimeError('The matrix disagg_by_src is too large: %s'
                                % msg)
@@ -448,9 +448,13 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
             logging.debug("busy time: %s", smap.busytime)
-            logging.info('Finished tile %d of %d', t, len(tiles))
+            if len(tiles) > 1:
+                logging.info('Finished tile %d of %d', t, len(tiles))
         self.store_info()
         self.haz.store_disagg(acc)
+        logging.info('Collapse factor = {:_d}/{:_d} = {:.1f}'.format(
+            int(self.cfactor[1]), int(self.cfactor[0]),
+            self.cfactor[1] / self.cfactor[0]))
         return True
 
     def store_info(self):
@@ -558,6 +562,14 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('%s', nr)
         if '_poes' in self.datastore:
             self.post_classical()
+
+        # sanity check on the rupture IDs
+        if 'rup' in self.datastore:
+            rup_id = self.datastore['rup/id']
+            tot = len(rup_id)
+            if 0 < tot < 1_000_000:
+                uniq = len(numpy.unique(rup_id[:]))
+                assert tot == uniq, (tot, uniq)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam

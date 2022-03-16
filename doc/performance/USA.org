@@ -1,0 +1,96 @@
+Engine 3.11
+-----------
+
+| calc_44685, maxmem=138.3 GB | time_sec | memory_mb | counts    |
+|-----------------------------+----------+-----------+-----------|
+| total classical             | 319_085  | 1_124     | 661       |
+| get_poes                    | 183_431  | 0.0       | 1_429_999 |
+| total build_hazard          | 93_453   | 85.4      | 240       |
+| combine pmaps               | 90_731   | 0.0       | 94_480    |
+| composing pnes              | 60_185   | 0.0       | 227_943   |
+| computing mean_std          | 49_645   | 0.0       | 1_429_999 |
+| make_contexts               | 20_247   | 0.0       | 229_559   |
+| ClassicalCalculator.run     | 14_626   | 4_466     | 1         |
+
+| operation-duration | counts | mean    | stddev | min     | max    | slowfac |
+|--------------------+--------+---------+--------+---------+--------+---------|
+| classical          | 661    | 482.7   | 139%   | 15.6    | 13_578 | 28.1    |
+| build_hazard       | 240    | 389.4   | 2%     | 319.2   | 405.0  | 1.04005 |
+| preclassical       | 8      | 11.4    | 132%   | 0.00351 | 37.7   | 3.32091 |
+
+Has a terrible slow task.
+
+Engine 3.12
+-----------
+
+| calc_44689, maxmem=169.5 GB | time_sec | memory_mb | counts     |
+|-----------------------------+----------+-----------+------------|
+| total classical             | 686_118  | 1_310     | 420        |
+| computing mean_std          | 298_153  | 0.0       | 10_159     |
+| get_poes                    | 248_119  | 0.0       | 17_423_053 |
+| composing pnes              | 71_637   | 0.0       | 17_423_053 |
+| make_contexts               | 54_701   | 0.0       | 17_424_669 |
+| ClassicalCalculator.run     | 8_410    | 3_386     | 1          |
+| total build_hazard          | 2_856    | 98.2      | 240        |
+
+| operation-duration | counts | mean    | stddev | min     | max   | slowfac |
+|--------------------+--------+---------+--------+---------+-------+---------|
+| classical          | 420    | 1_634   | 90%    | 36.9    | 5_614 | 3.43633 |
+| build_hazard       | 240    | 11.9    | 6%     | 9.27248 | 15.2  | 1.27602 |
+| preclassical       | 8      | 11.3    | 132%   | 0.00328 | 37.0  | 3.27968 |
+
+The task distribution is much better, as well as build_hazard.
+
+Engine 3.13
+-----------
+
+| calc_44690, maxmem=149.6 GB | time_sec | memory_mb | counts     |
+|-----------------------------+----------+-----------+------------|
+| total classical             | 977_396  | 1_127     | 1_164      |
+| get_poes                    | 417_821  | 0.0       | 17_719_863 |
+| computing mean_std          | 345_899  | 0.0       | 400_468    |
+| composing pnes              | 119_075  | 0.0       | 17_719_863 |
+| make_contexts               | 89_070   | 696.0     | 10_642     |
+| ClassicalCalculator.run     | 10_085   | 6_664     | 1          |
+| total postclassical         | 3_357    | 1.37500   | 240        |
+
+| operation-duration | counts |    mean | stddev |       min |   max | slowfac |
+|--------------------+--------+---------+--------+-----------+-------+---------|
+| classical          |    666 |   1_468 |    35% |   0.61383 | 3_251 | 2.21544 |
+| postclassical      |    240 |    14.0 |    24% |   8.56907 |  21.8 | 1.55594 |
+| preclassical       |    205 | 3.91217 |   587% | 1.717E-04 | 313.0 |    80.0 |
+
+Engine 3.14
+-----------
+
+| calc_44687, maxmem=143.8 GB | time_sec | memory_mb | counts     |
+|-----------------------------+----------+-----------+------------|
+| total classical             | 833_107  | 1_139     | 1_164      |
+| get_poes                    | 454_508  | 0.0       | 17_719_862 |
+| computing mean_std          | 148_403  | 0.0       | 400_467    |
+| make_contexts               | 91_518   | 815.4     | 10_641     |
+| composing pnes              | 35_069   | 0.0       | 17_719_862 |
+| ClassicalCalculator.run     | 8_785    | 6_411     | 1          |
+| total postclassical         | 3_368    | 1.32812   | 240        |
+
+| operation-duration | counts | mean    | stddev | min       | max   | slowfac |
+|--------------------+--------+---------+--------+-----------+-------+---------|
+| classical          | 666    | 1_251   | 41%    | 0.40290   | 3_324 | 2.65760 |
+| postclassical      | 240    | 14.0    | 23%    | 9.17548   | 21.5  | 1.53094 |
+| preclassical       | 206    | 3.90329 | 586%   | 1.638E-04 | 312.6 | 80.1    |
+
+$ oq compare uhs 44685 44687
++---------+----------+----------+
+| poe     | rms-diff | max-diff |
++---------+----------+----------+
+| 0.00211 | 0.03481  | 0.67516  |
++---------+----------+----------+
+
+$ oq compare uhs 44690 44687
++---------+-----------+----------+
+| poe     | rms-diff  | max-diff |
++---------+-----------+----------+
+| 0.00211 | 9.308E-06 | 0.00500  |
++---------+-----------+----------+
+
+I run again with time_per_task=1500 and get

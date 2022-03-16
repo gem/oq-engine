@@ -27,6 +27,7 @@ class :class:`~openquake.hazardlib.geo.nodalplane.NodalPlane`.
 """
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.surface import PlanarSurface

@@ -45,6 +45,11 @@ import argparse
 import subprocess
 from urllib.request import urlopen
 try:
+    import ensurepip
+except ImportError:
+    sys.exit("ensurepip is missing; on Ubuntu the solution is to install "
+             "python3-venv with apt")
+try:
     import venv
 except ImportError:
     # check platform
@@ -74,6 +79,7 @@ class server:
     CONFIG = '''[dbserver]
     port = %d
     file = %s
+    [directory]
     shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
 
@@ -101,6 +107,7 @@ class devel_server:
     CONFIG = '''[dbserver]
     port = %d
     file = %s
+    [directory]
     shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
     exit = server.exit

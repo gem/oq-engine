@@ -25,7 +25,8 @@ import os
 import unittest
 import numpy
 
-from openquake.hazardlib.geo.surface.multi import MultiSurface
+from openquake.hazardlib.geo.surface.multi_old import MultiSurfaceOld as \
+    MultiSurface
 from openquake.hazardlib.geo import Mesh, Point, Line, PlanarSurface,\
     SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import (downsample_mesh,

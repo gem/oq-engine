@@ -23,7 +23,7 @@ import unittest
 
 import numpy as np
 import pandas
-from openquake.baselib.general import all_equals
+from openquake.baselib.general import all_equals, RecordBuilder
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
@@ -127,23 +127,25 @@ def read_cmaker_df(gsim, csvfnames):
     assert imts
     imtls = {im: [0] for im in sorted(imts)}
     trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
+    mags = ['%.2f' % mag for mag in df.rup_mag.unique()]
     cmaker = contexts.ContextMaker(
-        trt.value if trt else "*", [gsim], {'imtls': imtls},
+        trt.value if trt else "*", [gsim], {'imtls': imtls, 'mags': mags},
         extraparams={col[5:] for col in df.columns if col.startswith('site_')})
+    dtype = RecordBuilder(**cmaker.defaultdict).zeros(0).dtype
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
-        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
+        df[name] = np.array(df[name].to_numpy(), dtype[dist])
         logging.info(name, df[name].unique())
     for sitepar in cmaker.REQUIRES_SITES_PARAMETERS:
         name = 'site_' + sitepar
-        df[name] = np.array(df[name].to_numpy(), cmaker.dtype[sitepar])
+        df[name] = np.array(df[name].to_numpy(), dtype[sitepar])
         logging.info(name, df[name].unique())
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
         if name not in df.columns:  # i.e. missing rake
-            df[name] = np.zeros(len(df), cmaker.dtype[par])
+            df[name] = np.zeros(len(df), dtype[par])
         else:
-            df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
+            df[name] = np.array(df[name].to_numpy(), dtype[par])
         logging.info(name, df[name].unique())
     logging.info('result_type', df['result_type'].unique())
     return cmaker, df.rename(columns=cmap)
@@ -152,10 +154,15 @@ def read_cmaker_df(gsim, csvfnames):
 def gen_ctxs(df):
     """
     :param df: a DataFrame with a specific structure
-    :yields: RuptureContexts
+    :returns: a list of RuptureContexts
     """
+    ctxs = []
     rrp = [col for col in df.columns if col.startswith('rup_')]
     pars = [col for col in df.columns if col.startswith(('dist_', 'site_'))]
+    if 'dist_rrup' not in pars:
+        dist_type = [p for p in pars if p.startswith('dist_')][0][5:]
+    else:
+        dist_type = 'rrup'
     outs = df.result_type.unique()
     num_outs = len(outs)
     for rup_params, grp in df.groupby(rrp):
@@ -181,8 +188,11 @@ def gen_ctxs(df):
             value = grp[grp.result_type == outs[0]][par].to_numpy()
             setattr(ctx, par[5:], value)  # dist_, site_ parameters
         ctx.sids = np.arange(len(gr))
+        if dist_type != 'rrup':
+            ctx.rrup = getattr(ctx, dist_type)
         assert len(gr) == len(grp) / num_outs, (len(gr), len(gr) / num_outs)
-        yield ctx
+        ctxs.append(ctx)
+    return ctxs
 
 
 class BaseGSIMTestCase(unittest.TestCase):

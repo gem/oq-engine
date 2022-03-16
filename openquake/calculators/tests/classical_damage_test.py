@@ -90,11 +90,12 @@ class ClassicalDamageTestCase(CalculatorTestCase):
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         fnames = export(('damages-rlzs', 'csv'), self.calc.datastore)
         if len(fnames) == 1:
-            self.assertEqualFiles('expected/damages.csv', fnames[0])
+            self.assertEqualFiles(
+                'expected/damages.csv', fnames[0], delta=1E-5)
         else:
             for fname in fnames:
                 self.assertEqualFiles(
-                    'expected/%s' % strip_calc_id(fname), fname)
+                    'expected/%s' % strip_calc_id(fname), fname, delta=1E-5)
 
     def test_case_1a(self):
         self.check(case_1a)

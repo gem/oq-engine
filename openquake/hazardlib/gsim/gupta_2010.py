@@ -82,7 +82,7 @@ class Gupta2010SSlab(AtkinsonBoore2003SSlab):
     #: Unlike Atkinson & Boore (2003), "rather than the random horizontal
     #: component, the geometric mean of both the horizontal components has
     #: been used in the modified attenuation relations." (p. 376)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Since the database is small only the total standard deviation is
     #: reported.

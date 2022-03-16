@@ -66,7 +66,7 @@ class WesternCan15Mid(BooreAtkinson2011):
 
     delta_mag = 0.  # overridden in Oceanic subclass
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         # first fix the magnitude for the Oceanic subclass
         if self.delta_mag:
             ctx = copy.copy(ctx)

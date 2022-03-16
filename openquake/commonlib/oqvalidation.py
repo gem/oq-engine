@@ -28,7 +28,7 @@ import collections
 import multiprocessing
 import numpy
 
-from openquake.baselib import __version__, hdf5, python3compat
+from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
@@ -64,8 +64,8 @@ reaggregate_by:
 amplification_method:
   Used in classical PSHA calculations to amplify the hazard curves with
   the convolution or kernel method.
-  Example: *amplification_method = convolution*.
-  Default: None
+  Example: *amplification_method = kernel*.
+  Default: "convolution"
 
 area_source_discretization:
   Discretization parameters (in km) for area sources.
@@ -112,6 +112,11 @@ base_path:
 
 cachedir:
   INTERNAL
+
+cache_distances:
+  Useful in UCERF calculations.
+  Example: *cache_distances = true*.
+  Default: False
 
 calculation_mode:
   One of classical, disaggregation, event_based, scenario, scenario_risk,
@@ -517,7 +522,7 @@ ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
   *pointsource_distance* to be set too.
   Example: *ps_grid_spacing = 50*.
-  Default: no default
+  Default: 0, meaning no grid
 
 quantiles:
   List of probabilities used to compute the quantiles across realizations.
@@ -705,7 +710,7 @@ time_per_task:
   Used in calculatins with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=600*
-  Default: 300
+  Default: 2000
 
 truncation_level:
   Truncation level used in the GMPEs.
@@ -728,6 +733,10 @@ width_of_mfd_bin:
   Default: None
 """ % __version__
 
+try:
+    PSDIST = config.performance.pointsource_distance
+except AttributeError:
+    PSDIST = 1000
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 TWO32 = 2 ** 32
@@ -736,6 +745,24 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
+ALL_CALCULATORS = ['classical_risk',
+                   'classical_damage',
+                   'classical',
+                   'ucerf_classical',
+                   'event_based',
+                   'scenario',
+                   'ucerf_hazard',
+                   'post_risk',
+                   'ebrisk',
+                   'scenario_risk',
+                   'event_based_risk',
+                   'disaggregation',
+                   'multi_risk',
+                   'classical_bcr',
+                   'preclassical',
+                   'conditional_spectrum',
+                   'event_based_damage',
+                   'scenario_damage']
 
 
 def check_same_levels(imtls):
@@ -794,7 +821,7 @@ class OqParam(valid.ParamSet):
     aggregate_by = valid.Param(valid.namelist, [])
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
-        valid.Choice('convolution', 'kernel'), None)
+        valid.Choice('convolution', 'kernel'), 'convolution')
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
@@ -803,9 +830,9 @@ class OqParam(valid.ParamSet):
     assets_per_site_limit = valid.Param(valid.positivefloat, 1000)
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
-    calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
+    calculation_mode = valid.Param(valid.Choice(*ALL_CALCULATORS))
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
-    collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), '0')
+    collapse_level = valid.Param(int, -1)
     collect_rlzs = valid.Param(valid.boolean, None)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
@@ -816,6 +843,7 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
+    cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
@@ -879,8 +907,8 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.floatdict, {'default': 1000})
-    ps_grid_spacing = valid.Param(valid.positivefloat, None)
+    pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
+    ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -927,7 +955,7 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
-    time_per_task = valid.Param(valid.positivefloat, 600)
+    time_per_task = valid.Param(valid.positivefloat, 2000)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -1028,6 +1056,8 @@ class OqParam(valid.ParamSet):
                 'pointsource_distance' not in names_vals):
             raise InvalidFile('%s: ps_grid_spacing requires setting a '
                               'pointsource_distance!' % self.inputs['job_ini'])
+        if self.collapse_level >= 0:
+            self.time_per_task = 1_000_000  # disable task_splitting
 
         self._risk_files = get_risk_files(self.inputs)
         if self.risk_files:
@@ -1172,12 +1202,6 @@ class OqParam(valid.ParamSet):
                 self.calculation_mode in ['classical', 'classical_risk',
                                           'disaggregation']):
             check_same_levels(self.imtls)
-
-        if ('amplification' in self.inputs and
-            self.amplification_method == 'convolution' and not
-                self.soil_intensities):
-            raise InvalidFile('%s: The soil_intensities must be defined'
-                              % job_ini)
 
     def validate(self):
         """
@@ -1713,16 +1737,20 @@ class OqParam(valid.ParamSet):
         """
         `ps_grid_spacing` must be smaller than the `pointsource_distance`
         """
-        if self.ps_grid_spacing is None:
+        if not self.ps_grid_spacing:
             return True
         return self.ps_grid_spacing <= calc.filters.getdefault(
             self.pointsource_distance, 'default')
 
     def is_valid_soil_intensities(self):
         """
-        soil_intensities can be set only if amplification_method=convolution
+        soil_intensities must be defined if amplification_method=convolution
+        and must not be defined if amplification_method=kernel
         """
-        if self.amplification_method == 'convolution':
+        classical = ('classical' in self.calculation_mode or
+                     'disaggregation' in self.calculation_mode)
+        if (classical and 'amplification' in self.inputs and
+                self.amplification_method == 'convolution'):
             return len(self.soil_intensities) > 1
         else:
             return self.soil_intensities is None

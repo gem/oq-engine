@@ -37,7 +37,7 @@ from openquake.hazardlib.gsim.kotha_2016 import KothaEtAl2016Turkey
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
-def compute(self, ctx, imts, mean, sig, tau, phi):
+def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
     """
     Adjustments for Armenia
     """

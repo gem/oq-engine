@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 9 * * *"
 
 jobs:
 
@@ -44,7 +44,7 @@ jobs:
       run: |
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
-        dnf install -y python${pyver} findutils
+        dnf install -y python${pyver}
         #check version of python
         echo "check version of python"
         pip3 -V
@@ -66,8 +66,9 @@ jobs:
         fi
     - name: Run tests
       run: |
-        source /opt/openquake/venv/bin/activate
+        source /opt/openquake/bin/activate
         pip install pytest
+        runuser -l openquake -c '/opt/openquake/bin/oq dbserver start &'
         mkdir ~/oqdata
         export PYTEST_ADDOPTS="--color=yes"
         pytest -vsx /__w/oq-engine/oq-engine/openquake/calculators

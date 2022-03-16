@@ -76,7 +76,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
             if rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
+                    rup.hypocenter, rup.surface, pmf,
+                    weight=getattr(rup, 'weight', 0.))
 
     def few_ruptures(self):
         """
@@ -86,7 +87,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
             if i % 50 == 0 and rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
+                    rup.hypocenter, rup.surface, pmf,
+                    weight=getattr(rup, 'weight', 0.))
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split
@@ -121,14 +123,18 @@ class NonParametricSeismicSource(BaseSeismicSource):
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
         surfaces = []
-        for rup in self.few_ruptures():
+        for rup, _ in self.data:
             if isinstance(rup.surface, MultiSurface):
-                for s in rup.surface.surfaces:
-                    surfaces.append(s)
+                surfaces.extend(rup.surface.surfaces)
             else:
                 surfaces.append(rup.surface)
-        multi_surf = MultiSurface(surfaces)
-        west, east, north, south = multi_surf.get_bounding_box()
+        lons = []
+        lats = []
+        for surf in surfaces:
+            lo1, lo2, la1, la2 = surf.get_bounding_box()
+            lons.extend([lo1, lo2])
+            lats.extend([la1, la2])
+        west, east, north, south = get_spherical_bounding_box(lons, lats)
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1

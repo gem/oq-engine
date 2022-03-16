@@ -33,6 +33,16 @@ from openquake.hazardlib.geo import utils as geo_utils
 F32 = numpy.float32
 
 
+def debug_plot(polygons):
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    pp = geo_utils.PolygonPlotter(ax)
+    for i, polygon in enumerate(polygons, 1):
+        pp.add(polygon, alpha=i *.1)
+    pp.set_lim()
+    plt.show()
+
+
 def sqrt(array):
     # due to numerical errors an array of positive values can become negative;
     # for instance: 1 - array([[ 0.99999989,  1.00000001,  1.        ]]) =
@@ -434,24 +444,10 @@ class Mesh(object):
                                      .buffer(self.DIST_TOLERANCE, 2)
             polygons.append(shapely.geometry.Polygon(stripe.exterior))
             prev_line = line[::-1]
-        try:
-            # create a final polygon as the union of all the stripe ones
-            polygon = shapely.ops.unary_union(polygons).simplify(
-                self.DIST_TOLERANCE)
-        except ValueError:
-            # NOTE(larsbutler): In some rare cases, we've observed ValueErrors
-            # ("No Shapely geometry can be created from null value") with very
-            # specific sets of polygons such that there are two unique
-            # and many duplicates of one.
-            # This bug is very difficult to reproduce consistently (except on
-            # specific platforms) so the work around here is to remove the
-            # duplicate polygons. In fact, we only observed this error on our
-            # CI/build machine. None of our dev environments or production
-            # machines has encountered this error, at least consistently. >:(
-            polygons = [shapely.wkt.loads(x) for x in
-                        list(set(p.wkt for p in polygons))]
-            polygon = shapely.ops.unary_union(polygons).simplify(
-                self.DIST_TOLERANCE)
+        # create a final polygon as the union of all the stripe ones
+        polygon = shapely.ops.unary_union(polygons).simplify(
+            self.DIST_TOLERANCE)
+        # debug_plot(polygons)
         return proj, polygon
 
     def get_convex_hull(self):

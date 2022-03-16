@@ -328,8 +328,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     '%s for a scenario calculation must contain a single '
                     'branchset, found %d!' % (oq.inputs['job_ini'], bsets))
             [(trt, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_trt().items()
-            self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             rup = readinput.get_rupture(oq)
+            oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
+            self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
                                   'NA', 0, G, e0=i * G, scenario=True)

@@ -18,6 +18,7 @@
 import sys
 import collections
 import numpy
+from openquake.baselib.general import rmsdiff
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
@@ -189,8 +190,8 @@ def compare_rups(calc_1: int, calc_2: int):
     Compare the ruptures of two calculations as pandas DataFrames
     """
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
-        df1 = ds1.read_df('rup').sort_values(['src_id', 'mag'])
-        df2 = ds2.read_df('rup').sort_values(['src_id', 'mag'])
+        df1 = ds1.read_df('rup', 'id').sort_index()
+        df2 = ds2.read_df('rup', 'id').sort_index()
     cols = [col for col in df1.columns if col not in
             {'probs_occur_', 'clon_', 'clat_'}]
     for col in cols:
@@ -217,9 +218,10 @@ def compare_uhs(calc_ids: int, files=False, *, poe_id: int = 0,
     if len(arrays) and len(calc_ids) == 2:
         # each array has shape (N, M)
         ms = numpy.mean((arrays[0] - arrays[1])**2)
-        maxdiff = numpy.abs(arrays[0] - arrays[1]).max()
-        row = ('%.5f' % c.oq.poes[poe_id], numpy.sqrt(ms), maxdiff)
-        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff']))
+        maxdiff = rmsdiff(arrays[0], arrays[1]).max()
+        argmax = rmsdiff(arrays[0], arrays[1]).argmax()
+        row = ('%.5f' % c.oq.poes[poe_id], numpy.sqrt(ms), maxdiff, argmax)
+        print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site']))
 
 
 def compare_hmaps(imt, calc_ids: int, files=False, *,

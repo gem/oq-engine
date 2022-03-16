@@ -38,7 +38,7 @@ def _get_distance_scaling(C, mag, rhypo):
     """
     Returns the distance scalig term
     """
-    return (C["a3"] * np.log(rhypo)) + (C["a4"] + C["a5"] * mag) * rhypo
+    return C["a3"] * np.log(rhypo) + (C["a4"] + C["a5"] * mag) * rhypo
 
 
 class MegawatiPan2010(GMPE):
@@ -61,7 +61,7 @@ class MegawatiPan2010(GMPE):
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components,
     #: ####: PLEASE CONFIRM!!!!! 140709
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total, see equation IV page 837.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -80,7 +80,7 @@ class MegawatiPan2010(GMPE):
     #: see equation 1 page 834.
     REQUIRES_DISTANCES = {'rhypo'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

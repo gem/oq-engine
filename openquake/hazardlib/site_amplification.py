@@ -111,7 +111,7 @@ class AmplFunction():
         median = numpy.zeros(len(mags))
         std = numpy.zeros(len(mags))
 
-        # TODO: figure out a way to vectorize this
+        # TODO: figure out a way to do the following better
         for i, (mag, dst) in enumerate(zip(mags, dsts)):
 
             # Filtering magnitude
@@ -416,7 +416,7 @@ def get_poes_site(mean_std, cmaker, ctx):
     truncation_level = cmaker.truncation_level
     mean, stddev = mean_std  # shape (C, M)
     C, L = mean.shape[1], loglevels.size
-    assert len(ctx.sids) == 1  # 1 site
+    assert len(numpy.unique(ctx.sids)) == 1  # 1 site
     M = len(loglevels)
     L1 = L // M
 
@@ -430,9 +430,9 @@ def get_poes_site(mean_std, cmaker, ctx):
     # Compute the probability of exceedance for each in intensity
     # measure type IMT
     sigma = cmaker.af.get_max_sigma()
-    mags = [ctx.mag]
+    mags = ctx.mag
     rrups = ctx.rrup
-    ampcode = ctx.sites['ampcode'][0]
+    [ampcode] = numpy.unique(ctx.ampcode)
     for m, imt in enumerate(loglevels):
 
         # Get the values of ground-motion used to compute the probability

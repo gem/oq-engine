@@ -934,65 +934,23 @@ def extract_damages_npz(dstore, what):
             assets, damages)
 
 
+# tested on oq-risk-tests event_based/etna
 @extract.add('event_based_mfd')
 def extract_mfd(dstore, what):
     """
-    Display num_ruptures by magnitude for event based calculations.
-    Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?kind=mean
+    Compare n_occ/eff_time with occurrence_rate.
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?
     """
     oq = dstore['oqparam']
-    qdic = parse(what)
-    kind_mean = 'mean' in qdic.get('kind', [])
-    kind_by_group = 'by_group' in qdic.get('kind', [])
-    full_lt = dstore['full_lt']
-    weights = [sm.weight for sm in full_lt.sm_rlzs]
-    n = len(weights)
-    duration = oq.investigation_time * oq.ses_per_logic_tree_path
-    dic = {'duration': duration}
-    dd = collections.defaultdict(float)
-    rups = dstore['ruptures']['trt_smr', 'mag', 'n_occ']
-    mags = sorted(numpy.unique(rups['mag']))
-    magidx = {mag: idx for idx, mag in enumerate(mags)}
-    num_groups = rups['trt_smr'].max() + 1
-    frequencies = numpy.zeros((len(mags), num_groups), float)
-    for trt_smr, mag, n_occ in rups:
-        if kind_mean:
-            dd[mag] += n_occ * weights[trt_smr % n] / duration
-        if kind_by_group:
-            frequencies[magidx[mag], trt_smr] += n_occ / duration
-    dic['magnitudes'] = numpy.array(mags)
-    if kind_mean:
-        dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
-    if kind_by_group:
-        for trt_smr, freqs in enumerate(frequencies.T):
-            dic['grp-%02d_frequency' % trt_smr] = freqs
-    return ArrayWrapper((), dic)
-
-# NB: this is an alternative, slower approach giving exactly the same numbers;
-# it is kept here for sake of comparison in case of dubious MFDs
-# @extract.add('event_based_mfd')
-# def extract_mfd(dstore, what):
-#     oq = dstore['oqparam']
-#     rlzs = dstore['full_lt'].get_realizations()
-#     weights = [rlz.weight['default'] for rlz in rlzs]
-#     duration = oq.investigation_time * oq.ses_per_logic_tree_path
-#     mag = dict(dstore['ruptures']['rup_id', 'mag'])
-#     mags = numpy.unique(dstore['ruptures']['mag'])
-#     mags.sort()
-#     magidx = {mag: idx for idx, mag in enumerate(mags)}
-#     occurrences = numpy.zeros((len(mags), len(weights)), numpy.uint32)
-#     events = dstore['events'][()]
-#     dic = {'duration': duration, 'magnitudes': mags,
-#            'mean_frequencies': numpy.zeros(len(mags))}
-#     for rlz, weight in enumerate(weights):
-#         eids = get_array(events, rlz=rlz)['id']
-#         if len(eids) == 0:
-#             continue
-#         rupids, n_occs = numpy.unique(eids // 2 ** 32, return_counts=True)
-#         for rupid, n_occ in zip(rupids, n_occs):
-#             occurrences[magidx[mag[rupid]], rlz] += n_occ
-#         dic['mean_frequencies'] += occurrences[:, rlz] * weight / duration
-#     return ArrayWrapper(occurrences, dic)
+    R = len(dstore['weights'])
+    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
+    rup_df = dstore.read_df('ruptures', 'id')
+    dic = dict(mag=[], freq=[], occ_rate=[])
+    for mag, df in rup_df.groupby('mag'):
+        dic['mag'].append(round(mag, 2))
+        dic['freq'].append(df.n_occ.sum() / eff_time)
+        dic['occ_rate'].append(df.occurrence_rate.sum())
+    return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
 
 
 @extract.add('mean_std_curves')
@@ -1035,11 +993,14 @@ def extract_relevant_events(dstore, dummy=None):
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/events
     """
-    events = dstore['events'][:]
+    all_events = dstore['events'][:]
     if 'relevant_events' not in dstore:
-        return events
+        all_events.sort(order='id')
+        return all_events
     rel_events = dstore['relevant_events'][:]
-    return events[rel_events]
+    events = all_events[rel_events]
+    events.sort(order='id')
+    return events
 
 
 @extract.add('event_info')

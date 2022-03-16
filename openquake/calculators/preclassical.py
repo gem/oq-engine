@@ -18,6 +18,7 @@
 
 import os
 import logging
+import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.python3compat import encode
@@ -114,11 +115,11 @@ def run_preclassical(calc):
             atomic_sources.extend(sg)
         else:
             normal_sources.extend(sg)
+
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         normal_sources, lambda src: (src.grp_id, msr_name(src)))
-    if csm.sitecol:
-        logging.info('Sending %s', sites)
+    logging.info('Starting preclassical')
     smap = parallel.Starmap(preclassical, h5=h5)
     for (grp_id, msr), srcs in sources_by_grp.items():
         pointsources, pointlike, others = [], [], []
@@ -127,16 +128,20 @@ def run_preclassical(calc):
                 pointsources.append(src)
             elif hasattr(src, 'nodal_plane_distribution'):
                 pointlike.append(src)
+            elif src.code in b'FN':  # multifault, nonparametric
+                others.extend(split_source(src) if calc.oqparam.split_sources
+                              else [src])
             else:
                 others.append(src)
         if calc.oqparam.ps_grid_spacing:
             if pointsources or pointlike:
                 smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
         else:
-            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 100)
+            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 160)
             for src in pointlike:  # area, multipoint
                 smap.submit(([src], sites, cmakers[grp_id]))
-        smap.submit_split((others, sites, cmakers[grp_id]), 10, 100)
+        if others:
+            smap.submit_split((others, sites, cmakers[grp_id]), 10, 160)
     normal = smap.reduce()
     if atomic_sources:  # case_35
         n = len(atomic_sources)
@@ -147,12 +152,15 @@ def run_preclassical(calc):
     else:
         atomic = AccumDict()
     res = normal + atomic
-    if res['before'] != res['after']:
+    if 'before' in res and 'after' in res and res['before'] != res['after']:
         logging.info('Reduced the number of point sources from {:_d} -> {:_d}'.
                      format(res['before'], res['after']))
     acc = AccumDict(accum=0)
     code2cls = get_code2cls()
     for grp_id, srcs in res.items():
+        # NB: grp_id can be the string "before" or "after"
+        if not isinstance(grp_id, str):
+            srcs.sort(key=operator.attrgetter('source_id'))
         # srcs can be empty if the minimum_magnitude filter is on
         if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
             # check if OQ_SAMPLE_SOURCES is set
@@ -196,28 +204,6 @@ class PreClassicalCalculator(base.HazardCalculator):
     """
     core_task = preclassical
     accept_precalc = []
-
-    def get_source_ids(self):
-        """
-        :returns: the unique source IDs contained in the composite model
-        """
-        oq = self.oqparam
-        self.M = len(oq.imtls)
-        self.L1 = oq.imtls.size // self.M
-        sources = encode([src_id for src_id in self.csm.source_info])
-        size, msg = get_nbytes_msg(
-            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
-        ps = 'pointSource' in self.full_lt.source_model_lt.source_types
-        if size > TWO32 and not ps:
-            raise RuntimeError('The matrix disagg_by_src is too large: %s'
-                               % msg)
-        elif size > TWO32:
-            msg = ('The source model contains point sources: you cannot set '
-                   'disagg_by_src=true unless you convert them to multipoint '
-                   'sources with the command oq upgrade_nrml --multipoint %s'
-                   ) % oq.base_path
-            raise RuntimeError(msg)
-        return sources
 
     def init(self):
         super().init()

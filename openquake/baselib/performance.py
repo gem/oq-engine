@@ -363,7 +363,9 @@ else:
         return lambda func: func
 
 
-@compile("int64[:, :](uint32[:])")
+@compile(["int64[:, :](uint8[:])",
+          "int64[:, :](uint32[:])",
+          "int64[:, :](int64[:])"])
 def _idx_start_stop(integers):
     # given an array of integers returns an array of shape (n, 3)
     out = []
@@ -396,3 +398,39 @@ def get_slices(uint32s):
             indices[idx] = []
         indices[idx].append((start, stop))
     return indices
+
+
+# this is used in split_array and it may dominate the performance
+# of classical calculations, so it has to be fast
+@compile("uint32[:](uint32[:], int64[:], int64[:], int64[:])")
+def _split(uint32s, indices, counts, cumcounts):
+    n = len(uint32s)
+    assert len(indices) == n
+    assert len(counts) <= n
+    out = numpy.zeros(n, numpy.uint32)
+    for idx, val in zip(indices, uint32s):
+        cumcounts[idx] -= 1
+        out[cumcounts[idx]] = val
+    return out
+
+
+# 3-argument version tested in SplitArrayTestCase
+def split_array(arr, indices, counts=None):
+    """
+    :param arr: an array with N elements
+    :param indices: a set of integers with repetitions
+    :param counts: if None the indices MUST be ordered
+    :returns: a list of K arrays, split on the integers
+
+    >>> arr = numpy.array([.1, .2, .3, .4, .5])
+    >>> idx = numpy.array([1, 1, 2, 2, 3])
+    >>> split_array(arr, idx)
+    [array([0.1, 0.2]), array([0.3, 0.4]), array([0.5])]
+    """
+    if counts is None:  # ordered indices
+        return [arr[s1:s2] for i, s1, s2 in _idx_start_stop(indices)]
+    # indices and counts coming from numpy.unique(arr)
+    # this part can be slow, but it is still 10x faster than pandas for EUR!
+    cumcounts = counts.cumsum()
+    out = _split(arr, indices, counts, cumcounts)
+    return [out[s1:s2] for s1, s2 in zip(cumcounts, cumcounts + counts)]

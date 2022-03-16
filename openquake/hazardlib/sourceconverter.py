@@ -379,30 +379,31 @@ def convert_nonParametricSeismicSource(fname, node, rup_spacing=5.0):
     nps = source.NonParametricSeismicSource(
         node['id'], node['name'], trt, [], [])
     nps.splittable = 'rup_weights' not in node.attrib
-    path = os.path.splitext(fname)[0] + '.hdf5'
-    hdf5_fname = path if os.path.exists(path) else None
-    if hdf5_fname and node.text is None:
-        # gridded source, read the rupture data from the HDF5 file
-        with hdf5.File(hdf5_fname, 'r') as h:
-            dic = {k: d[:] for k, d in h[node['id']].items()}
-            nps.fromdict(dic, rups_weights)
-    else:
-        # read the rupture data from the XML nodes
-        num_probs = None
-        for i, rupnode in enumerate(node):
-            po = rupnode['probs_occur']
-            probs = pmf.PMF(valid.pmf(po))
-            if num_probs is None:  # first time
-                num_probs = len(probs.data)
-            elif len(probs.data) != num_probs:
-                # probs_occur must have uniform length for all ruptures
-                raise ValueError(
-                    'prob_occurs=%s has %d elements, expected %s'
-                    % (po, len(probs.data), num_probs))
-            rup = RuptureConverter(rup_spacing).convert_node(rupnode)
-            rup.tectonic_region_type = trt
-            rup.weight = None if rups_weights is None else rups_weights[i]
-            nps.data.append((rup, probs))
+    if fname:
+        path = os.path.splitext(fname)[0] + '.hdf5'
+        hdf5_fname = path if os.path.exists(path) else None
+        if hdf5_fname and node.text is None:
+            # gridded source, read the rupture data from the HDF5 file
+            with hdf5.File(hdf5_fname, 'r') as h:
+                dic = {k: d[:] for k, d in h[node['id']].items()}
+                nps.fromdict(dic, rups_weights)
+                return nps
+    # read the rupture data from the XML nodes
+    num_probs = None
+    for i, rupnode in enumerate(node):
+        po = rupnode['probs_occur']
+        probs = pmf.PMF(valid.pmf(po))
+        if num_probs is None:  # first time
+            num_probs = len(probs.data)
+        elif len(probs.data) != num_probs:
+            # probs_occur must have uniform length for all ruptures
+            raise ValueError(
+                'prob_occurs=%s has %d elements, expected %s'
+                % (po, len(probs.data), num_probs))
+        rup = RuptureConverter(rup_spacing).convert_node(rupnode)
+        rup.tectonic_region_type = trt
+        rup.weight = None if rups_weights is None else rups_weights[i]
+        nps.data.append((rup, probs))
     return nps
 
 
@@ -658,7 +659,7 @@ class SourceConverter(RuptureConverter):
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 source_id=None, discard_trts='',
+                 source_id=None, discard_trts=(),
                  floating_x_step=0, floating_y_step=0):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization

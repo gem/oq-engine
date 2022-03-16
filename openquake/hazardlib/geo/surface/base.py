@@ -116,6 +116,7 @@ class BaseSurface:
 
     def __init__(self, mesh=None):
         self.mesh = mesh
+        self.suid = None
 
     def get_min_distance(self, mesh):
         """

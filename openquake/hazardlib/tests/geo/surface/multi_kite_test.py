@@ -15,27 +15,48 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
 import os
 import unittest
 import numpy as np
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+from openquake.hazardlib.nrml import read
 from openquake.hazardlib.geo.geodetic import (
     geodetic_distance, npoints_towards)
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.nrml import to_python
+from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
     _read_profiles)
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
+from openquake.hazardlib.geo.surface.kite_fault import (
+    KiteSurface, _fix_profiles, _create_mesh, get_mesh)
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
+NS = "{http://openquake.org/xmlns/nrml/0.5}"
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
-OVERWRITE = False
-
+OVERWRITE = True
 aae = np.testing.assert_almost_equal
+
+
+def get_meshs(milo, malo, mila, mala, step=0.01):
+    clo = []
+    cla = []
+    for lo in np.arange(milo, malo, step):
+        tlo = []
+        tla = []
+        for la in np.arange(mila, mala, step):
+            tlo.append(lo)
+            tla.append(la)
+        clo.append(tlo)
+        cla.append(tla)
+    clo = np.array(clo)
+    cla = np.array(cla)
+    mesh = Mesh(lons=clo.flatten(), lats=cla.flatten())
+    return clo, cla, mesh
 
 
 class MultiSurfaceOneTestCase(unittest.TestCase):
@@ -83,7 +104,6 @@ class MultiSurfaceOneTestCase(unittest.TestCase):
         tmp2 = Point(pntsb[0][1], pntsb[1][1], pntsb[2][1])
         prf4 = Line([tmp1, tmp2])
         sfcb = KiteSurface.from_profiles([prf3, prf4], 0.2, 0.2)
-
         computed = sfcb.get_area()
         expected = 10.0 * 14.14
         msg = 'Multi fault surface: area is wrong'
@@ -93,13 +113,11 @@ class MultiSurfaceOneTestCase(unittest.TestCase):
 class MultiSurfaceTwoTestCase(unittest.TestCase):
 
     def setUp(self):
-
         # First surface - Almost vertical dipping to south
         prf1 = Line([Point(0, 0, 0), Point(0, -0.00001, 20.)])
         prf2 = Line([Point(0.15, 0, 0), Point(0.15, -0.00001, 20.)])
         prf3 = Line([Point(0.3, 0, 0), Point(0.3, -0.00001, 20.)])
         sfca = KiteSurface.from_profiles([prf1, prf2, prf3], 1., 1.)
-
         # Second surface - Strike to NE and dip to SE
         pntsa = npoints_towards(lon=0.32, lat=0.0, depth=0.0, azimuth=45,
                                 hdist=10.0, vdist=0.0, npoints=2)
@@ -115,7 +133,7 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
         prf4 = Line([tmp1, tmp2])
         sfcb = KiteSurface.from_profiles([prf3, prf4], 0.2, 0.2)
 
-        # Create surface and mesh needed for the test
+        # Create the surface and mesh needed for the test
         self.msrf = MultiSurface([sfca, sfcb])
         self.coo = np.array([[-0.1, 0.0], [0.0, 0.1]])
         self.mesh = Mesh(self.coo[:, 0], self.coo[:, 1])
@@ -156,57 +174,37 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles08')
-
         hsmpl = 2
         vsmpl = 2
         idl = False
         alg = False
-
         # Read the profiles with prefix cs_50. These profiles dip toward
         # north
         prf, _ = _read_profiles(path, 'cs_50')
         srfc50 = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
-
         # Read the profiles with prefix cs_52. These profiles dip toward
         # north. This section is west to the section defined by cs_50
         prf, _ = _read_profiles(path, 'cs_51')
         srfc51 = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
-
-        clo = []
-        cla = []
-        step = 0.01
-        for lo in np.arange(-71.8, -69, step):
-            tlo = []
-            tla = []
-            for la in np.arange(19.25, 20.25, step):
-                tlo.append(lo)
-                tla.append(la)
-            clo.append(tlo)
-            cla.append(tla)
-        self.clo = np.array(clo)
-        self.cla = np.array(cla)
-        mesh = Mesh(lons=self.clo.flatten(), lats=self.cla.flatten())
-
+        self.clo, self.cla, mesh = get_meshs(-71.8, -69, 19.25, 20.25, 0.01)
         # Define multisurface and mesh of sites
         self.srfc50 = srfc50
         self.srfc51 = srfc51
-
         self.msrf = MultiSurface([srfc50, srfc51])
         self.mesh = mesh
-
         self.los = [self.msrf.surfaces[0].mesh.lons,
                     self.msrf.surfaces[1].mesh.lons]
         self.las = [self.msrf.surfaces[0].mesh.lats,
                     self.msrf.surfaces[1].mesh.lats]
 
     def test_get_edge_set(self):
-
         # The vertexes of the expected edges are the first and last vertexes of
         # the topmost row of the mesh
         expected = [np.array([[-70.33, 19.65, 0.],
                               [-70.57722702, 19.6697801, 0.0]]),
                     np.array([[-70.10327766, 19.67957463, 0.0],
                               [-70.33, 19.65, 0.0]])]
+        self.msrf._set_tor()
 
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
@@ -215,14 +213,13 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
                 mesh = sfc.mesh
                 ax.plot(mesh.lons, mesh.lats, '.', color=col)
                 ax.plot(mesh.lons[0, :],  mesh.lats[0, :], lw=3)
-            for edge in self.msrf.edge_set:
-                ax.plot(edge[:, 0], edge[:, 1], 'x-r')
+            for line in self.msrf.tors.lines:
+                ax.plot(line.coo[:, 0], line.coo[:, 1], 'x-r')
             plt.show()
 
         # Note that method is executed when the object is initialized
-        ess = self.msrf.edge_set
-        for es, expct in zip(ess, expected):
-            np.testing.assert_array_almost_equal(es, expct, decimal=2)
+        for es, expct in zip(self.msrf.tors.lines, expected):
+            np.testing.assert_array_almost_equal(es.coo, expct, decimal=2)
 
     def test_get_strike(self):
         # Since the two surfaces dip to the north, we expect the strike to
@@ -252,7 +249,6 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
 
     def test_get_bounding_box(self):
         bb = self.msrf.get_bounding_box()
-
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
             ax.plot([bb.west, bb.east, bb.east, bb.west],
@@ -260,7 +256,6 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             ax.plot(self.los[0], self.las[0], '.')
             ax.plot(self.los[1], self.las[1], '.')
             plt.show()
-
         aae([bb.west, bb.east, bb.south, bb.north],
             [-70.5772, -70.1032, 19.650, 19.7405], decimal=2)
 
@@ -275,76 +270,308 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         # This checks the boundary of the first surface. The result is checked
         # visually
         blo, bla = self.srfc50.get_surface_boundaries()
-
         # Saving data
         fname = os.path.join(BASE_PATH, 'results', 'results_t01.npz')
         if OVERWRITE:
             np.savez_compressed(fname, blo=blo, bla=bla)
-
         # Load expected results
         er = np.load(fname)
-
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
             ax.plot(er['blo'], er['bla'], '-r')
             plt.show()
-
         # Testing
         aae(er['blo'], blo, decimal=1)
         aae(er['bla'], bla, decimal=1)
 
-    @unittest.skip("skipping due to differences betweeen various architectures")
+    @unittest.skip("Differences betweeen various architectures")
     def test_get_surface_boundaries(self):
         # The result is checked visually
         blo, bla = self.msrf.get_surface_boundaries()
-
         # Saving data
         fname = os.path.join(BASE_PATH, 'results', 'results_t02.npz')
         if OVERWRITE:
             np.savez_compressed(fname, blo=blo, bla=bla)
-
         # Load expected results
         er = np.load(fname)
-
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
             ax.plot(blo, bla, '-r')
             ax.plot(self.los[0], self.las[0], '.')
             ax.plot(self.los[1], self.las[1], '.')
             plt.show()
-
         # Testing
         aae(er['blo'], blo, decimal=2)
         aae(er['bla'], bla, decimal=2)
 
     def test_get_rx(self):
+
         # Results visually inspected
         dst = self.msrf.get_rx_distance(self.mesh)
 
         if PLOTTING:
-            title = f'{self.NAME} - Rx'
+            title = f'{type(self).__name__} - Rx'
             _plt_results(self.clo, self.cla, dst, self.msrf, title)
 
+        # Saving data
+        fname = os.path.join(BASE_PATH, 'results', 'results_msf_nan_rx.npz')
+        if OVERWRITE:
+            np.savez_compressed(fname, rx=dst)
+
+        # Load expected results
+        er = np.load(fname)
+
+        # Testing
+        aae(er['rx'], dst, decimal=1)
+
     def test_get_ry0(self):
+
         # Results visually inspected
         dst = self.msrf.get_ry0_distance(self.mesh)
 
         if PLOTTING:
-            title = f'{self.NAME} - Rx'
-            _plt_results(self.clo, self.cla, dst, self.msrf, title)
+            title = f'{type(self).__name__} - Ry0'
+            fig, ax = _plt_results(self.clo, self.cla, dst, self.msrf, title)
+            for line in self.msrf.tors.lines:
+                ax.plot(line.coo[:, 0], line.coo[:, 1], '-r', lw=3)
+            self.msrf.tors._set_origin()
+            ax.plot(self.msrf.tors.olon, self.msrf.tors.olat, 'o')
+            plt.show()
+
+        # Saving data
+        fname = os.path.join(BASE_PATH, 'results', 'results_msf_nan_ry0.npz')
+        if OVERWRITE:
+            np.savez_compressed(fname, rx=dst)
+
+        # Load expected results
+        er = np.load(fname)
+
+        # Testing
+        aae(er['rx'], dst, decimal=1)
 
 
-def _plt_results(clo, cla, dst, msrf, title):
+class NZLTestCase(unittest.TestCase):
+
+    def setUp(self):
+
+        # Create converter
+        self.rms = 2.5
+        sconv = SourceConverter(investigation_time=1.,
+                                rupture_mesh_spacing=self.rms)
+
+        # Read geometry model. It contains a list of sections (i.e. instances
+        # of :class:`openquake.hazardlib.source.multi_fault.FaultSection`).
+        # The surface of each section in this case is an instance of
+        # :class:`openquake.hazardlib.geo.surface.KiteFault`
+        fname = 'sections_rupture200_sections.xml'
+        fname = os.path.join(BASE_DATA_PATH, fname)
+        gmodel = to_python(fname, sconv)
+
+        # Create the surface
+        sfcs = []
+        for sec in gmodel.sections:
+            sfcs.append(gmodel.sections[sec].surface)
+        self.msrf = MultiSurface(sfcs)
+
+        # Create second surface
+        keys = list(gmodel.sections)
+        self.sec_id = keys[1]
+        sfcs2 = [gmodel.sections[self.sec_id].surface]
+        self.msrf2 = MultiSurface(sfcs2)
+
+    def test_nzl_tors(self):
+
+        # Set the rupture traces
+        self.msrf._set_tor()
+
+        if PLOTTING:
+            # Plotting profiles and surfaces
+            _, ax = plt.subplots(1, 1)
+            for sfc in self.msrf.surfaces:
+                plot_mesh_2d(ax, sfc)
+                for pro in sfc.profiles:
+                    ax.plot(pro.coo[:, 0], pro.coo[:, 1], '--b')
+            # Plotting traces
+            for line in self.msrf.tors.lines:
+                col = np.random.rand(3)
+                coo = line.coo
+                ax.plot(coo[:, 0], coo[:, 1], color=col)
+                ax.plot(coo[0, 0], coo[0, 1], marker='$s$', color=col)
+            plt.show()
+
+    def test_nzl_1_get_rx(self):
+        """ Testing the calculation of the rx distance """
+
+        # Set the output name
+        title = f'{type(self).__name__} - Rx - Surface 1'
+        fname = os.path.join(BASE_PATH, 'results', 'results_nzl_1_rx.txt')
+
+        # Test
+        _test_nzl_get_rx(self.msrf, title, fname)
+
+    def test_nzl_2_profiles(self):
+        """ Testing the resampled profiles """
+
+        # Name of the file with the Geometry Model
+        fname = 'sections_rupture200_sections.xml'
+        fname = os.path.join(BASE_DATA_PATH, fname)
+
+        # Read data and get resampled profiles
+        profiles = _get_profiles(fname)
+        prof = profiles[self.sec_id][0]
+        rprof, ref_idx = _fix_profiles(prof, self.rms, False, False)
+
+        # Save results
+        fname0 = 'results_nzl_2_rprof_0.txt'
+        fname0 = os.path.join(BASE_PATH, 'results', fname0)
+        fname2 = 'results_nzl_2_rprof_2.txt'
+        fname2 = os.path.join(BASE_PATH, 'results', fname2)
+        fnamei = 'results_nzl_2_ref_idx.txt'
+        fnamei = os.path.join(BASE_PATH, 'results', fnamei)
+        if OVERWRITE:
+            np.savetxt(fname0, rprof[0])
+            np.savetxt(fname2, rprof[2])
+            np.savetxt(fnamei, np.array([ref_idx]))
+
+        # Check profiles
+        expected_prof0 = np.loadtxt(fname0)
+        aae(expected_prof0, rprof[0], decimal=3)
+        expected_prof2 = np.loadtxt(fname2)
+        aae(expected_prof2, rprof[2], decimal=3)
+        expected_refi = np.loadtxt(fnamei)
+        aae(expected_refi, ref_idx, decimal=3)
+
+    def test_nzl_2_sfc_building(self):
+        """ Testing the mesh """
+
+        # Name of the file with the Geometry Model
+        fname = 'sections_rupture200_sections.xml'
+        fname = os.path.join(BASE_DATA_PATH, fname)
+
+        # Rupture mesh spacing
+        rms = self.rms
+
+        # Get profiles
+        profiles = _get_profiles(fname)
+        prof = profiles[self.sec_id][0]
+        rprof, ref_idx = _fix_profiles(prof, rms, False, idl=False)
+
+        # Create mesh (note that we flip it to replicate the right_hand rule
+        # fix). The 'get_mesh' function provides the same results on MacOS and
+        # Linux.
+        msh = _create_mesh(rprof, ref_idx, rms, idl=False)
+        tmp = np.fliplr(msh[:, :, 0])
+        mback = get_mesh(rprof, ref_idx, rms, idl=False)
+
+        # Save results
+        fname = 'results_nzl_2_mesh.txt'
+        fname = os.path.join(BASE_PATH, 'results', fname)
+        fnameb = 'results_nzl_2_mesh_back.txt'
+        fnameb = os.path.join(BASE_PATH, 'results', fnameb)
+        if OVERWRITE:
+            np.savetxt(fname, tmp)
+            np.savetxt(fnameb, np.array(mback)[:, :, 0])
+
+        # Check the mesh
+        expected_mshb = np.loadtxt(fnameb)
+        aae(expected_mshb, np.array(mback)[:, :, 0], decimal=3)
+        expected_msh = np.loadtxt(fname)
+        aae(expected_msh, self.msrf2.surfaces[0].mesh.lons, decimal=3)
+
+    def test_nzl_2_get_rx(self):
+
+        # Saving the mesh
+        fname_lo = 'results_nzl_2_mesh_lons.txt'
+        fname_lo = os.path.join(BASE_PATH, 'results', fname_lo)
+        if OVERWRITE:
+            np.savetxt(fname_lo, self.msrf2.surfaces[0].mesh.lons)
+
+        # Checking the mesh
+        expected_lons = np.loadtxt(fname_lo)
+        aae(expected_lons, self.msrf2.surfaces[0].mesh.lons, decimal=3)
+
+        # Checking Rx
+        title = f'{type(self).__name__} - Rx - Surface 2'
+        fname = os.path.join(BASE_PATH, 'results', 'results_nzl_2_rx.txt')
+        _test_nzl_get_rx(self.msrf2, title, fname)
+
+
+def _test_nzl_get_rx(msrf, title, fname):
+
+    # Mesh of sites
+    mlons = []
+    mlats = []
+    step = 0.01
+    for lo in np.arange(165, 168, step):
+        tlo = []
+        tla = []
+        for la in np.arange(-46.0, -44.5, step):
+            tlo.append(lo)
+            tla.append(la)
+        mlons.append(tlo)
+        mlats.append(tla)
+    mlons = np.array(mlons)
+    mlats = np.array(mlats)
+    mesh = Mesh(lons=mlons.flatten(), lats=mlats.flatten())
+
+    # Compute the Rx distance
+    dst = msrf.get_rx_distance(mesh)
+
+    if PLOTTING:
+        _plt_results(mlons, mlats, dst, msrf, title, boundary=False)
+        plt.show()
+
+    # We did not have a way to compute these results independently
+    if OVERWRITE:
+        np.savetxt(fname, dst)
+
+    # Load expected results
+    dst_expected = np.loadtxt(fname)
+
+    dst_expected = np.sort(dst_expected.flatten())
+    dst = np.sort(dst.flatten())
+
+    # Testing
+    aae(dst_expected, dst, decimal=3)
+
+
+def _plt_results(clo, cla, dst, msrf, title, boundary=True):
     """ Plot results """
-    _ = plt.figure()
-    ax = plt.gca()
-    plt.scatter(clo, cla, c=dst, edgecolors='none', s=15)
-    plot_mesh_2d(ax, msrf.surfaces[0])
-    plot_mesh_2d(ax, msrf.surfaces[1])
-    lo, la = msrf.get_surface_boundaries()
-    plt.plot(lo, la, '-r')
+    fig, ax = plt.subplots(1, 1)
+    plt.scatter(clo, cla, c=dst, edgecolors='none', s=15, cmap=cm.coolwarm)
+    for srf in msrf.surfaces:
+        plot_mesh_2d(ax, srf)
+    if boundary:
+        lo, la = msrf.get_surface_boundaries()
+        plt.plot(lo, la, '-r')
     z = np.reshape(dst, clo.shape)
-    cs = plt.contour(clo, cla, z, 10, colors='k')
+    cs = plt.contour(clo, cla, z, 10, colors='k', alpha=.5)
     _ = plt.clabel(cs)
     plt.title(title)
-    plt.show()
+    return fig, ax
+
+
+def _get_profiles(fname):
+    """ Gets profiles from a Geometry Model """
+    [node] = read(fname)
+    all_profiles = {}
+    # Parse file
+    for section in node:
+        if section.tag == f"{NS}section":
+            # Parse the surfaces in each section
+            for surface in section:
+                section_profiles = []
+                if surface.tag == f"{NS}kiteSurface":
+                    # Parse the profiles for each surface
+                    profiles = []
+                    for profile in surface:
+                        # Get poslists
+                        for points in profile.LineString:
+                            pnts = np.array(~points)
+                            rng = range(0, len(pnts), 3)
+                            pro = Line([Point(pnts[i], pnts[i+1], pnts[i+2])
+                                        for i in rng])
+                            profiles.append(pro)
+                    section_profiles = [profiles]
+            all_profiles[section['id']] = section_profiles
+    return all_profiles

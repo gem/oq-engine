@@ -76,7 +76,7 @@ class BommerEtAl2009RSD(GMPE):
 
     #: Supported intensity measure component is the geometric mean horizontal
     #: component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total, see table 7, page 35
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -91,7 +91,7 @@ class BommerEtAl2009RSD(GMPE):
     #: Required distance measure is closest distance to rupture
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

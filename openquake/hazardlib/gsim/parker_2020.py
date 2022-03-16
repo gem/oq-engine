@@ -139,11 +139,10 @@ def _depth_scaling_1(trt, C, ctx):
 
 @_depth_scaling.add(const.TRT.SUBDUCTION_INTRASLAB)
 def _depth_scaling_2(trt, C, ctx):
-    if ctx.hypo_depth >= C["db"]:
-        return C["d"]
-    if ctx.hypo_depth <= 20:
-        return C["m"] * (20 - C["db"]) + C["d"]
-    return C["m"] * (ctx.hypo_depth - C["db"]) + C["d"]
+    res = C["m"] * (ctx.hypo_depth - C["db"]) + C["d"]
+    res[ctx.hypo_depth >= C["db"]] = C["d"]
+    res[ctx.hypo_depth <= 20] = C["m"] * (20 - C["db"]) + C["d"]
+    return res
 
 
 def _get_basin_term_factors(theta0, theta1, vmu, vsig, e1, e2, e3,
@@ -202,14 +201,12 @@ def _magnitude_scaling(sfx, C, C_PGA, mag, m_b):
     Magnitude scaling factor.
     """
     m_diff = mag - m_b
-    if m_diff > 0:
-        fm = C["c6" + sfx] * m_diff
-        fm_pga = C_PGA["c6" + sfx] * m_diff
-    else:
-        fm = C["c4" + sfx] * m_diff + C["c5" + sfx] * m_diff ** 2
-        fm_pga = C_PGA["c4" + sfx] * m_diff \
-            + C_PGA["c5" + sfx] * m_diff ** 2
-
+    fm = np.where(m_diff > 0, C["c6" + sfx] * m_diff,
+                  C["c4" + sfx] * m_diff + C["c5" + sfx] * m_diff**2)
+    fm_pga = np.where(
+        m_diff > 0,
+        C_PGA["c6" + sfx] * m_diff,
+        C_PGA["c4" + sfx] * m_diff + C_PGA["c5" + sfx] * m_diff**2)
     return fm, fm_pga
 
 
@@ -238,15 +235,14 @@ def _path_term(trt, region, basin, suffix, C, C_PGA, mag, rrup, m_b):
     h = _path_term_h(trt, mag, m_b)
     r = np.sqrt(rrup ** 2 + h ** 2)
     # log(R / Rref)
-    r_rref = np.log(r / math.sqrt(1 + h ** 2))
+    r_rref = np.log(r / np.sqrt(1 + h ** 2))
 
     a0, a0_pga = _a0(trt, region, basin, C, C_PGA)
 
     c1n = "c1" + suffix
-    fp = C[c1n] * np.log(r) + (CONSTANTS["b4"] * mag) \
-        * r_rref + a0 * r
-    fp_pga = C_PGA[c1n] * np.log(r) + (CONSTANTS["b4"] * mag) \
-        * r_rref + a0_pga * r
+    fp = C[c1n] * np.log(r) + (CONSTANTS["b4"] * mag) * r_rref + a0 * r
+    fp_pga = C_PGA[c1n] * np.log(r) + (
+        CONSTANTS["b4"] * mag) * r_rref + a0_pga * r
 
     return fp, fp_pga
 
@@ -267,10 +263,8 @@ def _path_term_h_2(trt, mag, m_b=None):
     """
     H factor for path term, subduction slab.
     """
-    if mag <= m_b:
-        m = (math.log10(35) - math.log10(3.12)) / (m_b - 4)
-        return 10 ** (m * (mag - m_b) + math.log10(35))
-    return 35
+    m = (math.log10(35) - math.log10(3.12)) / (m_b - 4)
+    return np.where(mag <= m_b, 10 ** (m * (mag - m_b) + math.log10(35)), 35)
 
 
 def get_stddevs(C, rrup, vs30):
@@ -325,7 +319,7 @@ class ParkerEtAl2020SInter(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV, PGA, SA}
 
     #: Supported intensity measure component is the geometric mean component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
@@ -356,7 +350,7 @@ class ParkerEtAl2020SInter(GMPE):
             self.saturation_region = saturation_region
         self.basin = basin
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

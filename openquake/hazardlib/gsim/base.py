@@ -122,7 +122,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
     return _truncnorm_sf(truncation_level, out)
 
 
-OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters'
+OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters set_tables'
 
 
 def bad_methods(clsdict):
@@ -156,7 +156,10 @@ class MetaGSIM(abc.ABCMeta):
             print('%s cannot contain the methods %s' % (name, bad),
                   file=sys.stderr)
         for k, v in dic.items():
-            if isinstance(v, set):
+            if (k == 'compute' and v.__annotations__.get("ctx")
+                    is not numpy.recarray):
+                raise TypeError('%s.compute is not vectorized' % name)
+            elif isinstance(v, set):
                 dic[k] = frozenset(v)
                 if k == 'REQUIRES_DISTANCES':
                     missing = v - KNOWN_DISTANCES
@@ -261,6 +264,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
+
+    REQUIRES_COMPUTED_PARAMETERS = ()
 
     _toml = ''  # set by valid.gsim
     superseded_by = None
@@ -431,21 +436,22 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def set_parameters(self):
+    def set_parameters(self, rup=None):
         """
         Combines the parameters of the GMPE provided at the construction level
         with the ones originally assigned to the backbone modified GMPE.
         """
-        for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
-                    ADMITTED_SET_PARAMETERS):
-            try:
-                val = getattr(self.gmpe, key)
-            except AttributeError:
-                pass
-            else:
-                setattr(self, key, val)
+        if rup is None:   # in gulerce_abrahamson, split_sigma, etc
+            for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
+                        ADMITTED_SET_PARAMETERS):
+                try:
+                    val = getattr(self.gmpe, key)
+                except AttributeError:
+                    pass
+                else:
+                    setattr(self, key, val)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         """
         :param ctx: a RuptureContext object or a numpy recarray of size N
         :param imts: a list of M Intensity Measure Types
@@ -459,7 +465,6 @@ class GMPE(GroundShakingIntensityModel):
         """
         raise NotImplementedError
 
-    # the ctxs are used in avg_poe_gmpe
     def get_poes(self, mean_std, cmaker, ctx):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
@@ -470,9 +475,9 @@ class GMPE(GroundShakingIntensityModel):
             An array of shape (2, M, N) with mean and standard deviations
             for the sites and intensity measure types
         :param cmaker:
-            A ContextMaker instance
-        :param ctxs:
-            Context objects used to compute mean_std
+            A ContextMaker instance, used only in nhsm_2014
+        :param ctx:
+            A recarray used only in  avg_poe_gmpe
         :returns:
             array of PoEs of shape (N, L)
         :raises ValueError:
@@ -489,13 +494,13 @@ class GMPE(GroundShakingIntensityModel):
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        if hasattr(self, 'weights_signs'):
+        if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
             outs = []
             weights, signs = zip(*self.weights_signs)
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, m] += s * ctx.adjustment
+                    ms[0, m] += s * cmaker.adj[self]
                 outs.append(_get_poes(ms, loglevels, truncation_level))
             arr[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
@@ -507,7 +512,8 @@ class GMPE(GroundShakingIntensityModel):
         else:  # regular case
             # split large arrays in slices < 1 MB to fit inside the CPU cache
             for sl in gen_slices(0, N, maxsize):
-                arr[sl] = _get_poes(mean_std[:, :, sl], loglevels, truncation_level)
+                arr[sl] = _get_poes(mean_std[:, :, sl],
+                                    loglevels, truncation_level)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for imt in loglevels:
             if imtweight and imtweight.dic.get(imt) == 0:

@@ -243,7 +243,7 @@ def run_calc(log):
         # check the available memory before starting
         while True:
             used_mem = psutil.virtual_memory().percent
-            if used_mem < 50:  # continue if little memory is in use
+            if used_mem < 80:  # continue if little memory is in use
                 break
             logging.info('Used memory %d%%, waiting', used_mem)
             time.sleep(5)
@@ -357,7 +357,7 @@ def run_jobs(jobs):
             print('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
-        if jobarray:
+        if jobarray and OQ_DISTRIBUTE != 'no':
             procs = []
             try:
                 for args in allargs:

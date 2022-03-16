@@ -48,7 +48,8 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
-BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+BASE94 = ''.join(chr(i) for i in range(65, 127)) + ''.join(
+    chr(i) for i in range(33, 65))
 mp = multiprocessing.get_context('spawn')
 
 
@@ -970,7 +971,8 @@ def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     if M is None:
         M = max(indices) + 1
     if not shp:
-        return numpy.bincount(indices, values, M)
+        return numpy.bincount(
+            indices, values if factor is None else values * factor, M)
     lst = list(shp)
     lst.insert(axis, M)
     res = numpy.zeros(lst, values.dtype)
@@ -1000,17 +1002,20 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
-def fast_agg3(structured_array, kfield, vfields, factor=None):
+def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)
-    and some value fields (the vfields).
+    and some value fields (the vfields). If vfields is not passed,
+    use all fields except the kfield.
 
     >>> data = numpy.array([(1, 2.4), (1, 1.6), (2, 2.5)],
     ...                    [('aid', U16), ('val', F32)])
-    >>> fast_agg3(data, 'aid', ['val'])
+    >>> fast_agg3(data, 'aid')
     array([(1, 4. ), (2, 2.5)], dtype=[('aid', '<u2'), ('val', '<f4')])
     """
     allnames = structured_array.dtype.names
+    if vfields is None:
+        vfields = [name for name in allnames if name != kfield]
     assert kfield in allnames, kfield
     for vfield in vfields:
         assert vfield in allnames, vfield
@@ -1023,6 +1028,36 @@ def fast_agg3(structured_array, kfield, vfields, factor=None):
         dtlist.append((name, structured_array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
     res[kfield] = uniq
+    for name in dic:
+        res[name] = dic[name]
+    return res
+
+
+# this is fast
+def kmean(structured_array, kfield, uniq_indices_counts=()):
+    """
+    Given a structured array of N elements with a discrete kfield with
+    K <= N unique values, returns a structured array of K elements
+    obtained by averaging the values associated to the kfield.
+    """
+    allnames = structured_array.dtype.names
+    assert kfield in allnames, kfield
+    if uniq_indices_counts:
+        uniq, indices, counts = uniq_indices_counts
+    else:
+        uniq, indices, counts = numpy.unique(
+            structured_array[kfield], return_inverse=True, return_counts=True)
+    dic = {}
+    dtlist = []
+    for name in allnames:
+        if name == kfield:
+            dic[kfield] = uniq
+        else:
+            values = structured_array[name]
+            dic[name] = fast_agg(indices, values) / (
+                counts if len(values.shape) == 1 else counts.reshape(-1, 1))
+        dtlist.append((name, structured_array.dtype[name]))
+    res = numpy.zeros(len(uniq), dtlist)
     for name in dic:
         res[name] = dic[name]
     return res
@@ -1376,7 +1411,7 @@ def categorize(values, nchars=2):
     if len(uvalues) > mvalues:
         raise ValueError(
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
-    prod = itertools.product(*[BASE64] * nchars)
+    prod = itertools.product(*[BASE94] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
@@ -1439,16 +1474,16 @@ class RecordBuilder(object):
             self.names.append(name)
             self.values.append(value)
             if isinstance(value, (str, bytes)):
-                tp = (numpy.string_, len(value))
+                tp = (numpy.string_, len(value) or 1)
             elif isinstance(value, numpy.ndarray):
-                tp = value.dtype
+                tp = (value.dtype, len(value))
             else:
                 tp = type(value)
             dtypes.append(tp)
         self.dtype = numpy.dtype([(n, d) for n, d in zip(self.names, dtypes)])
 
     def zeros(self, shape):
-        return numpy.zeros(shape, self.dtype)
+        return numpy.zeros(shape, self.dtype).view(numpy.recarray)
 
     def dictarray(self, shape):
         return {n: numpy.ones(shape, self.dtype[n]) for n in self.names}
@@ -1464,6 +1499,18 @@ class RecordBuilder(object):
             except IndexError:
                 rec[name] = self.values[i]
         return rec
+
+
+def rmsdiff(a, b):
+    """
+    :param a: an array of shape (N, ...)
+    :param b: an array with the same shape of a
+    :returns: an array of shape (N,) with the root mean squares of a-b
+    """
+    assert a.shape == b.shape
+    axis = tuple(range(1, len(a.shape)))
+    rms = numpy.sqrt(((a - b)**2).mean(axis=axis))
+    return rms
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 

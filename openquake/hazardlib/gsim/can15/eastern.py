@@ -111,7 +111,7 @@ class EasternCan15Mid(GMPE):
              AtkinsonBoore2006Modified2011()]
     sgn = 0
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See documentation for method `GroundShakingIntensityModel` in
         :class:~`openquake.hazardlib.gsim.base.GSIM`
@@ -152,9 +152,9 @@ class EasternCan15Mid(GMPE):
             # Note that in this case we do not apply a triangular smoothing on
             # distance as explained at page 996 of Atkinson and Adams (2013)
             # for the calculation of the standard deviation
-            stds = np.log(np.exp(stds1)*0.2 + np.exp(stds2)*0.2 +
-                          np.exp(stds3)*0.2 + np.exp(stds4)*0.2 +
-                          np.exp(stds5)*0.2)
+            stds = np.log(np.exp(stds1) * 0.2 + np.exp(stds2) * 0.2 +
+                          np.exp(stds3) * 0.2 + np.exp(stds4) * 0.2 +
+                          np.exp(stds5) * 0.2)
             sig[m] = get_sigma(imt)
             if self.sgn:
                 mean[m] += self.sgn * (stds + _get_delta(stds, ctx.repi))

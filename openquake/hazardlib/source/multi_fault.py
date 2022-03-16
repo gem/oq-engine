@@ -27,10 +27,13 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.multi import MultiSurface
+from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
-BLOCKSIZE = 500
+BLOCKSIZE = 1000
+# the BLOCKSIZE has to be large to reduce the number of sources and
+# therefore the redundant data transfer in the .sections attribute
 
 
 class FaultSection(object):
@@ -101,7 +104,17 @@ class MultiFaultSource(BaseSeismicSource):
 
         Set the attribute .sections to the passed dictionary
         """
+        # Check
         assert sections
+
+        # Assign to the surface the index of the corresponding section
+        for key in sections:
+            sections[key].surface.suid = key
+
+        # `i` is the index of the rupture of the `n` admitted by this source.
+        # In this loop we check that all the IDs of the sections composing one
+        # rupture have a object in the sections dictionary describing their
+        # geometry.
         self.sections = sections
         msg = 'Rupture #{:d}: section "{:s}" does not exist'
         for i in range(len(self.mags)):
@@ -116,7 +129,7 @@ class MultiFaultSource(BaseSeismicSource):
         :param fromidx: start
         :param untilidx: stop
         """
-        # check
+        # Check
         if 'sections' not in self.__dict__:
             raise RuntimeError('You forgot to call set_sections in %s!' % self)
 
@@ -139,8 +152,8 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Fast version of iter_ruptures used in estimate_weight
         """
-        s = self.sections
-        for i in range(0, len(self.mags), BLOCKSIZE // 5):
+        s = self.sections  # use one rupture every 500
+        for i in range(0, len(self.mags), BLOCKSIZE // 2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = self.sections[idxs[0]].surface
@@ -189,5 +202,20 @@ class MultiFaultSource(BaseSeismicSource):
 
     polygon = NP.polygon
     wkt = NP.wkt
-    get_bounding_box = NP.get_bounding_box
     mesh_size = NP.mesh_size
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing the surfaces, enlarged by the maximum distance
+        """
+        surfaces = []
+        for sec in self.sections.values():
+            if isinstance(sec.surface, MultiSurface):
+                surfaces.extend(sec.surface.surfaces)
+            else:
+                surfaces.append(sec.surface)
+        multi_surf = MultiSurface(surfaces)
+        west, east, north, south = multi_surf.get_bounding_box()
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, north, south)
+        return west - a2, south - a1, east + a2, north + a1

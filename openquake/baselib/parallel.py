@@ -773,7 +773,11 @@ class Starmap(object):
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
-        self.host_ip = socket.gethostbyname(socket.gethostname())
+        if self.distribute in ('no', 'processpool'):
+            self.return_ip = '127.0.0.1'  # zmq returns data to localhost
+        else:  # zmq returns data to the receiver_host
+            self.return_ip = socket.gethostbyname(
+                config.dbserver.receiver_host or socket.gethostname())
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
@@ -811,7 +815,7 @@ class Starmap(object):
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
-                self.host_ip, self.socket.port)
+                self.return_ip, self.socket.port)
             self.monitor.version = version
             self.monitor.config = config
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
@@ -840,8 +844,9 @@ class Starmap(object):
         Submit the given arguments to the underlying task
         """
         self.monitor.operation = self.task_func.__name__ + '_'
-        self.submit((args[0], self.task_func, args[1:], duration, outs_per_task),
-                    split_task)
+        self.submit(
+            (args[0], self.task_func, args[1:], duration, outs_per_task),
+            split_task)
 
     def submit_all(self):
         """
@@ -966,11 +971,12 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
     # see how long it takes to run the first slice
     t0 = time.time()
     for i, elems in enumerate(split_elems):
+        monitor.out_no = monitor.task_no + i * 65536
         res = func(elems, *args, monitor=monitor)
         dt = time.time() - t0
         yield res
         if dt > duration:
-            # spawn subtasks for the rest and exit
+            # spawn subtasks for the rest and exit, used in classical/case_14
             for els in split_elems[i + 1:]:
                 ls = List(els)
                 ls.weight = sum(getattr(el, 'weight', 1.) for el in els)

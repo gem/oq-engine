@@ -69,7 +69,7 @@ class MegawatiEtAl2003(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components,
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation types is total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -83,7 +83,7 @@ class MegawatiEtAl2003(GMPE):
     #: Required distance measure is hypocentral distance, and azimuth
     REQUIRES_DISTANCES = {'rhypo', 'azimuth'}
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

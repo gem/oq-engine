@@ -33,7 +33,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
@@ -641,16 +641,28 @@ def view_task_info(token, dstore):
         data, dt('operation-duration counts mean stddev min max slowfac'))
 
 
+def reduce_srcids(srcids):
+    s = set()
+    for srcid in srcids:
+        s.add(srcid.split(':')[0])
+    return ' '.join(sorted(s))
+
+
 @view.add('task_durations')
 def view_task_durations(token, dstore):
     """
     Display the raw task durations. Here is an example of usage::
 
-      $ oq show task_durations:classical
+      $ oq show task_durations
     """
-    task = token.split(':')[1]  # called as task_duration:task_name
-    array = get_array(dstore['task_info'][()], taskname=task)['duration']
-    return '\n'.join(map(str, array))
+    df = dstore.read_df('source_data')
+    out = []
+    for taskno, rows in df.groupby('taskno'):
+        srcids = reduce_srcids(rows.src_id.to_numpy())
+        out.append((taskno, rows.ctimes.sum(), rows.weight.sum(), srcids))
+    arr = numpy.array(out, dt('taskno duration weight srcids'))
+    arr.sort(order='duration')
+    return arr
 
 
 @view.add('task')
@@ -1287,3 +1299,42 @@ def view_rup_stats(token, dstore):
     rups = dstore['ruptures'][:]
     out = [stats(f, rups[f]) for f in 'mag n_occ'.split()]
     return numpy.array(out, dt('kind counts mean stddev min max'))
+
+
+@view.add('collapsible')
+def view_collapsible(token, dstore):
+    """
+    Show how much the ruptures are collapsed for each site
+    """
+    def recarray(mag, rrups, vs30s, dtype=dt('mag rrup vs30')):
+        out = [(mag, rrups[sid], vs30) for sid, vs30 in enumerate(vs30s)]
+        return numpy.array(out, dtype).view(numpy.recarray)
+
+    sitecol = dstore['sitecol']
+    rup_arr = dstore['rup/id'][:]
+    mag_arr = dstore['rup/mag'][:]
+    rrup_arr = dstore['rup/rrup_'][:]
+    sids_arr = dstore['rup/sids_'][:]
+    c1 = Collapser(1)
+    dic = dict(rup_id=[], site_id=[], mdvbin=[])
+    for id, mag, rrup, sids in zip(rup_arr, mag_arr, rrup_arr, sids_arr):
+        mdvbin = c1.calc_mdvbin(recarray(mag, rrup, sitecol.vs30[sids]))
+        for sid, mdv in zip(sids, mdvbin):
+            dic['rup_id'].append(id)
+            dic['site_id'].append(sid)
+            dic['mdvbin'].append(mdv)
+    out = []
+    for sid, df in pandas.DataFrame(dic).groupby('site_id'):
+        n, u = len(df), len(df.mdvbin.unique())
+        out.append((sid, u, n, n / u))
+    return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
+
+
+# tested in oq-risk-tests etna
+@view.add('event_based_mfd')
+def view_event_based_mfd(token, dstore):
+    """
+    Compare n_occ/eff_time with occurrence_rate
+    """
+    aw = extract(dstore, 'event_based_mfd?')
+    return pandas.DataFrame(aw.to_dict()).set_index('mag')

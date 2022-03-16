@@ -117,7 +117,8 @@ def get_csm(oq, full_lt, h5=None):
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
-        oq.source_id, discard_trts=oq.discard_trts,
+        oq.source_id,
+        discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
         floating_y_step=oq.floating_y_step)
     classical = not oq.is_event_based()
@@ -131,6 +132,7 @@ def get_csm(oq, full_lt, h5=None):
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
             src.checksum = src.grp_id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
+            src.smweight = sm_rlz.weight
             logging.info('Reading sections and rupture planes for %s', src)
             planes = src.get_planes()
             if classical:
@@ -220,6 +222,7 @@ def _build_groups(full_lt, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
+    frac = 1. / len(full_lt.sm_rlzs)
     for rlz in full_lt.sm_rlzs:
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
@@ -238,6 +241,9 @@ def _build_groups(full_lt, smdict):
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:
                 src.trt_smr = trt_smr
+                # the smweight is used in event based sampling:
+                # see oq-risk-tests etna
+                src.smweight = rlz.weight if full_lt.num_samples else frac
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
@@ -263,7 +269,7 @@ def reduce_sources(sources_with_same_id):
     out = []
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr samples'}
+               if k not in 'source_id trt_smr smweight samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():

@@ -22,9 +22,7 @@ Module exports :class:`PhungEtAl2020SInter`
                :class:`PhungEtAl2020Asc`
 """
 import math
-
 import numpy as np
-
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
@@ -68,15 +66,16 @@ def _distance_attenuation(s, region, aftershocks, C, mag, rrup, ztor):
     """
     Distance scaling and attenuation term [8, 9, 10].
     """
-    del_c5 = C['dp'] * max(ztor / 50 - 20 / 50, 0) \
-        * (ztor > 20) * (mag < 7.0)
-    cns = (C['c5'] + del_c5) * math.cosh(C['c6'] * max(mag - C['c_hm'], 0))
+    del_c5 = C['dp'] * np.maximum(ztor / 50 - 20 / 50, 0) * \
+        (ztor > 20) * (mag < 7.0)
+    cns = (C['c5'] + del_c5) * np.cosh(
+        C['c6'] * np.maximum(mag - C['c_hm'], 0))
 
     f8 = s['c4'] * np.log(rrup + cns)
     f9 = (s['c4_a'] - s['c4']) * np.log(np.sqrt(rrup ** 2
                                                 + s['c_rb'] ** 2))
     f10 = (C['c_g1' + region] + aftershocks * C['dc_g1as']
-           + C['c_g2'] / (math.cosh(max(mag - C['c_g3'], 0)))) * rrup
+           + C['c_g2'] / (np.cosh(np.maximum(mag - C['c_g3'], 0)))) * rrup
 
     return f8 + f9 + f10
 
@@ -85,24 +84,26 @@ def _fsof_ztor(C, mag, rake, ztor):
     """
     Factors requiring type of fault.
     """
-    f234 = 0
-    if 30 <= rake <= 150:
-        e_ztor = (max(3.5384 - 2.60 * max(mag - 5.8530, 0), 0)) ** 2
-        # reverse fault [2]
-        f234 += C['c1_a'] \
-            + C['c1_c'] / math.cosh(2 * max(mag - 4.5, 0))
-    else:
-        e_ztor = max(2.7482 - 1.7639 * max(mag - 5.5210, 0), 0) ** 2
-        if -120 <= rake <= -60:
-            # normal fault [3]
-            f234 += C['c1_b'] \
-                + C['c1_d'] / math.cosh(2 * max(mag - 4.5, 0))
+    f234 = np.zeros_like(rake)
+    e_ztor = ztor.copy()
+    pos = (30 <= rake) & (rake <= 150)
+    e_ztor[pos] = np.maximum(
+        3.5384 - 2.60 * np.maximum(mag[pos] - 5.8530, 0), 0) ** 2
+    neg = (-120 <= rake) & (rake <= -60)
+    e_ztor[neg] = np.maximum(
+        2.7482 - 1.7639 * np.maximum(mag[neg] - 5.5210, 0), 0) ** 2
+    # reverse fault [2]
+    f234[pos] += C['c1_a'] + C['c1_c'] / np.cosh(
+        2 * np.maximum(mag[pos] - 4.5, 0))
+    # normal fault [3]
+    f234[neg] += C['c1_b'] + C['c1_d'] / np.cosh(
+        2 * np.maximum(mag[neg] - 4.5, 0))
 
     ztor = np.where(ztor < 0, e_ztor, ztor)
     delta_ztor = ztor - e_ztor
     # [4]
-    f234 += (C['c7'] + C['c7_b'] / math.cosh(2 * max(mag - 4.5, 0))) \
-        * delta_ztor
+    f234 += (C['c7'] + C['c7_b'] / np.cosh(
+        2 * np.maximum(mag - 4.5, 0))) * delta_ztor
 
     return f234, ztor
 
@@ -116,7 +117,7 @@ class PhungEtAl2020Asc(GMPE):
 
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
 
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
@@ -142,7 +143,7 @@ class PhungEtAl2020Asc(GMPE):
         # direct point parameter for directivity effect
         self.d_dpp = d_dpp
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -156,23 +157,22 @@ class PhungEtAl2020Asc(GMPE):
             # main shock [1]
             lnmed += C['c1']
             # dip term [5]
-            lnmed += (C['c11'] + C['c11_b']
-                      / math.cosh(2 * max(ctx.mag - 4.5, 0))) \
-                * (math.cos(math.radians(ctx.dip)) ** 2)
+            lnmed += (C['c11'] + C['c11_b'] / np.cosh(2 * np.maximum(
+                ctx.mag - 4.5, 0))) * np.cos(np.radians(ctx.dip)) ** 2
             # hanging wall term [12]
-            lnmed += (ctx.rx >= 0) * C['c9'] * math.cos(math.radians(ctx.dip))\
+            lnmed += (ctx.rx >= 0) * C['c9'] * np.cos(np.radians(ctx.dip))\
                 * (C['c9_a'] + (1 - C['c9_a']) * np.tanh(ctx.rx / C['c9_b']))\
                 * (1 - np.sqrt(ctx.rjb ** 2 + ztor ** 2) / (ctx.rrup + 1))
             # directivity [11]
             lnmed += C['c8'] \
                 * np.maximum(1 - np.maximum(ctx.rrup - 40, 0) / 30, 0) \
-                * min(max(ctx.mag - 5.5, 0) / 0.8, 1) \
-                * math.exp(s['c8_a'] * (ctx.mag - C['c8_b']) ** 2) \
+                * np.clip((ctx.mag - 5.5) / 0.8, 0., 1.) \
+                * np.exp(s['c8_a'] * (ctx.mag - C['c8_b']) ** 2) \
                 * self.d_dpp
             # fmag [6, 7]
             lnmed += s['c2'] * (ctx.mag - 6)
             lnmed += (s['c2'] - C['c3']) / C['c_n'] \
-                * math.log(1 + math.exp(C['c_n'] * (C['c_m'] - ctx.mag)))
+                * np.log(1 + np.exp(C['c_n'] * (C['c_m'] - ctx.mag)))
             lnmed += _distance_attenuation(
                 s, self.region, self.aftershocks, C, ctx.mag, ctx.rrup, ztor)
 
@@ -181,7 +181,7 @@ class PhungEtAl2020Asc(GMPE):
             lnmed += C['phi1' + self.region] * np.minimum(
                 np.log(ctx.vs30 / 1130), 0)
             lnmed += C['phi2'] * (np.exp(C['phi3'] * (
-                np.minimum(ctx.vs30, 1130) - 360)) - math.exp(
+                np.minimum(ctx.vs30, 1130) - 360)) - np.exp(
                     C['phi3'] * (1130 - 360))) * np.log(
                         (sa1130 + C['phi4']) / C['phi4'])
             # basin term [16]
@@ -236,13 +236,10 @@ def _fmag(region, C, mag, pga=False):
     """
     Magnitude term.
     """
-    a4 = C['a4']
-    if region == 'jptw':
-        a4 += C['a4_del']
-
-    if mag <= C['mref']:
-        return a4 * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
-    return C['a5'] * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
+    a4 = C['a4'] + (C['a4_del'] if region == 'jptw' else 0)
+    return np.where(mag <= C['mref'],
+                    a4 * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2,
+                    C['a5'] * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2)
 
 
 def _fp(trt, region, s, C, mag, rrup, pga=False):
@@ -256,7 +253,7 @@ def _fp(trt, region, s, C, mag, rrup, pga=False):
         a1 += C['a1_del']
     r = 'tw' if pga else region
     return a1 + a7 + (C['a2'] + a14 + s['a3'] * (mag - 7.8)) \
-        * np.log(rrup + s['c4'] * math.exp(s['a9'] * (mag - 6))) \
+        * np.log(rrup + s['c4'] * np.exp(s['a9'] * (mag - 6))) \
         + C['a6' + r] * rrup
 
 
@@ -299,8 +296,8 @@ def _fztor(trt, C, ztor):
     Ztor factor for subduction interface.
     """
     if trt == const.TRT.SUBDUCTION_INTRASLAB:
-        return C['a11'] * (min(ztor, 80) - 40)
-    return C['a10'] * (min(ztor, 40) - 20)
+        return C['a11'] * (np.minimum(ztor, 80) - 40)
+    return C['a10'] * (np.minimum(ztor, 40) - 20)
 
 
 def pga_rock(trt, region, s, C_PGA, mag, rrup, ztor, vs30):
@@ -326,7 +323,7 @@ class PhungEtAl2020SInter(GMPE):
 
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     DEFINED_FOR_REFERENCE_VELOCITY = 1000
 
@@ -348,7 +345,7 @@ class PhungEtAl2020SInter(GMPE):
         # 'jptw', 'tw' (Japan/Taiwan joined, Taiwan)
         self.region = region
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

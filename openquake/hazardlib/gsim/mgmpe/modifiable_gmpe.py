@@ -19,32 +19,66 @@
 Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
+import copy
+import warnings
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.contexts import STD_TYPES
+from openquake.hazardlib.contexts import STD_TYPES, get_mean_stds
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib import const, contexts
-from openquake.hazardlib.imt import from_string, PGA, PGV
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.const import IMC
+from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
+    NRCan15SiteTerm, BA08_AB06)
+
+from openquake.hazardlib.gsim.nga_east import (
+    TAU_EXECUTION, get_phi_ss, TAU_SETUP, PHI_SETUP, get_tau_at_quantile,
+    get_phi_ss_at_quantile)
+from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
 
-COEFF = {IMC.AVERAGE_HORIZONTAL: [1, 1, 0.01, 0.02, 1],
-         IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
+COEFF = {IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
          IMC.RANDOM_HORIZONTAL: [1, 1, 0.07, 0.11, 1.05],
          IMC.GREATER_OF_TWO_HORIZONTAL:
          [0.1, 1.117, 0.53, 1.165, 4.48, 1.195, 8.70, 1.266, 1.266],
          IMC.RotD50:
          [0.09, 1.009, 0.58, 1.028, 4.59, 1.042, 8.93, 1.077, 1.077]}
 
-COEFF_PGA_PGV = {IMC.AVERAGE_HORIZONTAL: [1, 0.01, 1, 1, 0.01, 1],
-                 IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
+COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
                  IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
                  IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
                  IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
+
+
+def sigma_model_alatik2015(self, ctx, imt, ergodic, tau_model, phi_ss_coetab,
+                           tau_coetab):
+    """
+    This function uses the sigma model of Al Atik (2015) as the standard
+    deviation of a specified GMPE
+    """
+    phi = get_phi_ss(imt, ctx.mag, phi_ss_coetab)
+    if ergodic:
+        phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
+        phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+    tau = TAU_EXECUTION[tau_model](imt, ctx.mag, tau_coetab)
+    std_total = np.sqrt(tau ** 2. + phi ** 2.)
+    setattr(self, const.StdDev.TOTAL, std_total)
+    setattr(self, const.StdDev.INTER_EVENT, tau)
+    setattr(self, const.StdDev.INTRA_EVENT, phi)
+
+
+def nrcan15_site_term(self, ctx, imt, kind):
+    """
+    This function adds a site term to GMMs missing it
+    """
+    C = NRCan15SiteTerm.COEFFS_BA08[imt]
+    C2 = NRCan15SiteTerm.COEFFS_AB06r[imt]
+    fa = BA08_AB06(kind, C, C2, ctx.vs30, imt, np.exp(self.mean))
+    self.mean = np.log(np.exp(self.mean) * fa)
 
 
 def horiz_comp_to_geom_mean(self, ctx, imt):
@@ -62,20 +96,20 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
     # IMT period
     T = imt.period
 
-    # Conversion coefficients
-    C = COEFF[horcom]
-    C_PGA_PGV = COEFF_PGA_PGV[horcom]
-
     # Get the string defining the horizontal component
     comp = str(horcom).split('.')[1]
 
     # List of the horizontal component definitions that can be converted into
     # geometric mean
-    tmp = ['AVERAGE_HORIZONTAL', 'GMRotI50', 'RANDOM_HORIZONTAL',
+    tmp = ['GMRotI50', 'RANDOM_HORIZONTAL',
            'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
 
     # Apply the conversion
     if comp in tmp:
+        # Conversion coefficients
+        C = COEFF[horcom]
+        C_PGA_PGV = COEFF_PGA_PGV[horcom]
+
         imt_name = imt.__repr__()
         if imt_name == 'PGA':
             conv_median = C_PGA_PGV[0]
@@ -109,9 +143,16 @@ def horiz_comp_to_geom_mean(self, ctx, imt):
                     conv_sigma = (C[2] + (C[3]-C[2]) *
                                   np.log10(T/0.15)/np.log10(0.8/0.15))
                 rstd = C[4]
+    elif comp in ['GEOMETRIC_MEAN']:
+        conv_median = 1
+        conv_sigma = 0
+        rstd = 1
     else:
+        conv_median = 1
+        conv_sigma = 0
+        rstd = 1
         msg = f'Conversion not applicable for {comp}'
-        raise ValueError(msg)
+        warnings.warn(msg, UserWarning)
 
     # Original total STD
     total_stddev = getattr(self, const.StdDev.TOTAL)
@@ -283,6 +324,34 @@ class ModifiableGMPE(GMPE):
         self.gmpe = registry[gmpe_name](**kw)
         self.set_parameters()
         self.mean = None
+
+        # This is required by the `sigma_model_alatik2015` function
+        key = 'sigma_model_alatik2015'
+        if key in self.params:
+
+            # Phi S2SS and ergodic param
+            # self.params[key]['phi_s2ss'] = None
+            self.params[key]['ergodic'] = self.params[key].get("ergodic", True)
+
+            # Tau
+            tau_model = self.params[key].get("tau_model", "global")
+            if "tau_model" not in self.params:
+                self.params[key]['tau_model'] = tau_model
+            tau_quantile = self.params[key].get("tau_quantile", None)
+            self.params[key]['tau_coetab'] = get_tau_at_quantile(
+                TAU_SETUP[tau_model]["MEAN"],
+                TAU_SETUP[tau_model]["STD"],
+                tau_quantile)
+
+            # Phi SS
+            phi_model = self.params[key].get("phi_model", "global")
+            if "phi_model" in self.params:
+                del self.params[key]["phi_model"]
+            phi_ss_quantile = self.params[key].get("phi_ss_quantile", None)
+            self.params[key]['phi_ss_coetab'] = get_phi_ss_at_quantile(
+                PHI_SETUP[phi_model], phi_ss_quantile)
+
+        # Set params
         for key in self.params:
             if key in IMT_DEPENDENT_KEYS:
                 # If the modification is period-dependent
@@ -291,12 +360,13 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    def compute(self, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+
         if ('set_between_epsilon' in self.params or
             'set_total_std_as_tau_plus_delta' in self.params) and (
                 StdDev.INTER_EVENT not in
@@ -305,11 +375,19 @@ class ModifiableGMPE(GMPE):
 
         if 'apply_swiss_amplification' in self.params:
             self.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
+            self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
+
+        ctx_rock = copy.copy(ctx)
+        if 'nrcan15_site_term' in self.params:
+            ctx_rock.vs30 = np.full_like(ctx.vs30, 760.)
 
         # Compute the original mean and standard deviations
-        self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
+        mean[:], sig[:], tau[:], phi[:] = get_mean_stds(
+            self.gmpe, ctx_rock, imts)
+
         g = globals()
         for m, imt in enumerate(imts):
+
             # Save mean and stds
             kvs = list(zip(STD_TYPES, [sig[m], tau[m], phi[m]]))
             self.mean = mean[m]
