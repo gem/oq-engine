@@ -37,8 +37,8 @@ def debug_plot(polygons):
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
     pp = geo_utils.PolygonPlotter(ax)
-    for polygon in polygons:
-        pp.add(polygon)
+    for i, polygon in enumerate(polygons, 1):
+        pp.add(polygon, alpha=i *.1)
     pp.set_lim()
     plt.show()
 
