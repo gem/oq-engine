@@ -222,6 +222,7 @@ def _build_groups(full_lt, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
+    frac = 1. / len(full_lt.sm_rlzs)
     for rlz in full_lt.sm_rlzs:
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
@@ -240,7 +241,7 @@ def _build_groups(full_lt, smdict):
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:
                 src.trt_smr = trt_smr
-                src.smweight = rlz.weight
+                src.smweight = rlz.weight if full_lt.num_samples else frac
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
