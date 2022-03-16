@@ -63,10 +63,9 @@ def get_datadir():
         shared_dir = config.directory.shared_dir
         if shared_dir:
             user = getpass.getuser()
-            if user == 'openquake':  # use /opt/openquake/oqdata
-                datadir = os.path.join(shared_dir, 'oqdata')
-            else:
-                datadir = os.path.join(shared_dir, user, 'oqdata')
+            # special case for /opt/openquake/openquake -> /opt/openquake
+            datadir = os.path.join(shared_dir, user, 'oqdata').replace(
+                'openquake/openquake', 'openquake')
         else:  # use the home of the user
             datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
     return datadir
