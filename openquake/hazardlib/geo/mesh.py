@@ -33,6 +33,16 @@ from openquake.hazardlib.geo import utils as geo_utils
 F32 = numpy.float32
 
 
+def debug_plot(polygons):
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    pp = geo_utils.PolygonPlotter(ax)
+    for polygon in polygons:
+        pp.add(polygon)
+    pp.set_lim()
+    plt.show()
+
+
 def sqrt(array):
     # due to numerical errors an array of positive values can become negative;
     # for instance: 1 - array([[ 0.99999989,  1.00000001,  1.        ]]) =
@@ -437,6 +447,7 @@ class Mesh(object):
         # create a final polygon as the union of all the stripe ones
         polygon = shapely.ops.unary_union(polygons).simplify(
             self.DIST_TOLERANCE)
+        # debug_plot(polygons)
         return proj, polygon
 
     def get_convex_hull(self):

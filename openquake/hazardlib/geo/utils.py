@@ -54,6 +54,7 @@ class PolygonPlotter(object):
     Add polygons to a given axis object
     """
     def __init__(self, ax):
+        self.ax = ax
         self.minxs = []
         self.maxxs = []
         self.minys = []
