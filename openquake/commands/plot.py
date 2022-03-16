@@ -22,7 +22,7 @@ import logging
 import shapely
 import numpy
 from scipy.stats import linregress
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
@@ -382,42 +382,6 @@ def make_figure_memory(extractors, what):
         start += len(mem)
     ax.legend()
     return plt
-
-
-class PolygonPlotter():
-    """
-    Add polygons to a given axis object
-    """
-    def __init__(self, ax):
-        self.ax = ax
-        self.minxs = []
-        self.maxxs = []
-        self.minys = []
-        self.maxys = []
-
-    def add(self, poly, **kw):
-        from openquake.hmtk.plotting.patch import PolygonPatch
-        minx, miny, maxx, maxy = poly.bounds
-        self.minxs.append(minx)
-        self.maxxs.append(maxx)
-        self.minys.append(miny)
-        self.maxys.append(maxy)
-        try:
-            self.ax.add_patch(PolygonPatch(poly, **kw))
-        except ValueError:  # LINESTRING, not POLYGON
-            pass
-
-    def set_lim(self, xs=(), ys=()):
-        if len(xs):
-            self.minxs.append(min(xs))
-            self.maxxs.append(max(xs))
-        if len(ys):
-            self.minys.append(min(ys))
-            self.maxys.append(max(ys))
-        if self.minxs and self.maxxs:
-            self.ax.set_xlim(min(self.minxs), max(self.maxxs))
-        if self.minys and self.maxys:
-            self.ax.set_ylim(min(self.minys), max(self.maxys))
 
 
 def make_figure_sources(extractors, what):

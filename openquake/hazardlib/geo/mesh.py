@@ -431,27 +431,12 @@ class Mesh(object):
             # if there are any lying on the straight line).
             stripe = shapely.geometry.LineString(coords) \
                                      .simplify(self.DIST_TOLERANCE) \
-                                     .buffer(self.DIST_TOLERANCE, 2)
+                                     .buffer(self.DIST_TOLERANCE, 4)
             polygons.append(shapely.geometry.Polygon(stripe.exterior))
             prev_line = line[::-1]
-        try:
-            # create a final polygon as the union of all the stripe ones
-            polygon = shapely.ops.unary_union(polygons).simplify(
-                self.DIST_TOLERANCE)
-        except ValueError:
-            # NOTE(larsbutler): In some rare cases, we've observed ValueErrors
-            # ("No Shapely geometry can be created from null value") with very
-            # specific sets of polygons such that there are two unique
-            # and many duplicates of one.
-            # This bug is very difficult to reproduce consistently (except on
-            # specific platforms) so the work around here is to remove the
-            # duplicate polygons. In fact, we only observed this error on our
-            # CI/build machine. None of our dev environments or production
-            # machines has encountered this error, at least consistently. >:(
-            polygons = [shapely.wkt.loads(x) for x in
-                        list(set(p.wkt for p in polygons))]
-            polygon = shapely.ops.unary_union(polygons).simplify(
-                self.DIST_TOLERANCE)
+        # create a final polygon as the union of all the stripe ones
+        polygon = shapely.ops.unary_union(polygons).simplify(
+            self.DIST_TOLERANCE)
         return proj, polygon
 
     def get_convex_hull(self):
