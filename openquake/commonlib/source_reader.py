@@ -241,6 +241,8 @@ def _build_groups(full_lt, smdict):
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:
                 src.trt_smr = trt_smr
+                # the smweight is used in event based sampling:
+                # see oq-risk-tests etna
                 src.smweight = rlz.weight if full_lt.num_samples else frac
                 if rlz.samples > 1:
                     src.samples = rlz.samples
