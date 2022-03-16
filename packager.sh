@@ -143,7 +143,7 @@ repo_id_get () {
         repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
     fi
 
-    echo "$repo_id"
+    echo "${repo_id}.git"
 }
 
 #
@@ -1103,7 +1103,8 @@ devtest_run () {
     #
     repo_id="$(repo_id_get)"
     if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
-        repos="git://${repo_id} ${GEM_GIT_REPO}"
+        # repos="git://${repo_id} ${GEM_GIT_REPO}"
+        repos="git@${repo_id} ${GEM_GIT_REPO}"
     else
         repos="${GEM_GIT_REPO}"
     fi
