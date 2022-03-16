@@ -221,10 +221,10 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertIn('Could not export XXX in csv', str(ctx.exception))
 
         # check MFD distribution
-        extract_url = '/v1/calc/%s/extract/event_based_mfd?kind=mean' % job_id
+        extract_url = '/v1/calc/%s/extract/event_based_mfd?' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertGreater(len(got['magnitudes']), 1)
-        self.assertGreater(len(got['mean_frequency']), 1)
+        self.assertGreater(len(got['mag']), 1)
+        self.assertGreater(len(got['freq']), 1)
 
         # check rupture_info
         extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
