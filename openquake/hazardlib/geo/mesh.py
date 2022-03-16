@@ -431,7 +431,7 @@ class Mesh(object):
             # if there are any lying on the straight line).
             stripe = shapely.geometry.LineString(coords) \
                                      .simplify(self.DIST_TOLERANCE) \
-                                     .buffer(self.DIST_TOLERANCE, 4)
+                                     .buffer(self.DIST_TOLERANCE, 2)
             polygons.append(shapely.geometry.Polygon(stripe.exterior))
             prev_line = line[::-1]
         # create a final polygon as the union of all the stripe ones
