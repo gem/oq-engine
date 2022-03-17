@@ -360,6 +360,17 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
+    # called by the ContextMaker
+    def set_tables(self, mags, imts):
+        """
+        :param mags: a list of magnitudes as strings
+        :param imts: a list of IMTs as strings
+
+        Set the .mean_table and .sig_table attributes on the underlying gmpe
+        """
+        if hasattr(self.gmpe, 'set_tables'):
+            self.gmpe.set_tables(mags, imts)
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
