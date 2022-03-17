@@ -1330,27 +1330,11 @@ def view_collapsible(token, dstore):
     return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
 
 
+# tested in oq-risk-tests etna
 @view.add('event_based_mfd')
 def view_event_based_mfd(token, dstore):
     """
     Compare n_occ/eff_time with occurrence_rate
     """
-    oq = dstore['oqparam']
-    R = len(dstore['weights'])
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
-    # print(oq.investigation_time, oq.ses_per_logic_tree_path, R, eff_time)
-    rup_df = dstore.read_df('ruptures', 'id')
-    out = []
-    for mag, df in rup_df.groupby('mag'):
-        out.append((mag, df.n_occ.sum() / eff_time, df.occurrence_rate.sum()))
-    return numpy.array(out, dt('mag frequency occur_rate'))
-
-
-@view.add('eb_mfd')
-def view_eb_mfd(token, dstore):
-    """
-    Compare n_occ/eff_time with occurrence_rate
-    """
-    aw = extract(dstore, 'event_based_mfd?kind=mean')
-    tbl = list(zip(aw.magnitudes, aw.mean_frequency))
-    return numpy.array(tbl, dt('mag freq'))
+    aw = extract(dstore, 'event_based_mfd?')
+    return pandas.DataFrame(aw.to_dict()).set_index('mag')
