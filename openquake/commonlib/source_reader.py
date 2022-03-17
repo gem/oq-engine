@@ -46,7 +46,7 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def create_source_info(csm, source_data, h5):
+def create_source_info(csm, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
     """

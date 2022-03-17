@@ -931,8 +931,7 @@ class HazardCalculator(BaseCalculator):
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         if 'source_info' not in self.datastore:
-            source_reader.create_source_info(
-                self.csm, source_data, self.datastore.hdf5)
+            source_reader.create_source_info(self.csm, self.datastore.hdf5)
         self.csm.update_source_info(source_data)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
