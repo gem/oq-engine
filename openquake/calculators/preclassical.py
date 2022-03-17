@@ -21,9 +21,7 @@ import logging
 import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
-from openquake.baselib.python3compat import encode
-from openquake.baselib.general import (
-    AccumDict, groupby, get_nbytes_msg)
+from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
@@ -38,15 +36,15 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 
 
-def zero_times(sources):
-    source_data = AccumDict(accum=[])
+def source_data(sources):
+    data = AccumDict(accum=[])
     for src in sources:
-        source_data['src_id'].append(src.source_id)
-        source_data['nsites'].append(src.nsites)
-        source_data['nrupts'].append(src.num_ruptures)
-        source_data['weight'].append(src.weight)
-        source_data['ctimes'].append(0)
-    return source_data
+        data['src_id'].append(src.source_id)
+        data['nsites'].append(src.nsites)
+        data['nrupts'].append(src.num_ruptures)
+        data['weight'].append(src.weight)
+        data['ctimes'].append(0)
+    return data
 
 
 def preclassical(srcs, sites, cmaker, monitor):
@@ -179,8 +177,7 @@ def run_preclassical(calc):
         cls = code2cls[key].__name__
         logging.info('{} ruptures: {:_d}'.format(cls, val))
 
-    source_data = zero_times(csm.get_sources())
-    calc.store_source_info(source_data)
+    calc.store_source_info(source_data(csm.get_sources()))
     # store ps_grid data, if any
     for key, sources in res.items():
         if isinstance(key, str) and key.startswith('ps_grid/'):
