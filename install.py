@@ -166,7 +166,7 @@ User=openquake
 Group=openquake
 Environment=
 WorkingDirectory={OQDATA}
-ExecStart=/opt/openquake/venv/bin/oq {service} start
+ExecStart=/opt/openquake/venv/bin/oq {command}
 Restart=always
 RestartSec=30
 KillMode=control-group
@@ -429,12 +429,15 @@ def install(inst, version):
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/' + service_name
             afterservice = 'network.target'
+            command = service + ' start'+ ' -f'
             if 'webui' in service:
                 afterservice = 'network.target openquake-dbserver'
+                command = service + ' -s' + ' start'
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
-                                         afterservice=afterservice)
+                                         afterservice=afterservice, 
+                                         command=command)
                     f.write(srv)
             subprocess.check_call(
                 ['systemctl', 'enable', '--now', service_name])
