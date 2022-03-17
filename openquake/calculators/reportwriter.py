@@ -42,7 +42,6 @@ class ReportWriter(object):
     title = {
         'params': 'Parameters',
         'inputs': 'Input files',
-        'full_lt': 'Composite source model',
         'required_params_per_trt':
         'Required parameters per tectonic region type',
         'ruptures_events': 'Specific information for event based',
@@ -93,7 +92,6 @@ class ReportWriter(object):
         for name in ('params', 'inputs'):
             self.add(name)
         if 'full_lt' in ds:
-            self.add('full_lt')
             self.add('required_params_per_trt')
         if 'rup_data' in ds:
             self.add('ruptures_events')
