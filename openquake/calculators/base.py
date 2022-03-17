@@ -734,10 +734,7 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if (oq.calculation_mode == 'preclassical' and
-                'exposure' not in oq.inputs):
-            return
-        elif (not oq.imtls and 'shakemap' not in oq.inputs
+        if (not oq.imtls and 'shakemap' not in oq.inputs
                 and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
@@ -832,11 +829,11 @@ class HazardCalculator(BaseCalculator):
                     for taxo, weight in items:
                         if taxo != '?':
                             taxonomies.add(taxo)
-            # check that we are covering all the taxonomy strings in the exposure
+            # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
-                raise RuntimeError('The exposure contains the taxonomy strings %s '
-                                   'which are not in the risk model' % missing)
+                raise RuntimeError('The exposure contains the taxonomy strings '
+                                   '%s which are not in the risk model' % missing)
             if len(self.crmodel.taxonomies) > len(taxonomies):
                 logging.info('Reducing risk model from %d to %d taxonomy strings',
                              len(self.crmodel.taxonomies), len(taxonomies))
