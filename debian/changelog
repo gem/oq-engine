@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Upgraded shapely from version 1.7 to version 1.8: this causes slight
+    changes in the results for most calculations
   * Removed the not used (and not working) functionality `applyToSourceType`
   * Raised an error when the total standard deviation is zero, unless
     truncation_level is set to zero
