@@ -1,3 +1,7 @@
+  [Tom Son]
+  * Fixed a typo and a few bugs within Kuehn et al. (2020) model to match with the
+  author's code
+
   [Michele Simionato]
   * Removed the not used (and not working) functionality `applyToSourceType`
   * Raised an error when the total standard deviation is zero, unless
