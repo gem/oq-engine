@@ -429,10 +429,10 @@ def install(inst, version):
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/' + service_name
             afterservice = 'network.target'
-            command = service + ' start'+ ' -f'
+            command = service + ' start -f'
             if 'webui' in service:
                 afterservice = 'network.target openquake-dbserver'
-                command = service + ' -s' + ' start'
+                command = service + ' -s start'
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA,
