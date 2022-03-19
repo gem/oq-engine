@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.kite_fault` defines
 :class:`KiteFaultSource`.
 """
+import re
 import copy
 import numpy as np
 from typing import Tuple
@@ -133,8 +134,26 @@ class KiteFaultSource(ParametricSeismicSource):
         msr = self.magnitude_scaling_relationship
         tom = self.temporal_occurrence_model
         surface = self.surface
+
+        # Keyword args. 'rids' contains a list of rupture IDs
         slc = kwargs.get('slc', slice(None))
+        rids = kwargs.get('rids', None)
+
+        # Format for the unique IDs of ruptures
+        fmt = "{:s}-{:.2f}-{:d}-{:d}"
+
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+
+            # Create the list of ruptures for the current magnitude given a
+            # list of rupture IDs
+            rids_per_mag = None
+            if rids is not None:
+                rids_per_mag = []
+                pattern = '^.*-(\\d*\\.\\d{2})-.*'
+                for rid in rids:
+                    mtch = re.search(pattern, rid)
+                    if np.abs(mag - float(mtch.group(1))) < 1e-5:
+                        rids_per_mag.append(rid)
 
             # Compute the area, length and width of the ruptures
             area = msr.get_median_area(mag=mag, rake=self.rake)
@@ -169,7 +188,8 @@ class KiteFaultSource(ParametricSeismicSource):
             ruptures = []
 
             for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid,
-                                          f_strike=fstrike, f_dip=fdip):
+                                          f_strike=fstrike, f_dip=fdip,
+                                          rids=rids_per_mag):
                 ruptures.append(rup)
             if len(ruptures) < 1:
                 continue
@@ -178,9 +198,12 @@ class KiteFaultSource(ParametricSeismicSource):
             # Rupture generator
             for rup in ruptures[slc]:
                 hypocenter = rup[0].get_center()
+
                 # Yield an instance of a ParametricProbabilisticRupture
-                yield ppr(mag, self.rake, self.tectonic_region_type,
+                out = ppr(mag, self.rake, self.tectonic_region_type,
                           hypocenter, rup[0], occurrence_rate, tom)
+                out.uid = fmt.format(self.source_id, mag, rup[1], rup[2])
+                yield out
 
     def few_ruptures(self):
         """
@@ -188,7 +211,8 @@ class KiteFaultSource(ParametricSeismicSource):
         """
         yield from self.iter_ruptures(slc=slice(None, None, 25))
 
-    def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
+    def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1,
+                      rids=None):
         """
         Returns all the ruptures admitted by a given geometry i.e. number of
         nodes along strike and dip
@@ -204,6 +228,8 @@ class KiteFaultSource(ParametricSeismicSource):
             Floating distance along strike (multiple of sampling distance)
         :param f_dip:
             Floating distance along dip (multiple of sampling distance)
+        :param rids:
+            A list with IDs of ruptures
         :returns:
             A tuple containing the rupture and the indexes of the top right
             node of the mesh representing the rupture.
@@ -238,7 +264,22 @@ class KiteFaultSource(ParametricSeismicSource):
                 and y_nodes[-1] != omsh.lons.shape[0] - rup_d):
             f_dip -= 1
             y_nodes = np.arange(0, mesh_y_len, f_dip)
+        print(y_nodes)
 
+        # Create upper-left nodes from rupture IDs
+        if rids is not None:
+            pattern = '^.*-(\\d*\\.\\d{2})-(\\d*)-(\\d*)'
+            x_nodes = []
+            y_nodes = []
+            for rid in rids:
+                mtch = re.search(pattern, rid)
+                x_nodes.append(int(mtch.group(2)))
+                y_nodes.append(int(mtch.group(3)))
+            x_nodes = np.array(x_nodes)
+            y_nodes = np.array(y_nodes)
+            print('>>', y_nodes)
+
+        # Create ruptures
         for i in x_nodes:
             for j in y_nodes:
                 nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])

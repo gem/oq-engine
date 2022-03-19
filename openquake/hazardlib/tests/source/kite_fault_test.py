@@ -372,3 +372,37 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
             ruptures = [r for r in source.iter_ruptures()]
             self._ruptures_animation('test05', source.surface, ruptures,
                                      source.profiles)
+
+
+class UniqueRuptureIDTestCase(unittest.TestCase):
+    """
+    Tests all of the geometry modification methods
+    """
+    def setUp(self):
+        fault_trace = Line([Point(30.0, 30.0), Point(30.0, 32.0)])
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=6.0,
+                             max_mag=7.0, bin_width=0.2)
+        dip = 70.0
+        upper_seismogenic_depth = 0.0
+        lower_seismogenic_depth = 15.0
+        rake = 90
+        scalerel = PeerMSR()
+        rupture_mesh_spacing = 5
+        rupture_aspect_ratio = 1
+        tom = PoissonTOM(1.)
+        floating_x_step = 0.5
+        floating_y_step = 0.5
+        trt = TRT.ACTIVE_SHALLOW_CRUST
+        self.src = KiteFaultSource.as_simple_fault(
+            'test', 'test', trt, mfd, rupture_mesh_spacing,
+            scalerel, rupture_aspect_ratio, tom,
+            upper_seismogenic_depth, lower_seismogenic_depth, fault_trace,
+            dip, rake, floating_x_step, floating_y_step)
+
+    def test_ruptures_01(self):
+        rids = ['test-6.10-0-0', 'test-6.90-0-0']
+        rups = [rup for rup in self.src.iter_ruptures(rids=rids)]
+        assert len(rups) == 2, 'Wrong number of ruptures'
+        msg = 'Expected rupture does not exist'
+        assert rups[0].uid == rids[0], msg
+        assert rups[1].uid == rids[1], msg

@@ -574,7 +574,7 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
         self.fault.lower_seismogenic_depth = 10.0
 
     def test_modify_set_geometry_trace(self):
-        new_fault = deepcopy(self.fault) 
+        new_fault = deepcopy(self.fault)
         new_trace = Line([Point(30.0, 30.0), Point(30.2, 32.25)])
         new_fault.modify_set_geometry(new_trace, 0., 10., 45., 1.)
         exp_lons = [30.0, 30.2]
@@ -617,6 +617,37 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(str(ar.exception), "dip must be between 0.0 and 90.0")
 
     def test_modify_set_dip(self):
-        new_fault = deepcopy(self.fault) 
+        new_fault = deepcopy(self.fault)
         new_fault.modify_set_dip(72.0)
         self.assertAlmostEqual(new_fault.dip, 72.0)
+
+
+class UniqueRuptureIDTestCase(unittest.TestCase):
+    """
+    Tests all of the geometry modification methods
+    """
+    def setUp(self):
+        trace = Line([Point(30.0, 30.0), Point(30.0, 32.0)])
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=6.0,
+                             max_mag=7.0, bin_width=0.2)
+        dip = 70.0
+        upper_seismogenic_depth = 0.0
+        lower_seismogenic_depth = 15.0
+        rake = 90
+        scalerel = WC1994()
+        rupture_mesh_spacing = 5
+        rupture_aspect_ratio = 1
+        tom = PoissonTOM(1.)
+        self.src = SimpleFaultSource(
+            'test', 'test', TRT.ACTIVE_SHALLOW_CRUST, mfd,
+            rupture_mesh_spacing, scalerel, rupture_aspect_ratio, tom,
+            upper_seismogenic_depth, lower_seismogenic_depth,
+            trace, dip, rake)
+
+    def test_ruptures_01(self):
+        rids = ['test-6.10-1-40', 'test-6.90-0-0']
+        rups = [rup for rup in self.src.iter_ruptures(rids=rids)]
+        assert len(rups) == 2, 'Wrong number of ruptures'
+        msg = 'Expected rupture does not exist'
+        assert rups[0].uid == rids[0], msg
+        assert rups[1].uid == rids[1], msg

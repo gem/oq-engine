@@ -138,14 +138,23 @@ class SimpleFaultSource(ParametricSeismicSource):
         divided by the number of ruptures that can be placed in a fault.
         """
         slc = kwargs.get('slc', slice(None))
+        rids = kwargs.get('rids', None)
+
+        # Fault surface
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.mesh
         mesh_rows, mesh_cols = whole_fault_mesh.shape
+
+        # Rounded fault length and fault width
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
 
+        # String for creating the unique rupture ID
+        fmt = "{:s}-{:.2f}-{:d}-{:d}"
+
+        # Loop over magnitudes
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             rup_cols, rup_rows = self._get_rupture_dimensions(
                 fault_length, fault_width, mag)
@@ -155,6 +164,14 @@ class SimpleFaultSource(ParametricSeismicSource):
             occurrence_rate = mag_occ_rate / float(num_rup)
             for first_row in range(num_rup_along_width)[slc]:
                 for first_col in range(num_rup_along_length)[slc]:
+                    unique_id = fmt.format(self.source_id, mag, first_row,
+                                           first_col)
+
+                    # Skipping ruptures not included in the input list
+                    if rids is not None and unique_id not in rids:
+                        continue
+
+                    # Rupture mesh
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 
@@ -164,10 +181,13 @@ class SimpleFaultSource(ParametricSeismicSource):
                         occurrence_rate_hypo = occurrence_rate
                         surface = SimpleFaultSurface(mesh)
 
-                        yield ParametricProbabilisticRupture(
+                        out = ParametricProbabilisticRupture(
                             mag, self.rake, self.tectonic_region_type,
                             hypocenter, surface, occurrence_rate_hypo,
                             self.temporal_occurrence_model)
+                        out.uid = unique_id
+                        yield out
+
                     else:
                         for hypo in self.hypo_list:
                             for slip in self.slip_list:
@@ -178,11 +198,13 @@ class SimpleFaultSource(ParametricSeismicSource):
                                     hypo[2] * slip[1]
                                 rupture_slip_direction = slip[0]
 
-                                yield ParametricProbabilisticRupture(
+                                out = ParametricProbabilisticRupture(
                                     mag, self.rake, self.tectonic_region_type,
                                     hypocenter, surface, occurrence_rate_hypo,
                                     self.temporal_occurrence_model,
                                     rupture_slip_direction)
+                                out.uid = unique_id
+                                yield out
 
     def few_ruptures(self):
         """
