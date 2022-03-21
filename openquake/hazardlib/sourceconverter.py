@@ -95,15 +95,17 @@ def fix_dupl(dist, fname=None, lineno=None):
             dist[:] = newdist
 
 
-def rounded_unique(mags):
+def rounded_unique(mags, idxs):
     """
     :param mags: a list of magnitudes
-    :returns: array of magnitudes rounded to 2 digits
+    :param idxs: a list of tuples of section indices
+    :returns: an array of magnitudes rounded to 2 digits
     :raises: ValueError if the rounded magnitudes contain duplicates
     """
     mags = numpy.round(mags, 2)
-    if len(mags) > len(numpy.unique(mags)):
-        raise ValueError('%s contains duplicates' % mags)
+    mag_idxs = zip(mags, idxs)
+    if extract_dupl(mag_idxs):
+        raise ValueError('%s contains duplicates' % mag_idxs)
     return mags
 
 
@@ -1108,9 +1110,10 @@ class SourceConverter(RuptureConverter):
             pmfs.append(prb)
             mags.append(~rupnode.magnitude)
             rakes.append(~rupnode.rake)
-            idxs.append(rupnode.sectionIndexes.get('indexes').split(','))
+            indexes = rupnode.sectionIndexes['indexes']
+            idxs.append(tuple(indexes.split(',')))
         with context(self.fname, node):
-            mags = rounded_unique(mags)
+            mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
         mfs = MultiFaultSource(sid, name, trt, idxs, pmfs, mags, rakes)
