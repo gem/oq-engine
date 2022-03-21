@@ -394,7 +394,7 @@ def namelists(value):
             try:
                 source_id(n)
             except ValueError:
-                raise ValueError('nvalid name: %s' % n)
+                raise ValueError('Invalid name: %s' % n)
         lists.append(names)
     return lists
 
