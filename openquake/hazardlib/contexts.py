@@ -1256,7 +1256,7 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N
     :param imts: a list of M IMTs
-    :param mags: a list of magnitudes as strings (used only in GMPETables)
+    :param kw: additional keyword arguments
     :returns:
         an array of shape (4, M, N) obtained by applying the
         given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)
