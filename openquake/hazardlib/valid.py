@@ -374,6 +374,31 @@ def namelist(value):
     return names
 
 
+def namelists(value):
+    """
+    :param value: input string
+    :returns: list of lists of identifiers
+
+    >>> namelists('a,b')
+    [['a', 'b']]
+    >>> namelists('a1, b_2; _c')
+    [['a1', 'b_2'], ['_c']]
+
+    >>> namelists('a1; b_2; 1c')
+    [['a1'], ['b_2'], ['1c']]
+    """
+    lists = []
+    for string in value.split(';'):
+        names = string.replace(',', ' ').split()
+        for n in names:
+            try:
+                source_id(n)
+            except ValueError:
+                raise ValueError('Invalid name: %s' % n)
+        lists.append(names)
+    return lists
+
+
 def float_(value):
     """
     :param value: input string
