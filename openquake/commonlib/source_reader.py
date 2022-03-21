@@ -46,7 +46,7 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def create_source_info(csm, source_data, h5):
+def create_source_info(csm, h5):
     """
     Creates source_info, source_wkt, trt_smrs, toms
     """
@@ -57,8 +57,9 @@ def create_source_info(csm, source_data, h5):
         for src in sg:
             srcid = basename(src)
             trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
+            code = csm.code.get(srcid, b'P')
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, src.code, 0, 0, 0, trti, 0]
+            row = [srcid, src.grp_id, code, 0, 0, 0, trti, 0]
             wkts.append(getattr(src, '_wkt', ''))
             data[srcid] = row
             src.id = len(data) - 1
@@ -340,10 +341,13 @@ class CompositeSourceModel:
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
         self.src_groups = src_groups
+        self.code = {}  # srcid -> code
         for grp_id, sg in enumerate(src_groups):
             assert len(sg)  # sanity check
             for src in sg:
                 src.grp_id = grp_id
+                if src.code != b'P':
+                    self.code[src.source_id] = src.code
 
     def get_trt_smrs(self):
         """

@@ -4,9 +4,9 @@ Event Based Risk from GMF
 +----------------+----------------------+
 | checksum32     | 2_307_968_511        |
 +----------------+----------------------+
-| date           | 2022-03-17T07:01:21  |
+| date           | 2022-03-17T11:28:49  |
 +----------------+----------------------+
-| engine_version | 3.14.0-git7b67373170 |
+| engine_version | 3.14.0-gitaed816bf7b |
 +----------------+----------------------+
 | input_size     | 2_616                |
 +----------------+----------------------+
@@ -39,10 +39,6 @@ Parameters
 | area_source_discretization      | None                         |
 +---------------------------------+------------------------------+
 | pointsource_distance            | {'default': '1000'}          |
-+---------------------------------+------------------------------+
-| floating_x_step                 | 0                            |
-+---------------------------------+------------------------------+
-| floating_y_step                 | 0                            |
 +---------------------------------+------------------------------+
 | ground_motion_correlation_model | None                         |
 +---------------------------------+------------------------------+
@@ -83,7 +79,7 @@ Required parameters per tectonic region type
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-3 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 8 tasks = 192 B
+3 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 20 tasks = 480 B
 
 Exposure model
 --------------
@@ -116,9 +112,9 @@ Data transfer
 Slowest operations
 ------------------
 +------------------+----------+-----------+--------+
-| calc_5430        | time_sec | memory_mb | counts |
+| calc_50649       | time_sec | memory_mb | counts |
 +------------------+----------+-----------+--------+
-| importing inputs | 0.02315  | 0.0       | 1      |
+| importing inputs | 0.02033  | 0.0       | 1      |
 +------------------+----------+-----------+--------+
-| reading exposure | 0.00361  | 0.0       | 1      |
+| reading exposure | 0.00355  | 0.0       | 1      |
 +------------------+----------+-----------+--------+
