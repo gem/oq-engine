@@ -95,6 +95,21 @@ def fix_dupl(dist, fname=None, lineno=None):
             dist[:] = newdist
 
 
+def rounded_unique(mags, idxs):
+    """
+    :param mags: a list of magnitudes
+    :param idxs: a list of tuples of section indices
+    :returns: an array of magnitudes rounded to 2 digits
+    :raises: ValueError if the rounded magnitudes contain duplicates
+    """
+    mags = numpy.round(mags, 2)
+    mag_idxs = list(zip(mags, idxs))
+    dupl = extract_dupl(mag_idxs)
+    if dupl:
+        logging.error('%s %s contains duplicates' % dupl[0])
+    return mags
+
+
 class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
@@ -586,7 +601,7 @@ class RuptureConverter(object):
             surface=self.convert_surfaces(surfaces))
         return rupt
 
-    # used in scenario only (?)
+    # used in scenarios or nonparametric sources
     def convert_multiPlanesRupture(self, node):
         """
         Convert a multiPlanesRupture node.
@@ -1064,6 +1079,7 @@ class SourceConverter(RuptureConverter):
         return convert_nonParametricSeismicSource(
             self.fname, node, self.rupture_mesh_spacing)
 
+    # used in UCERF
     def convert_multiFaultSource(self, node):
         """
         Convert the given node into a multi fault source object.
@@ -1088,14 +1104,17 @@ class SourceConverter(RuptureConverter):
                 num_probs = len(prb.data)
             elif len(prb.data) != num_probs:
                 # probs_occur must have uniform length for all ruptures
-                raise ValueError(
-                    'prob_occurs=%s has %d elements, expected %s'
-                    % (rupnode['probs_occur'], len(prb.data), num_probs))
+                with context(self.fname, rupnode):
+                    raise ValueError(
+                        'prob_occurs=%s has %d elements, expected %s'
+                        % (rupnode['probs_occur'], len(prb.data), num_probs))
             pmfs.append(prb)
             mags.append(~rupnode.magnitude)
             rakes.append(~rupnode.rake)
-            idxs.append(rupnode.sectionIndexes.get('indexes').split(','))
-        mags = numpy.array(mags)
+            indexes = rupnode.sectionIndexes['indexes']
+            idxs.append(tuple(indexes.split(',')))
+        with context(self.fname, node):
+            mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
         mfs = MultiFaultSource(sid, name, trt, idxs, pmfs, mags, rakes)
