@@ -137,7 +137,7 @@ repo_id_get () {
     fi
 
     if echo "$repo_line" | grep -q '[0-9a-z_\.-]\+@[a-z0-9_\.-]\+:'; then
-        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+[^ ${TB}@]\+@//g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g;s@:@/@g")"
+        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+//g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")
     else
         repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
     fi
@@ -290,7 +290,7 @@ build_dependencies_file () {
     if [ -e ${je_deps_base}_jenkins_deps_info ]; then
         return
     fi
-    
+
     if [ ! -d ${je_deps_base}_jenkins_deps ]; then
         pwd
         mkdir ${je_deps_base}_jenkins_deps
