@@ -95,6 +95,18 @@ def fix_dupl(dist, fname=None, lineno=None):
             dist[:] = newdist
 
 
+def rounded_unique(mags):
+    """
+    :param mags: a list of magnitudes
+    :returns: array of magnitudes rounded to 2 digits
+    :raises: ValueError if the rounded magnitudes contain duplicates
+    """
+    mags = numpy.round(mags, 2)
+    if len(mags) > len(numpy.unique(mags)):
+        raise ValueError('%s contains duplicates' % mags)
+    return mags
+
+
 class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
@@ -1089,14 +1101,16 @@ class SourceConverter(RuptureConverter):
                 num_probs = len(prb.data)
             elif len(prb.data) != num_probs:
                 # probs_occur must have uniform length for all ruptures
-                raise ValueError(
-                    'prob_occurs=%s has %d elements, expected %s'
-                    % (rupnode['probs_occur'], len(prb.data), num_probs))
+                with context(self.fname, rupnode):
+                    raise ValueError(
+                        'prob_occurs=%s has %d elements, expected %s'
+                        % (rupnode['probs_occur'], len(prb.data), num_probs))
             pmfs.append(prb)
             mags.append(~rupnode.magnitude)
             rakes.append(~rupnode.rake)
             idxs.append(rupnode.sectionIndexes.get('indexes').split(','))
-        mags = numpy.array(mags)
+        with context(self.fname, node):
+            mags = rounded_unique(mags)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
         mfs = MultiFaultSource(sid, name, trt, idxs, pmfs, mags, rakes)
