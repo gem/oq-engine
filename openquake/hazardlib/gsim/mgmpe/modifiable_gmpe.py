@@ -317,6 +317,7 @@ class ModifiableGMPE(GMPE):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.mags = ()  # used in GMPETables
 
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
@@ -370,6 +371,7 @@ class ModifiableGMPE(GMPE):
         """
         if hasattr(self.gmpe, 'set_tables'):
             self.gmpe.set_tables(mags, imts)
+            self.mags = mags
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -394,7 +396,7 @@ class ModifiableGMPE(GMPE):
 
         # Compute the original mean and standard deviations
         mean[:], sig[:], tau[:], phi[:] = get_mean_stds(
-            self.gmpe, ctx_rock, imts)
+            self.gmpe, ctx_rock, imts, self.mags)
 
         g = globals()
         for m, imt in enumerate(imts):

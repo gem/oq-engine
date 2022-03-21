@@ -1037,5 +1037,5 @@ hazard_uhs-std.csv
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
         self.run_calc(case_77.__file__, 'job.ini')
-        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+        [f1] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs-mean.csv', f1)
