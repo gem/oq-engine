@@ -103,7 +103,7 @@ def rounded_unique(mags, idxs):
     :raises: ValueError if the rounded magnitudes contain duplicates
     """
     mags = numpy.round(mags, 2)
-    mag_idxs = zip(mags, idxs)
+    mag_idxs = list(zip(mags, idxs))
     if extract_dupl(mag_idxs):
         raise ValueError('%s contains duplicates' % mag_idxs)
     return mags
