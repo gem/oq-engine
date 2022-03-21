@@ -106,7 +106,7 @@ def rounded_unique(mags, idxs):
     mag_idxs = list(zip(mags, idxs))
     dupl = extract_dupl(mag_idxs)
     if dupl:
-        raise ValueError('%s %s contains duplicates' % dupl[0])
+        logging.error('%s %s contains duplicates' % dupl[0])
     return mags
 
 
