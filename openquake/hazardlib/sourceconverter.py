@@ -104,8 +104,9 @@ def rounded_unique(mags, idxs):
     """
     mags = numpy.round(mags, 2)
     mag_idxs = list(zip(mags, idxs))
-    if extract_dupl(mag_idxs):
-        raise ValueError('%s contains duplicates' % mag_idxs)
+    dupl = extract_dupl(mag_idxs)
+    if dupl:
+        raise ValueError('%s %s contains duplicates' % dupl[0])
     return mags
 
 
