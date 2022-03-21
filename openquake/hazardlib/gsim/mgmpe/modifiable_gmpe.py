@@ -396,7 +396,7 @@ class ModifiableGMPE(GMPE):
 
         # Compute the original mean and standard deviations
         mean[:], sig[:], tau[:], phi[:] = get_mean_stds(
-            self.gmpe, ctx_rock, imts, self.mags)
+            self.gmpe, ctx_rock, imts, mags=self.mags)
 
         g = globals()
         for m, imt in enumerate(imts):

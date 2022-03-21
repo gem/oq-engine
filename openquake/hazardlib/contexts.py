@@ -1251,19 +1251,19 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsim, ctx, imts, mags=()):
+def get_mean_stds(gsim, ctx, imts, **kw):
     """
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N
     :param imts: a list of M IMTs
-    :param mags: a list of magnitudes as strings (used only in GMPETables)
+    :param kw: additional keyword arguments
     :returns:
         an array of shape (4, M, N) obtained by applying the
         given GSIM, ctx amd imts, or an array of shape (G, 4, M, N)
     """
     imtls = {imt.string: [0] for imt in imts}
     single = hasattr(gsim, 'compute')
-    kw = {'imtls': imtls, 'mags': mags}
+    kw['imtls'] = imtls
     cmaker = ContextMaker('*', [gsim] if single else gsim, kw)
     out = cmaker.get_mean_stds([ctx])  # (4, G, M, N)
     return out[:, 0] if single else out
