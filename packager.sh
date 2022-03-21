@@ -306,7 +306,7 @@ build_dependencies_file () {
     #
     repo_id="$(repo_id_get)"
     if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
-        repos="git://${repo_id} ${GEM_GIT_REPO}"
+        repos="git@${repo_id} ${GEM_GIT_REPO}"
     else
         repos="${GEM_GIT_REPO}"
     fi
