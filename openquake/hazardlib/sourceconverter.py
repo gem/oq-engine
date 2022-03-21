@@ -586,7 +586,7 @@ class RuptureConverter(object):
             surface=self.convert_surfaces(surfaces))
         return rupt
 
-    # used in scenario only (?)
+    # used in scenarios or nonparametric sources
     def convert_multiPlanesRupture(self, node):
         """
         Convert a multiPlanesRupture node.
@@ -1064,6 +1064,7 @@ class SourceConverter(RuptureConverter):
         return convert_nonParametricSeismicSource(
             self.fname, node, self.rupture_mesh_spacing)
 
+    # used in UCERF
     def convert_multiFaultSource(self, node):
         """
         Convert the given node into a multi fault source object.
