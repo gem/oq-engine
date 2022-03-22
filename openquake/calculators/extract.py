@@ -675,9 +675,9 @@ def get_agg_tags(dstore, aggregate_by):
     if not aggregate_by:
         return {}
     agg_tags = {tagname: [] for tagname in aggregate_by}
-    agg_keys = json.loads(dstore['agg_keys'][()])
-    for vals in agg_keys.values():
-        for tagname, val in zip(aggregate_by, vals):
+    agg_keys = decode(dstore['agg_keys'][:])
+    for keys in agg_keys:
+        for tagname, val in zip(aggregate_by, keys.split(',')):
             agg_tags[tagname].append(val)
     for tagname in aggregate_by:
         agg_tags[tagname].append('*total*')
