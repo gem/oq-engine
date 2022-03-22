@@ -187,7 +187,7 @@ def event_based_risk(df, oqparam, monitor):
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=False)
-        for taxo, adf in assetcol.to_dframe('ordinal').groupby('taxonomy'):
+        for taxo, adf in assetcol.to_dframe().groupby('taxonomy'):
             gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
@@ -349,7 +349,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(
                 event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
-            smap.monitor.save('assets', self.assetcol.to_dframe())
+            smap.monitor.save('assets', self.assetcol.to_dframe('id'))
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)

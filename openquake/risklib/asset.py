@@ -579,7 +579,7 @@ class AssetCollection(object):
             self.tot_sites = len(sitecol)
         sitecol.make_complete()
 
-    def to_dframe(self, indexfield='id'):
+    def to_dframe(self, indexfield='ordinal'):
         """
         :returns: the associated DataFrame
         """
