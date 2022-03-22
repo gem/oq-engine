@@ -172,7 +172,7 @@ def event_based_risk(df, oqparam, monitor):
             df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if oqparam.K:
-            aggkey, aggids = assetcol.build_aggkey(oqparam.aggregate_by)
+            aggids, _ = assetcol.build_aggids(oqparam.aggregate_by)
         else:
             aggids = ()
         crmodel = monitor.read('crmodel')
@@ -187,14 +187,13 @@ def event_based_risk(df, oqparam, monitor):
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=False)
-        for taxo, asset_df in assetcol.to_dframe('ordinal').groupby('taxonomy'):
-            gmf_df = df[numpy.isin(df.sid.to_numpy(),
-                                   asset_df.site_id.to_numpy())]
+        for taxo, adf in assetcol.to_dframe().groupby('taxonomy'):
+            gmf_df = df[numpy.isin(df.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
             with mon_risk:
                 out = crmodel.get_output(
-                    taxo, asset_df, gmf_df, oqparam._sec_losses, rng)
+                    taxo, adf, gmf_df, oqparam._sec_losses, rng)
             yield out
 
     return aggreg(outputs(), crmodel, ARKD, aggids, rlz_id, monitor)
@@ -350,7 +349,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(
                 event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
-            smap.monitor.save('assets', self.assetcol.to_dframe())
+            smap.monitor.save('assets', self.assetcol.to_dframe('id'))
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)

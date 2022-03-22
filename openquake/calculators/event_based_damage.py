@@ -61,7 +61,7 @@ def event_based_damage(df, oqparam, monitor):
             df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if K:
-            aggkey, aggids = assetcol.build_aggkey(oqparam.aggregate_by)
+            aggids, _ = assetcol.build_aggids(oqparam.aggregate_by)
         else:
             aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
@@ -78,7 +78,7 @@ def event_based_damage(df, oqparam, monitor):
     float_dmg_dist = oqparam.float_dmg_dist  # True by default
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
-        for sid, asset_df in assetcol.to_dframe('ordinal').groupby('site_id'):
+        for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
             # working one site at the time
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
@@ -197,7 +197,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             event_based_damage, self.gen_args(eids), h5=self.datastore.hdf5)
-        smap.monitor.save('assets', self.assetcol.to_dframe())
+        smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
 
