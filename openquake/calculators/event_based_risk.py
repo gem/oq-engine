@@ -111,7 +111,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
+def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -140,9 +140,9 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
                 eids = alt.eid.to_numpy() * TWO32  # U64
                 values = numpy.array([alt[col] for col in value_cols]).T
                 fast_agg(eids + U64(K), values, correl, li, acc)
-                if len(kids):
+                if len(aggids):
                     aids = alt.aid.to_numpy()
-                    fast_agg(eids + U64(kids[aids]), values, correl, li, acc)
+                    fast_agg(eids + U64(aggids[aids]), values, correl, li, acc)
     with mon_df:
         dic = general.AccumDict(accum=[])
         for ukey, arr in acc.items():
@@ -172,9 +172,9 @@ def event_based_risk(df, oqparam, monitor):
             df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if oqparam.K:
-            aggkey, kids = assetcol.build_aggkey(oqparam.aggregate_by)
+            aggkey, aggids = assetcol.build_aggkey(oqparam.aggregate_by)
         else:
-            kids = ()
+            aggids = ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
@@ -197,7 +197,7 @@ def event_based_risk(df, oqparam, monitor):
                     taxo, asset_df, gmf_df, oqparam._sec_losses, rng)
             yield out
 
-    return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
+    return aggreg(outputs(), crmodel, ARKD, aggids, rlz_id, monitor)
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):

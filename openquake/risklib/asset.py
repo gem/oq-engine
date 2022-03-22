@@ -537,13 +537,13 @@ class AssetCollection(object):
         """
         aggkey = self.tagcol.get_aggkey(aggby)
         if aggby == ['id']:
-            kids = self['ordinal']
+            aggids = self['ordinal']
         elif aggby == ['site_id']:
-            kids = self['site_id']
+            aggids = self['site_id']
         else:
             key2i = {key: i for i, key in enumerate(aggkey)}
-            kids = numpy.array([key2i[tuple(t)] for t in self[aggby]])
-        return aggkey, kids
+            aggids = numpy.array([key2i[tuple(t)] for t in self[aggby]])
+        return aggkey, aggids
 
     def reduce(self, sitecol):
         """

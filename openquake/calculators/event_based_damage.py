@@ -61,9 +61,9 @@ def event_based_damage(df, oqparam, monitor):
             df = dstore.read_df('gmf_data', slc=df)
         assetcol = dstore['assetcol']
         if K:
-            aggkey, kids = assetcol.build_aggkey(oqparam.aggregate_by)
+            aggkey, aggids = assetcol.build_aggkey(oqparam.aggregate_by)
         else:
-            kids = numpy.zeros(len(assetcol), U16)
+            aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
     master_seed = oqparam.master_seed
     sec_sims = oqparam.secondary_simulations.items()
@@ -141,7 +141,7 @@ def event_based_damage(df, oqparam, monitor):
                         dddict[eid, K][lti] += tot[e]
                         if K:
                             for a, aid in enumerate(aids):
-                                dddict[eid, kids[aid]][lti] += d3[a, e]
+                                dddict[eid, aggids[aid]][lti] += d3[a, e]
     return to_dframe(dddict, ci, L), dmgcsq
 
 

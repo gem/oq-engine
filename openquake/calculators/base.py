@@ -1178,7 +1178,7 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     lst = []
     if aggby:
-        aggkey, kids = assetcol.build_aggkey(aggby)
+        aggkey, aggids = assetcol.build_aggkey(aggby)
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [
             (name, hdf5.vstr) for name in aggby]
