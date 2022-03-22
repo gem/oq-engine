@@ -1177,8 +1177,8 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     :returns: the aggkey dictionary key -> tags
     """
     lst = []
-    aggkey = assetcol.tagcol.get_aggkey(aggby)
     if aggby:
+        aggkey, aggids = assetcol.build_aggkey(aggby)
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [
             (name, hdf5.vstr) for name in aggby]
@@ -1188,18 +1188,8 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
             kvs.append(key + val)
             lst.append(' '.join(val))
         dstore['agg_keys'] = numpy.array(kvs, dt)
-        if aggby == ['id']:
-            kids = assetcol['ordinal']
-        elif aggby == ['site_id']:
-            kids = assetcol['site_id']
-        else:
-            key2i = {key: i for i, key in enumerate(aggkey)}
-            kids = [key2i[tuple(t)] for t in assetcol[aggby]]
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
-        grp = dstore.getitem('assetcol')
-        if 'kids' not in grp:
-            grp['kids'] = U16(kids)
     lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)

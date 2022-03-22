@@ -531,6 +531,20 @@ class AssetCollection(object):
             agg_values[K] = tuple(df.sum())
         return agg_values
 
+    def build_aggkey(self, aggby):
+        """
+        :returns: (aggkey dictionary, agg_ids list)
+        """
+        aggkey = self.tagcol.get_aggkey(aggby)
+        if aggby == ['id']:
+            aggids = self['ordinal']
+        elif aggby == ['site_id']:
+            aggids = self['site_id']
+        else:
+            key2i = {key: i for i, key in enumerate(aggkey)}
+            aggids = numpy.array([key2i[tuple(t)] for t in self[aggby]])
+        return aggkey, aggids
+
     def reduce(self, sitecol):
         """
         :returns: a reduced AssetCollection on the given sitecol

@@ -59,15 +59,17 @@ def event_based_damage(df, oqparam, monitor):
     with monitor('reading gmf_data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
-        assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = (dstore['assetcol/kids'][:] if K
-                else numpy.zeros(len(assets_df), U16))
+        assetcol = dstore['assetcol']
+        if K:
+            aggkey, aggids = assetcol.build_aggkey(oqparam.aggregate_by)
+        else:
+            aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
     master_seed = oqparam.master_seed
     sec_sims = oqparam.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
-    dmgcsq = zero_dmgcsq(len(assets_df), oqparam.R, crmodel)
+    dmgcsq = zero_dmgcsq(len(assetcol), oqparam.R, crmodel)
     A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
     if R > 1:
@@ -76,7 +78,7 @@ def event_based_damage(df, oqparam, monitor):
     float_dmg_dist = oqparam.float_dmg_dist  # True by default
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
-        for sid, asset_df in assets_df.groupby('site_id'):
+        for sid, asset_df in assetcol.to_dframe('ordinal').groupby('site_id'):
             # working one site at the time
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
@@ -139,7 +141,7 @@ def event_based_damage(df, oqparam, monitor):
                         dddict[eid, K][lti] += tot[e]
                         if K:
                             for a, aid in enumerate(aids):
-                                dddict[eid, kids[aid]][lti] += d3[a, e]
+                                dddict[eid, aggids[aid]][lti] += d3[a, e]
     return to_dframe(dddict, ci, L), dmgcsq
 
 

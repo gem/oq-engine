@@ -111,7 +111,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
+def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -140,9 +140,9 @@ def aggreg(outputs, crmodel, ARKD, kids, rlz_id, monitor):
                 eids = alt.eid.to_numpy() * TWO32  # U64
                 values = numpy.array([alt[col] for col in value_cols]).T
                 fast_agg(eids + U64(K), values, correl, li, acc)
-                if len(kids):
+                if len(aggids):
                     aids = alt.aid.to_numpy()
-                    fast_agg(eids + U64(kids[aids]), values, correl, li, acc)
+                    fast_agg(eids + U64(aggids[aids]), values, correl, li, acc)
     with mon_df:
         dic = general.AccumDict(accum=[])
         for ukey, arr in acc.items():
@@ -170,12 +170,15 @@ def event_based_risk(df, oqparam, monitor):
     with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
-        assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = dstore['assetcol/kids'][:] if oqparam.K else ()
+        assetcol = dstore['assetcol']
+        if oqparam.K:
+            aggkey, aggids = assetcol.build_aggkey(oqparam.aggregate_by)
+        else:
+            aggids = ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]
-    ARKD = len(assets_df), len(weights), oqparam.K, oqparam.D
+    ARKD = len(assetcol), len(weights), oqparam.K, oqparam.D
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -184,7 +187,7 @@ def event_based_risk(df, oqparam, monitor):
 
     def outputs():
         mon_risk = monitor('computing risk', measuremem=False)
-        for taxo, asset_df in assets_df.groupby('taxonomy'):
+        for taxo, asset_df in assetcol.to_dframe('ordinal').groupby('taxonomy'):
             gmf_df = df[numpy.isin(df.sid.to_numpy(),
                                    asset_df.site_id.to_numpy())]
             if len(gmf_df) == 0:
@@ -194,7 +197,7 @@ def event_based_risk(df, oqparam, monitor):
                     taxo, asset_df, gmf_df, oqparam._sec_losses, rng)
             yield out
 
-    return aggreg(outputs(), crmodel, ARKD, kids, rlz_id, monitor)
+    return aggreg(outputs(), crmodel, ARKD, aggids, rlz_id, monitor)
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
