@@ -487,9 +487,9 @@ num_epsilon_bins:
 
 num_rlzs_disagg:
   Used in disaggregation calculation to specify how many outputs will be
-  generated.
-  Example: *num_rlzs_disagg=1*.
-  Default: None
+  generated. `0` means all realizations.
+  Example: *num_rlzs_disagg=0*.
+  Default: 1
 
 number_of_ground_motion_fields:
   Used in scenario calculations to specify how many random ground motion
@@ -904,7 +904,7 @@ class OqParam(valid.ParamSet):
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
-    num_rlzs_disagg = valid.Param(valid.positiveint, None)
+    num_rlzs_disagg = valid.Param(valid.positiveint, 1)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
@@ -1148,8 +1148,7 @@ class OqParam(valid.ParamSet):
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
                 self.num_epsilon_bins = 1
-            if (self.rlz_index is not None
-                    and self.num_rlzs_disagg is not None):
+            if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
 

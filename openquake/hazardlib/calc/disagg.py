@@ -57,7 +57,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     """
     tl = oq.truncation_level
     if oq.rlz_index is None:
-        Z = oq.num_rlzs_disagg or 1
+        Z = oq.num_rlzs_disagg
     else:
         Z = len(oq.rlz_index)
 
