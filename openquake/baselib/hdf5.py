@@ -535,13 +535,15 @@ def dumps(dic):
     """
     new = {}
     for k, v in dic.items():
-        if k.startswith('_') or v is None:
+        if v is None or isinstance(k, str) and k.startswith('_'):
             pass
         elif isinstance(v, (list, tuple)) and v:
             if isinstance(v[0], INT):
                 new[k] = [int(x) for x in v]
             elif isinstance(v[0], FLOAT):
                 new[k] = [float(x) for x in v]
+            elif isinstance(v[0], numpy.bytes_):
+                new[k] = json.dumps(decode(v))
             else:
                 new[k] = json.dumps(v)
         elif isinstance(v, FLOAT):

@@ -21,11 +21,12 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, writers, general, python3compat
+from openquake.baselib import hdf5, writers, general
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize)
+    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize,
+    get_agg_tags)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -50,18 +51,6 @@ def get_rup_data(ebruptures):
 
 def tag2idx(tags):
     return {tag: i for i, tag in enumerate(tags)}
-
-
-def get_agg_tags(dstore, aggregate_by):
-    agg_tags = {}
-    if aggregate_by:
-        agg_keys = dstore['agg_keys'][:]
-        for tagname in aggregate_by:
-            keys = python3compat.decode(agg_keys[tagname])
-            agg_tags[tagname] = numpy.concatenate([keys, ['*total*']])
-    else:
-        agg_tags = {}
-    return agg_tags
 
 
 def _loss_type(ln):

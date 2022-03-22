@@ -51,7 +51,7 @@ def save_curve_stats(dstore):
     oq = dstore['oqparam']
     units = dstore['cost_calculator'].get_units(oq.loss_types)
     try:
-        K1 = len(dstore['agg_keys']) + 1
+        K1 = len(dstore['agg_values']) + 1
     except KeyError:
         K1 = 1
     stats = oq.hazard_stats()

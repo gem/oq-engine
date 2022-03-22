@@ -668,6 +668,22 @@ def extract_csq_curves(dstore, what):
                              consequences=cols))
 
 
+def get_agg_tags(dstore, aggregate_by):
+    """
+    :returns: a dictionary tagname -> array of strings ended by *total*
+    """
+    if not aggregate_by:
+        return {}
+    agg_tags = {tagname: [] for tagname in aggregate_by}
+    agg_keys = json.loads(dstore['agg_keys'][()])
+    for vals in agg_keys.values():
+        for tagname, val in zip(aggregate_by, vals):
+            agg_tags[tagname].append(val)
+    for tagname in aggregate_by:
+        agg_tags[tagname].append('*total*')
+    return {k: numpy.array(v) for k, v in agg_tags.items()}
+
+
 @extract.add('agg_curves')
 def extract_agg_curves(dstore, what):
     """
@@ -692,9 +708,11 @@ def extract_agg_curves(dstore, what):
     tagvalues = [tagdict[t][0] for t in tagnames]
     idx = -1
     if tagnames:
-        for i, tags in enumerate(dstore['agg_keys'][:][tagnames]):
+        aggtags = get_agg_tags(dstore, tagnames)
+        arr = numpy.array([aggtags[tagname] for tagname in tagnames])
+        for a, tags in enumerate(arr.T):  # shape (T, A) -> (A, T)
             if decode([v for v in tags]) == tagvalues:
-                idx = i
+                idx = a
                 break
     kinds = list(info['stats'])
     name = 'agg_curves-stats'

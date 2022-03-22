@@ -19,6 +19,7 @@ import os
 import sys
 import abc
 import pdb
+import json
 import logging
 import operator
 import traceback
@@ -1180,16 +1181,11 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     if aggby:
         aggkey, aggids = assetcol.build_aggkey(aggby)
         logging.info('Storing %d aggregation keys', len(aggkey))
-        dt = [(name + '_', U16) for name in aggby] + [
-            (name, hdf5.vstr) for name in aggby]
-        kvs = []
-        for key, val in aggkey.items():
-            val = tuple(python3compat.decode(val))
-            kvs.append(key + val)
-            lst.append(' '.join(val))
-        dstore['agg_keys'] = numpy.array(kvs, dt)
+        dstore['agg_keys'] = hdf5.dumps(aggkey)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
+        for vals in aggkey.values():
+            lst.extend(python3compat.decode(vals))
     lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
