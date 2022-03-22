@@ -1171,14 +1171,29 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
         dstore['avg_gmf'] = avg_gmf
 
 
+def build_aggkey(assetcol, aggby):
+    """
+    :returns: (aggkey dictionary, agg_ids list)
+    """
+    aggkey = assetcol.tagcol.get_aggkey(aggby)
+    if aggby == ['id']:
+        kids = assetcol['ordinal']
+    elif aggby == ['site_id']:
+        kids = assetcol['site_id']
+    else:
+        key2i = {key: i for i, key in enumerate(aggkey)}
+        kids = [key2i[tuple(t)] for t in assetcol[aggby]]
+    return aggkey, kids
+
+
 def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
     lst = []
-    aggkey = assetcol.tagcol.get_aggkey(aggby)
     if aggby:
+        aggkey, kids = build_aggkey(assetcol, aggby)
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [
             (name, hdf5.vstr) for name in aggby]
@@ -1188,13 +1203,6 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
             kvs.append(key + val)
             lst.append(' '.join(val))
         dstore['agg_keys'] = numpy.array(kvs, dt)
-        if aggby == ['id']:
-            kids = assetcol['ordinal']
-        elif aggby == ['site_id']:
-            kids = assetcol['site_id']
-        else:
-            key2i = {key: i for i, key in enumerate(aggkey)}
-            kids = [key2i[tuple(t)] for t in assetcol[aggby]]
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
         grp = dstore.getitem('assetcol')
