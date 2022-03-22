@@ -533,7 +533,7 @@ class AssetCollection(object):
 
     def build_aggids(self, aggby):
         """
-        :returns: (array of integers, array of strings)
+        :returns: (array of integers, list of strings)
         """
         aggkey = self.tagcol.get_aggkey(aggby)
         if aggby == ['id']:
@@ -543,7 +543,7 @@ class AssetCollection(object):
         else:
             key2i = {key: i for i, key in enumerate(aggkey)}
             aggids = numpy.array([key2i[tuple(t)] for t in self[aggby]])
-        return aggids, numpy.array(list(aggkey.values()))
+        return aggids, [decode(vals) for vals in aggkey.values()]
 
     def reduce(self, sitecol):
         """

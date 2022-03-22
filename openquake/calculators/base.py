@@ -1180,13 +1180,12 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     if aggby:
         aggids, aggvals = assetcol.build_aggids(aggby)
         logging.info('Storing %d aggregation keys', len(aggids))
-        allvals = [','.join(python3compat.decode(vals))
-                   for vals in aggvals]
+        allvals = [','.join(vals) for vals in aggvals]
         dstore['agg_keys'] = numpy.array(allvals, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
         for vals in allvals:
-            lst.extend(python3compat.decode(vals))
+            lst.extend(vals)
     lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
