@@ -1178,20 +1178,19 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     lst = []
     if aggby:
-        aggkey, aggids = assetcol.build_aggkey(aggby)
-        logging.info('Storing %d aggregation keys', len(aggkey))
+        aggids, aggvals = assetcol.build_aggids(aggby)
+        logging.info('Storing %d aggregation keys', len(aggids))
         allvals = [','.join(python3compat.decode(vals))
-                   for vals in aggkey.values()]
+                   for vals in aggvals]
         dstore['agg_keys'] = numpy.array(allvals, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
-        for vals in aggkey.values():
+        for vals in allvals:
             lst.extend(python3compat.decode(vals))
     lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
         dstore.set_shape_descr('agg_values', aggregation=lst)
-    return aggkey if aggby else {}
 
 
 def read_shakemap(calc, haz_sitecol, assetcol):

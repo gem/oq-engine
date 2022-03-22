@@ -242,7 +242,7 @@ class PostRiskCalculator(base.RiskCalculator):
         self.reaggreate = False
         if oq.hazard_calculation_id and not ds.parent:
             ds.parent = datastore.read(oq.hazard_calculation_id)
-            self.aggkey = base.save_agg_values(
+            base.save_agg_values(
                 ds, self.assetcol, oq.loss_types, oq.aggregate_by)
             aggby = ds.parent['oqparam'].aggregate_by
             self.reaggreate = aggby and oq.aggregate_by != aggby
@@ -251,7 +251,7 @@ class PostRiskCalculator(base.RiskCalculator):
                     zip(aggby, self.assetcol.tagcol.agg_shape(aggby)))
         else:
             assetcol = ds['assetcol']
-            self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
+            assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.L = len(oq.loss_types)
         if self.R > 1:
             self.num_events = numpy.bincount(
@@ -278,7 +278,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 self.datastore.set_shape_descr('src_loss_table',
                                                source=source_ids,
                                                loss_type=oq.loss_types)
-        K = len(self.aggkey) if oq.aggregate_by else 0
+        K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
         rbe_df = self.datastore.read_df('risk_by_event')
         if self.reaggreate:
             idxs = numpy.concatenate([
@@ -311,7 +311,7 @@ class PostRiskCalculator(base.RiskCalculator):
                    'addition-is-non-associative.html')
             num_haz_rlzs = len(self.datastore['weights'])
             event_rates = oq.risk_event_rates(self.num_events, num_haz_rlzs)
-            K = len(self.aggkey) if oq.aggregate_by else 0
+            K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
             aggrisk = self.aggrisk[self.aggrisk.agg_id == K]
             avg_losses = self.datastore['avg_losses-rlzs'][:].sum(axis=0)
             # shape (R, L)
