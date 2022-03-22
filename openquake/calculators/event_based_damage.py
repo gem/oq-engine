@@ -59,9 +59,12 @@ def event_based_damage(df, oqparam, monitor):
     with monitor('reading gmf_data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
-        assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = (dstore['assetcol/kids'][:] if K
-                else numpy.zeros(len(assets_df), U16))
+        assetcol = dstore['assetcol']
+        assets_df = assetcol.to_dframe('ordinal')
+        if K:
+            aggkey, kids = assetcol.build_aggkey(oqparam.aggregate_by)
+        else:
+            kids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
     master_seed = oqparam.master_seed
     sec_sims = oqparam.secondary_simulations.items()

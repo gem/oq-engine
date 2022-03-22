@@ -1190,9 +1190,6 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         dstore['agg_keys'] = numpy.array(kvs, dt)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
-        grp = dstore.getitem('assetcol')
-        if 'kids' not in grp:
-            grp['kids'] = U16(kids)
     lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
