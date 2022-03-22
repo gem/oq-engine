@@ -367,7 +367,7 @@ def get_shallow_site_response_term(C, region, vs30, pga1100):
     # Get linear site term
     vs_mod = vs30 / C["k1"]
     f_site_g = c_7 * np.log(vs_mod)
-    idx = vs30 >= C["k1"]
+    idx = vs30 > C["k1"]
     f_site_g[idx] = f_site_g[idx] + (C["k2"] * CONSTS["n"] *
                                      np.log(vs_mod[idx]))
 
