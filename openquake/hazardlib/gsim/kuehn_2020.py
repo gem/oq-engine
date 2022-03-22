@@ -688,7 +688,7 @@ class KuehnEtAl2020SInter(GMPE):
                 pga_soil = get_mean_values(C_PGA, self.region, trt, m_b,
                                            ctx, pga1100)
                 break
-        [mag] = np.unique(np.round(ctx.mag, 6))
+
         for m, imt in enumerate(imts):
             # Get coefficinets for imt
             C = self.COEFFS[imt]
@@ -709,6 +709,7 @@ class KuehnEtAl2020SInter(GMPE):
                                           ctx, pga1100)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
+                [mag] = np.unique(np.round(ctx.mag, 6))
                 sigma_mu_adjust = get_sigma_mu_adjustment(
                     self.sigma_mu_model, imt, mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
