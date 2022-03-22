@@ -170,8 +170,12 @@ def event_based_risk(df, oqparam, monitor):
     with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
-        assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = dstore['assetcol/kids'][:] if oqparam.K else ()
+        assetcol = dstore['assetcol']
+        assets_df = assetcol.to_dframe('ordinal')
+        if oqparam.K:
+            aggkey, kids = assetcol.build_aggkey(oqparam.aggregate_by)
+        else:
+            kids = ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else dstore['weights'][()]

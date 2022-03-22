@@ -542,7 +542,7 @@ class AssetCollection(object):
             kids = self['site_id']
         else:
             key2i = {key: i for i, key in enumerate(aggkey)}
-            kids = [key2i[tuple(t)] for t in self[aggby]]
+            kids = numpy.array([key2i[tuple(t)] for t in self[aggby]])
         return aggkey, kids
 
     def reduce(self, sitecol):
