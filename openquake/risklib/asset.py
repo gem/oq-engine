@@ -373,6 +373,16 @@ class TagCollection(object):
         return sum(len(getattr(self, tagname)) for tagname in self.tagnames)
 
 
+def tagset(aggregate_by):
+    """
+    :returns: set of unique tags in aggregate_by
+    """
+    s = set()
+    for aggby in aggregate_by:
+        s.update(aggby)
+    return s
+
+
 class AssetCollection(object):
     def __init__(self, exposure, assets_by_site, time_event, aggregate_by):
         self.tagcol = exposure.tagcol
@@ -384,7 +394,7 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, exposure.tagcol.tagnames, time_event)
-        if 'id' in aggregate_by:
+        if 'id' in tagset(aggregate_by):
             self.tagcol.add_tagname('id')
             self.tagcol.id.extend(self['id'])
         exp_periods = exposure.occupancy_periods

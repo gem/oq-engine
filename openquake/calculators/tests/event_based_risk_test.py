@@ -528,7 +528,7 @@ agg_id
         parent = self.calc.datastore
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
-        oq.__dict__['aggregate_by'] = ['NAME_1']
+        oq.__dict__['aggregate_by'] = [['NAME_1']]
         log = logs.init('job', {'calculation_mode': 'post_risk',
                                 'description': 'test recompute'})
         prc = PostRiskCalculator(oq, log.calc_id)
