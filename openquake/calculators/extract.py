@@ -706,26 +706,22 @@ def extract_agg_curves(dstore, what):
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
-    idx = -1
+    agg_id = -1
     if tagnames:
-        aggtags = get_agg_tags(dstore, tagnames)
-        arr = numpy.array([aggtags[tagname] for tagname in tagnames])
-        for a, tags in enumerate(arr.T):  # shape (T, A) -> (A, T)
-            if decode(tags) == tagvalues:
-                idx = a
-                break
+        lst = decode(dstore['agg_keys'][:])
+        agg_id = lst.index(','.join(tagvalues))
     kinds = list(info['stats'])
     name = 'agg_curves-stats'
     units = dstore.get_attr(name, 'units')
     shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
     rps = shape_descr['return_period']
-    tup = (idx, k, l)
+    tup = (agg_id, k, l)
     arr = dstore[name][tup].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue, = dstore['agg_values'][idx][lt]
+        evalue, = dstore['agg_values'][agg_id][lt]
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
