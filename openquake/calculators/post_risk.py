@@ -193,7 +193,7 @@ def store_agg(dstore, rbe_df, num_events):
         'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
     dmgs = [col for col in columns if col.startswith('dmg_')]
     if dmgs:
-        aggnumber = dstore['agg_values']['number']
+        aggnumber = dstore['assetcol'].get_agg_values(oq.aggregate_by)['number']
     gb = rbe_df.groupby(['agg_id', 'rlz_id', 'loss_id'])
     for (agg_id, rlz_id, loss_id), df in gb:
         ne = num_events[rlz_id]

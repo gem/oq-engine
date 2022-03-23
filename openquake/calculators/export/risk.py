@@ -80,7 +80,7 @@ def export_aggrisk(ekey, dstore):
     tagnames = oq.aggregate_by
     aggtags = get_aggtags(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    agg_values = dstore['agg_values'][()]  # shape K+1
+    agg_values = dstore['assetcol'].get_agg_values(tagnames)  # shape K+1
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time or
@@ -564,7 +564,7 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
 
     # aggcurves
-    agg_values = dstore['agg_values'][:]
+    agg_values = dstore['assetcol'].get_agg_values(oq.aggregate_by)
     cols = [col for col in df.columns if col not in consequences
             and col not in ('agg_id', 'rlz_id', 'loss_id')]
     edic = general.AccumDict(accum=[])

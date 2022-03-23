@@ -711,7 +711,7 @@ def extract_agg_curves(dstore, what):
         aggtags = get_agg_tags(dstore, tagnames)
         arr = numpy.array([aggtags[tagname] for tagname in tagnames])
         for a, tags in enumerate(arr.T):  # shape (T, A) -> (A, T)
-            if decode([v for v in tags]) == tagvalues:
+            if decode(tags) == tagvalues:
                 idx = a
                 break
     kinds = list(info['stats'])

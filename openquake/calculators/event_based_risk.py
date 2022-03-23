@@ -51,9 +51,9 @@ def save_curve_stats(dstore):
     oq = dstore['oqparam']
     units = dstore['cost_calculator'].get_units(oq.loss_types)
     try:
-        K1 = len(dstore['agg_values']) + 1
+        K = len(dstore['agg_keys'])
     except KeyError:
-        K1 = 1
+        K = 0
     stats = oq.hazard_stats()
     S = len(stats)
     L = len(oq.lti)
@@ -61,7 +61,7 @@ def save_curve_stats(dstore):
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
-    out = numpy.zeros((K1, S, L, P))
+    out = numpy.zeros((K + 1, S, L, P))
     for (agg_id, loss_id), df in aggcurves_df.groupby(["agg_id", "loss_id"]):
         for s, stat in enumerate(stats.values()):
             for p in range(P):
@@ -70,7 +70,7 @@ def save_curve_stats(dstore):
                 ws /= ws.sum()
                 out[agg_id, s, loss_id, p] = stat(dfp.loss.to_numpy(), ws)
     dstore['agg_curves-stats'] = out
-    dstore.set_shape_descr('agg_curves-stats', agg_id=K1, stat=list(stats),
+    dstore.set_shape_descr('agg_curves-stats', agg_id=K+1, stat=list(stats),
                            lti=L, return_period=periods)
     dstore.set_attrs('agg_curves-stats', units=units)
 
@@ -254,7 +254,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         logging.info(
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
-        K = len(self.datastore['agg_values']) - 1
+        try:
+            K = len(self.datastore['agg_keys'])
+        except KeyError:
+            K = 0
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
         oq.D = 2
