@@ -1273,7 +1273,10 @@ def create_risk_by_event(calc):
     """
     oq = calc.oqparam
     dstore = calc.datastore
-    K = len(dstore['agg_values']) - 1
+    try:
+        K = len(dstore['agg_keys'])
+    except KeyError:
+        K = 0
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         fields = [('loss', F32)]
