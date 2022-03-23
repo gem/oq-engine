@@ -254,7 +254,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         logging.info(
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
-        KK = len(self.datastore['agg_values']) - 1
+        K = len(self.datastore['agg_values']) - 1
         self.datastore.swmr_on()
         sec_losses = []  # one insured loss for each loss type with a policy
         oq.D = 2
@@ -262,13 +262,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
             self.oqparam.D = 3
-        if not hasattr(self, 'aggkey'):
-            self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
         oq.N = self.N
-        oq.K = len(self.aggkey)
-        assert oq.K == KK
+        oq.K = K
         ct = oq.concurrent_tasks or 1
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)

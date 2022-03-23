@@ -1273,7 +1273,7 @@ def create_risk_by_event(calc):
     """
     oq = calc.oqparam
     dstore = calc.datastore
-    aggkey = getattr(calc, 'aggkey', {})  # empty if not aggregate_by
+    K = len(dstore['agg_values']) - 1
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         fields = [('loss', F32)]
@@ -1281,11 +1281,10 @@ def create_risk_by_event(calc):
             fields.append(('ins_loss', F32))
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields
-        dstore.create_df('risk_by_event', descr, K=len(aggkey),
-                         L=len(oq.loss_types))
+        dstore.create_df('risk_by_event', descr, K=K, L=len(oq.loss_types))
     else:  # damage + consequences
         dmgs = ' '.join(crmodel.damage_states[1:])
         descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
-        dstore.create_df('risk_by_event', descr, K=len(aggkey),
+        dstore.create_df('risk_by_event', descr, K=K,
                          L=len(oq.loss_types), limit_states=dmgs)
