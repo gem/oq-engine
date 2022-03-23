@@ -140,8 +140,9 @@ def event_based_damage(df, oqparam, monitor):
                     for e, eid in enumerate(eids):
                         dddict[eid, K][lti] += tot[e]
                         if K:
-                            for a, aid in enumerate(aids):
-                                dddict[eid, aggids[aid]][lti] += d3[a, e]
+                            for kids in aggids:
+                                for a, aid in enumerate(aids):
+                                    dddict[eid, kids[aid]][lti] += d3[a, e]
     return to_dframe(dddict, ci, L), dmgcsq
 
 
