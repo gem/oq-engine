@@ -1176,7 +1176,6 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
-    lst = []
     if aggby:
         aggids, aggtags = assetcol.build_aggids(aggby)
         logging.info('Storing %d aggregation keys', len(aggids))
@@ -1184,12 +1183,8 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         dstore['agg_keys'] = numpy.array(agg_keys, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
-        for tags in aggtags:
-            lst.extend(tags)
-    lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
-        dstore.set_shape_descr('agg_values', aggregation=lst)
 
 
 def read_shakemap(calc, haz_sitecol, assetcol):
@@ -1278,7 +1273,7 @@ def create_risk_by_event(calc):
     """
     oq = calc.oqparam
     dstore = calc.datastore
-    aggkey = getattr(calc, 'aggkey', {})  # empty if not aggregate_by
+    K = len(dstore['agg_values']) - 1
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         fields = [('loss', F32)]
@@ -1286,11 +1281,10 @@ def create_risk_by_event(calc):
             fields.append(('ins_loss', F32))
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('variance', F32)] + fields
-        dstore.create_df('risk_by_event', descr, K=len(aggkey),
-                         L=len(oq.loss_types))
+        dstore.create_df('risk_by_event', descr, K=K, L=len(oq.loss_types))
     else:  # damage + consequences
         dmgs = ' '.join(crmodel.damage_states[1:])
         descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
-        dstore.create_df('risk_by_event', descr, K=len(aggkey),
+        dstore.create_df('risk_by_event', descr, K=K,
                          L=len(oq.loss_types), limit_states=dmgs)
