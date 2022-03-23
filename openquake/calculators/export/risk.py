@@ -59,6 +59,12 @@ def _loss_type(ln):
     return ln
 
 
+def get_aggtags(dstore):
+    aggtags = [ln.decode('utf8').split(',') for ln in dstore['agg_keys'][:]]
+    aggtags += [('*total*',) * len(aggtags[0])]
+    return aggtags
+
+    
 @export.add(('aggrisk', 'csv'))
 def export_aggrisk(ekey, dstore):
     """
@@ -67,10 +73,8 @@ def export_aggrisk(ekey, dstore):
     """
     oq = dstore['oqparam']
     tagnames = oq.aggregate_by
+    aggtags = get_aggtags(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    tagcol = dstore['assetcol/tagcol']
-    aggtags = list(tagcol.get_aggkey(tagnames).values())
-    aggtags.append(('*total*',) * len(tagnames))
     agg_values = dstore['agg_values'][()]  # shape K+1
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
@@ -117,9 +121,7 @@ def export_aggrisk_stats(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    tagcol = dstore['assetcol/tagcol']
-    aggtags = list(tagcol.get_aggkey(oq.aggregate_by).values())
-    aggtags.append(('*total*',) * len(oq.aggregate_by))
+    aggtags = get_aggtags(dstore)
     key = ekey[0].split('-')[0]  # aggrisk or aggcurves
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname(f'{key}-stats', '', 'csv')

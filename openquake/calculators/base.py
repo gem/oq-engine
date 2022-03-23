@@ -1176,7 +1176,6 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
-    lst = []
     if aggby:
         aggids, aggtags = assetcol.build_aggids(aggby)
         logging.info('Storing %d aggregation keys', len(aggids))
@@ -1184,12 +1183,8 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         dstore['agg_keys'] = numpy.array(agg_keys, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
-        for tags in aggtags:
-            lst.extend(tags)
-    lst.append('*total*')
     if assetcol.get_value_fields():
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
-        dstore.set_shape_descr('agg_values', aggregation=lst)
 
 
 def read_shakemap(calc, haz_sitecol, assetcol):
