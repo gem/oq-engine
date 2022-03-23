@@ -60,11 +60,16 @@ def _loss_type(ln):
 
 
 def get_aggtags(dstore):
-    aggtags = [ln.decode('utf8').split(',') for ln in dstore['agg_keys'][:]]
-    aggtags += [('*total*',) * len(aggtags[0])]
+    # returns a list of tag tuples
+    if 'agg_keys' in dstore:  # there was an aggregate_by
+        aggtags = [ln.decode('utf8').split(',')
+                   for ln in dstore['agg_keys'][:]]
+        aggtags += [('*total*',) * len(aggtags[0])]
+    else:  # np aggregate_by
+        aggtags = [()]
     return aggtags
 
-    
+
 @export.add(('aggrisk', 'csv'))
 def export_aggrisk(ekey, dstore):
     """
