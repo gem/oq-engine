@@ -249,9 +249,6 @@ class PostRiskCalculator(base.RiskCalculator):
             if self.reaggreate:
                 self.num_tags = dict(
                     zip(aggby, self.assetcol.tagcol.agg_shape(aggby)))
-        else:
-            assetcol = ds['assetcol']
-            assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.L = len(oq.loss_types)
         if self.R > 1:
             self.num_events = numpy.bincount(
