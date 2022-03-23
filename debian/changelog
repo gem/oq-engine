@@ -1,3 +1,7 @@
+  [Tom Son]
+  * Fixed a typo and a few bugs within Kuehn et al. (2020) model to match with the
+  author's code
+
   [Michele Simionato]
   * Rounded the magnitudes in multiFaultSources to two digits
 

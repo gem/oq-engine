@@ -360,7 +360,7 @@ def get_shallow_site_response_term(C, region, vs30, pga1100):
         Array of Vs30 values (m/s)
 
     :param numpy ndarray pga1100:
-        Peak ground acceletaion on reference rock (Vs30 1100 m/s)
+        Peak ground acceleration on reference rock (Vs30 1100 m/s)
     """
     # c7 is the same for interface or inslab - so just read from interface
     c_7 = C[REGION_TERMS_IF[region]["c7"]]
@@ -692,8 +692,8 @@ class KuehnEtAl2020SInter(GMPE):
         for m, imt in enumerate(imts):
             # Get coefficinets for imt
             C = self.COEFFS[imt]
-            m_break = m_b + C["dm_b"] if trt == const.TRT.SUBDUCTION_INTERFACE\
-                else m_b
+            m_break = m_b + C["dm_b"] if trt == const.TRT.SUBDUCTION_INTERFACE and\
+                self.region in ("JPN", "SAM") else m_b
 
             if imt.string == "PGA":
                 mean[m] = pga_soil
