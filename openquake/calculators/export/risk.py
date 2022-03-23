@@ -77,7 +77,7 @@ def export_aggrisk(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    tagnames = oq.aggregate_by[0]
+    tagnames = oq.aggregate_by[0] if oq.aggregate_by else []
     aggtags = get_aggtags(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     agg_values = dstore['agg_values'][()]  # shape K+1
