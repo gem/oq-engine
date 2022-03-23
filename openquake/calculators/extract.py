@@ -18,7 +18,6 @@
 from urllib.parse import parse_qs
 from unittest.mock import Mock
 from functools import lru_cache
-import collections
 import logging
 import json
 import gzip
@@ -668,18 +667,18 @@ def extract_csq_curves(dstore, what):
                              consequences=cols))
 
 
-def get_agg_tags(dstore, aggregate_by):
+def get_agg_tags(dstore, tagnames):
     """
     :returns: a dictionary tagname -> array of strings ended by *total*
     """
-    if not aggregate_by:
+    if not tagnames:
         return {}
-    agg_tags = {tagname: [] for tagname in aggregate_by}
+    agg_tags = {tagname: [] for tagname in tagnames}
     agg_keys = decode(dstore['agg_keys'][:])
     for keys in agg_keys:
-        for tagname, val in zip(aggregate_by, keys.split(',')):
+        for tagname, val in zip(tagnames, keys.split(',')):
             agg_tags[tagname].append(val)
-    for tagname in aggregate_by:
+    for tagname in tagnames:
         agg_tags[tagname].append('*total*')
     return {k: numpy.array(v) for k, v in agg_tags.items()}
 
@@ -702,9 +701,14 @@ def extract_agg_curves(dstore, what):
     lt = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
     tagnames = sorted(tagdict)
-    if set(tagnames) != set(info['tagnames']):
-        raise ValueError('Expected tagnames=%s, got %s' %
-                         (info['tagnames'], tagnames))
+    tagnames_ok = False
+    for aggby in info['tagnames']:
+        if tagnames == sorted(aggby):
+            tagnames_ok = True
+            break
+    if not tagnames_ok:
+        raise ValueError('tagnames=%s missing in %s' %
+                         (tagnames, info['tagnames']))
     tagvalues = [tagdict[t][0] for t in tagnames]
     idx = -1
     if tagnames:

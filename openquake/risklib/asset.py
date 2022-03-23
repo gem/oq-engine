@@ -307,22 +307,25 @@ class TagCollection(object):
         return {tagname: getattr(self, tagname)[tagidx]
                 for tagidx, tagname in zip(tagidxs, self.tagnames)}
 
-    def get_aggkey(self, tagnames):
+    def get_aggkey(self, alltagnames):
         """
+        :param alltagnames: array of (Ag, T) tag names
         :returns: a dictionary tuple of indices -> tagvalues
         """
         aggkey = {}
-        if not tagnames:
+        if not alltagnames:
             return aggkey
-        alltags = [getattr(self, tagname) for tagname in tagnames]
-        ranges = [range(1, len(tags)) for tags in alltags]
-        for i, idxs in enumerate(itertools.product(*ranges)):
-            aggkey[idxs] = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
-        if len(aggkey) >= TWO16 and 'site_id' not in self.tagnames:
-            # forbid too many aggregations (they are usual an user mistake)
-            # except for aggregate_by=site_id which is legitimate
-            raise ValueError('Too many aggregation tags: %d >= %d' %
-                             (len(aggkey), TWO16))
+        for ag, tagnames in enumerate(alltagnames):
+            alltags = [getattr(self, tagname) for tagname in tagnames]
+            ranges = [range(1, len(tags)) for tags in alltags]
+            for idxs in itertools.product(*ranges):
+                aggkey[ag, idxs] = tuple(
+                    tags[idx] for idx, tags in zip(idxs, alltags))
+            if len(aggkey) >= TWO16 and 'site_id' not in self.tagnames:
+                # forbid too many aggregations (they are usual an user mistake)
+                # except for aggregate_by=site_id which is legitimate
+                raise ValueError('Too many aggregation tags: %d >= %d' %
+                                 (len(aggkey), TWO16))
         return aggkey
 
     def gen_tags(self, tagname):
@@ -502,14 +505,17 @@ class AssetCollection(object):
     def get_agg_values(self, tagnames):
         """
         :param tagnames:
-            tagnames
+            a list of Ag lists of tag names
         :returns:
             a structured array of length K+1 with the value fields
         """
+        allnames = set()
+        for names in tagnames:
+            allnames.update(names)
         aggkey = {key: k for k, key in enumerate(
             self.tagcol.get_aggkey(tagnames))}
         K = len(aggkey)
-        dic = {tagname: self[tagname] for tagname in tagnames}
+        dic = {tagname: self[tagname] for tagname in allnames}
         for field in self.fields:
             dic[field] = self['value-' + field]
         for field in self.occfields:
@@ -517,32 +523,35 @@ class AssetCollection(object):
         value_dt = [(f, float) for f in self.fields + self.occfields]
         agg_values = numpy.zeros(K+1, value_dt)
         df = pandas.DataFrame(dic)
-        if tagnames:
-            df = df.set_index(list(tagnames))
-            if tagnames == ['id']:
+        for ag, allnames in enumerate(tagnames):
+            df = df.set_index(allnames)
+            if allnames == ['id']:
                 df.index = self['ordinal'] + 1
-            elif tagnames == ['site_id']:
+            elif allnames == ['site_id']:
                 df.index = self['site_id'] + 1
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
-                agg_values[aggkey[key]] = tuple(grp.sum())
+                agg_values[aggkey[ag, key]] = tuple(grp.sum())
         if self.fields:  # missing in scenario_damage case_8
             agg_values[K] = tuple(df.sum())
         return agg_values
 
-    def build_aggids(self, aggby):
+    def build_aggids(self, aggregate_by):
         """
-        :returns: (array of integers, list of strings)
+        :param aggregate_by: list of Ag lists of strings
+        :returns: (array of (Ag, A) integers, list of K strings)
         """
-        aggkey = self.tagcol.get_aggkey(aggby)
-        if aggby == ['id']:
-            aggids = self['ordinal']
-        elif aggby == ['site_id']:
-            aggids = self['site_id']
-        else:
-            key2i = {key: i for i, key in enumerate(aggkey)}
-            aggids = numpy.array([key2i[tuple(t)] for t in self[aggby]])
+        aggkey = self.tagcol.get_aggkey(aggregate_by)
+        aggids = numpy.zeros((len(aggregate_by), len(self)), U32)
+        key2i = {key: i for i, key in enumerate(aggkey)}
+        for ag, aggby in enumerate(aggregate_by):
+            if aggby == ['id']:
+                aggids[ag] = self['ordinal']
+            elif aggby == ['site_id']:
+                aggids[ag] = self['site_id']
+            else:
+                aggids[ag] = [key2i[ag, tuple(t)] for t in self[aggby]]
         return aggids, [decode(vals) for vals in aggkey.values()]
 
     def reduce(self, sitecol):

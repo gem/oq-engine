@@ -77,7 +77,7 @@ def export_aggrisk(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    tagnames = oq.aggregate_by
+    tagnames = oq.aggregate_by[0]
     aggtags = get_aggtags(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     agg_values = dstore['agg_values'][()]  # shape K+1
@@ -547,7 +547,8 @@ def export_aggcurves_csv(ekey, dstore):
     E = len(dstore['events'])
     R = len(dstore['weights'])
     lossnames = numpy.array(oq.loss_types)
-    aggtags = get_agg_tags(dstore, oq.aggregate_by)
+    aggtags = get_agg_tags(
+        dstore, oq.aggregate_by[0] if oq.aggregate_by else [])
     df = dstore.read_df('aggcurves')
     consequences = [col for col in df.columns
                     if col in scientific.KNOWN_CONSEQUENCES]

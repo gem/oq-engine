@@ -142,7 +142,8 @@ def aggreg(outputs, crmodel, ARKD, aggids, rlz_id, monitor):
                 fast_agg(eids + U64(K), values, correl, li, acc)
                 if len(aggids):
                     aids = alt.aid.to_numpy()
-                    fast_agg(eids + U64(aggids[aids]), values, correl, li, acc)
+                    for kids in aggids[:, aids]:
+                        fast_agg(eids + U64(kids), values, correl, li, acc)
     with mon_df:
         dic = general.AccumDict(accum=[])
         for ukey, arr in acc.items():
