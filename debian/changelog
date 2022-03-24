@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Removed the obsolete commands `oq to_shapefile` and `oq from_shapefile`
+    and turned pyshp into an optional dependency
   * Setting `num_rlzs_disagg=0` is now valid and it means considering
     all realizations in a disaggregation calculation
   * Rounded the magnitudes in multiFaultSources to two digits

@@ -23,6 +23,7 @@ https://wheelhouse.openquake.org/v3/macos/py/chardet-3.0.4-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/urllib3-1.25.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/requests-2.22.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py37/PyYAML-5.1.2-cp37-cp37m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py/toml-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/Django-3.2.12-py3-none-any.whl

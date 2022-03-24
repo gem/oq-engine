@@ -23,7 +23,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip wheel
         pip install pytest
-        pip install fiona
+        pip install fiona pyshp
         pip install -r requirements-py39-linux64.txt && pip install -e .
         python -c'import shapely as s; print("shapely=%s" % s.__version__)'
     - name: Test with pytest
