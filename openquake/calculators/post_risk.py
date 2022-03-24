@@ -249,6 +249,9 @@ class PostRiskCalculator(base.RiskCalculator):
             if self.reaggreate:
                 self.num_tags = dict(
                     zip(aggby[0], self.assetcol.tagcol.agg_shape(aggby[0])))
+        else:
+            assetcol = ds['assetcol']
+            assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.L = len(oq.loss_types)
         if self.R > 1:
             self.num_events = numpy.bincount(
@@ -279,7 +282,7 @@ class PostRiskCalculator(base.RiskCalculator):
         rbe_df = self.datastore.read_df('risk_by_event')
         if self.reaggreate:
             idxs = numpy.concatenate([
-                reagg_idxs(self.num_tags, oq.aggregate_by[0]),
+                reagg_idxs(self.num_tags, oq.aggregate_by),
                 numpy.array([K], int)])
             rbe_df['agg_id'] = idxs[rbe_df['agg_id'].to_numpy()]
             rbe_df = rbe_df.groupby(
