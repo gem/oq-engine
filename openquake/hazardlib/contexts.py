@@ -1100,10 +1100,9 @@ class PmapMaker(object):
                 else:
                     lst = [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
-            elif par == 'occurrence_rate' and not hasattr(ctx, par):
-                dic[par] = numpy.nan
             else:
-                dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
+                dic[par] = numpy.array([getattr(ctx, par, numpy.nan)
+                                        for ctx in ctxs])
         dic['id'] = numpy.arange(len(ctxs)) * TWO32 + self.cmaker.out_no
         return dic
 
