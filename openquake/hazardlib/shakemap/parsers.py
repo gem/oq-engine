@@ -33,7 +33,10 @@ import json
 import zipfile
 
 from shapely.geometry import Polygon
-import shapefile
+try:
+    import shapefile  # optional dependency
+except ImportError:
+    pass
 
 import numpy
 from openquake.baselib.general import CallableDict
