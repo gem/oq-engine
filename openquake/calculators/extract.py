@@ -667,22 +667,6 @@ def extract_csq_curves(dstore, what):
                              consequences=cols))
 
 
-def get_agg_tags(dstore, tagnames):
-    """
-    :returns: a dictionary tagname -> array of strings ended by *total*
-    """
-    if not tagnames:
-        return {}
-    agg_tags = {tagname: [] for tagname in tagnames}
-    agg_keys = decode(dstore['agg_keys'][:])
-    for keys in agg_keys:
-        for tagname, val in zip(tagnames, keys.split(',')):
-            agg_tags[tagname].append(val)
-    for tagname in tagnames:
-        agg_tags[tagname].append('*total*')
-    return {k: numpy.array(v) for k, v in agg_tags.items()}
-
-
 @extract.add('agg_curves')
 def extract_agg_curves(dstore, what):
     """
