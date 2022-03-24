@@ -87,7 +87,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
                               delta=1E-5)
 
         # checking aggrisk
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 

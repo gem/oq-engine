@@ -91,9 +91,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(aw.stats, ['mean'])
         numpy.testing.assert_allclose(aw.array, [685.5015], atol=.001)
 
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=1E-5)
+        fnames = export(('aggrisk', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
+                                  fname, delta=1E-5)
 
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -487,15 +488,15 @@ agg_id
         # nontrivial taxonomy mapping
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='0')
-        [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        for fname in out['aggrisk', 'csv']:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
         # NB: there was a taskno-dependency here, so make sure there are
         # no regressions
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='4')
-        [fname] = out['aggrisk', 'csv']
-        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        for fname in out['aggrisk', 'csv']:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):
@@ -520,7 +521,7 @@ agg_id
         # test recomputing aggregate loss curves with post_risk
         # this is starting from a ruptures.csv file
         out = self.run_calc(recompute.__file__, 'job.ini', exports='csv')
-        [fname] = out['aggrisk', 'csv']
+        [_total, fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
         [fname] = out['aggcurves', 'csv']
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-5)
@@ -536,7 +537,7 @@ agg_id
         oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), log:
             prc.run()
-        [fname] = export(('aggrisk', 'csv'), prc.datastore)
+        [_total, fname] = export(('aggrisk', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
 

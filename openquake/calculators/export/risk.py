@@ -81,6 +81,7 @@ def export_aggrisk(ekey, dstore):
     aggtags = get_aggtags(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     agg_values = dstore['assetcol'].get_agg_values(tagnames)  # shape K+1
+    K = len(agg_values) - 1
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time or
@@ -92,31 +93,39 @@ def export_aggrisk(ekey, dstore):
     csqs = [col for col in cols if not col.startswith('dmg_')]
     header = ['loss_type'] + tagnames + ['exposed_value'] + [
         '%s_ratio' % csq for csq in csqs]
-    dest = dstore.build_fname('aggrisk', '', 'csv')
-    out = general.AccumDict(accum=[])
+    dest = dstore.build_fname('aggrisk-{}', '', 'csv')
     manyrlzs = hasattr(aggrisk, 'rlz_id') and len(aggrisk.rlz_id.unique()) > 1
-    for (agg_id, loss_id), df in aggrisk.groupby(['agg_id', 'loss_id']):
-        n = len(df)
-        loss_type = oq.loss_types[loss_id]
-        out['loss_type'].extend([loss_type] * n)
-        for tagname, tag in zip(tagnames, aggtags[agg_id]):
-            out[tagname].extend([tag] * n)
-        if manyrlzs:
-            out['rlz_id'].extend(df.rlz_id)
-        for col in cols:
-            if col in csqs:
-                aval = scientific.get_agg_value(
-                    col, agg_values, agg_id, loss_type)
-                out[col + '_value'].extend(df[col])
-                out[col + '_ratio'].extend(df[col] / aval)
-            else:
-                out[col].extend(df[col])
-    dsdic = {'dmg_0': 'no_damage'}
-    for s, ls in enumerate(oq.limit_states, 1):
-        dsdic['dmg_%d' % s] = ls
-    df = pandas.DataFrame(out).rename(columns=dsdic)
-    writer.save(df, dest, header, comment=md)
-    return [dest]
+    pairs = [([], aggrisk.agg_id == K)]
+    if tagnames:
+        pairs.append((tagnames, aggrisk.agg_id < K))
+    fnames = []
+    for tagnames, ok in pairs:
+        name = '-'.join(tagnames) or 'total'
+        out = general.AccumDict(accum=[])
+        for (agg_id, lid), df in aggrisk[ok].groupby(['agg_id', 'loss_id']):
+            n = len(df)
+            loss_type = oq.loss_types[lid]
+            out['loss_type'].extend([loss_type] * n)
+            for tagname, tag in zip(tagnames, aggtags[agg_id]):
+                out[tagname].extend([tag] * n)
+            if manyrlzs:
+                out['rlz_id'].extend(df.rlz_id)
+            for col in cols:
+                if col in csqs:
+                    aval = scientific.get_agg_value(
+                        col, agg_values, agg_id, loss_type)
+                    out[col + '_value'].extend(df[col])
+                    out[col + '_ratio'].extend(df[col] / aval)
+                else:
+                    out[col].extend(df[col])
+        dsdic = {'dmg_0': 'no_damage'}
+        for s, ls in enumerate(oq.limit_states, 1):
+            dsdic['dmg_%d' % s] = ls
+        df = pandas.DataFrame(out).rename(columns=dsdic)
+        fname = dest.format(name)
+        writer.save(df, fname, header, comment=md)
+        fnames.append(fname)
+    return fnames
 
 
 @export.add(('aggrisk-stats', 'csv'), ('aggcurves-stats', 'csv'))
