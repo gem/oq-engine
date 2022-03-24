@@ -41,7 +41,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
-        [_tot, fname] = out['aggrisk', 'csv']
+        [fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
 
         # check the exported GMFs
@@ -226,7 +226,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (9,))
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
-        [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
@@ -244,7 +244,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (7,))
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'MMI'))
-        [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
