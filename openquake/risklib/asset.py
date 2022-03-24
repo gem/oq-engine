@@ -543,7 +543,7 @@ class AssetCollection(object):
                     key = key,  # turn it into a 1-value tuple
                 agg_values[aggkey[ag, key]] = tuple(grp[vfields].sum())
         if self.fields:  # missing in scenario_damage case_8
-            agg_values[K] = tuple(df[vfields].sum())
+            agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
 
     def build_aggids(self, aggregate_by):
