@@ -512,39 +512,38 @@ class AssetCollection(object):
         """
         return [f for f in self.array.dtype.names if f.startswith('value-')]
 
-    def get_agg_values(self, tagnames):
+    def get_agg_values(self, aggregate_by):
         """
-        :param tagnames:
+        :param aggregate_by:
             a list of Ag lists of tag names
         :returns:
             a structured array of length K+1 with the value fields
         """
-        allnames = set()
-        for names in tagnames:
-            allnames.update(names)
+        allnames = tagset(aggregate_by)
         aggkey = {key: k for k, key in enumerate(
-            self.tagcol.get_aggkey(tagnames))}
+            self.tagcol.get_aggkey(aggregate_by))}
         K = len(aggkey)
         dic = {tagname: self[tagname] for tagname in allnames}
         for field in self.fields:
             dic[field] = self['value-' + field]
         for field in self.occfields:
             dic[field] = self[field]
-        value_dt = [(f, float) for f in self.fields + self.occfields]
+        vfields = self.fields + self.occfields
+        value_dt = [(f, float) for f in vfields]
         agg_values = numpy.zeros(K+1, value_dt)
-        df = pandas.DataFrame(dic)
-        for ag, allnames in enumerate(tagnames):
-            df = df.set_index(allnames)
-            if allnames == ['id']:
+        dataf = pandas.DataFrame(dic)
+        for ag, tagnames in enumerate(aggregate_by):
+            df = dataf.set_index(tagnames)
+            if tagnames == ['id']:
                 df.index = self['ordinal'] + 1
-            elif allnames == ['site_id']:
+            elif tagnames == ['site_id']:
                 df.index = self['site_id'] + 1
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
-                agg_values[aggkey[ag, key]] = tuple(grp.sum())
+                agg_values[aggkey[ag, key]] = tuple(grp[vfields].sum())
         if self.fields:  # missing in scenario_damage case_8
-            agg_values[K] = tuple(df.sum())
+            agg_values[K] = tuple(df[vfields].sum())
         return agg_values
 
     def build_aggids(self, aggregate_by):

@@ -70,22 +70,24 @@ def get_aggtags(dstore):
     return aggtags
 
 
-def _aggrisk(oq, aggtags, agg_values, aggrisk, md, dest):
+def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     cols = [col for col in aggrisk.columns
             if col not in {'agg_id', 'rlz_id', 'loss_id'}]
     csqs = [col for col in cols if not col.startswith('dmg_')]
     manyrlzs = hasattr(aggrisk, 'rlz_id') and len(aggrisk.rlz_id.unique()) > 1
     fnames = []
-    for tagnames in oq.aggregate_by or [[]]:
+    for tagnames, agg_ids in zip(oq.aggregate_by or [[]], aggids):
+        arisk = aggrisk[numpy.isin(aggrisk.agg_id, agg_ids)]
         header = ['loss_type'] + tagnames + ['exposed_value'] + [
             '%s_ratio' % csq for csq in csqs]
         out = general.AccumDict(accum=[])
-        for (agg_id, loss_id), df in aggrisk.groupby(['agg_id', 'loss_id']):
+        for (agg_id, loss_id), df in arisk.groupby(['agg_id', 'loss_id']):
             n = len(df)
             loss_type = oq.loss_types[loss_id]
             out['loss_type'].extend([loss_type] * n)
             for tagname, tag in zip(tagnames, aggtags[agg_id]):
+                print(tagname, tag)
                 out[tagname].extend([tag] * n)
             if manyrlzs:
                 out['rlz_id'].extend(df.rlz_id)
@@ -114,15 +116,17 @@ def export_aggrisk(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
     aggtags = get_aggtags(dstore)
-    agg_values = dstore['assetcol'].get_agg_values(oq.aggregate_by)
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time or
                    oq.investigation_time))
     aggrisk = dstore.read_df('aggrisk')
     dest = dstore.build_fname('{}', '', 'csv')
-    return _aggrisk(oq, aggtags, agg_values, aggrisk, md, dest)
+    aggids, tags = assetcol.build_aggids(oq.aggregate_by)
+    return _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest)
 
 
 @export.add(('aggrisk-stats', 'csv'), ('aggcurves-stats', 'csv'))
@@ -494,6 +498,7 @@ def export_aggregate_by_csv(ekey, dstore):
     return fnames
 
 
+# used in multi_risk
 @export.add(('asset_risk', 'csv'))
 def export_asset_risk_csv(ekey, dstore):
     """
@@ -529,6 +534,7 @@ def export_asset_risk_csv(ekey, dstore):
     return [fname]
 
 
+# used in multi_risk
 @export.add(('agg_risk', 'csv'))
 def export_agg_risk_csv(ekey, dstore):
     """
