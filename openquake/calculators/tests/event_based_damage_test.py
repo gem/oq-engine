@@ -82,7 +82,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
     def test_case_13a(self):
         # test event_based_damage, no aggregate_by
         self.run_calc(case_13.__file__, 'job_a.ini')
-        [_, f] = export(('aggcurves', 'csv'), self.calc.datastore)
+        [f] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
 
     def test_case_13b(self):
@@ -118,7 +118,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_risk-mean.csv', f, delta=5E-5)
 
         # check aggcurves
-        [_, f] = export(('aggcurves', 'csv'), self.calc.datastore)
+        [f] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
 
         # check extract
