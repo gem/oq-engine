@@ -39,6 +39,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
+from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
 
@@ -76,7 +77,7 @@ def get_info(dstore):
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
                 limit_states=oq.limit_states,
-                tagnames=oq.aggregate_by)
+                tagnames=tagset(oq.aggregate_by))
 
 
 def _normalize(kinds, info):
@@ -685,14 +686,9 @@ def extract_agg_curves(dstore, what):
     lt = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
     tagnames = sorted(tagdict)
-    tagnames_ok = False
-    for aggby in info['tagnames']:
-        if tagnames == sorted(aggby):
-            tagnames_ok = True
-            break
-    if not tagnames_ok:
-        raise ValueError('tagnames=%s missing in %s' %
-                         (tagnames, info['tagnames']))
+    if set(tagnames) != info['tagnames']:
+        raise ValueError('Expected tagnames=%s, got %s' %
+                         (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
     agg_id = -1
     if tagnames:
