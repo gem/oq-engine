@@ -1,0 +1,26 @@
+#,,,,"generated_by='OpenQuake engine 3.14.0-git6fdb6e4e59', start_date='2022-03-25T16:41:58', checksum=3248968340"
+loss_type,loss,stat,NAME_1,taxonomy
+business_interruption,23.414297819137573,mean,Mid-Western,Wood/Res
+business_interruption,7.855328639348348,quantile-0.15,Mid-Western,Wood/Res
+business_interruption,22.18595814704895,quantile-0.85,Mid-Western,Wood/Res
+structural,6.508490347862244,mean,Mid-Western,Wood/Res
+structural,1.6211685472064548,quantile-0.15,Mid-Western,Wood/Res
+structural,6.1226491530736284,quantile-0.85,Mid-Western,Wood/Res
+business_interruption,13.271080684661866,mean,Mid-Western,Wood/Com
+business_interruption,8.768780125512016,quantile-0.15,Mid-Western,Wood/Com
+business_interruption,12.915635903676352,quantile-0.85,Mid-Western,Wood/Com
+structural,4.165321457386018,mean,Mid-Western,Wood/Com
+structural,1.4872141480445862,quantile-0.15,Mid-Western,Wood/Com
+structural,3.953891932964325,quantile-0.85,Mid-Western,Wood/Com
+business_interruption,10.6747371673584,mean,Mid-Western,Adobe/Res
+business_interruption,7.038309945000543,quantile-0.15,Mid-Western,Adobe/Res
+business_interruption,10.387650807698568,quantile-0.85,Mid-Western,Adobe/Res
+structural,49.753970336914065,mean,Mid-Western,Adobe/Res
+structural,43.723336113823784,quantile-0.15,Mid-Western,Adobe/Res
+structural,49.27786763509115,quantile-0.85,Mid-Western,Adobe/Res
+business_interruption,23.288838863372803,mean,Far-Western,Adobe/Com
+business_interruption,14.723704391055637,quantile-0.15,Far-Western,Adobe/Com
+business_interruption,22.61264403661092,quantile-0.85,Far-Western,Adobe/Com
+structural,70.27124481201173,mean,Far-Western,Adobe/Com
+structural,42.355433993869354,quantile-0.15,Far-Western,Adobe/Com
+structural,68.06736501057944,quantile-0.85,Far-Western,Adobe/Com
