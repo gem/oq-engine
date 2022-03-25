@@ -138,17 +138,29 @@ def export_aggrisk_stats(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    aggtags = get_aggtags(dstore)
     key = ekey[0].split('-')[0]  # aggrisk or aggcurves
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dest = dstore.build_fname(f'{key}-stats', '', 'csv')
-    df = extract(dstore, f'risk_stats/{key}')
-    tagvalues = numpy.array([aggtags[agg_id] for agg_id in df.agg_id])
-    for n, name in enumerate(oq.aggregate_by):
-        df[name] = tagvalues[:, n]
-    del df['agg_id']
-    writer.save(df, dest, df.columns, comment=dstore.metadata)
-    return [dest]
+    dest = dstore.build_fname(key + '-stats-{}', '', 'csv')
+    dataf = extract(dstore, 'risk_stats/' + key)
+    assetcol = dstore['assetcol']
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
+    K = len(agg_values) - 1
+    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
+    pairs = [([], dataf.agg_id == K)]  # full aggregation
+    for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
+        pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
+    fnames = []
+    for tagnames, ok in pairs:
+        df = dataf[ok]
+        if tagnames:
+            tagvalues = numpy.array([aggtags[agg_id] for agg_id in df.agg_id])
+            for n, name in enumerate(tagnames):
+                df[name] = tagvalues[:, n]
+        del df['agg_id']
+        fname = dest.format('-'.join(tagnames))
+        writer.save(df, fname, df.columns, comment=dstore.metadata)
+        fnames.append(fname)
+    return fnames
 
 
 def _get_data(dstore, dskey, stats):

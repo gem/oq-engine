@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Implemented multi-aggregation with a syntax like
+    `aggregate_by=taxonomy,region;taxonomy;region`
   * Removed the obsolete commands `oq to_shapefile` and `oq from_shapefile`
     and turned pyshp into an optional dependency
   * Setting `num_rlzs_disagg=0` is now valid and it means considering
