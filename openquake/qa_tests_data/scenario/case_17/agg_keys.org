@@ -1,4 +1,4 @@
-| name_1           |
+| ['name_1']       |
 |------------------|
 | REGIN DE TARAPAC |
 | REGIN DE UBLE    |
