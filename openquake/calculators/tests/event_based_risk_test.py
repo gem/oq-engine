@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-from unittest import mock, SkipTest
+from unittest import mock
 import numpy
 
 from openquake.baselib.general import gettemp
@@ -518,7 +518,6 @@ agg_id
         self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
 
     def test_recompute(self):
-        raise SkipTest
         # test recomputing aggregate loss curves with post_risk
         # this is starting from a ruptures.csv file
         out = self.run_calc(recompute.__file__, 'job.ini', exports='csv')
