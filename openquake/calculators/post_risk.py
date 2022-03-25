@@ -245,7 +245,8 @@ class PostRiskCalculator(base.RiskCalculator):
             base.save_agg_values(
                 ds, self.assetcol, oq.loss_types, oq.aggregate_by)
             aggby = ds.parent['oqparam'].aggregate_by
-            self.reaggreate = oq.aggregate_by[0] not in aggby
+            self.reaggreate = (
+                oq.aggregate_by and oq.aggregate_by[0] not in aggby)
             if self.reaggreate:
                 [names] = aggby
                 self.num_tags = dict(
