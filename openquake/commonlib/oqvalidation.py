@@ -818,7 +818,7 @@ class OqParam(valid.ParamSet):
                'max_hazard_curves': 'max'}
 
     hazard_imtls = {}
-    aggregate_by = valid.Param(valid.namelist, [])
+    aggregate_by = valid.Param(valid.namelists, [])
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')

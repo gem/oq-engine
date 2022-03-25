@@ -1,10 +1,10 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.14.0-gitf31dff2b33', start_date='2022-03-24T16:47:06', checksum=57342934, investigation_time=50.0, risk_investigation_time=50.0"
+#,,,,,,,"generated_by='OpenQuake engine 3.14.0-git93dc5f6859', start_date='2022-03-25T06:48:43', checksum=57342934, investigation_time=50.0, risk_investigation_time=50.0"
 loss_type,policy,taxonomy,rlz_id,loss_value,loss_ratio,ins_loss_value,ins_loss_ratio
 nonstructural,B,RM,0,1.63194E+02,6.52776E-02,0.00000E+00,0.00000E+00
 nonstructural,B,RM,1,1.21328E+02,4.85311E-02,0.00000E+00,0.00000E+00
-structural,B,RM,0,3.60182E+02,7.20364E-02,2.54919E+02,5.09838E-02
+structural,B,RM,0,3.60182E+02,7.20364E-02,2.54919E+02,5.09837E-02
 structural,B,RM,1,1.80733E+02,3.61465E-02,1.04646E+02,2.09291E-02
-nonstructural,B,W,0,2.19985E+01,4.39971E-02,0.00000E+00,0.00000E+00
+nonstructural,B,W,0,2.19985E+01,4.39970E-02,0.00000E+00,0.00000E+00
 nonstructural,B,W,1,2.19176E+01,4.38352E-02,0.00000E+00,0.00000E+00
 structural,B,W,0,2.34421E+02,2.34421E-01,2.08106E+02,2.08106E-01
 structural,B,W,1,1.24750E+02,1.24750E-01,1.05185E+02,1.05185E-01

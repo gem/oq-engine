@@ -233,9 +233,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        [fname] = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                              delta=1E-5)
+        for fname in export(('aggcurves', 'csv'), self.calc.datastore):
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
     def test_case_4(self):
         # Turkey with SHARE logic tree
@@ -503,7 +503,7 @@ agg_id
         # this is a case with L=1, R=1, T1=2, P=6
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv',
                             minimum_asset_loss='100')
-        [fname] = out['aggcurves', 'csv']
+        _tot, fname = out['aggcurves', 'csv']
         # very sensitive to shapely version
         self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
 
@@ -514,7 +514,7 @@ agg_id
         out = self.run_calc(
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
-        [fname] = out['aggcurves', 'csv']
+        _tot, fname = out['aggcurves', 'csv']
         self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
 
     def test_recompute(self):
@@ -523,13 +523,13 @@ agg_id
         out = self.run_calc(recompute.__file__, 'job.ini', exports='csv')
         [_total, fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
-        [fname] = out['aggcurves', 'csv']
+        [_total, fname] = out['aggcurves', 'csv']
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-5)
 
         parent = self.calc.datastore
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
-        oq.__dict__['aggregate_by'] = ['NAME_1']
+        oq.__dict__['aggregate_by'] = [['NAME_1']]
         log = logs.init('job', {'calculation_mode': 'post_risk',
                                 'description': 'test recompute'})
         prc = PostRiskCalculator(oq, log.calc_id)

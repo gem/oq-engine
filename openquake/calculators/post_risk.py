@@ -193,7 +193,7 @@ def store_agg(dstore, rbe_df, num_events):
         'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
     dmgs = [col for col in columns if col.startswith('dmg_')]
     if dmgs:
-        aggnumber = dstore['assetcol'].get_agg_values(oq.aggregate_by)['number']
+        aggnumber = dstore['agg_values']['number']
     gb = rbe_df.groupby(['agg_id', 'rlz_id', 'loss_id'])
     for (agg_id, rlz_id, loss_id), df in gb:
         ne = num_events[rlz_id]
@@ -247,8 +247,9 @@ class PostRiskCalculator(base.RiskCalculator):
             aggby = ds.parent['oqparam'].aggregate_by
             self.reaggreate = aggby and oq.aggregate_by != aggby
             if self.reaggreate:
+                [names] = aggby
                 self.num_tags = dict(
-                    zip(aggby, self.assetcol.tagcol.agg_shape(aggby)))
+                    zip(names, self.assetcol.tagcol.agg_shape(names)))
         self.L = len(oq.loss_types)
         if self.R > 1:
             self.num_events = numpy.bincount(

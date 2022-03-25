@@ -777,6 +777,7 @@ class HazardCalculator(BaseCalculator):
                     exposure.exposures, hdf5.vstr)
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
+            assetcol.update_tagcol(oq.aggregate_by)
             if oq.region:
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)

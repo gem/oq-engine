@@ -25,8 +25,7 @@ from openquake.baselib import hdf5, writers, general
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize,
-    get_agg_tags)
+    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -70,48 +69,32 @@ def get_aggtags(dstore):
     return aggtags
 
 
-@export.add(('aggrisk', 'csv'))
-def export_aggrisk(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    oq = dstore['oqparam']
-    tagnames = oq.aggregate_by
-    aggtags = get_aggtags(dstore)
+def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    agg_values = dstore['assetcol'].get_agg_values(tagnames)  # shape K+1
-    K = len(agg_values) - 1
-    md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time or
-                   oq.investigation_time))
-
-    aggrisk = dstore.read_df('aggrisk')
     cols = [col for col in aggrisk.columns
             if col not in {'agg_id', 'rlz_id', 'loss_id'}]
     csqs = [col for col in cols if not col.startswith('dmg_')]
-    header = ['loss_type'] + tagnames + ['exposed_value'] + [
-        '%s_ratio' % csq for csq in csqs]
-    dest = dstore.build_fname('aggrisk-{}', '', 'csv')
     manyrlzs = hasattr(aggrisk, 'rlz_id') and len(aggrisk.rlz_id.unique()) > 1
-    pairs = [([], aggrisk.agg_id == K)]
-    if tagnames:
-        pairs.append((tagnames, aggrisk.agg_id < K))
     fnames = []
+    K = len(agg_values) - 1
+    pairs = [([], aggrisk.agg_id == K)]  # full aggregation
+    for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
+        pairs.append((tagnames, numpy.isin(aggrisk.agg_id, agg_ids)))
     for tagnames, ok in pairs:
-        name = '-'.join(tagnames) or 'total'
+        header = ['loss_type'] + tagnames + ['exposed_value'] + [
+            '%s_ratio' % csq for csq in csqs]
         out = general.AccumDict(accum=[])
         for (agg_id, lid), df in aggrisk[ok].groupby(['agg_id', 'loss_id']):
             n = len(df)
             loss_type = oq.loss_types[lid]
             out['loss_type'].extend([loss_type] * n)
-            for tagname, tag in zip(tagnames, aggtags[agg_id]):
-                out[tagname].extend([tag] * n)
+            if tagnames:
+                for tagname, tag in zip(tagnames, aggtags[agg_id]):
+                    out[tagname].extend([tag] * n)
             if manyrlzs:
                 out['rlz_id'].extend(df.rlz_id)
             for col in cols:
-                if col in csqs:
+                if col in csqs:  # normally csqs = ['loss']
                     aval = scientific.get_agg_value(
                         col, agg_values, agg_id, loss_type)
                     out[col + '_value'].extend(df[col])
@@ -122,10 +105,30 @@ def export_aggrisk(ekey, dstore):
         for s, ls in enumerate(oq.limit_states, 1):
             dsdic['dmg_%d' % s] = ls
         df = pandas.DataFrame(out).rename(columns=dsdic)
-        fname = dest.format(name)
+        fname = dest.format('-'.join(tagnames))
         writer.save(df, fname, header, comment=md)
         fnames.append(fname)
     return fnames
+
+
+@export.add(('aggrisk', 'csv'))
+def export_aggrisk(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+                   risk_investigation_time=oq.risk_investigation_time or
+                   oq.investigation_time))
+
+    aggrisk = dstore.read_df('aggrisk')
+    dest = dstore.build_fname('aggrisk-{}', '', 'csv')
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
+    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
+    return _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest)
 
 
 @export.add(('aggrisk-stats', 'csv'), ('aggcurves-stats', 'csv'))
@@ -497,6 +500,7 @@ def export_aggregate_by_csv(ekey, dstore):
     return fnames
 
 
+# used in multi_risk
 @export.add(('asset_risk', 'csv'))
 def export_asset_risk_csv(ekey, dstore):
     """
@@ -532,6 +536,7 @@ def export_asset_risk_csv(ekey, dstore):
     return [fname]
 
 
+# used in multi_risk
 @export.add(('agg_risk', 'csv'))
 def export_agg_risk_csv(ekey, dstore):
     """
@@ -553,16 +558,17 @@ def export_aggcurves_csv(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
+    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     E = len(dstore['events'])
     R = len(dstore['weights'])
+    K = len(dstore['agg_values']) - 1
     lossnames = numpy.array(oq.loss_types)
-    aggtags = get_agg_tags(dstore, oq.aggregate_by)
-    df = dstore.read_df('aggcurves')
-    consequences = [col for col in df.columns
+    dataf = dstore.read_df('aggcurves')
+    consequences = [col for col in dataf.columns
                     if col in scientific.KNOWN_CONSEQUENCES]
-    for tagname, tags in aggtags.items():
-        df[tagname] = tags[df.agg_id]
-    dest = dstore.export_path('%s.%s' % ekey)
+    dest = dstore.export_path('%s-{}.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
     md['risk_investigation_time'] = (oq.risk_investigation_time or
@@ -573,22 +579,32 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
 
     # aggcurves
-    agg_values = dstore['assetcol'].get_agg_values(oq.aggregate_by)
-    cols = [col for col in df.columns if col not in consequences
+    cols = [col for col in dataf.columns if col not in consequences
             and col not in ('agg_id', 'rlz_id', 'loss_id')]
     edic = general.AccumDict(accum=[])
     manyrlzs = not oq.collect_rlzs and R > 1
-    for (agg_id, rlz_id, loss_id), d in df.groupby(
-            ['agg_id', 'rlz_id', 'loss_id']):
-        for col in cols:
-            edic[col].extend(d[col])
-        edic['loss_type'].extend([lossnames[loss_id]] * len(d))
-        if manyrlzs:
-            edic['rlz_id'].extend([rlz_id] * len(d))
-        for cons in consequences:
-            edic[cons + '_value'].extend(d[cons])
-            aval = scientific.get_agg_value(
-                cons, agg_values, agg_id, lossnames[loss_id])
-            edic[cons + '_ratio'].extend(d[cons] / aval)
-    writer.save(pandas.DataFrame(edic), dest, comment=md)
-    return [dest]
+    fnames = []
+    pairs = [([], dataf.agg_id == K)]  # full aggregation
+    for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
+        pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
+    for tagnames, ok in pairs:
+        edic = general.AccumDict(accum=[])
+        for (agg_id, rlz_id, loss_id), d in dataf[ok].groupby(
+                ['agg_id', 'rlz_id', 'loss_id']):
+            if tagnames:
+                for tagname, tag in zip(tagnames, aggtags[agg_id]):
+                    edic[tagname].extend([tag] * len(d))
+            for col in cols:
+                edic[col].extend(d[col])
+            edic['loss_type'].extend([lossnames[loss_id]] * len(d))
+            if manyrlzs:
+                edic['rlz_id'].extend([rlz_id] * len(d))
+            for cons in consequences:
+                edic[cons + '_value'].extend(d[cons])
+                aval = scientific.get_agg_value(
+                    cons, agg_values, agg_id, lossnames[loss_id])
+                edic[cons + '_ratio'].extend(d[cons] / aval)
+        fname = dest.format('-'.join(tagnames))
+        writer.save(pandas.DataFrame(edic), fname, comment=md)
+        fnames.append(fname)
+    return fnames
