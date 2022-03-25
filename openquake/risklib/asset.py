@@ -386,17 +386,11 @@ def tagset(aggregate_by):
 class AssetCollection(object):
     def __init__(self, exposure, assets_by_site, time_event, aggregate_by):
         self.tagcol = exposure.tagcol
-        if 'site_id' in tagset(aggregate_by):
-            self.tagcol.add_tagname('site_id')
-            self.tagcol.site_id.extend(range(len(assets_by_site)))
         self.time_event = time_event
-        self.aggregate_by = aggregate_by
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, exposure.tagcol.tagnames, time_event)
-        if 'id' in tagset(aggregate_by):
-            self.tagcol.add_tagname('id')
-            self.tagcol.id.extend(self['id'])
+        self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
@@ -408,6 +402,18 @@ class AssetCollection(object):
                        if f.startswith('value-')]
         self.occfields = [f for f in self.array.dtype.names
                           if f.startswith('occupants')]
+
+    def update_tagcol(self, aggregate_by):
+        """
+        """
+        self.aggregate_by = aggregate_by
+        ts = tagset(aggregate_by)
+        if 'id' in ts and not hasattr(self.tagcol, 'id'):
+            self.tagcol.add_tagname('id')
+            self.tagcol.id.extend(self['id'])
+        if 'site_id' in ts and not hasattr(self.tagcol, 'site_id'):
+            self.tagcol.add_tagname('site_id')
+            self.tagcol.site_id.extend(range(self.tot_sites))
 
     @property
     def tagnames(self):
