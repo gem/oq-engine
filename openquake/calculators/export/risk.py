@@ -563,6 +563,7 @@ def export_aggcurves_csv(ekey, dstore):
     aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     E = len(dstore['events'])
     R = len(dstore['weights'])
+    K = len(dstore['agg_values']) - 1
     lossnames = numpy.array(oq.loss_types)
     dataf = dstore.read_df('aggcurves')
     consequences = [col for col in dataf.columns
@@ -583,17 +584,16 @@ def export_aggcurves_csv(ekey, dstore):
     edic = general.AccumDict(accum=[])
     manyrlzs = not oq.collect_rlzs and R > 1
     fnames = []
-    tot_id = dataf.agg_id.max()
-    if len(aggids) == 0:
-        aggids = [[tot_id]]
-        aggtags = ['*total']
-    for tagnames, agg_ids in zip(oq.aggregate_by or [[]], aggids):
+    pairs = [([], dataf.agg_id == K)]  # full aggregation
+    for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
+        pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
+    for tagnames, ok in pairs:
         edic = general.AccumDict(accum=[])
-        df = dataf[numpy.isin(dataf.agg_id, agg_ids)]
-        for (agg_id, rlz_id, loss_id), d in df.groupby(
+        for (agg_id, rlz_id, loss_id), d in dataf[ok].groupby(
                 ['agg_id', 'rlz_id', 'loss_id']):
-            for tagname, tag in zip(tagnames, aggtags[agg_id]):
-                edic[tagname].extend([tag] * len(d))
+            if tagnames:
+                for tagname, tag in zip(tagnames, aggtags[agg_id]):
+                    edic[tagname].extend([tag] * len(d))
             for col in cols:
                 edic[col].extend(d[col])
             edic['loss_type'].extend([lossnames[loss_id]] * len(d))
@@ -604,7 +604,7 @@ def export_aggcurves_csv(ekey, dstore):
                 aval = scientific.get_agg_value(
                     cons, agg_values, agg_id, lossnames[loss_id])
                 edic[cons + '_ratio'].extend(d[cons] / aval)
-        fname = dest.format('_'.join(tagnames))
+        fname = dest.format('-'.join(tagnames))
         writer.save(pandas.DataFrame(edic), fname, comment=md)
         fnames.append(fname)
     return fnames
