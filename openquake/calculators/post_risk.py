@@ -245,7 +245,7 @@ class PostRiskCalculator(base.RiskCalculator):
             base.save_agg_values(
                 ds, self.assetcol, oq.loss_types, oq.aggregate_by)
             aggby = ds.parent['oqparam'].aggregate_by
-            self.reaggreate = aggby and oq.aggregate_by != aggby
+            self.reaggreate = oq.aggregate_by[0] not in aggby
             if self.reaggreate:
                 [names] = aggby
                 self.num_tags = dict(
@@ -332,9 +332,8 @@ def post_aggregate(calc_id: int, aggregate_by):
     parent = datastore.read(calc_id)
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
-    for tagname in aggby:
-        if tagname not in oqp.aggregate_by:
-            raise ValueError('%r not in %s' % (tagname, oqp.aggregate_by))
+    if aggby not in oqp.aggregate_by:
+        raise ValueError('%r not in %s' % (aggby, oqp.aggregate_by))
     dic = dict(
         calculation_mode='reaggregate',
         description=oqp.description + '[aggregate_by=%s]' % aggregate_by,
@@ -348,5 +347,5 @@ def post_aggregate(calc_id: int, aggregate_by):
         parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, log.calc_id)
         prc.assetcol = parent['assetcol']
-        prc.run(aggregate_by=aggby)
+        prc.run(aggregate_by=[aggby])
         engine.expose_outputs(prc.datastore)

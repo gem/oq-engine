@@ -36,6 +36,7 @@ from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree
+from openquake.risklib import asset
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
@@ -1770,9 +1771,10 @@ class OqParam(valid.ParamSet):
         At the moment only `aggregate_by=id` or `aggregate_by=site_id`
         are accepted
         """
-        if 'id' in self.aggregate_by and len(self.aggregate_by) > 1:
+        tagset = asset.tagset(self.aggregate_by)
+        if 'id' in tagset and len(tagset) > 1:
             return False
-        elif 'site_id' in self.aggregate_by and len(self.aggregate_by) > 1:
+        elif 'site_id' in tagset and len(tagset) > 1:
             return False
         return True
 
