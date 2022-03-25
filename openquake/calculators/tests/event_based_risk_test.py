@@ -365,12 +365,12 @@ agg_id
         aac(sig1 ** 2 + sig2 ** 2 + sig3 ** 2, tot.variance)
 
         # check aggcurves-stats
-        [fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
+        [_, fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=2E-5)
 
         # check aggrisk-stats
-        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        [_, fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=2E-5)
 
