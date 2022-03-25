@@ -386,7 +386,7 @@ def tagset(aggregate_by):
 class AssetCollection(object):
     def __init__(self, exposure, assets_by_site, time_event, aggregate_by):
         self.tagcol = exposure.tagcol
-        if 'site_id' in aggregate_by:
+        if 'site_id' in tagset(aggregate_by):
             self.tagcol.add_tagname('site_id')
             self.tagcol.site_id.extend(range(len(assets_by_site)))
         self.time_event = time_event

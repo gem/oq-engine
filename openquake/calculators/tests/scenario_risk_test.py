@@ -139,7 +139,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        [fname] = out['aggrisk', 'csv']
+        [_tot, fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
 
     def test_case_1h(self):
@@ -194,14 +194,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         aac(tot10, tot20, atol=.0001)  # must be around 230.0107
 
         # check aggregate_by site_id
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')

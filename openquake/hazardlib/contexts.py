@@ -1101,7 +1101,8 @@ class PmapMaker(object):
                     lst = [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
             else:
-                dic[par] = numpy.array([getattr(ctx, par) for ctx in ctxs])
+                dic[par] = numpy.array([getattr(ctx, par, numpy.nan)
+                                        for ctx in ctxs])
         dic['id'] = numpy.arange(len(ctxs)) * TWO32 + self.cmaker.out_no
         return dic
 

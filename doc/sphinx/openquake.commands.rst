@@ -33,14 +33,6 @@ export command
     :undoc-members:
     :show-inheritance:
 
-from_shapefile command
-----------------------------------------
-
-.. automodule:: openquake.commands.from_shapefile
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 info command
 ------------------------------
 
@@ -117,14 +109,6 @@ to_hdf5 command
 ---------------------------------
 
 .. automodule:: openquake.commands.to_hdf5
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-to_shapefile command
---------------------------------------
-
-.. automodule:: openquake.commands.to_shapefile
     :members:
     :undoc-members:
     :show-inheritance:
