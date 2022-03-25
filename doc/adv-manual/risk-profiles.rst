@@ -259,7 +259,7 @@ instead:
 >>> numpy.random.default_rng(123456).normal(size=5)
 array([ 0.1928212 , -0.06550702,  0.43550665,  0.88235875,  0.37132785])
 
-They are unavoidably different. You may argue than not splitting is
+They are unavoidably different. You may argue that not splitting is
 the correct way of proceeding, since the splitting causes some
 random numbers to be repeated (the numbers 0.1928212 and -0.0655070
 in this example) and actually breaks the normal distribution.
