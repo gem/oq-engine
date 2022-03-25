@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
-from openquake.risklib import scientific
+from openquake.risklib import asset, scientific
 from openquake.engine import engine
 from openquake.calculators import base, views
 
@@ -333,7 +333,7 @@ def post_aggregate(calc_id: int, aggregate_by):
     parent = datastore.read(calc_id)
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
-    if aggby not in oqp.aggregate_by:
+    if aggby and aggby[0] not in asset.tagset(oqp.aggregate_by):
         raise ValueError('%r not in %s' % (aggby, oqp.aggregate_by))
     dic = dict(
         calculation_mode='reaggregate',
