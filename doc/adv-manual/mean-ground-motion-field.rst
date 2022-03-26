@@ -148,10 +148,10 @@ are truncated below the ``minimum_intensity``:
 >>> numpy.exp(numpy.log(gmvs).mean())
 0.13702281319482504
 
-In this case the difference is minor, but if the number of simulations is
-small and/or the σ is large the mean and standard deviation obtained
-from the logarithms of the ground motion fields could be quite different
-from the expected ones.
+In this case the difference is minor, but if the number of simulations
+is small and/or the :math:`\sigma` is large the mean and standard
+deviation obtained from the logarithms of the ground motion fields
+could be quite different from the expected ones.
 
 Finally, it should be noticed that the geometric mean can be orders of
 magnitude different from the usual mean and it is purely a coincidence
