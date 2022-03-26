@@ -41,7 +41,7 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 
 # The encoding of source files.
-#source_encoding = 'utf-8-sig'
+source_encoding = 'utf-8-sig'
 
 # The master toctree document.
 master_doc = 'index'
@@ -217,7 +217,6 @@ latex_elements = {
 
 # Latex figure (float) alignment
 #'figure_align': 'htbp',
-    'preamble': r'\inputencoding{utf8}'
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
