@@ -109,7 +109,7 @@ breaks the log normal distribution.
 To be concrete, consider a case with a single site, and single intensity measure
 type (PGA) and a ``minimum_intensity`` of 0.05g. Suppose there are 1000
 simulations and that you have a normal distribution of the logaritms
-with μ=-2 and σ=.5; then the ground motion values that you could obtain
+with :math:`\mu`=-2 and :math:`\sigma`=.5; then the ground motion values that you could obtain
 would be as follows:
 
 >>> import numpy
@@ -123,7 +123,7 @@ more than one order of magnitude:
 (0.026765710489091852, 0.1370582013790309, 0.9290114132955762)
 
 Also mean and standard deviation of the logarithms are very close to
-the expected values μ=-2 and σ=.5:
+the expected values :math:`\mu`=-2 and :math:`\sigma`=.5:
 
 >>> numpy.log(gmvs).mean()
 -1.9903339720888376
