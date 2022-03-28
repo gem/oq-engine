@@ -49,7 +49,7 @@ from openquake.hazardlib.lt import (
     LogicTreeError, parse_uncertainty, random, attach_to_branches)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
-ID_REGEX = re.compile(r'id="([^"]+?)"')
+ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 
 U16 = numpy.uint16
 U32 = numpy.uint32
