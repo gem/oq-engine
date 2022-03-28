@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2019, GEM Foundation.
+# Copyright (c) 2022, GEM Foundation.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,7 +23,7 @@ import re
 
 
 def process(line):
-    # Search for lines with " .2ex " and extract section header
+    # Search for lines like " .2ex " and extract section header
     m = re.search(r'(.* \.\dex) (.*)$', line)
     if(m is None):
         print(line)
