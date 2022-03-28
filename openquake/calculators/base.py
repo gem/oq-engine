@@ -833,11 +833,13 @@ class HazardCalculator(BaseCalculator):
             # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
-                raise RuntimeError('The exposure contains the taxonomy strings '
-                                   '%s which are not in the risk model' % missing)
+                raise RuntimeError(
+                    'The exposure contains the taxonomy strings '
+                    '%s which are not in the risk model' % missing)
             if len(self.crmodel.taxonomies) > len(taxonomies):
-                logging.info('Reducing risk model from %d to %d taxonomy strings',
-                             len(self.crmodel.taxonomies), len(taxonomies))
+                logging.info(
+                    'Reducing risk model from %d to %d taxonomy strings',
+                    len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
 
