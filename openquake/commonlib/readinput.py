@@ -1126,7 +1126,8 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     total = good = 0
     to_remove = set()
     paths = logictree.collect_info(smlt_file).smpaths
-    source_ids = {decode(k): v for k, v in source_ids.items()}
+    if isinstance(source_ids, dict):
+        source_ids = {decode(k): v for k, v in source_ids.items()}
     for dic in parallel.Starmap.apply(reduce_sm, (paths, source_ids)):
         path = dic['path']
         model = dic['model']
