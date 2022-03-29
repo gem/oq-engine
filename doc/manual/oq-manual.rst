@@ -382,10 +382,10 @@ source. Ruptures are created by conserving the area computed using the
 specified magnitude-area scaling relatioship and the corresponding value
 of magnitude.
 
-.. figure:: figures/hazard/point_source_multiple_ruptures.pdf
+.. figure:: figures/hazard/point_source_multiple_ruptures.png
    :alt: Point source with multiple ruptures. Note the change in the aspect ratio once the rupture width fills the entire seismogenic layer.
    :name: fig:point_source_multiple_ruptures
-   :width: 10cm
+   :width: 95%
 
    Point source with multiple ruptures. Note the change in the aspect
    ratio once the rupture width fills the entire seismogenic layer.
@@ -422,10 +422,10 @@ by the point source.
           </hypoDepthDist>
       </pointSource>
 
-.. figure:: figures/hazard/pointsrc_2strike_2hypodep.pdf
+.. figure:: figures/hazard/pointsrc_2strike_2hypodep.png
    :alt: Ruptures produced by the source created using the information in the example .xml file described on page .
    :name: fig:point_source_ruptures
-   :width: 10cm
+   :width: 95%
 
    Ruptures produced by the source created using the information in the
    example .xml file described on page .
@@ -545,8 +545,9 @@ hypocenters at localized at two distinct depths.
           </hypoDepthDist>
       </areaSource>
 
-Fault sources with floating ruptures Fault
+Fault sources with floating ruptures 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Fault
 sources in the OpenQuake engine are classified according to the method adopted to
 distribute ruptures over the fault surface. Two options are currently
 supported:
@@ -787,10 +788,10 @@ a combination of rectangular ruptures as represented in
 Figure `1.4 <#fig:char_fault_source>`__. Mutiple surfaces containing
 mixed geometry types are also supported.
 
-.. figure:: figures/hazard/multi_surface.pdf
+.. figure:: figures/hazard/multi_surface.png
    :alt: Geometry of a multi-segmented characteristic fault composed of four rectangular ruptures as modelled in OpenQuake.
    :name: fig:char_fault_source
-   :width: 10cm
+   :width: 95%
 
    Geometry of a multi-segmented characteristic fault composed of four
    rectangular ruptures as modelled in OpenQuake.
@@ -897,7 +898,7 @@ configurations is shown below.
        </surface>
    </characteristicFaultSource>
 
-Non-Parametric Sources -2ex -0.1ex -.2ex
+Non-Parametric Sources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Non-Parametric Fault
 ____________________
@@ -1040,10 +1041,10 @@ A discrete incremental magnitude-frequency distribution
    parameters is represented in
    Figure `1.5 <#fig:evenly_discretized_mfd>`__.
 
-   .. figure:: figures/hazard/ed_mfd.pdf
+   .. figure:: figures/hazard/ed_mfd.png
       :alt: Example of an incremental magnitude-frequency distribution.
       :name: fig:evenly_discretized_mfd
-      :width: 12cm
+      :width: 95%
 
       Example of an incremental magnitude-frequency distribution.
 
@@ -1064,10 +1065,10 @@ A double truncated Gutenberg-Richter distribution
    Figure `1.6 <#fig:dt_gr_mfd>`__ shows the magnitude-frequency
    distribution obtained using the parameters of the considered example.
 
-   .. figure:: figures/hazard/dt_mfd.pdf
+   .. figure:: figures/hazard/dt_mfd.png
       :alt: Example of a double truncated Gutenberg-Richter magnitude-frequency distribution.
       :name: fig:dt_gr_mfd
-      :width: 12cm
+      :width: 95%
 
       Example of a double truncated Gutenberg-Richter
       magnitude-frequency distribution.
@@ -1105,10 +1106,10 @@ Hybrid Characteristic earthquake model (à la (Youngs and Coppersmith 1985))
    Note that in this distribution the width of the magnitude bin must be
    defined explicitly in the model.
 
-   .. figure:: figures/hazard/yc_mfd_char_rate.pdf
+   .. figure:: figures/hazard/yc_mfd_char_rate.png
       :alt: (Youngs and Coppersmith 1985) magnitude-frequency distribution.
       :name: fig:yc_gr_mfd
-      :width: 10cm
+      :width: 95%
 
       (Youngs and Coppersmith 1985) magnitude-frequency distribution.
 
@@ -1129,10 +1130,10 @@ Hybrid Characteristic earthquake model (à la (Youngs and Coppersmith 1985))
           <magnitudes>8.1 8.47 8.68 9.02</magnitude>
       </arbitraryMFD>
 
-   .. figure:: figures/hazard/arb_mfd.pdf
+   .. figure:: figures/hazard/arb_mfd.png
       :alt: “Arbitrary” magnitude-frequency distribution.
       :name: fig:arb_mfd
-      :width: 10cm
+      :width: 95%
 
       “Arbitrary” magnitude-frequency distribution.
 
@@ -1297,8 +1298,9 @@ The main calculators used to perform this analysis are:
    This procedure is computationally intensive and is not recommended
    for investigating the hazard over large areas.
 
-Scenario based Seismic Hazard Analysis In
+Scenario based Seismic Hazard Analysis 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In
 case of Scenario Based Seismic Hazard Analysis, the input data consist of a single earthquake rupture
 model and one or more ground-motion models. Using the Ground Motion
 Field Calculator, multiple realizations of ground shaking can be
@@ -1463,10 +1465,10 @@ Figure `2.1 <#fig:psha_input>`__ summarises the structure of a PSHA
 input model for the OpenQuake engine and the relationships between the different
 files.
 
-.. figure:: figures/hazard/psha_input_structure.pdf
+.. figure:: figures/hazard/psha_input_structure.png
    :alt: PSHA Input Model structure
    :name: fig:psha_input
-   :width: 14cm
+   :width: 95%
 
    PSHA Input Model structure
 
@@ -1519,10 +1521,10 @@ structure is provided in Figure `2.2 <#glts>`__. A branch set identifies
 a collection of branches (i.e. individual branches) whose weights sum to
 1.
 
-.. figure:: figures/hazard/GenericLogicTreeStructure.pdf
+.. figure:: figures/hazard/GenericLogicTreeStructure.png
    :alt: Generic Logic Tree structure as described in terms of branch sets, and individual branches.
    :name: glts
-   :width: 13cm
+   :width: 95%
 
    Generic Logic Tree structure as described in terms of branch sets,
    and individual branches.
@@ -1984,8 +1986,9 @@ well as parameters governing the calculation. We illustrate in the
 following different examples of the configuration file addressing
 different types of seismic hazard calculations.
 
-[Classical PSHA]Classical PSHA In the
+Classical PSHA 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In the
 following we describe the overall structure and the most typical
 parameters of a configuration file to be used for the computation of a
 seismic hazard map using a classical PSHA methodology.
@@ -2244,8 +2247,9 @@ Specifying poes will output hazard maps. For more information about the
 outputs of the calculation, see the section: “Description of hazard
 output” (page ).
 
-Seismic hazard disaggregation In this
+Seismic hazard disaggregation 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In this
 section we describe the structure of the configuration file to be used
 to complete a seismic hazard disaggregation. Since only a few parts of
 the standard configuration file need to be changed we can use the
@@ -2370,8 +2374,9 @@ If ``iml_disagg`` is specified, the user should not include
 ``intensity_measure_types_and_levels`` in the “Calculation
 configuration” section (see page ) since it is explicitly given here.
 
-Event based PSHA In the following we
+Event based PSHA 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In the following we
 describe the sections of the configuration file that are required to
 complete event based PSHA calculations
 
@@ -2436,8 +2441,9 @@ event- based ground motion values to provide hazard curves indicating
 the probabilities of exceeding the intensity measure levels set
 previously in the ``intensity_measure_types_and_levels`` option.
 
-Scenario hazard In order to run this
+Scenario hazard 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In order to run this
 calculator, the parameter ``calculation_mode`` needs to be set to
 ``scenario``. The basic job configuration file required for running a
 scenario hazard calculation is shown in
@@ -2535,9 +2541,8 @@ A general introduction on the use of the OpenQuake engine is provided in
 Chapter `1 <#chap:intro>`__ at page . The reader is invited to consult
 this part before diving into the following sections.
 
-Running OpenQuake-engine for hazard
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-calculations
+Running OpenQuake-engine for hazard calculations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The execution of a hazard analysis using the OpenQuake-engine is
 straightforward. Below we provide an example of the simplest command
@@ -2657,8 +2662,9 @@ https://github.com/gem/oq-engine/tree/master/openquake/hazardlib/stats.py
 
 In particular, the median is computed as the q=0.5 quantile.
 
-Outputs from Classical PSHA By default, the
+Outputs from Classical PSHA 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+By default, the
 classical PSHA calculator computes and stores hazard curves for each
 logic tree sample considered.
 
@@ -2675,8 +2681,8 @@ performed with their corresponding ID):
 
    user@ubuntu:~$ oq engine --lo <calc_id>
    id | name
-   \textcolor{red}{3 | Hazard Curves}
-   \textcolor{black}{4 | Realizations}
+   *3 | Hazard Curves
+   4 | Realizations
 
 To export from the database the outputs (in this case hazard curves)
 contained in one of the output identifies, one can do so with the
@@ -2806,8 +2812,9 @@ nrml used to describe a uniform hazard spectrum.
           </uniformHazardSpectra>
       </nrml>
 
-Outputs from Hazard Disaggregation The
+Outputs from Hazard Disaggregation 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The
 OpenQuake engine output of a disaggregation analysis corresponds to the
 combination of a hazard curve and a multidimensional matrix containing
 the results of the disaggregation. For a typical disaggregation
@@ -2817,9 +2824,9 @@ calculation the list of outputs are the following:
 
    user@ubuntu:~$ oq engine --lo <calc_id>
    id | name
-   \textcolor{red}{3 | Disaggregation Outputs}
-   \textcolor{black}{5 | Full Report}
-   \textcolor{black}{6 | Realizations}
+   **3** | Disaggregation Outputs
+   5 | Full Report
+   6 | Realizations
 
 Running ``--export-output`` to export the disaggregation results will
 produce individual files for each site. In presence of a nontrivial
@@ -2829,8 +2836,9 @@ file. If not specified, for each site the engine will determine the
 realization closest to the mean hazard curve and will use that
 realization to perform the disaggregation.
 
-Outputs from Event Based PSHA The Event
+Outputs from Event Based PSHA 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The Event
 Based PSHA calculator computes and stores stochastic event sets and the
 corresponding ground motion fields. This calculator can also produce
 hazard curves and hazard maps, similar to the Classical PSHA calculator.
@@ -2841,11 +2849,11 @@ OpenQuake engine at the end of an event-based PSHA calculation:
 
    user@ubuntu:~$ oq engine --lo <calc_id>
    id | name
-   \textcolor{red}{10 | Ground Motion Fields}
+   **10** | Ground Motion Fields
    11 | Hazard Curves
    12 | Hazard Maps
    13 | Realizations
-   \textcolor{blue}{14 | Earthquake Ruptures}
+   __14__ | Earthquake Ruptures
    15 | Events
    16 | Uniform Hazard Spectra
 
@@ -2942,8 +2950,9 @@ Table `3.2 <#output:realizations>`__.
       7           b2\ :math:`\sim`\ b12_b22 0.075
       =========== ========================= ==========
 
-Outputs from Scenario Hazard Analysis By
+Outputs from Scenario Hazard Analysis 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+By
 default, the scenario hazard calculator computes and stores Ground Motion Fields for
 each GMPE specified in the job configuration file. The Ground Motion Fields will be
 computed at each of the sites and for each of the intensity measure
@@ -3080,9 +3089,8 @@ considered active shallow crust sources.
           </logicTree>
       </nrml>
 
-Classical PSHA with different source
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-typologies
+Classical PSHA with different source typologies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section discusses the following examples:
 
@@ -3652,8 +3660,9 @@ options and methodologies can be easily introduced, without affecting
 the overall calculation workflow. Each workflow is described in more
 detail in the following sections.
 
-Scenario Damage Assessment The scenario damage
+Scenario Damage Assessment 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The scenario damage
 calculator computes damage distribution statistics for all assets in a
 given exposuremodel for a single specified rupture. Damage distribution
 statistics include the mean and standard deviation of damage fractions
@@ -3694,11 +3703,10 @@ The required input files required for running a scenario damage
 calculation and the resulting output files are depicted in
 Figure `1.1 <#fig:io-structure-scenario-damage>`__.
 
-.. figure:: figures/risk/io-structure-scenario-damage.pdf
+.. figure:: figures/risk/io-structure-scenario-damage.png
    :alt: Scenario Damage Calculator input/output structure.
    :name: fig:io-structure-scenario-damage
-   :width: 9cm
-   :height: 7cm
+   :width: 95%
 
    Scenario Damage Calculator input/output structure.
 
@@ -3712,8 +3720,9 @@ providing a fragilitymodel file for at least one loss type is mandatory
 for running a Scenario Damage calculation, providing corresponding
 consequencemodel files is optional.
 
-Scenario Risk Assessment The scenario risk
+Scenario Risk Assessment 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The scenario risk
 calculator computes loss statistics for all assets in a given
 exposuremodel for a single specified rupture. Loss statistics include
 the mean and standard deviation of ground-up losses for each loss type
@@ -3752,11 +3761,10 @@ The required input files required for running a scenario risk
 calculation and the resulting output files are depicted in
 Figure `1.2 <#fig:io-structure-scenario-risk>`__.
 
-.. figure:: figures/risk/io-structure-scenario-risk.pdf
+.. figure:: figures/risk/io-structure-scenario-risk.png
    :alt: Scenario Risk Calculator input/output structure.
    :name: fig:io-structure-scenario-risk
-   :width: 9cm
-   :height: 7cm
+   :width: 95%
 
    Scenario Risk Calculator input/output structure.
 
@@ -3786,11 +3794,10 @@ The required input files required for running a classical probabilistic
 damage calculation and the resulting output files are depicted in
 Figure `1.3 <#fig:io-structure-classical-damage>`__.
 
-.. figure:: figures/risk/io-structure-classical-damage.pdf
+.. figure:: figures/risk/io-structure-classical-damage.png
    :alt: Classical PSHA-based Damage Calculator input/output structure.
    :name: fig:io-structure-classical-damage
-   :width: 9cm
-   :height: 7cm
+   :width: 95%
 
    Classical PSHA-based Damage Calculator input/output structure.
 
@@ -3834,11 +3841,10 @@ The required input files required for running a classical probabilistic
 risk calculation and the resulting output files are depicted in
 Figure `1.4 <#fig:io-structure-classical-risk>`__.
 
-.. figure:: figures/risk/io-structure-classical-risk.pdf
+.. figure:: figures/risk/io-structure-classical-risk.png
    :alt: Classical PSHA-based Risk Calculator input/output structure.
    :name: fig:io-structure-classical-risk
-   :width: 9cm
-   :height: 7cm
+   :width: 95%
 
    Classical PSHA-based Risk Calculator input/output structure.
 
@@ -3907,10 +3913,10 @@ The required input files required for running a probabilistic stochastic
 event-based damage calculation and the resulting output files are
 depicted in Figure `1.5 <#fig:io-structure-event-based-damage>`__
 
-.. figure:: figures/risk/io-structure-event-based-damage.pdf
+.. figure:: figures/risk/io-structure-event-based-damage.png
    :alt: Probabilistic Event-based Damage Calculator input/output structure.
    :name: fig:io-structure-event-based-damage
-   :width: 12cm
+   :width: 95%
 
    Probabilistic Event-based Damage Calculator input/output structure.
 
@@ -3993,11 +3999,10 @@ The required input files required for running a probabilistic stochastic
 event-based risk calculation and the resulting output files are depicted
 in Figure `1.6 <#fig:io-structure-event-based-risk>`__
 
-.. figure:: figures/risk/io-structure-event-based-risk.pdf
+.. figure:: figures/risk/io-structure-event-based-risk.png
    :alt: Probabilistic Event-based Risk Calculator input/output structure.
    :name: fig:io-structure-event-based-risk
-   :width: 9cm
-   :height: 7cm
+   :width: 95%
 
    Probabilistic Event-based Risk Calculator input/output structure.
 
@@ -4018,11 +4023,10 @@ intervention is economically viable.
 In Figure `1.7 <#fig:io-structure-benefit-cost>`__, the input/output
 structure for this calculator is depicted.
 
-.. figure:: figures/risk/io-structure-benefit-cost.pdf
+.. figure:: figures/risk/io-structure-benefit-cost.png
    :alt: Retrofitting Benefit/Cost Ratio Calculator input/output structure.
    :name: fig:io-structure-benefit-cost
-   :width: 10.5cm
-   :height: 7cm
+   :width: 95%
 
    Retrofitting Benefit/Cost Ratio Calculator input/output structure.
 
@@ -5104,10 +5108,10 @@ For discrete fragilityfunctions, sets of probabilities of exceedance
 (one set per limit state) are defined for a list of intensity measure
 levels, as illustrated in Figure `2.1 <#fig:fragility-discrete>`__.
 
-.. figure:: figures/risk/fragility-discrete.pdf
+.. figure:: figures/risk/fragility-discrete.png
    :alt: Graphical representation of a discrete fragility model
    :name: fig:fragility-discrete
-   :width: 12cm
+   :width: 95%
 
    Graphical representation of a discrete fragility model
 
@@ -5116,10 +5120,10 @@ through the use of cumulative lognormal distribution functions. In
 Figure `2.2 <#fig:fragility-continuous>`__, a continuous fragilitymodel
 is presented.
 
-.. figure:: figures/risk/fragility-continuous.pdf
+.. figure:: figures/risk/fragility-continuous.png
    :alt: Graphical representation of a continuous fragility model
    :name: fig:fragility-continuous
-   :width: 12cm
+   :width: 95%
 
    Graphical representation of a continuous fragility model
 
@@ -5577,10 +5581,10 @@ described in detail. A graphical representation of a vulnerabilitymodel
 (mean loss ratio for a set of intensity measure levels) is illustrated
 in Figure `2.3 <#fig:vulnerability-zero-cov>`__.
 
-.. figure:: figures/risk/vulnerability-zero-cov.pdf
+.. figure:: figures/risk/vulnerability-zero-cov.png
    :alt: Graphical representation of a vulnerability model
    :name: fig:vulnerability-zero-cov
-   :width: 12cm
+   :width: 95%
 
    Graphical representation of a vulnerability model
 
@@ -5595,10 +5599,10 @@ uncertainty in the loss ratio at different intensity levels using a
 lognormal distribution is illustrated in
 Figure `2.4 <#fig:vulnerability-nonzero-cov>`__.
 
-.. figure:: figures/risk/vulnerability-nonzero-cov.pdf
+.. figure:: figures/risk/vulnerability-nonzero-cov.png
    :alt: Graphical representation of a vulnerability function that models the uncertainty in the loss ratio using a lognormal distribution. The mean loss ratios and coefficients of variation are illustrated for a set of intensity levels.
    :name: fig:vulnerability-nonzero-cov
-   :width: 12cm
+   :width: 95%
 
    Graphical representation of a vulnerability function that models the
    uncertainty in the loss ratio using a lognormal distribution. The
@@ -8385,11 +8389,10 @@ than one asset at the same location). A map with the distribution of the
 number of buildings throughout Nepal is presented in
 Figure `5.1 <#fig:exposure-nepal>`__.
 
-.. figure:: figures/risk/exposure-nepal.pdf
+.. figure:: figures/risk/exposure-nepal.png
    :alt: Distribution of number of buildings in Nepal
    :name: fig:exposure-nepal
-   :width: 12cm
-   :height: 8cm
+   :width: 95%
 
    Distribution of number of buildings in Nepal
 
@@ -8799,25 +8802,25 @@ Glossary
    Probabilistic Risk Calculators, but not by the Classical
    Probabilistic Risk Calculator.
 
-.. |image| image:: figures/hazard/point.pdf
-   :width: 7cm
-.. |image1| image:: figures/hazard/area.pdf
-   :width: 7cm
-.. |image2| image:: figures/hazard/simple_fault.pdf
-   :width: 7cm
-.. |image3| image:: figures/hazard/complex_fault.pdf
-   :width: 7cm
-.. |image4| image:: figures/hazard/char_fault2.pdf
-   :width: 7cm
-.. |image5| image:: figures/hazard/char_fault3.pdf
-   :width: 7cm
-.. |image6| image:: figures/hazard/char_fault1.pdf
-   :width: 7cm
-.. |image7| image:: figures/hazard/hazard-curves-ltcase2.pdf
-   :width: 9cm
-.. |image8| image:: figures/hazard/ses.pdf
-   :width: 9cm
-.. |image9| image:: figures/hazard/gmf-no-corr.pdf
-   :width: 6cm
-.. |image10| image:: figures/hazard/gmf-corr.pdf
-   :width: 6cm
+.. |image| image:: figures/hazard/point.png
+   :width: 95%
+.. |image1| image:: figures/hazard/area.png
+   :width: 95%
+.. |image2| image:: figures/hazard/simple_fault.png
+   :width: 95%
+.. |image3| image:: figures/hazard/complex_fault.png
+   :width: 95%
+.. |image4| image:: figures/hazard/char_fault2.png
+   :width: 95%
+.. |image5| image:: figures/hazard/char_fault3.png
+   :width: 95%
+.. |image6| image:: figures/hazard/char_fault1.png
+   :width: 95%
+.. |image7| image:: figures/hazard/hazard-curves-ltcase2.png
+   :width: 95%
+.. |image8| image:: figures/hazard/ses.png
+   :width: 95%
+.. |image9| image:: figures/hazard/gmf-no-corr.png
+   :width: 95%
+.. |image10| image:: figures/hazard/gmf-corr.png
+   :width: 95%
