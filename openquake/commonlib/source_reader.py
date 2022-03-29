@@ -184,20 +184,25 @@ def fix_geometry_sections(smdict):
     """
     gmodels = []
     smodels = []
+    gfiles = []
     for fname, mod in smdict.items():
         if isinstance(mod, nrml.GeometryModel):
             gmodels.append(mod)
+            gfiles.append(fname)
         elif isinstance(mod, nrml.SourceModel):
             smodels.append(mod)
         else:
             raise RuntimeError('Unknown model %s' % mod)
 
     # merge and reorder the sections
+    sec_ids = []
     sections = {}
     for gmod in gmodels:
+        sec_ids.extend(gmod.sections)
         sections.update(gmod.sections)
+    nrml.check_unique(
+        sec_ids, 'section ID in files ' + ' '.join(gfiles))
     sections = {sid: sections[sid] for sid in sorted(sections)}
-    nrml.check_unique(sections)
 
     # fix the MultiFaultSources
     for smod in smodels:
