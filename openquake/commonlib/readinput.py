@@ -1066,7 +1066,6 @@ def reduce_sm(paths, source_ids):
     """
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
-            print(src_node)
             if src_node.tag.endswith('Surface'):  # in geometrySections
                 return True
             code = tag2code[re.search(r'\}(\w+)', src_node.tag).group(1)]
