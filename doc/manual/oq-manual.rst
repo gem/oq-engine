@@ -1,5 +1,5 @@
 .. contents::
-   :depth: 3
+   :depth: 4
 ..
 
 .. section-numbering::
@@ -37,7 +37,8 @@
 | Please cite this document as:
 | GEM (2022). The OpenQuake-engine User Manual. *Global Earthquake Model
   (GEM) OpenQuake Manual for Engine version 3.14.0.
-  doi: 10.13117/GEM.OPENQUAKE.MAN.ENGINE.3.14.0, pages.*
+  doi: 10.13117/GEM.OPENQUAKE.MAN.ENGINE.3.14.0*
+
 | **Disclaimer**
 | The OpenQuake-engine User Manual is distributed in the hope that it
   will be useful, but without any warranty: without even the implied
@@ -52,6 +53,7 @@
   Manual provided hereunder is on as “as is” basis, and the authors and
   GEM Foundation have no obligations to provide maintenance, support,
   updates, enhancements, or modifications.
+
 | **License**
 | This Manual is distributed under the Creative Commons License
   Attribution- NonCommercial-ShareAlike 4.0 International (`CC BY-NC-SA
@@ -59,6 +61,7 @@
   download this Manual and share it with others as long as you provide
   proper credit, but you cannot change it in any way or use it
   commercially.
+
 | © 2013–2022 GEM Foundation
 | *March 2022*
 
@@ -313,15 +316,15 @@ For this OpenQuake-engine supports a nonparametricsource in which the
 earthquakeruptureforecast is provided explicitly by the user as a set of
 ruptures and their corresponding probabilities of occurrence.
 
-Source typologies for modelling distributed
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Source typologies for modelling distributed seismicity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Point sources
 _____________
 
-.. figure:: figures/hazard/single_rupture.pdf
+.. figure:: figures/hazard/single_rupture.png
    :alt: Single rupture
    :name: fig:single_rupture
-   :width: 10cm
+   :width: 95%
 
    Single rupture
 
@@ -1010,8 +1013,9 @@ below:
        </complexFaultRupture>
    </nonParametricSeismicSource>
 
-Magnitude-frequency distributions The
+Magnitude-frequency distributions 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The
 magnitude-frequency distributions currently supported by the OpenQuake engine are
 the following:
 
@@ -1132,23 +1136,22 @@ Hybrid Characteristic earthquake model (à la (Youngs and Coppersmith 1985))
 
       “Arbitrary” magnitude-frequency distribution.
 
-Magnitude-scaling relationships We provide
+Magnitude-scaling relationships 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+We provide
 below a list of the magnitude-area scaling relationships implemented in
 the OpenQuake hazard library (oq-hazardlib):
 
-Relationships for shallow earthquakes in
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-active tectonic regions
+Relationships for shallow earthquakes in active tectonic regions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  (Wells and Coppersmith 1994) - One of the most well known magnitude
    scaling relationships, based on a global database of historical
    earthquake ruptures. The implemented relationship is the one linking
    magnitude to rupture area, and is called with the keyword ``WC1994``
 
-Magnitude-scaling relationships for
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-subduction earthquakes
+Magnitude-scaling relationships for subduction earthquakes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  (Strasser, Arango, and Bommer 2010) - Defines several magnitude
    scaling relationships for interface and in-slab earthquakes. Only the
@@ -1161,18 +1164,16 @@ subduction earthquakes
    scaling relationships are implemented here, and are called with the
    keywords ``ThingbaijamInterface``.
 
-Magnitude-scaling relationships stable
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-continental regions
+Magnitude-scaling relationships stable continental regions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  (EPRI 2011) - Defines a single magnitude to rupture-area scaling
    relationship for use in the central and eastern United States:
    :math:`Area = 10.0^{M_W - 4.336}`. It is called with the keyword
    ``CEUS2011``
 
-Miscellaneous Magnitude-Scaling
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Relationships
+Miscellaneous Magnitude-Scaling Relationships
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  ``PeerMSR`` defines a simple magnitude scaling relation used as part
    of the Pacific Earthquake Engineering Research Center verification of
@@ -1183,8 +1184,9 @@ Relationships
    infinitesimally small area for all magnitudes. Should only be used
    for distributed seismicity sources and not for fault sources.
 
-Calculation workflows The hazard component of
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Calculation workflows 
+^^^^^^^^^^^^^^^^^^^^^
+The hazard component of
 the OpenQuake engine can compute seismic hazard using various approaches. Three
 types of analysis are currently supported:
 
@@ -1789,8 +1791,9 @@ attributes allowing for complex tree definitions:
       applyToTectonicRegionType="Active Shallow Crust"
 
 
-The Seismic Source System The Seismic Source
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The Seismic Source System 
+^^^^^^^^^^^^^^^^^^^^^^^^^
+The Seismic Source
 System contains the model (or the models) describing position, geometry
 and activity of seismic sources of engineering importance for a set of
 sites as well as the possible epistemic uncertainties to be incorporated
