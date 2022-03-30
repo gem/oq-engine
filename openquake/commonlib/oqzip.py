@@ -35,7 +35,10 @@ def zip_all(directory, ini):
                 oq = oqvalidation.OqParam(**readinput.get_params(path))
                 zips.extend(readinput.get_input_files(oq))
     total = sum(os.path.getsize(z) for z in zips)
-    logging.info('Generated %s of zipped data', general.humansize(total))
+    if os.path.exists('jobs.zip'):
+        os.remove('jobs.zip')
+    general.zipfiles(zips, 'jobs.zip', log=logging.info)
+    logging.info('Generated %s of jobs.zip', general.humansize(total))
 
 
 # useful for the demos
