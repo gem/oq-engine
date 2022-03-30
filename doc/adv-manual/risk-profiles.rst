@@ -1,7 +1,7 @@
 Risk profiles
-=======================
+=============
 
-GEM is able to produce risk profiles, i.e. estimates of average losses
+The OpenQuake engine can produce risk profiles, i.e. estimates of average losses
 and maximum probable losses for all countries in the world. Even if you
 are interested in a single country, you can still use this feature
 to compute risk profiles for each province in your country.
@@ -9,43 +9,42 @@ to compute risk profiles for each province in your country.
 However, the calculation of the risk profiles is tricky and there are
 actually several different ways to do it.
 
-1. The least-recommended way is to run indipendent calculations, one
+1. The least-recommended way is to run independent calculations, one
    for each country. The issue with this approach is that even if the
    hazard model is the same for all the countries (say you are
-   interested in the 13 countries in South America) due to the nature
-   of event based calculations different ruptures will be sampled in
+   interested in the 13 countries of South America), due to the nature
+   of event based calculations, different ruptures will be sampled in
    different countries. In practice, when comparing Chile with Peru you will
    see differences due to the fact that the random sampling picked
    different ruptures in the two contries and not real differences. In
-   theory the effect should disappear for long investigation times,
-   when all possible ruptures are samples, but in practice for finite
-   investigation times there will always be different ruptures.
+   theory, the effect should disappear if the calculations have sufficiently
+   long investigation times, when all possible ruptures are sampled, 
+   but in practice, for finite investigation times there will always be 
+   different ruptures.
 
-2. To avoid such issue the contry-specific calculation must all start
-   from the same set of ruptures, precomputed in advance. You can
+2. To avoid such issues, the country-specific calculations should
+   ideally all start from the same set of precomputed ruptures. You can
    compute the whole stochastic event set by running an event based
    calculation without specifying the sites and with the parameter
-   ``ground_motion_fields`` set to false. Currently one must specify
+   ``ground_motion_fields`` set to false. Currently, one must specify
    a few global site parameters in the precalculation to make the
-   engine checker happy, but they will not be used since since the
+   engine checker happy, but they will not be used since the
    ground motion fields will not be generated in the
-   precalculation. They will be generated in the subsequent
-   individual calculations, but on-the-fly and not stored in the file
-   system. This approach is fine if you do not have a lot of disk
+   precalculation. The ground motion fields will be generated on-the-fly  
+   in the subsequent individual country calculations, but not stored 
+   in the file system. This approach is fine if you do not have a lot of disk
    space at your disposal, but it is still inefficient since it is
-   more prone to the slow task issue.
+   quite prone to the slow tasks issue.
 
-3. If you have plenty of disk space it is better to generate the
-   ground motion fields in the precalculation and then run the
-   contry-specific calculations starting from there. This is
-   particularly convenient if you have to run the risk part of the
-   calculations multiple times. A typical use case is to use
-   different vulnerability functions (for instance to compare a
-   strong building code versus a weak building code). Having
-   precomputed the GMFs means that you do not have to recompute them
-   twice.
+3. If you have plenty of disk space it is better to also generate the
+   ground motion fields in the precalculation, and then run the
+   contry-specific risk calculations starting from there. This is
+   particularly convenient if you foresee the need to run the risk
+   part of the calculations multiple times, while the hazard part remains
+   unchanged. Using a precomputed set of GMFs removes the need to rerun
+   the hazard part of the calculations each time.
 
-4. If you have a really powerful machine the most efficient way is to
+4. If you have a really powerful machine, the most efficient way is to
    run a single calculation considering all countries in a single
    job.ini file. The risk profiles can be obtained by using the
    ``aggregate_by`` and ``reaggregate_by`` parameters. This approach
@@ -54,7 +53,7 @@ actually several different ways to do it.
    to cloud-computing resources, since then you can spawn a different
    machine for each country and parallelize horizontally.
 
-Here are some tips on how to prepare the required job.ini files.
+Here are some tips on how to prepare the required job.ini files:
 
 When using approach #1 you will have 13 different files (in the example
 of South America) with a format like the following::
@@ -88,7 +87,7 @@ and filtered 13 times. This is inefficient. Also, hazard parameters like
  maximum_distance = 300
 
 must be the same in all 13 files to ensure the consistency of the
-calculation. This is error prone.
+calculation. Ensuring this consistency can be prone to human error.
 
 When using approach #2 you will have 14 different files: 13 files for
 the individual countries and a special file for precomputing the ruptures::
@@ -120,38 +119,39 @@ require specifying the full site model as follows::
     ...
 
 The engine will automatically concatenate the site model files for all
-13 countries a produce a single site collection. The site parameters
+13 countries and produce a single site collection. The site parameters
 will be extracted from such files, so the dummy global parameters
 ``reference_vs30_value``, ``reference_depth_to_1pt0km_per_sec``, etc
 can be removed.
 
 It is FUNDAMENTAL FOR PERFORMANCE to have reasonable site model files,
 i.e. the number of sites must be relatively small, let's say below
-100,000 sites. The most common error is wanting to use the sites of
-the exposure, but this can easily generate tens of millions of sites
-making the calculation impossible in terms of both memory and disk space
-occupation.
+100,000 sites. For calculations with large high-definition exposure models,
+trying to calculate the hazard at the location of every single asset
+can easily generate millions of sites, making the calculation intractable
+in terms of both memory and disk space occupation.
 
 The engine provides a command ``oq prepare_site_model``
 which is meant to generate sensible site model files starting from
-the country exposures and the USGS vs30 file for the entire world.
+the country exposures and the global USGS vs30 grid.
 It works by using a hazard grid so that the number of sites
-can be reduced to a manageable number. Please look in the manual in
-the section about the oq commands to see how to use it.
+can be reduced to a manageable number. Please refer to the manual in
+the section about the oq commands to see how to use it, or try
+``oq prepare_site_model --help``.
 
 Approach #4 is the best, since there is only a single file,
 thus avoiding entirely the possibily of having inconsistent parameters
 in different files. It is also the faster approach, not to mention the
 most convenient one, since you have to manage a single calculation and
-not 13. That makes any kind of post-processing analysis a lot
+not 13. That makes the task of managing any kind of post-processing a lot
 simpler. Unfortunately, it is also the option that requires more
-memory and it can be unfeasable if the model is too big and you do not
-have enough IT resources: in that case you must go back to options #2
-or #3. If you have access to multiple small machines approaches #2 and
-#3 can be more attractive than #4, since then you can scale horizontally.
-If you decide to use approach #4, in the single file you must specify
-the ``site_model_file`` as done in the approach #3, and also the
-``exposure_file`` as follows::
+memory and it can be infeasable if the model is too large and you do not
+have enough computing resources. In that case your best bet might be to
+go back to options #2 or #3. If you have access to multiple small machines,
+approaches #2 and #3 can be more attractive than #4, since then you 
+can scale horizontally. If you decide to use approach #4, 
+in the single file you must specify the ``site_model_file`` as done in
+approach #3, and also the ``exposure_file`` as follows::
 
  exposure_file =
    Exposure_Argentina.xml
@@ -159,19 +159,19 @@ the ``site_model_file`` as done in the approach #3, and also the
    ...
 
 The engine will automatically build a single asset collection for the
-entire South America. In order to use this approach you need to
+entire continent of South America. In order to use this approach, you need to
 collect all the vulnerability functions in a single file and the
-taxonomy mapping must cover entire exposure for all
-countries. Moreover the exposure must contain the associations
-asset->country; this normally encoded in a field called ``ID_0``.
-Then the aggregation by country can be done with the option
+taxonomy mapping file must cover the entire exposure for all countries. 
+Moreover, the exposure must contain the associations between 
+asset<->country; in GEM's exposure models, this is typically encoded 
+in a field called ``ID_0``. Then the aggregation by country can be done with the option
 
 ::
 
    aggregate_by = ID_0
 
-Sometimes one is interested in finer aggregations, for instance by country
-and also by occupancy (Residential, Industrial or Business); then you have
+Sometimes, one is interested in finer aggregations, for instance by country
+and also by occupancy (Residential, Industrial or Commercial); then you have
 to set
 
 ::
@@ -180,8 +180,8 @@ to set
  reaggregate_by = ID_0
 
 ``reaggregate_by` is a new feature of engine 3.13 which allows to go
-from a fine aggregation (i.e. one with more tags, in this example 2)
-to a raw aggregation (i.e. one with less tags, in this example 1).
+from a finer aggregation (i.e. one with more tags, in this example 2)
+to a coarser aggregation (i.e. one with fewer tags, in this example 1).
 Actually the command ``oq reaggregate`` has been there for more than one
 year; the new feature is that it is automatically called at the end of
 a calculation, by spawning a subcalculation to compute the reaggregation.
@@ -231,7 +231,7 @@ Caveat: GMFs are split-dependent
 --------------------------------
 
 You should not expect the results of approach #4 to match exactly the
-results of approaches #3 or #2, since splitting a calculation in
+results of approaches #3 or #2, since splitting a calculation by
 countries is a tricky operation. In general, if you have a set of
 sites and you split it in disjoint subsets, and then you compute the
 ground motion fields for each subset, you will get different results
@@ -264,9 +264,9 @@ the correct way of proceeding, since the splitting causes some
 random numbers to be repeated (the numbers 0.1928212 and -0.0655070
 in this example) and actually breaks the normal distribution.
 
-In practice, if there is a large number of events and if you are
-interested in statistical quantities, things work out and you will
-produce similar results with and without splitting. But you will
+In practice, if there is a sufficiently large event-set and if you are
+interested in statistical quantities, things work out and you should
+see similar results with and without splitting. But you will
 *never produce identical results*. Only the classical calculator does
 not depend on the splitting of the sites, for event based and scenario
 calculations there is no way out.
