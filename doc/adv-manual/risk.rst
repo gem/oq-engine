@@ -143,6 +143,7 @@ The effective realizations in each of the subregions will then be much
 fewer than when trying to cover the entire large region in a single
 calculation.
 
+NB: ``collect_rlzs`` has no effect at all on the hazard results.
 
 Trimming of the logic-trees or sampling of the branches
 -------------------------------------------------------
