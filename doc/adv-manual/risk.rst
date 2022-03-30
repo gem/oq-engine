@@ -101,7 +101,7 @@ Collapsing of branches
 ----------------------
 
 When one is not interested so much in the uncertainty around the loss
-estimates, but more interested simply in the mean estimates, all of the
+estimates, simply in the mean estimates, all of the
 source model branches can be "collapsed" into one branch. Using the
 collapsed source model should yield the same mean hazard or loss
 estimates as using the full source model logic tree and then computing
@@ -114,6 +114,18 @@ GMPE logic tree and then computing the weighted mean of the individual
 branch results. This has become possible through the introduction of 
 `AvgGMPE feature <https://github.com/gem/oq-engine/blob/engine-3.9/openquake/qa_tests_data/classical/case_19/gmpe_logic_tree.xml#L26-L40>`_ in version 3.9.
 
+Using ``collect_rlzs=true``
+----------------------------
+
+Since version 3.12 the engine recognizes a flag ``collect_rlzs`` in
+the risk configuration file, which by default is false. When the flag
+is set to true, then the hazard realizations are collected together
+when computing the risk results and considered as one. This is
+possible only when the weights of the realizations are all equal,
+otherwise the engine raises an error. Collecting the realizations
+makes the calculation of the losses and loss curves much faster and
+more memory efficient. It is the recommended way to proceed when you
+are interested only in mean results.
 
 Splitting the calculation into subregions
 -----------------------------------------
