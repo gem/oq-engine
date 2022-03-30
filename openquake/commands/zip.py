@@ -28,7 +28,7 @@ def main(what, archive_zip='', jobs=False, *, risk_file=''):
         if jobs:
             oqzip.zip_all_jobs(what)
         else:
-            oqzip.zip_all(what)
+            oqzip.zip_all(what, 'job_vs30.ini')
     elif what.endswith('.xml') and '<logicTree' in open(what).read(512):
         # hack to see if the NRML file is of kind logicTree
         oqzip.zip_source_model(what, archive_zip)

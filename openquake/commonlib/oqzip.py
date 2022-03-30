@@ -16,27 +16,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
-import unittest.mock as mock
 import os.path
 import logging
 from openquake.baselib import general
-from openquake.risklib.asset import Exposure
-from openquake.commonlib import readinput, logictree, oqvalidation
+from openquake.commonlib import readinput, oqvalidation
 
 
-# useful for the mosaic files
-def zip_all(directory):
+# useful for the mosaic
+def zip_all(directory, ini):
     """
-    Zip source models and exposures recursively
+    Zip recursively a directory containing ini files
     """
     zips = []
     for cwd, dirs, files in os.walk(directory):
-        if 'ssmLT.xml' in files:
-            zips.append(zip_source_model(os.path.join(cwd, 'ssmLT.xml'),
-                                         cleanup=False))
         for f in files:
-            if f.endswith('.xml') and 'exposure' in f.lower():
-                zips.append(zip_exposure(os.path.join(cwd, f)))
+            if f.endswith(ini):
+                path = os.path.join(cwd, f)
+                oq = oqvalidation.OqParam(**readinput.get_params(path))
+                zips.extend(readinput.get_input_files(oq))
     total = sum(os.path.getsize(z) for z in zips)
     logging.info('Generated %s of zipped data', general.humansize(total))
 
@@ -60,48 +57,6 @@ def zip_all_jobs(directory):
         zips.append(zip_job(job_ini, archive_zip, risk_ini))
         total = sum(os.path.getsize(z) for z in zips)
     logging.info('Generated %s of zipped data', general.humansize(total))
-
-
-def zip_source_model(ssmLT, archive_zip='', log=logging.info, cleanup=True):
-    """
-    Zip the source model files starting from the smmLT.xml file
-    """
-    basedir = os.path.dirname(ssmLT)
-    if os.path.basename(ssmLT) != 'ssmLT.xml':
-        orig = ssmLT
-        ssmLT = os.path.join(basedir, 'ssmLT.xml')
-        with open(ssmLT, 'wb') as f:
-            f.write(open(orig, 'rb').read())
-
-    archive_zip = archive_zip or os.path.join(basedir, 'ssmLT.zip')
-    if os.path.exists(archive_zip):
-        sys.exit('%s exists already' % archive_zip)
-    info = logictree.collect_info(ssmLT)
-    files = info.h5paths + info.smpaths
-    oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT},
-                   random_seed=42, number_of_logic_tree_samples=0,
-                   sampling_method='early_weights')
-    oq._input_files = readinput.get_input_files(oq)
-    checksum = readinput.get_checksum32(oq)
-    checkfile = os.path.join(os.path.dirname(ssmLT), 'CHECKSUM.txt')
-    with open(checkfile, 'w') as f:
-        f.write(str(checksum))
-    files.extend([os.path.abspath(ssmLT), os.path.abspath(checkfile)])
-    general.zipfiles(files, archive_zip, log=log, cleanup=cleanup)
-    return archive_zip
-
-
-def zip_exposure(exposure_xml, archive_zip='', log=logging.info):
-    """
-    Zip an exposure.xml file with all its .csv subfiles (if any)
-    """
-    archive_zip = archive_zip or exposure_xml[:-4] + '.zip'
-    if os.path.exists(archive_zip):
-        sys.exit('%s exists already' % archive_zip)
-    [exp] = Exposure.read_headers([exposure_xml])
-    files = [exposure_xml] + exp.datafiles
-    general.zipfiles(files, archive_zip, log=log, cleanup=True)
-    return archive_zip
 
 
 def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
