@@ -27,9 +27,12 @@ from openquake.baselib import sap
 from openquake import commands
 
 # check for Python version
-PY_VER = sys.version_info[:3]
+PY_VER = sys.version_info[:2]
 if PY_VER < (3, 6):
     sys.exit('Python 3.6+ is required, you are using %s', sys.executable)
+elif PY_VER == (3, 6):
+    print('Python 3.6 (%s) is not supported; the engine may not work correctly'
+          % sys.executable)
 
 # force cluster users to use `oq engine` so that we have centralized logs
 if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:
