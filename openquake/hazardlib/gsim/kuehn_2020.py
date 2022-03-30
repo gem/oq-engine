@@ -690,14 +690,14 @@ class KuehnEtAl2020SInter(GMPE):
                 break
         [mag] = np.unique(np.round(ctx.mag, 6))
         for m, imt in enumerate(imts):
-            # Get coefficinets for imt
+            # Get coefficients for imt
             C = self.COEFFS[imt]
-            m_break = m_b + C["dm_b"] if trt == const.TRT.SUBDUCTION_INTERFACE and\
-                self.region in ("JPN", "SAM") else m_b
-
+            m_break = m_b + C["dm_b"] if (
+                trt == const.TRT.SUBDUCTION_INTERFACE and
+                self.region in ("JPN", "SAM")) else m_b
             if imt.string == "PGA":
                 mean[m] = pga_soil
-            elif ("SA" in imt.string) and (imt.period <= 0.1):
+            elif "SA" in imt.string and imt.period <= 0.1:
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
                 mean[m] = get_mean_values(C, self.region, trt, m_break,
                                           ctx, pga1100)
