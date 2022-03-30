@@ -141,6 +141,6 @@ class KuehnEtAl2020RegionTestCase(BaseGSIMTestCase):
             for region, files in self.FILES.items():
                 mean_file, *std_files = [f.format(trt) for f in files]
                 self.check(mean_file,
-                           max_discrep_percentage=0.1, region=region)
+                           max_discrep_percentage=0.03, region=region)
                 self.check(*std_files,
                            max_discrep_percentage=0.1, region=region)
