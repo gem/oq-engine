@@ -100,8 +100,8 @@ custom site model file tailored to your exposure (see the section
 Collapsing of branches
 ----------------------
 
-When one is not interested so much in the uncertainty around the loss
-estimates, simply in the mean estimates, all of the
+When one is not interested in the uncertainty around the loss
+estimates and cares more about the mean estimates, all of the
 source model branches can be "collapsed" into one branch. Using the
 collapsed source model should yield the same mean hazard or loss
 estimates as using the full source model logic tree and then computing
