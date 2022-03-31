@@ -73,6 +73,17 @@ class GeoPackager(object):
             recs = [geodict(row) for row in rows]
             f.writerecords(recs)
 
+    def read_all(self):
+        """
+        :returns: a list of geojson dictionaries
+        """
+        data = []
+        for layer in fiona.listlayers(self.fname):
+            with fiona.open(self.fname, 'r', 'GPKG',
+                            encoding='utf8', layer=layer) as col:
+                data.extend(col)
+        return data
+
     def _save(self, name, dic):
         # Useful for debugging. Example:
         # dic = {'geometry':
