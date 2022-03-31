@@ -1261,7 +1261,7 @@ class RowConverter(SourceConverter):
     def convert_npdist(self, node):
         lst = []
         for w, np in super().convert_npdist(node).data:
-            dic = {'weight': w, 'dip': np.dip, 'rake': np.rake,
+            dic = {'probability': w, 'dip': np.dip, 'rake': np.rake,
                    'strike': np.strike}
             lst.append(dic)
         return str(lst)
@@ -1269,7 +1269,7 @@ class RowConverter(SourceConverter):
     def convert_hddist(self, node):
         lst = []
         for w, hd in super().convert_hddist(node).data:
-            lst.append(dict(weight=w, hypodepth=hd))
+            lst.append(dict(probability=w, hypodepth=hd))
         return str(lst)
 
     def convert_areaSource(self, node):
