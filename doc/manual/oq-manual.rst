@@ -546,7 +546,7 @@ hypocenters at localized at two distinct depths.
       </areaSource>
 
 Fault sources with floating ruptures 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Fault
 sources in the OpenQuake engine are classified according to the method adopted to
 distribute ruptures over the fault surface. Two options are currently
@@ -899,7 +899,7 @@ configurations is shown below.
    </characteristicFaultSource>
 
 Non-Parametric Sources
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 Non-Parametric Fault
 ____________________
 
@@ -1015,10 +1015,9 @@ below:
    </nonParametricSeismicSource>
 
 Magnitude-frequency distributions 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The
-magnitude-frequency distributions currently supported by the OpenQuake engine are
-the following:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The magnitude-frequency distributions currently supported by the 
+OpenQuake engine are the following:
 
 A discrete incremental magnitude-frequency distribution
    It is the simplest distribution supported. It is defined by the
@@ -1138,7 +1137,7 @@ Hybrid Characteristic earthquake model (à la (Youngs and Coppersmith 1985))
       “Arbitrary” magnitude-frequency distribution.
 
 Magnitude-scaling relationships 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 We provide
 below a list of the magnitude-area scaling relationships implemented in
 the OpenQuake hazard library (oq-hazardlib):
@@ -1299,9 +1298,9 @@ The main calculators used to perform this analysis are:
    for investigating the hazard over large areas.
 
 Scenario based Seismic Hazard Analysis 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In
-case of Scenario Based Seismic Hazard Analysis, the input data consist of a single earthquake rupture
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In case of Scenario Based Seismic Hazard Analysis, the input data 
+consist of a single earthquake rupture
 model and one or more ground-motion models. Using the Ground Motion
 Field Calculator, multiple realizations of ground shaking can be
 computed, each realization sampling the aleatory uncertainties in the
@@ -1885,7 +1884,7 @@ each source in the initial seismic source models.
        </logicTree>
    </nrml>
 
-Starting from OpenQuake engine24, it is also possible to split a source model
+Starting from OpenQuake engine v2.4, it is also possible to split a source model
 into several files and read them as if they were a single file. The file
 names for the different files comprising a source model should be
 provided in the source model logic tree file. For instance, a source
@@ -2248,7 +2247,7 @@ outputs of the calculation, see the section: “Description of hazard
 output” (page ).
 
 Seismic hazard disaggregation 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In this
 section we describe the structure of the configuration file to be used
 to complete a seismic hazard disaggregation. Since only a few parts of
@@ -2262,8 +2261,8 @@ at page  as a reference and we emphasize herein major differences.
 
    [general]
    description = A demo .ini file for PSHA disaggregation
-   calculation\_mode = disaggregation
-   random\_seed = 1024
+   calculation_mode = disaggregation
+   random_seed = 1024
 
 The calculation mode parameter in this case is set as
 ``disaggregation``.
@@ -2290,13 +2289,13 @@ description of each parameter is provided below.
    :number-lines: 7
 
    [disaggregation]
-   poes\_disagg = 0.02, 0.1
-   mag\_bin\_width = 1.0
-   distance\_bin\_width = 25.0
-   coordinate\_bin\_width = 1.5
-   num\_epsilon\_bins = 3
-   disagg\_outputs = Mag\_Dist\_Eps Mag\_Lon\_Lat
-   num\_rlzs\_disagg = 3
+   poes_disagg = 0.02, 0.1
+   mag_bin_width = 1.0
+   distance_bin_width = 25.0
+   coordinate_bin_width = 1.5
+   num_epsilon_bins = 3
+   disagg_outputs = Mag_Dist_Eps Mag_Lon_Lat
+   num_rlzs_disagg = 3
 
 -  ``poes_disagg``: disaggregation is performed for the intensity
    measure levels corresponding to the probability of exceedance
@@ -4043,9 +4042,9 @@ classical probabilistic damage and risk calculators, Ground Motion Field for the
 scenario damage and risk calculators, or Stochastic Event Sets for the probabilistic
 event based calculators.
 
-Exposure Models *All* risk calculators in the
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-OpenQuake engine require an exposuremodel that needs to be provided in the
+Exposure Models
+^^^^^^^^^^^^^^^
+*All* risk calculators in the OpenQuake engine require an exposuremodel that needs to be provided in the
 Natural hazards' Risk Markup Language schema, the use of which is illustrated through several
 examples in this section. The information included in an exposuremodel
 comprises a metadata section listing general information about the
@@ -7900,12 +7899,11 @@ Table `4.4 <#output:scenario_consequence_total>`__.
 
    .. table:: Example of a scenario total consequences output file
 
-      +----------------+----------------+----------------+----------------+
-      | **c            | **con          | **str          | **struc        |
-      | ontents-mean** | tents-stddev** | uctural-mean** | tural-stddev** |
-      +================+================+================+================+
-      | 13845.87       | 6517.61        | 2270.29        | 2440.90        |
-      +----------------+----------------+----------------+----------------+
+      +-------------------+---------------------+---------------------+-----------------------+
+      | **contents-mean** | **contents-stddev** | **structural-mean** | **structural-stddev** |
+      +===================+=====================+=====================+=======================+
+      | 13845.87          | 6517.61             | 2270.29             | 2440.90               |
+      +-------------------+---------------------+---------------------+-----------------------+
 
 Scenario Risk Outputs The Scenario Risk
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8057,8 +8055,9 @@ Table `4.8 <#output:scenario_loss_event>`__.
       …         …              …
       ========= ============== =================
 
-Probabilistic Damage Outputs -3ex -0.1ex -.4ex
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Probabilistic Damage Outputs 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Probabilistic damage distribution
 _________________________________
 
@@ -8206,39 +8205,39 @@ Table `4.11 <#output:loss_curve_aggregate>`__.
 
    .. table:: Example of an aggregate loss curve
 
-      +----------------+----------------+----------------+----------------+
-      | **annu         | **r            | **structural** | **n            |
-      | al_frequency_o | eturn_period** |                | onstructural** |
-      | f_exceedence** |                |                |                |
-      +================+================+================+================+
-      | 1E+00          | 1              | -              | 1,440.07       |
-      +----------------+----------------+----------------+----------------+
-      | 5E-01          | 2              | 246.95         | 2,122.25       |
-      +----------------+----------------+----------------+----------------+
-      | 2E-01          | 5              | 506.42         | 2,714.08       |
-      +----------------+----------------+----------------+----------------+
-      | 1E-01          | 10             | 740.06         | 3,226.47       |
-      +----------------+----------------+----------------+----------------+
-      | 5E-02          | 20             | 1,040.54       | 4,017.06       |
-      +----------------+----------------+----------------+----------------+
-      | 2E-02          | 50             | 1,779.61       | 6,610.49       |
-      +----------------+----------------+----------------+----------------+
-      | 1E-02          | 100            | 2,637.58       | 9,903.82       |
-      +----------------+----------------+----------------+----------------+
-      | 5E-03          | 200            | 3,742.73       | 14,367.00      |
-      +----------------+----------------+----------------+----------------+
-      | 2E-03          | 500            | 5,763.20       | 21,946.50      |
-      +----------------+----------------+----------------+----------------+
-      | 1E-03          | 1,000          | 7,426.77       | 25,161.00      |
-      +----------------+----------------+----------------+----------------+
-      | 5E-04          | 2,000          | 9,452.61       | 28,937.50      |
-      +----------------+----------------+----------------+----------------+
-      | 2E-04          | 5,000          | 12,021.00      | 35,762.20      |
-      +----------------+----------------+----------------+----------------+
-      | 1E-04          | 10,000         | 14,057.90      | 38,996.60      |
-      +----------------+----------------+----------------+----------------+
-      | …              | …              | …              | …              |
-      +----------------+----------------+----------------+----------------+
+      +-------------------+----------------+----------------+-------------------+
+      | **annual**        | **return**     | **structural** | **nonstructural** |
+      | **_frequency_o**  | **_period**    |                |                   |
+      | **of_exceedence** |                |                |                   |
+      +===================+================+================+===================+
+      | 1E+00             | 1              | -              | 1,440.07          |
+      +-------------------+----------------+----------------+-------------------+
+      | 5E-01             | 2              | 246.95         | 2,122.25          |
+      +-------------------+----------------+----------------+-------------------+
+      | 2E-01             | 5              | 506.42         | 2,714.08          |
+      +-------------------+----------------+----------------+-------------------+
+      | 1E-01             | 10             | 740.06         | 3,226.47          |
+      +-------------------+----------------+----------------+-------------------+
+      | 5E-02             | 20             | 1,040.54       | 4,017.06          |
+      +-------------------+----------------+----------------+-------------------+
+      | 2E-02             | 50             | 1,779.61       | 6,610.49          |
+      +-------------------+----------------+----------------+-------------------+
+      | 1E-02             | 100            | 2,637.58       | 9,903.82          |
+      +-------------------+----------------+----------------+-------------------+
+      | 5E-03             | 200            | 3,742.73       | 14,367.00         |
+      +-------------------+----------------+----------------+-------------------+
+      | 2E-03             | 500            | 5,763.20       | 21,946.50         |
+      +-------------------+----------------+----------------+-------------------+
+      | 1E-03             | 1,000          | 7,426.77       | 25,161.00         |
+      +-------------------+----------------+----------------+-------------------+
+      | 5E-04             | 2,000          | 9,452.61       | 28,937.50         |
+      +-------------------+----------------+----------------+-------------------+
+      | 2E-04             | 5,000          | 12,021.00      | 35,762.20         |
+      +-------------------+----------------+----------------+-------------------+
+      | 1E-04             | 10,000         | 14,057.90      | 38,996.60         |
+      +-------------------+----------------+----------------+-------------------+
+      | …                 | …              | …              | …                 |
+      +-------------------+----------------+----------------+-------------------+
 
 Same as described previously for individual assets, mean aggregate loss
 exceedance curves and quantile aggregate loss exceedance curves will
@@ -8302,8 +8301,8 @@ even when it is generated it cannot be exported: it can only be accessed
 programmatically from the datastore. It is there for debugging purposes
 only.
 
-Benefit-Cost Ratio Outputs -3ex -0.1ex -.4ex
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Benefit-Cost Ratio Outputs
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 Retrofitting benefit/cost ratio maps
 ____________________________________
 
@@ -8642,10 +8641,11 @@ which should produce the following output:
 Bibliography
 ------------
 
-\*Articles
-__________
-\*Other Sources
-^^^^^^^^^^^^^^^
+Articles
+________
+
+Other Sources
+^^^^^^^^^^^^^
 
 Glossary
 --------
