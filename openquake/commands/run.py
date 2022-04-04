@@ -25,7 +25,7 @@ import pstats
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
-from openquake.commonlib import oqvalidation, logs, datastore, readinput
+from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.server import dbserver
@@ -56,6 +56,7 @@ def get_pstats(pstatfile, n):
     for line in lines[i + 2:]:
         columns = line.split()
         if len(columns) == 6:
+            columns[-1] = os.path.basename(columns[-1])
             data.append(PStatData(*columns))
     rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
     # here is an example of the expected output table:
