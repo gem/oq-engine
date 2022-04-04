@@ -2892,8 +2892,7 @@ latitude and longitude coordinates.
 .. container::
    :name: output:gmf_event_based
 
-   .. table:: Example of a ground motion fields csv output file for an
-   event based hazard calculation
+   .. table:: Example of a ground motion fields csv output file for an event based hazard calculation
 
       +----------+----------+----------+----------+----------+----------+
       | **       | **s      | **ev     | **g      | **gmv_S  | **gmv_S  |
@@ -2968,9 +2967,7 @@ latitude and longitude coordinates.
 .. container::
    :name: output:gmf_scenario
 
-   .. table:: Example of a ground motion fields csv output file for a
-   scenario (`Download
-   example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_gmfs.csv>`__)
+   .. table:: Example of a ground motion fields csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_gmfs.csv>`__)
 
       ======== ======= ======= =========== =============== ===============
       **rlzi** **sid** **eid** **gmv_PGA** **gmv_SA(0.3)** **gmv_SA(1.0)**
@@ -2997,9 +2994,7 @@ intensity measure types specified in the job configuration file.
 .. container::
    :name: output:sitemesh
 
-   .. table:: Example of a sites csv output file for a scenario
-   (`Download
-   example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_sites.csv>`__)
+   .. table:: Example of a sites csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_sites.csv>`__)
 
       =========== ========== ========
       **site_id** **lon**    **lat**
@@ -7800,8 +7795,7 @@ output file snippet in Table `4.1 <#output:scenario_damage_tag>`__.
 .. container::
    :name: output:scenario_damage_tag
 
-   .. table:: Example of a scenario damage distribution per tag output
-   file
+   .. table:: Example of a scenario damage distribution per tag output file
 
       +-----------+-----------+-----------+-----------+-----------+---+
       |           | **str     | **str     | **str     | **str     | … |
@@ -7838,8 +7832,7 @@ Table `4.1 <#output:scenario_damage_tag>`__.
 .. container::
    :name: output:scenario_damage_total
 
-   .. table:: Example of a scenario total damage distribution output
-   file
+   .. table:: Example of a scenario total damage distribution output file
 
       ============= ================ ================
       **loss_type** **damage_state** **damage_value**
@@ -7869,24 +7862,23 @@ Table `4.3 <#output:scenario_consequence_asset>`__.
 
    .. table:: Example of a scenario asset consequences output file
 
-      +--------------+------------+----------+--------------+--------------+
-      | *            | **lon**    | **lat**  | **nonstruc   | **nonstructu |
-      | *asset_ref** |            |          | tural-mean** | ral-stddev** |
-      +==============+============+==========+==============+==============+
-      | a3           | -122.57000 | 38.11300 | 428.29       | 281.49       |
-      +--------------+------------+----------+--------------+--------------+
-      | a2           | -122.11400 | 38.11300 | 1220.84      | 1111.4       |
-      +--------------+------------+----------+--------------+--------------+
-      | a5           | -122.00000 | 37.91000 | 1390.59      | 859.10       |
-      +--------------+------------+----------+--------------+--------------+
-      | a4           | -122.00000 | 38.00000 | 2889.04      | 1663.33      |
-      +--------------+------------+----------+--------------+--------------+
-      | a1           | -122.00000 | 38.11300 | 3191.30      | 1707.41      |
-      +--------------+------------+----------+--------------+--------------+
-      | a6           | -122.00000 | 38.22500 | 3310.62      | 2069.87      |
-      +--------------+------------+----------+--------------+--------------+
-      | a7           | -121.88600 | 38.11300 | 1415.19      | 845.83       |
-      +--------------+------------+----------+--------------+--------------+
+      +--------------+------------+----------+-------------------------+--------------------------+
+      | **asset_ref**| **lon**    | **lat**  | **nonstructural-mean**  | **nonstructural-stddev** |
+      +==============+============+==========+=========================+==========================+
+      | a3           | -122.57000 | 38.11300 | 428.29                  | 281.49                   |
+      +--------------+------------+----------+-------------------------+--------------------------+
+      | a2           | -122.11400 | 38.11300 | 1220.84                 | 1111.4                   |
+      +--------------+------------+----------+-------------------------+--------------------------+
+      | a5           | -122.00000 | 37.91000 | 1390.59                 | 859.10                   |
+      +--------------+------------+----------+-------------------------+--------------------------+
+      | a4           | -122.00000 | 38.00000 | 2889.04                 | 1663.33                  |
+      +--------------+------------+----------+-------------------------+--------------------------+
+      | a1           | -122.00000 | 38.11300 | 3191.30                 | 1707.41                  |
+      +--------------+------------+----------+-------------------------+--------------------------+
+      | a6           | -122.00000 | 38.22500 | 3310.62                 | 2069.87                  |
+      +--------------+------------+----------+-------------------------+--------------------------+
+      | a7           | -121.88600 | 38.11300 | 1415.19                 | 845.83                   |
+      +--------------+------------+----------+-------------------------+--------------------------+
 
 The output file lists consequence statistics for all loss types (amongst
 “structural”, “nonstructural”, “contents”, or “business_interruption”)
@@ -8001,8 +7993,7 @@ Table `4.6 <#output:scenario_loss_tag>`__.
 .. container::
    :name: output:scenario_loss_tag
 
-   .. table:: Example of a scenario loss distribution per tag output
-   file
+   .. table:: Example of a scenario loss distribution per tag output file
 
       ================= ============ ================= ==============
       **tag**           **contents** **nonstructural** **structural**
@@ -8271,27 +8262,23 @@ probabilistic loss map output file.
 
    .. table:: Example of a probabilistic loss map output file
 
-      +----------+----------+----------+---------+----------+----------+
-      | **ass    | **ta     | **lon**  | **lat** | **stru   | **str    |
-      | et_ref** | xonomy** |          |         | ctural\  | uctural\ |
-      |          |          |          |         | :math:`\ |  :math:` |
-      |          |          |          |         | sim`\ po | \sim`\ p |
-      |          |          |          |         | e-0.02** | oe-0.1** |
-      +==========+==========+==========+=========+==========+==========+
-      | a1       | wood     | -122.000 | 38.113  | 6,686.10 | 3,241.80 |
-      +----------+----------+----------+---------+----------+----------+
-      | a2       | concrete | -122.114 | 38.113  | 597.59   | 328.07   |
-      +----------+----------+----------+---------+----------+----------+
-      | a3       | wood     | -122.570 | 38.113  | 251.73   | 136.64   |
-      +----------+----------+----------+---------+----------+----------+
-      | a4       | steel    | -122.000 | 38.000  | 3,196.66 | 1,610.98 |
-      +----------+----------+----------+---------+----------+----------+
-      | a5       | wood     | -122.000 | 37.910  | 949.26   | 431.26   |
-      +----------+----------+----------+---------+----------+----------+
-      | a6       | concrete | -122.000 | 38.225  | 1,549.72 | 577.30   |
-      +----------+----------+----------+---------+----------+----------+
-      | a7       | wood     | -121.886 | 38.113  | 1,213.54 | 677.16   |
-      +----------+----------+----------+---------+----------+----------+
+      +---------------+--------------+----------+---------+-------------------------+------------------------+
+      | **asset_ref** | **taxonomy** | **lon**  | **lat** | **structural poe-0.02** | **structural poe-0.1** |
+      +===============+==============+==========+=========+=========================+========================+
+      | a1            | wood         | -122.000 | 38.113  | 6,686.10                | 3,241.80               |
+      +---------------+--------------+----------+---------+-------------------------+------------------------+
+      | a2            | concrete     | -122.114 | 38.113  | 597.59                  | 328.07                 |
+      +---------------+--------------+----------+---------+-------------------------+------------------------+
+      | a3            | wood         | -122.570 | 38.113  | 251.73                  | 136.64                 |
+      +---------------+--------------+----------+---------+-------------------------+------------------------+
+      | a4            | steel        | -122.000 | 38.000  | 3,196.66                | 1,610.98               |
+      +---------------+--------------+----------+---------+-------------------------+------------------------+
+      | a5            | wood         | -122.000 | 37.910  | 949.26                  | 431.26                 |
+      +---------------+--------------+----------+---------+-------------------------+------------------------+
+      | a6            | concrete     | -122.000 | 38.225  | 1,549.72                | 577.30                 |
+      +---------------+--------------+----------+---------+-------------------------+------------------------+
+      | a7            | wood         | -121.886 | 38.113  | 1,213.54                | 677.16                 |
+      +---------------+--------------+----------+---------+-------------------------+------------------------+
 
 Stochastic event loss tables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
