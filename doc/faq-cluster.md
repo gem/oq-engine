@@ -27,17 +27,17 @@ A more detailed stack trace:
 
 ```python
 OSError:
-  File "/opt/openquake/lib/python3.6/site-packages/openquake/baselib/parallel.py", line 312, in new
+  File "/opt/openquake/lib/python3.8/site-packages/openquake/baselib/parallel.py", line 312, in new
     val = func(*args)
-  File "/opt/openquake/lib/python3.6/site-packages/openquake/baselib/parallel.py", line 376, in gfunc
+  File "/opt/openquake/lib/python3.8/site-packages/openquake/baselib/parallel.py", line 376, in gfunc
     yield func(*args)
-  File "/opt/openquake/lib/python3.6/site-packages/openquake/calculators/classical.py", line 301, in build_hazard_stats
+  File "/opt/openquake/lib/python3.8/site-packages/openquake/calculators/classical.py", line 301, in build_hazard_stats
     pgetter.init()  # if not already initialized
-  File "/opt/openquake/lib/python3.6/site-packages/openquake/calculators/getters.py", line 69, in init
+  File "/opt/openquake/lib/python3.8/site-packages/openquake/calculators/getters.py", line 69, in init
     self.dstore = hdf5.File(self.dstore, 'r')
-  File "/opt/openquake/lib64/python3.6/site-packages/h5py/_hl/files.py", line 312, in __init__
+  File "/opt/openquake/lib64/python3.8/site-packages/h5py/_hl/files.py", line 312, in __init__
     fid = make_fid(name, mode, userblock_size, fapl, swmr=swmr)
-  File "/opt/openquake/lib64/python3.6/site-packages/h5py/_hl/files.py", line 142, in make_fid
+  File "/opt/openquake/lib64/python3.8/site-packages/h5py/_hl/files.py", line 142, in make_fid
     fid = h5f.open(name, flags, fapl=fapl)
   File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
   File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper

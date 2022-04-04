@@ -38,7 +38,7 @@ import requests
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -1045,13 +1045,14 @@ def get_pmap_from_csv(oqparam, fnames):
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
-tag2code = {'ar': b'A',
-            'mu': b'M',
-            'po': b'P',
-            'si': b'S',
-            'co': b'C',
-            'ch': b'X',
-            'no': b'N'}
+tag2code = {'multiFaultSource': b'F',
+            'areaSource': b'A',
+            'multiPointSource': b'M',
+            'pointSource': b'P',
+            'simpleFaultSource': b'S',
+            'complexFaultSource': b'C',
+            'characteristicSource': b'X',
+            'nonParametricSource': b'N'}
 
 
 # tested in commands_test
@@ -1065,7 +1066,9 @@ def reduce_sm(paths, source_ids):
     """
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
-            code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
+            if src_node.tag.endswith('Surface'):  # in geometrySections
+                return True
+            code = tag2code[re.search(r'\}(\w+)', src_node.tag).group(1)]
             arr = source_ids.get(src_node['id'])
             if arr is None:
                 return False
@@ -1123,6 +1126,8 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     total = good = 0
     to_remove = set()
     paths = logictree.collect_info(smlt_file).smpaths
+    if isinstance(source_ids, dict):
+        source_ids = {decode(k): v for k, v in source_ids.items()}
     for dic in parallel.Starmap.apply(reduce_sm, (paths, source_ids)):
         path = dic['path']
         model = dic['model']

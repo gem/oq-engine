@@ -184,20 +184,25 @@ def fix_geometry_sections(smdict):
     """
     gmodels = []
     smodels = []
+    gfiles = []
     for fname, mod in smdict.items():
         if isinstance(mod, nrml.GeometryModel):
             gmodels.append(mod)
+            gfiles.append(fname)
         elif isinstance(mod, nrml.SourceModel):
             smodels.append(mod)
         else:
             raise RuntimeError('Unknown model %s' % mod)
 
     # merge and reorder the sections
+    sec_ids = []
     sections = {}
     for gmod in gmodels:
+        sec_ids.extend(gmod.sections)
         sections.update(gmod.sections)
+    nrml.check_unique(
+        sec_ids, 'section ID in files ' + ' '.join(gfiles))
     sections = {sid: sections[sid] for sid in sorted(sections)}
-    nrml.check_unique(sections)
 
     # fix the MultiFaultSources
     for smod in smodels:
@@ -465,8 +470,6 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
-        if parallel.Starmap.num_cores > 64:  # if many cores less tasks
-            max_weight *= 1.5
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         heavy = [src for src in srcs if src.weight > max_weight]

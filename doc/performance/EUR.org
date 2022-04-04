@@ -1,3 +1,5 @@
+$ oqe mosaic/EUR/in/job_vs30.ini
+
 Engine 3.11
 -----------
 
@@ -64,22 +66,22 @@ Engine 3.13
 Engine 3.14
 -----------
 
-| calc_44743, maxmem=126.1 GB | time_sec | memory_mb | counts  |
-|-----------------------------+----------+-----------+---------|
-| total classical             | 125_429  | 259.1     | 796     |
-| get_poes                    | 49_627   | 0.0       | 150_240 |
-| composing pnes              | 42_179   | 0.0       | 300_480 |
-| computing mean_std          | 16_604   | 0.0       | 21_567  |
-| make_contexts               | 16_544   | 796.4     | 22_472  |
-| ClassicalCalculator.run     | 1_964    | 5_773     | 1       |
-| total preclassical          | 1_065    | 172.5     | 273     |
-| total postclassical         | 909.5    | 4.64844   | 240     |
+| calc_44926, maxmem=150.1 GB | time_sec | memory_mb | counts |
+|-----------------------------+----------+-----------+--------|
+| total classical             | 125_386  | 658.6     | 253    |
+| get_poes                    | 48_383   | 0.0       | 37_695 |
+| computing pnes              | 33_572   | 0.0       | 37_695 |
+| make_contexts               | 15_219   | 139.5     | 22_492 |
+| computing mean_std          | 14_848   | 0.0       | 37_695 |
+| ClassicalCalculator.run     | 1_812    | 5_211     | 1      |
+| total preclassical          | 1_061    | 172.5     | 389    |
+| total postclassical         | 932.8    | 1.32031   | 240    |
 
-| operation-duration | counts | mean    | stddev | min       | max     | slowfac |
-|--------------------+--------+---------+--------+-----------+---------+---------|
-| classical          | 280    | 448.0   | 58%    | 0.99974   | 890.6   | 1.98804 |
-| postclassical      | 240    | 3.78975 | 19%    | 0.85462   | 5.11440 | 1.34954 |
-| preclassical       | 150    | 7.09686 | 341%   | 1.581E-04 | 189.7   | 26.7    |
-| read_source_model  | 4      | 24.9    | 160%   | 1.39913   | 94.3    | 3.78715 |
+| operation-duration | counts | mean    | stddev | min     | max     | slowfac |
+|--------------------+--------+---------+--------+---------+---------+---------|
+| classical          | 253    | 495.6   | 47%    | 0.47310 | 912.4   | 1.84100 |
+| postclassical      | 240    | 3.88650 | 20%    | 1.07615 | 5.22130 | 1.34345 |
+| preclassical       | 191    | 5.55336 | 384%   | 0.09667 | 191.2   | 34.4    |
+| read_source_model  | 4      | 24.2    | 160%   | 1.41113 | 91.7    | 3.78370 |
 
 "computing mean_std" is much faster.
