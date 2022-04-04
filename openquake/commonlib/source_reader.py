@@ -470,8 +470,6 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
-        if parallel.Starmap.num_cores > 64:  # if many cores less tasks
-            max_weight *= 1.5
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         heavy = [src for src in srcs if src.weight > max_weight]

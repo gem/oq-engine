@@ -503,14 +503,14 @@ class ClassicalCalculator(base.HazardCalculator):
                         len(block), sum(src.weight for src in block))
                     trip = (block, sids, cmakers[grp_id])
                     triples.append(trip)
-                    outs = (oq.outs_per_task if len(block) >= oq.outs_per_task
-                            else len(block))
-                    if outs > 1 and not oq.disagg_by_src:
-                        smap.submit_split(trip, oq.time_per_task, outs)
-                        self.n_outs[grp_id] += outs
-                    else:
-                        smap.submit(trip)
-                        self.n_outs[grp_id] += 1
+                    # outs = (oq.outs_per_task if len(block) >= oq.outs_per_task
+                    #         else len(block))
+                    # if outs > 1 and not oq.disagg_by_src:
+                    #     smap.submit_split(trip, oq.time_per_task, outs)
+                    #     self.n_outs[grp_id] += outs
+                    # else:
+                    smap.submit(trip)
+                    self.n_outs[grp_id] += 1
         logging.info('grp_id->n_outs: %s', list(self.n_outs.values()))
         return smap
 
