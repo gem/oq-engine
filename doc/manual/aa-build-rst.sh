@@ -22,11 +22,11 @@ sed -i "s/version X\.Y\.Z/version $VERSION/; s/ENGINE\.X\.Y\.Z/ENGINE\.$VERSION/
 $PANDOC -s -t rst -N --number-offset=-1 --toc --citeproc oq-manual.tex | \
 	sed -f acronyms.sed  > oq-manual-unfixed.rst
 
-./fix-rst-sections.py  oq-manual-unfixed.rst > oq-manual.rst
+./fix-rst-sections.py  oq-manual-unfixed.rst > oq-manual-gen.rst
 
 # build HTML from RST
 #$PANDOC -t html --section-divs --toc -o oq-manual-ph.html oq-manual.rst
 #$PANDOC -s -t html -N --number-offset=-1 --toc -o oq-manual-ph.html oq-manual.rst
-$PANDOC -s -t html -N --number-offset=0 --shift-heading-level-by -1 --toc -o oq-manual-ph.html oq-manual.rst
+$PANDOC -s -t html -N --number-offset=0 --shift-heading-level-by -1 --toc -o oq-manual-gen.html oq-manual-gen.rst
 
 exit 0
