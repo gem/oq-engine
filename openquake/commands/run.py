@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2021 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ import pstats
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
-from openquake.commonlib import oqvalidation, logs, datastore, readinput
+from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.server import dbserver
@@ -34,9 +34,6 @@ calc_path = None  # set only when the flag --slowest is given
 
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
-
-oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
-    base.calculators)
 
 
 def get_pstats(pstatfile, n):
@@ -59,6 +56,7 @@ def get_pstats(pstatfile, n):
     for line in lines[i + 2:]:
         columns = line.split()
         if len(columns) == 6:
+            columns[-1] = os.path.basename(columns[-1])
             data.append(PStatData(*columns))
     rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
     # here is an example of the expected output table:
