@@ -1978,15 +1978,16 @@ uses for calculation the B. S.-J. Chiou and Youngs (2008) Ground Motion Predicti
           </logicTree>
       </nrml>
 
-Configuration file The configuration file is
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Configuration file 
+^^^^^^^^^^^^^^^^^^
+The configuration file is
 the primary file controlling both the definition of the input model as
 well as parameters governing the calculation. We illustrate in the
 following different examples of the configuration file addressing
 different types of seismic hazard calculations.
 
 Classical PSHA 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
 In the
 following we describe the overall structure and the most typical
 parameters of a configuration file to be used for the computation of a
@@ -3043,8 +3044,9 @@ various seismic hazard analysis:
 
 -  SimpleFaultSourceClassicalPSHA
 
-Classical PSHA Demos A number of demos have
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Classical PSHA 
+^^^^^^^^^^^^^^
+Demos A number of demos have
 been designed to show how to perform a classical PSHA calculation using
 the different available source typologies and how to define non-trivial
 logic trees. It should be noted that the input files that will be
@@ -3464,8 +3466,9 @@ number of logic tree path is 36 (1 source model x 3 b value increments x
 3 maximum magnitude increments x 2 GMPE for Active x 2 GMPEs for
 Stable).
 
-Hazard Disaggregation Demos An example of
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Hazard Disaggregation Demos 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+An example of
 disaggregation calculation is given considering a source model
 consisting of two sources (area and simple fault) belonging to two
 different tectonic region types.
@@ -3522,8 +3525,9 @@ distances in bins of 10 km (``distance_bin_width = 10.0``), coordinates
 in bins of 0.2 degrees (``coordinate_bin_width = 0.2``). 3 epsilons bins
 are considered (``num_epsilon_bins = 3``).
 
-Event Based PSHA Demos A demo showing an
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Event Based PSHA Demos 
+^^^^^^^^^^^^^^^^^^^^^^
+A demo showing an
 example of Event Based PSHA calculation is provided with the following
 configuration file:
 
@@ -5086,8 +5090,9 @@ A web-based tool to build an exposuremodel in the Natural hazards' Risk Markup L
 starting from a csv file or a spreadsheet can be found at the OpenQuake
 platform at the following address: https://platform.openquake.org/ipt/.
 
-Fragility Models This section describes the
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Fragility Models 
+^^^^^^^^^^^^^^^^
+This section describes the
 schema currently used to store fragilitymodels, which are required for
 the Scenario Damage Calculator and the Classical Probabilistic Seismic
 Damage Calculator. In order to perform probabilistic or scenario damage
@@ -5404,8 +5409,9 @@ A web-based tool to build a fragilitymodel in the Natural hazards' Risk Markup L
 also under development, and can be found at the OpenQuake platform at
 the following address: https://platform.openquake.org/ipt/.
 
-Consequence Models Starting from OpenQuake engine17, the
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Consequence Models 
+^^^^^^^^^^^^^^^^^^
+Starting from OpenQuake engine17, the
 Scenario Damage calculator also accepts consequencemodels in addition to
 fragilitymodels, in order to estimate consequences based on the
 calculated damage distribution. The user may provide one
@@ -5566,8 +5572,9 @@ The following attributes are needed to define a consequencefunction:
    defined in the corresponding fragilitymodel using the attribute
    ``limitStates``.
 
-Vulnerability Models In order to perform
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Vulnerability Models 
+^^^^^^^^^^^^^^^^^^^^
+In order to perform
 probabilistic or scenario risk calculations, it is necessary to define a
 vulnerabilityfunction for each building typology present in the
 exposuremodel. In this section, the schema for the vulnerabilitymodel is
@@ -6014,8 +6021,9 @@ aforementioned ones may need to be provided. We illustrate in the
 following sections different examples of the configuration file for the
 different risk calculators.
 
-Scenario Damage Calculator For this calculator,
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Scenario Damage Calculator 
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+For this calculator,
 the parameter ``calculation_mode`` should be set to ``scenario_damage``.
 
 Example 1
@@ -6548,8 +6556,9 @@ will be displayed:
    8990 | Average Asset Losses
    8993 | Average Asset Damages
 
-Scenario Risk Calculator In order to run this
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Scenario Risk Calculator 
+^^^^^^^^^^^^^^^^^^^^^^^^
+In order to run this
 calculator, the parameter ``calculation_mode`` needs to be set to
 ``scenario_risk``.
 
@@ -7474,8 +7483,9 @@ are listed below:
    loss estimates can lead to a significant boost in performance and
    tractability. The default value of ``ignore_covs`` is ``false``.
 
-Retrofit Benefit-Cost Ratio Calculator As
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Retrofit Benefit-Cost Ratio Calculator 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+As
 previously explained, this calculator uses loss exceedance curves which
 are calculated using the Classical Probabilistic risk calculator. In
 order to run this calculator, the parameter ``calculation_mode`` needs
@@ -7572,8 +7582,9 @@ will be displayed:
      id | name
    5422 | Benefit-cost ratio distribution | BCR Map. type=structural, hazard=5420
 
-Exporting Risk Results To obtain a list of all
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Exporting Risk Results 
+^^^^^^^^^^^^^^^^^^^^^^
+To obtain a list of all
 risk calculations that have been previously run (successfully or
 unsuccessfully), or that are currently running, the following command
 can be employed:
@@ -7673,8 +7684,9 @@ Risk Results
 This following sections describe the different output files produced by
 the risk calculators.
 
-Scenario Damage Outputs The Scenario Damage
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Scenario Damage Outputs 
+^^^^^^^^^^^^^^^^^^^^^^^
+The Scenario Damage
 Calculator produces the following output file for all loss types
 (amongst “structural”, “nonstructural”, “contents”, or
 “business_interruption”) for which a fragility model file was provided
@@ -7905,8 +7917,9 @@ Table `4.4 <#output:scenario_consequence_total>`__.
       | 13845.87          | 6517.61             | 2270.29             | 2440.90               |
       +-------------------+---------------------+---------------------+-----------------------+
 
-Scenario Risk Outputs The Scenario Risk
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Scenario Risk Outputs 
+^^^^^^^^^^^^^^^^^^^^^
+The Scenario Risk
 Calculator produces the following set of output files:
 
 #. ``Aggregate Asset Losses``: this file contains the aggregated
@@ -8400,9 +8413,10 @@ and fragility or vulnerability models fundamental for the risk
 calculations. Each demo folder also a configuration file and the input
 models to produce the relevant hazard inputs.
 
-Scenario Damage Demos A rupture of magnitude Mw
+Scenario Damage 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-7 in the central part of Nepal is considered in this demo. The
+Demos A rupture of magnitude Mw 7 in the central part of Nepal 
+is considered in this demo. The
 characteristics of this rupture (geometry, dip, rake, hypocentre, upper
 and lower seismogenic depth) are defined in the ``fault_rupture.xml``
 file, and the hazard and risk calculation settings are specified in the
@@ -8433,8 +8447,9 @@ and the following outputs should be produced by the risk calculation:
    9062 | Average Asset Damages
    9063 | Average Asset Losses
 
-Scenario Risk Demos The same rupture described
+Scenario Risk Demos 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The same rupture described
 in the Scenario Damage demo is also used for this demo. In this case, a
 combined job file, job.ini, is used to specify the configuration
 parameters for the hazard and risk calculations.
@@ -8500,8 +8515,9 @@ and the following sample outputs are obtained:
    9076 | Asset Damage Distribution
    9077 | Asset Damage Statistics
 
-Classical Probabilistic Seismic Risk Demos The
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Classical Probabilistic Seismic Risk Demos 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The
 same hazard input as described in the Classical Probabilistic Damage
 demo is used for this demo. Thus, the workflow to produce the set of
 hazard curves described in
@@ -8617,8 +8633,9 @@ and the following results are expected:
 The number and the name of the outputs can change between different
 versions of the engine.
 
-Retrofit Benefit-Cost Ratio Demos The loss
+Retrofit Benefit-Cost Ratio Demos 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The loss
 exceedance curves used within this demo are produced using the Classical
 Probabilistic Risk calculator. Thus, the process to produce the seismic
 hazard curves described in
