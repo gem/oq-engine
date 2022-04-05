@@ -110,25 +110,6 @@ def rounded_unique(mags, idxs):
     return mags
 
 
-def collapse_nphc(src):
-    """
-    Collapse the nodal_plane_distribution and hypocenter_distribution.
-    """
-    if (hasattr(src, 'nodal_plane_distribution') and
-            hasattr(src, 'hypocenter_distribution')):
-        if len(src.nodal_plane_distribution.data) > 1:
-            ws, nps = zip(*src.nodal_plane_distribution.data)
-            strike = numpy.average([np.strike for np in nps], weights=ws)
-            dip = numpy.average([np.dip for np in nps], weights=ws)
-            rake = numpy.average([np.rake for np in nps], weights=ws)
-            val = geo.NodalPlane(strike, dip, rake)
-            src.nodal_plane_distribution = pmf.PMF([(1., val)])
-        if len(src.hypocenter_distribution.data) > 1:
-            ws, vals = zip(*src.hypocenter_distribution.data)
-            val = numpy.average(vals, weights=ws)
-            src.hypocenter_distribution = pmf.PMF([(1., val)])
-
-
 class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
@@ -1209,10 +1190,6 @@ class SourceConverter(RuptureConverter):
             msg = 'The Source Group is a cluster but does not have a '
             msg += 'temporal occurrence model'
             raise ValueError(msg)
-
-        if self.collapse_nphc:
-            for src in sg.sources:
-                collapse_nphc(src)
         return sg
 
 

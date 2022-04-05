@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Slightly changed the collapsing of nodal planes and hypocenters in
+    presence of the equivalent distance approximation (`reqv`)
   * Extended `oq reduce_sm` to multiFaultSources
   * Fixed the check on unique section IDs for multiFaultSources
   * Implemented multi-aggregation with a syntax like
