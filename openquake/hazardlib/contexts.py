@@ -875,8 +875,8 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
-        maxsize = TWO32 // (L * G * 128)  # .25 GB per poes
-        assert maxsize, 'L * G > 33_554_432!'
+        maxsize = TWO32 // (L * G * 512)  # optimized for the USA model
+        assert L * G * 512 < TWO32,  (L, G)
 
         # collapse if possible
         with self.col_mon:
