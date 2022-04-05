@@ -4372,8 +4372,7 @@ can be defined leads to four ways of storing the information about the
 assets. For each of these cases a brief explanation and example is
 provided in this section.
 
-Example 1
-:::::::::
+**Example 1**
 
 This example illustrates an *Exposure Model* in which the aggregated cost
 (structural, nonstructural, contents and business interruption) of the
@@ -4475,8 +4474,7 @@ provided directly, so there is no need to define other attributes such
 as ``number`` or ``area``. This mode of representing an *Exposure Model* is
 probably the simplest one.
 
-Example 2
-:::::::::
+**Example 2**
 
 In the snippet shown in
 Listing `[lst:input_exposure_cunit_metadata] <#lst:input_exposure_cunit_metadata>`__,
@@ -4569,8 +4567,7 @@ OpenQuake engine multiplies, for each asset, the number of units (buildings) by
 the “per asset” replacement cost. Note that in this case, there is no
 need to specify the attribute ``area``.
 
-Example 3
-:::::::::
+**Example 3**
 
 The example shown in
 Listing `[lst:input_exposure_carea_aagg_metadata] <#lst:input_exposure_carea_aagg_metadata>`__
@@ -4671,8 +4668,7 @@ computed by multiplying the aggregated built up ``area`` of each asset
 by the associated cost per unit area. Notice that in this case, there is
 no need to specify the attribute ``number``.
 
-Example 4
-:::::::::
+**Example 4**
 
 This example demonstrates an *Exposure Model* that defines the number of
 structural units for each asset, the average built up area per
@@ -4769,8 +4765,7 @@ estimate the various costs of each asset, by multiplying the number of
 structural units by its average built up area, and then by the
 respective cost per unit area.
 
-Example 5
-:::::::::
+**Example 5**
 
 In this example, additional information will be included, which is
 required for other risk analysis besides loss estimation, such as the
@@ -4817,8 +4812,7 @@ can be stored the per building type of cost structure described in
 Example 1 was used, it is important to mention that any of the other
 cost storing approaches can also be employed (Examples 2–4).
 
-Example 6
-:::::::::
+**Example 6**
 
 The OpenQuake engine is also capable of estimating human losses, based on the
 number of occupants in an asset, at a certain time of the day. The
@@ -4880,8 +4874,7 @@ all of the buildings comprising the asset.
 
       </nrml>
 
-Example 7
-:::::::::
+**Example 7**
 
 Starting from OpenQuake engine27, the user may also provide a set of tags for
 each asset in the *Exposure Model*. The primary intended use case for the
@@ -5020,8 +5013,7 @@ asset as shown in the following snippet from the same file:
 Note that it is not mandatory that every tag name specified in the
 metadata section must be provided with a tag value for each asset.
 
-Example 8
-:::::::::
+**Example 8**
 
 This example illustrates the use of multiple csv files containing the
 assets information, in conjunction with the metadata section in the
@@ -6026,8 +6018,7 @@ Scenario Damage Calculator
 For this calculator,
 the parameter ``calculation_mode`` should be set to ``scenario_damage``.
 
-Example 1
-:::::::::
+**Example 1**
 
 This example illustrates a scenario damage calculation which uses a
 single configuration file to first compute the ground motion fields for
@@ -6122,8 +6113,7 @@ section for each provided fragility model file (“structural”,
 the loss type defined in the configuration file by the relevant keyword
 above.
 
-Example 2
-:::::::::
+**Example 2**
 
 This example illustrates a scenario damage calculation which uses
 separate configuration files for the hazard and risk parts of a scenario
@@ -6316,8 +6306,7 @@ will produce the following display:
      id | name
    5072 | Ground Motion Fields
 
-Example 3
-:::::::::
+**Example 3**
 
 The example shown in
 Listing `[lst:config_scenario_damage_gmf_xml] <#lst:config_scenario_damage_gmf_xml>`__
@@ -6394,8 +6383,7 @@ The above calculation(s) can be run using the command line:
 
    user@ubuntu:~$ oq engine --run job.ini
 
-Example 4
-:::::::::
+**Example 4**
 
 This example illustrates a the hazard job configuration file for a
 scenario damage calculation which uses two Ground Motion Prediction Equations instead of only
@@ -6471,8 +6459,7 @@ Listing `[lst:config_scenario_hazard_gmlt] <#lst:config_scenario_hazard_gmlt>`_
       ground_motion_correlation_model = JB2009
       ground_motion_correlation_params = {"vs30_clustering": True}
 
-Example 5
-:::::::::
+**Example 5**
 
 This example illustrates a scenario damage calculation which specifies
 fragility models for calculating damage to structural and nonstructural
@@ -6567,8 +6554,7 @@ risk calculation are the same as those described in the previous section
 for the scenario damage calculator. The remaining parameters specific to
 the scenario risk calculator are illustrated through the examples below.
 
-Example 1
-:::::::::
+**Example 1**
 
 This example illustrates a scenario risk calculation which uses a single
 configuration file to first compute the ground motion fields for the
@@ -6727,8 +6713,7 @@ described in the section for the scenario damage calculator. The
 remaining parameters specific to the classical probabilistic damage
 calculator are illustrated through the examples below.
 
-Example 1
-:::::::::
+**Example 1**
 
 This example illustrates a classical probabilistic damage calculation
 which uses a single configuration file to first compute the hazard
@@ -6796,8 +6781,7 @@ will be displayed:
      id | name
    5359 | Asset Damage Distribution
 
-Example 2
-:::::::::
+**Example 2**
 
 This example illustrates a classical probabilistic damage calculation
 which uses separate configuration files for the hazard and risk parts of
@@ -6906,8 +6890,7 @@ calculator. The remaining parameters specific to the classical
 probabilistic risk calculator are illustrated through the examples
 below.
 
-Example 1
-:::::::::
+**Example 1**
 
 This example illustrates a classical probabilistic risk calculation
 which uses a single configuration file to first compute the hazard
@@ -6996,8 +6979,7 @@ will be displayed:
    3981 | Asset Loss Maps Statistics
    3983 | Average Asset Loss Statistics
 
-Example 2
-:::::::::
+**Example 2**
 
 This example illustrates a classical probabilistic risk calculation
 which uses separate configuration files for the hazard and risk parts of
@@ -7118,8 +7100,7 @@ and the classical probabilistic damage calculator. The remaining
 parameters specific to the stochastic event based damage calculator are
 illustrated through the example below.
 
-Example 1
-:::::::::
+**Example 1**
 
 This example illustrates a stochastic event based damage calculation
 which uses a single configuration file to first compute the Stochastic Event Sets and
@@ -7245,8 +7226,7 @@ classical probabilistic risk calculator. The remaining parameters
 specific to the stochastic event based risk calculator are illustrated
 through the example below.
 
-Example 1
-:::::::::
+**Example 1**
 
 This example illustrates a stochastic event based risk calculation which
 uses a single configuration file to first compute the Stochastic Event Sets and
@@ -7374,8 +7354,7 @@ Users may also begin an event based risk calculation by providing a
 precomputed set of Ground Motion Fields to the OpenQuake engine. The following example
 describes the procedure for this approach.
 
-Example 2
-:::::::::
+**Example 2**
 
 This example illustrates a stochastic event based risk calculation which
 uses a file listing a precomputed set of Ground Motion Fields. These Ground Motion Fields can be
@@ -7427,8 +7406,7 @@ Listing `[lst:config_gmf_event_based_risk] <#lst:config_gmf_event_based_risk>`_
       quantiles = 0.15, 0.50, 0.85
       conditional_loss_poes = 0.02, 0.10
 
-Additional parameters
-:::::::::::::::::::::
+**Additional parameters**
 
 A few additional parameters related to the event based risk calculator
 that may be useful for controlling specific aspects of the calculation
@@ -7498,8 +7476,7 @@ calculator. The remaining parameters specific to the classical retrofit
 benefit-cost ratio calculator are illustrated through the examples
 below.
 
-Example 1
-:::::::::
+**Example 1**
 
 This example illustrates a classical probabilistic retrofit benefit-cost
 ratio calculation which uses a single configuration file to first
@@ -8072,7 +8049,7 @@ Probabilistic Damage Outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Probabilistic damage distribution
-_________________________________
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Classical Probabilistic Damage calculator provides the expected
 damage distribution per asset as a csv file, an example of which is
@@ -8101,8 +8078,9 @@ This file lists the expected number of structural units in each damage
 state for each asset, for the time period specified by the parameter
 ``risk_investigation_time``.
 
-Probabilistic Risk Outputs Probabilistic risk
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Probabilistic Risk Outputs 
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Probabilistic risk
 calculations can be run using either the Classical Probabilistic Risk
 Calculator or the Stochastic Event-Based Probabilistic Risk Calculator.
 The following set of outputs is generated by both calculators:
@@ -8317,7 +8295,7 @@ only.
 Benefit-Cost Ratio Outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Retrofitting benefit/cost ratio maps
-____________________________________
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Ratio maps from the Retrofitting Benefit/Cost Ratio calculator require
 loss exceedance curves, which can be calculated using the Classical
@@ -8657,15 +8635,6 @@ which should produce the following output:
 
 Bibliography
 ------------
-
-Articles
-________
-
-Other Sources
-^^^^^^^^^^^^^
-
-Glossary
---------
 
 |
 
