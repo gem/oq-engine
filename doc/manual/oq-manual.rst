@@ -257,30 +257,30 @@ Currently the OpenQuake engine supports the following source types:
 
 -  Sources for modelling distributed seismicity:
 
-   -  pointsource - The elemental source type used to model distributed
+   -  *Point Source* - The elemental source type used to model distributed
       seismicity. Grid and area sources (described below) are different
       containers of point sources.
 
-   -  areasource - So far, the most frequently adopted source type in
+   -  *Area Source* - So far, the most frequently adopted source type in
       national and regional PSHA models.
 
-   -  gridsource - A replacement for area sources admitting spatially
+   -  *Grid Source* - A replacement for area sources admitting spatially
       variable seismicity occurrence properties.
 
 -  Fault sources with floating ruptures:
 
-   -  simplefaultsource - The simplest fault model in the OpenQuake engine. This
+   -  *Simple Fault Source* - The simplest fault model in the OpenQuake engine. This
       source is habitually used to describe shallow seismogenic faults.
 
-   -  complexfaultsource - Often used to model subduction interface
+   -  *Complex Fault Source* - Often used to model subduction interface
       sources with a complex geometry.
 
 -  Fault sources with ruptures always covering the entire fault surface:
 
-   -  charfaultsource - A typology of source where ruptures always fill
+   -  *Characteristic Fault Source* - A typology of source where ruptures always fill
       the entire fault surface.
 
-   -  nonparametricsource - A typology of source representing a
+   -  *Non-Parametric Source* - A typology of source representing a
       collection of ruptures, each with their associated probabilities
       of 0, 1, 2 ... occurrences in the investigation time
 
@@ -307,13 +307,13 @@ source typologies:
 -  Seismicity temporal occurrence follows a Poissonian model.
 
 The above sets of sources may be referred to as “parametric” sources,
-that is to say that the generation of the earthquakeruptureforecast is
+that is to say that the generation of the *Earthquake Rupture Forecast* is
 done by the OpenQuake engine based on the parameters of the sources set
 by the user. In some cases, particularly if the user wishes for the
 temporal occurrence model to be non-Poissonian (such as the lognormal or
 Brownian Passage Time models) a different type of behaviour is needed.
-For this OpenQuake-engine supports a nonparametricsource in which the
-earthquakeruptureforecast is provided explicitly by the user as a set of
+For this OpenQuake-engine supports a *Non-Parametric Source* in which the
+*Earthquake Rupture Forecast* is provided explicitly by the user as a set of
 ruptures and their corresponding probabilities of occurrence.
 
 Source typologies for modelling distributed seismicity
@@ -358,7 +358,7 @@ generated rupture):
 
 -  The upper and lower seismogenic depths [km]
 
--  One mfd
+-  One *Magnitude-Frequency Distribution*
 
 -  One magnitude-scaling relationship
 
@@ -433,8 +433,8 @@ by the point source.
 Grid sources
 ____________
 
-A gridsource is simply a collection of point sources distributed over a
-regular grid (usually equally spaced in longitude and latitude). In psha
+A *Grid Source* is simply a collection of point sources distributed over a
+regular grid (usually equally spaced in longitude and latitude). In *Probabilistic Seismic Hazard Analysis*
 a grid source can be considered a model alternative to area sources,
 since they both model distributed seismicity. Grid sources are generally
 used to reproduce more faithfully the spatial pattern of seismicity
@@ -486,9 +486,9 @@ Source data
 
 -  The upper and lower seismogenic depths [km]
 
--  One mfd
+-  One *Magnitude-Frequency Distribution*
 
--  One msr
+-  One *Magnitude-Scaling Relationship*
 
 -  The rupture aspect ratio
 
@@ -580,12 +580,12 @@ described in the following paragraph.
 Source data
 :::::::::::
 
--  A horizontal faulttrace (usually a polyline). It is a list of
+-  A horizontal *Fault Trace* (usually a polyline). It is a list of
    longitude-latitude tuples [degrees].
 
--  A frequencymagnitudedistribution
+-  A *Frequency-Magnitude Distribution*
 
--  A msr
+-  A *Magnitude-Scaling Relationship*
 
 -  A representative value of the dip angle (specified following the
    Aki-Richards convention; see Aki and Richards (2002)) [degrees]
@@ -783,7 +783,7 @@ created with the assumption that its ruptures will always cover the
 entire fault surface. As such, no floating is necessary on the surface.
 The characteristic fault may still take as input a magnitude frequency
 distribution. In this case, the fault surface can be represented either
-as a simplefaultsource surface or as a complexfaultsource surface or as
+as a *Simple Fault Source* surface or as a *Complex Fault Source* surface or as
 a combination of rectangular ruptures as represented in
 Figure `1.4 <#fig:char_fault_source>`__. Mutiple surfaces containing
 mixed geometry types are also supported.
@@ -804,11 +804,11 @@ Source data
 
    -  A list of rectangular ruptures (“planar surfaces”)
 
-   -  A simplefaultsource geometry
+   -  A *Simple Fault Source* geometry
 
-   -  A complexfaultsource geometry
+   -  A *Complex Fault Source* geometry
 
--  A frequencymagnitudedistribution.
+-  A *Frequency-Magnitude Distribution*.
 
 -  Rake angle (specified following the Aki-Richards convention; see Aki
    and Richards (2002)).
@@ -914,8 +914,8 @@ which the probabilities refer corresponds to that specified in the
 configuration file. As the surface of the rupture is set explicitly, no
 rupture floating occurs, and, as in the case of the characteristic fault
 source, the rupture surface can be defined as either a single planar
-rupture, a list of planar ruptures, a simplefaultsource geometry, a
-complexfaultsource geometry, or a combination of different geometries.
+rupture, a list of planar ruptures, a *Simple Fault Source* geometry, a
+*Complex Fault Source* geometry, or a combination of different geometries.
 
 Comprehensive examples enumerating the possible configurations are shown
 below:
@@ -1212,14 +1212,14 @@ workflow.
 
 Classical Probabilistic Seismic Hazard
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Analysis Input data for the classical acr:psha consist of a PSHA input
+Analysis Input data for the classical acr:*Probabilistic Seismic Hazard Analysis* consist of a PSHA input
 model provided together with calculation settings.
 
 The main calculators used to perform this analysis are the following:
 
 #. *Logic Tree Processor*
 
-   The Logic Tree Processor (LTP) takes as an input the acr:psha Input
+   The Logic Tree Processor (LTP) takes as an input the acr:*Probabilistic Seismic Hazard Analysis* Input
    Model and creates a Seismic Source Model. The LTP uses the
    information in the Initial Seismic Source Models and the Seismic
    Source Logic Tree to create a Seismic Source Input Model (i.e. a
@@ -1248,7 +1248,7 @@ The main calculators used to perform this analysis are the following:
 Event-Based Probabilistic Seismic Hazard
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Analysis Input data for the Event-Based PSHA - as in the case of the
-Classical acr:psha calculator - consists of a PSHA Input Model and a set
+Classical acr:*Probabilistic Seismic Hazard Analysis* calculator - consists of a PSHA Input Model and a set
 of calculation settings.
 
 The main calculators used to perform this analysis are:
@@ -1256,7 +1256,7 @@ The main calculators used to perform this analysis are:
 #. *Logic Tree Processor*
 
    The Logic Tree Processor works in the same way described in the
-   description of the Classical acr:psha workflow (see
+   description of the Classical acr:*Probabilistic Seismic Hazard Analysis* workflow (see
    Section `[subsec:classical_psha] <#subsec:classical_psha>`__ at
    page ).
 
@@ -1476,8 +1476,8 @@ Defining Logic Trees
 The main components of a
 logic tree structure in the OpenQuake engine are the following:
 
-branch
-   : the simplest component of a logic tree structure. A branch
+*Branch*
+   : the simplest component of a logic tree structure. A *Branch*
    represent a possible interpretation of a value assignment for a
    specific type of uncertainty. It is fully described by the tuple
    (parameter or model, weight).
@@ -1516,16 +1516,16 @@ As it appears from this example, the structure of a logic tree is a set
 of nested elements.
 
 A schematic representation of the elemental components of a logic tree
-structure is provided in Figure `2.2 <#glts>`__. A branch set identifies
+structure is provided in Figure `2.2 <#glts>`__. A *Branch* set identifies
 a collection of branches (i.e. individual branches) whose weights sum to
 1.
 
 .. figure:: figures/hazard/GenericLogicTreeStructure.png
-   :alt: Generic Logic Tree structure as described in terms of branch sets, and individual branches.
+   :alt: Generic Logic Tree structure as described in terms of *Branch* sets, and individual branches.
    :name: glts
    :width: 95%
 
-   Generic Logic Tree structure as described in terms of branch sets,
+   Generic Logic Tree structure as described in terms of *Branch* sets,
    and individual branches.
 
 Logic trees as described in the nrml schema
@@ -1543,12 +1543,12 @@ In the NRML schema, a logic tree structure is defined through the
 A ``logicTree`` contains as a sequence of ``logicTreeBranchSet``
 elements.
 
-There are no restrictions on the number of branch set that can be
+There are no restrictions on the number of *Branch* set that can be
 defined.
 
 Each ``logicTreeBranchSet`` has two required attributes: ``branchSetID``
 and ``uncertaintyType``. The latter defines the type of epistemic
-uncertainty this branch set is describing.
+uncertainty this *Branch* set is describing.
 
 .. code:: xml
 
@@ -1759,7 +1759,7 @@ The ``logicTreeBranchSet`` element offers also a number of optional
 attributes allowing for complex tree definitions:
 
 -  ``applyToBranches``: specifies to which ``logicTreeBranch`` elements
-   (one or more), in the previous branch sets, the branch set is linked
+   (one or more), in the previous *Branch* sets, the *Branch* set is linked
    to. The linking is established by defining the IDs of the branches to
    link to:
 
@@ -1768,9 +1768,9 @@ attributes allowing for complex tree definitions:
       applyToBranches="branchID1 branchID2 .... branchIDN"
 
 
-   The default is the keyword ALL, which means that a branch set is by
-   default linked to all branches in the previous branch set. By
-   specifying one or more branches to which the branch set links to,
+   The default is the keyword ALL, which means that a *Branch* set is by
+   default linked to all branches in the previous *Branch* set. By
+   specifying one or more branches to which the *Branch* set links to,
    non- symmetric logic trees can be defined.
 
 -  ``applyToSources``: specifies to which source in a source model the
@@ -1804,9 +1804,9 @@ The Seismic Source Logic Tree
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The structure of the Seismic Source Logic Tree consists of at least one
-branchset. The example provided below shows the simplest Seismic Source
-Logic Tree structure that can be defined in a pshainputmodel for
-OpenQuake engine. It’s a logic tree with just onebranchset with one branch used
+*Branch Set*. The example provided below shows the simplest Seismic Source
+Logic Tree structure that can be defined in a *Psha Input Model* for
+OpenQuake engine. It’s a logic tree with just onebranchset with one *Branch* used
 to define the initial seismic source model (its weight will be equal to
 one).
 
@@ -1946,12 +1946,12 @@ calculation.
 The Ground Motion Logic Tree
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The structure of the groundmotionlogictree consists of a list of ground
+The structure of the *Ground-Motion Logic Tree* consists of a list of ground
 motion prediction equations for each tectonic region used to
 characterise the sources in the PSHA input model.
 
 The example below in Listing `[lst:input_gmlt] <#lst:input_gmlt>`__
-shows a simple groundmotionlogictree. This logic tree assumes that all
+shows a simple *Ground-Motion Logic Tree*. This logic tree assumes that all
 the sources in the PSHA input model belong to “Active Shallow Crust” and
 uses for calculation the B. S.-J. Chiou and Youngs (2008) Ground Motion Prediction Equation.
 
@@ -2323,8 +2323,8 @@ description of each parameter is provided below.
    longitude-latitude histogram bin of the disaggregation matrix
    computed (decimal degrees)
 
--  ``num_epsilon_bins``: mandatory; specifies the number of epsilon
-   histogram bins of the disaggregation matrix. The width of the epsilon
+-  ``num_epsilon_bins``: mandatory; specifies the number of *Epsilon*
+   histogram bins of the disaggregation matrix. The width of the *Epsilon*
    bins depends on the ``truncation_level`` defined in the “Calculation
    configuration” section (page )
 
@@ -2507,8 +2507,8 @@ hazard calculation by providing a GMPE logic tree file (described
 previously in Section `[subsec:gmlt] <#subsec:gmlt>`__) using the
 parameter ``gsim_logic_tree_file``. In this case, the OpenQuake engine generates
 ground motion fields for all GMPEs specified in the logic tree file. The
-branch weights in the logic tree file are ignored in a scenario analysis
-and only the individual branch results are computed. Mean or quantile
+*Branch* weights in the logic tree file are ignored in a scenario analysis
+and only the individual *Branch* results are computed. Mean or quantile
 ground motion fields will not be generated.
 
 The ground motion fields will be computed at each of the sites and for
@@ -2648,7 +2648,7 @@ mean curves and quantiles. If the user requires the complete results for
 all realizations, there is a flag to specify, please see the FAQ
 https://github.com/gem/oq-engine/blob/master/doc/faq-hazard.md. Beware
 that if the logic tree contains a large number of end branches the
-process of exporting the results from each end branch can add a
+process of exporting the results from each end *Branch* can add a
 significant amount of time - possibly longer than the computation time -
 and result in a large volume of disk spaced being used. In this case it
 is best to postprocess the data programmatically. Please contact us and
@@ -3264,7 +3264,7 @@ Listing `[lst:input_gmlt_demo_LogicTreeCase1ClassicalPSHA] <#lst:input_gmlt_dem
 The source model contains sources belonging to Active Shallow Crust and
 Stable Continental Crust, therefore the GSIM logic tree defines two
 branching levels, one for each considered tectonic region type. Moreover
-for each tectonic region a branch set with two GMPEs is defined: Boore
+for each tectonic region a *Branch* set with two GMPEs is defined: Boore
 and Atkinson 2008 and Chiou and Youngs 2008 for Active Shallow Crust and
 Toro et al. 2003 and Campbell 2003 for Stable Continental Crust. By
 processing the above logic tree files using the logic tree path
@@ -3381,7 +3381,7 @@ branching levels are created, one defining uncertainties on G-R a and b
 values (defined by setting ``uncertaintyType="abGRAbsolute"``) and G-R
 maximum magnitude (``uncertaintyType="maxMagGRAbsolute"``).
 
-It is important to notice that each branch set is applied to a specific
+It is important to notice that each *Branch* set is applied to a specific
 source by defining the attribute ``applyToSources``, followed by the
 source ID. The GSIM logic tree file is the same as used for
 LogicTreeCase1ClassicalPSHA. By setting in the configuration file
@@ -3662,10 +3662,10 @@ Scenario Damage Assessment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 The scenario damage
 calculator computes damage distribution statistics for all assets in a
-given exposuremodel for a single specified rupture. Damage distribution
+given *Exposure Model* for a single specified rupture. Damage distribution
 statistics include the mean and standard deviation of damage fractions
 for different damage states. This calculator requires the definition of
-a finite rupturemodel, an exposuremodel and a fragilitymodel; the main
+a finite *Rupture Model*, an *Exposure Model* and a *Fragility Model*; the main
 results are the damage distribution statistics per asset, aggregated
 damage distribution statistics per taxonomy, aggregated damage
 distribution statistics for the region, and collapse maps, which contain
@@ -3690,11 +3690,11 @@ calculator has changed starting from OpenQuake engine39 to use a full Monte Carl
 simulation of damage states.
 
 For each Ground Motion Field, a damage state is simulated for each building for
-every asset in the exposuremodel using the provided fragilitymodel, and
+every asset in the *Exposure Model* using the provided *Fragility Model*, and
 finally the mean damage distribution across all realizations is
 calculated. The calculator also provides aggregated damage distribution
 statistics for the portfolio, such as mean damage fractions for each
-taxonomy in the exposuremodel, and the mean damage for the entire region
+taxonomy in the *Exposure Model*, and the mean damage for the entire region
 of study.
 
 The required input files required for running a scenario damage
@@ -3708,27 +3708,27 @@ Figure `1.1 <#fig:io-structure-scenario-damage>`__.
 
    Scenario Damage Calculator input/output structure.
 
-consequencemodel files can also be provided as inputs for a scenario
+*Consequence Model* files can also be provided as inputs for a scenario
 damage calculation in addition to fragilitymodels files, in order to
 estimate consequences based on the calculated damage distribution. The
-user may provide one consequencemodel file corresponding to each loss
+user may provide one *Consequence Model* file corresponding to each loss
 type (amongst structural, nonstructural, contents, and business
-interruption) for which a fragilitymodel file is provided. Whereas
-providing a fragilitymodel file for at least one loss type is mandatory
+interruption) for which a *Fragility Model* file is provided. Whereas
+providing a *Fragility Model* file for at least one loss type is mandatory
 for running a Scenario Damage calculation, providing corresponding
-consequencemodel files is optional.
+*Consequence Model* files is optional.
 
 Scenario Risk Assessment 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The scenario risk
 calculator computes loss statistics for all assets in a given
-exposuremodel for a single specified rupture. Loss statistics include
+*Exposure Model* for a single specified rupture. Loss statistics include
 the mean and standard deviation of ground-up losses for each loss type
 considered in the analysis. Loss statistics can currently be computed
 for five different loss types using this calculator: structural losses,
 nonstructural losses, contents losses, downtime losses, and occupant
 fatalities. This calculator requires the definition of a finite
-rupturemodel, an exposuremodel and a vulnerabilitymodel for each loss
+*Rupture Model*, an *Exposure Model* and a *Vulnerability Model* for each loss
 type considered; the main results are the loss statistics per asset and
 mean loss maps.
 
@@ -3746,14 +3746,14 @@ also provide their own sets of Ground Motion Fields as input to the scenario ris
 calculator.
 
 For each Ground Motion Field simulation, a loss ratio is sampled for every asset in
-the exposuremodel using the provided probabilistic vulnerabilitymodel
+the *Exposure Model* using the provided probabilistic *Vulnerability Model*
 taking into consideration the correlation model for vulnerability of
 different assets of a given taxonomy. Finally loss statistics, i.e., the
 mean loss and standard deviation of loss for ground-up losses across all
 simulations, are calculated for each asset. Mean loss maps are also
 generated by this calculator, describing the mean ground-up losses
 caused by the scenario event for the different assets in the
-exposuremodel.
+*Exposure Model*.
 
 The required input files required for running a scenario risk
 calculation and the resulting output files are depicted in
@@ -3772,20 +3772,20 @@ The classical PSHA-based damage calculator integrates the fragility
 functions for an asset with the seismic hazard curve at the location of
 the asset, to give the expected damage distribution for the asset within
 a specified time period. The calculator requires the definition of an
-exposuremodel, a fragilitymodel with fragilityfunctions for each
-taxonomy represented in the exposuremodel, and hazard curves calculated
+*Exposure Model*, a *Fragility Model* with fragilityfunctions for each
+taxonomy represented in the *Exposure Model*, and hazard curves calculated
 in the region of interest. The main results of this calculator are the
 expected damage distribution for each asset, which describe the
 probability of the asset being in different damage states, and collapse
 maps for the region, which describe the probability of collapse for
 different assets in the portfolio over the specified time period. Damage
 distribution aggregated by taxonomy or of the total portfolio
-(considering all assets in the exposuremodel) can not be extracted using
+(considering all assets in the *Exposure Model*) can not be extracted using
 this calculator, as the spatial correlation of the ground motion
 residuals is not taken into consideration.
 
 The hazard curves required for this calculator can be calculated by the
-OpenQuake engine for all asset locations in the exposuremodel using the classical
+OpenQuake engine for all asset locations in the *Exposure Model* using the classical
 PSHA approach (Cornell 1968; McGuire 1976).
 
 The required input files required for running a classical probabilistic
@@ -3805,10 +3805,10 @@ The classical PSHA-based risk calculator convolves through numerical
 integration, the probabilistic vulnerability functions for an asset with
 the seismic hazard curve at the location of the asset, to give the loss
 distribution for the asset within a specified time period. The
-calculator requires the definition of an exposuremodel, a
-vulnerabilitymodel for each loss type of interest with
+calculator requires the definition of an *Exposure Model*, a
+*Vulnerability Model* for each loss type of interest with
 vulnerabilityfunctions for each taxonomy represented in the
-exposuremodel, and hazard curves calculated in the region of interest.
+*Exposure Model*, and hazard curves calculated in the region of interest.
 Loss curves and loss maps can currently be calculated for five different
 loss types using this calculator: structural losses, nonstructural
 losses, contents losses, downtime losses, and occupant fatalities. The
@@ -3819,19 +3819,19 @@ which describe the loss values that have a given probability of
 exceedance over the specified time
 
 Unlike the probabilistic event-based risk calculator, an aggregate loss
-curve (considering all assets in the exposuremodel) can not be extracted
+curve (considering all assets in the *Exposure Model*) can not be extracted
 using this calculator, as the correlation of the ground motion residuals
 and vulnerability uncertainty is not taken into consideration in this
 calculator.
 
 The hazard curves required for this calculator can be calculated by the
-OpenQuake engine for all asset locations in the exposuremodel using the classical
+OpenQuake engine for all asset locations in the *Exposure Model* using the classical
 PSHA approach (Cornell 1968; McGuire 1976). The use of logic- trees
 allows for the consideration of model uncertainty in the choice of a
 ground motion prediction equation for the different tectonic region
 types in the region. Unlike what was described in the previous
 calculator, a total loss curve (considering all assets in the
-exposuremodel) can not be extracted using this calculator, as the
+*Exposure Model*) can not be extracted using this calculator, as the
 correlation of the ground motion residuals and vulnerability uncertainty
 is not taken into consideration.
 
@@ -3853,9 +3853,9 @@ simulation approach to probabilistic damage assessment in order to
 estimate the damage distribution for individual assets and aggregated
 damage distribution for a spatially distributed portfolio of assets
 within a specified time period. The calculator requires the definition
-of an exposuremodel, a fragilitymodel for each loss type of interest
+of an *Exposure Model*, a *Fragility Model* for each loss type of interest
 with fragilityfunctions for each damage state for every typology
-represented in the exposuremodel, and a Stochastic Event Set representative of the
+represented in the *Exposure Model*, and a Stochastic Event Set representative of the
 seismicity of the region over the specified time period. Damage state
 curves and damage maps corresponding to specified return periods can
 also be obtained using this calculator.
@@ -3876,7 +3876,7 @@ tables within the datastore for the completed calculation.
 This calculator relies on the probabilistic event-based hazard
 calculator, which simulates the seismicity of the chosen time period
 :math:`T` by producing a Stochastic Event Set. For each rupture generated by a
-seismicsource, the number of occurrences in the given time span
+*Seismic Source*, the number of occurrences in the given time span
 :math:`T` is simulated by sampling the corresponding probability
 distribution as given by :math:`P_{rup}(k | T)`. A Stochastic Event Set is therefore
 a *sample* of the full population of ruptures as defined by a Seismic Source Model.
@@ -3901,8 +3901,8 @@ the consideration of uncertainty in the choice of a Seismic Source Model, and in
 choice of groundmotionmodels for the different tectonic regions.
 
 For each Ground Motion Field realization, a damage state is siumulated for each
-building of every asset in the exposuremodel using the provided
-fragilitymodel. The asset-level event damage table is saved to the
+building of every asset in the *Exposure Model* using the provided
+*Fragility Model*. The asset-level event damage table is saved to the
 datastore. Time-averaged damage distributions at the asset-level can be
 obtained from the event damage table. Finally damage state exceedance
 curves can be computed.
@@ -3918,16 +3918,16 @@ depicted in Figure `1.5 <#fig:io-structure-event-based-damage>`__
 
    Probabilistic Event-based Damage Calculator input/output structure.
 
-Similar to the scenario damage calculator, consequencemodel files can
+Similar to the scenario damage calculator, *Consequence Model* files can
 also be provided as inputs for an event-based damage calculation in
 addition to fragilitymodels files, in order to estimate consequences
 based on the calculated damage distribution. The user may provide one
-consequencemodel file corresponding to each loss type (amongst
+*Consequence Model* file corresponding to each loss type (amongst
 structural, nonstructural, contents, and business interruption) for
-which a fragilitymodel file is provided. Whereas providing a
-fragilitymodel file for at least one loss type is mandatory for running
+which a *Fragility Model* file is provided. Whereas providing a
+*Fragility Model* file for at least one loss type is mandatory for running
 an Event-Based Damage calculation, providing corresponding
-consequencemodel files is optional.
+*Consequence Model* files is optional.
 
 Stochastic Event Based Probabilistic Seismic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3936,9 +3936,9 @@ simulation approach to probabilistic risk assessment in order to
 estimate the loss distribution for individual assets and aggregated loss
 distribution for a spatially distributed portfolio of assets within a
 specified time period. The calculator requires the definition of an
-exposuremodel, a vulnerabilitymodel for each loss type of interest with
+*Exposure Model*, a *Vulnerability Model* for each loss type of interest with
 vulnerabilityfunctions for each taxonomy represented in the
-exposuremodel, and a Stochastic Event Set (also known as a *synthetic catalog*)
+*Exposure Model*, and a Stochastic Event Set (also known as a *synthetic catalog*)
 representative of the seismicity of the region over the specified time
 period. Loss curves and loss maps can currently be calculated for five
 different loss types using this calculator: structural losses,
@@ -3963,7 +3963,7 @@ for each seismic event in the Stochastic Event Set.
 This calculator relies on the probabilistic event-based hazard
 calculator, which simulates the seismicity of the chosen time period
 :math:`T` by producing a Stochastic Event Set. For each rupture generated by a
-seismicsource, the number of occurrences in the given time span
+*Seismic Source*, the number of occurrences in the given time span
 :math:`T` is simulated by sampling the corresponding probability
 distribution as given by :math:`P_{rup}(k | T)`. A Stochastic Event Set is therefore
 a *sample* of the full population of ruptures as defined by a Seismic Source Model.
@@ -3988,7 +3988,7 @@ the consideration of uncertainty in the choice of a Seismic Source Model, and in
 choice of groundmotionmodels for the different tectonic regions.
 
 For each Ground Motion Field realization, a loss ratio is sampled for every asset in
-the exposuremodel using the provided probabilistic vulnerabilitymodel,
+the *Exposure Model* using the provided probabilistic *Vulnerability Model*,
 taking into consideration the correlation model for vulnerability of
 different assets of a given taxonomy. Finally loss exceedance curves are
 computed for ground-up losses.
@@ -4048,22 +4048,22 @@ event based calculators.
 
 Exposure Models
 ^^^^^^^^^^^^^^^
-*All* risk calculators in the OpenQuake engine require an exposuremodel that needs to be provided in the
+*All* risk calculators in the OpenQuake engine require an *Exposure Model* that needs to be provided in the
 Natural hazards' Risk Markup Language schema, the use of which is illustrated through several
-examples in this section. The information included in an exposuremodel
+examples in this section. The information included in an *Exposure Model*
 comprises a metadata section listing general information about the
 exposure, followed by a cost conversions section that describes how the
 different areas, costs, and occupancies for the assets will be
 specified, followed by data regarding each individual asset in the
 portfolio.
 
-**Note:** Starting from OpenQuake engine30, the exposuremodel may be provided
+**Note:** Starting from OpenQuake engine30, the *Exposure Model* may be provided
 using csv files listing the asset information, along with an xml file
 conatining the metadata section for the exposure model that has been
 described in the examples above. See Example 8 below for an illustration
 of an exposure model using csv files.
 
-A simple exposuremodel comprising a single asset is shown in
+A simple *Exposure Model* comprising a single asset is shown in
 Listing `[lst:input_exposure_minimal] <#lst:input_exposure_minimal>`__.
 
 .. container:: listing
@@ -4141,13 +4141,13 @@ turn. The first part of the file contains the metadata section:
 
 The information in the metadata section is common to all of the assets
 in the portfolio and needs to be incorporated at the beginning of every
-exposuremodel file. There are a number of parameters that compose the
+*Exposure Model* file. There are a number of parameters that compose the
 metadata section, which is intended to provide general information
-regarding the assets within the exposuremodel. These parameters are
+regarding the assets within the *Exposure Model*. These parameters are
 described below:
 
 -  ``id``: mandatory; a unique string used to identify the
-   exposuremodel. This string can contain letters (a–z; A–Z),
+   *Exposure Model*. This string can contain letters (a–z; A–Z),
    numbers (0–9), dashes (–), and underscores (_), with a maximum of
    100 characters.
 
@@ -4158,7 +4158,7 @@ described below:
    being used to classify the assets.
 
 -  ``description``: mandatory; a brief string (ASCII) with further
-   information about the exposuremodel.
+   information about the *Exposure Model*.
 
 Next, let us look at the part of the file describing the area and cost
 conversions:
@@ -4200,7 +4200,7 @@ conversions:
 Notice that the ``costType`` element defines a ``name``, a ``type``, and
 a ``unit`` attribute.
 
-The Natural hazards' Risk Markup Language schema for the exposuremodel allows the definition of a
+The Natural hazards' Risk Markup Language schema for the *Exposure Model* allows the definition of a
 structural cost, a nonstructural components cost, a contents cost, and a
 business interruption or downtime cost for each asset in the portfolio.
 Thus, the valid values for the ``name`` attribute of the ``costType``
@@ -4218,9 +4218,9 @@ element are the following:
    incurred per unit time that a damaged asset remains closed following
    an earthquake
 
-The exposuremodel shown in the example above defines only the structural
+The *Exposure Model* shown in the example above defines only the structural
 values for the assets. However, multiple cost types can be defined for
-each asset in the same exposuremodel.
+each asset in the same *Exposure Model*.
 
 The ``unit`` attribute of the ``costType`` element is used for
 specifying the currency unit for the corresponding cost type. Note that
@@ -4267,14 +4267,14 @@ attribute of the ``area`` element are the following:
    or unit comprising each asset
 
 The way the information about the characteristics of the assets in an
-exposuremodel are stored can vary strongly depending on how and why the
+*Exposure Model* are stored can vary strongly depending on how and why the
 data was compiled. As an example, if national census information is used
 to estimated the distribution of assets in a given region, it is likely
 that the number of buildings within a given geographical area will be
 used to define the dataset, and will be used for estimating the number
 of collapsed buildings for a scenario earthquake. On the other hand, if
 simplified methodologies based on proxy data such as population
-distribution are used to develop the exposuremodel, then it is likely
+distribution are used to develop the *Exposure Model*, then it is likely
 that the built up area or economic cost of each building typology will
 be directly derived, and will be used for the estimation of economic
 losses.
@@ -4320,7 +4320,7 @@ calculations:
 Each asset definition involves specifiying a set of mandatory and
 optional attributes concerning the asset. The following set of
 attributes can be assigned to each asset based on the current schema for
-the exposuremodel:
+the *Exposure Model*:
 
 -  ``id``: mandatory; a unique string used to identify the given asset,
    which is used by the OpenQuake engine to relate each asset with its associated
@@ -4375,11 +4375,11 @@ provided in this section.
 Example 1
 :::::::::
 
-This example illustrates an exposuremodel in which the aggregated cost
+This example illustrates an *Exposure Model* in which the aggregated cost
 (structural, nonstructural, contents and business interruption) of the
 assets of each taxonomy for a set of locations is directly provided.
 Thus, in order to indicate how the various costs will be defined, the
-following information needs to be stored in the exposuremodel file, as
+following information needs to be stored in the *Exposure Model* file, as
 shown in
 Listing `[lst:input_exposure_cagg_metadata] <#lst:input_exposure_cagg_metadata>`__.
 
@@ -4467,12 +4467,12 @@ Each asset is uniquely identified by its ``id``. Then, a pair of
 coordinates (latitude and longitude) for a ``location`` where the asset
 is assumed to exist is defined. Each asset must be classified according
 to a ``taxonomy``, so that the OpenQuake engine is capable of employing the
-appropriate vulnerabilityfunction or fragilityfunction in the risk
+appropriate *Vulnerability Function* or *Fragility Function* in the risk
 calculations. Finally, the cost values of each ``type`` are stored
 within the ``costs`` attribute. In this example, the aggregated value
 for all structural units (within a given asset) at each location is
 provided directly, so there is no need to define other attributes such
-as ``number`` or ``area``. This mode of representing an exposuremodel is
+as ``number`` or ``area``. This mode of representing an *Exposure Model* is
 probably the simplest one.
 
 Example 2
@@ -4480,7 +4480,7 @@ Example 2
 
 In the snippet shown in
 Listing `[lst:input_exposure_cunit_metadata] <#lst:input_exposure_cunit_metadata>`__,
-an exposuremodel containing the number of structural units and the
+an *Exposure Model* containing the number of structural units and the
 associated costs per unit of each asset is presented.
 
 .. container:: listing
@@ -4574,7 +4574,7 @@ Example 3
 
 The example shown in
 Listing `[lst:input_exposure_carea_aagg_metadata] <#lst:input_exposure_carea_aagg_metadata>`__
-comprises an exposuremodel containing the built up area of each asset,
+comprises an *Exposure Model* containing the built up area of each asset,
 and the associated costs are provided per unit area.
 
 .. container:: listing
@@ -4616,7 +4616,7 @@ and the associated costs are provided per unit area.
 
       </nrml>
 
-In order to compile an exposuremodel with this structure, the cost
+In order to compile an *Exposure Model* with this structure, the cost
 ``type`` should be set to ``per_area``. In addition, it is also
 necessary to specify if the ``area`` that is being store represents the
 aggregated area of number of units within an asset, or the average area
@@ -4674,11 +4674,11 @@ no need to specify the attribute ``number``.
 Example 4
 :::::::::
 
-This example demonstrates an exposuremodel that defines the number of
+This example demonstrates an *Exposure Model* that defines the number of
 structural units for each asset, the average built up area per
 structural unit and the associated costs per unit area.
 Listing `[lst:input_exposure_carea_aunit_metadata] <#lst:input_exposure_carea_aunit_metadata>`__
-shows the metadata definition for an exposuremodel built in this manner.
+shows the metadata definition for an *Exposure Model* built in this manner.
 
 .. container:: listing
 
@@ -4822,10 +4822,10 @@ Example 6
 
 The OpenQuake engine is also capable of estimating human losses, based on the
 number of occupants in an asset, at a certain time of the day. The
-example exposuremodel shown in
+example *Exposure Model* shown in
 Listing `[lst:input_exposure_occupants] <#lst:input_exposure_occupants>`__
 illustrates how this parameter is defined for each asset. In addition,
-this example also serves the purpose of presenting an exposuremodel in
+this example also serves the purpose of presenting an *Exposure Model* in
 which three cost types have been defined using three different options.
 
 As previously mentioned, in this example only three costs are being
@@ -4884,13 +4884,13 @@ Example 7
 :::::::::
 
 Starting from OpenQuake engine27, the user may also provide a set of tags for
-each asset in the exposuremodel. The primary intended use case for the
+each asset in the *Exposure Model*. The primary intended use case for the
 tags is to enable aggregation or accumulation of risk results
 (casualties / damages / losses) for each tag. The tags could be used to
 specify location attributes, occupancy types, or insurance policy codes
-for the different assets in the exposuremodel.
+for the different assets in the *Exposure Model*.
 
-The example exposuremodel shown in
+The example *Exposure Model* shown in
 Listing `[lst:input_exposure_tags] <#lst:input_exposure_tags>`__
 illustrates how one or more tags can be defined for each asset.
 
@@ -4934,7 +4934,7 @@ illustrates how one or more tags can be defined for each asset.
 
       </nrml>
 
-The list of tag names that will be used in the exposuremodel must be
+The list of tag names that will be used in the *Exposure Model* must be
 provided in the metadata section of the exposure file, as shown in the
 following snippet from the full file:
 
@@ -5027,7 +5027,7 @@ This example illustrates the use of multiple csv files containing the
 assets information, in conjunction with the metadata section in the
 usual xml format.
 
-Let us take a look at the metadata section of the exposuremodel, which
+Let us take a look at the metadata section of the *Exposure Model*, which
 is listed as usual in an xml file:
 
 .. container:: listing
@@ -5086,7 +5086,7 @@ listed in the csv files. In case the number of occupants are not listed
 in the csv files, a self-closing tag ``<occupancyPeriods />`` should be
 included in the xml metadata section.
 
-A web-based tool to build an exposuremodel in the Natural hazards' Risk Markup Language schema
+A web-based tool to build an *Exposure Model* in the Natural hazards' Risk Markup Language schema
 starting from a csv file or a spreadsheet can be found at the OpenQuake
 platform at the following address: https://platform.openquake.org/ipt/.
 
@@ -5096,11 +5096,11 @@ This section describes the
 schema currently used to store fragilitymodels, which are required for
 the Scenario Damage Calculator and the Classical Probabilistic Seismic
 Damage Calculator. In order to perform probabilistic or scenario damage
-calculations, it is necessary to define a fragilityfunction for each
-building typology present in the exposuremodel. A fragilitymodel defines
+calculations, it is necessary to define a *Fragility Function* for each
+building typology present in the *Exposure Model*. A *Fragility Model* defines
 a set of fragilityfunctions, describing the probability of exceeding a
 set of limit, or damage, states. The fragilityfunctions can be defined
-using either a discrete or a continuous format, and the fragilitymodel
+using either a discrete or a continuous format, and the *Fragility Model*
 file can include a mix of both types of fragilityfunctions.
 
 For discrete fragilityfunctions, sets of probabilities of exceedance
@@ -5116,7 +5116,7 @@ levels, as illustrated in Figure `2.1 <#fig:fragility-discrete>`__.
 
 The fragilityfunctions can also be defined as continuous functions,
 through the use of cumulative lognormal distribution functions. In
-Figure `2.2 <#fig:fragility-continuous>`__, a continuous fragilitymodel
+Figure `2.2 <#fig:fragility-continuous>`__, a continuous *Fragility Model*
 is presented.
 
 .. figure:: figures/risk/fragility-continuous.png
@@ -5126,8 +5126,8 @@ is presented.
 
    Graphical representation of a continuous fragility model
 
-An example fragilitymodel comprising one discrete fragilityfunction and
-one continuous fragilityfunction is shown in
+An example *Fragility Model* comprising one discrete *Fragility Function* and
+one continuous *Fragility Function* is shown in
 Listing `[lst:input_fragility] <#lst:input_fragility>`__.
 
 .. container:: listing
@@ -5165,10 +5165,10 @@ Listing `[lst:input_fragility] <#lst:input_fragility>`__.
       </nrml>
 
 The initial portion of the schema contains general information that
-describes some general aspects of the fragilitymodel. The information in
+describes some general aspects of the *Fragility Model*. The information in
 this metadata section is common to all of the functions in the
-fragilitymodel and needs to be included at the beginning of every
-fragilitymodel file. The parameters of the metadata section are shown in
+*Fragility Model* and needs to be included at the beginning of every
+*Fragility Model* file. The parameters of the metadata section are shown in
 the snippet below and described after the snippet:
 
 .. code:: xml
@@ -5204,7 +5204,7 @@ the snippet below and described after the snippet:
    </nrml>
 
 -  ``id``: mandatory; a unique string used to identify the
-   fragilitymodel. This string can contain letters (a–z; A–Z),
+   *Fragility Model*. This string can contain letters (a–z; A–Z),
    numbers (0–9), dashes (-), and underscores (_), with a maximum of
    100 characters.
 
@@ -5217,9 +5217,9 @@ the snippet below and described after the snippet:
    “business_interruption”.
 
 -  ``description``: mandatory; a brief string (ASCII) with further
-   relevant information about the fragilitymodel, for example, which
+   relevant information about the *Fragility Model*, for example, which
    building typologies are covered or the source of the functions in the
-   fragilitymodel.
+   *Fragility Model*.
 
 -  ``limitStates``: mandatory; this field is used to define the number
    and nomenclature of each limit state. Four limit states are employed
@@ -5231,8 +5231,8 @@ the snippet below and described after the snippet:
    dashes (-), and underscores (_). Please ensure that there is no
    whitespace within the name of any individual limit state.
 
-The following snippet from the above fragilitymodel example file defines
-a discrete fragilityfunction:
+The following snippet from the above *Fragility Model* example file defines
+a discrete *Fragility Function*:
 
 .. code:: xml
 
@@ -5267,11 +5267,11 @@ a discrete fragilityfunction:
    </nrml>
 
 The following attributes are needed to define a discrete
-fragilityfunction:
+*Fragility Function*:
 
 -  ``id``: mandatory; a unique string used to identify the taxonomy for
    which the function is being defined. This string is used to relate
-   the fragilityfunction with the relevant asset in the exposuremodel.
+   the *Fragility Function* with the relevant asset in the *Exposure Model*.
    This string can contain letters (a–z; A–Z), numbers (0–9),
    dashes (-), and underscores (_), with a maximum of 100 characters.
 
@@ -5287,7 +5287,7 @@ fragilityfunction:
 
 -  ``poes``: mandatory; this field is used to define the probabilities
    of exceedance (``poes``) for each limit state for each discrete
-   fragilityfunction. It is also necessary to specify which limit state
+   *Fragility Function*. It is also necessary to specify which limit state
    the exceedance probabilities are being defined for using the
    attribute ``ls``. The probabilities of exceedance for each limit
    state must be provided on a separate line; and the number of
@@ -5296,10 +5296,10 @@ fragilityfunction:
    the attribute ``imls``. Finally, the number and names of the limit
    states in each fragility function must be equal to the number of
    limit states defined earlier in the metadata section of the
-   fragilitymodel using the attribute ``limitStates``.
+   *Fragility Model* using the attribute ``limitStates``.
 
-The following snippet from the above fragilitymodel example file defines
-a continuous fragilityfunction:
+The following snippet from the above *Fragility Model* example file defines
+a continuous *Fragility Function*:
 
 .. code:: xml
 
@@ -5334,11 +5334,11 @@ a continuous fragilityfunction:
    </nrml>
 
 The following attributes are needed to define a continuous
-fragilityfunction:
+*Fragility Function*:
 
 -  ``id``: mandatory; a unique string used to identify the taxonomy for
    which the function is being defined. This string is used to relate
-   the fragilityfunction with the relevant asset in the exposuremodel.
+   the *Fragility Function* with the relevant asset in the *Exposure Model*.
    This string can contain letters (a–z; A–Z), numbers (0–9),
    dashes (-), and underscores (_), with a maximum of 100 characters.
 
@@ -5351,7 +5351,7 @@ fragilityfunction:
    function can be used for representing continuous fragilityfunctions.
 
 -  ``imls``: mandatory; this element specifies aspects related to the
-   intensity measure used by the the fragilityfunction. The range of
+   intensity measure used by the the *Fragility Function*. The range of
    intensity levels for which the continuous fragilityfunctions are
    valid is specified using the attributes ``minIML`` and ``maxIML``. In
    addition, it is also necessary to define the intensity measure type
@@ -5360,7 +5360,7 @@ fragilityfunction:
    for all limit states is taken to be zero.
 
 -  ``params``: mandatory; this field is used to define the parameters of
-   the continuous curve for each limit state for this fragilityfunction.
+   the continuous curve for each limit state for this *Fragility Function*.
    For a lognormal cumulative distrbution function, the two parameters
    required to specify the function are the mean and standard deviation
    of the intensity level. These parameters are defined for each limit
@@ -5368,8 +5368,8 @@ fragilityfunction:
    attribute ``ls`` specifies the limit state for which the parameters
    are being defined. The parameters for each limit state must be
    provided on a separate line. The number and names of the limit states
-   in each fragilityfunction must be equal to the number of limit states
-   defined earlier in the metadata section of the fragilitymodel using
+   in each *Fragility Function* must be equal to the number of limit states
+   defined earlier in the metadata section of the *Fragility Model* using
    the attribute ``limitStates``. A point worth clarifying is that the
    parameters to be defined in the fragility input file are the mean and
    standard deviation of the intensity measure level (IML) for each
@@ -5382,7 +5382,7 @@ between Natural hazards' Risk Markup Language v0.4 (used prior to OpenQuake engi
 (introduced in OpenQuake engine17).
 
 A deprecation warning is printed every time you attempt to use a
-fragilitymodel in the old Natural hazards' Risk Markup Language v0.4 format in an OpenQuake engine17 (or
+*Fragility Model* in the old Natural hazards' Risk Markup Language v0.4 format in an OpenQuake engine17 (or
 later) risk calculation. To get rid of the warning you must upgrade the
 old fragilitymodels files to Natural hazards' Risk Markup Language v0.5. You can use the command
 ``upgrade_nrml`` with oq to do this as follows:
@@ -5391,7 +5391,7 @@ old fragilitymodels files to Natural hazards' Risk Markup Language v0.5. You can
 
    user@ubuntu:~$ oq upgrade_nrml <directory-name>
 
-The above command will upgrade all of your old fragilitymodel files to
+The above command will upgrade all of your old *Fragility Model* files to
 Natural hazards' Risk Markup Language v0.5. The original files will be kept, but with a .bak
 extension appended. Notice that you will need to set the
 ``lossCategory`` attribute to its correct value manually. This is easy
@@ -5405,7 +5405,7 @@ Modeller’s Toolkit, the code for which can be found on a public
 repository at GitHub at the following address:
 http://github.com/gemsciencetools/rmtk.
 
-A web-based tool to build a fragilitymodel in the Natural hazards' Risk Markup Language schema are
+A web-based tool to build a *Fragility Model* in the Natural hazards' Risk Markup Language schema are
 also under development, and can be found at the OpenQuake platform at
 the following address: https://platform.openquake.org/ipt/.
 
@@ -5415,24 +5415,24 @@ Starting from OpenQuake engine17, the
 Scenario Damage calculator also accepts consequencemodels in addition to
 fragilitymodels, in order to estimate consequences based on the
 calculated damage distribution. The user may provide one
-consequencemodel file corresponding to each loss type (amongst
+*Consequence Model* file corresponding to each loss type (amongst
 structural, nonstructural, contents, and business interruption) for
-which a fragilitymodel file is provided. Whereas providing a
-fragilitymodel file for at least one loss type is mandatory for running
-a Scenario Damage calculation, providing corresponding consequencemodel
+which a *Fragility Model* file is provided. Whereas providing a
+*Fragility Model* file for at least one loss type is mandatory for running
+a Scenario Damage calculation, providing corresponding *Consequence Model*
 files is optional.
 
 This section describes the schema currently used to store
 consequencemodels, which are optional inputs for the Scenario Damage
-Calculator. A consequencemodel defines a set of consequencefunctions,
+Calculator. A *Consequence Model* defines a set of consequencefunctions,
 describing the distribution of the loss (or consequence) ratio
 conditional on a set of discrete limit (or damage) states. These
-consequencefunction can be currently defined in OpenQuake engine by specifying
+*Consequence Function* can be currently defined in OpenQuake engine by specifying
 the parameters of the continuous distribution of the loss ratio for each
 limit state specified in the fragility model for the corresponding loss
 type, for each taxonomy defined in the exposure model.
 
-An example consequencemodel is shown in
+An example *Consequence Model* is shown in
 Listing `[lst:input_consequence] <#lst:input_consequence>`__.
 
 .. container:: listing
@@ -5461,12 +5461,12 @@ Listing `[lst:input_consequence] <#lst:input_consequence>`__.
       </nrml>
 
 The initial portion of the schema contains general information that
-describes some general aspects of the consequencemodel. The information
+describes some general aspects of the *Consequence Model*. The information
 in this metadata section is common to all of the functions in the
-consequencemodel and needs to be included at the beginning of every
-consequencemodel file. The parameters are described below:
+*Consequence Model* and needs to be included at the beginning of every
+*Consequence Model* file. The parameters are described below:
 
--  ``id``: a unique string used to identify the consequencemodel. This
+-  ``id``: a unique string used to identify the *Consequence Model*. This
    string can contain letters (a–z; A–Z), numbers (0–9), dashes (-), and
    underscores (_), with a maximum of 100 characters.
 
@@ -5479,9 +5479,9 @@ consequencemodel file. The parameters are described below:
    “business_interruption”.
 
 -  ``description``: mandatory; a brief string (ASCII) with further
-   information about the consequencemodel, for example, which building
+   information about the *Consequence Model*, for example, which building
    typologies are covered or the source of the functions in the
-   consequencemodel.
+   *Consequence Model*.
 
 -  ``limitStates``: mandatory; this field is used to define the number
    and nomenclature of each limit state. Four limit states are employed
@@ -5491,8 +5491,8 @@ consequencemodel file. The parameters are described below:
    state string can contain letters (a–z; A–Z), numbers (0–9),
    dashes (-), and underscores (_). Please ensure that there is no
    whitespace within the name of any individual limit state. The number
-   and nomenclature of the limit states used in the consequencemodel
-   should match those used in the corresponding fragilitymodel.
+   and nomenclature of the limit states used in the *Consequence Model*
+   should match those used in the corresponding *Fragility Model*.
 
 .. code:: xml
 
@@ -5517,8 +5517,8 @@ consequencemodel file. The parameters are described below:
 
    </nrml>
 
-The following snippet from the above consequencemodel example file
-defines a consequencefunction using a lognormal distribution to model
+The following snippet from the above *Consequence Model* example file
+defines a *Consequence Function* using a lognormal distribution to model
 the uncertainty in the consequence ratio for each limit state:
 
 .. code:: xml
@@ -5544,11 +5544,11 @@ the uncertainty in the consequence ratio for each limit state:
 
    </nrml>
 
-The following attributes are needed to define a consequencefunction:
+The following attributes are needed to define a *Consequence Function*:
 
 -  ``id``: mandatory; a unique string used to identify the taxonomy for
    which the function is being defined. This string is used to relate
-   the consequencefunction with the relevant asset in the exposuremodel.
+   the *Consequence Function* with the relevant asset in the *Exposure Model*.
    This string can contain letters (a–z; A–Z), numbers (0–9),
    dashes (-), and underscores (_), with a maximum of 100 characters.
 
@@ -5560,7 +5560,7 @@ The following attributes are needed to define a consequencefunction:
 
 -  ``params``: mandatory; this field is used to define the parameters of
    the continuous distribution used for modelling the uncertainty in the
-   loss ratios for each limit state for this consequencefunction. For a
+   loss ratios for each limit state for this *Consequence Function*. For a
    lognormal distrbution, the two parameters required to specify the
    function are the mean and standard deviation of the consequence
    ratio. These parameters are defined for each limit state using the
@@ -5568,17 +5568,17 @@ The following attributes are needed to define a consequencefunction:
    specifies the limit state for which the parameters are being defined.
    The parameters for each limit state must be provided on a separate
    line. The number and names of the limit states in each
-   consequencefunction must be equal to the number of limit states
-   defined in the corresponding fragilitymodel using the attribute
+   *Consequence Function* must be equal to the number of limit states
+   defined in the corresponding *Fragility Model* using the attribute
    ``limitStates``.
 
 Vulnerability Models 
 ^^^^^^^^^^^^^^^^^^^^
 In order to perform
 probabilistic or scenario risk calculations, it is necessary to define a
-vulnerabilityfunction for each building typology present in the
-exposuremodel. In this section, the schema for the vulnerabilitymodel is
-described in detail. A graphical representation of a vulnerabilitymodel
+*Vulnerability Function* for each building typology present in the
+*Exposure Model*. In this section, the schema for the *Vulnerability Model* is
+described in detail. A graphical representation of a *Vulnerability Model*
 (mean loss ratio for a set of intensity measure levels) is illustrated
 in Figure `2.3 <#fig:vulnerability-zero-cov>`__.
 
@@ -5595,7 +5595,7 @@ considered in the input file, by means of a coefficient of variation per
 loss ratio and a probabilistic distribution, which can currently be set
 to lognormal (LN), Beta (BT); or by specifying a discrete probability
 mass (PM) [4]_ distribution of the loss ratio at a set of intensity
-levels. An example of a vulnerabilityfunction that models the
+levels. An example of a *Vulnerability Function* that models the
 uncertainty in the loss ratio at different intensity levels using a
 lognormal distribution is illustrated in
 Figure `2.4 <#fig:vulnerability-nonzero-cov>`__.
@@ -5613,16 +5613,16 @@ Figure `2.4 <#fig:vulnerability-nonzero-cov>`__.
 In general, defining vulnerabilityfunctions requires the user to specify
 the distribution of the loss ratio for a set of intensity levels. The
 loss ratio distributions can be defined using either a discrete or a
-continuous format, and the vulnerabilitymodel file can include a mix of
+continuous format, and the *Vulnerability Model* file can include a mix of
 both types of vulnerabilityfunctions. It is also possible to define a
-vulnerabilityfunction using a set of deterministic loss ratios
+*Vulnerability Function* using a set of deterministic loss ratios
 corresponding to a set of intensity levels (i.e., ignoring the
 uncertainty in the conditional loss ratios).
 
-An example vulnerabilitymodel comprising three vulnerabilityfunctions is
+An example *Vulnerability Model* comprising three vulnerabilityfunctions is
 shown in
 Listing `[lst:input_vulnerability] <#lst:input_vulnerability>`__. This
-vulnerabilitymodel contains one function that uses the lognormal
+*Vulnerability Model* contains one function that uses the lognormal
 distribution to represent the uncertainty in the loss ratio at different
 intensity levels, one function that uses the Beta distribution, and one
 function that is defined using a discrete probability mass distribution.
@@ -5670,10 +5670,10 @@ function that is defined using a discrete probability mass distribution.
       </nrml>
 
 The initial portion of the schema contains general information that
-describes some general aspects of the vulnerabilitymodel. The
+describes some general aspects of the *Vulnerability Model*. The
 information in this metadata section is common to all of the functions
-in the vulnerabilitymodel and needs to be included at the beginning of
-every vulnerabilitymodel file. The parameters are illustrated in the
+in the *Vulnerability Model* and needs to be included at the beginning of
+every *Vulnerability Model* file. The parameters are illustrated in the
 snippet shown and described below:
 
 .. code:: xml
@@ -5717,7 +5717,7 @@ snippet shown and described below:
    </nrml>
 
 -  ``id``: a unique string (ASCII) used to identify the
-   vulnerabilitymodel. This string can contain letters (a–z; A–Z),
+   *Vulnerability Model*. This string can contain letters (a–z; A–Z),
    numbers (0–9), dashes (-), and underscores (_), with a maximum of
    100 characters.
 
@@ -5730,11 +5730,11 @@ snippet shown and described below:
    and “occupants”.
 
 -  ``description``: mandatory; a brief string with further information
-   about the vulnerabilitymodel, for example, which building typologies
-   are covered or the source of the functions in the vulnerabilitymodel.
+   about the *Vulnerability Model*, for example, which building typologies
+   are covered or the source of the functions in the *Vulnerability Model*.
 
-The following snippet from the above vulnerabilitymodel example file
-defines a vulnerabilityfunction modelling the uncertainty in the
+The following snippet from the above *Vulnerability Model* example file
+defines a *Vulnerability Function* modelling the uncertainty in the
 conditional loss ratios using a (continuous) lognormal distribution:
 
 .. code:: xml
@@ -5777,14 +5777,14 @@ conditional loss ratios using a (continuous) lognormal distribution:
 
    </nrml>
 
-The following attributes are needed to define a vulnerabilityfunction
+The following attributes are needed to define a *Vulnerability Function*
 which uses a continuous distribution to model the uncertainty in the
 conditional loss ratios:
 
 -  ``id``: a unique string (ASCII) used to identify the taxonomy for
    which the function is being defined. This string is used to relate
-   the vulnerabilityfunction with the relevant asset in the
-   exposuremodel. This string can contain letters (a–z; A–Z),
+   the *Vulnerability Function* with the relevant asset in the
+   *Exposure Model*. This string can contain letters (a–z; A–Z),
    numbers (0–9), dashes (-), and underscores (_), with a maximum of
    100 characters.
 
@@ -5800,23 +5800,23 @@ conditional loss ratios:
    define the intensity measure type (``imt``).
 
 -  ``meanLRs``: mandatory; this field is used to define the mean loss
-   ratios for this vulnerabilityfunction for each of the intensity
+   ratios for this *Vulnerability Function* for each of the intensity
    levels defined by the attribute ``imls``. The number of mean loss
    ratios defined by the ``meanLRs`` attribute must be equal to the
    number of intensity levels defined by the attribute ``imls``.
 
 -  ``covLRs``: mandatory; this field is used to define the coefficient
    of variation for the conditional distribution of the loss ratios for
-   this vulnerabilityfunction for each of the intensity levels defined
+   this *Vulnerability Function* for each of the intensity levels defined
    by the attribute ``imls``. The number of coefficients of variation of
    loss ratios defined by the ``covLRs`` attribute must be equal to the
    number of intensity levels defined by the attribute ``imls``. The
    uncertainty in the conditional loss ratios can be ignored by setting
-   all of the ``covLRs`` for a given vulnerabilityfunction to zero.
+   all of the ``covLRs`` for a given *Vulnerability Function* to zero.
 
-The next snippet from the vulnerabilitymodel example file of
+The next snippet from the *Vulnerability Model* example file of
 Listing `[lst:input_vulnerability] <#lst:input_vulnerability>`__ defines
-a vulnerabilityfunction which models the uncertainty in the conditional
+a *Vulnerability Function* which models the uncertainty in the conditional
 loss ratios using a (discrete) probability mass distribution:
 
 .. code:: xml
@@ -5859,14 +5859,14 @@ loss ratios using a (discrete) probability mass distribution:
 
    </nrml>
 
-The following attributes are needed to define a vulnerabilityfunction
+The following attributes are needed to define a *Vulnerability Function*
 which uses a discrete probability mass distribution to model the
 uncertainty in the conditional loss ratios:
 
 -  ``id``: a unique string (ASCII) used to identify the taxonomy for
    which the function is being defined. This string is used to relate
-   the vulnerabilityfunction with the relevant asset in the
-   exposuremodel. This string can contain letters (a–z; A–Z),
+   the *Vulnerability Function* with the relevant asset in the
+   *Exposure Model*. This string can contain letters (a–z; A–Z),
    numbers (0–9), dashes (-), and underscores (_), with a maximum of
    100 characters.
 
@@ -5883,7 +5883,7 @@ uncertainty in the conditional loss ratios:
    probability of observing a particular loss ratio (specified for each
    row of ``probabilities`` using the attribute ``lr``), conditional on
    the set of intensity levels specified using the attribute ``imls``.
-   for this vulnerabilityfunction. Thus, the number of probabilities
+   for this *Vulnerability Function*. Thus, the number of probabilities
    defined by each ``probabilities`` attribute must be equal to the
    number of intensity levels defined by the attribute ``imls``. On the
    other hand, there is no limit to the number of loss ratios for which
@@ -5896,7 +5896,7 @@ between Natural hazards' Risk Markup Language v0.4 (used prior to OpenQuake engi
 (introduced in OpenQuake engine17).
 
 A deprecation warning is printed every time you attempt to use a
-vulnerabilitymodel in the old Natural hazards' Risk Markup Language v0.4 format in an OpenQuake engine17 (or
+*Vulnerability Model* in the old Natural hazards' Risk Markup Language v0.4 format in an OpenQuake engine17 (or
 later) risk calculation. To get rid of the warning you must upgrade the
 old vulnerabilitymodels files to Natural hazards' Risk Markup Language v0.5. You can use the command
 ``upgrade_nrml`` with oq to do this as follows:
@@ -5905,7 +5905,7 @@ old vulnerabilitymodels files to Natural hazards' Risk Markup Language v0.5. You
 
    user@ubuntu:~$ oq upgrade_nrml <directory-name>
 
-The above command will upgrade all of your old vulnerabilitymodel files
+The above command will upgrade all of your old *Vulnerability Model* files
 to Natural hazards' Risk Markup Language v0.5. The original files will be kept, but with a .bak
 extension appended. Notice that you will need to set the
 ``lossCategory`` attribute to its correct value manually. This is easy
@@ -5918,7 +5918,7 @@ being evaluated by GEM Foundation and have been included as part of the Risk
 Modeller’s Toolkit, the code for which can be found on a public
 repository at GitHub at: http://github.com/gemsciencetools/rmtk.
 
-A web-based tool to build an vulnerabilitymodel in the Natural hazards' Risk Markup Language schema
+A web-based tool to build an *Vulnerability Model* in the Natural hazards' Risk Markup Language schema
 are also under development, and can be found at the OpenQuake platform
 at the following address: https://platform.openquake.org/ipt/.
 
@@ -5935,11 +5935,11 @@ damage and risk analysis using the OpenQuake engine are organised into:
 -  An exposure model file in the NRML format, as described in
    Section `[sec:exposure] <#sec:exposure>`__.
 
--  A file describing the vulnerabilitymodel
+-  A file describing the *Vulnerability Model*
    (Section `[sec:vulnerability] <#sec:vulnerability>`__) for loss
-   calculations, or a file describing the fragilitymodel
+   calculations, or a file describing the *Fragility Model*
    (Section `[sec:fragility] <#sec:fragility>`__) for damage
-   calculations. Optionally, a file describing the consequencemodel
+   calculations. Optionally, a file describing the *Consequence Model*
    (Section `[sec:consequence] <#sec:consequence>`__) can also be
    provided in order to calculate losses from the estimated damage
    distributions.
@@ -6009,7 +6009,7 @@ subsequent sections.
    ``classical_bcr``.
 
 -  ``exposure_file``: this parameter is used to specify the path to the
-   exposuremodel file. Typically this is the path to the xml file
+   *Exposure Model* file. Typically this is the path to the xml file
    containing the exposure, or the xml file containing the metadata
    sections for the case where the assets are listed in one or more csv
    files. For particularly large exposure models, it may be more
@@ -6071,7 +6071,7 @@ parameters seen in the above example configuration file are described
 below:
 
 -  ``rupture_model_file``: a parameter used to define the path to the
-   earthquake rupturemodel file describing the scenario event.
+   earthquake *Rupture Model* file describing the scenario event.
 
 -  ``rupture_mesh_spacing``: a parameter used to specify the mesh size
    (in km) used by the OpenQuake engine to discretize the rupture. Note that the
@@ -6079,7 +6079,7 @@ below:
    the calculation and (2) the computational demand.
 
 -  ``structural_fragility_file``: a parameter used to define the path to
-   the structural fragilitymodel file.
+   the structural *Fragility Model* file.
 
 In this case, the ground motion fields will be computed at each of the
 locations of the assets in the exposure model. Ground motion fields will
@@ -6105,16 +6105,16 @@ same job configuration file to provide the corresponding fragility model
 files:
 
 -  ``structural_fragility_file``: a parameter used to define the path to
-   a structural fragilitymodel file
+   a structural *Fragility Model* file
 
 -  ``nonstructural_fragility_file``: a parameter used to define the path
-   to a nonstructural fragilitymodel file
+   to a nonstructural *Fragility Model* file
 
 -  ``contents_fragility_file``: a parameter used to define the path to a
-   contents fragilitymodel file
+   contents *Fragility Model* file
 
 -  ``business_interruption_fragility_file``: a parameter used to define
-   the path to a business interruption fragilitymodel file
+   the path to a business interruption *Fragility Model* file
 
 It is important that the ``lossCategory`` parameter in the metadata
 section for each provided fragility model file (“structural”,
@@ -6356,7 +6356,7 @@ coordinates.
 
 -  ``gmfs_file``: a parameter used to define the path to the Ground Motion Fields
    file in the Natural hazards' Risk Markup Language schema. This file must define Ground Motion Fields for all
-   of the intensity measure types used in the fragilitymodel.
+   of the intensity measure types used in the *Fragility Model*.
 
 .. container:: listing
 
@@ -6378,7 +6378,7 @@ coordinates.
 
 -  ``gmfs_csv``: a parameter used to define the path to the Ground Motion Fields
    file in the csv format. This file must define Ground Motion Fields for all of the
-   intensity measure types used in the fragilitymodel. (`Download an
+   intensity measure types used in the *Fragility Model*. (`Download an
    example file
    here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_scenario_gmfs.csv>`__).
 
@@ -6476,7 +6476,7 @@ Example 5
 
 This example illustrates a scenario damage calculation which specifies
 fragility models for calculating damage to structural and nonstructural
-components of structures, and also specifies consequencemodel files for
+components of structures, and also specifies *Consequence Model* files for
 calculation of the corresponding losses.
 
 A minimal job configuration file required for running a scenario damage
@@ -6520,22 +6520,22 @@ Listing `[lst:config_scenario_damage_consequences] <#lst:config_scenario_damage
 
 Note that one or more of the following parameters can be used in the
 same job configuration file to provide the corresponding
-consequencemodel files:
+*Consequence Model* files:
 
 -  ``structural_consequence_file``: a parameter used to define the path
-   to a structural consequencemodel file
+   to a structural *Consequence Model* file
 
 -  ``nonstructural_consequence_file``: a parameter used to define the
-   path to a nonstructural consequencemodel file
+   path to a nonstructural *Consequence Model* file
 
 -  ``contents_consequence_file``: a parameter used to define the path to
-   a contents consequencemodel file
+   a contents *Consequence Model* file
 
 -  ``business_interruption_consequence_file``: a parameter used to
-   define the path to a business interruption consequencemodel file
+   define the path to a business interruption *Consequence Model* file
 
 It is important that the ``lossCategory`` parameter in the metadata
-section for each provided consequencemodel file (“structural”,
+section for each provided *Consequence Model* file (“structural”,
 “nonstructural”, “contents”, or “business_interruption”) should match
 the loss type defined in the configuration file by the relevant keyword
 above.
@@ -6620,20 +6620,20 @@ of the following parameters can be used in the same job configuration
 file to provide the corresponding vulnerability model files:
 
 -  ``structural_vulnerability_file``: this parameter is used to specify
-   the path to the structural vulnerabilitymodel file
+   the path to the structural *Vulnerability Model* file
 
 -  ``nonstructural_vulnerability_file``: this parameter is used to
    specify the path to the nonstructuralvulnerabilitymodel file
 
 -  ``contents_vulnerability_file``: this parameter is used to specify
-   the path to the contents vulnerabilitymodel file
+   the path to the contents *Vulnerability Model* file
 
 -  ``business_interruption_vulnerability_file``: this parameter is used
-   to specify the path to the business interruption vulnerabilitymodel
+   to specify the path to the business interruption *Vulnerability Model*
    file
 
 -  ``occupants_vulnerability_file``: this parameter is used to specify
-   the path to the occupants vulnerabilitymodel file
+   the path to the occupants *Vulnerability Model* file
 
 It is important that the ``lossCategory`` parameter in the metadata
 section for each provided vulnerability model file (“structural”,
@@ -6651,7 +6651,7 @@ following:
    results.
 
 -  ``asset_correlation``: if the uncertainty in the loss ratios has been
-   defined within the vulnerabilitymodel, users can specify a
+   defined within the *Vulnerability Model*, users can specify a
    coefficient of correlation that will be used in the Monte Carlo
    sampling process of the loss ratios, between the assets that share
    the same taxonomy. If the ``asset_correlation`` is set to one, the
@@ -6703,11 +6703,11 @@ are listed below:
    beta distribution) to characterize the uncertainty in the loss ratio
    conditional on the shaking intensity level, specify the mean loss
    ratios and the corresponding coefficients of variation for a set of
-   intensity levels. They are used to build the so called epsilon matrix
+   intensity levels. They are used to build the so called *Epsilon* matrix
    within the engine, which is how loss ratios are sampled from the
    distribution for each asset. There is clearly a performance penalty
    associated with the propagation of uncertainty in the vulnerability
-   to losses. The epsilon matrix has to be computed and stored, and then
+   to losses. The *Epsilon* matrix has to be computed and stored, and then
    the worker processes have to read it, which involves large quantities
    of data transfer and memory usage. Setting ``ignore_covs = true`` in
    the job file will result in the engine using just the mean loss ratio
@@ -6957,7 +6957,7 @@ Section `[sec:config_classical_damage] <#sec:config_classical_damage>`__
 is the use of a vulnerability model instead of a fragility model.
 
 As with the Scenario Risk calculator, it is possible to specify one or
-more vulnerabilitymodel files in the same job configuration file, using
+more *Vulnerability Model* files in the same job configuration file, using
 the parameters:
 
 -  ``structural_vulnerability_file``,
@@ -6977,7 +6977,7 @@ should match the loss type defined in the configuration file by the
 relevant keyword above.
 
 In this case, the hazard curves will be computed at each of the
-locations of the assets in the exposuremodel, for each of the intensity
+locations of the assets in the *Exposure Model*, for each of the intensity
 measure types found in the provided set of vulnerabilitymodels. The
 above calculation can be run using the command line:
 
@@ -7082,9 +7082,9 @@ are described below:
 
 -  ``lrem_steps_per_interval``: this parameter controls the number of
    intermediate values between consecutive loss ratios (as defined in
-   the vulnerabilitymodel) that are considered in the risk calculations.
+   the *Vulnerability Model*) that are considered in the risk calculations.
    A larger number of loss ratios than those defined in each
-   vulnerabilityfunction should be considered, in order to better
+   *Vulnerability Function* should be considered, in order to better
    account for the uncertainty in the loss ratio distribution. If this
    parameter is not defined in the configuration file, the OpenQuake engine
    assumes the ``lrem_steps_per_interval`` to be equal to 5. More
@@ -7230,7 +7230,7 @@ The above calculation can be run using the command line:
    user@ubuntu:~$ oq engine --run job.ini
 
 Computation of the damage curves, and average damages for each
-individual asset in the exposuremodel can be resource intensive, and
+individual asset in the *Exposure Model* can be resource intensive, and
 thus these outputs are not generated by default.
 
 Stochastic Event Based Seismic Risk Calculator
@@ -7366,7 +7366,7 @@ The above calculation can be run using the command line:
    user@ubuntu:$ oq engine --run job.ini
 
 Computation of the loss tables, loss curves, and average losses for each
-individual asset in the exposuremodel can be resource intensive, and
+individual asset in the *Exposure Model* can be resource intensive, and
 thus these outputs are not generated by default, unless instructed to by
 using the parameters described above.
 
@@ -7435,11 +7435,11 @@ that may be useful for controlling specific aspects of the calculation
 are listed below:
 
 -  ``individual_curves``: this boolean parameter is used to specify if
-   the asset loss curves for each branch realization should be saved to
+   the asset loss curves for each *Branch* realization should be saved to
    the datastore. For the asset loss curves output, by default the
    engine only saves and exports statistical results, i.e. the mean and
    quantile asset loss curves. If you want the asset loss curves for
-   each of the individual branch realizations, you must set
+   each of the individual *Branch* realizations, you must set
    ``individual_curves=true`` in the job file. Please take care: if you
    have hundreds of realizations, the data transfer and disk space
    requirements will be orders of magnitude larger than just returning
@@ -7447,7 +7447,7 @@ are listed below:
    fail. The default value of ``individual_curves`` is ``false``.
 
 -  ``asset_correlation``: if the uncertainty in the loss ratios has been
-   defined within the vulnerabilitymodel, users can specify a
+   defined within the *Vulnerability Model*, users can specify a
    coefficient of correlation that will be used in the Monte Carlo
    sampling process of the loss ratios, between the assets that share
    the same taxonomy. If the ``asset_correlation`` is set to one, the
@@ -7470,11 +7470,11 @@ are listed below:
    beta distribution) to characterize the uncertainty in the loss ratio
    conditional on the shaking intensity level, specify the mean loss
    ratios and the corresponding coefficients of variation for a set of
-   intensity levels. They are used to build the so called epsilon matrix
+   intensity levels. They are used to build the so called *Epsilon* matrix
    within the engine, which is how loss ratios are sampled from the
    distribution for each asset. There is clearly a performance penalty
    associated with the propagation of uncertainty in the vulnerability
-   to losses. The epsilon matrix has to be computed and stored, and then
+   to losses. The *Epsilon* matrix has to be computed and stored, and then
    the worker processes have to read it, which involves large quantities
    of data transfer and memory usage. Setting ``ignore_covs = true`` in
    the job file will result in the engine using just the mean loss ratio
@@ -7556,7 +7556,7 @@ The new parameters introduced in the above example configuration file
 are described below:
 
 -  ``vulnerability_retrofitted_file``: this parameter is used to specify
-   the path to the vulnerabilitymodel file containing the
+   the path to the *Vulnerability Model* file containing the
    vulnerabilityfunctions for the retrofitted asset
 
 -  ``interest_rate``: this parameter is used in the calculation of the
@@ -7700,7 +7700,7 @@ in the configuration file:
 
 #. ``Average Asset Damages``: this file contains the damage distribution
    statistics for each of the individual assets defined in the
-   exposuremodel that fall within the ``region`` and have a computed
+   *Exposure Model* that fall within the ``region`` and have a computed
    Ground Motion Field value available within the defined ``asset_hazard_distance``.
    For each asset, the mean number of buildings (``mean``) in each
    damage state are listed in this file.
@@ -7710,13 +7710,13 @@ visualizing or exporting the results from a Scenario Damage Calculation,
 the following additional outputs can be exported:
 
 2. ``dmg_by_tag``: this file contains the aggregated damage distribution
-   statistics for each of the tags defined in the exposuremodel. For
+   statistics for each of the tags defined in the *Exposure Model*. For
    each tag, the mean number of buildings (``mean``) in each damage
    state are listed in this file.
 
 3. ``dmg_total``: this file contains the aggregated damage distribution
    statistics for the entire portfolio of assets defined in the
-   exposuremodel. The mean (``mean``) and associated standard deviation
+   *Exposure Model*. The mean (``mean``) and associated standard deviation
    (``stddev``) of the total number of buildings in each damage state
    are listed in this file.
 
@@ -7724,7 +7724,7 @@ In addition to the above asset-level damage output file which is
 produced for all Scenario Damage calculations, the following output file
 is also produced for all loss types (amongst “structural”,
 “nonstructural”, “contents”, or “business_interruption”) for which a
-consequencemodel file was also provided in the configuration file:
+*Consequence Model* file was also provided in the configuration file:
 
 4. ``Event Losses``: this file contains the scenario consequence
    statistics for each of the individual events generated by the
@@ -7734,7 +7734,7 @@ consequencemodel file was also provided in the configuration file:
 
 5. ``Average Asset Losses``: this file contains the scenario consequence
    statistics for each of the individual assets defined in the
-   exposuremodel that fall within the ``region`` and have a computed
+   *Exposure Model* that fall within the ``region`` and have a computed
    Ground Motion Field value available within the defined ``asset_hazard_distance``.
    For each asset, the mean consequences (``mean``) and associated
    standard deviation (``stddev``) are listed in this file.
@@ -7745,12 +7745,12 @@ the following additional outputs can be exported:
 
 5. ``losses_by_tag``: this file contains the aggregated scenario
    consequence statistics for each of the tags defined in the
-   exposuremodel. For each tag, the mean consequences (``mean``) and
+   *Exposure Model*. For each tag, the mean consequences (``mean``) and
    associated standard deviation (``stddev``) are listed in this file.
 
 6. ``losses_total``: this file contains the aggregated scenario
    consequence statistics for the entire portfolio of assets defined in
-   the exposuremodel. The mean consequences (``mean``) and associated
+   the *Exposure Model*. The mean consequences (``mean``) and associated
    standard deviation (``stddev``) are listed in this file.
 
 If the calculation involves multiple Ground Motion Prediction Equations as described in Example 4
@@ -7781,7 +7781,7 @@ Asset damage statistics
 _______________________
 
 This output contains the damage distribution statistics for each of the
-individual assets defined in the exposuremodel that fall within the
+individual assets defined in the *Exposure Model* that fall within the
 ``region`` and have a computed Ground Motion Field value available within the
 defined ``asset_hazard_distance``. An example output file for structural
 damage is shown in the file snippet in
@@ -7790,8 +7790,8 @@ Table `[output:scenario_damage_asset] <#output:scenario_damage_asset>`__.
 The output file lists the mean of the number of buildings in each damage
 state for each asset in the exposure model for all loss types (amongst
 ‘structural’’, “nonstructural”, “contents”, or “business_interruption”)
-for which a consequencemodel file was also provided in the configuration
-file in addition to the corresponding fragilitymodel file.
+for which a *Consequence Model* file was also provided in the configuration
+file in addition to the corresponding *Fragility Model* file.
 
 Damage statistics by tag
 ________________________
@@ -7862,7 +7862,7 @@ Asset consequence statistics
 ____________________________
 
 This output contains the consequences statistics for each of the
-individual assets defined in the exposuremodel that fall within the
+individual assets defined in the *Exposure Model* that fall within the
 ``region`` and have a computed Ground Motion Field value available within the
 defined ``asset_hazard_distance``. An example output file for structural
 damage consequences is shown in
@@ -7893,8 +7893,8 @@ Table `4.3 <#output:scenario_consequence_asset>`__.
 
 The output file lists consequence statistics for all loss types (amongst
 “structural”, “nonstructural”, “contents”, or “business_interruption”)
-for which a consequencemodel file was also provided in the configuration
-file in addition to the corresponding fragilitymodel file.
+for which a *Consequence Model* file was also provided in the configuration
+file in addition to the corresponding *Fragility Model* file.
 
 Total consequence statistics
 ____________________________
@@ -7924,16 +7924,16 @@ Calculator produces the following set of output files:
 
 #. ``Aggregate Asset Losses``: this file contains the aggregated
    scenario loss statistics for the entire portfolio of assets defined
-   in the exposuremodel. The mean (``mean``) and standard deviation
+   in the *Exposure Model*. The mean (``mean``) and standard deviation
    (``stddev``) of the total loss for the portfolio of assets are listed
    in this file.
 
 #. ``Average Asset Losses``: this file contains mean (``mean``) and
    associated standard deviation (``stddev``) of the scenario loss for
-   all assets at each of the unique locations in the exposuremodel.
+   all assets at each of the unique locations in the *Exposure Model*.
 
 #. ``Aggregate Event Losses``: this file contains the total loss for the
-   portfolio of assets defined in the exposuremodel for each realization
+   portfolio of assets defined in the *Exposure Model* for each realization
    of the scenario generated in the Monte Carlo simulation process.
 
 In addition, if the OpenQuake-QGIS  plugin is used for
@@ -7941,7 +7941,7 @@ visualizing or exporting the results from a Scenario Risk Calculation,
 the following additional outputs can be exported:
 
 4. ``losses_by_tag``: this file contains the scenario loss statistics
-   for each of the tags defined in the exposuremodel. For each tag, the
+   for each of the tags defined in the *Exposure Model*. For each tag, the
    mean (``mean``) and associated standard deviation (``stddev``) of the
    losses for each tag are listed in this file.
 
@@ -7960,7 +7960,7 @@ _____________________
 
 This output is always produced for a Scenario Risk calculation and
 comprises a mean total loss and associated standard deviation for each
-of the individual assets defined in the exposuremodel that fall within
+of the individual assets defined in the *Exposure Model* that fall within
 the ``region`` and have a computed Ground Motion Field value available within the
 defined ``asset_hazard_distance``. These results are stored in a comma
 separate value (.csv) file as illustrated in the example shown in
@@ -8017,7 +8017,7 @@ Table `4.6 <#output:scenario_loss_tag>`__.
 The output file lists the mean loss aggregated for each tags present in
 the exposure model and selected by the for all loss types (amongst
 “structural”, “nonstructural”, “contents”, or “business_interruption”)
-for which a vulnerabilitymodel file was provided in the configuration
+for which a *Vulnerability Model* file was provided in the configuration
 file.
 
 Total loss statistics
@@ -8046,7 +8046,7 @@ Scenario losses by event
 
 The losses by event output lists the total losses for each realization
 of the scenario generated in the Monte Carlo simulation process for all
-loss types for which a vulnerabilitymodel file was provided in the
+loss types for which a *Vulnerability Model* file was provided in the
 configuration file. These results are exported in a comma separate value
 (.csv) file as illustrated in the example shown in
 Table `4.8 <#output:scenario_loss_event>`__.
@@ -8114,11 +8114,11 @@ The following set of outputs is generated by both calculators:
 #. ``loss_maps``: loss maps describe the loss (``value``) that is
    exceeded at the selected probability of exceedance (``poE``) within
    the specified time period for all assets at each of the unique
-   locations in the exposuremodel.
+   locations in the *Exposure Model*.
 
 #. ``avg_losses``: the average losses output describes the expected loss
    (``value``) within the time period specified by
-   ``risk_investigation_time`` for all assets in the exposuremodel.
+   ``risk_investigation_time`` for all assets in the *Exposure Model*.
 
 In addition, with the Stochastic Event-Based Probabilistic Risk
 Calculator, it is also possible to calculate the following types of
@@ -8126,10 +8126,10 @@ outputs:
 
 #. ``agg_curves``: aggregate loss curves describe the exceedance
    probabilities for a set of loss values for the entire portfolio of
-   assets defined in the exposuremodel.
+   assets defined in the *Exposure Model*.
 
 #. ``losses_by_event``: an event loss table contains the aggregate loss
-   across all assets in the exposuremodel for each of the simulated
+   across all assets in the *Exposure Model* for each of the simulated
    ruptures in the Stochastic Event Set.
 
 Loss exceedance curves
@@ -8382,7 +8382,7 @@ analyses:
 -  ScenarioRisk
 
 These seven demos use Nepal as the region of interest. An example
-exposuremodel has been developed for this region, comprising 9,063
+*Exposure Model* has been developed for this region, comprising 9,063
 assets distributed amongst 2,221 locations (due to the existence of more
 than one asset at the same location). A map with the distribution of the
 number of buildings throughout Nepal is presented in
@@ -8408,7 +8408,7 @@ Nepal (NSET - `http:www.nset.org.np/ <http://www.nset.org.np/>`__).
 
 The following sections include instructions not only on how to run the
 risk calculations, but also on how to produce the necessary hazard
-inputs. Thus, each demo comprises the configuration file, exposuremodel
+inputs. Thus, each demo comprises the configuration file, *Exposure Model*
 and fragility or vulnerability models fundamental for the risk
 calculations. Each demo folder also a configuration file and the input
 models to produce the relevant hazard inputs.
@@ -8499,7 +8499,7 @@ which will produce the following sample hazard output:
    9075 | Realizations
 
 The risk job calculates the probabilistic damage distribution for each
-asset in the exposuremodel starting from the above generated hazard
+asset in the *Exposure Model* starting from the above generated hazard
 curves. The following command launches the risk calculations:
 
 .. code:: shell-session
@@ -8565,7 +8565,7 @@ Section `[sec:demos_classical_damage] <#sec:demos_classical_damage>`__
 and Section `[sec:demos_classical_risk] <#sec:demos_classical_risk>`__.
 However, instead of hazard curves, sets of ground motion fields will be
 generated by the hazard calculation of this demo. Again, since there is
-only one branch in the logic tree, only one set of ground motion fields
+only one *Branch* in the logic tree, only one set of ground motion fields
 will be used in the risk calculations. The hazard and risk jobs are
 defined in a single configuration file for this demo. To trigger the
 hazard and risk calculations the following command needs to be used:
@@ -8602,7 +8602,7 @@ Section `[sec:demos_classical_damage] <#sec:demos_classical_damage>`__
 and Section `[sec:demos_classical_risk] <#sec:demos_classical_risk>`__.
 However, instead of hazard curves, sets of ground motion fields will be
 generated by the hazard calculation of this demo. Again, since there is
-only one branch in the logic tree, only one set of ground motion fields
+only one *Branch* in the logic tree, only one set of ground motion fields
 will be used in the risk calculations. The hazard and risk jobs are
 defined in a single configuration file for this demo. To trigger the
 hazard and risk calculations the following command needs to be used:

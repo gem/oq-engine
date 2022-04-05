@@ -1,4 +1,5 @@
 .. toctree::
    :maxdepth: 2
 
-   ./oq-manual
+   oq-manual
+   glossary
