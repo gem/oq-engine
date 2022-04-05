@@ -38,7 +38,7 @@ PStatData = collections.namedtuple(
 
 def get_pstats(pstatfile, n):
     """
-    Return profiling information as an RST table.
+    Return profiling information as an ORG table.
 
     :param pstatfile: path to a .pstat file
     :param n: the maximum number of stats to retrieve
@@ -69,7 +69,8 @@ def get_pstats(pstatfile, n):
     # 1      25.104  baselib.parallel.py:249(apply_reduce)
     # 1      25.099  calculators/classical.py:41(classical)
     # 1      25.099  hazardlib/calc/hazard_curve.py:164(classical)
-    return views.text_table(rows, header='ncalls cumtime path'.split())
+    return views.text_table(
+        rows, header='ncalls cumtime path'.split(), ext='org')
 
 
 # called when profiling
