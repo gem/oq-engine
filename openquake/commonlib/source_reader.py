@@ -140,8 +140,7 @@ def get_csm(oq, full_lt, h5=None):
         oq.source_id,
         discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
-        floating_y_step=oq.floating_y_step,
-        collapse_nphc='reqv' in oq.inputs)
+        floating_y_step=oq.floating_y_step)
     classical = not oq.is_event_based()
     full_lt.ses_seed = oq.ses_seed
     if oq.is_ucerf():

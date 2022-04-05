@@ -675,15 +675,13 @@ class SourceConverter(RuptureConverter):
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
                  source_id=None, discard_trts=(),
-                 floating_x_step=0, floating_y_step=0,
-                 collapse_nphc=False):
+                 floating_x_step=0, floating_y_step=0):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
         self.rupture_mesh_spacing = rupture_mesh_spacing
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
-        self.collapse_nphc = collapse_nphc
         self.width_of_mfd_bin = width_of_mfd_bin
         self.source_id = source_id
         self.discard_trts = discard_trts

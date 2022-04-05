@@ -775,7 +775,7 @@ class ContextMaker(object):
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
         """
-        :param ctxs: a list of contexts
+        :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
         :returns: an array of shape (4, G, M, N) with mean and stddevs
         """
         if not hasattr(self, 'imts'):
