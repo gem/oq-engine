@@ -110,6 +110,25 @@ def rounded_unique(mags, idxs):
     return mags
 
 
+def collapse_nphc(src):
+    """
+    Collapse the nodal_plane_distribution and hypocenter_distribution.
+    """
+    if (hasattr(src, 'nodal_plane_distribution') and
+            hasattr(src, 'hypocenter_distribution')):
+        if len(src.nodal_plane_distribution.data) > 1:
+            ws, nps = zip(*src.nodal_plane_distribution.data)
+            strike = numpy.average([np.strike for np in nps], weights=ws)
+            dip = numpy.average([np.dip for np in nps], weights=ws)
+            rake = numpy.average([np.rake for np in nps], weights=ws)
+            val = geo.NodalPlane(strike, dip, rake)
+            src.nodal_plane_distribution = pmf.PMF([(1., val)])
+        if len(src.hypocenter_distribution.data) > 1:
+            ws, vals = zip(*src.hypocenter_distribution.data)
+            val = numpy.average(vals, weights=ws)
+            src.hypocenter_distribution = pmf.PMF([(1., val)])
+
+
 class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
@@ -675,13 +694,15 @@ class SourceConverter(RuptureConverter):
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
                  source_id=None, discard_trts=(),
-                 floating_x_step=0, floating_y_step=0):
+                 floating_x_step=0, floating_y_step=0,
+                 collapse_nphc=False):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
         self.rupture_mesh_spacing = rupture_mesh_spacing
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
+        self.collapse_nphc = collapse_nphc
         self.width_of_mfd_bin = width_of_mfd_bin
         self.source_id = source_id
         self.discard_trts = discard_trts
@@ -1188,6 +1209,10 @@ class SourceConverter(RuptureConverter):
             msg = 'The Source Group is a cluster but does not have a '
             msg += 'temporal occurrence model'
             raise ValueError(msg)
+
+        if self.collapse_nphc:
+            for src in sg.sources:
+                collapse_nphc(src)
         return sg
 
 

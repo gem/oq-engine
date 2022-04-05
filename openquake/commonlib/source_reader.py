@@ -114,6 +114,9 @@ def get_csm(oq, full_lt, h5=None):
     Build source models from the logic tree and to store
     them inside the `source_full_lt` dataset.
     """
+    if 'reqv' in oq.inputs:
+        logging.warning('Using equivalent distance approximation and ignoring '
+                        'finite size effects in point sources')
     converter = sourceconverter.SourceConverter(
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
@@ -121,7 +124,8 @@ def get_csm(oq, full_lt, h5=None):
         oq.source_id,
         discard_trts=[s.strip() for s in oq.discard_trts.split(',')],
         floating_x_step=oq.floating_x_step,
-        floating_y_step=oq.floating_y_step)
+        floating_y_step=oq.floating_y_step,
+        collapse_nphc='reqv' in oq.inputs)
     classical = not oq.is_event_based()
     full_lt.ses_seed = oq.ses_seed
     if oq.is_ucerf():
