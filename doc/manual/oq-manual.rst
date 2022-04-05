@@ -3659,7 +3659,7 @@ the overall calculation workflow. Each workflow is described in more
 detail in the following sections.
 
 Scenario Damage Assessment 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 The scenario damage
 calculator computes damage distribution statistics for all assets in a
 given exposuremodel for a single specified rupture. Damage distribution
