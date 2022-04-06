@@ -3,31 +3,49 @@ Glossary
 
 Area Source
 :::::::::::
-A source type usually adopted to model distributedseismicity. In an area source the seismicity occurrence rate is assumeduniform over the source area; this produces an hazard pattern with aplateau of constant hazard inside the polygon delimiting the area sourceand values of hazard that tend to decrease as we move away from the border of the source
+A source type usually adopted to model distributed seismicity. In an area 
+source the seismicity occurrence rate is assumed uniform over the source area; 
+this produces an hazard pattern with aplateau of constant hazard inside the 
+polygon delimiting the area sourceand values of hazard that tend to decrease 
+as we move away from the border of the source
 
 Asset
 :::::
-An asset is an element with a certain value, which can includebuildings or population. For example, an asset can include an individualbuilding at a given location, or a number of buildings that are grouped, co- located at a single location and classified with the same \gls{taxonomy}
+An asset is an element with a certain value, which can include buildings or 
+population. For example, an asset can include an individual building at a 
+given location, or a number of buildings that are grouped, co- located at a 
+single location and classified with the same *Taxonomy*
+
 
 Branch
 ::::::
-The simplest element in a logic tree; it belongs to a\gls{branchset} where it represents one possible option among a finitenumber of alternatives. A branch is associated with a weight value if the \gls{branchset} represents the epistemicuncertainty on a parameter or a model when the \gls{branchset} is used to specify alternative models (e.g. district \glspl{acr:mfd})
+The simplest element in a logic tree; it belongs to a *Branch Set* where it 
+represents one possible option among a finite number of alternatives. A branch 
+is associated with a weight value if the *Branch Set* represents the 
+epistemic uncertainty on a parameter or a model when the *Branch Set* is 
+used to specify alternative models (e.g. district 
+*Magnitude-Frequency Distribution*)
 
 Branch Set
 ::::::::::
-The structure describing the epistemic uncertainty on aspecific parameter or model included in a logic tree structure. Itensembles a number of \glspl{branch}, each one representing a discrete alternative
+The structure describing the epistemic uncertainty on a specific parameter or 
+model included in a logic tree structure. It ensembles a number of *Branch*, 
+each one representing a discrete alternative
 
 Configuration File
 ::::::::::::::::::
-The file (usually .ini) containing the information necessary to run a calculation in OpenQuake
+The file (usually .ini) containing the information necessary to run a 
+calculation in OpenQuake
 
 Consequence Function
 ::::::::::::::::::::
-the distribution of the consequence (or loss) ratio conditional on a set of discrete limit states, defined for a particular \gls{taxonomy}
+the distribution of the consequence (or loss) ratio conditional on a set of 
+discrete limit states, defined for a particular \gls{taxonomy}
 
 Consequence Model
 :::::::::::::::::
-A set of \glspl{consequencefunction} used to model the consequence ratios of all the \glspl{taxonomy} in the \gls{exposuremodel}
+A set of *Consequence Function* used to model the consequence ratios of all 
+the *Taxonomy* in the *Exposure Model*
 
 Characteristic Fault Source
 :::::::::::::::::::::::::::
@@ -39,71 +57,101 @@ A source typology usually adopted to model subduction interface faults
 
 Deductible
 ::::::::::
-A parameter used in the calculation of insured losses thatestablishes the economic value that needs to be deducted from the ground-up losses
+A parameter used in the calculation of insured losses thatestablishes the 
+economic value that needs to be deducted from the ground-up losses
 
 Seismic Hazard Disaggregation
 :::::::::::::::::::::::::::::
-A methodology to investigate the contributions to aspecific level of hazard in terms of fundamental variables commonly usedto characterize seismic sources and ground motion models (e.g. magnitude, source-site distance, \gls{epsilon}
+A methodology to investigate the contributions to aspecific level of hazard in 
+terms of fundamental variables commonly usedto characterize seismic sources 
+and ground motion models (e.g. magnitude, source-site distance, *Epsilon*
 
 Dip
 :::
-The dip is the steepest angle of descent of the fault plane relative to a horizontal plane; it is measured in degrees [0,90]
+The dip is the steepest angle of descent of the fault plane relative to a 
+horizontal plane; it is measured in degrees [0,90]
 
 Disaggregation Matrix
 :::::::::::::::::::::
-A multi-dimensional matrix used to systematically store thecontributions to a level of hazard to be disaggregated and that is specified by the user. See also \gls{seismichazarddisaggregation}
+A multi-dimensional matrix used to systematically store thecontributions to a 
+level of hazard to be disaggregated and that is specified by the user. 
+See also *Seismic Hazard Disaggregation*
 
 Earthquake Rupture Forecast
 :::::::::::::::::::::::::::
-A list of all possible ruptures generated by all thesources included in a seismic source model. Each element in the listcontains: the rupture geometry and the rupture probability of occurrencein a given time span. See also the definition available on the\href{http://www.opensha.org/glossary-earthquakeRuptureForecast} {OpenSHA website}
+A list of all possible ruptures generated by all thesources included in a 
+seismic source model. Each element in the listcontains: the rupture geometry 
+and the rupture probability of occurrencein a given time span. See also the 
+definition available on the 
+`OpenSHA website <http://www.opensha.org/Glossary#earthquake-rupture-forecast-erf>`__
 
 Earthquake Rupture Forecast Calculator
 ::::::::::::::::::::::::::::::::::::::
-Calculator producing a \gls{seismicsourcemodel} from a \gls{seismicsourcelogictree}
+Calculator producing a *Seismic Source Model* from a 
+*Seismic Source Logic Tree*
 
 Epsilon
 :::::::
-normalized residual of the ground motion} 
+normalized residual of the ground motion
 
 Exposure Model
 ::::::::::::::
-A set of \glspl{asset} grouped according to their geographical location, \gls{taxonomy} and value
+A set of *Asset* grouped according to their geographical location, *Taxonomy* 
+and value
 
 Fault Trace
 :::::::::::
-A curve representing the intersection between the surfacecontaining the fault surface (or its prolongation) and the topographicsurface\begin{figure}[!ht] \centering \includegraphics[width=10cm]{figures/hazard/single_rupture.pdf
+A curve representing the intersection between the surface containing the fault 
+surface (or its prolongation) and the topographic surface
+
+.. figure:: figures/hazard/single_rupture.png
+   :alt: Single rupture
+   :width: 95%
+
 
 Fragility Function
 ::::::::::::::::::
-the probability of exceeding a set of limit states, given an intensity measure level. These functions can be discrete or continuous
+the probability of exceeding a set of limit states, given an intensity measure 
+level. These functions can be discrete or continuous
 
 Fragility Model
 :::::::::::::::
-A set of \glspl{vulnerabilityfunction} used to model the fragility of all the \glspl{asset} in the \gls{exposuremodel}
+A set of *Vulnerability Function* used to model the fragility of all the 
+*Asset* in the *Exposure Model*
 
 Frequency-Magnitude Distribution
 ::::::::::::::::::::::::::::::::
-See \gls{mfd}} 
+A distribution describing the frequency of earthquakes with
+a specific magnitude. It can be continuous or discrete. One frequency-
+magnitude distribution frequently adopted in PSHA is the double
+truncated Gutenberg-Richter distribution
 
 Grid Source
 :::::::::::
-A source typology usually adopted to model distributedseismicity. It is routinely produced by a seismicity smoothing algorithm (one of the most famous algorithm is the one proposed by \citet{frankel1995})
+A source typology usually adopted to model distributedseismicity. It is 
+routinely produced by a seismicity smoothing algorithm (one of the most 
+famous algorithm is the one proposed by Frankel 1995)
 
 Ground-Motion Field
 :::::::::::::::::::
-An object describing the geographic distribution around a rupture of a ground motion intensity measure
+An object describing the geographic distribution around a rupture of a 
+ground motion intensity measure
 
 Ground-Motion Field Calculator
 ::::::::::::::::::::::::::::::
-An \gls{acr:oqe} calculator that given a rupture computes thegeographic distribution of a ground motion intensity parameter. Currently OQ can generate ground motion fields using a \gls{acr:gmpe}
+An OpenQuake engine calculator that given a rupture computes thegeographic 
+distribution of a ground motion intensity parameter. Currently OQ can 
+generate ground motion fields using a *Ground-Motion Prediction Equation*
 
 Ground-Motion Logic Tree
 ::::::::::::::::::::::::
-A method used to systematically describe the epistemicuncertainties related to the ground motion models used in the computation of hazard using a specific \gls{pshainputmodel}
+A method used to systematically describe the epistemicuncertainties related 
+to the ground motion models used in the computation of hazard using a 
+specific *PSHA Input Model*
 
 Ground-Motion Model
 :::::::::::::::::::
-An object that given a rupture with specific propertiescomputes the expected ground motion at the given site. In simplest case aground motion model corresponds to a \gls{groundmotionpredictioneq}. Incase of complex PSHA input models, the produced ground motion models contains a set of \glspl{acr:gmpe}, one for each tectonic region considered
+An object that given a rupture with specific propertiescomputes the expected ground motion at the given site. In simplest case aground motion model corresponds to a \gls{groundmotionpredictioneq}. Incase of complex PSHA input models, the produced ground motion models contains a set of *Ground-Motion Prediction Equation*, one for each tectonic region considered
 
 Ground-Motion Parameter
 :::::::::::::::::::::::
@@ -111,7 +159,10 @@ A scalar or vector quantity describing a relevant propertyof the shaking such as
 
 Ground-Motion Prediction Equation
 :::::::::::::::::::::::::::::::::
-An equation that - given some fundamental parameterscharacterizing  the source, the propagation path and the site (in thesimplest  case magnitude, distance and V$_\text{S,30}$) - computes the value $GM$ of a (scalar) ground motion intensity parameter
+An equation that - given some fundamental parameters characterizing the 
+source, the propagation path and the site (in thesimplest  case magnitude, 
+distance and *VS30* - computes the value GM of a (scalar) ground 
+motion intensity parameter
 
 Ground-Motion System
 ::::::::::::::::::::
@@ -155,23 +206,29 @@ A distribution describing the frequency of earthquakes witha specific magnitude.
 
 Non-Parametric Source
 :::::::::::::::::::::
-A source typology in which the earthquake rupture forecast isdescribed explicitly by a set of ruptures and the corresponding probabilities of occurrence
+A source typology in which the earthquake rupture forecast isdescribed 
+explicitly by a set of ruptures and the corresponding probabilities of 
+occurrence
 
 Natural Hazards' Risk Markup Language
 :::::::::::::::::::::::::::::::::::::
-A markup language similar to XML, which specifies a numberof standardised schemas to represent various input models used for \gls{acr:oqe} calculations and output files generated by \gls{acr:oqe
+A markup language similar to XML, which specifies a numberof standardised 
+schemas to represent various input models used for OpenQuake engine 
+calculations and output files generated by the OpenQuake engine
 
-Opensha
+OpenSHA
 :::::::
-OpenSHA is an open-source, advanced Java-based platformfor conducting Seismic Hazard Analysis - (see \href{http://opensha.org}{OpenSHA website})
+OpenSHA is an open-source, advanced Java-based platformfor conducting 
+Seismic Hazard Analysis - (see the `OpenSHA website <http://opensha.org>`__)
 
 Point Source
 ::::::::::::
 The elemental source typology used in the \glsdesc{acr:oqe} to model distributed seismicity
 
-Psha Input Model
+PSHA Input Model
 ::::::::::::::::
-An object containing the information necessary to describethe seismic source and the ground motion models - plus the related epistemic uncertainties
+An object containing the information necessary to describethe seismic source 
+and the ground motion models - plus the related epistemic uncertainties
 
 Probabilistic Seismic Hazard Analysis
 :::::::::::::::::::::::::::::::::::::
@@ -265,7 +322,7 @@ Vulnerability Model
 :::::::::::::::::::
 A set of \glspl{vulnerabilityfunction} used to model the physical vulnerability of all the \glspl{asset} in the \gls{exposuremodel}
 
-V$_{S,30}$
-::::::::::
+VS30
+::::
 Average shear wave velocity of the materials in the uppermost 30m of the soil column
 
