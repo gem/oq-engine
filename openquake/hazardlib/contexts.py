@@ -79,7 +79,8 @@ def get_maxsize(num_levels, num_gsims):
     # optimized for the USA model
     assert num_levels * num_gsims * 32 < TWO32,  (num_levels, num_gsims)
     maxsize = TWO32 // (num_levels * num_gsims * 32)
-    return min(maxsize, 200_000)  # 200_000 to fit in the CPU cache
+    # 10_000 optimizes "computing pnes" for the ALS calculation
+    return min(maxsize, 10_000)
 
 
 def trivial(ctx, name):
