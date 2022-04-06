@@ -22,7 +22,7 @@ import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -101,6 +101,10 @@ def run_preclassical(calc):
     calc.datastore['toms'] = numpy.array(
         [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
+    L = calc.oqparam.imtls.size
+    G = max(len(cm.gsims) for cm in cmakers)
+    maxsize = get_maxsize(L, G)
+    logging.info('Max context length={:_d}'.format(maxsize))
     h5 = calc.datastore.hdf5
     calc.sitecol = sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures

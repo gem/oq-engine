@@ -72,6 +72,15 @@ def size(imtls):
     return len(imls) * len(imtls)
 
 
+def get_maxsize(num_levels, num_gsims):
+    """
+    :returns: the maximum context length
+    """
+    # optimized for the USA model
+    assert num_levels * num_gsims * 512 < TWO32,  (num_levels, num_gsims)
+    return TWO32 // (num_levels * num_gsims * 512)
+
+
 def trivial(ctx, name):
     """
     :param ctx: a recarray
@@ -875,8 +884,7 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
-        maxsize = TWO32 // (L * G * 512)  # optimized for the USA model
-        assert L * G * 512 < TWO32,  (L, G)
+        maxsize = get_maxsize(L, G)
 
         # collapse if possible
         with self.col_mon:
