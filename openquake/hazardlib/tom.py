@@ -190,10 +190,10 @@ class PoissonTOM(BaseTOM):
 
         U, L = poes.shape
         assert len(occurrence_rates) == U, (len(occurrence_rates), U)
-        eff_time = numpy.zeros((U, L))
-        for lvl in range(L):
-            eff_time[:, lvl] = occurrence_rates * self.time_span * poes[:, lvl]
-        return numpy.exp(- eff_time)
+        out = numpy.zeros_like(poes)
+        for p, poe in enumerate(poes.T):
+            numpy.exp(- occurrence_rates * self.time_span * poe, out[:, p])
+        return out
 
 
 # use in calc.disagg
