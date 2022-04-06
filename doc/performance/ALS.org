@@ -43,7 +43,8 @@ Much faster and less slow tasks.
 Engine 3.13
 -----------
 
-Slower preclassical.
+Slower preclassical (due to the parallelization) and get_poes (due to more
+precision in the pointsource_distance approximation).
 
 | calc_44946, maxmem=52.9 GB | time_sec | memory_mb | counts    |
 |----------------------------+----------+-----------+-----------|
@@ -65,7 +66,8 @@ Slower preclassical.
 Engine 3.14
 -----------
 
-Slower even if "computing mean_std" is much faster.
+Slower even if "computing mean_std" is much faster. The reason is the
+improvement in pointsource_distance
 
 | calc_44949, maxmem=72.2 GB | time_sec | memory_mb | counts |
 |----------------------------+----------+-----------+--------|
