@@ -104,7 +104,8 @@ def run_preclassical(calc):
     L = calc.oqparam.imtls.size
     G = max(len(cm.gsims) for cm in cmakers)
     maxsize = get_maxsize(L, G)
-    logging.info('Max context length={:_d}'.format(maxsize))
+    logging.info('Max context length={:_d}, NLG={:.1f} MB'.format(
+        maxsize, maxsize * L * G * 8 / 1024**2))
     h5 = calc.datastore.hdf5
     calc.sitecol = sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
