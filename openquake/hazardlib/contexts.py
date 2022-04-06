@@ -76,9 +76,9 @@ def get_maxsize(num_levels, num_gsims):
     """
     :returns: the maximum context length
     """
-    # optimized for the USA model
-    assert num_levels * num_gsims * 512 < TWO32,  (num_levels, num_gsims)
-    return TWO32 // (num_levels * num_gsims * 512)
+    # optimized for the USA model; maxsize ~ 4E6 / LG
+    assert num_levels * num_gsims * 1024 < TWO32,  (num_levels, num_gsims)
+    return TWO32 // (num_levels * num_gsims * 1024)
 
 
 def trivial(ctx, name):
