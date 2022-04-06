@@ -127,6 +127,14 @@ makes the calculation of the losses and loss curves much faster and
 more memory efficient. It is the recommended way to proceed when you
 are interested only in mean results.
 
+Note 1: when using sampling, ``collect_rlzs`` is implicitly set to
+``True``, so if you want to export the individual results per
+realization you must set explictly ``collect_rlzs=false``.
+
+Note 2: ``collect_rlzs`` is not the inverse of the ``individual rlsz``
+flag. The two flags are completely independent, one refers to risk
+and the other to hazard calculations.
+
 Splitting the calculation into subregions
 -----------------------------------------
 
