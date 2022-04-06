@@ -483,9 +483,7 @@ class HazardCalculator(BaseCalculator):
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
 
-        if (not oq.hazard_calculation_id
-                and oq.calculation_mode != 'preclassical'
-                and not oq.save_disk_space):
+        if not oq.hazard_calculation_id and not oq.save_disk_space:
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
