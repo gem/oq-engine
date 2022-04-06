@@ -167,7 +167,7 @@ class PoissonTOM(BaseTOM):
             numpy.random.seed(seeds)
         return numpy.random.poisson(occurrence_rate * self.time_span)
 
-    def get_probability_no_exceedance(self, occurrence_rates, poes):
+    def get_probability_no_exceedance(self, occurrence_rates, poes, out=None):
         """
         :param occurrence_rates:
             Array of size U with the average number of events per year.
@@ -190,7 +190,6 @@ class PoissonTOM(BaseTOM):
 
         U, L = poes.shape
         assert len(occurrence_rates) == U, (len(occurrence_rates), U)
-        out = numpy.zeros_like(poes)
         for lvl in range(L):
             numpy.exp(- occurrence_rates * self.time_span * poes[:, lvl],
                       out[:, lvl])
@@ -243,8 +242,8 @@ def get_probability_no_exceedance(ctx, poes, probs_or_tom):
     if hasattr(probs_or_tom, 'get_probability_no_exceedance'):  # poissonian
         G = pnes.shape[2]
         for g in range(G):
-            pnes[:, :, g] = probs_or_tom.get_probability_no_exceedance(
-                ctx.occurrence_rate, poes[:, :, g])
+            probs_or_tom.get_probability_no_exceedance(
+                ctx.occurrence_rate, poes[:, :, g], pnes[:, :, g])
         return pnes
     else:  # nonpoissonian
         for i, probs_occur in enumerate(probs_or_tom):
