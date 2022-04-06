@@ -64,18 +64,20 @@ Engine 3.13
 Engine 3.14
 -----------
 
-| calc_44705, maxmem=79.2 GB | time_sec | memory_mb | counts     |
-|----------------------------+----------+-----------+------------|
-| total classical            | 224_445  | 575.1     | 962        |
-| get_pnes                   | 131_143  | 0.0       | 24_789_885 |
-| make_contexts              | 37_291   | 410.0     | 13_712     |
-| computing mean_std         | 31_341   | 0.0       | 394_567    |
-| composing pnes             | 23_386   | 0.0       | 24_789_885 |
-| ClassicalCalculator.run    | 2_710    | 4_973     | 1          |
-| total preclassical         | 1_320    | 104.3     | 423        |
+We are much slower :(
 
-| operation-duration | counts | mean    | stddev | min       | max     | slowfac |
-|--------------------+--------+---------+--------+-----------+---------+---------|
-| classical          | 461    | 486.9   | 44%    | 50.3      | 1_086   | 2.22982 |
-| postclassical      | 239    | 1.28478 | 45%    | 0.01495   | 2.48119 | 1.93121 |
-| preclassical       | 198    | 6.66908 | 400%   | 2.105E-04 | 235.4   | 35.3    |
+| calc_44958, maxmem=97.4 GB | time_sec | memory_mb | counts  |
+|----------------------------+----------+-----------+---------|
+| total classical            | 331_527  | 508.4     | 251     |
+| computing pnes             | 134_513  | 0.0       | 751_863 |
+| get_poes                   | 91_933   | 0.0       | 751_863 |
+| make_contexts              | 36_880   | 679.5     | 13_489  |
+| computing mean_std         | 31_478   | 0.0       | 751_863 |
+| ClassicalCalculator.run    | 4_551    | 5_519     | 1       |
+
+| operation-duration | counts | mean    | stddev | min     | max     | slowfac |
+|--------------------+--------+---------+--------+---------+---------+---------|
+| classical          | 251    | 1_321   | 32%    | 2.06656 | 2_508   | 1.89863 |
+| postclassical      | 239    | 1.27326 | 47%    | 0.01096 | 2.53625 | 1.99193 |
+| preclassical       | 313    | 4.29960 | 503%   | 0.09879 | 229.7   | 53.4    |
+| read_source_model  | 193    | 1.45741 | 103%   | 0.00549 | 7.51766 | 5.15822 |
