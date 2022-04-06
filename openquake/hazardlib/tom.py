@@ -103,8 +103,9 @@ class FatedTOM(BaseTOM):
     def sample_number_of_occurrences(self, seeds=None):
         return 1
 
-    def get_probability_no_exceedance(self, occurrence_rate, poes):
-        return 1-poes
+    def get_probability_no_exceedance(self, occurrence_rate, poes, out):
+        out[:] = 1 - poes
+        return out
 
 
 class PoissonTOM(BaseTOM):
