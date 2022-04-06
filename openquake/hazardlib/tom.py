@@ -167,31 +167,32 @@ class PoissonTOM(BaseTOM):
             numpy.random.seed(seeds)
         return numpy.random.poisson(occurrence_rate * self.time_span)
 
-    def get_probability_no_exceedance(self, occurrence_rate, poes):
+    def get_probability_no_exceedance(self, occurrence_rates, poes):
         """
-        :param occurrence_rate:
-            The average number of events per year.
+        :param occurrence_rates:
+            Array of size U with the average number of events per year.
         :param poes:
             2D numpy array containing conditional probabilities that the
             rupture occurrence causes a ground shaking value exceeding a
-            ground motion level at a site. First dimension represent sites,
-            second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`.
+            ground motion level at a site. First dimension represent ruptures,
+            second dimension intensity measure levels.
         :returns:
             2D numpy array containing probabilities of no exceedance. First
-            dimension represents sites, second dimension intensity measure
+            dimension represents ruptures, second dimension intensity measure
             levels.
 
         The probability is computed as exp(-occurrence_rate * time_span * poes)
         """
         try:
-            n = len(occurrence_rate)
-        except TypeError:  # float' has no len()
-            eff_time = occurrence_rate * self.time_span * poes
-        else:
-            eff_time = numpy.zeros((n,) + poes.shape)
-            for i in range(n):
-                eff_time[i] = occurrence_rate[i] * self.time_span * poes[i]
+            len(occurrence_rates)
+        except TypeError:  # float has no len(), in disaggregation
+            return numpy.exp(- occurrence_rates * self.time_span * poes)
+
+        U, L = poes.shape
+        assert len(occurrence_rates) == U, (len(occurrence_rates), U)
+        eff_time = numpy.zeros((U, L))
+        for lvl in range(L):
+            eff_time[:, lvl] = occurrence_rates * self.time_span * poes[:, lvl]
         return numpy.exp(- eff_time)
 
 
@@ -237,11 +238,12 @@ def get_probability_no_exceedance(ctx, poes, probs_or_tom):
         temporal occurrence model if the rupture is parametric,
         list of N probability mass functions otherwise
     """
-    pnes = numpy.zeros_like(poes)
+    pnes = numpy.zeros_like(poes)  # shape (N, L, G)
     if hasattr(probs_or_tom, 'get_probability_no_exceedance'):  # poissonian
-        for i, rate in enumerate(ctx.occurrence_rate):
-            pnes[i] = probs_or_tom.get_probability_no_exceedance(
-                rate, poes[i])
+        G = pnes.shape[2]
+        for g in range(G):
+            pnes[:, :, g] = probs_or_tom.get_probability_no_exceedance(
+                ctx.occurrence_rate, poes[:, :, g])
         return pnes
     else:  # nonpoissonian
         for i, probs_occur in enumerate(probs_or_tom):
