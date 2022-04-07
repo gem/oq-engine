@@ -607,9 +607,6 @@ sampling_method:
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
 
-save_disk_space:
- INTERNAL
-
 sec_peril_params:
   INTERNAL
 
@@ -934,7 +931,6 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
-    save_disk_space = valid.Param(valid.boolean, True)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
@@ -1113,11 +1109,6 @@ class OqParam(valid.ParamSet):
         if self.return_periods and not self.poes and self.investigation_time:
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
-
-        # check for multi_risk
-        if self.calculation_mode == 'multi_risk':
-            # store input files, mandatory for the QGIS plugin
-            self.save_disk_space = False
 
         # check for tiling
         if self.max_sites_disagg > self.max_sites_per_tile:
@@ -1744,8 +1735,8 @@ class OqParam(valid.ParamSet):
 
     def is_valid_soil_intensities(self):
         """
-        soil_intensities must be defined if amplification_method=convolution
-        and must not be defined if amplification_method=kernel
+        soil_intensities must be defined only in classical calculations
+        with amplification_method=convolution
         """
         classical = ('classical' in self.calculation_mode or
                      'disaggregation' in self.calculation_mode)
