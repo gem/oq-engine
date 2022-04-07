@@ -249,15 +249,16 @@ def get_probability_no_exceedance(ctx, poes, probs_or_tom):
         calc_pnes(ctx.occurrence_rate, poes, probs_or_tom.time_span, pnes)
     else:  # nonpoissonian
         for i, probs_occur in enumerate(probs_or_tom):
-            pnes[i] = get_probability_no_exceedance_np(probs_occur, poes[i])
+            set_probability_no_exceedance_np(probs_occur, poes[i], pnes[i])
     return pnes
 
 
-def get_probability_no_exceedance_np(probs_occur, poes):
+@compile("(float64[:], float64[:,:], float64[:,:])")
+def set_probability_no_exceedance_np(probs_occur, poes, pnes):
     """
     :param probs_occur: an array of probabilities
     :param poes: an array of PoEs
-    :returns: an array of PNEs computed as ∑ p(k|T) * p(X<x|rup)^k
+    :paran pnes: set an array of PNEs computed as ∑ p(k|T) * p(X<x|rup)^k
     """
     # Uses the formula
     #
@@ -270,5 +271,8 @@ def get_probability_no_exceedance_np(probs_occur, poes):
     #
     # `p(k|T)` is given by the attribute probs_occur and
     # `p(X<x|rup)` is computed as ``1 - poes``.
-    pnes = F64([v * (1 - poes) ** p for p, v in enumerate(probs_occur)])
-    return numpy.clip(pnes.sum(axis=0), 0., 1.)  # avoid numeric issues
+    P = len(probs_occur)
+    arr = numpy.zeros((P,) + poes.shape)
+    for p, v in enumerate(probs_occur):
+        arr[p] = v * (1 - poes) ** p
+    pnes[:] = numpy.clip(arr.sum(axis=0), 0., 1.)  # avoid numeric issues
