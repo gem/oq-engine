@@ -271,8 +271,7 @@ def set_probability_no_exceedance_np(probs_occur, poes, pnes):
     #
     # `p(k|T)` is given by the attribute probs_occur and
     # `p(X<x|rup)` is computed as ``1 - poes``.
-    P = len(probs_occur)
-    arr = numpy.zeros((P,) + poes.shape)
+    arr = numpy.zeros_like(poes)
     for p, v in enumerate(probs_occur):
-        arr[p] = v * (1 - poes) ** p
-    pnes[:] = numpy.clip(arr.sum(axis=0), 0., 1.)  # avoid numeric issues
+        arr += v * (1 - poes) ** p
+    pnes[:] = numpy.clip(arr, 0., 1.)  # avoid numeric issues
