@@ -483,7 +483,6 @@ class HazardCalculator(BaseCalculator):
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
         if oq.calculation_mode == 'multi_risk':
-            import pdb; pdb.set_trace()
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
