@@ -239,9 +239,10 @@ def get_probability_no_exceedance(ctx, poes, probs_or_tom):
     """
     pnes = numpy.zeros_like(poes)
     if hasattr(probs_or_tom, 'get_probability_no_exceedance'):  # poissonian
+        time_span = probs_or_tom.time_span
         for i, rate in enumerate(ctx.occurrence_rate):
-            pnes[i] = probs_or_tom.get_probability_no_exceedance(
-                rate, poes[i])
+            pnes[i] = -rate * time_span * poes[i]
+        numpy.exp(pnes, out=pnes)
         return pnes
     else:  # nonpoissonian
         for i, probs_occur in enumerate(probs_or_tom):
