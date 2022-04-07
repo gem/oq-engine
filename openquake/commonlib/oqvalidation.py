@@ -1744,8 +1744,8 @@ class OqParam(valid.ParamSet):
 
     def is_valid_soil_intensities(self):
         """
-        soil_intensities must be defined if amplification_method=convolution
-        and must not be defined if amplification_method=kernel
+        soil_intensities must be defined only in classical calculations
+        with amplification_method=convolution
         """
         classical = ('classical' in self.calculation_mode or
                      'disaggregation' in self.calculation_mode)
