@@ -69,21 +69,31 @@ Much slower because the pointsource_distance is more precise.
 Engine 3.14
 -----------
 
-We are 3x faster, even in preclassical for nonparametric sources.
+We are 3.3x faster, even in preclassical for nonparametric sources.
 
-| calc_44958, maxmem=97.4 GB | time_sec | memory_mb | counts  |
+| calc_44967, maxmem=95.1 GB | time_sec | memory_mb | counts  |
 |----------------------------+----------+-----------+---------|
-| total classical            | 331_527  | 508.4     | 251     |
-| computing pnes             | 134_513  | 0.0       | 751_863 |
-| get_poes                   | 91_933   | 0.0       | 751_863 |
-| make_contexts              | 36_880   | 679.5     | 13_489  |
-| computing mean_std         | 31_478   | 0.0       | 751_863 |
-| ClassicalCalculator.run    | 4_551    | 5_519     | 1       |
-| total preclassical         | 1_346    | 104.3     | 800     |
+| total classical            | 303_400  | 539.7     | 252     |
+| computing pnes             | 97_655   | 0.0       | 753_677 |
+| get_poes                   | 97_343   | 0.0       | 753_677 |
+| make_contexts              | 37_449   | 863.7     | 13_561  |
+| computing mean_std         | 32_359   | 0.0       | 753_677 |
+| ClassicalCalculator.run    | 4_416    | 6_009     | 1       |
+| total preclassical         | 1_353    | 104.0     | 798     |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|
-| classical          | 251    | 1_321   | 32%    | 2.06656 | 2_508   | 1.89863 |
-| postclassical      | 239    | 1.27326 | 47%    | 0.01096 | 2.53625 | 1.99193 |
-| preclassical       | 313    | 4.29960 | 503%   | 0.09879 | 229.7   | 53.4    |
-| read_source_model  | 193    | 1.45741 | 103%   | 0.00549 | 7.51766 | 5.15822 |
+| classical          | 252    | 1_204   | 36%    | 1.72197 | 2_524   | 2.09637 |
+| postclassical      | 239    | 1.28485 | 46%    | 0.01257 | 2.50767 | 1.95172 |
+| preclassical       | 311    | 4.35114 | 503%   | 0.09827 | 235.6   | 54.2    |
+| read_source_model  | 193    | 1.44417 | 103%   | 0.00561 | 7.45409 | 5.16152 |
+
+
+| calc_44973, maxmem=97.5 GB | time_sec | memory_mb | counts  |
+|----------------------------+----------+-----------+---------|
+| total classical            | 258_043  | 535.3     | 251     |
+| get_poes                   | 101_727  | 0.0       | 752_764 |
+| computing pnes             | 44_351   | 0.0       | 752_764 |
+| make_contexts              | 37_700   | 631.0     | 13_525  |
+| computing mean_std         | 33_014   | 0.0       | 752_764 |
+| ClassicalCalculator.run    | 3_079    | 6_387     | 1       |
