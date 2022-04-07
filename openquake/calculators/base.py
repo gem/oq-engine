@@ -482,8 +482,7 @@ class HazardCalculator(BaseCalculator):
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
-
-        if not oq.hazard_calculation_id and not oq.save_disk_space:
+        if oq.calculation_mode == 'multi_risk':
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY

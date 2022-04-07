@@ -287,7 +287,6 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         # reduce the logic tree to one random realization
         # reduce the sites by a factor of `re`
         # reduce the ses by a factor of `re`
-        # set save_disk_space = true
         os.environ['OQ_SAMPLE_SITES'] = re
         job_ini['number_of_logic_tree_samples'] = '1'
         ses = job_ini.get('ses_per_logic_tree_path')
@@ -300,7 +299,6 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-        job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
     oqparam._input_files = get_input_files(oqparam)
     if validate:  # always true except from oqzip
