@@ -221,7 +221,7 @@ def get_probability_no_exceedance_rup(rup, poes, tom):
 
 
 @compile("(float64[:], float64[:,:,:], float64, float64[:,:,:])")
-def calc_poisson(rates, poes, time_span, out):
+def calc_pnes(rates, poes, time_span, out):
     """
     Compute probabilities of no exceedance by using the poisson distribution
     (fast). Works by populating the "out" array.
@@ -243,7 +243,7 @@ def get_probability_no_exceedance(ctx, poes, probs_or_tom):
     """
     pnes = numpy.zeros_like(poes)
     if hasattr(probs_or_tom, 'get_probability_no_exceedance'):  # poissonian
-        calc_poisson(ctx.occurrence_rate, poes, probs_or_tom.time_span, pnes)
+        calc_pnes(ctx.occurrence_rate, poes, probs_or_tom.time_span, pnes)
         return pnes
     else:  # nonpoissonian
         for i, probs_occur in enumerate(probs_or_tom):
