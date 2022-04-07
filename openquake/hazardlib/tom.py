@@ -215,7 +215,9 @@ def get_probability_no_exceedance_rup(rup, poes, tom):
         temporal occurrence model (not used if the rupture is nonparametric)
     """
     if numpy.isnan(rup.occurrence_rate):  # nonparametric
-        return get_probability_no_exceedance_np(rup.probs_occur, poes)
+        pnes = numpy.zeros_like(poes)
+        set_probability_no_exceedance_np(rup.probs_occur, poes, pnes)
+        return pnes
     else:  # parametric
         return tom.get_probability_no_exceedance(rup.occurrence_rate, poes)
 
