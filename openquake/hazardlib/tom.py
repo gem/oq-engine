@@ -23,6 +23,7 @@ density functions for earthquake temporal occurrence modeling.
 import abc
 import numpy
 import scipy.stats
+from openquake.baselib.performance import compile
 
 registry = {}
 F64 = numpy.float64
@@ -184,15 +185,7 @@ class PoissonTOM(BaseTOM):
 
         The probability is computed as exp(-occurrence_rate * time_span * poes)
         """
-        try:
-            n = len(occurrence_rate)
-        except TypeError:  # float' has no len()
-            eff_time = occurrence_rate * self.time_span * poes
-        else:
-            eff_time = numpy.zeros((n,) + poes.shape)
-            for i in range(n):
-                eff_time[i] = occurrence_rate[i] * self.time_span * poes[i]
-        return numpy.exp(- eff_time)
+        return numpy.exp(- occurrence_rate * self.time_span * poes)
 
 
 # use in calc.disagg
@@ -227,6 +220,17 @@ def get_probability_no_exceedance_rup(rup, poes, tom):
         return tom.get_probability_no_exceedance(rup.occurrence_rate, poes)
 
 
+@compile("(float64[:], float64[:,:,:], float64, float64[:,:,:])")
+def calc_pnes(rates, poes, time_span, out):
+    """
+    Compute probabilities of no exceedance by using the poisson distribution
+    (fast). Works by populating the "out" array.
+    """
+    for i, rate in enumerate(rates):
+        out[i] = -rate * time_span * poes[i]
+    numpy.exp(out, out)
+
+
 def get_probability_no_exceedance(ctx, poes, probs_or_tom):
     """
     Vectorized version of :func:`get_probability_no_exceedance_rup`.
@@ -238,15 +242,15 @@ def get_probability_no_exceedance(ctx, poes, probs_or_tom):
         list of N probability mass functions otherwise
     """
     pnes = numpy.zeros_like(poes)
-    if hasattr(probs_or_tom, 'get_probability_no_exceedance'):  # poissonian
+    if isinstance(probs_or_tom, FatedTOM):
         for i, rate in enumerate(ctx.occurrence_rate):
-            pnes[i] = probs_or_tom.get_probability_no_exceedance(
-                rate, poes[i])
-        return pnes
+            pnes[i] = probs_or_tom.get_probability_no_exceedance(rate, poes[i])
+    elif isinstance(probs_or_tom, PoissonTOM):
+        calc_pnes(ctx.occurrence_rate, poes, probs_or_tom.time_span, pnes)
     else:  # nonpoissonian
         for i, probs_occur in enumerate(probs_or_tom):
             pnes[i] = get_probability_no_exceedance_np(probs_occur, poes[i])
-        return pnes
+    return pnes
 
 
 def get_probability_no_exceedance_np(probs_occur, poes):
