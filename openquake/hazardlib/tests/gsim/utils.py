@@ -132,19 +132,15 @@ def read_cmaker_df(gsim, csvfnames):
     for dist in cmaker.REQUIRES_DISTANCES:
         name = 'dist_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
-        logging.info(name, df[name].unique())
     for dist in cmaker.REQUIRES_SITES_PARAMETERS:
         name = 'site_' + dist
         df[name] = np.array(df[name].to_numpy(), cmaker.dtype[dist])
-        logging.info(name, df[name].unique())
     for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
         name = 'rup_' + par
         if name not in df.columns:  # i.e. missing rake
             df[name] = np.zeros(len(df), cmaker.dtype[par])
         else:
             df[name] = np.array(df[name].to_numpy(), cmaker.dtype[par])
-        logging.info(name, df[name].unique())
-    logging.info('result_type', df['result_type'].unique())
     return cmaker, df.rename(columns=cmap)
 
 
