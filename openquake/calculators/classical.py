@@ -452,7 +452,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('Finished tile %d of %d', t, len(tiles))
         self.store_info()
         self.haz.store_disagg(acc)
-        logging.info('Collapse factor = {:_d}/{:_d} = {:.1f}'.format(
+        logging.info('Theoretical cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
         return True
