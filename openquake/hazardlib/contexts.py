@@ -769,12 +769,9 @@ class ContextMaker(object):
             pmap = probmap
         for ctx in self.recarrays(ctxs):
             # allocating pmap in advance
-            usids = numpy.unique(ctx.sids)
-            sidx = numpy.zeros(usids.max() + 1, U32)
-            lst = []
-            for idx, sid in enumerate(usids):
-                sidx[sid] = idx
-                lst.append(pmap.setdefault(sid, rup_indep).array)
+            dic = {}  # sid -> array of shape (L, G)
+            for sid in numpy.unique(ctx.sids):
+                dic[sid] = pmap.setdefault(sid, rup_indep).array
             for poes, ctxt, slcsids in self.gen_poes(ctx):
                 probs_or_tom = getattr(ctxt, 'probs_occur', self.tom)
                 ws = getattr(ctxt, 'weight', numpy.zeros(len(ctxt)))
@@ -786,12 +783,11 @@ class ContextMaker(object):
                     for poe, pne, wei, sids in zip(poes, pnes, ws, slcsids):
                         # sids has length 1 unless there is collapsing
                         for sid in sids:
-                            probs = lst[sidx[sid]]  # shape (L, G)
                             if rup_indep:
-                                probs *= pne
+                                dic[sid] *= pne
                             else:  # mutex nonparametric rupture
                                 # USAmodel, New Madrid cluster
-                                probs += (1. - pne) * wei
+                                dic[sid] += (1. - pne) * wei
 
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
