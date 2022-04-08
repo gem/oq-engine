@@ -255,7 +255,8 @@ def get_probability_no_exceedance(ctx, poes, probs_or_tom):
     return pnes
 
 
-@compile("(float64[:], float64[:,:], float64[:,:])")
+@compile(["(float64[:], float64[:,:], float64[:,:])",
+          "(float64[:], float64[:,:,:,:], float64[:,:,:,:])"])
 def set_probability_no_exceedance_np(probs_occur, poes, pnes):
     """
     :param probs_occur: an array of probabilities
