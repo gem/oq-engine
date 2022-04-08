@@ -244,6 +244,8 @@ component of the OpenQuake engine. In particular, we will describe the main
 typologies of sources supported and the main calculation workflows
 available.
 
+.. _Source typologies:
+
 Source typologies 
 ^^^^^^^^^^^^^^^^^
 
@@ -1329,55 +1331,56 @@ occurrence of the specific rupture, but only sufficient information to
 parameterise the location (as a three-dimensional surface), the
 magnitude and the style-of-faulting of the rupture, a more simplified
 NRML structure is sufficient compared to the source model structures
-described previously in
-Section `[sec:source_typologies] <#sec:source_typologies>`__. A *rupture
-model* XML can be defined in the following formats:
+described previously in :ref:`Source typologies`. 
+A *rupture model* XML can be defined in the following formats:
 
 #. *Simple Fault Rupture* - in which the geometry is defined by the
    trace of the fault rupture, the dip and the upper and lower
-   seismogenic depths. An example is shown below. 
+   seismogenic depths. An example is shown in 
+   :ref:`the listing <lst:input_rupture_simple>` below:
 
    .. container:: listing
-      :name: lst:input_rupture_simple
 
-      .. code:: xml
-         :number-lines:
+    .. code:: xml
+       :number-lines:
+       :name: lst:input_rupture_simple
 
-         <?xml version='1.0' encoding='utf-8'?>
-         <nrml xmlns:gml="http://www.opengis.net/gml"
-               xmlns="http://openquake.org/xmlns/nrml/0.5">
+             <?xml version='1.0' encoding='utf-8'?>
+             <nrml xmlns:gml="http://www.opengis.net/gml"
+                   xmlns="http://openquake.org/xmlns/nrml/0.5">
 
-             <simpleFaultRupture>
-               <magnitude>6.7</magnitude>
-               <rake>180.0</rake>
-               <hypocenter lon="-122.02750" lat="37.61744" depth="6.7"/>
-               <simpleFaultGeometry>
-                 <gml:LineString>
-                   <gml:posList>
-                     -121.80236 37.39713
-                     -121.91453 37.48312
-                     -122.00413 37.59493
-                     -122.05088 37.63995
-                     -122.09226 37.68095
-                     -122.17796 37.78233
-                   </gml:posList>
-                 </gml:LineString>
-                 <dip>76.0</dip>
-                 <upperSeismoDepth>0.0</upperSeismoDepth>
-                 <lowerSeismoDepth>13.4</lowerSeismoDepth>
-               </simpleFaultGeometry>
-             </simpleFaultRupture>
+                 <simpleFaultRupture>
+                   <magnitude>6.7</magnitude>
+                   <rake>180.0</rake>
+                   <hypocenter lon="-122.02750" lat="37.61744" depth="6.7"/>
+                   <simpleFaultGeometry>
+                     <gml:LineString>
+                       <gml:posList>
+                         -121.80236 37.39713
+                         -121.91453 37.48312
+                         -122.00413 37.59493
+                         -122.05088 37.63995
+                         -122.09226 37.68095
+                         -122.17796 37.78233
+                       </gml:posList>
+                     </gml:LineString>
+                     <dip>76.0</dip>
+                     <upperSeismoDepth>0.0</upperSeismoDepth>
+                     <lowerSeismoDepth>13.4</lowerSeismoDepth>
+                   </simpleFaultGeometry>
+                 </simpleFaultRupture>
 
-         </nrml>
+             </nrml>
 
 #. *Planar & Multi-Planar Rupture* - in which the geometry is defined as
    a collection of one or more rectangular planes, each defined by four
    corners. An example of a multi-planar rupture is shown below in
-   Listing `[lst:input_rupture_multi_planes] <#lst:input_rupture_multi_planes>`__.
+   :ref:`the listing <lst:input_rupture_multi_planes>` below:
 
    .. container:: listing
 
       .. code:: xml
+         :name: lst:input_rupture_multi_planes
          :number-lines:
 
          <?xml version='1.0' encoding='utf-8'?>
@@ -1407,12 +1410,13 @@ model* XML can be defined in the following formats:
 #. *Complex Fault Rupture* - in which the geometry is defined by the
    upper, lower and (if applicable) intermediate edges of the fault
    rupture. An example of a complex fault rupture is shown below in
-   Listing `[lst:input_rupture_complex] <#lst:input_rupture_complex>`__.
+   :ref:`the listing <lst:input_rupture_complex>` below:
 
    .. container:: listing
 
       .. code:: xml
          :number-lines:
+         :name: lst:input_rupture_complex
 
          <?xml version='1.0' encoding='utf-8'?>
          <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -2013,6 +2017,8 @@ uses for calculation the B. S.-J. Chiou and Youngs (2008) Ground Motion Predicti
           </logicTree>
       </nrml>
 
+.. _sec-hazard_configuration_file:
+
 Configuration file 
 ^^^^^^^^^^^^^^^^^^
 The configuration file is
@@ -2479,7 +2485,7 @@ the probabilities of exceeding the intensity measure levels set
 previously in the ``intensity_measure_types_and_levels`` option.
 
 Scenario hazard 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 In order to run this
 calculator, the parameter ``calculation_mode`` needs to be set to
 ``scenario``. The basic job configuration file required for running a
@@ -2541,7 +2547,7 @@ the scenario calculator is described below:
 
 Multiple ground motion prediction equations can be used for a scenario
 hazard calculation by providing a GMPE logic tree file (described
-previously in Section `[subsec:gmlt] <#subsec:gmlt>`__) using the
+previously in Section :ref:`gmlt`) using the
 parameter ``gsim_logic_tree_file``. In this case, the OpenQuake engine generates
 ground motion fields for all GMPEs specified in the logic tree file. The
 *Branch* weights in the logic tree file are ignored in a scenario analysis
@@ -2603,6 +2609,8 @@ example below:
 In this example we ask the engine to provide an extensive amount of
 information (usually not justified for a standard analysis). Alternative
 options are: ``debug``, ``info``, ``warn``, ``error``, ``critical``.
+
+.. _sec-exporting_hazard_results:
 
 Exporting results from a hazard calculation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3764,7 +3772,7 @@ for running a Scenario Damage calculation, providing corresponding
 *Consequence Model* files is optional.
 
 Scenario Risk Assessment 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 The scenario risk
 calculator computes loss statistics for all assets in a given
 *Exposure Model* for a single specified rupture. Loss statistics include
@@ -4049,8 +4057,9 @@ in Figure `1.6 <#fig:io-structure-event-based-risk>`__
 
    Probabilistic Event-based Risk Calculator input/output structure.
 
-Retrofit Benefit-Cost Ratio Analysis This
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Retrofit Benefit-Cost Ratio Analysis 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This
 calculator represents a decision-support tool for deciding whether the
 employment of retrofitting measures to a collection of existing
 buildings is advantageous from an economical point of view. For this
@@ -4077,7 +4086,7 @@ For further information regarding the theoretical background of the
 methodologies used for each calculator, users are referred to the
 OpenQuake- engine Book (Risk).
 
-.. _`chap:riskinputs`:
+.. _chap-riskinputs:
 
 Risk Input Models
 -----------------
@@ -4090,6 +4099,8 @@ region of interest. Hazard inputs include hazard curves for the
 classical probabilistic damage and risk calculators, Ground Motion Field for the
 scenario damage and risk calculators, or Stochastic Event Sets for the probabilistic
 event based calculators.
+
+.. _sec-exposure:
 
 Exposure Models
 ^^^^^^^^^^^^^^^
@@ -4109,11 +4120,12 @@ described in the examples above. See Example 8 below for an illustration
 of an exposure model using csv files.
 
 A simple *Exposure Model* comprising a single asset is shown in
-Listing `[lst:input_exposure_minimal] <#lst:input_exposure_minimal>`__.
+:ref: `the listing <lst:input_exposure_minimal>`.
 
 .. container:: listing
 
    .. code:: xml
+      :name: lst:input_exposure_minimal
       :number-lines:
 
       <?xml version="1.0" encoding="UTF-8"?>
@@ -5145,6 +5157,8 @@ A web-based tool to build an *Exposure Model* in the Natural hazards' Risk Marku
 starting from a csv file or a spreadsheet can be found at the OpenQuake
 platform at the following address: https://platform.openquake.org/ipt/.
 
+.. _sec-fragility:
+
 Fragility Models 
 ^^^^^^^^^^^^^^^^
 This section describes the
@@ -5468,6 +5482,8 @@ A web-based tool to build a *Fragility Model* in the Natural hazards' Risk Marku
 also under development, and can be found at the OpenQuake platform at
 the following address: https://platform.openquake.org/ipt/.
 
+.. _sec-consequence:
+
 Consequence Models 
 ^^^^^^^^^^^^^^^^^^
 Starting from OpenQuake engine17, the
@@ -5633,6 +5649,8 @@ The following attributes are needed to define a *Consequence Function*:
    *Consequence Function* must be equal to the number of limit states
    defined in the corresponding *Fragility Model* using the attribute
    ``limitStates``.
+
+.. _sec-vulnerability:
 
 Vulnerability Models 
 ^^^^^^^^^^^^^^^^^^^^
@@ -5999,14 +6017,14 @@ calculators. Input data for scenario-based and probabilistic seismic
 damage and risk analysis using the OpenQuake engine are organised into:
 
 -  An exposure model file in the NRML format, as described in
-   Section `[sec:exposure] <#sec:exposure>`__.
+   Section :ref:`sec-exposure`.
 
 -  A file describing the *Vulnerability Model*
-   (Section `[sec:vulnerability] <#sec:vulnerability>`__) for loss
+   (Section :ref:`sec-vulnerability`) for loss
    calculations, or a file describing the *Fragility Model*
-   (Section `[sec:fragility] <#sec:fragility>`__) for damage
+   (Section :ref:`sec-fragility`) for damage
    calculations. Optionally, a file describing the *Consequence Model*
-   (Section `[sec:consequence] <#sec:consequence>`__) can also be
+   (Section :ref:`sec-consequence`) can also be
    provided in order to calculate losses from the estimated damage
    distributions.
 
@@ -6033,9 +6051,10 @@ damage and risk analysis using the OpenQuake engine are organised into:
    -  Use a configuration file for the risk calculation along with
       hazard input files in the OpenQuake NRML format
 
-The file formats for exposuremodels, fragilitymodels, consequencemodels,
-and vulnerabilitymodels have been described earlier in
-Chapter `2 <#chap:riskinputs>`__. The configuration file is the primary
+The file formats for *Exposure models*, *Fragility Models*, 
+*Consequence Models*, and *Vulnerability models* 
+have been described earlier in
+Chapter :ref:`chap-riskinputs`. The configuration file is the primary
 file that provides the OpenQuake engine information regarding both the definition
 of the input models (e.g. exposure, site parameters, fragility,
 consequence, or vulnerability models) as well as the parameters
@@ -6043,16 +6062,17 @@ governing the risk calculation.
 
 Information regarding the configuration file for running hazard
 calculations using the OpenQuake engine can be found in
-Section `[sec:hazard_configuration_file] <#sec:hazard_configuration_file>`__.
+Section :ref:`sec-hazard_configuration_file`.
 Some initial mandatory parameters of the configuration file common to
 all of the risk calculators are presented in
-Listing `[lst:config_example] <#lst:config_example>`__. The remaining
+:ref:`the listing <lst:config_example>`. The remaining
 parameters that are specific to each risk calculator are discussed in
 subsequent sections.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_example
 
       [general]
       description = Example risk calculation
