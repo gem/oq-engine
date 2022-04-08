@@ -79,7 +79,7 @@ def get_maxsize(num_levels, num_gsims):
     # optimized for the USA model
     assert num_levels * num_gsims * 32 < TWO32,  (num_levels, num_gsims)
     maxsize = TWO32 // (num_levels * num_gsims * 128)  # optimized for ESHM20
-    # 10_000 optimizes "computing pnes" for the ALS calculation
+    # 10_000 optimizes "composing pnes" for the ALS calculation
     return min(maxsize, 10_000)
 
 
@@ -404,7 +404,7 @@ class ContextMaker(object):
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
-        self.pne_mon = monitor('computing pnes', measuremem=False)
+        self.pne_mon = monitor('composing pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -768,17 +768,26 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         for ctx in self.recarrays(ctxs):
-            for poes, pnes, weights, slcsids in self.gen_poes(ctx):
-                # the following is relatively fast
-                for poe, pne, wei, sids in zip(poes, pnes, weights, slcsids):
-                    # sids has length 1 unless there is collapsing
-                    for sid in sids:
-                        probs = pmap.setdefault(sid, rup_indep).array  # (L, G)
-                        if rup_indep:
-                            probs *= pne
-                        else:  # mutex nonparametric rupture
-                            # USAmodel, New Madrid cluster
-                            probs += (1. - pne) * wei
+            # allocating pmap in advance
+            dic = {}  # sid -> array of shape (L, G)
+            for sid in numpy.unique(ctx.sids):
+                dic[sid] = pmap.setdefault(sid, rup_indep).array
+            for poes, ctxt, slcsids in self.gen_poes(ctx):
+                probs_or_tom = getattr(ctxt, 'probs_occur', self.tom)
+                ws = getattr(ctxt, 'weight', numpy.zeros(len(ctxt)))
+                with self.pne_mon:
+                    # the following is slow
+                    pnes = get_probability_no_exceedance(
+                        ctxt, poes, probs_or_tom)
+                    # the following is relatively fast
+                    for poe, pne, wei, sids in zip(poes, pnes, ws, slcsids):
+                        # sids has length 1 unless there is collapsing
+                        for sid in sids:
+                            if rup_indep:
+                                dic[sid] *= pne
+                            else:  # mutex nonparametric rupture
+                                # USAmodel, New Madrid cluster
+                                dic[sid] += (1. - pne) * wei
 
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
@@ -882,7 +891,7 @@ class ContextMaker(object):
     def gen_poes(self, ctx):
         """
         :param ctx: a vectorized context (recarray) of size N
-        :yields: poes, pnes, weights, slcsids with poes of shape (N, L, G)
+        :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
@@ -912,14 +921,7 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctxt)
                     else:  # regular case
                         poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
-            with self.pne_mon:
-                if hasattr(ctx, 'probs_occur'):  # nonparametric
-                    probs_or_tom = ctxt.probs_occur
-                else:  # parametric ruptures
-                    probs_or_tom = self.tom
-                weights = getattr(ctxt, 'weight', numpy.zeros(len(ctxt)))
-                pnes = get_probability_no_exceedance(ctxt, poes, probs_or_tom)
-            yield poes, pnes, weights, slcsids
+            yield poes, ctxt, slcsids
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)

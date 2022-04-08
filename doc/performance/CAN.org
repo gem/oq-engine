@@ -53,18 +53,31 @@ Engine 3.13
 | make_contexts              | 35_876    | 177.9     | 40_030     |
 | ClassicalCalculator.run    | 14_950    | 5_175     | 1          |
 
+| operation-duration | counts | mean    | stddev | min       | max     | slowfac |
+|--------------------+--------+---------+--------+-----------+---------+---------|
+| classical          | 663    | 2_429   | 27%    | 48.8      | 3_210   | 1.32159 |
+| postclassical      | 240    | 33.0    | 18%    | 15.6      | 51.9    | 1.57476 |
+| preclassical       | 57     | 21.7    | 192%   | 1.750E-04 | 195.0   | 8.97376 |
+| read_source_model  | 12     | 0.06045 | 75%    | 0.00799   | 0.13635 | 2.25560 |
+
 Engine 3.14
 -----------
 
-Thanks to the vectorization, "computing mean_std" is 14x faster!
+Thanks to the vectorization, "computing mean_std" is much faster
 
-| calc_44676, maxmem=96.0 GB | time_sec | memory_mb | counts     |
-|----------------------------+----------+-----------+------------|
-| total classical            | 376_656  | 454.3     | 1_074      |
-| get_poes                   | 145_504  | 0.0       | 35_566_874 |
-| composing pnes             | 96_355   | 0.0       | 35_566_874 |
-| computing mean_std         | 96_198   | 0.0       | 714_752    |
-| make_contexts              | 36_747   | 186.9     | 40_030     |
-| total postclassical        | 7_857    | 25.3      | 240        |
-| combine pmaps              | 5_679    | 0.0       | 138_284    |
-| ClassicalCalculator.run    | 4_133    | 5_171     | 1          |
+| calc_44979, maxmem=82.8 GB | time_sec | memory_mb | counts    |
+|----------------------------+----------+-----------+-----------|
+| total classical            | 506_154  | 660.3     | 256       |
+| get_poes                   | 191_149  | 0.0       | 1_389_758 |
+| composing pnes             | 140_261  | 0.0       | 1_389_758 |
+| computing mean_std         | 128_604  | 0.0       | 1_389_758 |
+| make_contexts              | 38_681   | 238.5     | 40_030    |
+| total postclassical        | 7_842    | 25.2      | 240       |
+| ClassicalCalculator.run    | 5_863    | 3_444     | 1         |
+
+| operation-duration | counts | mean    | stddev | min     | max     | slowfac |
+|--------------------+--------+---------+--------+---------+---------+---------|
+| classical          | 256    | 1_977   | 32%    | 0.10432 | 3_704   | 1.87337 |
+| postclassical      | 240    | 32.7    | 17%    | 17.3    | 49.0    | 1.50050 |
+| preclassical       | 36     | 34.4    | 143%   | 0.07740 | 208.4   | 6.06192 |
+| read_source_model  | 12     | 0.06104 | 75%    | 0.00779 | 0.13576 | 2.22423 |

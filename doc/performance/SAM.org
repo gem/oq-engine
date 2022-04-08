@@ -69,21 +69,21 @@ Much slower because the pointsource_distance is more precise.
 Engine 3.14
 -----------
 
-We are 3x faster, even in preclassical for nonparametric sources.
+We are 3.3x faster, even in preclassical for nonparametric sources.
 
-| calc_44958, maxmem=97.4 GB | time_sec | memory_mb | counts  |
+| calc_44978, maxmem=95.6 GB | time_sec | memory_mb | counts  |
 |----------------------------+----------+-----------+---------|
-| total classical            | 331_527  | 508.4     | 251     |
-| computing pnes             | 134_513  | 0.0       | 751_863 |
-| get_poes                   | 91_933   | 0.0       | 751_863 |
-| make_contexts              | 36_880   | 679.5     | 13_489  |
-| computing mean_std         | 31_478   | 0.0       | 751_863 |
-| ClassicalCalculator.run    | 4_551    | 5_519     | 1       |
-| total preclassical         | 1_346    | 104.3     | 800     |
+| total classical            | 254_908  | 538.2     | 252     |
+| get_poes                   | 102_661  | 0.0       | 753_677 |
+| composing pnes             | 76_747   | 0.0       | 753_677 |
+| make_contexts              | 37_829   | 886.5     | 13_561  |
+| computing mean_std         | 33_241   | 0.0       | 753_677 |
+| ClassicalCalculator.run    | 3_013    | 4_800     | 1       |
+| total preclassical         | 1_339    | 104.3     | 798     |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|
-| classical          | 251    | 1_321   | 32%    | 2.06656 | 2_508   | 1.89863 |
-| postclassical      | 239    | 1.27326 | 47%    | 0.01096 | 2.53625 | 1.99193 |
-| preclassical       | 313    | 4.29960 | 503%   | 0.09879 | 229.7   | 53.4    |
-| read_source_model  | 193    | 1.45741 | 103%   | 0.00549 | 7.51766 | 5.15822 |
+| classical          | 252    | 1_012   | 24%    | 1.92331 | 1_590   | 1.57141 |
+| postclassical      | 239    | 1.24049 | 47%    | 0.01303 | 2.43500 | 1.96293 |
+| preclassical       | 311    | 4.30395 | 501%   | 0.09496 | 228.7   | 53.1    |
+| read_source_model  | 193    | 1.39987 | 104%   | 0.00549 | 7.60006 | 5.42912 |
