@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the definition of `aggrisk`: dividing by the effective time
   * Internal: removed flag `save_disk_space` since now it is always on
   * Slightly changed the collapsing of nodal planes and hypocenters in
     presence of the equivalent distance approximation (`reqv`)
