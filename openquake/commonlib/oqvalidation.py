@@ -1298,13 +1298,13 @@ class OqParam(valid.ParamSet):
         """
         if self.investigation_time is None:
             # for scenarios there is no effective_time
-            return [1] * len(num_events)
+            return numpy.full_like(num_events, len(num_events))
         else:
             # for event based compute the time_ratio
             time_ratio = self.time_ratio
             if self.collect_rlzs:
                 time_ratio /= num_haz_rlzs
-            return list(time_ratio * num_events)
+            return time_ratio * num_events
 
     @property
     def imtls(self):
