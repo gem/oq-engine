@@ -762,7 +762,6 @@ class ContextMaker(object):
         :param probmap: if not None, update it
         :returns: a new ProbabilityMap if probmap is None
         """
-        rup_indep = self.rup_indep
         if probmap is None:  # create new pmap
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
@@ -771,26 +770,35 @@ class ContextMaker(object):
             # allocating pmap in advance
             dic = {}  # sid -> array of shape (L, G)
             for sid in numpy.unique(ctx.sids):
-                dic[sid] = pmap.setdefault(sid, rup_indep).array
+                dic[sid] = pmap.setdefault(sid, self.rup_indep).array
             for poes, ctxt, slcsids in self.gen_poes(ctx):
                 probs_or_tom = getattr(ctxt, 'probs_occur', self.tom)
-                ws = getattr(ctxt, 'weight', numpy.zeros(len(ctxt)))
                 with self.pne_mon:
                     # the following is slow
                     pnes = get_probability_no_exceedance(
                         ctxt, poes, probs_or_tom)
+
                     # the following is relatively fast
-                    for poe, pne, wei, sids in zip(poes, pnes, ws, slcsids):
-                        # sids has length 1 unless there is collapsing
-                        for sid in sids:
-                            if rup_indep:
+                    if isinstance(slcsids, numpy.ndarray):
+                        # no collapse: avoiding an inner loop can give a 25%
+                        if self.rup_indep:
+                            for poe, pne, sid in zip(poes, pnes, ctxt.sids):
                                 dic[sid] *= pne
-                            else:  # mutex nonparametric rupture
-                                # USAmodel, New Madrid cluster
+                        else:  # USAmodel, New Madrid cluster
+                            w = getattr(ctxt, 'weight', numpy.zeros(len(ctxt)))
+                            for poe, pne, wei, sid in zip(
+                                    poes, pnes, w, ctxt.sids):
                                 dic[sid] += (1. - pne) * wei
+                    else:  # collapse is possible only for rup_indep
+                        for poe, pne, sids in zip(poes, pnes, slcsids):
+                            for sid in sids:
+                                dic[sid] *= pne
 
         if probmap is None:  # return the new pmap
-            return ~pmap if rup_indep else pmap
+            if self.rup_indep:
+                for arr in dic.values():
+                    arr[:] = 1. - arr
+            return pmap
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs):
