@@ -599,9 +599,6 @@ rupture_mesh_spacing:
   Example: *rupture_mesh_spacing = 2.0*.
   Default: 5.0
 
-ruptures_per_block:
-  INTERNAL
-
 sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
@@ -746,10 +743,8 @@ F64 = numpy.float64
 ALL_CALCULATORS = ['classical_risk',
                    'classical_damage',
                    'classical',
-                   'ucerf_classical',
                    'event_based',
                    'scenario',
-                   'ucerf_hazard',
                    'post_risk',
                    'ebrisk',
                    'scenario_risk',
@@ -927,7 +922,6 @@ class OqParam(valid.ParamSet):
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, [])
-    ruptures_per_block = valid.Param(valid.positiveint, 500)  # for UCERF
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
@@ -1583,13 +1577,7 @@ class OqParam(valid.ParamSet):
         The calculation mode is event_based, event_based_risk or ebrisk
         """
         return (self.calculation_mode in
-                'event_based_risk ebrisk event_based_damage ucerf_hazard')
-
-    def is_ucerf(self):
-        """
-        :returns: True for UCERF calculations, False otherwise
-        """
-        return 'source_model' in self.inputs
+                'event_based_risk ebrisk event_based_damage')
 
     def is_valid_shakemap(self):
         """

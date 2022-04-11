@@ -143,34 +143,6 @@ def get_csm(oq, full_lt, h5=None):
         floating_y_step=oq.floating_y_step)
     classical = not oq.is_event_based()
     full_lt.ses_seed = oq.ses_seed
-    if oq.is_ucerf():
-        [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-        src_groups = []
-        for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
-            sg = copy.copy(grp)
-            src_groups.append(sg)
-            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value[0])  # one source
-            src.checksum = src.grp_id = src.trt_smr = grp_id
-            src.samples = sm_rlz.samples
-            src.smweight = sm_rlz.weight
-            logging.info('Reading sections and rupture planes for %s', src)
-            planes = src.get_planes()
-            if classical:
-                src.ruptures_per_block = oq.ruptures_per_block
-                sg.sources = list(src)
-                for s in sg:
-                    s.planes = planes
-                    s.sections = s.get_sections()
-                # add background point sources
-                sg = copy.copy(grp)
-                src_groups.append(sg)
-                sg.sources = src.get_background_sources()
-            else:  # event_based, use one source
-                sg.sources = [src]
-                src.planes = planes
-                src.sections = src.get_sections()
-        return CompositeSourceModel(full_lt, src_groups)
-
     logging.info('Reading the source model(s) in parallel')
 
     # NB: the source models file are often NOT in the shared directory
