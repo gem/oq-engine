@@ -1,7 +1,7 @@
 The release 3.14 is the result of 3 months of work involving nearly
 200 pull requests. The major highlights are: complete vectorization of
 hazardlib, optimization of the UCERF model, and upgrade of Shapely to
-version 1.8.0 (the upgrade causes slightly changes in the numbers
+version 1.8.0 (the upgrade causes slight changes in the numbers
 produced by the engine, this is why it is important to mention it).
 
 The complete list of changes is listed in the changelog:
@@ -76,9 +76,6 @@ speedup). Since the distance calculation algorithm has changed
 internally, the numbers are expected to be slightly different than
 in past versions.
 
-If you already have a license for the UCERF model or you are a GEM
-sponsor you can request the new model for free.
-
 At user request, it is now possible to disaggregate by all realizations
 by setting in the job.ini file
 
@@ -90,7 +87,8 @@ this feature with care.
 
 # New risk features
 
-At user request, we implemented multi-tag aggregation: it is now
+At user request, we implemented [multi-tag
+aggregation](https://github.com/gem/oq-engine/issues/7663): it is now
 possible to aggregate across different tag combinations within a
 single calculation. The exporters have been changed accordingly to
 export a file for each tag combination.  For instance setting in the
@@ -105,8 +103,9 @@ each. The export format is the same, however while before the totals
 were exported in the same file, now they are exported in a separate
 file.
 
-We also changed how the Aggregate Risk output is computed, reverting
-back to the definition of previous versions of the engine,
+We also changed how the [Aggregate Risk
+output](https://github.com/gem/oq-engine/pull/7708) is computed,
+reverting back to the definition of previous versions of the engine,
 directly related to the average annual losses.
 
 # Bug fixes
@@ -119,7 +118,7 @@ IDs. Both issues are now fixed.
 `job.ini` files containing a Byte Order Mark (BOM) where not read
 correctly, causing issues particularly on the Windows platform.
 
-There was a small bug with discard_trts, such that in some cases too much
+There was a small bug with discard_trts, such that in some cases too many
 TRTs were discarded. This is now fixed.
 
 Some `event_based_damage` calculations could fail in a cluster environment
