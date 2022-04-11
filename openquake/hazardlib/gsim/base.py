@@ -113,7 +113,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
     for m, imt in enumerate(loglevels):
         # loop needed to work on smaller matrices fitting the CPU cache
         slc = loglevels(imt)
-        levels = loglevels.array[slc]
+        levels = loglevels.array[m]
         if truncation_level == 0:
             for li, iml in enumerate(levels):
                 out[:, m * L1 + li] = iml <= mean_std[0, m]
