@@ -37,10 +37,15 @@ in some classical calculations.
 
 There were some improvements to `KiteSurfaces` and to
 `MultiFaultSources`. In particular the performance of
-MultiFaultSources in the engine was disastrous since all the time was
+MultiFaultSources in the engine was disastrous: all the time was
 spent in computing the bounding box and the encircling polygon. This is
-now fixed. Moreover the magnitudes in multiFaultSources are now rounded
-to two digits after the decimal point.
+now fixed.
+
+The magnitudes in multiFaultSources have been rounded to two digits
+after the decimal point.
+
+We added a check on `geo.Line` forbidden degenerate lines with less than
+two points.
 
 We extended the ModifiableGMPE to work with GMPETable subclasses,
 with  the NRCan15 site term and with the Al Atik Sigma model.
