@@ -13,7 +13,7 @@ https://github.com/gem/oq-engine/blob/engine-3.14/debian/changelog
 One year ago we started a vectorization program for the GMPEs in hazardlib,
 described here:
 
-https://github.com/gem/oq-engine/blob/master/doc/breaking-hazardlib.md
+https://github.com/gem/oq-engine/blob/engine-3.14/doc/breaking-hazardlib.md
 
 As of engine 3.14 all of the ~700 GMPEs in hazardlib are vectorized,
 i.e. they use the new API in terms of numpy arrays and not Python

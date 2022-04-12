@@ -48,10 +48,10 @@ development installation in Python: you should clone the engine repository,
 create and activate a virtualenv and then perform a `pip install -e .`
 from the engine main directory, as normal. You can find the details here:
 
-https://github.com/gem/oq-engine/blob/master/doc/installing/development.md
+https://github.com/gem/oq-engine/blob/engine-3.14/doc/installing/development.md
 
 It is also possible to develop on Windows (
-https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
+https://github.com/gem/oq-engine/blob/engine-3.14/doc/installing/development.md)
 but very few people in GEM are doing that, so you are on your own, should you
 encounter difficulties. We recommend Linux, but Mac also works.
 
@@ -368,4 +368,4 @@ compare with the values in the verification table:
 *sig* refers to the "TOTAL_STDDEV", *tau* to the "INTER_EVENT_STDDEV"
 and *phi* to the "INTRA_EVENT_STDDEV". This is how the tests
 in hazardlib are implemented. Interested users should look at the
-code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/gsim/utils.py.
+code in https://github.com/gem/oq-engine/blob/engine-3.14/openquake/hazardlib/tests/gsim/utils.py.
