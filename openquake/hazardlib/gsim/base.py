@@ -112,13 +112,13 @@ def _get_poes(mean_std, loglevels, truncation_level):
     L1 = loglevels.L1
     for m, imt in enumerate(loglevels):
         # loop needed to work on smaller matrices fitting the CPU cache
-        slc = loglevels(imt)
         levels = loglevels.array[m]
+        mL1 = m * L1
         if truncation_level == 0:
             for li, iml in enumerate(levels):
-                out[:, m * L1 + li] = iml <= mean_std[0, m]
+                out[:, mL1 + li] = iml <= mean_std[0, m]
         else:
-            _compute_delta(mean_std[:, m], levels, out[:, slc])
+            _compute_delta(mean_std[:, m], levels, out[:, mL1: mL1 + L1])
     return _truncnorm_sf(truncation_level, out)
 
 
@@ -511,9 +511,7 @@ class GMPE(GroundShakingIntensityModel):
                 arr[:] += w * _get_poes(mean_stdi, loglevels, truncation_level)
         else:  # regular case
             # split large arrays in slices < 1 MB to fit inside the CPU cache
-            for sl in gen_slices(0, N, maxsize):
-                arr[sl] = _get_poes(mean_std[:, :, sl],
-                                    loglevels, truncation_level)
+            arr[:] = _get_poes(mean_std, loglevels, truncation_level)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for imt in loglevels:
             if imtweight and imtweight.dic.get(imt) == 0:

@@ -79,8 +79,8 @@ def get_maxsize(num_levels, num_gsims):
     # optimized for the USA model
     assert num_levels * num_gsims * 32 < TWO32,  (num_levels, num_gsims)
     maxsize = TWO32 // (num_levels * num_gsims * 128)  # optimized for ESHM20
-    # 10_000 optimizes "composing pnes" for the ALS calculation
-    return min(maxsize, 10_000)
+    # 5_000 optimizes "composing pnes" for the ALS calculation
+    return min(maxsize, 5_000)
 
 
 def trivial(ctx, name):
