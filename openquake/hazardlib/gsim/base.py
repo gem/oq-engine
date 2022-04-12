@@ -511,7 +511,10 @@ class GMPE(GroundShakingIntensityModel):
                 arr[:] += w * _get_poes(mean_stdi, loglevels, truncation_level)
         else:  # regular case
             # split large arrays in slices < 1 MB to fit inside the CPU cache
-            arr[:] = _get_poes(mean_std, loglevels, truncation_level)
+            # this is crucial for performance
+            for sl in gen_slices(0, N, maxsize):
+                arr[sl] = _get_poes(
+                    mean_std[:, :, sl], loglevels, truncation_level)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for imt in loglevels:
             if imtweight and imtweight.dic.get(imt) == 0:
