@@ -489,7 +489,7 @@ class GMPE(GroundShakingIntensityModel):
         truncation_level = cmaker.truncation_level
         N = mean_std.shape[2]  # 2, M, N
         L = loglevels.size
-        maxsize = int(numpy.ceil(ONE_MB / L / 8))
+        maxsize = int(numpy.ceil(ONE_MB / L / 16))
         arr = numpy.zeros((N, L))
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
