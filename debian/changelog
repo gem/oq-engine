@@ -39,7 +39,7 @@ python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
   * Internal: introduced limited unique rupture IDs in classical calculations
     with few sites
 
-  [Prajacta Jadhav, Dharma Wijewickreme]
+  [Prajakta Jadhav, Dharma Wijewickreme]
   * Added GMPE Youd et al. (2002) and the corresponding site parameters
 
   [Michele Simionato]
