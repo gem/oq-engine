@@ -25,7 +25,7 @@ in the hazard or risk mosaic) you are recommended to use a Linux server.
 ## Install or upgrade packages from the OpenQuake website
 
 The best way is to use the [universal installer](universal.md). The LTS
-version has also a binary installer that can be downloaded from https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.11.4-1.exe using any browser and run the installer, then follow the wizard on screen.
+version has also a binary installer that can be downloaded from https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.11.5-1.exe using any browser and run the installer, then follow the wizard on screen.
 
 ![installer-screenshot-1](../img/win-installer-1.png)
 ![installer-screenshot-2](../img/win-installer-2.png)

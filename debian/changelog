@@ -1,3 +1,5 @@
+python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Changed the definition of `aggrisk`: dividing by the effective time
   * Internal: removed flag `save_disk_space` since now it is always on
@@ -59,6 +61,8 @@
   * Extended `oq postzip` to multiple files and `oq abort` to multiple jobs
   * Internal: changed install.py to install the venv in /opt/openquake/venv
   * Fixed a BOM issue on Windows when reading job.ini files
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 12 Apr 2022 12:27:58 +0000
 
 python3-oq-engine (3.13.0-1~xenial01) xenial; urgency=low
 
