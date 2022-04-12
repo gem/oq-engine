@@ -195,7 +195,7 @@ class Hazard:
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
         self.imtls = imtls = dstore['oqparam'].imtls
-        self.level_weights = imtls.array / imtls.array.sum()
+        self.level_weights = imtls.array.flatten() / imtls.array.sum()
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
         self.N = len(dstore['sitecol/sids'])
