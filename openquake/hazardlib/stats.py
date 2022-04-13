@@ -48,11 +48,8 @@ def _truncnorm_sf(truncation_level, values):
     >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345)
     True
     """
-    if truncation_level == 0:
+    if truncation_level == 0.:
         return values
-
-    if truncation_level is None:
-        return ndtr(- values)
 
     # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
     # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
@@ -68,7 +65,7 @@ def _truncnorm_sf(truncation_level, values):
 
     # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
     # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
-    z = phi_b * 2 - 1
+    z = phi_b * 2. - 1.
 
     # calculate the result of survival function of ``values``,
     # and restrict it to the interval where probability is defined --
@@ -78,7 +75,7 @@ def _truncnorm_sf(truncation_level, values):
     # ``SF(x) = (Z - CDF(x) + CDF(a)) / Z``,
     # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
     # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
-    return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
+    return ((phi_b - ndtr(values)) / z).clip(0., 1.)
 
 
 def norm_cdf(x, a, s):
