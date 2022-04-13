@@ -249,6 +249,7 @@ def to_gmfs(shakemap, gmf_dict, site_effects, truncation_level,
     """
     :param shakemap: site coordinates with shakemap values
     :param gmf_dict: dictionary with info about the gmf calculation method
+    :param truncation_level: truncation level (float)
     :param site_effects: whether to apply site effects or not
     :param num_gmfs: E, amount of gmfs to generate
     :param seed: seed for generating numbers
@@ -267,12 +268,8 @@ def to_gmfs(shakemap, gmf_dict, site_effects, truncation_level,
     N = len(shakemap)   # number of sites
 
     # generate standard normal random variables of shape (M*N, E)
-    if truncation_level:
-        Z = truncnorm.rvs(-truncation_level, truncation_level, loc=0, scale=1,
-                          size=(M * N, num_gmfs), random_state=seed)
-    else:
-        Z = norm.rvs(loc=0, scale=1, size=(
-            M * N, num_gmfs), random_state=seed)
+    Z = truncnorm.rvs(-truncation_level, truncation_level, loc=0, scale=1,
+                      size=(M * N, num_gmfs), random_state=seed)
 
     # build array of mean values of shape (M*N, E)
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
