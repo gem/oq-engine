@@ -18,7 +18,7 @@ def stress_cpu(zeros, monitor):
 
 if __name__ == '__main__':
     args = sys.argv[1:]
-    ct = args[0] if args else 64
+    ct = int(args[0]) if args else 64
     logging.basicConfig(level=logging.INFO)
     logging.info('Producing %d tasks', ct)
     Starmap.apply(stress_cpu, (numpy.zeros(10_000),),
