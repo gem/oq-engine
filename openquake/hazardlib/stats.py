@@ -18,13 +18,24 @@
 """
 Utilities to compute mean and quantile curves
 """
+import math
 import numpy
 import pandas
 from scipy.stats import norm
-from scipy.special import ndtr
 from openquake.baselib.general import AccumDict, agg_probs
+from openquake.baselib.performance import compile
+try:
+    import numba
+    SQRT05 = math.sqrt(0.5)
+
+    @numba.vectorize("float64(float64)")
+    def ndtr(z):
+        return 0.5 * (1.0 + math.erf(z * SQRT05))
+except ImportError:
+    from scipy.special import ndtr
 
 
+@compile("float64[:,:](float64, float64[:,:])")
 def _truncnorm_sf(truncation_level, values):
     """
     Survival function for truncated normal distribution.
