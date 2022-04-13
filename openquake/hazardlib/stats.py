@@ -30,7 +30,7 @@ def _truncnorm_sf(truncation_level, values):
     Survival function for truncated normal distribution.
 
     Assumes zero mean, standard deviation equal to one and symmetric
-    truncation.
+    truncation. It is faster than using scipy.stats.truncnorm.sf
 
     :param truncation_level:
         Positive float number representing the truncation on both sides
@@ -43,9 +43,6 @@ def _truncnorm_sf(truncation_level, values):
 
     >>> from scipy.stats import truncnorm
     >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
-    True
-    >>> from scipy.stats import norm
-    >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345)
     True
     """
     if truncation_level == 0.:
