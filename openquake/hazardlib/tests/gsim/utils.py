@@ -196,7 +196,7 @@ class BaseGSIMTestCase(unittest.TestCase):
     GSIM_CLASS = None
 
     def check(self, *filenames, max_discrep_percentage,
-              std_discrep_percentage=None, **kwargs):
+              std_discrep_percentage=None, truncation_level=99., **kwargs):
         if std_discrep_percentage is None:
             std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
@@ -210,6 +210,8 @@ class BaseGSIMTestCase(unittest.TestCase):
             if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
                 out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
         cmaker, df = read_cmaker_df(gsim, fnames)
+        if truncation_level != 99.:
+            cmaker.truncation_level = truncation_level
         for ctx in gen_ctxs(df):
             ctx.occurrence_rate = 0
             out = cmaker.get_mean_stds([ctx])[:, 0]

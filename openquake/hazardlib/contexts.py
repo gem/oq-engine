@@ -832,7 +832,8 @@ class ContextMaker(object):
                 start = slc.stop
             if self.adj[gsim]:
                 self.adj[gsim] = numpy.concatenate(self.adj[gsim])
-            if self.truncation_level and (out[1, g] == 0.).any():
+            if self.truncation_level not in (0, 99.) and (
+                    out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
         return out
 
