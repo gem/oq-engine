@@ -1,14 +1,12 @@
 The release 3.14 is the result of 3 months of work involving nearly
-200 pull requests. The major highlights are: complete vectorization of
-hazardlib, optimization of the UCERF model, and upgrade of Shapely to
-version 1.8.0 (the upgrade causes slight changes in the numbers
-produced by the engine, this is why it is important to mention it).
+200 pull requests. The major highlight is the complete vectorization of
+hazardlib.
 
 The complete list of changes is listed in the changelog:
 
 https://github.com/gem/oq-engine/blob/engine-3.14/debian/changelog
 
-# New in hazardlib
+# Work on hazardlib
 
 One year ago we started a vectorization program for the GMPEs in hazardlib,
 described here:
