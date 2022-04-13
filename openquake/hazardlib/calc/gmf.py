@@ -81,7 +81,7 @@ class GmfComputer(object):
 
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
-        distribution, or ``None``.
+        distribution
 
     :param correlation_model:
         Instance of correlation model object. See
@@ -297,7 +297,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         :class:`~openquake.hazardlib.gsim.base.IPE`.
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
-        distribution, or ``None``.
+        distribution
     :param realizations:
         Integer number of GMF realizations to compute.
     :param correlation_model:

@@ -38,7 +38,7 @@ NS = "{http://openquake.org/xmlns/nrml/0.5}"
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
-OVERWRITE = True
+OVERWRITE = False
 aae = np.testing.assert_almost_equal
 
 
@@ -429,9 +429,9 @@ class NZLTestCase(unittest.TestCase):
         fnamei = 'results_nzl_2_ref_idx.txt'
         fnamei = os.path.join(BASE_PATH, 'results', fnamei)
         if OVERWRITE:
-            np.savetxt(fname0, rprof[0])
-            np.savetxt(fname2, rprof[2])
-            np.savetxt(fnamei, np.array([ref_idx]))
+            np.savetxt(fname0, rprof[0], fmt='%.8e')
+            np.savetxt(fname2, rprof[2], fmt='%.8e')
+            np.savetxt(fnamei, np.array([ref_idx]), fmt='%.8e')
 
         # Check profiles
         expected_prof0 = np.loadtxt(fname0)
@@ -469,8 +469,8 @@ class NZLTestCase(unittest.TestCase):
         fnameb = 'results_nzl_2_mesh_back.txt'
         fnameb = os.path.join(BASE_PATH, 'results', fnameb)
         if OVERWRITE:
-            np.savetxt(fname, tmp)
-            np.savetxt(fnameb, np.array(mback)[:, :, 0])
+            np.savetxt(fname, tmp, fmt='%.8e')
+            np.savetxt(fnameb, np.array(mback)[:, :, 0], fmt='%.8e')
 
         # Check the mesh
         expected_mshb = np.loadtxt(fnameb)
@@ -484,7 +484,7 @@ class NZLTestCase(unittest.TestCase):
         fname_lo = 'results_nzl_2_mesh_lons.txt'
         fname_lo = os.path.join(BASE_PATH, 'results', fname_lo)
         if OVERWRITE:
-            np.savetxt(fname_lo, self.msrf2.surfaces[0].mesh.lons)
+            np.savetxt(fname_lo, self.msrf2.surfaces[0].mesh.lons, fmt='%.8e')
 
         # Checking the mesh
         expected_lons = np.loadtxt(fname_lo)
@@ -523,7 +523,7 @@ def _test_nzl_get_rx(msrf, title, fname):
 
     # We did not have a way to compute these results independently
     if OVERWRITE:
-        np.savetxt(fname, dst)
+        np.savetxt(fname, dst, fmt='%.8e')
 
     # Load expected results
     dst_expected = np.loadtxt(fname)

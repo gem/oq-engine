@@ -342,7 +342,7 @@ class ContextMaker(object):
             self.tom = registry['PoissonTOM'](self.investigation_time)
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
-        self.truncation_level = param.get('truncation_level')
+        self.truncation_level = param.get('truncation_level', 99.)
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
@@ -832,7 +832,8 @@ class ContextMaker(object):
                 start = slc.stop
             if self.adj[gsim]:
                 self.adj[gsim] = numpy.concatenate(self.adj[gsim])
-            if self.truncation_level and (out[1, g] == 0.).any():
+            if self.truncation_level not in (0, 99.) and (
+                    out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
         return out
 

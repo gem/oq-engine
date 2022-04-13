@@ -1,3 +1,10 @@
+  [Michele Simionato]
+
+  * Setting the truncation_level to the empty string is now forbidden;
+    some GMFs calculations not setting truncation_level can now give
+    different results since truncation_level=None is now replaced with
+    truncation_level=99
+
 python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
