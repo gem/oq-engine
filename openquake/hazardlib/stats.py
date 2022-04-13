@@ -21,15 +21,12 @@ Utilities to compute mean and quantile curves
 import math
 import numpy
 import pandas
-
 from scipy.stats import norm
 from openquake.baselib.general import AccumDict, agg_probs
 from openquake.baselib.performance import compile
-
-SQRT05 = math.sqrt(0.5)
-
 try:
     import numba
+    SQRT05 = math.sqrt(0.5)
 
     @numba.vectorize("float64(float64)")
     def ndtr(z):
@@ -72,7 +69,7 @@ def _truncnorm_sf(truncation_level, values):
     # and ``b = + truncation_level``.
 
     # calculate CDF of b
-    phi_b = 0.5 * ndtr(truncation_level)
+    phi_b = ndtr(truncation_level)
 
     # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
     # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
