@@ -36,6 +36,20 @@ class CrossCorrelation(ABC):
         :return: a scalar
         """
 
+    def get_cross_correlation_mtx(self, imts: list) -> np.ndarray:
+        """
+        :param imts:
+            A list
+        """
+        num_imts = len(imts)
+        mtx = np.zeros((num_imts, num_imts))
+        for i1 in range(num_imts):
+            for i2 in range(i1, num_imts):
+                cor = self.get_correlation(imts[i1], imts[i2])
+                mtx[i1, i2] = cor
+                mtx[i2, i1] = cor
+        return mtx
+
 
 class BakerJayaram2008(CrossCorrelation):
     """
@@ -46,6 +60,9 @@ class BakerJayaram2008(CrossCorrelation):
 
         from_per = from_imt.period
         to_per = to_imt.period
+
+        if np.abs(from_per-to_per) < 1e-10:
+            return 1.0
 
         t_min = np.min([from_per, to_per])
         t_max = np.max([from_per, to_per])
