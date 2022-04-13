@@ -947,7 +947,7 @@ class OqParam(valid.ParamSet):
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 2000)
-    truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), 99.)
+    truncation_level = valid.Param(valid.positivefloat, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)

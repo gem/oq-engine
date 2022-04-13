@@ -1,3 +1,7 @@
+  [Michele Simionato]
+
+  * Setting the truncation_level to the empty string is now forbidden
+
 python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
