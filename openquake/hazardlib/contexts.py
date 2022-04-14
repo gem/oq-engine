@@ -41,7 +41,7 @@ from openquake.baselib.performance import Monitor, split_array
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.tom import registry, get_probability_no_exceedance
+from openquake.hazardlib.tom import registry, get_pnes, FatedTOM
 from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.calc.filters import (
@@ -766,31 +766,39 @@ class ContextMaker(object):
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
+        if self.tom is None:
+            itime = -1.  # not used
+        elif isinstance(self.tom, FatedTOM):
+            itime = 0.
+        else:
+            itime = self.tom.time_span
         for ctx in self.recarrays(ctxs):
             # allocating pmap in advance
             dic = {}  # sid -> array of shape (L, G)
             for sid in numpy.unique(ctx.sids):
                 dic[sid] = pmap.setdefault(sid, self.rup_indep).array
             for poes, ctxt, slcsids in self.gen_poes(ctx):
-                probs_or_tom = getattr(ctxt, 'probs_occur', self.tom)
+                probs_occur = getattr(ctxt, 'probs_occur',
+                                      numpy.zeros((len(ctxt), 0)))
+                rates = getattr(ctxt, 'occurrence_rate',
+                                numpy.zeros(len(ctxt)))
                 with self.pne_mon:
-                    # the following is slow
-                    pnes = get_probability_no_exceedance(
-                        ctxt, poes, probs_or_tom)
-
-                    # the following is relatively fast
                     if isinstance(slcsids, numpy.ndarray):
                         # no collapse: avoiding an inner loop can give a 25%
                         if self.rup_indep:
-                            for poe, pne, sid in zip(poes, pnes, ctxt.sids):
-                                dic[sid] *= pne
+                            z = zip(poes, rates, probs_occur, ctxt.sids)
+                            for poe, rate, probs, sid in z:
+                                dic[sid] *= get_pnes(rate, probs, poe, itime)
                         else:  # USAmodel, New Madrid cluster
-                            w = getattr(ctxt, 'weight', numpy.zeros(len(ctxt)))
-                            for poe, pne, wei, sid in zip(
-                                    poes, pnes, w, ctxt.sids):
+                            z = zip(poes, rates, probs_occur,
+                                    ctxt.weight, ctxt.sids)
+                            for poe, rate, probs, wei, sid in z:
+                                pne = get_pnes(rate, probs, poe, itime)
                                 dic[sid] += (1. - pne) * wei
                     else:  # collapse is possible only for rup_indep
-                        for poe, pne, sids in zip(poes, pnes, slcsids):
+                        z = zip(poes, rates, probs_occur, slcsids)
+                        for poe, rate, probs, sids in z:
+                            pne = get_pnes(rate, probs, poe, itime)
                             for sid in sids:
                                 dic[sid] *= pne
 

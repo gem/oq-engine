@@ -1,5 +1,5 @@
   [Michele Simionato]
-
+  * Reduced the stress on the memory in classical calculations
   * Setting the truncation_level to the empty string is now forbidden;
     some GMFs calculations not setting truncation_level can now give
     different results since truncation_level=None is now replaced with
