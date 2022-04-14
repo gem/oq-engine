@@ -54,7 +54,7 @@ from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 U32 = numpy.uint32
 F64 = numpy.float64
 MAXSIZE = 500_000  # used when collapsing
-MEDSIZE = 1000  # crucial so that the arrays NLG fit in the CPU cache
+MEDSIZE = 2000  # crucial so that the arrays NLG fit in the CPU cache
 TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
