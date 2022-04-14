@@ -30,14 +30,9 @@ from unittest.mock import patch
 import numpy
 import pandas
 from scipy.interpolate import interp1d
-try:
-    import numba
-except ImportError:
-    numba = None
-
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
-from openquake.baselib.performance import Monitor, split_array
+from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -63,6 +58,23 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+
+
+# numbified below
+def update_pmap_n(dic, poes, rates, probs_occur, sids, itime):
+    for poe, rate, probs, sid in zip(poes, rates, probs_occur, sids):
+        dic[sid] *= get_pnes(rate, probs, poe, itime)
+
+
+if numba:
+    t = numba.types
+    sig = t.void(t.DictType(t.uint32, t.float64[:, :]),  # dic
+                 t.float64[:, :, :],                     # poes
+                 t.float64[:],                           # rates
+                 t.float64[:, :],                        # probs_occur
+                 t.uint32[:],                            # sids
+                 t.float64)                              # itime
+    update_pmap_n = compile(sig)(update_pmap_n)
 
 
 def size(imtls):
@@ -762,9 +774,14 @@ class ContextMaker(object):
             itime = 0.
         else:
             itime = self.tom.time_span
+        if numba:
+            dic = numba.typed.Dict.empty(
+                key_type=t.uint32,
+                value_type=t.float64[:, :])
+        else:
+            dic = {}  # sid -> array of shape (L, G)
         for ctx in self.recarrays(ctxs):
             # allocating pmap in advance
-            dic = {}  # sid -> array of shape (L, G)
             for sid in numpy.unique(ctx.sids):
                 dic[sid] = pmap.setdefault(sid, self.rup_indep).array
             for poes, ctxt, slcsids in self.gen_poes(ctx):
@@ -776,9 +793,8 @@ class ContextMaker(object):
                     if isinstance(slcsids, numpy.ndarray):
                         # no collapse: avoiding an inner loop can give a 25%
                         if self.rup_indep:
-                            z = zip(poes, rates, probs_occur, ctxt.sids)
-                            for poe, rate, probs, sid in z:
-                                dic[sid] *= get_pnes(rate, probs, poe, itime)
+                            update_pmap_n(dic, poes, rates, probs_occur,
+                                          ctxt.sids, itime)
                         else:  # USAmodel, New Madrid cluster
                             z = zip(poes, rates, probs_occur,
                                     ctxt.weight, ctxt.sids)
