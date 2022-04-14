@@ -29,7 +29,7 @@ import functools
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
-from openquake.baselib.performance import compile, numba
+from openquake.baselib.performance import compile
 from openquake.hazardlib import const
 from openquake.hazardlib.stats import _truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
@@ -48,7 +48,7 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_SITES_PARAMETERS',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
-ONE_MB = 1024 ** 2
+F64 = numpy.float64
 registry = {}  # GSIM name -> GSIM class
 gsim_aliases = {}  # GSIM alias -> TOML representation
 
@@ -87,24 +87,6 @@ class AdaptedWarning(UserWarning):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then _compute_delta will be called less times
-if numba:
-
-    @compile("void(float64[:, :], float64[:], float64[:, :])")
-    def _compute_delta(mean_std, levels, out):
-        # compute (iml - mean) / std for each level with numba
-        N, L = out.shape
-        for li in range(L):
-            iml = levels[li]
-            for si in range(N):
-                out[si, li] = (iml - mean_std[0, si]) / mean_std[1, si]
-else:
-
-    def _compute_delta(mean_std, levels, out):
-        # compute (iml - mean) / std for each level with numpy
-        for li, iml in enumerate(levels):
-            out[:, li] = (iml - mean_std[0]) / mean_std[1]
-
-
 @compile("float64[:, :](float64[:,:,:], float64[:,:], float64)")
 def _get_poes(mean_std, loglevels, truncation_level):
     # returns a matrix of shape (N, L)
@@ -115,10 +97,13 @@ def _get_poes(mean_std, loglevels, truncation_level):
         mL1 = m * L1
         if truncation_level == 0:
             for li, iml in enumerate(levels):
-                out[:, mL1 + li] = iml <= mean_std[0, m]
+                out[:, mL1 + li] = _truncnorm_sf(
+                    truncation_level, (iml <= mean_std[0, m]).astype(F64))
         else:
-            _compute_delta(mean_std[:, m], levels, out[:, mL1: mL1 + L1])
-    return _truncnorm_sf(truncation_level, out)
+            for li, iml in enumerate(levels):
+                out[:, mL1 + li] = _truncnorm_sf(
+                    truncation_level, (iml - mean_std[0, m]) / mean_std[1, m])
+    return out
 
 
 OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters set_tables'
