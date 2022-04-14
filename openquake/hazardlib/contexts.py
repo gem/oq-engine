@@ -766,7 +766,12 @@ class ContextMaker(object):
             pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
         else:  # update passed probmap
             pmap = probmap
-        itime = 0. if isinstance(self.tom, FatedTOM) else self.tom.time_span
+        if self.tom is None:
+            itime = -1.  # not used
+        elif isinstance(self.tom, FatedTOM):
+            itime = 0.
+        else:
+            itime = self.tom.time_span
         for ctx in self.recarrays(ctxs):
             # allocating pmap in advance
             dic = {}  # sid -> array of shape (L, G)
