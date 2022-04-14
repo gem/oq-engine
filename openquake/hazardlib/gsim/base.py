@@ -96,7 +96,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
         for li, iml in enumerate(levels):
-            if truncation_level == 0:
+            if truncation_level == 0.:
                 out[:, mL1 + li] = iml <= mean_std[0, m]
             else:
                 out[:, mL1 + li] = _truncnorm_sf(
