@@ -28,7 +28,7 @@ import warnings
 import functools
 import numpy
 
-from openquake.baselib.general import DeprecationWarning, gen_slices
+from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.performance import compile, numba
 from openquake.hazardlib import const
 from openquake.hazardlib.stats import _truncnorm_sf
@@ -510,11 +510,7 @@ class GMPE(GroundShakingIntensityModel):
                 mean_stdi[1] *= f  # multiply stddev by factor
                 arr[:] += w * _get_poes(mean_stdi, loglevels, truncation_level)
         else:  # regular case
-            # split large arrays in slices < 1 MB to fit inside the CPU cache
-            # this is crucial for performance
-            for sl in gen_slices(0, N, maxsize):
-                arr[sl] = _get_poes(
-                    mean_std[:, :, sl], loglevels, truncation_level)
+            arr[:] = _get_poes(mean_std, loglevels, truncation_level)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for imt in loglevels:
             if imtweight and imtweight.dic.get(imt) == 0:

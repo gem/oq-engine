@@ -54,6 +54,7 @@ from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 U32 = numpy.uint32
 F64 = numpy.float64
 MAXSIZE = 500_000  # used when collapsing
+MEDSIZE = 1000  # crucial so that the arrays NLG fit in the CPU cache
 TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
@@ -70,17 +71,6 @@ def size(imtls):
     """
     imls = imtls[next(iter(imtls))]
     return len(imls) * len(imtls)
-
-
-def get_maxsize(num_levels, num_gsims):
-    """
-    :returns: the maximum context length
-    """
-    # optimized for the USA model
-    assert num_levels * num_gsims * 32 < TWO32,  (num_levels, num_gsims)
-    maxsize = TWO32 // (num_levels * num_gsims * 128)  # optimized for ESHM20
-    # 10_000 optimizes "composing pnes" for the ALS calculation
-    return min(maxsize, 10_000)
 
 
 def trivial(ctx, name):
@@ -767,7 +757,7 @@ class ContextMaker(object):
         else:  # update passed probmap
             pmap = probmap
         if self.tom is None:
-            itime = -1.  # not used
+            itime = -1.
         elif isinstance(self.tom, FatedTOM):
             itime = 0.
         else:
@@ -912,15 +902,14 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
-        maxsize = get_maxsize(L, G)
 
         # collapse if possible
         with self.col_mon:
             ctx, allsids = self.collapser.collapse(ctx, self.rup_indep)
 
         # split large context arrays to avoid filling the CPU cache
-        if ctx.nbytes > maxsize:
-            slices = gen_slices(0, len(ctx), maxsize)
+        if ctx.nbytes > MEDSIZE:
+            slices = gen_slices(0, len(ctx), MEDSIZE)
         else:
             slices = [slice(None)]
 
