@@ -112,8 +112,8 @@ class ModifiableGMPEAddWithBetweenTest(unittest.TestCase):
                              add_between_within_stds={'with_betw_ratio': 0.6})
         out = gmm.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
                                        self.imt, stds_types)
-        expected_with = np.ones(4) * 0.24381161
-        expected_betw = np.ones(4) * 0.40635268
+        expected_with = np.ones(4) * 0.264451
+        expected_betw = np.ones(4) * 0.440751
         aae = np.testing.assert_array_almost_equal
         aae(expected_betw, out[1][2])
         aae(expected_with, out[1][1])
