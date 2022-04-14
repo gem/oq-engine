@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
   * Reduced the stress on the memory in classical calculations, thus
     improving the performance
   * Setting the truncation_level to the empty string is now forbidden;
