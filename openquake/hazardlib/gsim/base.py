@@ -97,8 +97,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
         mL1 = m * L1
         if truncation_level == 0:
             for li, iml in enumerate(levels):
-                out[:, mL1 + li] = _truncnorm_sf(
-                    truncation_level, (iml <= mean_std[0, m]).astype(F64))
+                out[:, mL1 + li] = iml <= mean_std[0, m]
         else:
             for li, iml in enumerate(levels):
                 out[:, mL1 + li] = _truncnorm_sf(
@@ -496,8 +495,9 @@ class GMPE(GroundShakingIntensityModel):
             arr[:] = _get_poes(mean_std, loglevels, truncation_level)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for m, imt in enumerate(cmaker.imtls):
+            mL1 = m * L1
             if imtweight and imtweight.dic.get(imt) == 0:
                 # set by the engine when parsing the gsim logictree
                 # when 0 ignore the contribution: see _build_trts_branches
-                arr[:, loglevels[m]] = 0
+                arr[:, mL1:mL1 + L1] = 0
         return arr
