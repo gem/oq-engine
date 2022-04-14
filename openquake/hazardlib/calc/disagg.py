@@ -164,9 +164,11 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         idxs = numpy.searchsorted(epsilons, lvls)
         poes[:, :, m, p, z] = _disagg_eps(
             truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+    z0 = numpy.zeros(0)
     for u, ctx in enumerate(ctxs):
-        pnes[u] *= get_pnes(ctx.occurrence_rate, ctx.probs_occur, poes[u],
-                            tom.time_span)
+        pnes[u] *= get_pnes(ctx.occurrence_rate,
+                            getattr(ctx, 'probs_occur', z0),
+                            poes[u], tom.time_span)
     bindata = BinData(dists, lons, lats, pnes)
     DEBUG[idx].append(pnes.mean())
     if not bin_edges:
