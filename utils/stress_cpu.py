@@ -22,6 +22,8 @@ if __name__ == '__main__':
     ct = int(args[0]) if args else 64
     logging.basicConfig(level=logging.INFO)
     logging.info('Producing %d tasks', ct)
-    Starmap.apply(stress_cpu, (numpy.zeros(10_000),),
-                  concurrent_tasks=ct, h5=hdf5new()).reduce()
+    with hdf5new() as h5:
+        Starmap.apply(stress_cpu, (numpy.zeros(10_000),),
+                      concurrent_tasks=ct, h5=h5).reduce()
+        logging.info('Performance info in %s', h5.filename)
     Starmap.shutdown()
