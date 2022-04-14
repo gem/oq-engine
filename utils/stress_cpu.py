@@ -1,12 +1,13 @@
 # this is useful to assess the power of a server and the scaling with
 # the number of cores; examples:
-# python stress_cpy.py 64
-# python stress_cpy.py 128
+# python stress_cpy.py 64 && oq show performance
+# python stress_cpy.py 128 && oq show performance
 
 import sys
 import numpy
 import logging
 from openquake.baselib.parallel import Starmap
+from openquake.commonlib.datastore import hdf5new
 
 
 def stress_cpu(zeros, monitor):
@@ -22,5 +23,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     logging.info('Producing %d tasks', ct)
     Starmap.apply(stress_cpu, (numpy.zeros(10_000),),
-                  concurrent_tasks=ct).reduce()
+                  concurrent_tasks=ct, h5=hdf5new()).reduce()
     Starmap.shutdown()
