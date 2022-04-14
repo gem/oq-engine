@@ -166,7 +166,7 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
             truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     for u, ctx in enumerate(ctxs):
         pnes[u] *= get_pnes(ctx.occurrence_rate, ctx.probs_occur, poes[u],
-                            tom.time_span)  # slow
+                            tom.time_span)
     bindata = BinData(dists, lons, lats, pnes)
     DEBUG[idx].append(pnes.mean())
     if not bin_edges:
