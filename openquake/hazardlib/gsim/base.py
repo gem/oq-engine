@@ -95,11 +95,10 @@ def _get_poes(mean_std, loglevels, truncation_level):
     out = numpy.zeros((N, loglevels.size))  # shape (N, L)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
-        if truncation_level == 0:
-            for li, iml in enumerate(levels):
+        for li, iml in enumerate(levels):
+            if truncation_level == 0:
                 out[:, mL1 + li] = iml <= mean_std[0, m]
-        else:
-            for li, iml in enumerate(levels):
+            else:
                 out[:, mL1 + li] = _truncnorm_sf(
                     truncation_level, (iml - mean_std[0, m]) / mean_std[1, m])
     return out
