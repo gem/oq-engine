@@ -33,7 +33,7 @@ from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
-from openquake.hazardlib.tom import get_probability_no_exceedance_rup
+from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
 from openquake.hazardlib.contexts import ContextMaker
@@ -165,7 +165,8 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         poes[:, :, m, p, z] = _disagg_eps(
             truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     for u, ctx in enumerate(ctxs):
-        pnes[u] *= get_probability_no_exceedance_rup(ctx, poes[u], tom)  # slow
+        pnes[u] *= get_pnes(ctx.occurrence_rate, ctx.probs_occur, poes[u],
+                            tom.time_span)  # slow
     bindata = BinData(dists, lons, lats, pnes)
     DEBUG[idx].append(pnes.mean())
     if not bin_edges:

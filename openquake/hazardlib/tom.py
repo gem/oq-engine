@@ -188,93 +188,35 @@ class PoissonTOM(BaseTOM):
         return numpy.exp(- occurrence_rate * self.time_span * poes)
 
 
-# use in calc.disagg
-def get_probability_no_exceedance_rup(rup, poes, tom):
+@compile(["(float64, float64[:], float64[:,:], float64)",
+          "(float64, float64[:], float64[:,:,:,:], float64)"])
+def get_pnes(rate, probs, poes, time_span):
     """
-    Compute and return the probability that in the time span for which the
-    rupture is defined, the rupture itself never generates a ground motion
-    value higher than a given level at a given site.
+    :param rate: occurrence rate in case of a poissonian rupture
+    :param probs: probabilities of occurrence in the nonpoissonian case
+    :param poes: array of PoEs of shape 2D or 4D
+    :param time_span: time span in the poissonian case (0. for FatedTOM)
 
-    Such calculation is performed starting from the conditional probability
-    that an occurrence of the current rupture is producing a ground motion
-    value higher than the level of interest at the site of interest.
-    The actual formula used for such calculation depends on the temporal
-    occurrence model the rupture is associated with.
-    The calculation can be performed for multiple intensity measure levels
-    and multiple sites in a vectorized fashion.
-
-    :param rup:
-        an object with a scalar attribute .occurrence_rate
-    :param poes:
-        array of shape (n, L, G) containing conditional probabilities that a
-        rupture occurrence causes a ground shaking value exceeding a
-        ground motion level at a site. First dimension represent sites,
-        second dimension intensity measure levels. ``poes`` can be obtained
-        calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
-    :param tom:
-        temporal occurrence model (not used if the rupture is nonparametric)
+    Fast way to return probabilities of no exceedence given an array
+    of PoEs and some parameter.
     """
-    if numpy.isnan(rup.occurrence_rate):  # nonparametric
-        pnes = numpy.zeros_like(poes)
-        set_probability_no_exceedance_np(rup.probs_occur, poes, pnes)
-        return pnes
-    else:  # parametric
-        return tom.get_probability_no_exceedance(rup.occurrence_rate, poes)
-
-
-@compile("(float64[:], float64[:,:,:], float64, float64[:,:,:])")
-def calc_pnes(rates, poes, time_span, out):
-    """
-    Compute probabilities of no exceedance by using the poisson distribution
-    (fast). Works by populating the "out" array.
-    """
-    for i, rate in enumerate(rates):
-        out[i] = -rate * time_span * poes[i]
-    numpy.exp(out, out)
-
-
-def get_probability_no_exceedance(ctx, poes, probs_or_tom):
-    """
-    Vectorized version of :func:`get_probability_no_exceedance_rup`.
-
-    :param ctx: a recarray of length N
-    :param poes: an array of probabilities of length N
-    :param tom:
-        temporal occurrence model if the rupture is parametric,
-        list of N probability mass functions otherwise
-    """
-    pnes = numpy.zeros_like(poes)
-    if isinstance(probs_or_tom, FatedTOM):
-        for i, rate in enumerate(ctx.occurrence_rate):
-            pnes[i] = probs_or_tom.get_probability_no_exceedance(rate, poes[i])
-    elif isinstance(probs_or_tom, PoissonTOM):
-        calc_pnes(ctx.occurrence_rate, poes, probs_or_tom.time_span, pnes)
-    else:  # nonpoissonian
-        for i, probs_occur in enumerate(probs_or_tom):
-            set_probability_no_exceedance_np(probs_occur, poes[i], pnes[i])
-    return pnes
-
-
-@compile(["(float64[:], float64[:,:], float64[:,:])",
-          "(float64[:], float64[:,:,:,:], float64[:,:,:,:])"])
-def set_probability_no_exceedance_np(probs_occur, poes, pnes):
-    """
-    :param probs_occur: an array of probabilities
-    :param poes: an array of PoEs
-    :paran pnes: set an array of PNEs computed as ∑ p(k|T) * p(X<x|rup)^k
-    """
-    # Uses the formula
-    #
-    #    ∑ p(k|T) * p(X<x|rup)^k
-    #
-    # where `p(k|T)` is the probability that the rupture occurs k times
-    # in the time span `T`, `p(X<x|rup)` is the probability that a
-    # rupture occurrence does not cause a ground motion exceedance, and
-    # the summation `∑` is done over the number of occurrences `k`.
-    #
-    # `p(k|T)` is given by the attribute probs_occur and
-    # `p(X<x|rup)` is computed as ``1 - poes``.
-    arr = numpy.full_like(poes, probs_occur[0])
-    for p, v in enumerate(probs_occur[1:], 1):
-        arr += v * (1 - poes) ** p
-    pnes[:] = numpy.clip(arr, 0., 1.)  # avoid numeric issues
+    if time_span == 0.:  # FatedTOM
+        return 1. - poes
+    elif len(probs) == 0:  # poissonian
+        return numpy.exp(-rate * time_span * poes)
+    else:
+        # Uses the formula
+        #
+        #    ∑ p(k|T) * p(X<x|rup)^k
+        #
+        # where `p(k|T)` is the probability that the rupture occurs k times
+        # in the time span `T`, `p(X<x|rup)` is the probability that a
+        # rupture occurrence does not cause a ground motion exceedance, and
+        # the summation `∑` is done over the number of occurrences `k`.
+        #
+        # `p(k|T)` is given by the attribute probs_occur and
+        # `p(X<x|rup)` is computed as ``1 - poes``.
+        pnes = numpy.full_like(poes, probs[0])
+        for p, prob in enumerate(probs[1:], 1):
+            pnes[:] += prob * (1 - poes) ** p
+        return pnes.clip(0., 1.)  # avoid numeric issues
