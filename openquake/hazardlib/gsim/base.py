@@ -105,14 +105,13 @@ else:
             out[:, li] = (iml - mean_std[0]) / mean_std[1]
 
 
+@compile("float64[:, :](float64[:,:,:], float64[:,:], float64)")
 def _get_poes(mean_std, loglevels, truncation_level):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
+    L1 = loglevels.size // len(loglevels)
     out = numpy.zeros((N, loglevels.size))  # shape (N, L)
-    L1 = loglevels.L1
-    for m, imt in enumerate(loglevels):
-        # loop needed to work on smaller matrices fitting the CPU cache
-        levels = loglevels.array[m]
+    for m, levels in enumerate(loglevels):
         mL1 = m * L1
         if truncation_level == 0:
             for li, iml in enumerate(levels):
@@ -485,12 +484,11 @@ class GMPE(GroundShakingIntensityModel):
             float number, and if ``imts`` dictionary contain wrong or
             unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
-        loglevels = cmaker.loglevels
+        loglevels = cmaker.loglevels.array
         truncation_level = cmaker.truncation_level
         N = mean_std.shape[2]  # 2, M, N
-        L = loglevels.size
-        maxsize = int(numpy.ceil(ONE_MB / L / 32))
-        arr = numpy.zeros((N, L))
+        M, L1 = loglevels.shape
+        arr = numpy.zeros((N, M*L1))
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
@@ -512,9 +510,9 @@ class GMPE(GroundShakingIntensityModel):
         else:  # regular case
             arr[:] = _get_poes(mean_std, loglevels, truncation_level)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
-        for imt in loglevels:
+        for m, imt in enumerate(cmaker.imtls):
             if imtweight and imtweight.dic.get(imt) == 0:
                 # set by the engine when parsing the gsim logictree
                 # when 0 ignore the contribution: see _build_trts_branches
-                arr[:, loglevels(imt)] = 0
+                arr[:, loglevels[m]] = 0
         return arr
