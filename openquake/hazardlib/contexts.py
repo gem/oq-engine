@@ -49,7 +49,6 @@ from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 U32 = numpy.uint32
 F64 = numpy.float64
 MAXSIZE = 500_000  # used when collapsing
-MEDSIZE = 5000  # crucial so that the arrays NLG fit in the CPU cache
 TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
@@ -58,6 +57,13 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
 IGNORE_PARAMS = {'mag', 'rrup', 'vs30', 'occurrence_rate', 'sids', 'mdvbin'}
+
+
+def get_maxsize(M, G):
+    """
+    :returns: an integer N such that arrays N*M*G fit in the CPU cache
+    """
+    return min(1024**2 / (8*M*G), 5000)
 
 
 # numbified below
@@ -917,18 +923,18 @@ class ContextMaker(object):
         :yields: poes, ctxt, slcsids with poes of shape (N, L, G)
         """
         from openquake.hazardlib.site_amplification import get_poes_site
-        L, G = self.loglevels.size, len(self.gsims)
-        # L1 is the MEDSIZE reduction factor such that the NLG arrays have
+        (M, L1), G = self.loglevels.array.shape, len(self.gsims)
+        maxsize = get_maxsize(M, G)
+        # L1 is the reduction factor such that the NLG arrays have
         # the same size as the GMN array and fit in the CPU cache
-        L1 = L // len(self.loglevels)
 
         # collapse if possible
         with self.col_mon:
             ctx, allsids = self.collapser.collapse(ctx, self.rup_indep)
 
         # split large context arrays to avoid filling the CPU cache
-        if ctx.nbytes > MEDSIZE:
-            slices = gen_slices(0, len(ctx), MEDSIZE)
+        if ctx.nbytes > maxsize:
+            slices = gen_slices(0, len(ctx), maxsize)
         else:
             slices = [slice(0, len(ctx))]
 
@@ -936,11 +942,11 @@ class ContextMaker(object):
             s = bigslc.start
             with self.gmf_mon:
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
-            for slc in gen_slices(bigslc.start, bigslc.stop, MEDSIZE // L1):
+            for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
                 with self.poe_mon:
-                    poes = numpy.zeros((len(ctxt), L, G))
+                    poes = numpy.zeros((len(ctxt), M*L1, G))
                     for g, gsim in enumerate(self.gsims):
                         ms = mean_stdt[:2, g, :, slc.start-s:slc.stop-s]
                         # builds poes of shape (n, L, G)

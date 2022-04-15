@@ -22,7 +22,7 @@ import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.contexts import read_cmakers, MEDSIZE
+from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -101,7 +101,9 @@ def run_preclassical(calc):
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
     M = len(calc.oqparam.imtls)
     G = max(len(cm.gsims) for cm in cmakers)
-    logging.info('Max 4GMN={:.1f} MB'.format(4*MEDSIZE*M*G*8 / 1024**2))
+    N = get_maxsize(M, G)
+    logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
+        N, M, G, N*M*G*8 / 1024**2))
     h5 = calc.datastore.hdf5
     calc.sitecol = sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
