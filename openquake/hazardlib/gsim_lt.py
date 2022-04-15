@@ -20,7 +20,6 @@ import io
 import os
 import ast
 import json
-import logging
 import operator
 import itertools
 from collections import namedtuple, defaultdict
@@ -35,7 +34,8 @@ from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
 
-BranchTuple = namedtuple('BranchTuple', 'trt id gsim weight effective')
+tmp = 'trt id gsim weight effective approach_weight, approach_name'
+BranchTuple = namedtuple('BranchTuple', tmp)
 
 
 class InvalidLogicTree(Exception):
@@ -138,6 +138,7 @@ def keyno(branch_id, bsno, brno, fname='', chars=BASE94):
     :returns: a short unique alias for the branch_id
     """
     if not set(branch_id) <= set(chars):
+        # TODO ex is undefined
         raise ValueError('%s %s' % (ex, fname))
     return chars[brno] + str(bsno)
 
@@ -234,9 +235,11 @@ class GsimLogicTree(object):
         for branch in self.branches:
             weights.update(branch.weight.dic)
         dt = [('trt', hdf5.vstr), ('branch', hdf5.vstr),
-              ('uncertainty', hdf5.vstr)] + [
+              ('uncertainty', hdf5.vstr), ('approach_weight', float),
+              ('approach_name', hdf5.vstr)] + [
             (weight, float) for weight in sorted(weights)]
-        branches = [(b.trt, b.id, repr(b.gsim)) +
+        branches = [(b.trt, b.id, repr(b.gsim), b.approach_weight,
+                     b.approach_name) +
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches if b.effective]
         dic = {'bsetdict': json.dumps(self.bsetdict)}
@@ -264,6 +267,8 @@ class GsimLogicTree(object):
             for brno, branch in enumerate(branches):
                 branch = fix_bytes(branch)
                 br_id = branch['branch']
+                app_wei = branch['approach_weight']
+                app_name = branch['approach_name']
                 gsim = valid.gsim(branch['uncertainty'], dirname)
                 for k, v in gsim.kwargs.items():
                     if k.endswith(('_file', '_table')):
@@ -271,11 +276,18 @@ class GsimLogicTree(object):
                         gsim.kwargs[k] = io.BytesIO(bytes(arr))
                 self.values[branch['trt']].append(gsim)
                 weight = object.__new__(ImtWeight)
+
                 # branch dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
-                weight.dic = {w: branch[w] for w in array.dtype.names[3:]}
+                tmp = {}
+                for w in array.dtype.names[3:]:
+                    if w not in ['approach_weight', 'approach_name']:
+                        tmp[w] = branch[w]
+                weight.dic = tmp
+
                 if len(weight.dic) > 1:
                     gsim.weight = weight
-                bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
+                bt = BranchTuple(branch['trt'], br_id, gsim, weight, True,
+                                 app_wei, app_name)
                 self.branches.append(bt)
                 self.shortener[br_id] = keyno(br_id, bsno, brno)
 
@@ -325,7 +337,8 @@ class GsimLogicTree(object):
                 gsim = AvgPoeGMPE(**kwargs)
                 gsim._toml = _toml
                 new.values[trt] = [gsim]
-                branch = BranchTuple(trt, bs_id, gsim, sum(weights), True)
+                branch = BranchTuple(trt, bs_id, gsim, sum(weights), True, 1.0,
+                                     'undef')
                 new.branches.append(branch)
             else:
                 new.branches.append(br)
@@ -356,66 +369,103 @@ class GsimLogicTree(object):
         return num
 
     def _build_trts_branches(self, tectonic_region_types):
+        """
+        Creates a list of BranchTuples
+        """
+
         # do the parsing, called at instantiation time to populate .values
         trts = []
+        approaches = {}
         branches = []
         branchids = []
         branchsetids = set()
         basedir = os.path.dirname(self.filename)
+        # Looping over the branch sets in the GMC logic tree. Two cases
+        # possible (for the time being): uncertaintyApproach and gmpeModel.
         for bsno, blnode in enumerate(self._ltnode):
             [branchset] = bsnodes(self.filename, blnode)
-            if branchset['uncertaintyType'] != 'gmpeModel':
+            if (branchset['uncertaintyType'] not in
+                    ['gmpeModel', 'uncertaintyApproach']):
                 raise InvalidLogicTree(
                     '%s: only uncertainties of type "gmpeModel" '
                     'are allowed in gmpe logic tree' % self.filename)
             bsid = branchset['branchSetID']
+
+            # Check the uniqueness of the branch set ID provided
             if bsid in branchsetids:
                 raise InvalidLogicTree(
                     '%s: Duplicated branchSetID %s' %
                     (self.filename, bsid))
             else:
                 branchsetids.add(bsid)
-            trt = branchset.get('applyToTectonicRegionType')
-            if trt:  # missing in logictree_test.py
-                self.bsetdict[trt] = bsid
-                trts.append(trt)
-            self.bsetdict[trt] = bsid
-            # NB: '*' is used in scenario calculations to disable filtering
-            effective = (tectonic_region_types == ['*'] or
-                         trt in tectonic_region_types)
-            weights = []
-            branch_ids = []
-            for brno, branch in enumerate(branchset):
-                weight = ImtWeight(branch, self.filename)
-                weights.append(weight)
-                branch_id = 'g' + BASE94[brno] + str(bsno)
-                branch_ids.append(branch_id)
-                try:
-                    gsim = valid.gsim(branch.uncertaintyModel, basedir)
-                except Exception as exc:
-                    raise ValueError(
-                        "%s in file %s" % (exc, self.filename)) from exc
-                if gsim in self.values[trt]:
-                    raise InvalidLogicTree('%s: duplicated gsim %s' %
-                                           (self.filename, gsim))
-                if len(weight.dic) > 1:
-                    gsim.weight = weight
-                self.values[trt].append(gsim)
-                bt = BranchTuple(
-                    branchset['applyToTectonicRegionType'],
-                    branch_id, gsim, weight, effective)
-                if effective:
-                    branches.append(bt)
-                    self.shortener[branch_id] = keyno(
-                        branch_id, bsno, brno, self.filename)
-            tot = sum(weights)
-            assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
-            if duplicated(branch_ids):
-                raise InvalidLogicTree(
-                    'There where duplicated branchIDs in %s' %
-                    self.filename)
-            branchids.extend(branch_ids)
 
+            # Processing branches with gmpe models
+            if branchset['uncertaintyType'] == 'gmpeModel':
+
+                bsid_apply = branchset.get('applyToBranch', None)
+                approach_weight = 1.0
+                approach_name = 'undef'
+                if bsid_apply is not None:
+                    approach_weight = approaches[bsid_apply]['weight']
+                    approach_name = approaches[bsid_apply]['name']
+
+                # Get the tectonic region type
+                trt = branchset.get('applyToTectonicRegionType')
+                if trt:  # missing in logictree_test.py
+                    self.bsetdict[trt] = bsid
+                    trts.append(trt)
+                self.bsetdict[trt] = bsid
+                # NB: '*' is used in scenario calculations to disable filtering
+                effective = (tectonic_region_types == ['*'] or
+                                trt in tectonic_region_types)
+                weights = []
+                branch_ids = []
+                for brno, branch in enumerate(branchset):
+                    weight = ImtWeight(branch, self.filename)
+                    weights.append(weight)
+                    branch_id = 'g' + BASE94[brno] + str(bsno)
+                    branch_ids.append(branch_id)
+                    try:
+                        gsim = valid.gsim(branch.uncertaintyModel, basedir)
+                    except Exception as exc:
+                        raise ValueError(
+                            "%s in file %s" % (exc, self.filename)) from exc
+                    if gsim in self.values[trt]:
+                        raise InvalidLogicTree('%s: duplicated gsim %s' %
+                                               (self.filename, gsim))
+                    if len(weight.dic) > 1:
+                        gsim.weight = weight
+                    self.values[trt].append(gsim)
+                    bt = BranchTuple(
+                        branchset['applyToTectonicRegionType'],
+                        branch_id, gsim, weight, effective, approach_weight,
+                        approach_name)
+                    if effective:
+                        branches.append(bt)
+                        self.shortener[branch_id] = keyno(
+                            branch_id, bsno, brno, self.filename)
+                tot = sum(weights)
+                assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
+                if duplicated(branch_ids):
+                    raise InvalidLogicTree(
+                        'There where duplicated branchIDs in %s' %
+                        self.filename)
+                branchids.extend(branch_ids)
+
+            elif branchset['uncertaintyType'] == 'uncertaintyApproach':
+                tot_wei = 0.0
+                for brno, branch in enumerate(branchset):
+                    branch_id = branch.get('branchID')
+                    name = branch.nodes[0].text
+                    weight = float(branch.nodes[1].text)
+                    approaches[branch_id] = {'weight': weight, 'name': name}
+                    tot_wei += weight
+                    msg = 'GMC logic tree - uncertaintyApproach: '
+                    msg += 'The sum of weights does not match 1'
+                assert numpy.abs(tot_wei - 1.0) < 1e-5, msg
+
+        """ Commenting out temporarly we will probably need to move it inside
+        the loop and check if within an uncertainty paradygm
         if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
                 '%s: Found duplicated applyToTectonicRegionType=%s' %
@@ -424,16 +474,18 @@ class GsimLogicTree(object):
         if dupl:
             logging.debug(
                 'There are duplicated branchIDs %s in %s', dupl, self.filename)
+        """
+
         branches.sort(key=lambda b: b.trt)
         return branches
 
-    def get_weights(self, trt, imt='weight'):
+    def get_weights(self, trt, imt='weight', approach='undef'):
         """
         Branch weights for the given TRT
         """
         weights = []
         for br in self.branches:
-            if br.trt == trt:
+            if br.trt == trt and br.approach_name == approach:
                 weights.append(br.weight[imt])
         return numpy.array(weights)
 
@@ -507,6 +559,11 @@ class GsimLogicTree(object):
             groups.append([b for b in self.branches if b.trt == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
+
+            ref = branches[0].approach_name
+            if not all(b.approach_name == ref for b in branches):
+                continue
+
             weight = 1
             lt_path = []
             lt_uid = []
@@ -516,6 +573,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
+            weight *= branches[0].approach_weight
             yield lt.Realization(tuple(value), weight, i, tuple(lt_uid))
 
     def __repr__(self):
@@ -566,6 +624,8 @@ def collect_files(gsim_lt_path):
     paths = set()
     for blevel in blevels:
         for bset in bsnodes(gsim_lt_path, blevel):
+            if bset['uncertaintyType'] == 'uncertaintyApproach':
+                continue
             assert bset['uncertaintyType'] == 'gmpeModel', bset
             for br in bset:
                 with context(gsim_lt_path, br):
