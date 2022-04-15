@@ -918,7 +918,7 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
-        # F is the MEDSIZE reduction factor such that the NLG arrays have
+        # L1 is the MEDSIZE reduction factor such that the NLG arrays have
         # the same size as the GMN array and fit in the CPU cache
         L1 = L // len(self.loglevels)
 
