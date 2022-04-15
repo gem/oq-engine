@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Added a new type of branch set for the ground-motion characterisation
+    logic tree: 'uncertaintyApproach'
+
   [Michele Simionato]
   * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
   * Reduced the stress on the memory in classical calculations, thus
