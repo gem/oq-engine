@@ -701,15 +701,16 @@ class SourceConverter(RuptureConverter):
         if trt and trt in self.discard_trts:
             return
         name = striptag(node.tag)
+        if name.endswith('Source'):  # source node
+            source_id = node['id']
+            if self.source_id and source_id not in self.source_id:
+                # if source_id is set in the job.ini, discard all other sources
+                return
+            elif self.source_nodes and name not in self.source_nodes:
+                # if source_nodes is set, discard all other source nodes
+                return
         obj = getattr(self, 'convert_' + name)(node)
-        source_id = getattr(obj, 'source_id', '')
-        if source_id and self.source_id and source_id not in self.source_id:
-            # if source_id is set in the job.ini, discard all other sources
-            return
-        elif source_id and self.source_nodes and name not in self.source_nodes:
-            # if source_nodes is set, discard all other source nodes
-            return
-        elif hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
+        if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
             # TruncatedGRMFD with slip rate (for Slovenia)
             m = obj.mfd
             obj.mfd = m.from_slip_rate(
