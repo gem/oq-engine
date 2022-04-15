@@ -87,8 +87,6 @@ def preclassical(srcs, sites, cmaker, monitor):
     cmaker.set_weight(dic[grp_id], sf, mon)
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
-    if spacing:
-        dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
     return dic
 
 
@@ -175,18 +173,6 @@ def run_preclassical(calc):
 
     source_data = zero_times(csm.get_sources())
     calc.store_source_info(source_data)
-    # store ps_grid data, if any
-    for key, sources in res.items():
-        if isinstance(key, str) and key.startswith('ps_grid/'):
-            arrays = []
-            for ps in sources:
-                if hasattr(ps, 'location'):
-                    lonlats = [ps.location.x, ps.location.y]
-                    for src in getattr(ps, 'pointsources', []):
-                        lonlats.extend([src.location.x, src.location.y])
-                    arrays.append(F32(lonlats))
-            h5[key] = arrays
-
     h5['full_lt'] = csm.full_lt
     return res
 
