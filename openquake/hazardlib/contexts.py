@@ -49,7 +49,7 @@ from openquake.hazardlib.geo.surface.multi import get_distdic, MultiSurface
 U32 = numpy.uint32
 F64 = numpy.float64
 MAXSIZE = 500_000  # used when collapsing
-MEDSIZE = 5_000  # crucial so that the arrays NLG fit in the CPU cache
+MEDSIZE = 5000  # crucial so that the arrays NLG fit in the CPU cache
 TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
@@ -918,6 +918,9 @@ class ContextMaker(object):
         """
         from openquake.hazardlib.site_amplification import get_poes_site
         L, G = self.loglevels.size, len(self.gsims)
+        # F is the MEDSIZE reduction factor such that the NLG arrays have
+        # the same size as the GMN array and fit in the CPU cache
+        L1 = L // len(self.loglevels)
 
         # collapse if possible
         with self.col_mon:
@@ -930,17 +933,16 @@ class ContextMaker(object):
             slices = [slice(0, len(ctx))]
 
         for bigslc in slices:
-            start = bigslc.start
+            s = bigslc.start
             with self.gmf_mon:
                 mean_stdt = self.get_mean_stds([ctx[bigslc]])
-            for slc in gen_slices(bigslc.start, bigslc.stop, MEDSIZE // 10):
+            for slc in gen_slices(bigslc.start, bigslc.stop, MEDSIZE // L1):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
                 with self.poe_mon:
                     poes = numpy.zeros((len(ctxt), L, G))
                     for g, gsim in enumerate(self.gsims):
-                        a, b = slc.start - start, slc.stop - start
-                        ms = mean_stdt[:2, g, :, a:b]
+                        ms = mean_stdt[:2, g, :, slc.start-s:slc.stop-s]
                         # builds poes of shape (n, L, G)
                         if self.af:  # kernel amplification method
                             poes[:, :, g] = get_poes_site(ms, self, ctxt)

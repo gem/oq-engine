@@ -101,7 +101,7 @@ def run_preclassical(calc):
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
     M = len(calc.oqparam.imtls)
     G = max(len(cm.gsims) for cm in cmakers)
-    logging.info('Max 4NMG={:.1f} MB'.format(4*MEDSIZE*M*G*8 / 1024**2))
+    logging.info('Max 4GMN={:.1f} MB'.format(4*MEDSIZE*M*G*8 / 1024**2))
     h5 = calc.datastore.hdf5
     calc.sitecol = sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
