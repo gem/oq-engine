@@ -63,7 +63,9 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fit in the CPU cache
     """
-    return min(1024**2 / (8*M*G), 5000)
+    maxs = 1024**2 // (8*M*G)
+    assert maxs > 1, maxs
+    return min(maxs, 5000)
 
 
 # numbified below
