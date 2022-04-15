@@ -99,9 +99,9 @@ def run_preclassical(calc):
     calc.datastore['toms'] = numpy.array(
         [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
-    L = calc.oqparam.imtls.size
+    M = len(calc.oqparam.imtls)
     G = max(len(cm.gsims) for cm in cmakers)
-    logging.info('Max NLG={:.1f} MB'.format(MEDSIZE * L * G * 8 / 1024**2))
+    logging.info('Max 4GMN={:.1f} MB'.format(4*MEDSIZE*M*G*8 / 1024**2))
     h5 = calc.datastore.hdf5
     calc.sitecol = sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
