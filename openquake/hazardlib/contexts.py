@@ -927,23 +927,26 @@ class ContextMaker(object):
         if ctx.nbytes > MEDSIZE:
             slices = gen_slices(0, len(ctx), MEDSIZE)
         else:
-            slices = [slice(None)]
+            slices = [slice(0, len(ctx))]
 
-        for slc in slices:
-            slcsids = allsids[slc]
-            ctxt = ctx[slc]
+        for bigslc in slices:
+            start = bigslc.start
             with self.gmf_mon:
-                mean_stdt = self.get_mean_stds([ctxt])
-            with self.poe_mon:
-                poes = numpy.zeros((len(ctxt), L, G))
-                for g, gsim in enumerate(self.gsims):
-                    ms = mean_stdt[:2, g]
-                    # builds poes of shape (n, L, G)
-                    if self.af:  # kernel amplification method for single site
-                        poes[:, :, g] = get_poes_site(ms, self, ctxt)
-                    else:  # regular case
-                        poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
-            yield poes, ctxt, slcsids
+                mean_stdt = self.get_mean_stds([ctx[bigslc]])
+            for slc in gen_slices(bigslc.start, bigslc.stop, MEDSIZE // 10):
+                slcsids = allsids[slc]
+                ctxt = ctx[slc]
+                with self.poe_mon:
+                    poes = numpy.zeros((len(ctxt), L, G))
+                    for g, gsim in enumerate(self.gsims):
+                        a, b = slc.start - start, slc.stop - start
+                        ms = mean_stdt[:2, g, :, a:b]
+                        # builds poes of shape (n, L, G)
+                        if self.af:  # kernel amplification method
+                            poes[:, :, g] = get_poes_site(ms, self, ctxt)
+                        else:  # regular case
+                            poes[:, :, g] = gsim.get_poes(ms, self, ctxt)
+                yield poes, ctxt, slcsids
 
     def estimate_weight(self, src, srcfilter):
         N = len(srcfilter.sitecol.complete)
