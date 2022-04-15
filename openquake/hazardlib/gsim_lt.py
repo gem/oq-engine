@@ -374,7 +374,7 @@ class GsimLogicTree(object):
         """
 
         # do the parsing, called at instantiation time to populate .values
-        trts = []
+        trtss = {}
         approaches = {}
         branches = []
         branchids = []
@@ -413,7 +413,9 @@ class GsimLogicTree(object):
                 trt = branchset.get('applyToTectonicRegionType')
                 if trt:  # missing in logictree_test.py
                     self.bsetdict[trt] = bsid
-                    trts.append(trt)
+                    if approach_name not in trtss:
+                        trtss[approach_name] = []
+                    trtss[approach_name].append(trt)
                 self.bsetdict[trt] = bsid
                 # NB: '*' is used in scenario calculations to disable filtering
                 effective = (tectonic_region_types == ['*'] or
@@ -464,17 +466,17 @@ class GsimLogicTree(object):
                     msg += 'The sum of weights does not match 1'
                 assert numpy.abs(tot_wei - 1.0) < 1e-5, msg
 
-        """ Commenting out temporarly we will probably need to move it inside
-        the loop and check if within an uncertainty paradygm
-        if len(trts) > len(set(trts)):
-            raise InvalidLogicTree(
-                '%s: Found duplicated applyToTectonicRegionType=%s' %
-                (self.filename, trts))
-        dupl = duplicated(branchids)
-        if dupl:
-            logging.debug(
-                'There are duplicated branchIDs %s in %s', dupl, self.filename)
-        """
+        apps = list(trtss.keys())
+        for app in apps:
+            trts = trtss[app]
+            if len(trts) > len(set(trts)):
+                raise InvalidLogicTree(
+                    '%s: Found duplicated applyToTectonicRegionType=%s' %
+                    (self.filename, trts))
+            dupl = duplicated(branchids)
+            if dupl:
+                fmt = 'There are duplicated branchIDs %s in %s'
+                logging.debug(fmt, dupl, self.filename)
 
         branches.sort(key=lambda b: b.trt)
         return branches
