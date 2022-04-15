@@ -669,6 +669,9 @@ source_id:
    Example: *source_id = src001 src002*.
    Default: empty list
 
+source_node:
+  INTERNAL
+
 spatial_correlation:
   Used in the ShakeMap calculator. The choics are "yes", "no" and "full".
   Example: *spatial_correlation = full*.
@@ -940,6 +943,7 @@ class OqParam(valid.ParamSet):
     sites_slice = valid.Param(valid.simple_slice, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
+    source_nodes = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
