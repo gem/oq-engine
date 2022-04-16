@@ -75,11 +75,13 @@ def update_pmap_n(dic, poes, rates, probs_occur, sids, itime):
 
 
 # numbified below
-def update_pmap_c(dic, poes, rates, probs_occur, slcsids, itime):
-    for poe, rate, probs, sids in zip(poes, rates, probs_occur, slcsids):
+def update_pmap_c(dic, poes, rates, probs_occur, allsids, sizes, itime):
+    start = 0 
+    for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
         pne = get_pnes(rate, probs, poe, itime)
-        for sid in sids:
+        for sid in allsids[start:start + size]:
             dic[sid] *= pne
+        start += size
 
 
 if numba:
@@ -96,7 +98,8 @@ if numba:
                  t.float64[:, :, :],                     # poes
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
-                 t.ListType(t.uint32[:]),                # slcsids
+                 t.uint32[:],                            # allsids
+                 t.uint32[:],                            # sizes
                  t.float64)                              # itime
     update_pmap_c = compile(sig)(update_pmap_c)
 
@@ -826,13 +829,13 @@ class ContextMaker(object):
                                 pne = get_pnes(rate, probs, poe, itime)
                                 dic[sid] += (1. - pne) * wei
                     else:  # collapse is possible only for rup_indep
-                        if numba:
-                            lst = numba.typed.List()
-                            for sids in slcsids:
-                                lst.append(sids)
-                            slcsids = lst
+                        allsids = []
+                        sizes = []
+                        for sids in slcsids:
+                            allsids.extend(sids)
+                            sizes.append(len(sids))
                         update_pmap_c(dic, poes, rates, probs_occur,
-                                      slcsids, itime)
+                                      U32(allsids), U32(sizes), itime)
 
         if probmap is None:  # return the new pmap
             if self.rup_indep:
