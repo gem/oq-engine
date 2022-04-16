@@ -65,19 +65,19 @@ Engine 3.14
 
 Thanks to the vectorization, "computing mean_std" is much faster
 
-| calc_44979, maxmem=82.8 GB | time_sec | memory_mb | counts    |
+| calc_45014, maxmem=83.6 GB | time_sec | memory_mb | counts    |
 |----------------------------+----------+-----------+-----------|
-| total classical            | 506_154  | 660.3     | 256       |
-| get_poes                   | 191_149  | 0.0       | 1_389_758 |
-| composing pnes             | 140_261  | 0.0       | 1_389_758 |
-| computing mean_std         | 128_604  | 0.0       | 1_389_758 |
-| make_contexts              | 38_681   | 238.5     | 40_030    |
-| total postclassical        | 7_842    | 25.2      | 240       |
-| ClassicalCalculator.run    | 5_863    | 3_444     | 1         |
+| total classical            | 490_430  | 650.6     | 257       |
+| get_poes                   | 194_137  | 0.0       | 1_388_749 |
+| computing mean_std         | 128_797  | 0.0       | 1_388_749 |
+| composing pnes             | 121_398  | 0.0       | 1_388_749 |
+| make_contexts              | 38_611   | 339.1     | 39_968    |
+| total postclassical        | 7_886    | 25.2      | 240       |
+| ClassicalCalculator.run    | 5_748    | 3_440     | 1         |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|
-| classical          | 256    | 1_977   | 32%    | 0.10432 | 3_704   | 1.87337 |
-| postclassical      | 240    | 32.7    | 17%    | 17.3    | 49.0    | 1.50050 |
-| preclassical       | 36     | 34.4    | 143%   | 0.07740 | 208.4   | 6.06192 |
-| read_source_model  | 12     | 0.06104 | 75%    | 0.00779 | 0.13576 | 2.22423 |
+| classical          | 257    | 1_908   | 33%    | 0.11264 | 3_560   | 1.86555 |
+| postclassical      | 240    | 32.9    | 15%    | 21.7    | 48.5    | 1.47595 |
+| preclassical       | 36     | 34.3    | 142%   | 0.07477 | 207.3   | 6.03938 |
+| read_source_model  | 12     | 0.06015 | 75%    | 0.00780 | 0.13466 | 2.23857 |
