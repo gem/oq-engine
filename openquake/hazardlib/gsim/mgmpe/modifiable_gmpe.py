@@ -173,7 +173,7 @@ def add_between_within_stds(self, ctx, imt, with_betw_ratio):
         The ratio between the within and between-event standard deviations
     """
     total = getattr(self, StdDev.TOTAL)
-    between = (total**2 / (1 + with_betw_ratio))**0.5
+    between = (total**2 / (1 + with_betw_ratio**2))**0.5
     within = with_betw_ratio * between
     setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
             {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})

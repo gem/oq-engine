@@ -669,6 +669,9 @@ source_id:
    Example: *source_id = src001 src002*.
    Default: empty list
 
+source_nodes:
+  INTERNAL
+
 spatial_correlation:
   Used in the ShakeMap calculator. The choics are "yes", "no" and "full".
   Example: *spatial_correlation = full*.
@@ -710,7 +713,7 @@ time_per_task:
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
-  Default: None
+  Default: 99
 
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
@@ -940,6 +943,7 @@ class OqParam(valid.ParamSet):
     sites_slice = valid.Param(valid.simple_slice, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
+    source_nodes = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
@@ -947,7 +951,7 @@ class OqParam(valid.ParamSet):
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 2000)
-    truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
+    truncation_level = valid.Param(valid.positivefloat, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
@@ -1605,15 +1609,6 @@ class OqParam(valid.ParamSet):
         """
         if self.ground_motion_correlation_model:
             return self.truncation_level != 0
-        else:
-            return True
-
-    def is_valid_truncation_level_disaggregation(self):
-        """
-        Truncation level must be set for disaggregation calculations
-        """
-        if self.calculation_mode == 'disaggregation':
-            return self.truncation_level is not None
         else:
             return True
 

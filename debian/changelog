@@ -1,3 +1,16 @@
+  [Michele Simionato]
+  * Changed the magnitude-dependent `maximum_distance` feature to discard
+    ruptures below `minmag` and above `maxmag`
+  * Added the ability to estimate the runtime of a calculation by using
+    the `--sample-sources` option
+  * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
+  * Reduced the stress on the memory in classical calculations, thus
+    improving the performance
+  * Setting the truncation_level to the empty string is now forbidden;
+    some GMFs calculations not setting truncation_level can now give
+    different results since truncation_level=None is now replaced with
+    truncation_level=99
+
 python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]

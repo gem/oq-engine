@@ -17,6 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import os
+import time
 import psutil
 import logging
 import operator
@@ -440,6 +442,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = {}
+        t0 = time.time()
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
             sids = tile.sids if len(tiles) > 1 else None
@@ -447,14 +450,15 @@ class ClassicalCalculator(base.HazardCalculator):
             for cm in self.haz.cmakers:
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
-            logging.debug("busy time: %s", smap.busytime)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
         self.store_info()
         self.haz.store_disagg(acc)
-        logging.info('Theoretical cfactor = {:_d}/{:_d} = {:.1f}'.format(
+        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
+        if not oq.hazard_calculation_id:
+            self.classical_time = time.time() - t0
         return True
 
     def store_info(self):
@@ -665,6 +669,15 @@ class ClassicalCalculator(base.HazardCalculator):
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
+
+        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
+        if fraction:
+            total_time = time.time() - self.t0
+            delta = total_time - self.classical_time
+            est_time = self.classical_time / float(fraction) + delta
+            logging.info('Estimated time: %.1f hours', est_time / 3600)
+
+        # generate plots
         if 'hmaps-stats' in self.datastore:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
             maxhaz = hmaps.max(axis=(0, 1, 3))

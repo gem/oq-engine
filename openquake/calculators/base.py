@@ -19,6 +19,7 @@ import os
 import sys
 import abc
 import pdb
+import time
 import logging
 import operator
 import traceback
@@ -184,7 +185,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
-        self.datastore.flush()
 
     def check_precalc(self, precalc_mode):
         """
@@ -470,9 +470,16 @@ class HazardCalculator(BaseCalculator):
                     oq, self.datastore.hdf5)
                 oq.mags_by_trt = csm.get_mags_by_trt()
                 for trt in oq.mags_by_trt:
-                    self.datastore['source_mags/' + trt] = numpy.array(
-                        oq.mags_by_trt[trt])
+                    mags = oq.mags_by_trt[trt]
+                    min_mag, max_mag = float(mags[0]), float(mags[-1])
+                    self.datastore['source_mags/' + trt] = numpy.array(mags)
                     interp = oq.maximum_distance(trt)
+                    if min_mag < interp.x[0]:
+                        logging.warning(
+                            'discarding magnitudes < %.2f', interp.x[0])
+                    if max_mag > interp.x[-1]:
+                        logging.warning(
+                            'discarding magnitudes > %.2f', interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
@@ -500,6 +507,7 @@ class HazardCalculator(BaseCalculator):
         If yes, read the inputs by retrieving the previous calculation;
         if not, read the inputs directly.
         """
+        self.t0 = time.time()
         oq = self.oqparam
         if 'gmfs' in oq.inputs or 'multi_peril' in oq.inputs:
             # read hazard from files
