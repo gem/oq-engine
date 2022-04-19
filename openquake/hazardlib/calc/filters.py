@@ -152,7 +152,7 @@ def magdepdist(pairs):
     :returns: a scipy.interpolate.interp1d function
     """
     mags, dists = zip(*pairs)
-    return interp1d(mags, dists)
+    return interp1d(mags, dists, bounds_error=False, fill_value=0.)
 
 
 class IntegrationDistance(dict):
@@ -179,8 +179,6 @@ class IntegrationDistance(dict):
                 for mag, dist in pairs:
                     if mag < MINMAG or mag > MAXMAG:
                         raise ValueError('Invalid magnitude %s' % mag)
-                if pairs[-1][0] < MAXMAG:  # extend the range to the right
-                    pairs.append((MAXMAG, pairs[-1][1]))
                 self[trt] = pairs
             else:  # assume scalar distance
                 assert items >= 0, items
