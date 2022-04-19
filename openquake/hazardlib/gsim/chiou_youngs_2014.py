@@ -402,9 +402,9 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_sa_stddevs(name, C, ctx):
+def get_mean_stddevs(name, C, ctx):
     """
-    Return site amplification and standard deviation values
+    Return mean and standard deviation values
     """
     # Get ground motion on reference rock
     ln_y_ref = get_ln_y_ref(name, C, ctx)
@@ -477,18 +477,20 @@ class ChiouYoungs2014(GMPE):
         for spec of input and result values.
         """
         name = self.__class__.__name__
-        # reference to page 1144, SA might need PGA value
-        pga_mean, pga_sig, pga_tau, pga_phi = get_sa_stddevs(name, self.COEFFS[PGA()], ctx)
+        # reference to page 1144, PSA might need PGA value
+        pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(name, self.COEFFS[PGA()], ctx)
         for m, imt in enumerate(imts):
-            if imt.string == "PGA":
+            if repr(imt) == "PGA":
                 mean[m] = pga_mean
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = \
-                    get_sa_stddevs(name, self.COEFFS[imt], ctx)
+                    get_mean_stddevs(name, self.COEFFS[imt], ctx)
                 # reference to page 1144
+                # Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+                # when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
-                    if imt.string.startswith("SA") and imt.period <= 0.3 \
+                    if repr(imt).startswith("SA") and imt_mean < pga_mean and imt.period <= 0.3 \
                     else imt_mean
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
