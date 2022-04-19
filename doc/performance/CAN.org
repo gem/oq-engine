@@ -44,21 +44,22 @@ Engine 3.12
 Engine 3.13
 -----------
 
-| calc_44670, maxmem=82.6 GB | time_sec  | memory_mb | counts     |
+| calc_45027, maxmem=84.7 GB | time_sec  | memory_mb | counts     |
 |----------------------------+-----------+-----------+------------|
-| total classical            | 1_610_175 | 518.1     | 1_188      |
-| computing mean_std         | 1_358_162 | 0.0       | 714_752    |
-| get_poes                   | 129_574   | 0.0       | 35_566_874 |
-| composing pnes             | 85_176    | 0.0       | 35_566_874 |
-| make_contexts              | 35_876    | 177.9     | 40_030     |
-| ClassicalCalculator.run    | 14_950    | 5_175     | 1          |
+| total classical            | 1_706_781 | 526.9     | 1_193      |
+| computing mean_std         | 1_404_270 | 0.0       | 836_598    |
+| get_poes                   | 160_457   | 0.0       | 36_736_209 |
+| composing pnes             | 103_994   | 0.0       | 36_736_209 |
+| make_contexts              | 36_638    | 258.7     | 39_968     |
+| ClassicalCalculator.run    | 15_921    | 5_190     | 1          |
+| total postclassical        | 7_848     | 25.3      | 240        |
 
 | operation-duration | counts | mean    | stddev | min       | max     | slowfac |
 |--------------------+--------+---------+--------+-----------+---------+---------|
-| classical          | 663    | 2_429   | 27%    | 48.8      | 3_210   | 1.32159 |
-| postclassical      | 240    | 33.0    | 18%    | 15.6      | 51.9    | 1.57476 |
-| preclassical       | 57     | 21.7    | 192%   | 1.750E-04 | 195.0   | 8.97376 |
-| read_source_model  | 12     | 0.06045 | 75%    | 0.00799   | 0.13635 | 2.25560 |
+| classical          | 665    | 2_567   | 27%    | 121.7     | 3_498   | 1.36283 |
+| postclassical      | 240    | 32.7    | 18%    | 15.6      | 51.9    | 1.58696 |
+| preclassical       | 57     | 21.5    | 194%   | 1.724E-04 | 203.6   | 9.47090 |
+| read_source_model  | 12     | 0.06122 | 75%    | 0.00779   | 0.13359 | 2.18209 |
 
 Engine 3.14
 -----------
@@ -85,3 +86,23 @@ Thanks to the vectorization anf GMPETable optimization
 
 Engine 3.15
 -----------
+
+Faster "composing pnes".
+
+| calc_45020, maxmem=80.3 GB | time_sec | memory_mb | counts     |
+|----------------------------+----------+-----------+------------|
+| total classical            | 421_288  | 655.9     | 257        |
+| get_poes                   | 172_759  | 0.0       | 55_156_530 |
+| computing mean_std         | 132_162  | 0.0       | 2_767_347  |
+| composing pnes             | 70_096   | 0.0       | 55_156_530 |
+| make_contexts              | 36_653   | 250.7     | 39_968     |
+| total postclassical        | 7_841    | 25.2      | 240        |
+| ClassicalCalculator.run    | 4_989    | 3_467     | 1          |
+| total preclassical         | 1_238    | 96.9      | 50         |
+
+| operation-duration | counts | mean    | stddev | min     | max     | slowfac |
+|--------------------+--------+---------+--------+---------+---------+---------|
+| classical          | 257    | 1_639   | 31%    | 0.10913 | 2_857   | 1.74312 |
+| postclassical      | 240    | 32.7    | 18%    | 16.9    | 52.0    | 1.59246 |
+| preclassical       | 36     | 34.4    | 143%   | 0.07650 | 202.8   | 5.89411 |
+| read_source_model  | 12     | 0.06030 | 75%    | 0.00782 | 0.13509 | 2.24016 |
