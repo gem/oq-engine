@@ -490,7 +490,7 @@ class ChiouYoungs2014(GMPE):
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
                 # when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
-                    if repr(imt).startswith("SA") and imt_mean < pga_mean and imt.period <= 0.3 \
+                    if repr(imt).startswith("SA") and imt.period <= 0.3 \
                     else imt_mean
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
