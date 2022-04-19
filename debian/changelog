@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the error message when using an out-of-the-range
+    magnitude-dependent `maximum_distance`
   * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
   * Reduced the stress on the memory in classical calculations, thus
     improving the performance
