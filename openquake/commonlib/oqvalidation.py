@@ -669,7 +669,7 @@ source_id:
    Example: *source_id = src001 src002*.
    Default: empty list
 
-source_node:
+source_nodes:
   INTERNAL
 
 spatial_correlation:
