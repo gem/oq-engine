@@ -19,6 +19,7 @@ import os
 import sys
 import abc
 import pdb
+import time
 import logging
 import operator
 import traceback
@@ -470,9 +471,20 @@ class HazardCalculator(BaseCalculator):
                     oq, self.datastore.hdf5)
                 oq.mags_by_trt = csm.get_mags_by_trt()
                 for trt in oq.mags_by_trt:
-                    self.datastore['source_mags/' + trt] = numpy.array(
-                        oq.mags_by_trt[trt])
+                    mags = oq.mags_by_trt[trt]
+                    min_mag, max_mag = float(mags[0]), float(mags[-1])
+                    self.datastore['source_mags/' + trt] = numpy.array(mags)
                     interp = oq.maximum_distance(trt)
+                    if min_mag < interp.x[0]:
+                        raise ValueError(
+                            'maximum_distance: the magnitude %.2f is larger '
+                            'than the minimum magnitude %.2f' % (
+                                interp.x[0], min_mag))
+                    if max_mag > interp.x[-1]:
+                        raise ValueError(
+                            'maximum_distance: the magnitude %.2f is smaller '
+                            'than the maximum magnitude %.2f' % (
+                                interp.x[-1], max_mag))
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
@@ -500,6 +512,7 @@ class HazardCalculator(BaseCalculator):
         If yes, read the inputs by retrieving the previous calculation;
         if not, read the inputs directly.
         """
+        self.t0 = time.time()
         oq = self.oqparam
         if 'gmfs' in oq.inputs or 'multi_peril' in oq.inputs:
             # read hazard from files
