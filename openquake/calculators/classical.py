@@ -675,7 +675,7 @@ class ClassicalCalculator(base.HazardCalculator):
             total_time = time.time() - self.t0
             delta = total_time - self.classical_time
             est_time = self.classical_time / float(fraction) + delta
-            logging.info('Estimated time %.1f hours', est_time / 3600)
+            logging.info('Estimated time: %.1f hours', est_time / 3600)
 
         # generate plots
         if 'hmaps-stats' in self.datastore:
