@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Changed the magnitude-dependent `maximum_distance` feature to discard
-    ruptures below `minmag` and above `maxmax`
+    ruptures below `minmag` and above `maxmag`
   * Added the ability to estimate the runtime of a calculation by using
     the `--sample-sources` option
   * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
