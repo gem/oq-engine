@@ -889,15 +889,24 @@ def dictionary(value):
 def mag_scale_rel(value):
     """
     :param value:
-        name of a Magnitude-Scale relationship in hazardlib
+        a Magnitude-Scale relationship in hazardlib
     :returns:
         the corresponding hazardlib object
+
+    Parametric MSR classes are supported with TOML syntax; for instance
+
+    >>> mag_scale_rel("CScalingMSR.C=4.7")
+    <CScalingMSR>
     """
     value = value.strip()
+    if '.' in value:
+        [(value, kwargs)] = toml.loads(value).items()
+    else:
+        kwargs = {}
     if value not in SCALEREL:
         raise ValueError(
             "'%s' is not a recognized magnitude-scale relationship" % value)
-    return value
+    return SCALEREL[value](**kwargs)
 
 
 def pmf(value):
