@@ -74,6 +74,16 @@ def update_pmap_n(dic, poes, rates, probs_occur, sids, itime):
         dic[sid] *= get_pnes(rate, probs, poe, itime)
 
 
+# numbified below
+def update_pmap_c(dic, poes, rates, probs_occur, allsids, sizes, itime):
+    start = 0 
+    for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
+        pne = get_pnes(rate, probs, poe, itime)
+        for sid in allsids[start:start + size]:
+            dic[sid] *= pne
+        start += size
+
+
 if numba:
     t = numba.types
     sig = t.void(t.DictType(t.uint32, t.float64[:, :]),  # dic
@@ -83,6 +93,15 @@ if numba:
                  t.uint32[:],                            # sids
                  t.float64)                              # itime
     update_pmap_n = compile(sig)(update_pmap_n)
+
+    sig = t.void(t.DictType(t.uint32, t.float64[:, :]),  # dic
+                 t.float64[:, :, :],                     # poes
+                 t.float64[:],                           # rates
+                 t.float64[:, :],                        # probs_occur
+                 t.uint32[:],                            # allsids
+                 t.uint32[:],                            # sizes
+                 t.float64)                              # itime
+    update_pmap_c = compile(sig)(update_pmap_c)
 
 
 def size(imtls):
@@ -810,11 +829,13 @@ class ContextMaker(object):
                                 pne = get_pnes(rate, probs, poe, itime)
                                 dic[sid] += (1. - pne) * wei
                     else:  # collapse is possible only for rup_indep
-                        z = zip(poes, rates, probs_occur, slcsids)
-                        for poe, rate, probs, sids in z:
-                            pne = get_pnes(rate, probs, poe, itime)
-                            for sid in sids:
-                                dic[sid] *= pne
+                        allsids = []
+                        sizes = []
+                        for sids in slcsids:
+                            allsids.extend(sids)
+                            sizes.append(len(sids))
+                        update_pmap_c(dic, poes, rates, probs_occur,
+                                      U32(allsids), U32(sizes), itime)
 
         if probmap is None:  # return the new pmap
             if self.rup_indep:
