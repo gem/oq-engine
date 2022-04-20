@@ -1420,7 +1420,7 @@ def dists(node):
     npd = tuple(
         ((node['probability'], node['rake'], node['strike'], node['dip']))
         for node in node.nodalPlaneDist)
-    return hd, npd, ~node.magScaleRel
+    return hd, npd, str(~node.magScaleRel)
 
 
 def collapse(array):
