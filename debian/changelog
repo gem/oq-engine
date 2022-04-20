@@ -1,3 +1,8 @@
+  [Tom Son]
+  * Implemented a missing piece in Chiou & Youngs (2014) model
+  Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+  when it falls below the predicted PGA
+
   [Michele Simionato]
   * Changed the magnitude-dependent `maximum_distance` feature to discard
     ruptures below `minmag` and above `maxmag`
