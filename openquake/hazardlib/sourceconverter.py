@@ -855,7 +855,7 @@ class SourceConverter(RuptureConverter):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
         polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         area_discretization = geom.attrib.get(
             'discretization', self.area_source_discretization)
         if area_discretization is None:
@@ -888,7 +888,7 @@ class SourceConverter(RuptureConverter):
         """
         geom = node.pointGeometry
         lon_lat = ~geom.Point.pos
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         return source.PointSource(
             source_id=node['id'],
             name=node['name'],
@@ -913,7 +913,7 @@ class SourceConverter(RuptureConverter):
         """
         geom = node.multiPointGeometry
         lons, lats = zip(*split_coords_2d(~geom.posList))
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         return source.MultiPointSource(
             source_id=node['id'],
             name=node['name'],
@@ -937,7 +937,7 @@ class SourceConverter(RuptureConverter):
                   instance
         """
         geom = node.simpleFaultGeometry
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         fault_trace = self.geo_line(geom)
         mfd = self.convert_mfdist(node)
         with context(self.fname, node):
@@ -984,7 +984,7 @@ class SourceConverter(RuptureConverter):
             geom = node.kiteSurface
             profiles = self.geo_lines(geom)
 
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         mfd = self.convert_mfdist(node)
 
         # get rupture floating steps
@@ -1038,7 +1038,7 @@ class SourceConverter(RuptureConverter):
         geom = node.complexFaultGeometry
         edges = self.geo_lines(geom)
         mfd = self.convert_mfdist(node)
-        msr = valid.SCALEREL[~node.magScaleRel]()
+        msr = ~node.magScaleRel
         with context(self.fname, node):
             cmplx = source.ComplexFaultSource(
                 source_id=node['id'],
@@ -1290,7 +1290,7 @@ class RowConverter(SourceConverter):
             'A',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1306,7 +1306,7 @@ class RowConverter(SourceConverter):
             'P',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1323,7 +1323,7 @@ class RowConverter(SourceConverter):
             'M',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1339,7 +1339,7 @@ class RowConverter(SourceConverter):
             'S',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
@@ -1358,7 +1358,7 @@ class RowConverter(SourceConverter):
             'C',
             node['tectonicRegion'],
             self.convert_mfdist(node),
-            ~node.magScaleRel,
+            str(~node.magScaleRel),
             ~node.ruptAspectRatio,
             numpy.nan,
             numpy.nan,
@@ -1420,7 +1420,7 @@ def dists(node):
     npd = tuple(
         ((node['probability'], node['rake'], node['strike'], node['dip']))
         for node in node.nodalPlaneDist)
-    return hd, npd, ~node.magScaleRel
+    return hd, npd, str(~node.magScaleRel)
 
 
 def collapse(array):
