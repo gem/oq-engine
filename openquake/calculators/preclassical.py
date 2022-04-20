@@ -138,7 +138,9 @@ def run_preclassical(calc):
             if pointsources or pointlike:
                 smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
         else:
-            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 160)
+            if pointsources:
+                smap.submit_split(
+                    (pointsources, sites, cmakers[grp_id]), 10, 160)
             for src in pointlike:  # area, multipoint
                 smap.submit(([src], sites, cmakers[grp_id]))
         if others:
