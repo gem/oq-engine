@@ -1049,8 +1049,8 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         if ('ps_grid_spacing' in names_vals and
                 'pointsource_distance' not in names_vals):
-            raise InvalidFile('%s: ps_grid_spacing requires setting a '
-                              'pointsource_distance!' % self.inputs['job_ini'])
+            self.pointsource_distance = dict(
+                default=float(names_vals['ps_grid_spacing']))
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 

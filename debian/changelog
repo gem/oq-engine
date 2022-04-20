@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Setting `ps_grid_spacing` now sets the `pointsource_distance` too
   * Saving memory in preclassical calculations on machines with 8 cores or less
   * Changed the magnitude-dependent `maximum_distance` feature to discard
     ruptures below `minmag` and above `maxmag`
