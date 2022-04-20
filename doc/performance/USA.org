@@ -46,21 +46,22 @@ Engine 3.13
 
 We are slow due to not collapsing the point ruptures (reqv approx).
 
-| calc_44690, maxmem=149.6 GB | time_sec | memory_mb | counts     |
+| calc_45026, maxmem=150.9 GB | time_sec | memory_mb | counts     |
 |-----------------------------+----------+-----------+------------|
-| total classical             | 977_396  | 1_127     | 1_164      |
-| get_poes                    | 417_821  | 0.0       | 17_719_863 |
-| computing mean_std          | 345_899  | 0.0       | 400_468    |
-| composing pnes              | 119_075  | 0.0       | 17_719_863 |
-| make_contexts               | 89_070   | 696.0     | 10_642     |
-| ClassicalCalculator.run     | 10_085   | 6_664     | 1          |
-| total postclassical         | 3_357    | 1.37500   | 240        |
+| total classical             | 970_589  | 1_240     | 1_164      |
+| get_poes                    | 415_921  | 0.0       | 17_716_766 |
+| computing mean_std          | 343_216  | 0.0       | 399_618    |
+| composing pnes              | 117_387  | 0.0       | 17_716_766 |
+| make_contexts               | 88_698   | 668.2     | 10_228     |
+| ClassicalCalculator.run     | 9_882    | 6_233     | 1          |
+| total postclassical         | 3_022    | 1.31250   | 240        |
 
-| operation-duration | counts |    mean | stddev |       min |   max | slowfac |
+| operation-duration | counts | mean    | stddev | min       | max   | slowfac |
 |--------------------+--------+---------+--------+-----------+-------+---------|
-| classical          |    666 |   1_468 |    35% |   0.61383 | 3_251 | 2.21544 |
-| postclassical      |    240 |    14.0 |    24% |   8.56907 |  21.8 | 1.55594 |
-| preclassical       |    205 | 3.91217 |   587% | 1.717E-04 | 313.0 |    80.0 |
+| classical          | 666    | 1_457   | 35%    | 76.8      | 3_309 | 2.27061 |
+| postclassical      | 240    | 12.6    | 37%    | 6.36211   | 24.9  | 1.98142 |
+| preclassical       | 206    | 3.85083 | 584%   | 1.717E-04 | 307.8 | 79.9    |
+| read_source_model  | 13     | 7.11753 | 218%   | 0.04286   | 44.9  | 6.31504 |
 
 Engine 3.14
 -----------
@@ -83,3 +84,25 @@ We are much faster in spite of the slow tasks.
 | postclassical      | 240    | 12.5    | 30%    | 6.44794 | 20.2  | 1.61856 |
 | preclassical       | 290    | 2.76584 | 746%   | 0.12706 | 344.5 | 124.5   |
 | read_source_model  | 13     | 7.21178 | 218%   | 0.04390 | 45.3  | 6.27863 |
+
+Engine 3.15
+-----------
+
+There is a big speedup but even worse slow tasks.
+
+| calc_45022, maxmem=121.1 GB | time_sec | memory_mb | counts     |
+|-----------------------------+----------+-----------+------------|
+| total classical             | 269_148  | 1_412     | 274        |
+| get_poes                    | 126_035  | 0.0       | 22_011_660 |
+| computing mean_std          | 73_468   | 0.0       | 1_050_801  |
+| composing pnes              | 35_064   | 0.0       | 22_011_660 |
+| make_contexts               | 28_280   | 467.4     | 10_228     |
+| ClassicalCalculator.run     | 6_005    | 6_614     | 1          |
+| total postclassical         | 2_982    | 102.9     | 240        |
+
+| operation-duration | counts | mean    | stddev | min     | max   | slowfac |
+|--------------------+--------+---------+--------+---------+-------+---------|
+| classical          | 274    | 982.3   | 75%    | 1.40302 | 4_236 | 4.31274 |
+| postclassical      | 240    | 12.4    | 31%    | 6.73063 | 23.3  | 1.87547 |
+| preclassical       | 290    | 2.78202 | 749%   | 0.14161 | 348.1 | 125.1   |
+| read_source_model  | 13     | 7.35317 | 218%   | 0.04300 | 45.8  | 6.22722 |

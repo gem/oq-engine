@@ -675,7 +675,8 @@ class SourceConverter(RuptureConverter):
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
                  source_id=None, discard_trts=(),
-                 floating_x_step=0, floating_y_step=0):
+                 floating_x_step=0, floating_y_step=0,
+                 source_nodes=()):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -687,6 +688,7 @@ class SourceConverter(RuptureConverter):
         self.discard_trts = discard_trts
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
+        self.source_nodes = source_nodes
 
     def convert_node(self, node):
         """
@@ -698,11 +700,16 @@ class SourceConverter(RuptureConverter):
         trt = node.attrib.get('tectonicRegion')
         if trt and trt in self.discard_trts:
             return
-        obj = getattr(self, 'convert_' + striptag(node.tag))(node)
-        source_id = getattr(obj, 'source_id', '')
-        if self.source_id and source_id and source_id not in self.source_id:
-            # if source_id is set in the job.ini, discard all other sources
-            return
+        name = striptag(node.tag)
+        if name.endswith('Source'):  # source node
+            source_id = node['id']
+            if self.source_id and source_id not in self.source_id:
+                # if source_id is set in the job.ini, discard all other sources
+                return
+            elif self.source_nodes and name not in self.source_nodes:
+                # if source_nodes is set, discard all other source nodes
+                return
+        obj = getattr(self, 'convert_' + name)(node)
         if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
             # TruncatedGRMFD with slip rate (for Slovenia)
             m = obj.mfd

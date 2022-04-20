@@ -669,6 +669,9 @@ source_id:
    Example: *source_id = src001 src002*.
    Default: empty list
 
+source_nodes:
+  INTERNAL
+
 spatial_correlation:
   Used in the ShakeMap calculator. The choics are "yes", "no" and "full".
   Example: *spatial_correlation = full*.
@@ -940,6 +943,7 @@ class OqParam(valid.ParamSet):
     sites_slice = valid.Param(valid.simple_slice, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
+    source_nodes = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
@@ -1045,8 +1049,8 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         if ('ps_grid_spacing' in names_vals and
                 'pointsource_distance' not in names_vals):
-            raise InvalidFile('%s: ps_grid_spacing requires setting a '
-                              'pointsource_distance!' % self.inputs['job_ini'])
+            self.pointsource_distance = dict(
+                default=float(names_vals['ps_grid_spacing']))
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 

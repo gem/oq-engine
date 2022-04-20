@@ -968,10 +968,11 @@ class ContextMaker(object):
             for slc in gen_slices(bigslc.start, bigslc.stop, maxsize // L1):
                 slcsids = allsids[slc]
                 ctxt = ctx[slc]
+                self.slc = slice(slc.start - s, slc.stop - s)  # in get_poes
                 with self.poe_mon:
                     poes = numpy.zeros((len(ctxt), M*L1, G))
                     for g, gsim in enumerate(self.gsims):
-                        ms = mean_stdt[:2, g, :, slc.start-s:slc.stop-s]
+                        ms = mean_stdt[:2, g, :, self.slc]
                         # builds poes of shape (n, L, G)
                         if self.af:  # kernel amplification method
                             poes[:, :, g] = get_poes_site(ms, self, ctxt)

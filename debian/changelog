@@ -1,5 +1,11 @@
   [Michele Simionato]
   * Implemented context collapsing in classical calculations
+  * Setting `ps_grid_spacing` now sets the `pointsource_distance` too
+  * Saving memory in preclassical calculations on machines with 8 cores or less
+  * Changed the magnitude-dependent `maximum_distance` feature to discard
+    ruptures below `minmag` and above `maxmag`
+  * Added the ability to estimate the runtime of a calculation by using
+    the `--sample-sources` option
   * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
   * Reduced the stress on the memory in classical calculations, thus
     improving the performance
