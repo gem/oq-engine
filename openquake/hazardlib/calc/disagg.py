@@ -122,7 +122,13 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
     """
+    epsstar = True
     # disaggregate (separate) PoE in different contributions
+    # U - Number of contexts (i.e. ruptures)
+    # E - Number of epsilon bins between lower and upper truncation
+    # M - Number of IML values to disaggregate
+    # P -
+    # Z -
     U, E, M = len(ctxs), len(eps3[2]), len(iml2dict)
     iml2 = next(iter(iml2dict.values()))
     P, Z = iml2.shape
@@ -139,6 +145,10 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
     G = ctxs[0].mean_std.shape[1]
+    # Array with mean and total std values. Shape of this is:
+    # U - Number of contexts (i.e. ruptures)
+    # M - ?
+    # G - ?
     mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
         # search the index associated to the site ID; for instance
@@ -151,6 +161,7 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
             mean_std[:, u, :, g] = ctx.mean_std[:, g, :, idx]  # (2, M)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
+    # Multi-dimensional iteration
     for (m, p, z), iml in numpy.ndenumerate(iml3):
         if iml == -numpy.inf:  # zero hazard
             continue
@@ -161,9 +172,16 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         except KeyError:
             continue
         lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
+        # Find the index in the epsilons-bins vector where lvls (which are
+        # epsilons) should be included.
         idxs = numpy.searchsorted(epsilons, lvls)
-        poes[:, :, m, p, z] = _disagg_eps(
-            truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+        # Now we split the epsilon into parts (one for each epsilon-bin larger
+        # than lvls)
+        if epsstar:
+            poes[:, idxs, m, p, z] = truncnorm.sf(lvls)
+        else:
+            poes[:, :, m, p, z] = _disagg_eps(
+                truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     z0 = numpy.zeros(0)
     for u, ctx in enumerate(ctxs):
         pnes[u] *= get_pnes(ctx.occurrence_rate,
