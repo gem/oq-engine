@@ -98,6 +98,12 @@ class BaseMSR(metaclass=abc.ABCMeta):
         """
         return self.__class__ is other.__class__
 
+    def __str__(self):
+        """
+        Returns a TOML representation of the instance
+        """
+        return self.__class__.__name__
+
     def __repr__(self):
         """
         Returns the name of the class
