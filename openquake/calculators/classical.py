@@ -625,6 +625,8 @@ class ClassicalCalculator(base.HazardCalculator):
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         ct = oq.concurrent_tasks or 1
+        if 1 < ct <= 16:  # saving half the memory on small machines
+            ct = 32
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         if '_poes' in set(self.datastore):
             dstore = self.datastore
@@ -671,7 +673,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore[kind][:] = self.hazard.pop(kind)
 
         fraction = os.environ.get('OQ_SAMPLE_SOURCES')
-        if fraction:
+        if fraction and hasattr(self, 'classical_time'):
             total_time = time.time() - self.t0
             delta = total_time - self.classical_time
             est_time = self.classical_time / float(fraction) + delta
