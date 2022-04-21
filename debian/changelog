@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed disaggregation returning NaNs in some situations with
+    nonParametric/multiFaultSources
   * Fixed --hc not working with disaggregation
   * Fixed double counting when using the ps_grid_spacing approx (sometimes)
   * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
