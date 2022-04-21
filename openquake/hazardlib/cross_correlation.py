@@ -39,7 +39,11 @@ class CrossCorrelation(ABC):
     def get_cross_correlation_mtx(self, imts: list) -> np.ndarray:
         """
         :param imts:
-            A list
+            A list of :class:`openquake.hazardlib.imt.IMT` instances
+        :returns:
+            A :class:`numpy.ndarray` instance with shape (|imts|, |imts|)
+            containing the correlation coefficients between the IMTs provided
+            in the input `imts` list.
         """
         num_imts = len(imts)
         mtx = np.zeros((num_imts, num_imts))
@@ -119,8 +123,9 @@ class CrossCorrelationBetween(ABC):
 
 class GodaAtkinson2009(CrossCorrelationBetween):
     """
-    Implements the correlation model of Goda and Atkinson published in 2009
-    https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/99/5/3003/342221/Probabilistic-Characterization-of-Spatially
+    Implements the correlation model of Goda and Atkinson published in 2009.
+    This is a correlation model for between-event residuals. See
+    https://doi.org/10.1785/0120090007
     """
     cache = {}  # periods -> correlation matrix
 
