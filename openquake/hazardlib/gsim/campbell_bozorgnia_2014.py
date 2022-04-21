@@ -346,15 +346,32 @@ class CampbellBozorgnia2014(GMPE):
     #: and depth (km) to the 2.5 km/s shear wave velocity layer (z2pt5)
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
-    #: Required rupture parameters are magnitude, rake, dip, ztor, rupture
+    #: Required rupture parameters are magnitude, rake, dip, rupture
     #: width and hypocentral depth
     REQUIRES_RUPTURE_PARAMETERS = {
-        'mag', 'rake', 'dip', 'ztor', 'width', 'hypo_depth'}
+        'mag', 'rake', 'dip', 'width', 'hypo_depth'}
 
     #: Required distance measures are Rrup, Rjb and Rx
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
+    REQUIRES_COMPUTED_PARAMETERS = {'ztor'}
+
     SJ = 0  # 1 for Japan
+
+    def set_parameters(self, rup):
+        """
+        Estimate some of the rupture parameters if not provided.
+        """
+        frv = np.zeros_like(rup.rake)
+        frv[(rup.rake > 30.) & (rup.rake < 150.)] = 1.
+        # if Ztor is unknown
+        if not hasattr(rup, "ztor"):
+            # Equation 4 and 5 in Chiou & Youngs 2014
+            rup.ztor = np.where(
+                frv,
+                np.maximum(2.704 - 1.226 * np.maximum(rup.mag - 5.849, 0), 0) ** 2,
+                np.maximum(2.673 - 1.136 * np.maximum(rup.mag - 4.970, 0), 0) ** 2
+            )
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
