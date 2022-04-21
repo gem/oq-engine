@@ -899,7 +899,7 @@ def mag_scale_rel(value):
     <CScalingMSR>
     """
     value = value.strip()
-    if '.' in value:
+    if '.' in value or '[' in value:
         [(value, kwargs)] = toml.loads(value).items()
     else:
         kwargs = {}
