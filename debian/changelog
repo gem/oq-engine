@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Added the possibility of disaggregating in terms of epsilon*
+
   [Michele Simionato]
   * Added the ability to estimate the runtime of a calculation by using
     the `--sample-sources` option

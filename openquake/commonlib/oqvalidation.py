@@ -229,7 +229,7 @@ ebrisk_maxsize:
 epsilon_star:
   A boolean controlling the typology of disaggregation output to be provided.
   When True disaggregation is perfomed in terms of epsilon* rather then
-  epsilon (see Bazzurro and Cornell, 2002)
+  epsilon (see Bazzurro and Cornell, 1999)
 
 floating_x_step:
   Float, used in rupture generation for kite faults. indicates the fraction
