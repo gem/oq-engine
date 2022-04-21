@@ -115,9 +115,9 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             assert s2 < TWO16, 'The rupture mesh spacing is too small'
             shapes.append(s1)
             shapes.append(s2)
-            lons.append(array[0].flatten())
-            lats.append(array[1].flatten())
-            points.append(array.flatten())
+            lons.append(array[0].flat)
+            lats.append(array[1].flat)
+            points.append(array.flat)
         lons = numpy.concatenate(lons)
         lats = numpy.concatenate(lats)
         points = F32(numpy.concatenate(points))
@@ -144,7 +144,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         # 2 * num_surfaces integers describing the first and second
         # dimension of each surface, and then the lons, lats and deps of
         # the underlying meshes of points.
-        geom = numpy.concatenate([[len(shapes) // 2], shapes, F32(points)])
+        geom = numpy.concatenate([[len(shapes) // 2], shapes, points])
         geoms.append(geom)
     if not rups:
         return ()
