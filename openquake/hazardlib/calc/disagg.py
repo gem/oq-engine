@@ -114,15 +114,18 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
+def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
+                 epsstar=False):
     """
     :param ctxs: a list of U RuptureContexts
     :param tom: a temporal occurrence model
     :param g_by_z: an array of gsim indices
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
+    :param sid:
+    :param bin_edges:
+    :param epsstar: a boolean. When True, disaggregation contains eps* results
     """
-    epsstar = True
     # disaggregate (separate) PoE in different contributions
     # U - Number of contexts (i.e. ruptures)
     # E - Number of epsilon bins between lower and upper truncation
@@ -178,7 +181,8 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         # Now we split the epsilon into parts (one for each epsilon-bin larger
         # than lvls)
         if epsstar:
-            poes[:, idxs, m, p, z] = truncnorm.sf(lvls)
+            assert numpy.all(lvls > min(epsilons))
+            poes[:, idxs-1, m, p, z] = truncnorm.sf(lvls)
         else:
             poes[:, :, m, p, z] = _disagg_eps(
                 truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
@@ -308,10 +312,10 @@ def _magbin_groups(rups, mag_bins):
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.nofilter, **kwargs):
+        source_filter=filters.nofilter, epsstar=False, **kwargs):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
-    intensity mesaure type ``imt`` exceeding, at least once, an intensity
+    intensity measure type ``imt`` exceeding, at least once, an intensity
     measure level ``iml`` at a geographical location ``site``, given rupture
     scenarios classified in terms of:
 
@@ -402,7 +406,8 @@ def disaggregation(
     for trt in cmaker:
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
             set_mean_std(ctxs, cmaker[trt])
-            bdata[trt, magi] = disaggregate(ctxs, tom, [0], {imt: iml2}, eps3)
+            bdata[trt, magi] = disaggregate(ctxs, tom, [0], {imt: iml2}, eps3,
+                                            epsstar=epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
