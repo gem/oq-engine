@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed disaggregation returning NaNs in some situations with
+    nonParametric/multiFaultSources
   * Bug fix: not storing far away ruptures coming from multiFaultSources
   * Implemented CScalingMSR
   * Optimized context collapsing in classical calculations
