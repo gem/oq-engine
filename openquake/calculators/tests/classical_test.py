@@ -922,6 +922,15 @@ hazard_uhs-std.csv
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-5)
 
+        # make sure we are not storing far away ruptures
+        r = self.calc.datastore['ruptures'][:]
+        [lon] = self.calc.sitecol.lons
+        [lat] = self.calc.sitecol.lats
+        deltalon = (r['maxlon'] - lon).max()
+        deltalat = (r['maxlat'] - lat).max()
+        # check bounding box close to the site
+        assert deltalon <= .65, deltalon
+        assert deltalat <= .49, deltalat
         rups = extract(self.calc.datastore, 'ruptures')
         csv = general.gettemp(rups.array)
         self.assertEqualFiles('expected/full_ruptures.csv', csv, delta=1E-5)
