@@ -1051,7 +1051,7 @@ A discrete incremental magnitude-frequency distribution
 
    The magnitude-frequency distribution obtained with the above
    parameters is represented in
-   Figure `1.5 <#fig:evenly_discretized_mfd>`__.
+   :numref:`fig:evenly_discretized_mfd`.
 
    .. figure:: figures/hazard/ed_mfd.png
       :alt: Example of an incremental magnitude-frequency distribution.
@@ -2718,7 +2718,7 @@ results is a set of hazard curves (one for each investigated site). The
 command below illustrates how is possible to retrieve the group of
 hazard curves obtained for a calculation with a given identifier
 ``<calc_id>`` (see
-Section `[sec:exporting_hazard_results] <#sec:exporting_hazard_results>`__
+Section :ref:`sec-exporting_hazard_results`
 for an explanation about how to obtain the list of calculations
 performed with their corresponding ID):
 
@@ -2996,6 +2996,8 @@ Table `3.2 <#output:realizations>`__.
       6           b2\ :math:`\sim`\ b12_b21 0.1125
       7           b2\ :math:`\sim`\ b12_b22 0.075
       =========== ========================= ==========
+
+.. _subsec-output_scenario_hazard:
 
 Outputs from Scenario Hazard Analysis 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3770,6 +3772,8 @@ interruption) for which a *Fragility Model* file is provided. Whereas
 providing a *Fragility Model* file for at least one loss type is mandatory
 for running a Scenario Damage calculation, providing corresponding
 *Consequence Model* files is optional.
+
+.. _sec-config_scenario_risk:
 
 Scenario Risk Assessment 
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -6107,6 +6111,8 @@ aforementioned ones may need to be provided. We illustrate in the
 following sections different examples of the configuration file for the
 different risk calculators.
 
+.. _sec-config_scenario_damage:
+
 Scenario Damage Calculator 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 For this calculator,
@@ -6120,11 +6126,12 @@ the given rupture model and then calculate damage distribution
 statistics based on the ground motion fields. A minimal job
 configuration file required for running a scenario damage calculation is
 shown in
-Listing `[lst:config_scenario_damage_combined] <#lst:config_scenario_damage_combined>`__.
+:ref:`the listing <lst:config_scenario_damage_combined>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_scenario_damage_combined
 
       [general]
       description = Scenario damage using a single config file
@@ -6408,7 +6415,7 @@ illustrates a scenario damage calculation which uses a file listing a
 precomputed set of Ground Motion Fields. These Ground Motion Fields can be computed using the
 OpenQuake engine or some other software. The Ground Motion Fields must be provided in either
 the Natural hazards' Risk Markup Language schema or the csv format as presented in
-Section `[subsec:output_scenario_hazard] <#subsec:output_scenario_hazard>`__.
+Section :ref:`subsec-output_scenario_hazard`.
 The damage distribution is computed based on the provided Ground Motion Fields.
 Listing `[lst:output_gmf_scenario_xml] <#lst:output_gmf_scenario_xml>`__
 shows an example of a Ground Motion Fields file in the Natural hazards' Risk Markup Language schema and
@@ -6483,7 +6490,7 @@ This example illustrates a the hazard job configuration file for a
 scenario damage calculation which uses two Ground Motion Prediction Equations instead of only
 one. Currently, the set of Ground Motion Prediction Equations to be used for a scenario
 calculation can be specified using a logic tree file, as demonstrated in
-`[subsec:gmlt] <#subsec:gmlt>`__. As of OpenQuake engine18, the weights in the
+:ref:`gmlt`. As of OpenQuake engine18, the weights in the
 logic tree are ignored, and a set of Ground Motion Fields will be generated for each
 Ground Motion Prediction Equation in the logic tree file. Correspondingly, damage distribution
 statistics will be generated for each set of Ground Motion Field.
@@ -6797,9 +6804,12 @@ are listed below:
    loss estimates can lead to a significant boost in performance and
    tractability. The default value of ``ignore_covs`` is ``false``.
 
-Classical Probabilistic Seismic Damage
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Calculator In order to run this calculator, the parameter
+
+.. _sec-config_classical_damage:
+
+Classical Probabilistic Seismic Damage Calculator 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+In order to run this calculator, the parameter
 ``calculation_mode`` needs to be set to ``classical_damage``.
 
 Most of the job configuration parameters required for running a
@@ -6816,11 +6826,12 @@ curves for the given source model and ground motion model and then
 calculate damage distribution statistics based on the hazard curves. A
 minimal job configuration file required for running a classical
 probabilistic damage calculation is shown in
-Listing `[lst:config_classical_damage_combined] <#lst:config_classical_damage_combined>`__.
+:ref:`the listing <lst:config_classical_damage_combined>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_classical_damage_combined
 
       [general]
       description = Classical probabilistic damage using a single config file
@@ -6853,7 +6864,7 @@ Listing `[lst:config_classical_damage_combined] <#lst:config_classical_damage_c
 
 The general parameters ``description`` and ``calculation_mode``, and
 ``exposure_file`` have already been described earlier in
-Section `[sec:config_scenario_damage] <#sec:config_scenario_damage>`__.
+Section :ref:`sec-config_scenario_damage`.
 The parameters related to the hazard curves computation have been
 described earlier in
 Section  :ref:`Classical PSHA`.
@@ -6948,7 +6959,7 @@ hazard curves and fragility models.
 Now, the above calculations described by the two configuration files
 “job_hazard.ini” and “job_damage.ini” can be run sequentially or
 separately, as illustrated in Example 2 in
-Section `[sec:config_scenario_damage] <#sec:config_scenario_damage>`__.
+Section :ref:`sec-config_scenario_damage`.
 The new parameters introduced in the above example configuration file
 are described below:
 
@@ -7031,7 +7042,7 @@ Listing `[lst:config_classical_risk_combined] <#lst:config_classical_risk_combi
 
 Apart from the calculation mode, the only difference with the example
 job configuration file shown in Example 1 of
-Section `[sec:config_classical_damage] <#sec:config_classical_damage>`__
+Section :ref:`sec-config_classical_damage`
 is the use of a vulnerability model instead of a fragility model.
 
 As with the Scenario Risk calculator, it is possible to specify one or
@@ -7151,7 +7162,7 @@ assets based on the hazard curves and vulnerabilitymodels.
 Now, the above calculations described by the two configuration files
 “job_hazard.ini” and “job_risk.ini” can be run sequentially or
 separately, as illustrated in Example 2 in
-Section `[sec:config_scenario_damage] <#sec:config_scenario_damage>`__.
+Section :ref:`sec-config_scenario_damage`.
 The new parameters introduced in the above risk configuration file
 example
 (Listing `[lst:config_classical_risk] <#lst:config_classical_risk>`__)
@@ -7258,7 +7269,7 @@ calculator to take into account the uncertainty in the conditional loss
 ratio at a particular intensity level. Hence, the parameters
 ``asset_correlation`` and ``master_seed`` may be defined as previously
 described for the Scenario Damage calculator in
-Section `[sec:config_scenario_damage] <#sec:config_scenario_damage>`__.
+Section :ref:`sec-config_scenario_damage`.
 The parameter “risk_investigation_time” specifies the time period for
 which the average damage values will be calculated, similar to the
 Classical Probabilistic Damage calculator. If this parameter is not
@@ -7389,7 +7400,7 @@ calculator to take into account the uncertainty in the conditional loss
 ratio at a particular intensity level. Hence, the parameters
 ``asset_correlation`` and ``master_seed`` may be defined as previously
 described for the Scenario Risk calculator in
-Section `[sec:config_scenario_risk] <#sec:config_scenario_risk>`__. The
+Section :ref:`sec-config_scenario_risk`. The
 parameter “risk_investigation_time” specifies the time period for which
 the event loss tables and loss exceedance curves will be calculated,
 similar to the Classical Probabilistic Risk calculator. If this
@@ -7827,7 +7838,7 @@ the following additional outputs can be exported:
 
 If the calculation involves multiple Ground Motion Prediction Equations as described in Example 4
 in
-Section `[sec:config_scenario_damage] <#sec:config_scenario_damage>`__,
+Section :ref:`sec-config_scenario_damage`,
 separate output files are generated for each of the above outputs, for
 each of the different Ground Motion Prediction Equations used in the calculation.
 
@@ -8520,8 +8531,10 @@ and the following outputs should be produced by the risk calculation:
    9062 | Average Asset Damages
    9063 | Average Asset Losses
 
+.. _sec-demos_scenario_risk:
+
 Scenario Risk Demos 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 The same rupture described
 in the Scenario Damage demo is also used for this demo. In this case, a
 combined job file, job.ini, is used to specify the configuration
@@ -8546,6 +8559,8 @@ and the following outputs should be produced:
    9074 | Average Asset Losses
    9075 | Aggregate Event Losses
    9076 | Realizations
+
+.. _sec-demos_classical_damage:
 
 Classical Probabilistic Seismic Damage Demos
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8588,13 +8603,15 @@ and the following sample outputs are obtained:
    9076 | Asset Damage Distribution
    9077 | Asset Damage Statistics
 
+.. _sec-demos_classical_risk:
+
 Classical Probabilistic Seismic Risk Demos 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The
 same hazard input as described in the Classical Probabilistic Damage
 demo is used for this demo. Thus, the workflow to produce the set of
 hazard curves described in
-Section `[sec:demos_classical_damage] <#sec:demos_classical_damage>`__
+Section :ref:`sec-demos_classical_damage`
 is also valid herein. Then, to run the Classical Probabilistic Risk
 demo, users should navigate to the folder containing the demo input
 models and configuration files and employ the following command:
@@ -8634,8 +8651,8 @@ Event Based Probabilistic Seismic Damage Demos
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This demo uses the same probabilistic seismic hazard assessment (PSHA)
 model described in the previous examples in
-Section `[sec:demos_classical_damage] <#sec:demos_classical_damage>`__
-and Section `[sec:demos_classical_risk] <#sec:demos_classical_risk>`__.
+Section :ref:`sec-demos_classical_damage`
+and Section :ref:`sec-demos_classical_risk`.
 However, instead of hazard curves, sets of ground motion fields will be
 generated by the hazard calculation of this demo. Again, since there is
 only one *Branch* in the logic tree, only one set of ground motion fields
@@ -8671,8 +8688,8 @@ Event Based Probabilistic Seismic Risk Demos
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This demo uses the same probabilistic seismic hazard assessment (PSHA)
 model described in the previous examples in
-Section `[sec:demos_classical_damage] <#sec:demos_classical_damage>`__
-and Section `[sec:demos_classical_risk] <#sec:demos_classical_risk>`__.
+Section :ref:`sec-demos_classical_damage`
+and Section :ref:`sec-demos_classical_risk`.
 However, instead of hazard curves, sets of ground motion fields will be
 generated by the hazard calculation of this demo. Again, since there is
 only one *Branch* in the logic tree, only one set of ground motion fields
@@ -8712,7 +8729,7 @@ The loss
 exceedance curves used within this demo are produced using the Classical
 Probabilistic Risk calculator. Thus, the process to produce the seismic
 hazard curves described in
-Section `[sec:demos_classical_risk] <#sec:demos_classical_risk>`__ can
+Section :ref:`sec-demos_classical_risk` can
 be employed here. Then, the risk calculations can be initiated using the
 following command:
 
