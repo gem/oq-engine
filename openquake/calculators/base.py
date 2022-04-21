@@ -185,7 +185,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
-        self.datastore.flush()
 
     def check_precalc(self, precalc_mode):
         """
@@ -476,15 +475,11 @@ class HazardCalculator(BaseCalculator):
                     self.datastore['source_mags/' + trt] = numpy.array(mags)
                     interp = oq.maximum_distance(trt)
                     if min_mag < interp.x[0]:
-                        raise ValueError(
-                            'maximum_distance: the magnitude %.2f is larger '
-                            'than the minimum magnitude %.2f' % (
-                                interp.x[0], min_mag))
+                        logging.warning(
+                            'discarding magnitudes < %.2f', interp.x[0])
                     if max_mag > interp.x[-1]:
-                        raise ValueError(
-                            'maximum_distance: the magnitude %.2f is smaller '
-                            'than the maximum magnitude %.2f' % (
-                                interp.x[-1], max_mag))
+                        logging.warning(
+                            'discarding magnitudes > %.2f', interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],

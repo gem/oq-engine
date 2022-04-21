@@ -122,16 +122,16 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     :param g_by_z: an array of gsim indices
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
-    :param sid:
+    :param sid: the site ID
     :param bin_edges:
     :param epsstar: a boolean. When True, disaggregation contains eps* results
     """
     # disaggregate (separate) PoE in different contributions
     # U - Number of contexts (i.e. ruptures)
     # E - Number of epsilon bins between lower and upper truncation
-    # M - Number of IML values to disaggregate
-    # P -
-    # Z -
+    # M - Number of IMTs
+    # P - Number of PoEs in poes_disagg
+    # Z - Number of realizations to consider
     U, E, M = len(ctxs), len(eps3[2]), len(iml2dict)
     iml2 = next(iter(iml2dict.values()))
     P, Z = iml2.shape
@@ -150,11 +150,11 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
     G = ctxs[0].mean_std.shape[1]
     # Array with mean and total std values. Shape of this is:
     # U - Number of contexts (i.e. ruptures)
-    # M - ?
-    # G - ?
+    # M - Number of IMTs
+    # G - Number of gsims
     mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
-        # search the index associated to the site ID; for instance
+        # Search the index associated to the site ID; for instance
         # searchsorted([2, 4, 6], 4) => 1
         idx = numpy.searchsorted(ctx.sids, sid)
         dists[u] = ctx.rrup[idx]  # distance to the site

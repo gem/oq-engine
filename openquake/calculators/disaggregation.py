@@ -119,7 +119,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
         for magidx, ctx in zip(magi, allctxs):
             ctx.magi = magidx
     # Set epsstar boolean variable
-    epsstar = False
     epsstar = dstore['oqparam'].epsilon_star
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)

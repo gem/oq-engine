@@ -1,11 +1,23 @@
+  [Tom Son]
+  * Implemented a missing piece in Chiou & Youngs (2014) model
+  Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+  when it falls below the predicted PGA
+
   [Marco Pagani]
   * Added the possibility of disaggregating in terms of epsilon*
 
   [Michele Simionato]
+  * Fixed disaggregation returning NaNs in some situations with
+    nonParametric/multiFaultSources
+  * Bug fix: not storing far away ruptures coming from multiFaultSources
+  * Implemented CScalingMSR
+  * Optimized context collapsing in classical calculations
+  * Setting `ps_grid_spacing` now sets the `pointsource_distance` too
+  * Saving memory in preclassical calculations on machines with 8 cores or less
+  * Changed the magnitude-dependent `maximum_distance` feature to discard
+    ruptures below `minmag` and above `maxmag`
   * Added the ability to estimate the runtime of a calculation by using
     the `--sample-sources` option
-  * Improved the error message when using an out-of-the-range
-    magnitude-dependent `maximum_distance`
   * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
   * Reduced the stress on the memory in classical calculations, thus
     improving the performance

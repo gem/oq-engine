@@ -15,9 +15,9 @@ in the log you will see the estimate runtime for the full calculation.
 For instance for the SHARE model on a computer with
 an i7 processor you will see something like this:
 
-[2022-04-19 08:57:05 #4054 INFO] Estimated time 36.3 hours
+[2022-04-19 08:57:05 #4054 INFO] Estimated time 72.3 hours
 
-The estimate is rather rough but better than nothing. Notice that the
+The estimate is rather rough, so do not take it at the letter. The
 runtime can be reduced by orders of magnitude by tuning parameters
 like the `pointsource_distance` and `ps_grid_spacing`, discussed at
 length in the [advanced manual](https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance).

@@ -22,7 +22,7 @@ from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.geo import utils, NodalPlane
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.valid import SCALEREL
+from openquake.hazardlib.valid import mag_scale_rel
 from openquake.hazardlib.source.point import PointSource
 
 F32 = numpy.float32
@@ -149,7 +149,7 @@ class MultiPointSource(ParametricSeismicSource):
         attrs = {'source_id': self.source_id,
                  'name': self.name,
                  'magnitude_scaling_relationship':
-                 self.magnitude_scaling_relationship.__class__.__name__,
+                 str(self.magnitude_scaling_relationship),
                  'tectonic_region_type': self.tectonic_region_type}
         return dic, attrs
 
@@ -157,8 +157,8 @@ class MultiPointSource(ParametricSeismicSource):
         self.source_id = attrs['source_id']
         self.name = attrs['name']
         self.tectonic_region_type = attrs['tectonic_region_type']
-        self.magnitude_scaling_relationship = SCALEREL[
-            attrs['magnitude_scaling_relationship']]
+        self.magnitude_scaling_relationship = mag_scale_rel(
+            attrs['magnitude_scaling_relationship'])
         npd = dic.pop('nodal_plane_distribution')[:]
         hdd = dic.pop('hypocenter_distribution')[:]
         mesh = dic.pop('mesh')[:]
