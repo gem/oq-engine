@@ -571,7 +571,9 @@ In this subsection we discuss the different fault source types that
 support floating ruptures. In the next subsection we will illustrate the
 fault typology available to model a characteristic rupturing behaviour.
 
-Simple faults
+.. _desc_simple_fault:
+
+Simple Faults
 _____________
 
 Simple Faults are the most common source type used to model shallow
@@ -700,7 +702,9 @@ perform a PSHA calculation taking into account directivity effects.
         </slipList>
    </simpleFaultSource>
 
-Complex faults
+.. _desc_complex_fault:
+
+Complex Faults
 ______________
 
 A complex fault differs from simple fault just by the way the geometry
@@ -781,6 +785,9 @@ properties.
 
 Fault sources without floating ruptures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. _desc_characteristic_fault:
+
 Characteristic faults
 _____________________
 
@@ -1075,7 +1082,7 @@ A double truncated Gutenberg-Richter distribution
       <truncGutenbergRichterMFD aValue="5.0" bValue="1.0" minMag="5.0"
                                 maxMag="6.0"/>
 
-   Figure `1.6 <#fig:dt_gr_mfd>`__ shows the magnitude-frequency
+   :numref:`fig:dt_gr_mfd` shows the magnitude-frequency
    distribution obtained using the parameters of the considered example.
 
    .. figure:: figures/hazard/dt_mfd.png
@@ -1481,7 +1488,7 @@ into:
    motion prediction equations, per tectonic region type, needed to
    model the ground motion shaking in the region of interest.
 
-Figure `2.1 <#fig:psha_input>`__ summarises the structure of a PSHA
+:numref:`fig:psha_input` summarises the structure of a PSHA
 input model for the OpenQuake engine and the relationships between the different
 files.
 
@@ -1539,7 +1546,7 @@ As it appears from this example, the structure of a logic tree is a set
 of nested elements.
 
 A schematic representation of the elemental components of a logic tree
-structure is provided in Figure `2.2 <#glts>`__. A *Branch* set identifies
+structure is provided in :numref:`glts`. A *Branch* set identifies
 a collection of branches (i.e. individual branches) whose weights sum to
 1.
 
@@ -1751,7 +1758,7 @@ Depending on the ``uncertaintyType`` the content of the
 -  if ``uncertaintyType="simpleFaultGeometryAbsolute"`` then the
    uncertainty model must contain a *valid* instance of the
    ``simpleFaultGeometry`` node as described in section
-   `[desc_simple_fault] <#desc_simple_fault>`__
+   :ref:`desc_simple_fault`
 
 -  if ``uncertaintyType="simpleFaultDipRelative"`` then the uncertainty
    model must specify the number of degrees to increase (positive) or
@@ -1775,12 +1782,12 @@ Depending on the ``uncertaintyType`` the content of the
 -  if ``uncertaintyType="complexFaultGeometryAbsolute"`` then the
    uncertainty model must contain a *valid* instance of the
    ``complexFaultGeometry`` source node as described in section
-   `[desc_complex_fault] <#desc_complex_fault>`__
+   :ref:`desc_complex_fault`
 
 -  if ``uncertaintyType="characteristicFaultGeometryAbsolute"`` then the
    uncertainty model must contain a *valid* instance of the
    ``characteristicFaultGeometry`` source node, as described in section
-   `[desc_characteristic_fault] <#desc_characteristic_fault>`__
+   :ref:`desc_characteristic_fault`
 
 There are no restrictions on the number of ``logicTreeBranch`` elements
 that can be defined in a ``logicTreeBranchSet``, as long as the
@@ -2490,11 +2497,12 @@ In order to run this
 calculator, the parameter ``calculation_mode`` needs to be set to
 ``scenario``. The basic job configuration file required for running a
 scenario hazard calculation is shown in
-Listing `[lst:config_scenario_hazard] <#lst:config_scenario_hazard>`__.
+`the listing <lst:config_scenario_hazard>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_scenario_hazard
 
       [general]
       description = Scenario Hazard Config File
@@ -2524,7 +2532,7 @@ Listing `[lst:config_scenario_hazard] <#lst:config_scenario_hazard>`__.
 
 Most of the job configuration parameters required for running a scenario
 hazard calculation seen in the example in
-Listing `[lst:config_scenario_hazard] <#lst:config_scenario_hazard>`__
+`the listing <lst:config_scenario_hazard>` above
 are the same as those described in the previous sections for the
 classical PSHA calculator
 (Section  :ref:`Classical PSHA`)
@@ -2581,7 +2589,7 @@ for running hazard with the OpenQuake engine and the file formats used to
 represent the results of the analyses.
 
 A general introduction on the use of the OpenQuake engine is provided in
-Chapter `1 <#chap:intro>`__. The reader is invited to consult
+:ref:`chap:intro`. The reader is invited to consult
 this part before diving into the following sections.
 
 Running OpenQuake-engine for hazard calculations
@@ -2747,12 +2755,13 @@ associated with a particular calculation then they can use the
 
 The exports will produce one or more nrml files containing the seismic
 hazard curves, as represented below in
-Listing `[lst:output_hazard_curves_xml] <#lst:output_hazard_curves_xml>`__.
+`the listing <lst:output_hazard_curves_xml>` below.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:output_hazard_curves_xml
 
       <?xml version="1.0" encoding="utf-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -2805,21 +2814,22 @@ would display the following:
 
    user@ubuntu:~$ oq engine --lo <calc_id>
    id | name
-   \textcolor{black}{2 | Full Report}
-   \textcolor{red}{3 | Hazard Curves}
-   \textcolor{red}{4 | Hazard Maps}
-   \textcolor{black}{5 | Realizations}
-   \textcolor{red}{6 | Uniform Hazard Spectra}
+   2 | Full Report
+   3 | Hazard Curves
+   4 | Hazard Maps
+   5 | Realizations
+   6 | Uniform Hazard Spectra
 
-Listing `[lst:output_hazard_map_xml] <#lst:output_hazard_map_xml>`__
+:ref:`The first listing <lst:output_hazard_map_xml>` below
 shows a sample of the nrml file used to describe a hazard map, and and
-Listing `[lst:output_uhs] <#lst:output_uhs>`__ shows a sample of the
+:ref:`the second listing <lst:output_uhs>` below shows a sample of the
 nrml used to describe a uniform hazard spectrum.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:output_hazard_map_xml
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -2837,6 +2847,7 @@ nrml used to describe a uniform hazard spectrum.
 
    .. code:: xml
       :number-lines:
+      :name: lst:output_uhs
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -2897,11 +2908,11 @@ OpenQuake engine at the end of an event-based PSHA calculation:
 
    user@ubuntu:~$ oq engine --lo <calc_id>
    id | name
-   **10** | Ground Motion Fields
+   10 | Ground Motion Fields
    11 | Hazard Curves
    12 | Hazard Maps
    13 | Realizations
-   __14__ | Earthquake Ruptures
+   14 | Earthquake Ruptures
    15 | Events
    16 | Uniform Hazard Spectra
 
@@ -2932,40 +2943,39 @@ following colums:
 The outputs from the Ground Motion Fields can be exported in the csv format.
 Exporting the outputs from the Ground Motion Fields in the csv format results in two
 csv files illustrated in the example files in
-Table `3.1 <#output:gmf_event_based>`__ and
-Table `3.4 <#output:sitemesh>`__. The sites csv file provides the
+:numref:`output:gmf_event_based` and
+:numref:`output:sitemesh`. The sites csv file provides the
 association between the site ids in the Ground Motion Fields csv file with their
 latitude and longitude coordinates.
 
 .. container::
-   :name: output:gmf_event_based
 
    .. table:: Example of a ground motion fields csv output file for an event based hazard calculation
+      :name: output:gmf_event_based
 
-      +----------+----------+----------+----------+----------+----------+
-      | **       | **s      | **ev     | **g      | **gmv_S  | **gmv_S  |
-      | rlz_id** | ite_id** | ent_id** | mv_PGA** | A(0.3)** | A(1.0)** |
-      +==========+==========+==========+==========+==========+==========+
-      | 0        | 0        | 48       | 0.0089   | 0.0686   | 0.0065   |
-      +----------+----------+----------+----------+----------+----------+
-      | 0        | 0        | 54       | 0.0219   | 0.0325   | 0.0164   |
-      +----------+----------+----------+----------+----------+----------+
-      | …        | …        | …        | …        | …        | …        |
-      +----------+----------+----------+----------+----------+----------+
-      | 0        | 6        | 75       | 0.0246   | 0.0244   | 0.0036   |
-      +----------+----------+----------+----------+----------+----------+
-      | 1        | 0        | 76       | 0.0189   | 0.0327   | 0.0094   |
-      +----------+----------+----------+----------+----------+----------+
-      | 1        | 0        | 77       | 0.0286   | 0.0683   | 0.0471   |
-      +----------+----------+----------+----------+----------+----------+
-      | …        | …        | …        | …        | …        | …        |
-      +----------+----------+----------+----------+----------+----------+
-      | …        | …        | …        | …        | …        | …        |
-      +----------+----------+----------+----------+----------+----------+
-      | 7        | 6        | 1754     | 0.3182   | 1.2973   | 0.6127   |
-      +----------+----------+----------+----------+----------+----------+
-      | 7        | 6        | 1755     | 0.2219   | 0.6200   | 0.5069   |
-      +----------+----------+----------+----------+----------+----------+
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | **rlz_id** | **site_id** | **event_id** | **gmv_PGA** | **gmv_SA(0.3)** | **gmv_SA(1.0)**  |
+      +============+=============+==============+=============+=================+==================+
+      | 0          | 0           | 48           | 0.0089      | 0.0686          | 0.0065           |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | 0          | 0           | 54           | 0.0219      | 0.0325          | 0.0164           |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | …          | …           | …            | …           | …               | …                |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | 0          | 6           | 75           | 0.0246      | 0.0244          | 0.0036           |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | 1          | 0           | 76           | 0.0189      | 0.0327          | 0.0094           |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | 1          | 0           | 77           | 0.0286      | 0.0683          | 0.0471           |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | …          | …           | …            | …           | …               | …                |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | …          | …           | …            | …           | …               | …                |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | 7          | 6           | 1754         | 0.3182      | 1.2973          | 0.6127           |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
+      | 7          | 6           | 1755         | 0.2219      | 0.6200          | 0.5069           |
+      +------------+-------------+--------------+-------------+-----------------+------------------+
 
 The ``Events`` output produces a csv file with fields ``event_id``,
 ``rup_id`` and ``rlz_id``. The ``event_id`` is a 32 bit integer that
@@ -2977,12 +2987,12 @@ identifies uniquely the realization. The association between the
 The ``Realizations`` output produces a csv file listing the source model
 and the combination of ground shaking intensity models for each path
 sampled from the logic tree. An example of such a file is shown below in
-Table `3.2 <#output:realizations>`__.
+:numref:`output:realizations`.
 
 .. container::
-   :name: output:realizations
 
    .. table:: Example of a realizations file
+      :name: output:realizations
 
       =========== ========================= ==========
       **ordinal** **branch_path**           **weight**
@@ -3009,15 +3019,15 @@ types specified in the job configuration file.
 
 Exporting the outputs from the Ground Motion Fields in the csv format results in two
 csv files illustrated in the example files in
-Table `3.3 <#output:gmf_scenario>`__ and
-Table `3.4 <#output:sitemesh>`__. The sites csv file provides the
+:numref:`output:gmf_scenario` and
+:numref:`output:sitemesh`. The sites csv file provides the
 association between the site ids in the Ground Motion Fields csv file with their
 latitude and longitude coordinates.
 
 .. container::
-   :name: output:gmf_scenario
 
    .. table:: Example of a ground motion fields csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_gmfs.csv>`__)
+      :name: output:gmf_scenario
 
       ======== ======= ======= =========== =============== ===============
       **rlzi** **sid** **eid** **gmv_PGA** **gmv_SA(0.3)** **gmv_SA(1.0)**
@@ -3042,9 +3052,9 @@ subsequent columns list the ground motion values for each of the
 intensity measure types specified in the job configuration file.
 
 .. container::
-   :name: output:sitemesh
 
    .. table:: Example of a sites csv output file for a scenario (`Download example <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/output_scenario_sites.csv>`__)
+      :name: output:sitemesh
 
       =========== ========== ========
       **site_id** **lon**    **lat**
@@ -6419,10 +6429,10 @@ Section :ref:`subsec-output_scenario_hazard`.
 The damage distribution is computed based on the provided Ground Motion Fields.
 Listing `[lst:output_gmf_scenario_xml] <#lst:output_gmf_scenario_xml>`__
 shows an example of a Ground Motion Fields file in the Natural hazards' Risk Markup Language schema and
-Table `3.3 <#output:gmf_scenario>`__ shows an example of a Ground Motion Fields file
+:numref:`output:gmf_scenario` shows an example of a Ground Motion Fields file
 in the csv format. If the Ground Motion Fields file is provided in the csv format,
 an additional csv file listing the site ids must be provided using the
-parameter ``sites_csv``. See Table `3.4 <#output:sitemesh>`__ for an
+parameter ``sites_csv``. See :numref:`output:sitemesh` for an
 example of the sites csv file, which provides the association between
 the site ids in the Ground Motion Fields csv file with their latitude and longitude
 coordinates.
@@ -7472,7 +7482,7 @@ of a Ground Motion Fields file in the Natural hazards' Risk Markup Language sche
 Table `3.1 <#output:gmf_event_based>`__ shows an example of a Ground Motion Fields
 file in the csv format. If the Ground Motion Fields file is provided in the csv
 format, an additional csv file listing the site ids must be provided
-using the parameter ``sites_csv``. See Table `3.4 <#output:sitemesh>`__
+using the parameter ``sites_csv``. See :numref:`output:sitemesh`
 for an example of the sites csv file, which provides the association
 between the site ids in the Ground Motion Fields csv file with their latitude and
 longitude coordinates.
