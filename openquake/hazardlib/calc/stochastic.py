@@ -104,6 +104,8 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
         arrays = surface_to_arrays(rup.surface)  # one array per surface
+        lons = []
+        lats = []
         points = []
         shapes = []
         for array in arrays:
@@ -113,18 +115,16 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             assert s2 < TWO16, 'The rupture mesh spacing is too small'
             shapes.append(s1)
             shapes.append(s2)
-            points.extend(array.flat)
-            # example of points: [25.0, 25.1, 25.1, 25.0,
-            #                     -24.0, -24.0, -24.1, -24.1,
-            #                      5.0, 5.0, 5.0, 5.0]
-        points = F32(points)
+            lons.append(array[0].flatten())
+            lats.append(array[1].flatten())
+            points.append(array.flatten())
+        lons = numpy.concatenate(lons)
+        lats = numpy.concatenate(lats)
+        points = F32(numpy.concatenate(points))
         shapes = U32(shapes)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['seed'] = rup.rup_id
-        n = len(points) // 3
-        lons = points[0:n]
-        lats = points[n:2*n]
         rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
         rec['minlat'] = minlat = numpy.nanmin(lats)
         rec['maxlon'] = maxlon = numpy.nanmax(lons)
@@ -144,7 +144,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         # 2 * num_surfaces integers describing the first and second
         # dimension of each surface, and then the lons, lats and deps of
         # the underlying meshes of points.
-        geom = numpy.concatenate([[len(shapes) // 2], shapes, points])
+        geom = numpy.concatenate([[len(shapes) // 2], shapes, F32(points)])
         geoms.append(geom)
     if not rups:
         return ()
