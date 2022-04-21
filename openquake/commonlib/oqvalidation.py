@@ -599,9 +599,6 @@ rupture_mesh_spacing:
   Example: *rupture_mesh_spacing = 2.0*.
   Default: 5.0
 
-ruptures_per_block:
-  INTERNAL
-
 sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
@@ -672,6 +669,9 @@ source_id:
    Example: *source_id = src001 src002*.
    Default: empty list
 
+source_nodes:
+  INTERNAL
+
 spatial_correlation:
   Used in the ShakeMap calculator. The choics are "yes", "no" and "full".
   Example: *spatial_correlation = full*.
@@ -713,7 +713,7 @@ time_per_task:
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
-  Default: None
+  Default: 99
 
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
@@ -746,10 +746,8 @@ F64 = numpy.float64
 ALL_CALCULATORS = ['classical_risk',
                    'classical_damage',
                    'classical',
-                   'ucerf_classical',
                    'event_based',
                    'scenario',
-                   'ucerf_hazard',
                    'post_risk',
                    'ebrisk',
                    'scenario_risk',
@@ -927,7 +925,6 @@ class OqParam(valid.ParamSet):
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, [])
-    ruptures_per_block = valid.Param(valid.positiveint, 500)  # for UCERF
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
@@ -946,6 +943,7 @@ class OqParam(valid.ParamSet):
     sites_slice = valid.Param(valid.simple_slice, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
+    source_nodes = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
@@ -953,7 +951,7 @@ class OqParam(valid.ParamSet):
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 2000)
-    truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
+    truncation_level = valid.Param(valid.positivefloat, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
@@ -1051,8 +1049,8 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         if ('ps_grid_spacing' in names_vals and
                 'pointsource_distance' not in names_vals):
-            raise InvalidFile('%s: ps_grid_spacing requires setting a '
-                              'pointsource_distance!' % self.inputs['job_ini'])
+            self.pointsource_distance = dict(
+                default=float(names_vals['ps_grid_spacing']))
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
@@ -1298,13 +1296,13 @@ class OqParam(valid.ParamSet):
         """
         if self.investigation_time is None:
             # for scenarios there is no effective_time
-            return [1] * len(num_events)
+            return numpy.full_like(num_events, len(num_events))
         else:
             # for event based compute the time_ratio
             time_ratio = self.time_ratio
             if self.collect_rlzs:
                 time_ratio /= num_haz_rlzs
-            return list(time_ratio * num_events)
+            return time_ratio * num_events
 
     @property
     def imtls(self):
@@ -1583,13 +1581,7 @@ class OqParam(valid.ParamSet):
         The calculation mode is event_based, event_based_risk or ebrisk
         """
         return (self.calculation_mode in
-                'event_based_risk ebrisk event_based_damage ucerf_hazard')
-
-    def is_ucerf(self):
-        """
-        :returns: True for UCERF calculations, False otherwise
-        """
-        return 'source_model' in self.inputs
+                'event_based_risk ebrisk event_based_damage')
 
     def is_valid_shakemap(self):
         """
@@ -1617,15 +1609,6 @@ class OqParam(valid.ParamSet):
         """
         if self.ground_motion_correlation_model:
             return self.truncation_level != 0
-        else:
-            return True
-
-    def is_valid_truncation_level_disaggregation(self):
-        """
-        Truncation level must be set for disaggregation calculations
-        """
-        if self.calculation_mode == 'disaggregation':
-            return self.truncation_level is not None
         else:
             return True
 

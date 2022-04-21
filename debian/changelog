@@ -1,4 +1,25 @@
   [Michele Simionato]
+  * Bug fix: not storing far away ruptures coming from multiFaultSources
+  * Implemented CScalingMSR
+  * Optimized context collapsing in classical calculations
+  * Setting `ps_grid_spacing` now sets the `pointsource_distance` too
+  * Saving memory in preclassical calculations on machines with 8 cores or less
+  * Changed the magnitude-dependent `maximum_distance` feature to discard
+    ruptures below `minmag` and above `maxmag`
+  * Added the ability to estimate the runtime of a calculation by using
+    the `--sample-sources` option
+  * Fixed a wrong formula in `modifiable_gmpe.add_between_within_stds`
+  * Reduced the stress on the memory in classical calculations, thus
+    improving the performance
+  * Setting the truncation_level to the empty string is now forbidden;
+    some GMFs calculations not setting truncation_level can now give
+    different results since truncation_level=None is now replaced with
+    truncation_level=99
+
+python3-oq-engine (3.14.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Changed the definition of `aggrisk`: dividing by the effective time
   * Internal: removed flag `save_disk_space` since now it is always on
   * Slightly changed the collapsing of nodal planes and hypocenters in
     presence of the equivalent distance approximation (`reqv`)
@@ -36,7 +57,7 @@
   * Internal: introduced limited unique rupture IDs in classical calculations
     with few sites
 
-  [Prajacta Jadhav, Dharma Wijewickreme]
+  [Prajakta Jadhav, Dharma Wijewickreme]
   * Added GMPE Youd et al. (2002) and the corresponding site parameters
 
   [Michele Simionato]
@@ -58,6 +79,8 @@
   * Extended `oq postzip` to multiple files and `oq abort` to multiple jobs
   * Internal: changed install.py to install the venv in /opt/openquake/venv
   * Fixed a BOM issue on Windows when reading job.ini files
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 12 Apr 2022 12:27:58 +0000
 
 python3-oq-engine (3.13.0-1~xenial01) xenial; urgency=low
 

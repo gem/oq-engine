@@ -85,8 +85,6 @@ def preclassical(srcs, sites, cmaker, monitor):
     cmaker.set_weight(dic[grp_id], sf, mon)
     dic['before'] = len(split_sources)
     dic['after'] = len(dic[grp_id])
-    if spacing:
-        dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
     return dic
 
 
@@ -101,11 +99,11 @@ def run_preclassical(calc):
     calc.datastore['toms'] = numpy.array(
         [sg.tom_name for sg in csm.src_groups], hdf5.vstr)
     cmakers = read_cmakers(calc.datastore, csm.full_lt)
-    L = calc.oqparam.imtls.size
+    M = len(calc.oqparam.imtls)
     G = max(len(cm.gsims) for cm in cmakers)
-    maxsize = get_maxsize(L, G)
-    logging.info('Max context length={:_d}, NLG={:.1f} MB'.format(
-        maxsize, maxsize * L * G * 8 / 1024**2))
+    N = get_maxsize(M, G)
+    logging.info('NMG = ({:_d}, {:_d}, {:_d}) = {:.1f} MB'.format(
+        N, M, G, N*M*G*8 / 1024**2))
     h5 = calc.datastore.hdf5
     calc.sitecol = sites = csm.sitecol if csm.sitecol else None
     # do nothing for atomic sources except counting the ruptures
@@ -140,7 +138,9 @@ def run_preclassical(calc):
             if pointsources or pointlike:
                 smap.submit((pointsources + pointlike, sites, cmakers[grp_id]))
         else:
-            smap.submit_split((pointsources, sites, cmakers[grp_id]), 10, 160)
+            if pointsources:
+                smap.submit_split(
+                    (pointsources, sites, cmakers[grp_id]), 10, 160)
             for src in pointlike:  # area, multipoint
                 smap.submit(([src], sites, cmakers[grp_id]))
         if others:
@@ -181,20 +181,7 @@ def run_preclassical(calc):
     for val, key in sorted((val, key) for key, val in acc.items()):
         cls = code2cls[key].__name__
         logging.info('{} ruptures: {:_d}'.format(cls, val))
-
     calc.store_source_info(source_data(csm.get_sources()))
-    # store ps_grid data, if any
-    for key, sources in res.items():
-        if isinstance(key, str) and key.startswith('ps_grid/'):
-            arrays = []
-            for ps in sources:
-                if hasattr(ps, 'location'):
-                    lonlats = [ps.location.x, ps.location.y]
-                    for src in getattr(ps, 'pointsources', []):
-                        lonlats.extend([src.location.x, src.location.y])
-                    arrays.append(F32(lonlats))
-            h5[key] = arrays
-
     h5['full_lt'] = csm.full_lt
     return res
 

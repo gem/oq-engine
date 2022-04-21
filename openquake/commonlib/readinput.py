@@ -651,8 +651,6 @@ def get_source_model_lt(oqparam, branchID=None):
     if discard_trts:
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
         smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
-    if oqparam.is_ucerf():
-        smlt.tectonic_region_types = {'Active Shallow Crust'}
     return smlt
 
 
@@ -776,7 +774,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
     # then read the composite source model from the cache if possible
     if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
         os.makedirs(oqparam.cachedir)
-    if oqparam.cachedir and not oqparam.is_ucerf():
+    if oqparam.cachedir:
         # for UCERF pickling the csm is slower
         checksum = get_checksum32(oqparam, h5)
         fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
@@ -790,7 +788,7 @@ def get_composite_source_model(oqparam, h5=None, branchID=None):
 
     # read and process the composite source model from the input files
     csm = get_csm(oqparam, full_lt, h5)
-    if oqparam.cachedir and not oqparam.is_ucerf():
+    if oqparam.cachedir:
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
             pickle.dump(csm, f)

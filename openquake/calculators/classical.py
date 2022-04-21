@@ -17,6 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import os
+import time
 import psutil
 import logging
 import operator
@@ -195,7 +197,7 @@ class Hazard:
         self.full_lt = full_lt
         self.cmakers = read_cmakers(dstore, full_lt)
         self.imtls = imtls = dstore['oqparam'].imtls
-        self.level_weights = imtls.array / imtls.array.sum()
+        self.level_weights = imtls.array.flatten() / imtls.array.sum()
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
         self.N = len(dstore['sitecol/sids'])
@@ -440,6 +442,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data = AccumDict(accum=[])
         self.n_outs = AccumDict(accum=0)
         acc = {}
+        t0 = time.time()
         for t, tile in enumerate(tiles, 1):
             self.check_memory(len(tile), L, num_gs)
             sids = tile.sids if len(tiles) > 1 else None
@@ -447,14 +450,15 @@ class ClassicalCalculator(base.HazardCalculator):
             for cm in self.haz.cmakers:
                 acc[cm.grp_id] = ProbabilityMap.build(L, len(cm.gsims))
             smap.reduce(self.agg_dicts, acc)
-            logging.debug("busy time: %s", smap.busytime)
             if len(tiles) > 1:
                 logging.info('Finished tile %d of %d', t, len(tiles))
         self.store_info()
         self.haz.store_disagg(acc)
-        logging.info('Theoretical cfactor = {:_d}/{:_d} = {:.1f}'.format(
+        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
+        if not oq.hazard_calculation_id:
+            self.classical_time = time.time() - t0
         return True
 
     def store_info(self):
@@ -549,7 +553,7 @@ class ClassicalCalculator(base.HazardCalculator):
         except KeyError:  # no data
             pass
         else:
-            slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 60
+            slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 120
             msg = 'There were %d slow task(s)' % slow_tasks
             if (slow_tasks and self.SLOW_TASK_ERROR and
                     not self.oqparam.disagg_by_src):
@@ -621,6 +625,8 @@ class ClassicalCalculator(base.HazardCalculator):
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         ct = oq.concurrent_tasks or 1
+        if 1 < ct <= 16:  # saving half the memory on small machines
+            ct = 32
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         if '_poes' in set(self.datastore):
             dstore = self.datastore
@@ -665,6 +671,15 @@ class ClassicalCalculator(base.HazardCalculator):
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
+
+        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
+        if fraction and hasattr(self, 'classical_time'):
+            total_time = time.time() - self.t0
+            delta = total_time - self.classical_time
+            est_time = self.classical_time / float(fraction) + delta
+            logging.info('Estimated time: %.1f hours', est_time / 3600)
+
+        # generate plots
         if 'hmaps-stats' in self.datastore:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
             maxhaz = hmaps.max(axis=(0, 1, 3))

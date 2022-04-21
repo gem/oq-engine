@@ -25,7 +25,7 @@ xmlns:gml="http://www.opengis.net/gml"
         </lowerSeismoDepth>
       </pointGeometry>
       <magScaleRel>
-        PeerMSR
+        CScalingMSR.C = 3.90
       </magScaleRel>
       <ruptAspectRatio>
         1.0000000E+00
