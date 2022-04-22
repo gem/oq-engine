@@ -7943,12 +7943,12 @@ if the OpenQuake-QGIS  plugin is used for visualizing or
 exporting the results from a Scenario Damage Calculation, which will
 contain the mean and standard deviation of the total number of buildings
 in each damage state, as illustrated in the example file in
-Table `4.1 <#output:scenario_damage_tag>`__.
+:numref:`output:scenario_damage_total`.
 
 .. container::
-   :name: output:scenario_damage_total
 
    .. table:: Example of a scenario total damage distribution output file
+      :name: output:scenario_damage_total
 
       ============= ================ ================
       **loss_type** **damage_state** **damage_value**
@@ -7971,12 +7971,12 @@ individual assets defined in the *Exposure Model* that fall within the
 ``region`` and have a computed Ground Motion Field value available within the
 defined ``asset_hazard_distance``. An example output file for structural
 damage consequences is shown in
-Table `4.3 <#output:scenario_consequence_asset>`__.
+:numref:`output:scenario_consequence_asset`.
 
 .. container::
-   :name: output:scenario_consequence_asset
 
    .. table:: Example of a scenario asset consequences output file
+      :name: output:scenario_consequence_asset
 
       +--------------+------------+----------+-------------------------+--------------------------+
       | **asset_ref**| **lon**    | **lat**  | **nonstructural-mean**  | **nonstructural-stddev** |
@@ -8009,12 +8009,12 @@ or exporting the results from a Scenario Damage Calculation, a total
 consequences output file can also be generated, which will contain the
 mean and standard deviation of the total consequences for the selected
 scenario, as illustrated in the example shown in
-Table `4.4 <#output:scenario_consequence_total>`__.
+:numref:`output:scenario_consequence_total`.
 
 .. container::
-   :name: output:scenario_consequence_total
 
    .. table:: Example of a scenario total consequences output file
+      :name: output:scenario_consequence_total
 
       +-------------------+---------------------+---------------------+-----------------------+
       | **contents-mean** | **contents-stddev** | **structural-mean** | **structural-stddev** |
@@ -8069,12 +8069,12 @@ of the individual assets defined in the *Exposure Model* that fall within
 the ``region`` and have a computed Ground Motion Field value available within the
 defined ``asset_hazard_distance``. These results are stored in a comma
 separate value (.csv) file as illustrated in the example shown in
-Table `4.5 <#output:scenario_loss_asset>`__.
+:numref:`output:scenario_loss_asset`.
 
 .. container::
-   :name: output:scenario_loss_asset
 
    .. table:: Example of a scenario asset loss distribution output file
+      :name: output:scenario_loss_asset
 
       +---------------+--------------+------------+----------+----------------+----------------+---+
       |               |              |            |          | **structural** | **structural** | … |
@@ -8104,12 +8104,12 @@ exporting the results from a Scenario Risk Calculation, the total
 expected losses for assets of each tag will be computed and made
 available for export as a csv file. This distribution of losses per
 asset tag is depicted in the example output file snippet in
-Table `4.6 <#output:scenario_loss_tag>`__.
+:numref:`output:scenario_loss_tag`.
 
 .. container::
-   :name: output:scenario_loss_tag
 
    .. table:: Example of a scenario loss distribution per tag output file
+      :name: output:scenario_loss_tag
 
       ================= ============ ================= ==============
       **tag**           **contents** **nonstructural** **structural**
@@ -8133,12 +8133,12 @@ exporting the results from a Scenario Risk Calculation, the mean total
 loss and associated standard deviation for the selected earthquake
 rupture will be computed and made available for export as a csv file, as
 illustrated in the example shown in
-Table `4.7 <#output:scenario_loss_total>`__.
+:numref:`output:scenario_loss_total`.
 
 .. container::
-   :name: output:scenario_loss_total
 
    .. table:: Example of a scenario total loss output file
+      :name: output:scenario_loss_total
 
       ============ ======== ============= ======================
       **LossType** **Unit** **Mean**      **Standard Deviation**
@@ -8154,12 +8154,12 @@ of the scenario generated in the Monte Carlo simulation process for all
 loss types for which a *Vulnerability Model* file was provided in the
 configuration file. These results are exported in a comma separate value
 (.csv) file as illustrated in the example shown in
-Table `4.8 <#output:scenario_loss_event>`__.
+:numref:`output:scenario_loss_event`.
 
 .. container::
-   :name: output:scenario_loss_event
 
    .. table:: Example of a scenario losses by event output file
+      :name: output:scenario_loss_event
 
       ========= ============== =================
       **event** **structural** **nonstructural**
@@ -8181,12 +8181,13 @@ Probabilistic damage distribution
 
 The Classical Probabilistic Damage calculator provides the expected
 damage distribution per asset as a csv file, an example of which is
-shown in Table `4.9 <#output:probabilistic_damage>`__.
+shown in 
+:numref:`output:probabilistic_damage`.
 
 .. container::
-   :name: output:probabilistic_damage
 
    .. table:: Example of a probabilistic damage distribution output file
+      :name: output:probabilistic_damage
 
       +---------------+---------------+------------+--------------+-------------+--------------+
       | **asset_ref** | **no_damage** | **slight** | **moderate** | **extreme** | **complete** |
@@ -8259,12 +8260,13 @@ generated for the Classical Probabilistic Risk Calculator. On the other
 hand, individual asset loss exceedance curves are not generated for the
 Stochastic Event-Based Probabilistic Risk Calculator. These results are
 stored in a comma separate value (.csv) file as illustrated in the
-example shown in Table `4.10 <#output:loss_curve_asset>`__.
+example shown in 
+:numref:`output:loss_curve_asset`.
 
 .. container::
-   :name: output:loss_curve_asset
 
    .. table:: Example of an asset loss curve output file
+      :name: output:loss_curve_asset
 
       ========= ============= ======== ========
       **asset** **loss_type** **loss** **poe**
@@ -8317,12 +8319,12 @@ probabilities of exceedance of the total loss across the entire
 portfolio for a set of loss values within a given time span (or
 investigation interval). These results are exported in a comma separate
 value (.csv) file as illustrated in the example shown in
-Table `4.11 <#output:loss_curve_aggregate>`__.
+:numref:`output:loss_curve_aggregate`.
 
 .. container::
-   :name: output:loss_curve_aggregate
 
    .. table:: Example of an aggregate loss curve
+      :name: output:loss_curve_aggregate
 
       +-------------------+----------------+----------------+-------------------+
       | **annual**        | **return**     | **structural** | **nonstructural** |
@@ -8372,13 +8374,14 @@ generated using either the Stochastic Event-Based Probabilistic Risk
 Calculator or the Classical Probabilistic Risk Calculator.
 
 The file snippet included in
-Table `4.12 <#output:probabilistic_loss_map>`__. shows an example
+:numref:`output:probabilistic_loss_map`
+shows an example
 probabilistic loss map output file.
 
 .. container::
-   :name: output:probabilistic_loss_map
 
    .. table:: Example of a probabilistic loss map output file
+      :name: output:probabilistic_loss_map
 
       +---------------+--------------+----------+---------+-------------------------+------------------------+
       | **asset_ref** | **taxonomy** | **lon**  | **lat** | **structural poe-0.02** | **structural poe-0.1** |
@@ -8409,8 +8412,30 @@ the stochastic event sets. The rupture id listed in this table is linked
 with the rupture ids listed in the stochastic event sets files.
 
 The file snippet included in
-Table `[output:event_loss_table_aggregate] <#output:event_loss_table_aggregate>`__
+:numref:`output:event_loss_table_aggregate`
 shows an example stochastic event loss table output file.
+
+.. table:: Example aggregate event loss table
+   :name: output:event_loss_table_aggregate
+
+   ======== ====== ==== ==========
+   event_id rup_id year structural
+   ======== ====== ==== ==========
+   0        486    8    -
+   1        486    8    -
+   2        486    8    375.12
+   3        486    8    177.71
+   4        486    12   173.75
+   5        486    12   200.51
+   6        486    12   267.50
+   7        486    12   196.72
+   8        785    12   4,720.67
+   9        785    12   1,002.59
+   10       785    12   6,693.98
+   11       785    12   1,135.40
+   12       483    13   111.85
+   ...      ...    ...  ...
+   ======== ====== ==== ==========
 
 Asset event loss tables provide calculated losses for each of the assets
 in the exposure model, for each event within the stochastic event sets.
@@ -8431,7 +8456,28 @@ Probabilistic Risk calculator. For this reason, the parameters
 ``sourceModelTreePath`` and ``gsimTreePath`` are also included in this
 NRML schema, so the whole calculation process can be traced back. The
 results for each asset are stored as depicted in
-Table `[output:bcr_map] <#output:bcr_map>`__.
+:numref:`output:bcr_map`.
+
+.. table:: Example benefit-cost ratio map output
+   :name: output:bcr_map
+
+   ======= ======= ========= ============ =============== ====
+   lon     lat     asset_ref aal_original aal_retrofitted bcr
+   ======= ======= ========= ============ =============== ====
+   80.0888 28.8612 a1846     966,606      53,037          1.72
+   80.0888 28.8612 a4119     225,788      26,639          1.46
+   80.0888 28.8612 a6444     444,595      16,953          1.33
+   80.0888 28.8612 a8717     106,907      10,086          0.39
+   80.0888 28.9362 a1784     964,381      53,008          1.92
+   80.0888 28.9362 a4057     225,192      26,597          1.64
+   80.0888 28.9362 a6382     443,388      16,953          1.49
+   80.0888 28.9362 a8655     106,673      10,081          0.44
+   80.1292 29.0375 a2250     1,109,310    60,989          2.08
+   80.1292 29.0375 a4523     2,785,790    329,083         1.78
+   ...     ...     ...       ...          ...             ...
+   ======= ======= ========= ============ =============== ====
+
+
 
 -  ``interestRate``: this parameter represents the interest rate used in
    the time-value of money calculations
@@ -8445,6 +8491,8 @@ Table `[output:bcr_map] <#output:bcr_map>`__.
    considering the original vulnerability (``aalOrig``) and the average
    annual loss for the retrofitted (``aalRetr``) configuration of the
    assets are provided.
+
+
 
 .. _`chap:riskdemos`:
 
