@@ -172,8 +172,8 @@ C:\>python install.py devel --remove
 C:\>python install.py user --remove
 ```
 
-The calculation data (in `$HOME/oqdata` or `/var/lib/openquake/oqdata`) _WILL NOT_ be removed.
-You will have to remove these two directories manually, if needed.
+The calculation data (in the `oqdata` directory) WILL NOT be removed.
+You will have to remove the data manually, if desired.
 
 ***
 
