@@ -3296,12 +3296,13 @@ alternative source models, with sources belonging to two different
 tectonic region types, and with two alternative GMPEs for each tectonic
 region type. The source model logic tree is therefore defined as shown
 in
-Listing `[lst:input_sslt_demo_LogicTreeCase1ClassicalPSHA] <#lst:input_sslt_demo_LogicTreeCase1ClassicalPSHA>`__.
+:ref:`the listing <lst:input_sslt_demo_LogicTreeCase1ClassicalPSHA>` below. 
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_sslt_demo_LogicTreeCase1ClassicalPSHA
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -3332,12 +3333,13 @@ The two source models are defined in two separate files:
 a corresponding weight (0.5 for both).
 
 The GSIM logic tree file contains the structure as shown in
-Listing `[lst:input_gmlt_demo_LogicTreeCase1ClassicalPSHA] <#lst:input_gmlt_demo_LogicTreeCase1ClassicalPSHA>`__.
+:ref:`the listing <lst:input_gmlt_demo_LogicTreeCase1ClassicalPSHA>` below.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_gmlt_demo_LogicTreeCase1ClassicalPSHA
 
       <?xml version="1.0" encoding="UTF-8"?>
 
@@ -3403,12 +3405,13 @@ per region type).
 
 To accommodate such a structure the GSIM logic tree is defined as shown
 in
-Listing `[lst:input_gmlt_demo_LogicTreeCase2ClassicalPSHA] <#lst:input_gmlt_demo_LogicTreeCase2ClassicalPSHA>`__.
+:ref:`the listing <lst:input_gmlt_demo_LogicTreeCase2ClassicalPSHA>` below.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_gmlt_demo_LogicTreeCase2ClassicalPSHA
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -3509,10 +3512,17 @@ LogicTreeCase1ClassicalPSHA. By setting in the configuration file
 324 paths (1 source model x 3 (a, b) pairs for source 1 x 3 (a, b) pairs
 for source 2 x 3 max magnitude values for source 1 x 3 max magnitude
 values for source 2 x 2 GMPEs for Active Shallow Crust X 2 GMPEs for
-Stable Continental Crust), see
-Figure `[fig:hazard_curves] <#fig:hazard_curves>`__.
+Stable Continental Crust), see :numref:`fig:hazard_curves`.
 
-|image7|
+.. figure:: figures/hazard/hazard-curves-ltcase2.png
+   :name: fig:hazard_curves
+   :width: 95%
+
+   Hazard curves as obtained from the LogicTreeCase2 demo. Solid gray lines 
+   represent individual hazard curves from the different logic tree path (a 
+   total of 324 curves). The red dashed line represents the mean hazard curve, 
+   while the red dotted lines depict the quantile levels (0.15, 0.5, 0.95).
+
 
 LogicTreeCase3ClassicalPSHA illustrates an example of logic tree
 defining relative uncertainties on G-R maximum magnitude and b value. A
@@ -3520,12 +3530,13 @@ single source model is considered containing two sources belonging to
 different tectonic region types and both characterized by a G-R
 magnitude frequency distribution. The source model logic tree for this
 demo is as shown in
-Listing `[lst:input_sslt_demo_LogicTreeCase3ClassicalPSHA] <#lst:input_sslt_demo_LogicTreeCase3ClassicalPSHA>`__.
+:ref:`the listing <lst:input_sslt_demo_LogicTreeCase3ClassicalPSHA>` below.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_sslt_demo_LogicTreeCase3ClassicalPSHA
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -3700,16 +3711,36 @@ configuration file:
 
 The source model consist of one source (area). 100 stochastic event sets
 are generated (``ses_per_logic_tree_path = 100``) (an example can be
-seen in Figure `[fig:ses] <#fig:ses>`__). Ground motion fields are
+seen in :numref:`fig:ses`).
+Ground motion fields are
 computed (``ground_motion_fields = true``,
 Figure `[fig:gmfs] <#fig:gmfs>`__) and also hazard curves from ground
 motion fields are extracted (``hazard_curves_from_gmfs = true``). The
 corresponding hazard maps for 0.1 probability are also calculated
 (``hazard_maps = true``)
 
-|image8|
+.. figure:: figures/hazard/ses.png
+   :name: fig:ses
+   :width: 95%
 
-|image9| |image10|
+   A stochastic event set generated with the event based PSHA demo. The area
+   source defines a nodal plane distribution which distributes events among 
+   vertical and dipping (50 degrees) faults with equal weights. Vertical 
+   ruptures are then distributed equally in the range 0-180 degrees while the 
+   dipping ones in the range 0-360, both with a step of 45 degrees.
+
+.. figure:: figures/hazard/gmf-no-corr.png
+   :name: fig:gmf-no-corr
+   :width: 95%
+
+   Ground motion fields (PGA) with no spatial correlation (a) 
+
+.. figure:: figures/hazard/gmf-corr.png
+   :name: fig:gmf-corr
+   :width: 95%
+
+   Ground motion fields (PGA) with spatial correlation (b)
+
 
 Risk
 ====
@@ -8953,12 +8984,3 @@ Bibliography
    Probabilistic Risk Calculators, but not by the Classical
    Probabilistic Risk Calculator.
 
-
-.. |image7| image:: figures/hazard/hazard-curves-ltcase2.png
-   :width: 95%
-.. |image8| image:: figures/hazard/ses.png
-   :width: 95%
-.. |image9| image:: figures/hazard/gmf-no-corr.png
-   :width: 95%
-.. |image10| image:: figures/hazard/gmf-corr.png
-   :width: 95%
