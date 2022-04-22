@@ -3714,7 +3714,8 @@ are generated (``ses_per_logic_tree_path = 100``) (an example can be
 seen in :numref:`fig:ses`).
 Ground motion fields are
 computed (``ground_motion_fields = true``,
-Figure `[fig:gmfs] <#fig:gmfs>`__) and also hazard curves from ground
+:numref:`fig:gmf-no-corr` and :numref:`fig:gmf-corr`)
+and also hazard curves from ground
 motion fields are extracted (``hazard_curves_from_gmfs = true``). The
 corresponding hazard maps for 0.1 probability are also calculated
 (``hazard_maps = true``)
@@ -3729,17 +3730,18 @@ corresponding hazard maps for 0.1 probability are also calculated
    ruptures are then distributed equally in the range 0-180 degrees while the 
    dipping ones in the range 0-360, both with a step of 45 degrees.
 
+
 .. figure:: figures/hazard/gmf-no-corr.png
    :name: fig:gmf-no-corr
    :width: 95%
 
-   Ground motion fields (PGA) with no spatial correlation (a) 
+   Ground motion fields (PGA) with no spatial correlation
 
 .. figure:: figures/hazard/gmf-corr.png
    :name: fig:gmf-corr
    :width: 95%
 
-   Ground motion fields (PGA) with spatial correlation (b)
+   Ground motion fields (PGA) with spatial correlation
 
 
 Risk
@@ -3851,7 +3853,7 @@ of study.
 
 The required input files required for running a scenario damage
 calculation and the resulting output files are depicted in
-Figure `1.1 <#fig:io-structure-scenario-damage>`__.
+:numref:`fig:io-structure-scenario-damage`.
 
 .. figure:: figures/risk/io-structure-scenario-damage.png
    :alt: Scenario Damage Calculator input/output structure.
@@ -3911,7 +3913,7 @@ caused by the scenario event for the different assets in the
 
 The required input files required for running a scenario risk
 calculation and the resulting output files are depicted in
-Figure `1.2 <#fig:io-structure-scenario-risk>`__.
+:numref:`fig:io-structure-scenario-risk`.
 
 .. figure:: figures/risk/io-structure-scenario-risk.png
    :alt: Scenario Risk Calculator input/output structure.
@@ -3944,7 +3946,7 @@ PSHA approach (Cornell 1968; McGuire 1976).
 
 The required input files required for running a classical probabilistic
 damage calculation and the resulting output files are depicted in
-Figure `1.3 <#fig:io-structure-classical-damage>`__.
+:numref:`fig:io-structure-classical-damage`.
 
 .. figure:: figures/risk/io-structure-classical-damage.png
    :alt: Classical PSHA-based Damage Calculator input/output structure.
@@ -3991,7 +3993,7 @@ is not taken into consideration.
 
 The required input files required for running a classical probabilistic
 risk calculation and the resulting output files are depicted in
-Figure `1.4 <#fig:io-structure-classical-risk>`__.
+:numref:`fig:io-structure-classical-risk`.
 
 .. figure:: figures/risk/io-structure-classical-risk.png
    :alt: Classical PSHA-based Risk Calculator input/output structure.
@@ -4063,7 +4065,8 @@ curves can be computed.
 
 The required input files required for running a probabilistic stochastic
 event-based damage calculation and the resulting output files are
-depicted in Figure `1.5 <#fig:io-structure-event-based-damage>`__
+depicted in 
+:numref:`fig:io-structure-event-based-damage`.
 
 .. figure:: figures/risk/io-structure-event-based-damage.png
    :alt: Probabilistic Event-based Damage Calculator input/output structure.
@@ -4149,7 +4152,7 @@ computed for ground-up losses.
 
 The required input files required for running a probabilistic stochastic
 event-based risk calculation and the resulting output files are depicted
-in Figure `1.6 <#fig:io-structure-event-based-risk>`__
+in :numref:`fig:io-structure-event-based-risk`.
 
 .. figure:: figures/risk/io-structure-event-based-risk.png
    :alt: Probabilistic Event-based Risk Calculator input/output structure.
@@ -4173,7 +4176,7 @@ output of this calculator is a benefit/cost ratio for each asset, in
 which a ratio above one indicates that employing a retrofitting
 intervention is economically viable.
 
-In Figure `1.7 <#fig:io-structure-benefit-cost>`__, the input/output
+In :numref:`fig:io-structure-benefit-cost`, the input/output
 structure for this calculator is depicted.
 
 .. figure:: figures/risk/io-structure-benefit-cost.png
@@ -4221,7 +4224,7 @@ described in the examples above. See Example 8 below for an illustration
 of an exposure model using csv files.
 
 A simple *Exposure Model* comprising a single asset is shown in
-:ref: `the listing <lst:input_exposure_minimal>`.
+:ref:`the listing <lst:input_exposure_minimal>` below.
 
 .. container:: listing
 
@@ -4542,12 +4545,13 @@ assets of each taxonomy for a set of locations is directly provided.
 Thus, in order to indicate how the various costs will be defined, the
 following information needs to be stored in the *Exposure Model* file, as
 shown in
-Listing `[lst:input_exposure_cagg_metadata] <#lst:input_exposure_cagg_metadata>`__.
+:ref:`the listing <lst:input_exposure_cagg_metadata>` below.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_cagg_metadata
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -4586,12 +4590,13 @@ In this case, the cost ``type`` of each component as been defined as
 ``aggregated``. Once the way in which each cost is going to be defined
 has been established, the values for each asset can be stored according
 to the format shown in
-Listing `[lst:input_exposure_cagg_assets] <#lst:input_exposure_cagg_assets>`__.
+:ref:`the listing <lst:input_exposure_cagg_assets>`.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_cagg_assets
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -4641,7 +4646,7 @@ probably the simplest one.
 **Example 2**
 
 In the snippet shown in
-Listing `[lst:input_exposure_cunit_metadata] <#lst:input_exposure_cunit_metadata>`__,
+:ref:`the listing <lst:input_exposure_cunit_metadata>` below,
 an *Exposure Model* containing the number of structural units and the
 associated costs per unit of each asset is presented.
 
@@ -4649,6 +4654,7 @@ associated costs per unit of each asset is presented.
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_cunit_metadata
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -4686,12 +4692,13 @@ associated costs per unit of each asset is presented.
 For this case, the cost ``type`` has been set to ``per_asset``. Then,
 the information from each asset can be stored following the format shown
 in
-Listing `[lst:input_exposure_cunit_assets] <#lst:input_exposure_cunit_assets>`__.
+:ref:`the listing <lst:input_exposure_cunit_assets>` below.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_cunit_assets
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -4736,7 +4743,7 @@ need to specify the attribute ``area``.
 **Example 3**
 
 The example shown in
-Listing `[lst:input_exposure_carea_aagg_metadata] <#lst:input_exposure_carea_aagg_metadata>`__
+:ref:`the listing <lst:input_exposure_carea_aagg_metadata>` below
 comprises an *Exposure Model* containing the built up area of each asset,
 and the associated costs are provided per unit area.
 
@@ -4744,6 +4751,7 @@ and the associated costs are provided per unit area.
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_carea_aagg_metadata
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -4787,13 +4795,14 @@ aggregated area of number of units within an asset, or the average area
 of a single unit. In this particular case, the ``area`` that is being
 stored is the aggregated built up area per asset, and thus this
 attribute was set to ``aggregated``.
-Listing `[lst:input_exposure_carea_aagg_assets] <#lst:input_exposure_carea_aagg_assets>`__
+:ref:`The listing <lst:input_exposure_carea_aagg_assets>` below
 illustrates the definition of the assets for this example.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_carea_aagg_assets
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -4841,13 +4850,14 @@ no need to specify the attribute ``number``.
 This example demonstrates an *Exposure Model* that defines the number of
 structural units for each asset, the average built up area per
 structural unit and the associated costs per unit area.
-Listing `[lst:input_exposure_carea_aunit_metadata] <#lst:input_exposure_carea_aunit_metadata>`__
+:ref:`The listing <lst:input_exposure_carea_aunit_metadata>` below 
 shows the metadata definition for an *Exposure Model* built in this manner.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_carea_aunit_metadata
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -4887,13 +4897,14 @@ shows the metadata definition for an *Exposure Model* built in this manner.
 Similarly to what was described in the previous example, the various
 costs ``type`` also need to be established as ``per_area``, but the
 ``type`` of area is now defined as ``per_asset``.
-Listing `[lst:input_exposure_carea_aunit_assets] <#lst:input_exposure_carea_aunit_assets>`__
+:ref:`The listing <lst:input_exposure_carea_aunit_assets>` below
 illustrates the definition of the assets for this example.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_carea_aunit_assets
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -4945,12 +4956,13 @@ In order to perform a benefit/cost assessment, it is necessary to
 indicate the retrofitting cost. This parameter is handled in the same
 manner as the structural cost, and it should be stored according to the
 format shown in
-Listing `[lst:input_exposure_retrofit] <#lst:input_exposure_retrofit>`__.
+:ref:`the listing <lst:input_exposure_retrofit>` below.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_retrofit
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -4988,7 +5000,7 @@ cost storing approaches can also be employed (Examples 2–4).
 The OpenQuake engine is also capable of estimating human losses, based on the
 number of occupants in an asset, at a certain time of the day. The
 example *Exposure Model* shown in
-Listing `[lst:input_exposure_occupants] <#lst:input_exposure_occupants>`__
+:ref:`the listing <lst:input_exposure_occupants>` below
 illustrates how this parameter is defined for each asset. In addition,
 this example also serves the purpose of presenting an *Exposure Model* in
 which three cost types have been defined using three different options.
@@ -5008,6 +5020,7 @@ all of the buildings comprising the asset.
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_occupants
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -5056,13 +5069,14 @@ specify location attributes, occupancy types, or insurance policy codes
 for the different assets in the *Exposure Model*.
 
 The example *Exposure Model* shown in
-Listing `[lst:input_exposure_tags] <#lst:input_exposure_tags>`__
+:ref:`the listing <lst:input_exposure_tags>` below
 illustrates how one or more tags can be defined for each asset.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_exposure_tags
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -5245,7 +5259,14 @@ In the example shown above, the exposure information is provided in
 three csv files, Washington.csv, Oregon.csv, and California.csv. To
 illustrate the format of the csv files, we have shown below the header
 and first few lines of the file Washington.csv in
-Table `[input:exposure_csv_wa] <#input:exposure_csv_wa>`__.
+:numref:`input:exposure_csv_wa`.
+
+.. FIXME table too wide and :width: attribute is not recognised
+
+.. csv-table:: Example exposure csv file
+   :file: oqum/risk/verbatim/input_exposure_wa.csv
+   :name: input:exposure_csv_wa
+   :header-rows: 1
 
 Note that the xml metadata section for exposure models provided using
 csv files must include the xml tag ``<occupancyPeriods>`` listing the
@@ -5275,7 +5296,8 @@ file can include a mix of both types of fragilityfunctions.
 
 For discrete fragilityfunctions, sets of probabilities of exceedance
 (one set per limit state) are defined for a list of intensity measure
-levels, as illustrated in Figure `2.1 <#fig:fragility-discrete>`__.
+levels, as illustrated in 
+:numref:`fig:fragility-discrete`.
 
 .. figure:: figures/risk/fragility-discrete.png
    :alt: Graphical representation of a discrete fragility model
@@ -5286,7 +5308,7 @@ levels, as illustrated in Figure `2.1 <#fig:fragility-discrete>`__.
 
 The fragilityfunctions can also be defined as continuous functions,
 through the use of cumulative lognormal distribution functions. In
-Figure `2.2 <#fig:fragility-continuous>`__, a continuous *Fragility Model*
+:numref:`fig:fragility-continuous`, a continuous *Fragility Model*
 is presented.
 
 .. figure:: figures/risk/fragility-continuous.png
@@ -5298,12 +5320,13 @@ is presented.
 
 An example *Fragility Model* comprising one discrete *Fragility Function* and
 one continuous *Fragility Function* is shown in
-Listing `[lst:input_fragility] <#lst:input_fragility>`__.
+:ref:`the listing <lst:input_fragility>` below.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_fragility
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -5340,13 +5363,13 @@ describes some general aspects of the *Fragility Model*. The information in
 this metadata section is common to all of the functions in the
 *Fragility Model* and needs to be included at the beginning of every
 *Fragility Model* file. The parameters of the metadata section are shown in
-the snippet below and described after the snippet:
+:ref:`the snippet <lst:input_fragility-metadata>`
+below and described after the snippet:
 
 .. code:: xml
-   :number-lines:
+   :number-lines: 4
+   :name: lst:input_fragility-metadata
 
-   <?xml version="1.0" encoding="UTF-8"?>
-   <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
 
    <fragilityModel id="fragility_example"
                    assetCategory="buildings"
@@ -5355,25 +5378,6 @@ the snippet below and described after the snippet:
      <description>Fragility Model Example</description>
      <limitStates>slight moderate extensive complete</limitStates>
 
-     <fragilityFunction id="Woodframe_TwoStorey" format="discrete">
-       <imls imt="PGA" noDamageLimit="0.05">0.005 0.2 0.4 0.6 0.8 1.0 1.2</imls>
-       <poes ls="slight">0.00 0.01 0.15 0.84 0.99 1.00 1.00</poes>
-       <poes ls="moderate">0.00 0.00 0.01 0.12 0.35 0.57 0.74</poes>
-       <poes ls="extensive">0.00 0.00 0.00 0.08 0.19 0.32 0.45</poes>
-       <poes ls="complete">0.00 0.00 0.00 0.06 0.17 0.26 0.35</poes>
-     </fragilityFunction>
-
-     <fragilityFunction id="RC_LowRise" format="continuous" shape="logncdf">
-       <imls imt="SA(0.3)" noDamageLimit="0.05" minIML="0.0" maxIML="5.0"/>
-       <params ls="slight" mean="0.50" stddev="0.10"/>
-       <params ls="moderate" mean="1.00" stddev="0.40"/>
-       <params ls="extensive" mean="1.50" stddev="0.90"/>
-       <params ls="complete" mean="2.00" stddev="1.60"/>
-     </fragilityFunction>
-
-   </fragilityModel>
-
-   </nrml>
 
 -  ``id``: mandatory; a unique string used to identify the
    *Fragility Model*. This string can contain letters (a–z; A–Z),
@@ -5403,21 +5407,13 @@ the snippet below and described after the snippet:
    dashes (-), and underscores (_). Please ensure that there is no
    whitespace within the name of any individual limit state.
 
-The following snippet from the above *Fragility Model* example file defines
-a discrete *Fragility Function*:
+The following snippet from the above *Fragility Model* 
+:ref:`example file <lst:input_fragility>`
+defines a discrete *Fragility Function*:
 
 .. code:: xml
-   :number-lines:
-
-   <?xml version="1.0" encoding="UTF-8"?>
-   <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-
-   <fragilityModel id="fragility_example"
-                   assetCategory="buildings"
-                   lossCategory="structural">
-
-     <description>Fragility Model Example</description>
-     <limitStates>slight moderate extensive complete</limitStates>
+   :name: lst:input_fragility-disc
+   :number-lines: 19
 
      <fragilityFunction id="Woodframe_TwoStorey" format="discrete">
        <imls imt="PGA" noDamageLimit="0.05">0.005 0.2 0.4 0.6 0.8 1.0 1.2</imls>
@@ -5427,17 +5423,6 @@ a discrete *Fragility Function*:
        <poes ls="complete">0.00 0.00 0.00 0.06 0.17 0.26 0.35</poes>
      </fragilityFunction>
 
-     <fragilityFunction id="RC_LowRise" format="continuous" shape="logncdf">
-       <imls imt="SA(0.3)" noDamageLimit="0.05" minIML="0.0" maxIML="5.0"/>
-       <params ls="slight" mean="0.50" stddev="0.10"/>
-       <params ls="moderate" mean="1.00" stddev="0.40"/>
-       <params ls="extensive" mean="1.50" stddev="0.90"/>
-       <params ls="complete" mean="2.00" stddev="1.60"/>
-     </fragilityFunction>
-
-   </fragilityModel>
-
-   </nrml>
 
 The following attributes are needed to define a discrete
 *Fragility Function*:
@@ -5471,29 +5456,13 @@ The following attributes are needed to define a discrete
    limit states defined earlier in the metadata section of the
    *Fragility Model* using the attribute ``limitStates``.
 
-The following snippet from the above *Fragility Model* example file defines
-a continuous *Fragility Function*:
+The following snippet from the above *Fragility Model* 
+:ref:`example file <lst:input_fragility>`
+defines a continuous *Fragility Function*:
 
 .. code:: xml
-   :number-lines:
-
-   <?xml version="1.0" encoding="UTF-8"?>
-   <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-
-   <fragilityModel id="fragility_example"
-                   assetCategory="buildings"
-                   lossCategory="structural">
-
-     <description>Fragility Model Example</description>
-     <limitStates>slight moderate extensive complete</limitStates>
-
-     <fragilityFunction id="Woodframe_TwoStorey" format="discrete">
-       <imls imt="PGA" noDamageLimit="0.05">0.005 0.2 0.4 0.6 0.8 1.0 1.2</imls>
-       <poes ls="slight">0.00 0.01 0.15 0.84 0.99 1.00 1.00</poes>
-       <poes ls="moderate">0.00 0.00 0.01 0.12 0.35 0.57 0.74</poes>
-       <poes ls="extensive">0.00 0.00 0.00 0.08 0.19 0.32 0.45</poes>
-       <poes ls="complete">0.00 0.00 0.00 0.06 0.17 0.26 0.35</poes>
-     </fragilityFunction>
+   :name: lst:input_fragility-cont
+   :number-lines: 11
 
      <fragilityFunction id="RC_LowRise" format="continuous" shape="logncdf">
        <imls imt="SA(0.3)" noDamageLimit="0.05" minIML="0.0" maxIML="5.0"/>
@@ -5503,9 +5472,6 @@ a continuous *Fragility Function*:
        <params ls="complete" mean="2.00" stddev="1.60"/>
      </fragilityFunction>
 
-   </fragilityModel>
-
-   </nrml>
 
 The following attributes are needed to define a continuous
 *Fragility Function*:
@@ -5588,8 +5554,8 @@ the following address: https://platform.openquake.org/ipt/.
 Consequence Models 
 ^^^^^^^^^^^^^^^^^^
 Starting from OpenQuake engine17, the
-Scenario Damage calculator also accepts consequencemodels in addition to
-fragilitymodels, in order to estimate consequences based on the
+Scenario Damage calculator also accepts consequence models in addition to
+fragility models, in order to estimate consequences based on the
 calculated damage distribution. The user may provide one
 *Consequence Model* file corresponding to each loss type (amongst
 structural, nonstructural, contents, and business interruption) for
@@ -5609,12 +5575,13 @@ limit state specified in the fragility model for the corresponding loss
 type, for each taxonomy defined in the exposure model.
 
 An example *Consequence Model* is shown in
-Listing `[lst:input_consequence] <#lst:input_consequence>`__.
+:ref:`the listing <lst:input_consequence>` below.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_consequence
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -5672,10 +5639,8 @@ in this metadata section is common to all of the functions in the
    should match those used in the corresponding *Fragility Model*.
 
 .. code:: xml
-   :number-lines:
-
-   <?xml version="1.0" encoding="UTF-8"?>
-   <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+   :number-lines: 4
+   :name: lst:input_consequence-metadata
 
    <consequenceModel id="consequence_example"
                      assetCategory="buildings"
@@ -5683,34 +5648,14 @@ in this metadata section is common to all of the functions in the
 
      <description>Consequence Model Example</description>
      <limitStates>slight moderate extensive complete</limitStates>
-
-     <consequenceFunction id="RC_LowRise" dist="LN">
-       <params ls="slight" mean="0.04" stddev="0.00"/>
-       <params ls="moderate" mean="0.16" stddev="0.00"/>
-       <params ls="extensive" mean="0.32" stddev="0.00"/>
-       <params ls="complete" mean="0.64" stddev="0.00"/>
-     </consequenceFunction>
-
-   </consequenceModel>
-
-   </nrml>
 
 The following snippet from the above *Consequence Model* example file
 defines a *Consequence Function* using a lognormal distribution to model
 the uncertainty in the consequence ratio for each limit state:
 
 .. code:: xml
-   :number-lines:
-
-   <?xml version="1.0" encoding="UTF-8"?>
-   <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-
-   <consequenceModel id="consequence_example"
-                     assetCategory="buildings"
-                     lossCategory="structural">
-
-     <description>Consequence Model Example</description>
-     <limitStates>slight moderate extensive complete</limitStates>
+   :number-lines: 11
+   :name: lst:input_consequence-ln
 
      <consequenceFunction id="RC_LowRise" dist="LN">
        <params ls="slight" mean="0.04" stddev="0.00"/>
@@ -5718,10 +5663,6 @@ the uncertainty in the consequence ratio for each limit state:
        <params ls="extensive" mean="0.32" stddev="0.00"/>
        <params ls="complete" mean="0.64" stddev="0.00"/>
      </consequenceFunction>
-
-   </consequenceModel>
-
-   </nrml>
 
 The following attributes are needed to define a *Consequence Function*:
 
@@ -5761,7 +5702,8 @@ probabilistic or scenario risk calculations, it is necessary to define a
 *Exposure Model*. In this section, the schema for the *Vulnerability Model* is
 described in detail. A graphical representation of a *Vulnerability Model*
 (mean loss ratio for a set of intensity measure levels) is illustrated
-in Figure `2.3 <#fig:vulnerability-zero-cov>`__.
+in 
+:numref:`fig:vulnerability-zero-cov`.
 
 .. figure:: figures/risk/vulnerability-zero-cov.png
    :alt: Graphical representation of a vulnerability model
@@ -5771,7 +5713,7 @@ in Figure `2.3 <#fig:vulnerability-zero-cov>`__.
    Graphical representation of a vulnerability model
 
 Note that although the uncertainty for each loss ratio is not
-represented in Figure `2.3 <#fig:vulnerability-zero-cov>`__, it can be
+represented in :numref:`fig:vulnerability-zero-cov`, it can be
 considered in the input file, by means of a coefficient of variation per
 loss ratio and a probabilistic distribution, which can currently be set
 to lognormal (LN), Beta (BT); or by specifying a discrete probability
@@ -5779,7 +5721,7 @@ mass (PM) [4]_ distribution of the loss ratio at a set of intensity
 levels. An example of a *Vulnerability Function* that models the
 uncertainty in the loss ratio at different intensity levels using a
 lognormal distribution is illustrated in
-Figure `2.4 <#fig:vulnerability-nonzero-cov>`__.
+:numref:`fig:vulnerability-nonzero-cov`.
 
 .. figure:: figures/risk/vulnerability-nonzero-cov.png
    :alt: Graphical representation of a vulnerability function that models the uncertainty in the loss ratio using a lognormal distribution. The mean loss ratios and coefficients of variation are illustrated for a set of intensity levels.
@@ -5800,9 +5742,10 @@ both types of vulnerabilityfunctions. It is also possible to define a
 corresponding to a set of intensity levels (i.e., ignoring the
 uncertainty in the conditional loss ratios).
 
-An example *Vulnerability Model* comprising three vulnerabilityfunctions is
+An example *Vulnerability Model* comprising three vulnerability functions is
 shown in
-Listing `[lst:input_vulnerability] <#lst:input_vulnerability>`__. This
+:ref:`the listing <lst:input_vulnerability>` below.
+This
 *Vulnerability Model* contains one function that uses the lognormal
 distribution to represent the uncertainty in the loss ratio at different
 intensity levels, one function that uses the Beta distribution, and one
@@ -5811,6 +5754,7 @@ function that is defined using a discrete probability mass distribution.
 .. container:: listing
 
    .. code:: xml
+      :name: lst:input_vulnerability
       :number-lines:
 
       <?xml version="1.0" encoding="UTF-8"?>
@@ -5859,10 +5803,8 @@ every *Vulnerability Model* file. The parameters are illustrated in the
 snippet shown and described below:
 
 .. code:: xml
-   :number-lines:
-
-   <?xml version="1.0" encoding="UTF-8"?>
-   <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+   :name: lst:input_vulnerability-metadata
+   :number-lines: 4
 
    <vulnerabilityModel id="vulnerability_example"
                        assetCategory="buildings"
@@ -5870,34 +5812,6 @@ snippet shown and described below:
 
      <description>vulnerability model</description>
 
-     <vulnerabilityFunction id="W1_Res_LowCode" dist="LN">
-      <imls imt="PGA">0.005 0.15 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
-      <meanLRs>0.01 0.04 0.10 0.20 0.33 0.50 0.67 0.80 0.90 0.96 0.99</meanLRs>
-      <covLRs>0.03 0.12 0.24 0.32 0.38 0.40 0.38 0.32 0.24 0.12 0.03</covLRs>
-     </vulnerabilityFunction>
-
-
-     <vulnerabilityFunction id="S1_Res_HighCode" dist="BT">
-      <imls imt="SA(0.3)">0.05 0.2 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
-      <meanLRs>0.01 0.03 0.07 0.15 0.24 0.37 0.50 0.60 0.67 0.72 0.75</meanLRs>
-      <covLRs>0.03 0.12 0.24 0.32 0.38 0.40 0.38 0.32 0.24 0.12 0.03</covLRs>
-     </vulnerabilityFunction>
-
-
-     <vulnerabilityFunction id="ATC13_URM_Res" dist="PM">
-      <imls imt="MMI">6 7 8 9 10 11 12</imls>
-      <probabilities lr="0.000">0.95 0.49 0.30 0.14 0.03 0.01 0.00</probabilities>
-      <probabilities lr="0.005">0.03 0.38 0.40 0.30 0.10 0.03 0.01</probabilities>
-      <probabilities lr="0.050">0.02 0.08 0.16 0.24 0.30 0.10 0.01</probabilities>
-      <probabilities lr="0.200">0.00 0.02 0.08 0.16 0.26 0.30 0.03</probabilities>
-      <probabilities lr="0.450">0.00 0.02 0.03 0.10 0.18 0.30 0.18</probabilities>
-      <probabilities lr="0.800">0.00 0.01 0.02 0.04 0.10 0.18 0.39</probabilities>
-      <probabilities lr="1.000">0.00 0.01 0.01 0.02 0.03 0.08 0.38</probabilities>
-     </vulnerabilityFunction>
-
-   </vulnerabilityModel>
-
-   </nrml>
 
 -  ``id``: a unique string (ASCII) used to identify the
    *Vulnerability Model*. This string can contain letters (a–z; A–Z),
@@ -5921,16 +5835,8 @@ defines a *Vulnerability Function* modelling the uncertainty in the
 conditional loss ratios using a (continuous) lognormal distribution:
 
 .. code:: xml
-   :number-lines:
-
-   <?xml version="1.0" encoding="UTF-8"?>
-   <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-
-   <vulnerabilityModel id="vulnerability_example"
-                       assetCategory="buildings"
-                       lossCategory="structural">
-
-     <description>vulnerability model</description>
+   :name: lst:input_vulnerability-ln
+   :number-lines: 10
 
      <vulnerabilityFunction id="W1_Res_LowCode" dist="LN">
       <imls imt="PGA">0.005 0.15 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
@@ -5938,28 +5844,6 @@ conditional loss ratios using a (continuous) lognormal distribution:
       <covLRs>0.03 0.12 0.24 0.32 0.38 0.40 0.38 0.32 0.24 0.12 0.03</covLRs>
      </vulnerabilityFunction>
 
-
-     <vulnerabilityFunction id="S1_Res_HighCode" dist="BT">
-      <imls imt="SA(0.3)">0.05 0.2 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
-      <meanLRs>0.01 0.03 0.07 0.15 0.24 0.37 0.50 0.60 0.67 0.72 0.75</meanLRs>
-      <covLRs>0.03 0.12 0.24 0.32 0.38 0.40 0.38 0.32 0.24 0.12 0.03</covLRs>
-     </vulnerabilityFunction>
-
-
-     <vulnerabilityFunction id="ATC13_URM_Res" dist="PM">
-      <imls imt="MMI">6 7 8 9 10 11 12</imls>
-      <probabilities lr="0.000">0.95 0.49 0.30 0.14 0.03 0.01 0.00</probabilities>
-      <probabilities lr="0.005">0.03 0.38 0.40 0.30 0.10 0.03 0.01</probabilities>
-      <probabilities lr="0.050">0.02 0.08 0.16 0.24 0.30 0.10 0.01</probabilities>
-      <probabilities lr="0.200">0.00 0.02 0.08 0.16 0.26 0.30 0.03</probabilities>
-      <probabilities lr="0.450">0.00 0.02 0.03 0.10 0.18 0.30 0.18</probabilities>
-      <probabilities lr="0.800">0.00 0.01 0.02 0.04 0.10 0.18 0.39</probabilities>
-      <probabilities lr="1.000">0.00 0.01 0.01 0.02 0.03 0.08 0.38</probabilities>
-     </vulnerabilityFunction>
-
-   </vulnerabilityModel>
-
-   </nrml>
 
 The following attributes are needed to define a *Vulnerability Function*
 which uses a continuous distribution to model the uncertainty in the
@@ -5999,35 +5883,14 @@ conditional loss ratios:
    all of the ``covLRs`` for a given *Vulnerability Function* to zero.
 
 The next snippet from the *Vulnerability Model* example file of
-Listing `[lst:input_vulnerability] <#lst:input_vulnerability>`__ defines
+:ref:`the Vulnerability Function listing <lst:input_vulnerability>` above
+defines
 a *Vulnerability Function* which models the uncertainty in the conditional
 loss ratios using a (discrete) probability mass distribution:
 
 .. code:: xml
-   :number-lines:
-
-   <?xml version="1.0" encoding="UTF-8"?>
-   <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-
-   <vulnerabilityModel id="vulnerability_example"
-                       assetCategory="buildings"
-                       lossCategory="structural">
-
-     <description>vulnerability model</description>
-
-     <vulnerabilityFunction id="W1_Res_LowCode" dist="LN">
-      <imls imt="PGA">0.005 0.15 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
-      <meanLRs>0.01 0.04 0.10 0.20 0.33 0.50 0.67 0.80 0.90 0.96 0.99</meanLRs>
-      <covLRs>0.03 0.12 0.24 0.32 0.38 0.40 0.38 0.32 0.24 0.12 0.03</covLRs>
-     </vulnerabilityFunction>
-
-
-     <vulnerabilityFunction id="S1_Res_HighCode" dist="BT">
-      <imls imt="SA(0.3)">0.05 0.2 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0</imls>
-      <meanLRs>0.01 0.03 0.07 0.15 0.24 0.37 0.50 0.60 0.67 0.72 0.75</meanLRs>
-      <covLRs>0.03 0.12 0.24 0.32 0.38 0.40 0.38 0.32 0.24 0.12 0.03</covLRs>
-     </vulnerabilityFunction>
-
+   :name: lst:input_vulnerability-pm
+   :number-lines: 24
 
      <vulnerabilityFunction id="ATC13_URM_Res" dist="PM">
       <imls imt="MMI">6 7 8 9 10 11 12</imls>
@@ -6039,10 +5902,6 @@ loss ratios using a (discrete) probability mass distribution:
       <probabilities lr="0.800">0.00 0.01 0.02 0.04 0.10 0.18 0.39</probabilities>
       <probabilities lr="1.000">0.00 0.01 0.01 0.02 0.03 0.08 0.38</probabilities>
      </vulnerabilityFunction>
-
-   </vulnerabilityModel>
-
-   </nrml>
 
 The following attributes are needed to define a *Vulnerability Function*
 which uses a discrete probability mass distribution to model the
@@ -6316,18 +6175,21 @@ above.
 This example illustrates a scenario damage calculation which uses
 separate configuration files for the hazard and risk parts of a scenario
 damage assessment. The first configuration file shown in
-Listing `[lst:config_scenario_damage_hazard] <#lst:config_scenario_damage_hazard>`__
+:ref:`the first listing <lst:config_scenario_damage_hazard>` below
 contains input models and parameters required for the computation of the
 ground motion fields due to a given rupture. The second configuration
 file shown in
-Listing `[lst:config_scenario_damage] <#lst:config_scenario_damage>`__
+:ref:`the second listing <lst:config_scenario_damage>`
 contains input models and parameters required for the calculation of the
 damage distribution for a portfolio of assets due to the ground motion
 fields.
 
 .. container:: listing
 
+   **Scenario hazard example**
+
    .. code:: ini
+      :name: lst:config_scenario_damage_hazard
 
       [general]
       description = Scenario hazard example
@@ -6355,7 +6217,10 @@ fields.
 
 .. container:: listing
 
+   **Scenario damage example**
+
    .. code:: ini
+      :name: lst:config_scenario_damage
 
       [general]
       description = Scenario damage example
@@ -6385,8 +6250,9 @@ measure types specified here must include all intensity measure types
 that are used in the fragility or vulnerability models for the
 subsequent damage or risk calculation.
 
-In the hazard configuration file illustrated above
-(Listing `[lst:config_scenario_damage_hazard] <#lst:config_scenario_damage_hazard>`__),
+In 
+:ref:`the hazard configuration file <lst:config_scenario_damage_hazard>`
+illustrated above, 
 the list of sites at which the ground motion values will be computed is
 provided in a CSV file, specified using the ``sites_csv`` parameter. The
 sites used for the hazard calculation need not be the same as the
@@ -6396,9 +6262,9 @@ search radius (in km) using the ``asset_hazard_distance`` parameter for
 the OpenQuake engine to look for available hazard values, as shown in the
 job_damage.ini example file above.
 
-The only new parameters introduced in risk configuration file for this
-example
-(Listing `[lst:config_scenario_damage] <#lst:config_scenario_damage>`__)
+The only new parameters introduced in 
+:ref:`the risk configuration file <lst:config_scenario_damage>`
+for this example
 are the ``region``, ``asset_hazard_distance``, and ``time_event``
 parameters, which are described below; all other parameters have already
 been described in earlier examples.
@@ -8567,7 +8433,7 @@ These seven demos use Nepal as the region of interest. An example
 assets distributed amongst 2,221 locations (due to the existence of more
 than one asset at the same location). A map with the distribution of the
 number of buildings throughout Nepal is presented in
-Figure `5.1 <#fig:exposure-nepal>`__.
+:numref:`fig:exposure-nepal`.
 
 .. figure:: figures/risk/exposure-nepal.png
    :alt: Distribution of number of buildings in Nepal
