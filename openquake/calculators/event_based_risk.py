@@ -280,7 +280,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
         base.create_risk_by_event(self)
         self.rlzs = self.datastore['events']['rlz_id']
-        self.num_events = numpy.bincount(self.rlzs)  # events by rlz
+        self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
         if oq.avg_losses:
             self.create_avg_losses()
         alt_nbytes = 4 * self.E * L

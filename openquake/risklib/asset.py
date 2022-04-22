@@ -464,7 +464,7 @@ class AssetCollection(object):
         assets_by_site = [[] for sid in range(self.tot_sites)]
         for i, ass in enumerate(self.array):
             assets_by_site[ass['site_id']].append(self[i])
-        return numpy.array(assets_by_site)
+        return numpy.array(assets_by_site, dtype=object)
 
     # used in the extract API
     def aggregateby(self, tagnames, array):

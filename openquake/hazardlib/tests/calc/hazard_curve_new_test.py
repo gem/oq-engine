@@ -102,7 +102,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None)
+                                    truncation_level=99.)
         crv = curves[0][0]
         npt.assert_almost_equal([0.30000, 0.2785, 0.0891], crv, decimal=4)
 
@@ -112,7 +112,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None,
+                                    truncation_level=99.,
                                     investigation_time=1)
         crv = list(curves[0][0])
         npt.assert_almost_equal([0.30000, 0.2785, 0.0891],
@@ -127,7 +127,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None,
+                                    truncation_level=99.,
                                     investigation_time=1)
         npt.assert_almost_equal(numpy.array([0.30000, 0.2785, 0.0891]),
                                 curves[0][0], decimal=4)
@@ -177,7 +177,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None,
+                                    truncation_level=99.,
                                     investigation_time=1)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.40000, 0.36088, 0.07703]),
@@ -189,7 +189,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None,
+                                    truncation_level=99.,
                                     investigation_time=1)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.58000, 0.5389, 0.1592]),

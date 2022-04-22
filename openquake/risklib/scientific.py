@@ -243,6 +243,7 @@ class VulnerabilityFunction(object):
         """
         :param asset_df: a DataFrame with A assets
         :param gmf_df: a DataFrame of GMFs for the given assets
+        :param col: GMF column associated to the IMT (i.e. "gmv_0")
         :param rng: a MultiEventRNG or None
         :returns: a DataFrame with columns eid, aid, loss
         """

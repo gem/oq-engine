@@ -17,7 +17,7 @@ since every performance-oriented tool (numba, cython, etc) requires a
 numpy-oriented codebase to start from.
 
 Until now we managed to live with this original sin, since the main use
-for the engine is to build national hazard maps. In this cae for each IMT,
+for the engine is to build national hazard maps. In this case for each IMT,
 rupture and GSIM there are normally thousands of affected sites: looping
 on the ruptures, IMTs and GSIMs in Python is not an issue since the meat
 of the calculation is on the sites. However, for site-specific calculations
@@ -51,7 +51,7 @@ Towards a numpy-oriented hazardlib
 
 Rather than reimplementing thousands of methods it would be much better
 to make hazardlib more numpy-oriented. If hazardlib was fully numpy-oriented,
-looping on the ruptures could be done at C-speed by and there
+looping on the ruptures could be done at C-speed and there
 would be no need to duplicate methods.
 
 The move towards numpy actually started many years ago, and for
@@ -156,9 +156,12 @@ It is important to notice that there is an unwanted complication in the IMTs:
 there is a lot of work to  support the `sa_damping` field which actually is
 actually hard-coded to 5.0 in all CoeffsTable. It would be nice to remove it.
 
-It would also be nice to be able to vectorize by IMT. But that will be difficult
-even, having numpy-oriented IMTs. At minimum one will have to refactor the
-usage of the `CoeffsTable` [#]
+It would also be nice to be able to vectorize by IMT. But that will be
+difficult too. At minimum one will have to refactor the usage of the
+`CoeffsTable` (update: as of June the 10th the `CoeffsTable` has been
+refactored and we are now able to proceed with the program *even
+without replacing the existing IMT classes*, which is a major
+compatibility win).
 
 This is going to be long (months/years). It is also possible that we will
 never reach the ideal. Also, in the normal case with many sites (national
@@ -168,12 +171,8 @@ speedup.
 Nevertheless we need to do something. Every year hazardlib becomes
 larger, every year we have more users, every year it is more difficult
 to change anything, every year the models become larger and slower,
-and every year the frustration caused by the initial design decision
+and every year the frustration caused by the initial design decisions
 increases.
-
-[#] As of June the 10th the `CoeffsTable` has been refactored and we are
-now able to proceed with the program *even without replacing the
-existing IMT classes*, which is a major compatibility win.
 
 The GMPEs at C speed
 --------------------
@@ -224,3 +223,14 @@ techniques.  They will always be *optional*, i.e. the engine will work
 even if numba is not installed. It could be that phase 4 will never be
 implemented, if the performance tests show that there is no benefit
 (as it seems to be the case at the present).
+
+Update at March 2022
+--------------------
+
+The vectorization plan is now complete. All of the GMPEs in hazardlib
+are vectorized, and trying to introduce a new non-vectorized GMPE will
+result in an error. Phases 1, 2 and 3 are done, while I have decided
+not to start on Phase 4, since it is too much of an effort. Instead
+of doing Phase 4 there is a much simpler and much effective way to
+progress, i.e. the collapsing of the contexts which will be implemented
+in the following months.

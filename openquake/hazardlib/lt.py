@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import CallableDict, BASE94
-from openquake.hazardlib import geo, source as ohs
+from openquake.hazardlib import geo
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
@@ -94,8 +94,7 @@ def trucMFDFromSlip_absolute(utype, node, filename):
 
 @parse_uncertainty.add('setMSRAbsolute')
 def setMSR_absolute(utype, node, filename):
-    tmps = valid.mag_scale_rel(node.text)
-    return valid.SCALEREL[tmps]()
+    return valid.mag_scale_rel(node.text)
 
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')

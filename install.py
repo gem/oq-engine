@@ -431,7 +431,7 @@ def install(inst, version):
             afterservice = 'network.target'
             command = service + ' start -f'
             if 'webui' in service:
-                afterservice = 'network.target openquake-dbserver'
+                afterservice = 'network.target openquake-dbserver.service'
                 command = service + ' -s start'
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:

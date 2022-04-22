@@ -750,29 +750,32 @@ class DictArray(Mapping):
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
+        self.M = len(imtls)
         self.L1 = len(levels)
-        self.size = len(imtls) * self.L1
+        self.size = self.M * self.L1
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
                                for imt, imls in sorted(imtls.items())])
-        self.array = numpy.zeros(self.size, F64)
+        self.array = numpy.zeros((self.M, self.L1), F64)
         self.slicedic = {}
         n = 0
-        for imt, imls in sorted(imtls.items()):
+        self.mdic = {}
+        for m, (imt, imls) in enumerate(sorted(imtls.items())):
             if len(imls) != self.L1:
                 raise ValueError('imt=%s has %d levels, expected %d' %
                                  (imt, len(imls), self.L1))
-            self.slicedic[imt] = slc = slice(n, n + self.L1)
-            self.array[slc] = imls
+            self.slicedic[imt] = slice(n, n + self.L1)
+            self.mdic[imt] = m
+            self.array[m] = imls
             n += self.L1
 
     def __call__(self, imt):
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self.array[self(imt)]
+        return self.array[self.mdic[imt]]
 
     def __setitem__(self, imt, array):
-        self.array[self(imt)] = array
+        self.array[self.mdic[imt]] = array
 
     def __iter__(self):
         for imt in self.dt.names:

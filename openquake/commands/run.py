@@ -25,7 +25,7 @@ import pstats
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
-from openquake.commonlib import oqvalidation, logs, datastore, readinput
+from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.server import dbserver
@@ -38,7 +38,7 @@ PStatData = collections.namedtuple(
 
 def get_pstats(pstatfile, n):
     """
-    Return profiling information as an RST table.
+    Return profiling information as an ORG table.
 
     :param pstatfile: path to a .pstat file
     :param n: the maximum number of stats to retrieve
@@ -56,6 +56,7 @@ def get_pstats(pstatfile, n):
     for line in lines[i + 2:]:
         columns = line.split()
         if len(columns) == 6:
+            columns[-1] = os.path.basename(columns[-1])
             data.append(PStatData(*columns))
     rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
     # here is an example of the expected output table:
@@ -68,7 +69,8 @@ def get_pstats(pstatfile, n):
     # 1      25.104  baselib.parallel.py:249(apply_reduce)
     # 1      25.099  calculators/classical.py:41(classical)
     # 1      25.099  hazardlib/calc/hazard_curve.py:164(classical)
-    return views.text_table(rows, header='ncalls cumtime path'.split())
+    return views.text_table(
+        rows, header='ncalls cumtime path'.split(), ext='org')
 
 
 # called when profiling
@@ -91,8 +93,6 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
     # set the logs first of all
     log = logs.init("job", dic, getattr(logging, loglevel.upper()))
 
-    # disable gzip_input
-    base.BaseCalculator.gzip_inputs = lambda self: None
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         if reuse_input:  # enable caching

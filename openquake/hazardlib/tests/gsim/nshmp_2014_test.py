@@ -242,12 +242,6 @@ class GeneralEquivalenceTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             np.log(wmean_curve["PGA"][idx]), np.log(curves["PGA"][idx]), ndp)
 
-    def test_nshmp_wus_curves_no_truncation(self):
-        # Test the case without truncation
-        truncation = None
-        for gsim_name in ["ASK", "BSSA", "CB", "CY", "ID"]:
-            self._verify_curves(gsim_name, truncation)
-
     def test_nshmp_wus_curves_normal_truncation(self):
         # Test the case with a conventional truncation value (3.)
         truncation = 3.0

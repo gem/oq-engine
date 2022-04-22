@@ -97,11 +97,10 @@ class BakerJayaram2008(CrossCorrelation):
 # ######################## CrossCorrelationBetween ########################## #
 
 class CrossCorrelationBetween(ABC):
-    def __init__(self, truncation_level=None):
+    def __init__(self, truncation_level=99.):
+        assert truncation_level is not None  # sanity check
         self.truncation_level = truncation_level
-        if self.truncation_level is None:
-            self.distribution = stats.norm()
-        elif self.truncation_level == 0:
+        if self.truncation_level == 0:
             self.distribution = None
         else:
             self.distribution = stats.truncnorm(

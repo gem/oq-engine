@@ -179,6 +179,8 @@ def store_agg(dstore, rbe_df, num_events):
     Build the aggrisk and aggcurves tables from the risk_by_event table
     """
     oq = dstore['oqparam']
+    if oq.investigation_time:
+        T = oq.investigation_time * oq.ses_per_logic_tree_path
     size = dstore.getsize('risk_by_event')
     logging.info('Building aggrisk from %s of risk_by_event',
                  general.humansize(size))
@@ -205,7 +207,8 @@ def store_agg(dstore, rbe_df, num_events):
             ndamaged = sum(df[col].sum() for col in dmgs)
             aggrisk['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
         for col in columns:
-            aggrisk[col].append(df[col].sum() / ne)
+            agg = df[col].sum()
+            aggrisk[col].append(agg/T if oq.investigation_time else agg/ne)
     fix_dtypes(aggrisk)
     aggrisk = pandas.DataFrame(aggrisk)
     dstore.create_df(
@@ -308,8 +311,6 @@ class PostRiskCalculator(base.RiskCalculator):
         if 'avg_losses-rlzs' in self.datastore:
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
-            num_haz_rlzs = len(self.datastore['weights'])
-            event_rates = oq.risk_event_rates(self.num_events, num_haz_rlzs)
             K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
             aggrisk = self.aggrisk[self.aggrisk.agg_id == K]
             avg_losses = self.datastore['avg_losses-rlzs'][:].sum(axis=0)
@@ -318,7 +319,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 ri, li = int(row.rlz_id), int(row.loss_id)
                 # check on the sum of the average losses
                 avg = avg_losses[ri, li]
-                agg = row.loss * event_rates[ri]
+                agg = row.loss
                 if not numpy.allclose(avg, agg, rtol=.001):
                     logging.warning(
                         'Due to rounding errors inherent in floating-point '
