@@ -2496,7 +2496,7 @@ In order to run this
 calculator, the parameter ``calculation_mode`` needs to be set to
 ``scenario``. The basic job configuration file required for running a
 scenario hazard calculation is shown in
-`the listing <lst:config_scenario_hazard>` below.
+:ref:`the listing <lst:config_scenario_hazard>` below.
 
 .. container:: listing
 
@@ -6373,26 +6373,19 @@ will produce the following display:
 **Example 3**
 
 The example shown in
-Listing `[lst:config_scenario_damage_gmf_xml] <#lst:config_scenario_damage_gmf_xml>`__
+:ref:`the listing <lst:config_scenario_damage_gmf_xml>` below
 illustrates a scenario damage calculation which uses a file listing a
 precomputed set of Ground Motion Fields. These Ground Motion Fields can be computed using the
 OpenQuake engine or some other software. The Ground Motion Fields must be provided in either
 the Natural hazards' Risk Markup Language schema or the csv format as presented in
 Section :ref:`subsec-output_scenario_hazard`.
 The damage distribution is computed based on the provided Ground Motion Fields.
-Listing `[lst:output_gmf_scenario_xml] <#lst:output_gmf_scenario_xml>`__
-shows an example of a Ground Motion Fields file in the Natural hazards' Risk Markup Language schema and
-:numref:`output:gmf_scenario` shows an example of a Ground Motion Fields file
-in the csv format. If the Ground Motion Fields file is provided in the csv format,
-an additional csv file listing the site ids must be provided using the
-parameter ``sites_csv``. See :numref:`output:sitemesh` for an
-example of the sites csv file, which provides the association between
-the site ids in the Ground Motion Fields csv file with their latitude and longitude
-coordinates.
+
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_scenario_damage_gmf_xml
 
       [general]
       description = Scenario damage using user-defined ground motion fields (NRML)
@@ -6411,9 +6404,21 @@ coordinates.
    file in the Natural hazards' Risk Markup Language schema. This file must define Ground Motion Fields for all
    of the intensity measure types used in the *Fragility Model*.
 
+:ref:`The listing <lst:config_scenario_damage_gmf_csv>` below
+shows an example of a Ground Motion Fields file in the Natural hazards' 
+Risk Markup Language schema and
+:numref:`output:gmf_scenario` shows an example of a Ground Motion Fields file
+in the csv format. If the Ground Motion Fields file is provided in the csv format,
+an additional csv file listing the site ids must be provided using the
+parameter ``sites_csv``. See :numref:`output:sitemesh` for an
+example of the sites csv file, which provides the association between
+the site ids in the Ground Motion Fields csv file with their latitude and longitude
+coordinates.
+
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_scenario_damage_gmf_csv
 
       [general]
       description = Scenario damage using user-defined ground motion fields (CSV)
@@ -6459,13 +6464,15 @@ Ground Motion Prediction Equation in the logic tree file. Correspondingly, damag
 statistics will be generated for each set of Ground Motion Field.
 
 The file shown in
-Listing `[lst:input_scenario_gmlt] <#lst:input_scenario_gmlt>`__ lists
-the two Ground Motion Prediction Equations to be used for the hazard calculation:
+:ref:`the listing <lst:input_scenario_gmlt>` below
+lists the two Ground Motion Prediction Equations to be used for the hazard 
+calculation:
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
+      :name: lst:input_scenario_gmlt
 
       <?xml version="1.0" encoding="UTF-8"?>
       <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -6494,11 +6501,12 @@ the two Ground Motion Prediction Equations to be used for the hazard calculation
 The only change that needs to be made in the hazard job configuration
 file is to replace the ``gsim`` parameter with ``gsim_logic_tree_file``,
 as demonstrated in
-Listing `[lst:config_scenario_hazard_gmlt] <#lst:config_scenario_hazard_gmlt>`__.
+:ref:`the listing <lst:config_scenario_hazard_gmlt>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_scenario_hazard_gmlt
 
       [general]
       description = Scenario hazard example using multiple GMPEs
@@ -6533,11 +6541,12 @@ calculation of the corresponding losses.
 
 A minimal job configuration file required for running a scenario damage
 calculation followed by a consequences analysis is shown in
-Listing `[lst:config_scenario_damage_consequences] <#lst:config_scenario_damage_consequences>`__.
+:ref:`the listing <lst:config_scenario_damage_consequences>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_scenario_damage_consequences
 
       [general]
       description = Scenario damage and consequences
@@ -6627,11 +6636,12 @@ given rupture model and then calculate loss statistics for structural
 losses and nonstructural losses, based on the ground motion fields. The
 job configuration file required for running this scenario risk
 calculation is shown in
-Listing `[lst:config_scenario_risk_combined] <#lst:config_scenario_risk_combined>`__.
+:ref:`the listing <lst:config_scenario_risk_combined>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_scenario_risk_combined
 
       [general]
       description = Scenario risk using a single config file
@@ -6856,17 +6866,15 @@ This example illustrates a classical probabilistic damage calculation
 which uses separate configuration files for the hazard and risk parts of
 a classical probabilistic damage assessment. The first configuration
 file shown in
-Listing `[lst:config_classical_damage_hazard] <#lst:config_classical_damage_hazard>`__
+:ref:`the listing <lst:config_classical_damage_hazard>` below
 contains input models and parameters required for the computation of the
-hazard curves. The second configuration file shown in
-Listing `[lst:config_classical_damage] <#lst:config_classical_damage>`__
-contains input models and parameters required for the calculation of the
-probabilistic damage distribution for a portfolio of assets based on the
-hazard curves and fragility models.
+hazard curves. 
+
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_classical_damage_hazard
 
       [general]
       description = Classical probabilistic hazard
@@ -6898,9 +6906,16 @@ hazard curves and fragility models.
        "PGA": logscale(0.05, 3.0, 30),
        "SA(1.0)": logscale(0.05, 3.0, 30)}
 
+The second configuration file shown in
+:ref:`the listing <lst:config_classical_damage>` below
+contains input models and parameters required for the calculation of the
+probabilistic damage distribution for a portfolio of assets based on the
+hazard curves and fragility models.
+
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_classical_damage
 
       [general]
       description = Classical probabilistic damage example
@@ -6967,11 +6982,12 @@ curves for the given source model and ground motion model and then
 calculate loss exceedance curves based on the hazard curves. An example
 job configuration file for running a classical probabilistic risk
 calculation is shown in
-Listing `[lst:config_classical_risk_combined] <#lst:config_classical_risk_combined>`__.
+:ref:`the listing <lst:config_classical_risk_combined>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_classical_risk_combined
 
       [general]
       description = Classical probabilistic risk using a single config file
@@ -7054,17 +7070,15 @@ This example illustrates a classical probabilistic risk calculation
 which uses separate configuration files for the hazard and risk parts of
 a classical probabilistic risk assessment. The first configuration file
 shown in
-Listing `[lst:config_classical_risk_hazard] <#lst:config_classical_risk_hazard>`__
+:ref:`the listing <lst:config_classical_risk_hazard>`
 contains input models and parameters required for the computation of the
-hazard curves. The second configuration file shown in
-Listing `[lst:config_classical_risk] <#lst:config_classical_risk>`__
-contains input models and parameters required for the calculation of the
-loss exceedance curves and probabilistic loss maps for a portfolio of
-assets based on the hazard curves and vulnerabilitymodels.
+hazard curves. 
+
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_classical_risk_hazard
 
       [general]
       description = Classical probabilistic hazard
@@ -7096,9 +7110,16 @@ assets based on the hazard curves and vulnerabilitymodels.
        "PGA": logscale(0.05, 3.0, 30),
        "SA(1.0)": logscale(0.05, 3.0, 30)}
 
+The second configuration file shown in
+:ref:`the listing <lst:config_classical_risk>` below
+contains input models and parameters required for the calculation of the
+loss exceedance curves and probabilistic loss maps for a portfolio of
+assets based on the hazard curves and vulnerabilitymodels.
+
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_classical_risk
 
       [general]
       description = Classical probabilistic risk
@@ -7126,9 +7147,8 @@ Now, the above calculations described by the two configuration files
 “job_hazard.ini” and “job_risk.ini” can be run sequentially or
 separately, as illustrated in Example 2 in
 Section :ref:`sec-config_scenario_damage`.
-The new parameters introduced in the above risk configuration file
-example
-(Listing `[lst:config_classical_risk] <#lst:config_classical_risk>`__)
+The new parameters introduced in 
+:ref:`the above risk configuration file example <lst:config_classical_risk>`
 are described below:
 
 -  ``lrem_steps_per_interval``: this parameter controls the number of
@@ -7178,11 +7198,12 @@ calculate event loss tables, loss exceedance curves and probabilistic
 loss maps for structural losses, nonstructural losses and occupants,
 based on the Ground Motion Fields. The job configuration file required for running
 this stochastic event based damage calculation is shown in
-Listing `[lst:config_event_based_damage] <#lst:config_event_based_damage>`__.
+:ref:`the listing <lst:config_event_based_damage>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_event_based_damage
 
       [general]
       description = Stochastic event based damage using a single job file
@@ -7304,11 +7325,12 @@ calculate event loss tables, loss exceedance curves and probabilistic
 loss maps for structural losses, nonstructural losses and occupants,
 based on the Ground Motion Fields. The job configuration file required for running
 this stochastic event based risk calculation is shown in
-Listing `[lst:config_event_based_risk_combined] <#lst:config_event_based_risk_combined>`__.
+:ref:`the listing <lst:config_event_based_risk_combined>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_event_based_risk_combined
 
       [general]
       description = Stochastic event based risk using a single job file
@@ -7428,13 +7450,13 @@ describes the procedure for this approach.
 This example illustrates a stochastic event based risk calculation which
 uses a file listing a precomputed set of Ground Motion Fields. These Ground Motion Fields can be
 computed using the OpenQuake engine or some other software. The Ground Motion Fields must be
-provided in either the Natural hazards' Risk Markup Language schema or the csv format as presented in
+provided in the csv format as presented in
 Section  :ref:`Event based PSHA`.
-Listing `[lst:output_gmf_xml] <#lst:output_gmf_xml>`__ shows an example
-of a Ground Motion Fields file in the Natural hazards' Risk Markup Language schema and
-Table `3.1 <#output:gmf_event_based>`__ shows an example of a Ground Motion Fields
-file in the csv format. If the Ground Motion Fields file is provided in the csv
-format, an additional csv file listing the site ids must be provided
+:numref:`output:gmf_event_based`
+shows an example of a Ground Motion Fields
+file in the csv format. 
+
+An additional csv file listing the site ids must also be provided
 using the parameter ``sites_csv``. See :numref:`output:sitemesh`
 for an example of the sites csv file, which provides the association
 between the site ids in the Ground Motion Fields csv file with their latitude and
@@ -7445,11 +7467,12 @@ tables, loss exceedance curves and probabilistic loss maps for
 structural losses, nonstructural losses and occupants. The job
 configuration file required for running this stochastic event based risk
 calculation starting from a precomputed set of Ground Motion Fields is shown in
-Listing `[lst:config_gmf_event_based_risk] <#lst:config_gmf_event_based_risk>`__.
+:ref:`the listing <lst:config_gmf_event_based_risk>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_gmf_event_based_risk
 
       [general]
       description = Stochastic event based risk using precomputed gmfs
@@ -7557,11 +7580,12 @@ annual losses due to the retrofits, and finally calculate the
 benefit-cost ratio for each asset. A minimal job configuration file
 required for running a classical probabilistic retrofit benefit-cost
 ratio calculation is shown in
-Listing `[lst:config_classical_bcr_combined] <#lst:config_classical_bcr_combined>`__.
+:ref:`the listing <lst:config_classical_bcr_combined>` below.
 
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_classical_bcr_combined
 
       [general]
       description = Classical cost-benefit analysis using a single config file
@@ -7817,7 +7841,25 @@ _______________________
 This output contains the total damage distribution statistics for each
 of the individual events generated for the scenario. An example output
 file for structural damage is shown in the file snippet in
-Table `[output:scenario_damage_event] <#output:scenario_damage_event>`__.
+:numref:`output:scenario_damage_event`.
+
+.. table:: Example of a scenario event damage distribution output file
+   :name: output:scenario_damage_event
+
+   ======== ====== ========== ========== ========== ========== ========== ===
+                   structural structural structural structural structural ...
+   event_id rlz_id ds0        ds1        ds2        ds3        ds4        ...
+   ======== ====== ========== ========== ========== ========== ========== ===
+   0        0      5          1          0          0          1          ...
+   1        0      4          1          1          1          0          ... 
+   2        0      6          0          0          0          1          ...
+   ...      ...    ...        ...        ...        ...        ...        ...
+   100      1      5          0          1          0          1          ...
+   101      1      4          1          1          1          0          ...
+   102      1      5          1          0          0          1          ...
+   ...      ...    ...        ...        ...        ...        ...        ...
+   ======== ====== ========== ========== ========== ========== ========== ===
+
 
 The output file lists the total number of buildings in each damage state
 for each simulated event for the scenario, for each GMPE specified in
@@ -7831,7 +7873,26 @@ individual assets defined in the *Exposure Model* that fall within the
 ``region`` and have a computed Ground Motion Field value available within the
 defined ``asset_hazard_distance``. An example output file for structural
 damage is shown in the file snippet in
-Table `[output:scenario_damage_asset] <#output:scenario_damage_asset>`__.
+:numref:`output:scenario_damage_asset`.
+
+.. FIXME this table is too wide
+
+.. table:: Example of a scenario asset damage distribution output file
+   :name: output:scenario_damage_asset
+
+   ========= ======== ======== ====== ======== ======== ======== ======== ===
+                                      struct.l struct.l struct.l struct.l
+   asset_ref taxonomy lon      lat    ds0_mean ds1_mean ds2_mean ds3_mean ...
+   ========= ======== ======== ====== ======== ======== ======== ======== ===
+   a1        tax1     -122.000 38.113 2.43E-01 6.60E-01 3.00E-02 0.00E+00 ...
+   a2        tax2     -122.114 38.113 8.18E-01 1.00E-01 8.00E-02 2.50E-03 ...
+   a3        tax1     -122.570 38.113 9.90E-01 1.00E-02 0.00E+00 0.00E+00 ...
+   a4        tax3     -122.000 38.000 3.93E-01 2.35E-01 2.95E-01 7.25E-02 ...
+   a5        tax1     -122.000 37.910 9.90E-01 0.00E+00 0.00E+00 0.00E+00 ...
+   a6        tax2     -122.000 38.225 4.08E-01 2.35E-01 1.73E-01 1.28E-01 ...
+   a7        tax1     -121.886 38.113 9.70E-01 2.00E-02 0.00E+00 0.00E+00 ...
+   ========= ======== ======== ====== ======== ======== ======== ======== ===
+
 
 The output file lists the mean of the number of buildings in each damage
 state for each asset in the exposure model for all loss types (amongst
@@ -7847,29 +7908,27 @@ exporting the results, the Scenario Damage calculator can also estimate
 the expected total number of buildings of a certain combination of tags
 in each damage state and made available for export as a csv file. This
 distribution of damage per building tag is depicted in the example
-output file snippet in Table `4.1 <#output:scenario_damage_tag>`__.
+output file snippet in 
+:numref:`output:scenario_damage_tag`.
 
 .. container::
-   :name: output:scenario_damage_tag
 
    .. table:: Example of a scenario damage distribution per tag output file
+      :name: output:scenario_damage_tag
 
-      +-----------+-----------+-----------+-----------+-----------+---+
-      |           | **str     | **str     | **str     | **str     | … |
-      |           | uctural** | uctural** | uctural** | uctural** |   |
-      +-----------+-----------+-----------+-----------+-----------+---+
-      | **t       | **d       | **d       | **d       | **d       | … |
-      | axonomy** | s0_mean** | s1_mean** | s2_mean** | s3_mean** |   |
-      +-----------+-----------+-----------+-----------+-----------+---+
-      | taxo      | 3,272.48  | 592.55    | 479.19    | 422.34    | … |
-      | nomy=wood |           |           |           |           |   |
-      +-----------+-----------+-----------+-----------+-----------+---+
-      | taxonomy  | 1,241.94  | 389.94    | 272.69    | 91.63     | … |
-      | =concrete |           |           |           |           |   |
-      +-----------+-----------+-----------+-----------+-----------+---+
-      | taxon     | 460.72    | 279.44    | 152.18    | 57.43     | … |
-      | omy=steel |           |           |           |           |   |
-      +-----------+-----------+-----------+-----------+-----------+---+
+      +-----------+------------+------------+------------+------------+---+
+      |           | structural | structural | structural | structural | … |
+      | taxonomy  | ds0_mean   | ds1_mean   | ds2_mean   | ds3_mean   | … |
+      +===========+============+============+============+============+===+
+      | taxo      | 3,272.48   | 592.55     | 479.19     | 422.34     | … |
+      | nomy=wood |            |            |            |            |   |
+      +-----------+------------+------------+------------+------------+---+
+      | taxonomy  | 1,241.94   | 389.94     | 272.69     | 91.63      | … |
+      | =concrete |            |            |            |            |   |
+      +-----------+------------+------------+------------+------------+---+
+      | taxon     | 460.72     | 279.44     | 152.18     | 57.43      | … |
+      | omy=steel |            |            |            |            |   |
+      +-----------+------------+------------+------------+------------+---+
 
 The output file lists the mean of the total number of buildings in each
 damage state for each tag found in the exposure model for all loss types
