@@ -118,6 +118,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
         allctxs = cmaker.read_ctxs(dstore, slc)
         for magidx, ctx in zip(magi, allctxs):
             ctx.magi = magidx
+    # Set epsstar boolean variable
+    epsstar = dstore['oqparam'].epsilon_star
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = hmap4.shape
@@ -147,7 +149,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
             with dis_mon:
                 # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
                 matrix = disagg.disaggregate(close, cmaker.tom, g_by_z[s],
-                                             iml2, eps3, s, bins)  # 7D-matrix
+                                             iml2, eps3, s, bins,
+                                             epsstar=epsstar)  # 7D-matrix
                 for m in range(M):
                     mat6 = matrix[..., m, :, :]
                     if mat6.any():
