@@ -328,7 +328,6 @@ _____________
    :name: fig:single_rupture
    :width: 95%
 
-
    Single rupture
 
 The point source is the elemental source type adopted in the
@@ -3104,9 +3103,9 @@ various seismic hazard analysis:
 
 -  SimpleFaultSourceClassicalPSHA
 
-Classical PSHA 
-^^^^^^^^^^^^^^
-Demos A number of demos have
+Classical PSHA Demos 
+^^^^^^^^^^^^^^^^^^^^
+A number of demos have
 been designed to show how to perform a classical PSHA calculation using
 the different available source typologies and how to define non-trivial
 logic trees. It should be noted that the input files that will be
@@ -3115,8 +3114,8 @@ for event based and disaggregation analysis.
 
 All the classical PSHA demos illustrating the different source
 typologies (all demos but the ones about Logic Tree definition) share
-the same GSIM logic tree file, which for clarity is provided below in
-Listing `[lst:input_gmlt_demo] <#lst:input_gmlt_demo>`__.
+the same GSIM logic tree file, which for clarity is provided in
+:ref:`the listing <lst:input_gmlt_demo>` below.
 
 Since this logic tree consideres only one tectonic region (i.e.
 ``Active Shallow Crust``) all the seismic sources will belong be
@@ -3125,6 +3124,7 @@ considered active shallow crust sources.
 .. container:: listing
 
    .. code:: xml
+      :name: lst:input_gmlt_demo
       :number-lines:
 
       <?xml version="1.0" encoding="UTF-8"?>
@@ -3165,8 +3165,9 @@ This section discusses the following examples:
 
 -  SimpleFaultSourceClassicalPSHA
 
-The configuration file in
-Listing `[lst:config_classical] <#lst:config_classical>`__ is defined to
+The configuration file in 
+:ref:`the listing <lst:config_classical>`
+is defined to
 compute hazard curves for several intensity measure types (PGV, PGA and
 Spectral acceleration at different periods), hazard maps and uniform
 hazard spectra for different probabilities of exceedance:
@@ -3174,6 +3175,7 @@ hazard spectra for different probabilities of exceedance:
 .. container:: listing
 
    .. code:: ini
+      :name: lst:config_classical
 
       [general]
       description = ...
@@ -3221,13 +3223,67 @@ hazard spectra for different probabilities of exceedance:
       uniform_hazard_spectra = true
       poes = 0.10, 0.02
 
-Hazard maps for the different demos are shown in
-Figure `[fig:hazard_maps1] <#fig:hazard_maps1>`__ and
-Figure `[fig:hazard_maps2] <#fig:hazard_maps2>`__.
+Hazard maps (for PGA, 10% in 50 years) for the different demos using 
+various oq-engine source typologies are shown in
+the figures below:
 
-|image| |image1| |image2| |image3|
 
-|image4| |image5| |image6|
+.. figure:: figures/hazard/point.png
+   :width: 95%
+   :alt: Point Source
+   :name: fig-point-source-map
+
+   Point Source (a). 
+  
+.. figure:: figures/hazard/area.png
+   :width: 95%
+   :alt: Area Source
+   :name: fig-area-source-map
+
+   Area source (b). The solid black line represents the area boundary. 
+  
+.. figure:: figures/hazard/simple_fault.png
+   :width: 95%
+   :alt: Simple Fault Source
+   :name: fig-simple-fault-source-map
+
+   Simple Fault Source (c). The dashed line represents the fault trace, 
+   while the solid line the fault surface projection. 
+
+.. figure:: figures/hazard/simple_fault.png
+   :width: 95%
+   :alt: Complex Fault Source
+   :name: fig-complex-fault-source-map
+
+   (d) Complex Fault Source. The solid line represent the fault surface 
+   projection
+
+Hazard maps (for PGA, 10% in 50 years) as obtained from characteristic fault
+sources with simple fault geometry (a), complex fault geometry (b), and 
+collection of planar surfaces (c)
+
+.. figure:: figures/hazard/char_fault2.png
+   :width: 95%
+   :alt: characteristic fault source with simple fault geometry
+   :name: fig-char-fault2-map
+
+   characteristic fault source with simple fault geometry
+
+.. figure:: figures/hazard/char_fault3.png
+   :width: 95%
+   :alt: characteristic fault source with complex fault geometry
+   :name: fig-char-fault3-map
+
+   characteristic fault source with complex fault geometry
+
+.. figure:: figures/hazard/char_fault1.png
+   :width: 95%
+   :alt: characteristic fault source with collection of planar surfaces
+   :name: fig-char-fault1-map
+   :align: center
+
+   characteristic fault source with collection of planar surfaces
+
 
 Classical PSHA with non trivial logic trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -8897,20 +8953,7 @@ Bibliography
    Probabilistic Risk Calculators, but not by the Classical
    Probabilistic Risk Calculator.
 
-.. |image| image:: figures/hazard/point.png
-   :width: 95%
-.. |image1| image:: figures/hazard/area.png
-   :width: 95%
-.. |image2| image:: figures/hazard/simple_fault.png
-   :width: 95%
-.. |image3| image:: figures/hazard/complex_fault.png
-   :width: 95%
-.. |image4| image:: figures/hazard/char_fault2.png
-   :width: 95%
-.. |image5| image:: figures/hazard/char_fault3.png
-   :width: 95%
-.. |image6| image:: figures/hazard/char_fault1.png
-   :width: 95%
+
 .. |image7| image:: figures/hazard/hazard-curves-ltcase2.png
    :width: 95%
 .. |image8| image:: figures/hazard/ses.png
