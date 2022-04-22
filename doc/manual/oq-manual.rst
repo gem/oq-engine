@@ -2653,14 +2653,14 @@ provided below (the numbers in red are the calculations IDs):
 
    user@ubuntu:~$ oq engine --lhc
    job_id | status | start_time | description
-   \textcolor{red}{1} | failed | 2013-03-01 09:49:34 | Classical PSHA
-   \textcolor{red}{2} | successful | 2013-03-01 09:49:56 | Classical PSHA
-   \textcolor{red}{3} | failed | 2013-03-01 10:24:04 | Classical PSHA
-   \textcolor{red}{4} | failed | 2013-03-01 10:28:16 | Classical PSHA
-   \textcolor{red}{5} | failed | 2013-03-01 10:30:04 | Classical PSHA
-   \textcolor{red}{6} | successful | 2013-03-01 10:31:53 | Classical PSHA
-   \textcolor{red}{7} | failed | 2013-03-09 08:15:14 | Classical PSHA
-   \textcolor{red}{8} | successful | 2013-03-09 08:18:04 | Classical PSHA
+   1 | failed | 2013-03-01 09:49:34 | Classical PSHA
+   2 | successful | 2013-03-01 09:49:56 | Classical PSHA
+   3 | failed | 2013-03-01 10:24:04 | Classical PSHA
+   4 | failed | 2013-03-01 10:28:16 | Classical PSHA
+   5 | failed | 2013-03-01 10:30:04 | Classical PSHA
+   6 | successful | 2013-03-01 10:31:53 | Classical PSHA
+   7 | failed | 2013-03-09 08:15:14 | Classical PSHA
+   8 | successful | 2013-03-09 08:18:04 | Classical PSHA
 
 Subsequently the user can get the list of result stored for a specific
 hazard analysis by using the ``--list-outputs``, or ``--lo``, command,
@@ -2671,7 +2671,7 @@ result ID):
 
    user@ubuntu:~$ oq engine --lo <calc_id>
    id | name
-   \textcolor{blue}{3} | hcurves
+   3 | hcurves
 
 and finally extract an xml file for a specific hazard result:
 
