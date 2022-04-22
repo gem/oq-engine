@@ -92,7 +92,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
     L1 = loglevels.size // len(loglevels)
-    out = numpy.zeros((N, loglevels.size))  # shape (N, L1)
+    out = numpy.zeros((N, loglevels.size))  # shape (N, L)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
         iml = numpy.zeros((L1, 1))  # trick to vectorize better
