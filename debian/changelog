@@ -5,6 +5,7 @@
 
   [Marco Pagani]
   * Added the possibility of disaggregating in terms of epsilon*
+  * Added a method to compute the cross-correlation matrix
 
   [Michele Simionato]
   * Fixed disaggregation returning NaNs in some situations with
