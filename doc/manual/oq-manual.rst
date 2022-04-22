@@ -1,3 +1,5 @@
+.. Adding a real title here messes with the Heading numbers
+
 .. contents::
    :depth: 4
 ..
@@ -22,6 +24,8 @@
 | **Authors on previous versions**
 | Helen Crowley\ :math:`^2`, Damiano Monelli, Graeme
   Weatherill\ :math:`^3`
+
+
 
 +----------------------+----------------------+----------------------+
 | :math:`^1` GEM       | :math:`^2` EUCENTRE  | :math:`^3` GFZ       |
@@ -62,8 +66,20 @@
   proper credit, but you cannot change it in any way or use it
   commercially.
 
+| **RST format manual**
+| This manual was adapted from LaTeX to 
+  `reStructured Text <https://docutils.sourceforge.io/rst.html>`__
+  format as part of the
+  TREQ project by
+  Paul Henshaw\ :math:`^1` and Sandra Giacomini :math:`^1`.
+
+  *The RST format manual is made possible by the support of the American People 
+  through the United States Agency for International Development (USAID.) The 
+  contents of this study are the sole responsibility of the GEM Foundation and 
+  do not necessarily reflect the views of USAID or the United States Government.*
+
 | © 2013–2022 GEM Foundation
-| *March 2022*
+| *April 2022*
 
 .. _`part:introduction`:
 
