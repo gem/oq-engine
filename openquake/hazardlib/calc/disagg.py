@@ -114,15 +114,24 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
+def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=(),
+                 epsstar=False):
     """
     :param ctxs: a list of U RuptureContexts
     :param tom: a temporal occurrence model
     :param g_by_z: an array of gsim indices
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
+    :param sid: the site ID
+    :param bin_edges:
+    :param epsstar: a boolean. When True, disaggregation contains eps* results
     """
     # disaggregate (separate) PoE in different contributions
+    # U - Number of contexts (i.e. ruptures)
+    # E - Number of epsilon bins between lower and upper truncation
+    # M - Number of IMTs
+    # P - Number of PoEs in poes_disagg
+    # Z - Number of realizations to consider
     U, E, M = len(ctxs), len(eps3[2]), len(iml2dict)
     iml2 = next(iter(iml2dict.values()))
     P, Z = iml2.shape
@@ -139,9 +148,13 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
     G = ctxs[0].mean_std.shape[1]
+    # Array with mean and total std values. Shape of this is:
+    # U - Number of contexts (i.e. ruptures)
+    # M - Number of IMTs
+    # G - Number of gsims
     mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
-        # search the index associated to the site ID; for instance
+        # Search the index associated to the site ID; for instance
         # searchsorted([2, 4, 6], 4) => 1
         idx = numpy.searchsorted(ctx.sids, sid)
         dists[u] = ctx.rrup[idx]  # distance to the site
@@ -151,6 +164,7 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
             mean_std[:, u, :, g] = ctx.mean_std[:, g, :, idx]  # (2, M)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
+    # Multi-dimensional iteration
     for (m, p, z), iml in numpy.ndenumerate(iml3):
         if iml == -numpy.inf:  # zero hazard
             continue
@@ -161,9 +175,17 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         except KeyError:
             continue
         lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
+        # Find the index in the epsilons-bins vector where lvls (which are
+        # epsilons) should be included.
         idxs = numpy.searchsorted(epsilons, lvls)
-        poes[:, :, m, p, z] = _disagg_eps(
-            truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+        # Now we split the epsilon into parts (one for each epsilon-bin larger
+        # than lvls)
+        if epsstar:
+            assert numpy.all(lvls > min(epsilons))
+            poes[:, idxs-1, m, p, z] = truncnorm.sf(lvls)
+        else:
+            poes[:, :, m, p, z] = _disagg_eps(
+                truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     z0 = numpy.zeros(0)
     for u, ctx in enumerate(ctxs):
         pnes[u] *= get_pnes(ctx.occurrence_rate,
@@ -290,10 +312,10 @@ def _magbin_groups(rups, mag_bins):
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.nofilter, **kwargs):
+        source_filter=filters.nofilter, epsstar=False, **kwargs):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
-    intensity mesaure type ``imt`` exceeding, at least once, an intensity
+    intensity measure type ``imt`` exceeding, at least once, an intensity
     measure level ``iml`` at a geographical location ``site``, given rupture
     scenarios classified in terms of:
 
@@ -384,7 +406,8 @@ def disaggregation(
     for trt in cmaker:
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
             set_mean_std(ctxs, cmaker[trt])
-            bdata[trt, magi] = disaggregate(ctxs, tom, [0], {imt: iml2}, eps3)
+            bdata[trt, magi] = disaggregate(ctxs, tom, [0], {imt: iml2}, eps3,
+                                            epsstar=epsstar)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
