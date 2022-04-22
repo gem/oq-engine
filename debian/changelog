@@ -1,4 +1,15 @@
+  [Tom Son]
+  * Implemented a missing piece in Chiou & Youngs (2014) model
+  Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
+  when it falls below the predicted PGA
+
+  [Marco Pagani]
+  * Added the possibility of disaggregating in terms of epsilon*
+  * Added a method to compute the cross-correlation matrix
+
   [Michele Simionato]
+  * Fixed disaggregation returning NaNs in some situations with
+    nonParametric/multiFaultSources
   * Bug fix: not storing far away ruptures coming from multiFaultSources
   * Implemented CScalingMSR
   * Optimized context collapsing in classical calculations

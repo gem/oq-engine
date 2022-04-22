@@ -1159,13 +1159,12 @@ class PmapMaker(object):
         if not ctxs:
             return dic
         ctx = ctxs[0]
+        z0 = numpy.zeros(0)
         for par in self.cmaker.get_ctx_params():
             pa = par[:-1] if par.endswith('_') else par
-            if pa not in vars(ctx):
-                continue
-            elif par.endswith('_'):
+            if par.endswith('_'):
                 if par == 'probs_occur_':
-                    lst = [getattr(ctx, pa, []) for ctx in ctxs]
+                    lst = [getattr(ctx, pa, z0) for ctx in ctxs]
                 else:
                     lst = [getattr(ctx, pa) for ctx in ctxs]
                 dic[par] = numpy.array(lst, dtype=object)
