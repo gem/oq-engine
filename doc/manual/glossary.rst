@@ -40,7 +40,7 @@ calculation in OpenQuake
 Consequence Function
 ::::::::::::::::::::
 the distribution of the consequence (or loss) ratio conditional on a set of 
-discrete limit states, defined for a particular \gls{taxonomy}
+discrete limit states, defined for a particular *Taxonomy*
 
 Consequence Model
 :::::::::::::::::
@@ -132,8 +132,8 @@ A source typology usually adopted to model distributedseismicity. It is
 routinely produced by a seismicity smoothing algorithm (one of the most 
 famous algorithm is the one proposed by Frankel 1995)
 
-Ground-Motion Field
-:::::::::::::::::::
+Ground-Motion Field (GMF)
+:::::::::::::::::::::::::
 An object describing the geographic distribution around a rupture of a 
 ground motion intensity measure
 
@@ -151,14 +151,20 @@ specific *PSHA Input Model*
 
 Ground-Motion Model
 :::::::::::::::::::
-An object that given a rupture with specific propertiescomputes the expected ground motion at the given site. In simplest case aground motion model corresponds to a \gls{groundmotionpredictioneq}. Incase of complex PSHA input models, the produced ground motion models contains a set of *Ground-Motion Prediction Equation*, one for each tectonic region considered
+An object that given a rupture with specific propertiescomputes the expected 
+ground motion at the given site. In simplest case aground motion model 
+corresponds to a *Ground-Motion Prediction Equation*. Incase of complex PSHA 
+input models, the produced ground motion models contains a set of 
+*Ground-Motion Prediction Equations*, one for each tectonic region considered
 
 Ground-Motion Parameter
 :::::::::::::::::::::::
-A scalar or vector quantity describing a relevant propertyof the shaking such as intensity (e.g. PGA or Spectral Acceleration)or duration, equivalent number of cycles  \citep[see for example][]{hancock2005})
+A scalar or vector quantity describing a relevant propertyof the shaking such 
+as intensity (e.g. PGA or Spectral Acceleration)or duration, equivalent number 
+of cycles.  See for example Hancock 2005. 
 
-Ground-Motion Prediction Equation
-:::::::::::::::::::::::::::::::::
+Ground-Motion Prediction Equation (GMPE)
+::::::::::::::::::::::::::::::::::::::::
 An equation that - given some fundamental parameters characterizing the 
 source, the propagation path and the site (in thesimplest  case magnitude, 
 distance and *VS30* - computes the value GM of a (scalar) ground 
@@ -166,43 +172,62 @@ motion intensity parameter
 
 Ground-Motion System
 ::::::::::::::::::::
-An object containing a list of \gls{groundmotionlogictree}} 
+An object containing a list of *Ground-Motion Logic Trees*
 
 Initial Seismic Source Input Model
 ::::::::::::::::::::::::::::::::::
-It is the ensable of information needed to fully describethe seismic sources composing a seismic source input model. Theinitial seismic source input model is included in the first branching level of a seismic source logic tree
+It is the ensable of information needed to fully describethe seismic sources 
+composing a seismic source input model. Theinitial seismic source input 
+model is included in the first branching level of a seismic source logic tree
 
 Insured Losses
 ::::::::::::::
-Fraction of the ground-up losses that can be covered by the insurance industry, according to a certain policy
+Fraction of the ground-up losses that can be covered by the insurance 
+industry, according to a certain policy
 
 Integrated Risk Modelling Toolkit
 :::::::::::::::::::::::::::::::::
-A plugin for QGIS which includes tools to run the \gls{oqe},to visualize hazard and risk results, to develop composite indicatorsand integrate them with physical risk estimations, and to predict buildingrecovery times following an earthquake.This plugin was designed as a collaborative effort between theGEM Foundation and the Center for Disaster Management and Risk Reduction Technology, and it has been developed by the GEM Foundation.
+A plugin for QGIS which includes tools to run the OpenQuake Engine,to 
+visualize hazard and risk results, to develop composite indicatorsand 
+integrate them with physical risk estimations, and to predict building 
+recovery times following an earthquake.This plugin was designed as a 
+collaborative effort between theGEM Foundation and the Center for Disaster 
+Management and Risk Reduction Technology, and it has been developed by the 
+GEM Foundation.
 
 Investigation Time
 ::::::::::::::::::
-The time interval considered to calculate hazard; usually it corresponds to 50 years
+The time interval considered to calculate hazard; usually it corresponds to 
+50 years
 
 Limit
 :::::
-A parameter used in the calculation of insured losses thatestablishes the maximum economic amount that can be covered by the insurance industry, according to a certain insurance policy
+A parameter used in the calculation of insured losses thatestablishes the 
+maximum economic amount that can be covered by the insurance industry, 
+according to a certain insurance policy
 
 Logic Tree
 ::::::::::
-Data structure used to systematically describe uncertainties on parameters and models used in a PSHA study
+Data structure used to systematically describe uncertainties on parameters 
+and models used in a PSHA study
 
 Logic Tree Processor
 ::::::::::::::::::::
-An OQ calculator that takes the PSHA Input Model and createsmany realisations of a \gls{seismicsourcemodel} and of a \gls{groundmotionmodel}
+An OQ calculator that takes the PSHA Input Model and createsmany 
+realisations of a *Seismic Source Model* and of a *Ground-Motion Model*
 
 Magnitude-Scaling Relationship
 ::::::::::::::::::::::::::::::
-An empirical relationship linking the magnitude with aparameter  describing the size of the corresponding rupture (e.g. the area  of the rupture or the rupture length)
+An empirical relationship linking the magnitude with a parameter describing 
+the size of the corresponding rupture (e.g. the area  of the rupture or the 
+rupture length)
 
 Magnitude-Frequency Distribution
 ::::::::::::::::::::::::::::::::
-A distribution describing the frequency of earthquakes witha specific magnitude. It can be continuous or discrete. One frequency-magnitude distribution frequently adopted in \gls{acr:psha} is the double truncated Gutenberg-Richter distribution
+A distribution describing the frequency of earthquakes with a specific 
+magnitude. It can be continuous or discrete. One frequency-magnitude 
+distribution frequently adopted in *PSHA* is the double truncated 
+Gutenberg-Richter distribution
 
 Non-Parametric Source
 :::::::::::::::::::::
@@ -223,24 +248,30 @@ Seismic Hazard Analysis - (see the `OpenSHA website <http://opensha.org>`__)
 
 Point Source
 ::::::::::::
-The elemental source typology used in the \glsdesc{acr:oqe} to model distributed seismicity
+The elemental source typology used in the OpenQuake Engine to model 
+distributed seismicity
 
 PSHA Input Model
 ::::::::::::::::
 An object containing the information necessary to describethe seismic source 
 and the ground motion models - plus the related epistemic uncertainties
 
-Probabilistic Seismic Hazard Analysis
-:::::::::::::::::::::::::::::::::::::
-A methodology to compute seismic hazard by taking intoaccount the potential contributions coming from all the sources of engineering importance for a specified site
+Probabilistic Seismic Hazard Analysis (PSHA)
+::::::::::::::::::::::::::::::::::::::::::::
+A methodology to compute seismic hazard by taking intoaccount the potential 
+contributions coming from all the sources of engineering importance for a 
+specified site
 
 Earthquake Rupture
 ::::::::::::::::::
-A 3D surface - representing a portion or the entire fault surface - over which a slip event (i.e. an earthquake) occurs
+A 3D surface - representing a portion or the entire fault surface - over 
+which a slip event (i.e. an earthquake) occurs
 
 Rupture Model
 :::::::::::::
-An object containing the information necessary to describea \gls{rupture}, such as magnitude, hypocenter location, strike, dip, rake, and seismogenic depths
+An object containing the information necessary to describe a *Rupture*,
+such as magnitude, hypocenter location, strike, dip, rake, and seismogenic 
+depths
 
 Rupture Aspect Ratio
 ::::::::::::::::::::
@@ -248,81 +279,115 @@ The ratio between the lenght and the width of an earthquake rupture
 
 Rake
 ::::
-The rake is the direction in which a hanging wall block movesduring a rupture, measured relative to fault strike on the plane of the fault
+The rake is the direction in which a hanging wall block movesduring a rupture, 
+measured relative to fault strike on the plane of the fault
 
 Scenario Based Seismic Hazard Analysis
 ::::::::::::::::::::::::::::::::::::::
-An analyis of seismic hazard based on the selection ofone or a few ruptures and the computation of the expected groundmotion at a set of sites using a \gls{gmpe} accounting ground motion variability
+An analyis of seismic hazard based on the selection ofone or a few ruptures 
+and the computation of the expected groundmotion at a set of sites using a 
+*GMPE* accounting ground motion variability
 
 Seismicity History
 ::::::::::::::::::
-An object containing a set ruptures representative of thepossible seismicity generated by the sources in a \gls{seismicsourcemodel} during the investigation time $t$
+An object containing a set ruptures representative of thepossible seismicity 
+generated by the sources in a *Seismic Source Model* during the investigation 
+time $t$
 
 Seismicity Rate
 :::::::::::::::
-Number of events per unit of time (if not betterspecified, the definition of a seismicity rate generally presumes a time independent
+Number of events per unit of time (if not betterspecified, the definition of 
+a seismicity rate generally presumes a time independent
 
 Seismic Source Data
 :::::::::::::::::::
-An object containing the information necessary tocompletely describe a \gls{acr:psha} seismic source i.e. seismic source type, position, geometry and seismicity occurrence model
+An object containing the information necessary tocompletely describe a 
+*PSHA* seismic source i.e. seismic source type, position, geometry and 
+seismicity occurrence model
 
 Seismic Source Logic Tree
 :::::::::::::::::::::::::
-Logic tree structure defined to describe in structured andsystematic way the epistemic uncertainties characterizing the seismicsource model. The first branching level in the logic tree by definition contains one or several alternative \gls{initialseismicsourceinputmodel}
+Logic tree structure defined to describe in structured and systematic way 
+the epistemic uncertainties characterizing the seismicsource model. The first 
+branching level in the logic tree by definition contains one or several 
+alternative *Initial Seismic Source Input Model*
 
 Seismic Source Input Model
 ::::::::::::::::::::::::::
-An object containing a list of \gls{seismicsourcedata}. Inthe \glsdesc{acr:oqe} a seismic source model doesn't contain epistemic uncertainty
+An object containing a list of *Seismic Source Data*. In the OpenQuake Engine
+a seismic source model does not contain epistemic uncertainty
+
+.. FIXME this definition is incomplete
 
 Seismic Source
 ::::::::::::::
-An object that can generate}} \newacronym{acr:ssm}{SSM}{Seismic Source Model
+An object that can generate 
 
-Seismic Source Model
-::::::::::::::::::::
-An object containing a list of \glspl{seismicsource} objects
+
+Seismic Source Model (SSM)
+::::::::::::::::::::::::::
+An object containing a list of *Seismic Source* objects
 
 Seismic Source System
 :::::::::::::::::::::
-An object containing a list of\glspl{initialseismicsourceinputmodel} and the \gls{seismicsourcelogictree}
+An object containing a list of *Initial Seismic Source Input Model* 
+and the *Seismic Source Logic Tree*
 
 Simple Fault Source
 :::::::::::::::::::
-A source typology usually adopted to model shallow structures with an uncomplicated geometry
+A source typology usually adopted to model shallow structures with an 
+uncomplicated geometry
 
 Stochastic Event Set
 ::::::::::::::::::::
-An object containing one or many \glspl{seismicityhistory}} 
+An object containing one or many *Seismicity History*
 
 Strike
 ::::::
-The strike direction correspond to the angle between thenorth and the direction you take so that when you walk along the \gls{faulttrace} the fault dips on your right
+The strike direction correspond to the angle between thenorth and the 
+direction you take so that when you walk along the *Fault Trace*
+the fault dips on your right
 
 Tag
 :::
-Scheme used to specify attributes for the \glspl{asset}.Attributes for an \gls{asset} could include the state, county, zip-code,city, occupancy, CRESTA ID, or other such markers that could be usedin the post-processing stage of a risk calculation to aggregate results for each tag.
+Scheme used to specify attributes for the *Asset*. Attributes for an *Asset* 
+could include the state, county, zip-code,city, occupancy, CRESTA ID, or 
+other such markers that could be usedin the post-processing stage of a risk 
+calculation to aggregate results for each tag.
 
 Taxonomy
 ::::::::
-Scheme used to classify the \glspl{asset}. For buildings, aclassification scheme has been proposed by \gls{acr:gem} which considers anumber of attributes including lateral load resisting system and itsmaterial, height, year of construction. The taxonomy is currently used tolink the \glspl{asset} in the \gls{exposuremodel} to the relevant \gls{vulnerabilityfunction} or \gls{fragilityfunction}
+Scheme used to classify the *Asset*. For buildings, a classification 
+scheme has been proposed by the GEM Foundation which considers anumber of 
+attributes including lateral load resisting system and itsmaterial, height, 
+year of construction. The taxonomy is currently used tolink the *Asset* 
+in the *Exposure Model* to the relevant *Vulnerability Function* or 
+*Fragility Function* 
 
 Tectonic Region
 :::::::::::::::
-A area on the topographic surface that can be consideredhomogeneous in terms of tectonic properties such as the prevalent seismogenic properties and/or the seismic wave propagation properties
+A area on the topographic surface that can be considered homogeneous in 
+terms of tectonic properties such as the prevalent seismogenic properties 
+and/or the seismic wave propagation properties
 
 Temporal Occurrence Model
 :::::::::::::::::::::::::
-Usually a probabilistic model giving the probability of occurrence of an event in a specified \gls{investigationtime}
+Usually a probabilistic model giving the probability of occurrence of an 
+event in a specified *Investigation Time*
 
 Vulnerability Function
 ::::::::::::::::::::::
-A function that describes the probability distribution ofloss ratio, conditioned on an intensity measure level. Currently only discrete vulnerability functions are supported
+A function that describes the probability distribution ofloss ratio, 
+conditioned on an intensity measure level. Currently only discrete 
+vulnerability functions are supported
 
 Vulnerability Model
 :::::::::::::::::::
-A set of \glspl{vulnerabilityfunction} used to model the physical vulnerability of all the \glspl{asset} in the \gls{exposuremodel}
+A set of *Vulnerability Function* used to model the physical vulnerability 
+of all the *Asset* in the *Exposure Model*
 
 VS30
 ::::
-Average shear wave velocity of the materials in the uppermost 30m of the soil column
+Average shear wave velocity of the materials in the uppermost 30m of the soil 
+column
 
