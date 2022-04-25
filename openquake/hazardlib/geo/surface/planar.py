@@ -258,7 +258,7 @@ class PlanarSurface(BaseSurface):
         self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
         # ... and scalar "d" parameter from the plane equation (uses
         # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-        self.d = - (self.normal * tl).sum()
+        self.d = - self.normal @ tl
         # these two 3d vectors together with a zero point represent surface's
         # coordinate space (the way to translate 3d Cartesian space with
         # a center in earth's center to 2d space centered in surface's top
