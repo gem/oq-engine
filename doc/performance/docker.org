@@ -231,7 +231,7 @@ total build_hazard      302      0.53125   239
 ClassicalCalculator.run 613      225       1      
 
 # sudo docker run --rm -ti -v $HOME:/io openquake/engine:3.12 "oq run /io/GLD.zip; oq show performance"
-# Sep 6, 2021, huge numba speedup in build_hazard
+# Sep 6, 2021, speedup in build_hazard even without numba
 | calc_1, maxmem=2.4 GB   | time_sec | memory_mb | counts |
 |-------------------------+----------+-----------+--------|
 | total classical         | 4_137    | 66.3      | 374    |
@@ -253,3 +253,15 @@ ClassicalCalculator.run 613      225       1
 | make_contexts              | 224.0    | 10.2      | 2_617  |
 | total postclassical        | 118.7    | 0.95703   | 239    |
 | ClassicalCalculator.run    | 654.3    | 278.1     | 1      |
+
+# sudo docker run --rm -ti -v $HOME:/io openquake/engine:3.14 "oq run /io/GLD.zip; oq show performance"
+# Apr 12, 2022
+| calc_1, maxmem=2.5 GB      | time_sec | memory_mb | counts |
+|----------------------------+----------+-----------+--------|
+| total classical            | 4_654    | 84.8      | 1_008  |
+| get_poes                   | 2_347    | 0.0       | 54_957 |
+| composing pnes             | 1_562    | 0.0       | 54_957 |
+| computing mean_std         | 443.5    | 0.0       | 6_775  |
+| make_contexts              | 210.7    | 10.2      | 2_617  |
+| total postclassical        | 117.2    | 1.23047   | 239    |
+| ClassicalCalculator.run    | 636.0    | 342.4     | 1      |
