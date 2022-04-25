@@ -84,6 +84,18 @@ class PlanarSurface(BaseSurface):
         """
         return Mesh(self.corner_lons, self.corner_lats, self.corner_depths)
 
+    @property
+    def corner_lons(self):
+        return self.array[0]
+
+    @property
+    def corner_lats(self):
+        return self.array[1]
+
+    @property
+    def corner_depths(self):
+        return self.array[2]
+
     def __init__(self, strike, dip,
                  top_left, top_right, bottom_right, bottom_left, check=True):
         if check:
@@ -95,42 +107,15 @@ class PlanarSurface(BaseSurface):
             NodalPlane.check_strike(strike)
         self.dip = dip
         self.strike = strike
-
-        self.corner_lons = numpy.array([
+        self.array = numpy.array([[
             top_left.longitude, top_right.longitude,
             bottom_left.longitude, bottom_right.longitude
-        ])
-        self.corner_lats = numpy.array([
-            top_left.latitude, top_right.latitude,
-            bottom_left.latitude, bottom_right.latitude
-        ])
-        self.corner_depths = numpy.array([
-            top_left.depth, top_right.depth,
-            bottom_left.depth, bottom_right.depth
-        ])
+        ], [top_left.latitude, top_right.latitude,
+            bottom_left.latitude, bottom_right.latitude], [
+                top_left.depth, top_right.depth,
+                bottom_left.depth, bottom_right.depth]])  # shape (3, 4)
         # now set the attributes normal, d, uv1, uv2, zero_zero
-        self._init_plane()
-
-        # now we can check surface for validity
-        dists, xx, yy = self._project(self.mesh.xyz)
-        # "length" of the rupture is measured along the top edge
-        length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
-        # "width" of the rupture is measured along downdip direction
-        width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
-        self.width = (width1 + width2) / 2.0
-        self.length = (length1 + length2) / 2.0
-
-        if check:
-            # calculate the imperfect rectangle tolerance
-            # relative to surface's area
-            tolerance = (self.width * self.length *
-                         self.IMPERFECT_RECTANGLE_TOLERANCE)
-            if numpy.max(numpy.abs(dists)) > tolerance:
-                logging.warning("corner points do not lie on the same plane")
-            if length2 < 0:
-                raise ValueError("corners are in the wrong order")
-            if abs(length1 - length2) > tolerance:
-                raise ValueError("top and bottom edges have different lengths")
+        self._init_plane(check)
 
     @classmethod
     def from_corner_points(cls, top_left, top_right,
@@ -213,24 +198,21 @@ class PlanarSurface(BaseSurface):
         ptl = Point(top_left[0], top_left[1], hei)
         ptr = Point(top_right[0], top_right[1], hei)
 
-        self = cls(strike, dip, ptl, ptr, pbr, pbl)
-        return self
+        return cls(strike, dip, ptl, ptr, pbr, pbl)
 
     @classmethod
-    def from_array(cls, array34):
+    def from_array(cls, array34, strike=None, dip=None):
         """
         :param array34: an array of shape (3, 4) in order tl, tr, bl, br
         :returns: a :class:`PlanarSurface` instance
         """
-        tl, tr, bl, br = [Point(*p) for p in array34.T]
-        strike = tl.azimuth(tr)
-        dip = numpy.degrees(
-            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
-        # this is used when the planar surface geometry comes from an array
-        # in the datastore, which means it is correct and there is no need to
-        # check it again; also the check would fail because of a bug, see
-        # https://github.com/gem/oq-engine/issues/3392
-        self = cls(strike, dip, tl, tr, br, bl, check=False)
+        if strike is None or dip is None:  # recompute the angles
+            return cls.from_ucerf(array34.T)
+        self = object.__new__(PlanarSurface)
+        self.strike = strike
+        self.dip = dip
+        self.array = array34
+        self._init_plane()
         return self
 
     @classmethod
@@ -246,7 +228,7 @@ class PlanarSurface(BaseSurface):
         self = cls(strike, dip, tl, tr, br, bl, check=False)
         return self
 
-    def _init_plane(self):
+    def _init_plane(self, check=False):
         """
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
@@ -267,6 +249,27 @@ class PlanarSurface(BaseSurface):
         self.uv1 = geo_utils.normalized(tr - tl)
         self.uv2 = numpy.cross(self.normal, self.uv1)
         self.zero_zero = tl
+
+        # now we can check surface for validity
+        dists, xx, yy = self._project(self.mesh.xyz)
+        # "length" of the rupture is measured along the top edge
+        length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
+        # "width" of the rupture is measured along downdip direction
+        width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
+        self.width = (width1 + width2) / 2.0
+        self.length = (length1 + length2) / 2.0
+
+        if check:
+            # calculate the imperfect rectangle tolerance
+            # relative to surface's area
+            tolerance = (self.width * self.length *
+                         self.IMPERFECT_RECTANGLE_TOLERANCE)
+            if numpy.max(numpy.abs(dists)) > tolerance:
+                logging.warning("corner points do not lie on the same plane")
+            if length2 < 0:
+                raise ValueError("corners are in the wrong order")
+            if abs(length1 - length2) > tolerance:
+                raise ValueError("top and bottom edges have different lengths")
 
     def translate(self, p1, p2):
         """
@@ -290,11 +293,11 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
+        lons, lats = geodetic.point_at(
+            self.corner_lons, self.corner_lats, azimuth, distance)
+        nsurf.array = numpy.array([lons, lats, self.corner_depths])
         nsurf.dip = self.dip
         nsurf.strike = self.strike
-        nsurf.corner_lons, nsurf.corner_lats = geodetic.point_at(
-            self.corner_lons, self.corner_lats, azimuth, distance)
-        nsurf.corner_depths = self.corner_depths.copy()
         nsurf._init_plane()
         nsurf.width = self.width
         nsurf.length = self.length
