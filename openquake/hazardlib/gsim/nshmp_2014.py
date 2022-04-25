@@ -76,6 +76,14 @@ class NSHMP2014(base.GMPE):
         self.gsim = cls()  # underlying gsim
         super().__init__(**kwargs)
 
+    def set_parameters(self, rup):
+        """
+        Some models have their own set_parameters methods.
+        call the model's set_parameters if available and
+        call GMPE's set_parameters otherwise.
+        """
+        self.gsim.set_parameters(rup)
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Compute mean, sig, tau, phi and returns the so called adjustment
