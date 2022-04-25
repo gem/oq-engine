@@ -334,25 +334,21 @@ class PlanarSurface(BaseSurface):
 
     def _project(self, points):
         """
-        Project points to a surface's plane.
+        Project points (as an array of shape (N, 3)) to a surface's plane.
 
         Parameters are lists or numpy arrays of coordinates of points
         to project.
 
         :returns:
-            A tuple of three items: distances between original points
+            A tuple of three arrays: distances between original points
             and surface's plane in km, "x" and "y" coordinates of points'
             projections to the plane (in a surface's coordinate space).
         """
         # uses method from http://www.9math.com/book/projection-point-plane
         dists = points @ self.normal + self.d
-        projs = points - self.normal * dists.reshape(dists.shape + (1, ))
-
-        # translate projected points' to surface's coordinate space
-        vectors2d = projs - self.zero_zero
-        xx = (vectors2d * self.uv1).sum(axis=-1)
-        yy = (vectors2d * self.uv2).sum(axis=-1)
-        return dists, xx, yy
+        # translate projected points to surface coordinate space, shape (N, 3)
+        vectors2d = points - self.normal * dists[:, None] - self.zero_zero
+        return dists, vectors2d @ self.uv1, vectors2d @ self.uv2
 
     def _project_back(self, dists, xx, yy):
         """
