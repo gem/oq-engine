@@ -226,6 +226,11 @@ distance_bin_width:
 ebrisk_maxsize:
   INTERNAL
 
+epsilon_star:
+  A boolean controlling the typology of disaggregation output to be provided.
+  When True disaggregation is perfomed in terms of epsilon* rather then
+  epsilon (see Bazzurro and Cornell, 1999)
+
 floating_x_step:
   Float, used in rupture generation for kite faults. indicates the fraction
   of fault length used to float ruptures along strike by the given float
@@ -853,6 +858,7 @@ class OqParam(valid.ParamSet):
     floating_y_step = valid.Param(valid.positivefloat, 0)
     ignore_encoding_errors = valid.Param(valid.boolean, False)
     ignore_master_seed = valid.Param(valid.boolean, False)
+    epsilon_star = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
     gmf_max_gb = valid.Param(valid.positivefloat, .1)
@@ -1050,7 +1056,7 @@ class OqParam(valid.ParamSet):
         if ('ps_grid_spacing' in names_vals and
                 'pointsource_distance' not in names_vals):
             self.pointsource_distance = dict(
-                default=float(names_vals['ps_grid_spacing']))
+                default=2 * float(names_vals['ps_grid_spacing']))
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 

@@ -92,16 +92,18 @@ def _get_poes(mean_std, loglevels, truncation_level):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
     L1 = loglevels.size // len(loglevels)
-    out = numpy.zeros((N, loglevels.size))  # shape (N, L)
+    out = numpy.zeros((loglevels.size, N))  # shape (L, N)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
-        for li, iml in enumerate(levels):
-            if truncation_level == 0.:
-                out[:, mL1 + li] = iml <= mean_std[0, m]
-            else:
-                out[:, mL1 + li] = _truncnorm_sf(
-                    truncation_level, (iml - mean_std[0, m]) / mean_std[1, m])
-    return out
+        iml = numpy.zeros((L1, 1))  # trick to vectorize better
+        iml[:, 0] = levels  # numba is not happy with reshape
+        mea, sig = mean_std[:, m]  # shape N
+        if truncation_level == 0.:
+            out[mL1:mL1 + L1] = (iml <= mea)  # shape (L1, N)
+        else:
+            out[mL1:mL1 + L1] = _truncnorm_sf(  # shape (L1, N)
+                truncation_level, (iml - mea) / sig)
+    return out.T
 
 
 OK_METHODS = 'compute get_mean_and_stddevs get_poes set_parameters set_tables'

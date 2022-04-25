@@ -252,8 +252,7 @@ class PlanarSurface(BaseSurface):
         containing the surface.
         """
         tl, tr, bl, br = geo_utils.spherical_to_cartesian(
-            self.corner_lons, self.corner_lats, self.corner_depths
-        )
+            self.corner_lons, self.corner_lats, self.corner_depths)
         # these two parameters define the plane that contains the surface
         # (in 3d Cartesian space): a normal unit vector,
         self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
