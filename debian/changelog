@@ -1,4 +1,8 @@
   [Tom Son]
+  * Added the ability to estimate the rupture parameter, Ztor in
+  Campbell & Bozorgnia (2014) model
+
+  [Tom Son]
   * Implemented a missing piece in Chiou & Youngs (2014) model
   Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
   when it falls below the predicted PGA
