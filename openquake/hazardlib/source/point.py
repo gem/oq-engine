@@ -137,23 +137,64 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 surface.hc, surface, rate, src.temporal_occurrence_model)
 
 
-def to_corners(lon, lat, depth, half_length, half_width, half_height, strike):
+def to_corners(clon, clat, cdep, half_length, half_width, half_height,
+               dip, strike, upper_seismogenic_depth, lower_seismogenic_depth):
+    rdip = math.radians(dip)
+
+    # precalculated azimuth values for horizontal-only and vertical-only
+    # moves from one point to another on the plane defined by strike
+    # and dip:
+    azimuth_right = strike
+    azimuth_down = (azimuth_right + 90) % 360
+    azimuth_left = (azimuth_down + 90) % 360
+    azimuth_up = (azimuth_left + 90) % 360
+
+    # half height of the vertical component of rupture width
+    # is the vertical distance between the rupture geometrical
+    # center and it's upper and lower borders:
+    # calculate how much shallower the upper border of the rupture
+    # is than the upper seismogenic depth:
+    vshift = upper_seismogenic_depth - cdep + half_height
+    # if it is shallower (vshift > 0) than we need to move the rupture
+    # by that value vertically.
+    if vshift < 0:
+        # the top edge is below upper seismogenic depth. now we need
+        # to check that we do not cross the lower border.
+        vshift = lower_seismogenic_depth - cdep - half_height
+        if vshift > 0:
+            # the bottom edge of the rupture is above the lower seismo
+            # depth; that means that we don't need to move the rupture
+            # as it fits inside seismogenic layer.
+            vshift = 0
+        # if vshift < 0 than we need to move the rupture up.
+
+    # now we need to find the position of rupture's geometrical center.
+    # in any case the hypocenter point must lie on the surface, however
+    # the rupture center might be off (below or above) along the dip.
+    if vshift != 0:
+        # we need to move the rupture center to make the rupture fit
+        # inside the seismogenic layer.
+        hshift = abs(vshift / math.tan(rdip))
+        clon, clat = geodetic.point_at(
+            clon, clat, azimuth_up if vshift < 0 else azimuth_down,
+            hshift)
+        cdep += vshift
     array = numpy.zeros((3, 4))
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
     array[:2, 0] = geodetic.point_at(
-        lon, lat, (strike + 180 + theta) % 360, hor_dist)
+        clon, clat, (strike + 180 + theta) % 360, hor_dist)
     array[:2, 1] = geodetic.point_at(
-        lon, lat, (strike - theta) % 360, hor_dist)
+        clon, clat, (strike - theta) % 360, hor_dist)
     array[:2, 2] = geodetic.point_at(
-        lon, lat, (strike + 180 - theta) % 360, hor_dist)
+        clon, clat, (strike + 180 - theta) % 360, hor_dist)
     array[:2, 3] = geodetic.point_at(
-        lon, lat, (strike + theta) % 360, hor_dist)
-    array[2, 0] = depth - half_height
-    array[2, 1] = depth - half_height
-    array[2, 2] = depth + half_height
-    array[2, 3] = depth + half_height
-    return array
+        clon, clat, (strike + theta) % 360, hor_dist)
+    array[2, 0] = cdep - half_height
+    array[2, 1] = cdep - half_height
+    array[2, 2] = cdep + half_height
+    array[2, 3] = cdep + half_height
+    return array, numpy.array([clon, clat, cdep])
 
 
 class PointSource(ParametricSeismicSource):
@@ -322,61 +363,19 @@ class PointSource(ParametricSeismicSource):
         :param hypocenter:
             Point representing rupture's hypocenter.
         :param shift_hypo:
-            If true, returns the shifted hypocenter
+            If true, change .hc to the shifted hypocenter
         :returns:
-            Tuple (PlanarSurface, hypocenter)
+            a PlanarSurface instance with an attribute .hc
         """
         eps = .001  # 1 meter buffer to survive numerical errors
         assert self.upper_seismogenic_depth < hypocenter.depth + eps, (
             self.upper_seismogenic_depth, hypocenter.depth)
         assert self.lower_seismogenic_depth + eps > hypocenter.depth, (
             self.lower_seismogenic_depth, hypocenter.depth)
-        rdip = math.radians(nodal_plane.dip)
-
-        # precalculated azimuth values for horizontal-only and vertical-only
-        # moves from one point to another on the plane defined by strike
-        # and dip:
-        azimuth_right = nodal_plane.strike
-        azimuth_down = (azimuth_right + 90) % 360
-        azimuth_left = (azimuth_down + 90) % 360
-        azimuth_up = (azimuth_left + 90) % 360
-
         rup_length, rup_proj_width, rup_proj_height = _get_rupture_dimensions(
             self, mag, nodal_plane.rake, nodal_plane.dip)
         clon, clat, cdep = (hypocenter.longitude, hypocenter.latitude,
                             hypocenter.depth)
-
-        # half height of the vertical component of rupture width
-        # is the vertical distance between the rupture geometrical
-        # center and it's upper and lower borders:
-        hheight = rup_proj_height / 2.
-        # calculate how much shallower the upper border of the rupture
-        # is than the upper seismogenic depth:
-        vshift = self.upper_seismogenic_depth - hypocenter.depth + hheight
-        # if it is shallower (vshift > 0) than we need to move the rupture
-        # by that value vertically.
-        if vshift < 0:
-            # the top edge is below upper seismogenic depth. now we need
-            # to check that we do not cross the lower border.
-            vshift = self.lower_seismogenic_depth - hypocenter.depth - hheight
-            if vshift > 0:
-                # the bottom edge of the rupture is above the lower seismo
-                # depth; that means that we don't need to move the rupture
-                # as it fits inside seismogenic layer.
-                vshift = 0
-            # if vshift < 0 than we need to move the rupture up.
-
-        # now we need to find the position of rupture's geometrical center.
-        # in any case the hypocenter point must lie on the surface, however
-        # the rupture center might be off (below or above) along the dip.
-        if vshift != 0:
-            # we need to move the rupture center to make the rupture fit
-            # inside the seismogenic layer.
-            hshift = abs(vshift / math.tan(rdip))
-            clon, clat = geodetic.point_at(
-                clon, clat, azimuth_up if vshift < 0 else azimuth_down,
-                hshift)
-            cdep += vshift
 
         # from the rupture center we can now compute the coordinates of the
         # four coorners by moving along the diagonals of the plane. This seems
@@ -387,13 +386,14 @@ class PointSource(ParametricSeismicSource):
         # and the line passing through the rupture center and parallel to the
         # top and bottom edges. Theta is zero for vertical ruptures (because
         # rup_proj_width is zero)
-        array34 = to_corners(
+        array34, array3 = to_corners(
             clon, clat, cdep,
             rup_length / 2., rup_proj_width / 2., rup_proj_height / 2.,
-            nodal_plane.strike)
+            nodal_plane.dip, nodal_plane.strike,
+            self.upper_seismogenic_depth, self.lower_seismogenic_depth)
         surface = PlanarSurface.from_array(
             array34, nodal_plane.strike, nodal_plane.dip)
-        surface.hc = Point(clon, clat, cdep) if shift_hypo else hypocenter
+        surface.hc = Point(*array3) if shift_hypo else hypocenter
         return surface
 
     @property
