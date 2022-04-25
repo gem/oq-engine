@@ -45,7 +45,7 @@ def _get_rupture_dimensions(src, mag, rake, dip):
     :param dip:
         dip angle
     :returns:
-        Tuple of two items: rupture length in width in km.
+        (rupture length, rupture width)
 
     The rupture area is calculated using method
     :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
@@ -65,11 +65,12 @@ def _get_rupture_dimensions(src, mag, rake, dip):
     rup_width = area / rup_length
     seismogenic_layer_width = (src.lower_seismogenic_depth
                                - src.upper_seismogenic_depth)
-    max_width = seismogenic_layer_width / math.sin(math.radians(dip))
+    rdip = math.radians(dip)
+    max_width = seismogenic_layer_width / math.sin(rdip)
     if rup_width > max_width:
         rup_width = max_width
         rup_length = area / rup_width
-    return rup_length, rup_width
+    return rup_length, rup_width * math.cos(rdip)
 
 
 def msr_name(src):
@@ -216,7 +217,6 @@ class PointSource(ParametricSeismicSource):
         for _, np in self.nodal_plane_distribution.data:
             rup_length, rup_width = _get_rupture_dimensions(
                 self, mag, np.rake, np.dip)
-            rup_width = rup_width * math.cos(math.radians(np.dip))
             # the projection radius is half of the rupture diagonal
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
         self.radius = max(radius)
@@ -228,7 +228,6 @@ class PointSource(ParametricSeismicSource):
         """
         rup_length, rup_width = _get_rupture_dimensions(
             self, rup.mag, rup.rake, dip)
-        rup_width = rup_width * math.cos(math.radians(dip))
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
     def iter_ruptures(self, **kwargs):
@@ -317,13 +316,10 @@ class PointSource(ParametricSeismicSource):
         azimuth_left = (azimuth_down + 90) % 360
         azimuth_up = (azimuth_left + 90) % 360
 
-        rup_length, rup_width = _get_rupture_dimensions(
+        rup_length, rup_proj_width = _get_rupture_dimensions(
             self, mag, nodal_plane.rake, nodal_plane.dip)
-        # calculate the height of the rupture being projected
-        # on the vertical plane:
-        rup_proj_height = rup_width * math.sin(rdip)
-        # and it's width being projected on the horizontal one:
-        rup_proj_width = rup_width * math.cos(rdip)
+        # height of the rupture being projected on the vertical plane
+        rup_proj_height = rup_proj_width * math.tan(rdip)
 
         # half height of the vertical component of rupture width
         # is the vertical distance between the rupture geometrical
@@ -482,7 +478,6 @@ class CollapsedPointSource(PointSource):
             mag, _rate = self.get_annual_occurrence_rates()[-1]
         rup_length, rup_width = _get_rupture_dimensions(
             self, mag, self.rake, self.dip)
-        rup_width = rup_width * math.cos(math.radians(self.dip))
         # the projection radius is half of the rupture diagonal
         self.radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius
