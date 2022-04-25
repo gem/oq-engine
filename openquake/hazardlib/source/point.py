@@ -343,7 +343,8 @@ class PointSource(ParametricSeismicSource):
 
         rup_length, rup_proj_width, rup_proj_height = _get_rupture_dimensions(
             self, mag, nodal_plane.rake, nodal_plane.dip)
-        center = hypocenter
+        clon, clat, cdep = (hypocenter.longitude, hypocenter.latitude,
+                            hypocenter.depth)
 
         # half height of the vertical component of rupture width
         # is the vertical distance between the rupture geometrical
@@ -372,9 +373,10 @@ class PointSource(ParametricSeismicSource):
             # we need to move the rupture center to make the rupture fit
             # inside the seismogenic layer.
             hshift = abs(vshift / math.tan(rdip))
-            center = center.point_at(
-                horizontal_distance=hshift, vertical_increment=vshift,
-                azimuth=(azimuth_up if vshift < 0 else azimuth_down))
+            clon, clat = geodetic.point_at(
+                clon, clat, azimuth_up if vshift < 0 else azimuth_down,
+                hshift)
+            cdep += vshift
 
         # from the rupture center we can now compute the coordinates of the
         # four coorners by moving along the diagonals of the plane. This seems
@@ -386,12 +388,12 @@ class PointSource(ParametricSeismicSource):
         # top and bottom edges. Theta is zero for vertical ruptures (because
         # rup_proj_width is zero)
         array34 = to_corners(
-            center.longitude, center.latitude, center.depth,
+            clon, clat, cdep,
             rup_length / 2., rup_proj_width / 2., rup_proj_height / 2.,
             nodal_plane.strike)
         surface = PlanarSurface.from_array(
             array34, nodal_plane.strike, nodal_plane.dip)
-        surface.hc = center if shift_hypo else hypocenter
+        surface.hc = Point(clon, clat, cdep) if shift_hypo else hypocenter
         return surface
 
     @property
