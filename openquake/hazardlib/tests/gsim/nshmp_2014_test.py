@@ -217,7 +217,7 @@ class GeneralEquivalenceTestCase(unittest.TestCase):
         GMPE). Then the "low", "average" and "high" cases are run separately
         and the resulting curves summed with their respective weights.
 
-        A small degree of mismatch is found though this typcially takes
+        A small degree of mismatch is found though this typically takes
         place at very low probabilities. Curves are compared in the logarithmic
         domain (ignoring 0 values)
         """
