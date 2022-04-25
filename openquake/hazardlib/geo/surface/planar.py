@@ -345,9 +345,8 @@ class PlanarSurface(BaseSurface):
             projections to the plane (in a surface's coordinate space).
         """
         # uses method from http://www.9math.com/book/projection-point-plane
-        dists = (self.normal * points).sum(axis=-1) + self.d
-        t0 = - dists
-        projs = points + self.normal * t0.reshape(t0.shape + (1, ))
+        dists = points @ self.normal + self.d
+        projs = points - self.normal * dists.reshape(dists.shape + (1, ))
 
         # translate projected points' to surface's coordinate space
         vectors2d = projs - self.zero_zero
@@ -450,12 +449,8 @@ class PlanarSurface(BaseSurface):
             # case "III": ordinate doesn't affect the distance
             default=0
         )
-        # distance between a point project and a rectangle combines from
-        # both components
-        dists2d_squares = mxx ** 2 + myy ** 2
-        # finding a resulting distance combining a distance on a plane
-        # with a distance to a plane
-        return numpy.sqrt(dists ** 2 + dists2d_squares)
+        # combining distance on a plane with distance to a plane
+        return numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
 
     def get_closest_points(self, mesh):
         """
