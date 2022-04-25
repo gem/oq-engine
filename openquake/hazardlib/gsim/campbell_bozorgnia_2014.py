@@ -360,11 +360,11 @@ class CampbellBozorgnia2014(GMPE):
 
     def set_parameters(self, rup):
         """
-        Estimate some of the rupture parameters if not provided.
+        Estimate the rupture parameters if not provided.
         """
         frv = np.zeros_like(rup.rake)
         frv[(rup.rake > 30.) & (rup.rake < 150.)] = 1.
-        # if Ztor is unknown
+
         if not hasattr(rup, "ztor"):
             # Equation 4 and 5 in Chiou & Youngs 2014
             rup.ztor = np.where(
