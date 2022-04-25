@@ -137,14 +137,17 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 surface.hc, surface, rate, src.temporal_occurrence_model)
 
 
-def to_corners(clon, clat, cdep, half_length, half_width, half_height,
-               dip, strike, upper_seismogenic_depth, lower_seismogenic_depth):
-    rdip = math.radians(dip)
+def to_corners(self, clon, clat, cdep, mag, nodal_plane):
+    rup_length, rup_proj_width, rup_proj_height = _get_rupture_dimensions(
+        self, mag, nodal_plane.rake, nodal_plane.dip)
+    half_length, half_width, half_height = (
+        rup_length/2, rup_proj_width/2, rup_proj_height/2)
+    rdip = math.radians(nodal_plane.dip)
 
     # precalculated azimuth values for horizontal-only and vertical-only
     # moves from one point to another on the plane defined by strike
     # and dip:
-    azimuth_right = strike
+    azimuth_right = strike = nodal_plane.strike
     azimuth_down = (azimuth_right + 90) % 360
     azimuth_left = (azimuth_down + 90) % 360
     azimuth_up = (azimuth_left + 90) % 360
@@ -154,13 +157,13 @@ def to_corners(clon, clat, cdep, half_length, half_width, half_height,
     # center and it's upper and lower borders:
     # calculate how much shallower the upper border of the rupture
     # is than the upper seismogenic depth:
-    vshift = upper_seismogenic_depth - cdep + half_height
+    vshift = self.upper_seismogenic_depth - cdep + half_height
     # if it is shallower (vshift > 0) than we need to move the rupture
     # by that value vertically.
     if vshift < 0:
         # the top edge is below upper seismogenic depth. now we need
         # to check that we do not cross the lower border.
-        vshift = lower_seismogenic_depth - cdep - half_height
+        vshift = self.lower_seismogenic_depth - cdep - half_height
         if vshift > 0:
             # the bottom edge of the rupture is above the lower seismo
             # depth; that means that we don't need to move the rupture
@@ -372,8 +375,6 @@ class PointSource(ParametricSeismicSource):
             self.upper_seismogenic_depth, hypocenter.depth)
         assert self.lower_seismogenic_depth + eps > hypocenter.depth, (
             self.lower_seismogenic_depth, hypocenter.depth)
-        rup_length, rup_proj_width, rup_proj_height = _get_rupture_dimensions(
-            self, mag, nodal_plane.rake, nodal_plane.dip)
         clon, clat, cdep = (hypocenter.longitude, hypocenter.latitude,
                             hypocenter.depth)
 
@@ -387,10 +388,7 @@ class PointSource(ParametricSeismicSource):
         # top and bottom edges. Theta is zero for vertical ruptures (because
         # rup_proj_width is zero)
         array34, array3 = to_corners(
-            clon, clat, cdep,
-            rup_length / 2., rup_proj_width / 2., rup_proj_height / 2.,
-            nodal_plane.dip, nodal_plane.strike,
-            self.upper_seismogenic_depth, self.lower_seismogenic_depth)
+            self, clon, clat, cdep, mag, nodal_plane)
         surface = PlanarSurface.from_array(
             array34, nodal_plane.strike, nodal_plane.dip)
         surface.hc = Point(*array3) if shift_hypo else hypocenter
