@@ -137,7 +137,20 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 surface.hc, surface, rate, src.temporal_occurrence_model)
 
 
-def to_corners(self, clon, clat, cdep, mag, nodal_plane):
+def to_corners(self, mag, nodal_plane, hypocenter):
+    # from the rupture center we can now compute the coordinates of the
+    # four coorners by moving along the diagonals of the plane. This seems
+    # to be better then moving along the perimeter, because in this case
+    # errors are accumulated that induce distorsions in the shape with
+    # consequent raise of exceptions when creating PlanarSurface objects
+    # theta is the angle between the diagonal of the surface projection
+    # and the line passing through the rupture center and parallel to the
+    # top and bottom edges. Theta is zero for vertical ruptures (because
+    # rup_proj_width is zero)
+    array = numpy.zeros((3, 4))
+    array3 = numpy.zeros(3)
+    clon, clat, cdep = (hypocenter.longitude, hypocenter.latitude,
+                        hypocenter.depth)
     rup_length, rup_proj_width, rup_proj_height = _get_rupture_dimensions(
         self, mag, nodal_plane.rake, nodal_plane.dip)
     half_length, half_width, half_height = (
@@ -182,7 +195,6 @@ def to_corners(self, clon, clat, cdep, mag, nodal_plane):
             clon, clat, azimuth_up if vshift < 0 else azimuth_down,
             hshift)
         cdep += vshift
-    array = numpy.zeros((3, 4))
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
     array[:2, 0] = geodetic.point_at(
@@ -375,20 +387,7 @@ class PointSource(ParametricSeismicSource):
             self.upper_seismogenic_depth, hypocenter.depth)
         assert self.lower_seismogenic_depth + eps > hypocenter.depth, (
             self.lower_seismogenic_depth, hypocenter.depth)
-        clon, clat, cdep = (hypocenter.longitude, hypocenter.latitude,
-                            hypocenter.depth)
-
-        # from the rupture center we can now compute the coordinates of the
-        # four coorners by moving along the diagonals of the plane. This seems
-        # to be better then moving along the perimeter, because in this case
-        # errors are accumulated that induce distorsions in the shape with
-        # consequent raise of exceptions when creating PlanarSurface objects
-        # theta is the angle between the diagonal of the surface projection
-        # and the line passing through the rupture center and parallel to the
-        # top and bottom edges. Theta is zero for vertical ruptures (because
-        # rup_proj_width is zero)
-        array34, array3 = to_corners(
-            self, clon, clat, cdep, mag, nodal_plane)
+        array34, array3 = to_corners(self, mag, nodal_plane, hypocenter)
         surface = PlanarSurface.from_array(
             array34, nodal_plane.strike, nodal_plane.dip)
         surface.hc = Point(*array3) if shift_hypo else hypocenter
