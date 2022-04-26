@@ -78,6 +78,8 @@
   contents of this study are the sole responsibility of the GEM Foundation and 
   do not necessarily reflect the views of USAID or the United States Government.*
 
+.. image:: https://github.com/gem/oq-infrastructure/raw/master/logos/public/usaid.jpg
+
 | © 2013–2022 GEM Foundation
 | *April 2022*
 
