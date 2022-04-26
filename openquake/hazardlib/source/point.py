@@ -30,20 +30,25 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
+input_dt = numpy.dtype([
+    ('usd', float),
+    ('lsd', float),
+    ('rar', float),
+    ('mag', float),
+    ('area', float),
+    ('strike', float),
+    ('dip', float),
+    ('rake', float),
+    ('lon', float),
+    ('lat', float),
+    ('dep', float),
+])
 
-def _get_rupture_dimensions(src, mags, rake, dip):
+
+def _get_rupture_dimensions(inp):
     """
     Calculate and return the rupture length and width
-    for given magnitude ``mag`` and nodal plane.
-
-    :param src:
-        a PointSource, AreaSource or MultiPointSource
-    :param mags:
-        a list of magnitudes
-    :param rake:
-        rake angle
-    :param dip:
-        dip angle
+    for given magnitude surface parameters.
     :returns:
         array(N, 3) with rupture length, rupture width, rupture height
 
@@ -60,23 +65,38 @@ def _get_rupture_dimensions(src, mags, rake, dip):
     depth, the rupture width is shrunken to a maximum possible
     and rupture length is extended to preserve the same area.
     """
-    mags = numpy.array(mags)
-    out = numpy.zeros((len(mags), 3))
-    for i, mag in enumerate(mags):
-        area = src.magnitude_scaling_relationship.get_median_area(mag, rake)
-        rup_length = math.sqrt(area * src.rupture_aspect_ratio)
-        rup_width = area / rup_length
-        seismogenic_layer_width = (src.lower_seismogenic_depth
-                                   - src.upper_seismogenic_depth)
-        rdip = math.radians(dip)
-        max_width = seismogenic_layer_width / math.sin(rdip)
-        if rup_width > max_width:
-            rup_width = max_width
-            rup_length = area / rup_width
-        out[i, 0] = rup_length
-        out[i, 1] = rup_width * math.cos(rdip)
-        out[i, 2] = rup_width * math.sin(rdip)
-    return out
+    rup_length = math.sqrt(inp.area * inp.rar)
+    rup_width = inp.area / rup_length
+    seismogenic_layer_width = inp.lsd - inp.usd
+    rdip = math.radians(inp.dip)
+    max_width = seismogenic_layer_width / math.sin(rdip)
+    if rup_width > max_width:
+        rup_width = max_width
+        rup_length = inp.area / rup_width
+    return numpy.array([rup_length, rup_width * math.cos(rdip),
+                        rup_width * math.sin(rdip)])
+
+
+def _get_surfaces(inp, shift_hypo=False):
+    """
+    Create and return rupture surface object with given properties.
+
+    :param inp:
+        Surface input parameters
+    :param shift_hypo:
+        If true, change .hc to the shifted hypocenter
+    :returns:
+        a PlanarSurface instance with an attribute .hc
+    """
+    for rec in inp:
+        dims = _get_rupture_dimensions(rec)
+        array, hc = _array_hc(rec.usd, rec.lsd, rec.mag, dims,
+                              rec.strike, rec.dip, rec.lon, rec.lat, rec.dep)
+        surface = PlanarSurface.from_array(  # shape (3, 4)
+            array, rec.strike, rec.dip)
+        surface.hc = Point(*hc) if shift_hypo else Point(
+            rec.lon, rec.lat, rec.dep)
+        yield surface
 
 
 def msr_name(src):
@@ -137,7 +157,7 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 0, np.rake, rate, src.temporal_occurrence_model)
     else:  # regular case
         mags, rates = zip(*mag_rates)
-        surfaces = src._get_surfaces(mags, np, hc)
+        surfaces = _get_surfaces(src.get_input(mags, np, hc))
         for mag, rate, surface in zip(mags, rates, surfaces):
             yield ParametricProbabilisticRupture(
                 mag, np.rake, src.tectonic_region_type,
@@ -274,6 +294,24 @@ class PointSource(ParametricSeismicSource):
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
+    def get_input(self, mags, np, hc=None):
+        """
+        :yields: quintets (usd, lsd, rar, mag, area)
+        """
+        msr = self.magnitude_scaling_relationship
+        hc = hc or Point(self.location.x, self.location.y)
+        inp = [(self.upper_seismogenic_depth,
+                self.lower_seismogenic_depth,
+                self.rupture_aspect_ratio,
+                mag,
+                msr.get_median_area(mag, np.rake),
+                np.strike,
+                np.dip,
+                np.rake,
+                hc.x, hc.y, hc.z)
+               for i, mag in enumerate(mags)]
+        return numpy.array(inp, input_dt).view(numpy.recarray)
+
     def _get_max_rupture_projection_radius(self, mag=None):
         """
         Find a maximum radius of a circle on Earth surface enveloping a rupture
@@ -286,8 +324,8 @@ class PointSource(ParametricSeismicSource):
             mag, _rate = self.get_annual_occurrence_rates()[-1]
         radius = []
         for _, np in self.nodal_plane_distribution.data:
-            [(rup_length, rup_width, _)] = _get_rupture_dimensions(
-                self, [mag], np.rake, np.dip)
+            [inp] = self.get_input([mag], np)
+            rup_length, rup_width, _ = _get_rupture_dimensions(inp)
             # the projection radius is half of the rupture diagonal
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
         self.radius = max(radius)
@@ -297,8 +335,9 @@ class PointSource(ParametricSeismicSource):
         """
         :returns: half of maximum rupture's diagonal surface projection
         """
-        [(rup_length, rup_width, _)] = _get_rupture_dimensions(
-            self, [rup.mag], rup.rake, dip)
+        [inp] = self.get_input(
+            [rup.mag], NodalPlane(rup.surface.strike, dip, rup.rake))
+        rup_length, rup_width, _ = _get_rupture_dimensions(inp)
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
     def iter_ruptures(self, **kwargs):
@@ -322,8 +361,8 @@ class PointSource(ParametricSeismicSource):
                 if point_rup:
                     surfaces = numpy.zeros_like(mags)
                 else:
-                    surfaces = self._get_surfaces(
-                        mags, np, hc, kwargs.get('shift_hypo'))
+                    surfaces = _get_surfaces(
+                        self.get_input(mags, np, hc), kwargs.get('shift_hypo'))
                 for (mag, rate, surface) in zip(mags, rates, surfaces):
                     occurrence_rate = rate * np_prob * hc_prob
                     if point_rup:
@@ -363,37 +402,6 @@ class PointSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         return len(self.get_annual_occurrence_rates()) * self.count_nphc()
-
-    def _get_surfaces(
-            self, mags, nodal_plane, hypocenter, shift_hypo=False):
-        """
-        Create and return rupture surface object with given properties.
-
-        :param mag:
-            Magnitude value, used to calculate rupture dimensions,
-            see :meth:`_get_rupture_dimensions`.
-        :param nodal_plane:
-            Instance of :class:`openquake.hazardlib.geo.nodalplane.NodalPlane`
-            describing the rupture orientation.
-        :param hypocenter:
-            Point representing rupture's hypocenter.
-        :param shift_hypo:
-            If true, change .hc to the shifted hypocenter
-        :returns:
-            a PlanarSurface instance with an attribute .hc
-        """
-        alldims = _get_rupture_dimensions(
-            self, mags, nodal_plane.rake, nodal_plane.dip)
-        for mag, dims in zip(mags, alldims):
-            array, hc = _array_hc(self.upper_seismogenic_depth,
-                                  self.lower_seismogenic_depth,
-                                  mag, dims,
-                                  nodal_plane.strike, nodal_plane.dip,
-                                  hypocenter.x, hypocenter.y, hypocenter.z)
-            surface = PlanarSurface.from_array(  # shape (3, 4)
-                array, nodal_plane.strike, nodal_plane.dip)
-            surface.hc = Point(*hc) if shift_hypo else hypocenter
-            yield surface
 
     @property
     def polygon(self):
@@ -483,6 +491,7 @@ class CollapsedPointSource(PointSource):
         """
         if mag is None:
             mag, _rate = self.get_annual_occurrence_rates()[-1]
+        inp = self.get_input([mag], np, hc)
         [(rup_length, rup_width, _)] = _get_rupture_dimensions(
             self, [mag], self.rake, self.dip)
         # the projection radius is half of the rupture diagonal
@@ -545,7 +554,7 @@ def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
     ps.upper_seismogenic_depth = seismo[0]
     ps.lower_seismogenic_depth = seismo[1]
     ps.rupture_aspect_ratio = aspect_ratio
-    [surface] = ps._get_surfaces([mag], np, hc)
+    [surface] = _get_surfaces(ps.get_input([mag], np, hc))
     rup = ParametricProbabilisticRupture(
         mag, np.rake, trt, surface.hc, surface, occurrence_rate, tom)
     return rup

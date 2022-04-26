@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 import math
 from copy import deepcopy
 from openquake.hazardlib import geo, mfd
-from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.source.point import PointSource, _get_surfaces
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
@@ -102,7 +102,8 @@ class AreaSource(ParametricSeismicSource):
                                longitude=epicenter0.longitude,
                                depth=hc_depth)
                 mags, rates = zip(*self.get_annual_occurrence_rates())
-                surfaces = PointSource._get_surfaces(self, mags, np, hc)
+                surfaces = _get_surfaces(PointSource.get_input(
+                    self, mags, np, hc))
                 for mag, mag_occ_rate, surface in zip(mags, rates, surfaces):
                     occurrence_rate = (mag_occ_rate * np_prob * hc_prob
                                        * scaling_rate_factor)
