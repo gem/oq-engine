@@ -47,6 +47,7 @@ from openquake.hazardlib.gsim_lt import (
 from openquake.hazardlib.lt import (
     Branch, BranchSet, Realization, CompositeLogicTree, dummy_branchset,
     LogicTreeError, parse_uncertainty, random, attach_to_branches)
+from openquake.baselib.general import BASE8836, BASE94
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
@@ -319,7 +320,7 @@ class SourceModelLogicTree(object):
                 root, self.filename, "missing logicTree node")
         self.shortener = {}
         self.branchsets = []
-        self.parse_tree(tree)
+        self.parse_tree(tree) #!CBC
 
         # determine if the logic tree is source specific
         dicts = list(self.bsetdict.values())[1:]
@@ -350,7 +351,7 @@ class SourceModelLogicTree(object):
         t0 = time.time()
         for depth, blnode in enumerate(tree_node.nodes):
             [bsnode] = bsnodes(self.filename, blnode)
-            self.parse_branchset(bsnode, depth)
+            self.parse_branchset(bsnode, depth) #!CBC
         dt = time.time() - t0
         bname = os.path.basename(self.filename)
         logging.info('Validated %s in %.2f seconds', bname, dt)
@@ -386,7 +387,7 @@ class SourceModelLogicTree(object):
             raise nrml.DuplicatedID('%s in %s' % (bsid, self.filename))
         self.bsetdict[bsid] = attrs
         self.validate_branchset(branchset_node, depth, branchset)
-        self.parse_branches(branchset_node, branchset)
+        self.parse_branches(branchset_node, branchset) #!CBC
         dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
             self.num_paths = 1
@@ -463,8 +464,10 @@ class SourceModelLogicTree(object):
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
+            shortener_chars = BASE8836 if len(branches) > 94 else BASE94
+            #shortener_chars = BASE94
             self.shortener[branch_id] = keyno(
-                branch_id, bsno, brno, self.filename)
+                branch_id, bsno, brno, self.filename, shortener_chars)
             branchset.branches.append(branch)
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(

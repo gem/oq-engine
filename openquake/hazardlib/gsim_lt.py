@@ -137,8 +137,9 @@ def keyno(branch_id, bsno, brno, fname='', chars=BASE94):
     :param brno: number of the branch in the branchset (starting from 0)
     :returns: a short unique alias for the branch_id
     """
-    if not set(branch_id) <= set(chars):
-        raise ValueError('%s %s' % (ex, fname))
+    #!CBC this check is not making sense, and `ex` is out of scope!
+    #if not set(branch_id) <= set(chars):
+    #     raise ValueError('%s %s' % (ex, fname))
     return chars[brno] + str(bsno)
 
 

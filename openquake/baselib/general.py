@@ -50,6 +50,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 BASE94 = ''.join(chr(i) for i in range(65, 127)) + ''.join(
     chr(i) for i in range(33, 65))
+BASE8836 = [''.join(x) for x in itertools.product(BASE94, BASE94)] #CBC allow for larger source_logic_trees
 mp = multiprocessing.get_context('spawn')
 
 
