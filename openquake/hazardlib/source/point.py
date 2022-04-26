@@ -201,10 +201,8 @@ def _array_hc(self, mag, nodal_plane, hypocenter):
                             (strike + 180 - theta) % 360,
                             (strike + theta) % 360])
     array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
-    array[2, 0] = cdep - half_height
-    array[2, 1] = cdep - half_height
-    array[2, 2] = cdep + half_height
-    array[2, 3] = cdep + half_height
+    array[2, 0:2] = cdep - half_height
+    array[2, 2:4] = cdep + half_height
     return array, numpy.array([clon, clat, cdep])
 
 

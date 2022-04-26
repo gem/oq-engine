@@ -86,15 +86,15 @@ class PlanarSurface(BaseSurface):
 
     @property
     def corner_lons(self):
-        return self.array[0]
+        return self.corners[0]
 
     @property
     def corner_lats(self):
-        return self.array[1]
+        return self.corners[1]
 
     @property
     def corner_depths(self):
-        return self.array[2]
+        return self.corners[2]
 
     def __init__(self, strike, dip,
                  top_left, top_right, bottom_right, bottom_left, check=True):
@@ -107,7 +107,7 @@ class PlanarSurface(BaseSurface):
             NodalPlane.check_strike(strike)
         self.dip = dip
         self.strike = strike
-        self.array = numpy.array([[
+        self.corners = numpy.array([[
             top_left.longitude, top_right.longitude,
             bottom_left.longitude, bottom_right.longitude
         ], [top_left.latitude, top_right.latitude,
@@ -211,7 +211,7 @@ class PlanarSurface(BaseSurface):
         self = object.__new__(PlanarSurface)
         self.strike = strike
         self.dip = dip
-        self.array = array34
+        self.corners = array34
         self._init_plane()
         return self
 
@@ -295,7 +295,7 @@ class PlanarSurface(BaseSurface):
         nsurf = object.__new__(PlanarSurface)
         lons, lats = geodetic.point_at(
             self.corner_lons, self.corner_lats, azimuth, distance)
-        nsurf.array = numpy.array([lons, lats, self.corner_depths])
+        nsurf.corners = numpy.array([lons, lats, self.corner_depths])
         nsurf.dip = self.dip
         nsurf.strike = self.strike
         nsurf._init_plane()
