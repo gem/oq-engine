@@ -45,7 +45,7 @@ def _get_rupture_dimensions(src, mag, rake, dip):
     :param dip:
         dip angle
     :returns:
-        Tuple of two items: rupture length in width in km.
+        (rupture length, rupture width, rupture height)
 
     The rupture area is calculated using method
     :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
@@ -65,11 +65,12 @@ def _get_rupture_dimensions(src, mag, rake, dip):
     rup_width = area / rup_length
     seismogenic_layer_width = (src.lower_seismogenic_depth
                                - src.upper_seismogenic_depth)
-    max_width = seismogenic_layer_width / math.sin(math.radians(dip))
+    rdip = math.radians(dip)
+    max_width = seismogenic_layer_width / math.sin(rdip)
     if rup_width > max_width:
         rup_width = max_width
         rup_length = area / rup_width
-    return rup_length, rup_width
+    return rup_length, rup_width * math.cos(rdip), rup_width * math.sin(rdip)
 
 
 def msr_name(src):
@@ -214,9 +215,8 @@ class PointSource(ParametricSeismicSource):
             mag, _rate = self.get_annual_occurrence_rates()[-1]
         radius = []
         for _, np in self.nodal_plane_distribution.data:
-            rup_length, rup_width = _get_rupture_dimensions(
+            rup_length, rup_width, _ = _get_rupture_dimensions(
                 self, mag, np.rake, np.dip)
-            rup_width = rup_width * math.cos(math.radians(np.dip))
             # the projection radius is half of the rupture diagonal
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
         self.radius = max(radius)
@@ -226,9 +226,8 @@ class PointSource(ParametricSeismicSource):
         """
         :returns: half of maximum rupture's diagonal surface projection
         """
-        rup_length, rup_width = _get_rupture_dimensions(
+        rup_length, rup_width, _ = _get_rupture_dimensions(
             self, rup.mag, rup.rake, dip)
-        rup_width = rup_width * math.cos(math.radians(dip))
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
     def iter_ruptures(self, **kwargs):
@@ -253,7 +252,8 @@ class PointSource(ParametricSeismicSource):
                             0, np.rake, occurrence_rate,
                             self.temporal_occurrence_model)
                     else:
-                        surface, nhc = self._get_rupture_surface(mag, np, hc)
+                        surface, nhc = self._get_rupture_surface(
+                            mag, np, hc, kwargs.get('shift_hypo'))
                         yield ParametricProbabilisticRupture(
                             mag, np.rake, self.tectonic_region_type,
                             nhc if kwargs.get('shift_hypo') else hc,
@@ -287,7 +287,8 @@ class PointSource(ParametricSeismicSource):
         """
         return len(self.get_annual_occurrence_rates()) * self.count_nphc()
 
-    def _get_rupture_surface(self, mag, nodal_plane, hypocenter):
+    def _get_rupture_surface(
+            self, mag, nodal_plane, hypocenter, shift_hypo=False):
         """
         Create and return rupture surface object with given properties.
 
@@ -299,8 +300,10 @@ class PointSource(ParametricSeismicSource):
             describing the rupture orientation.
         :param hypocenter:
             Point representing rupture's hypocenter.
+        :param shift_hypo:
+            If true, returns the shifted hypocenter
         :returns:
-            Instance of :class:`~openquake.hazardlib.geo.surface.planar.PlanarSurface`.
+            Tuple (PlanarSurface, hypocenter)
         """
         eps = .001  # 1 meter buffer to survive numerical errors
         assert self.upper_seismogenic_depth < hypocenter.depth + eps, (
@@ -317,13 +320,10 @@ class PointSource(ParametricSeismicSource):
         azimuth_left = (azimuth_down + 90) % 360
         azimuth_up = (azimuth_left + 90) % 360
 
-        rup_length, rup_width = _get_rupture_dimensions(
+        rup_length, rup_proj_width, rup_proj_height = _get_rupture_dimensions(
             self, mag, nodal_plane.rake, nodal_plane.dip)
-        # calculate the height of the rupture being projected
-        # on the vertical plane:
-        rup_proj_height = rup_width * math.sin(rdip)
-        # and it's width being projected on the horizontal one:
-        rup_proj_width = rup_width * math.cos(rdip)
+
+        rupture_center = hypocenter
 
         # half height of the vertical component of rupture width
         # is the vertical distance between the rupture geometrical
@@ -337,18 +337,18 @@ class PointSource(ParametricSeismicSource):
         if vshift < 0:
             # the top edge is below upper seismogenic depth. now we need
             # to check that we do not cross the lower border.
-            vshift = self.lower_seismogenic_depth - hypocenter.depth - hheight
+            vshift = (self.lower_seismogenic_depth -
+                      hypocenter.depth - hheight)
             if vshift > 0:
-                # the bottom edge of the rupture is above the lower sesmogenic
+                # the bottom edge of the rupture is above the lower seismo
                 # depth. that means that we don't need to move the rupture
                 # as it fits inside seismogenic layer.
                 vshift = 0
-            # if vshift < 0 than we need to move the rupture up by that value.
+            # if vshift < 0 than we need to move the rupture up.
 
         # now we need to find the position of rupture's geometrical center.
         # in any case the hypocenter point must lie on the surface, however
         # the rupture center might be off (below or above) along the dip.
-        rupture_center = hypocenter
         if vshift != 0:
             # we need to move the rupture center to make the rupture fit
             # inside the seismogenic layer.
@@ -389,8 +389,8 @@ class PointSource(ParametricSeismicSource):
             azimuth=(nodal_plane.strike + theta) % 360)
         surface = PlanarSurface(
             nodal_plane.strike, nodal_plane.dip, left_top, right_top,
-            right_bottom, left_bottom)
-        return surface, rupture_center
+            right_bottom, left_bottom, check=False)
+        return surface, rupture_center if shift_hypo else hypocenter
 
     @property
     def polygon(self):
@@ -480,9 +480,8 @@ class CollapsedPointSource(PointSource):
         """
         if mag is None:
             mag, _rate = self.get_annual_occurrence_rates()[-1]
-        rup_length, rup_width = _get_rupture_dimensions(
+        rup_length, rup_width, _ = _get_rupture_dimensions(
             self, mag, self.rake, self.dip)
-        rup_width = rup_width * math.cos(math.radians(self.dip))
         # the projection radius is half of the rupture diagonal
         self.radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius

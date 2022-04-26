@@ -258,7 +258,7 @@ class PlanarSurface(BaseSurface):
         self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
         # ... and scalar "d" parameter from the plane equation (uses
         # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-        self.d = - (self.normal * tl).sum()
+        self.d = - self.normal @ tl
         # these two 3d vectors together with a zero point represent surface's
         # coordinate space (the way to translate 3d Cartesian space with
         # a center in earth's center to 2d space centered in surface's top
@@ -334,26 +334,21 @@ class PlanarSurface(BaseSurface):
 
     def _project(self, points):
         """
-        Project points to a surface's plane.
+        Project points (as an array of shape (N, 3)) to a surface's plane.
 
         Parameters are lists or numpy arrays of coordinates of points
         to project.
 
         :returns:
-            A tuple of three items: distances between original points
+            A tuple of three arrays: distances between original points
             and surface's plane in km, "x" and "y" coordinates of points'
             projections to the plane (in a surface's coordinate space).
         """
         # uses method from http://www.9math.com/book/projection-point-plane
-        dists = (self.normal * points).sum(axis=-1) + self.d
-        t0 = - dists
-        projs = points + self.normal * t0.reshape(t0.shape + (1, ))
-
-        # translate projected points' to surface's coordinate space
-        vectors2d = projs - self.zero_zero
-        xx = (vectors2d * self.uv1).sum(axis=-1)
-        yy = (vectors2d * self.uv2).sum(axis=-1)
-        return dists, xx, yy
+        dists = points @ self.normal + self.d
+        # translate projected points to surface coordinate space, shape (N, 3)
+        vectors2d = points - self.normal * dists[:, None] - self.zero_zero
+        return dists, vectors2d @ self.uv1, vectors2d @ self.uv2
 
     def _project_back(self, dists, xx, yy):
         """
@@ -450,12 +445,8 @@ class PlanarSurface(BaseSurface):
             # case "III": ordinate doesn't affect the distance
             default=0
         )
-        # distance between a point project and a rectangle combines from
-        # both components
-        dists2d_squares = mxx ** 2 + myy ** 2
-        # finding a resulting distance combining a distance on a plane
-        # with a distance to a plane
-        return numpy.sqrt(dists ** 2 + dists2d_squares)
+        # combining distance on a plane with distance to a plane
+        return numpy.sqrt(dists ** 2 + mxx ** 2 + myy ** 2)
 
     def get_closest_points(self, mesh):
         """
