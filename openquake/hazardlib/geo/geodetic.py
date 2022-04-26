@@ -20,8 +20,10 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
+import math
 import numpy
 from scipy.spatial.distance import cdist
+from openquake.baselib.performance import compile
 from openquake.baselib.python3compat import round
 
 #: Earth radius in km.
@@ -393,6 +395,7 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     return lons, lats, depths
 
 
+@compile("(f8,f8,f8,f8)")
 def point_at(lon, lat, azimuth, distance):
     """
     Perform a forward geodetic transformation: find a point lying at a given
@@ -413,20 +416,20 @@ def point_at(lon, lat, azimuth, distance):
     """
     # this is a simplified version of npoints_towards().
     # code duplication is justified by performance reasons.
-    lon, lat = numpy.radians(lon), numpy.radians(lat)
-    tc = numpy.radians(360 - azimuth)
-    sin_dists = numpy.sin(distance / EARTH_RADIUS)
-    cos_dists = numpy.cos(distance / EARTH_RADIUS)
-    sin_lat = numpy.sin(lat)
-    cos_lat = numpy.cos(lat)
+    lon, lat = math.radians(lon), math.radians(lat)
+    tc = math.radians(360 - azimuth)
+    sin_dists = math.sin(distance / EARTH_RADIUS)
+    cos_dists = math.cos(distance / EARTH_RADIUS)
+    sin_lat = math.sin(lat)
+    cos_lat = math.cos(lat)
 
-    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
-    lats = numpy.degrees(numpy.arcsin(sin_lats))
+    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * math.cos(tc)
+    lats = math.degrees(math.asin(sin_lats))
 
-    dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
-                         cos_dists - sin_lat * sin_lats)
-    lons = numpy.mod(lon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
-    lons = numpy.degrees(lons)
+    dlon = math.atan2(math.sin(tc) * sin_dists * cos_lat,
+                      cos_dists - sin_lat * sin_lats)
+    lons = lon - dlon + math.pi % (2 * math.pi) - math.pi
+    lons = math.degrees(lons)
 
     return lons, lats
 

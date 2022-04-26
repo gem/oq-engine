@@ -302,8 +302,11 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
-        lons, lats = geodetic.point_at(
-            self.corner_lons, self.corner_lats, azimuth, distance)
+        lons, lats = [], []
+        for lon, lat in zip(self.corner_lons, self.corner_lats):
+            lo, la = geodetic.point_at(lon, lat, azimuth, distance)
+            lons.append(lo)
+            lats.append(la)
         nsurf.corners = numpy.array([lons, lats, self.corner_depths])
         nsurf.dip = self.dip
         nsurf.strike = self.strike
