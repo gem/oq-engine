@@ -105,7 +105,7 @@ def _array_hc(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     return array, numpy.array([clon, clat, cdep])
 
 
-def _get_surfaces(inp, hypo, shift_hypo=False):
+def build_planar_surfaces(inp, hypo, shift_hypo=False):
     """
     :returns: a list of rupture surfaces
     :param inp:
@@ -278,7 +278,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 hc = Point(latitude=src.location.latitude,
                            longitude=src.location.longitude,
                            depth=hc_depth)
-                [surface] = _get_surfaces(src.get_input([mag], np), hc)
+                [surface] = build_planar_surfaces(src.get_input([mag], np), hc)
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)

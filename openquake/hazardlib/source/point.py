@@ -25,7 +25,7 @@ from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import (
-    ParametricSeismicSource, _get_surfaces)
+    ParametricSeismicSource, build_planar_surfaces)
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
@@ -136,7 +136,7 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 0, np.rake, rate, src.temporal_occurrence_model)
     else:  # regular case
         mags, rates = zip(*mag_rates)
-        surfaces = _get_surfaces(src.get_input(mags, np), hc)
+        surfaces = build_planar_surfaces(src.get_input(mags, np), hc)
         for mag, rate, surface in zip(mags, rates, surfaces):
             yield ParametricProbabilisticRupture(
                 mag, np.rake, src.tectonic_region_type,
@@ -277,7 +277,7 @@ class PointSource(ParametricSeismicSource):
                 if point_rup:
                     surfaces = numpy.zeros_like(mags)
                 else:
-                    surfaces = _get_surfaces(inp, hc, kwargs.get('shift_hypo'))
+                    surfaces = build_planar_surfaces(inp, hc, kwargs.get('shift_hypo'))
                 for (mag, rate, surface) in zip(mags, rates, surfaces):
                     occurrence_rate = rate * np_prob * hc_prob
                     if point_rup:
@@ -469,7 +469,7 @@ def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
     ps.upper_seismogenic_depth = seismo[0]
     ps.lower_seismogenic_depth = seismo[1]
     ps.rupture_aspect_ratio = aspect_ratio
-    [surface] = _get_surfaces(ps.get_input([mag], np), hc)
+    [surface] = build_planar_surfaces(ps.get_input([mag], np), hc)
     rup = ParametricProbabilisticRupture(
         mag, np.rake, trt, surface.hc, surface, occurrence_rate, tom)
     return rup
