@@ -137,7 +137,7 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 surface.hc, surface, rate, src.temporal_occurrence_model)
 
 
-def _array35(self, mag, nodal_plane, hypocenter):
+def _array_hc(self, mag, nodal_plane, hypocenter):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -147,7 +147,7 @@ def _array35(self, mag, nodal_plane, hypocenter):
     # and the line passing through the rupture center and parallel to the
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
-    array = numpy.zeros((3, 5))
+    array = numpy.zeros((3, 4))
     clon, clat, cdep = (hypocenter.longitude, hypocenter.latitude,
                         hypocenter.depth)
     rup_length, rup_proj_width, rup_proj_height = _get_rupture_dimensions(
@@ -196,22 +196,16 @@ def _array35(self, mag, nodal_plane, hypocenter):
         cdep += vshift
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    array[:2, 0] = geodetic.point_at(
-        clon, clat, (strike + 180 + theta) % 360, hor_dist)
-    array[:2, 1] = geodetic.point_at(
-        clon, clat, (strike - theta) % 360, hor_dist)
-    array[:2, 2] = geodetic.point_at(
-        clon, clat, (strike + 180 - theta) % 360, hor_dist)
-    array[:2, 3] = geodetic.point_at(
-        clon, clat, (strike + theta) % 360, hor_dist)
+    azimuths = numpy.array([(strike + 180 + theta) % 360,
+                            (strike - theta) % 360,
+                            (strike + 180 - theta) % 360,
+                            (strike + theta) % 360])
+    array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
     array[2, 0] = cdep - half_height
     array[2, 1] = cdep - half_height
     array[2, 2] = cdep + half_height
     array[2, 3] = cdep + half_height
-    array[0, 4] = clon
-    array[1, 4] = clat
-    array[2, 4] = cdep
-    return array
+    return array, numpy.array([clon, clat, cdep])
 
 
 class PointSource(ParametricSeismicSource):
@@ -389,10 +383,10 @@ class PointSource(ParametricSeismicSource):
             self.upper_seismogenic_depth, hypocenter.depth)
         assert self.lower_seismogenic_depth + eps > hypocenter.depth, (
             self.lower_seismogenic_depth, hypocenter.depth)
-        array35 = _array35(self, mag, nodal_plane, hypocenter)
+        array, hc = _array_hc(self, mag, nodal_plane, hypocenter)
         surface = PlanarSurface.from_array(
-            array35[:, :4], nodal_plane.strike, nodal_plane.dip)
-        surface.hc = Point(*array35[:, 4]) if shift_hypo else hypocenter
+            array, nodal_plane.strike, nodal_plane.dip)
+        surface.hc = Point(*hc) if shift_hypo else hypocenter
         return surface
 
     @property
