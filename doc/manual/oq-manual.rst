@@ -1,17 +1,12 @@
 .. Adding a real title here messes with the Heading numbers
 
-.. contents::
-   :depth: 4
-..
+OpenQuake-engine Instruction Manual
+===================================
 
 .. section-numbering::
 
 .. container:: center
 
-   OpenQuake: calculate, share, explore
-
-   **The OpenQuake-engine
-   User Instruction Manual**
 
    `globalquakemodel.org/openquake <http://globalquakemodel.org/openquake/>`__
 
@@ -82,6 +77,10 @@
 
 | © 2013–2022 GEM Foundation
 | *April 2022*
+
+.. contents::
+   :depth: 4
+..
 
 .. _`part:introduction`:
 
