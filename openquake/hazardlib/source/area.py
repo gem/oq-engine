@@ -96,16 +96,16 @@ class AreaSource(ParametricSeismicSource):
         # NB: all this mumbo-jumbo is done to avoid multiple calls to
         # PointSource._get_rupture_surface
         ref_ruptures = []
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            for np_prob, np in self.nodal_plane_distribution.data:
-                for hc_prob, hc_depth in self.hypocenter_distribution.data:
-                    hypocenter = geo.Point(latitude=epicenter0.latitude,
-                                           longitude=epicenter0.longitude,
-                                           depth=hc_depth)
+        for np_prob, np in self.nodal_plane_distribution.data:
+            for hc_prob, hc_depth in self.hypocenter_distribution.data:
+                hc = geo.Point(latitude=epicenter0.latitude,
+                               longitude=epicenter0.longitude,
+                               depth=hc_depth)
+                mags, rates = zip(*self.get_annual_occurrence_rates())
+                surfaces = PointSource._get_surfaces(self, mags, np, hc)
+                for mag, mag_occ_rate, surface in zip(mags, rates, surfaces):
                     occurrence_rate = (mag_occ_rate * np_prob * hc_prob
                                        * scaling_rate_factor)
-                    surface = PointSource._get_rupture_surface(
-                        self, mag, np, hypocenter)
                     if kwargs.get('shift_hypo'):
                         hc_depth = surface.hc.depth
                     ref_ruptures.append((mag, np.rake, hc_depth,
