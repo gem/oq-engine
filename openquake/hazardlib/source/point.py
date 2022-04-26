@@ -137,7 +137,7 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 surface.hc, surface, rate, src.temporal_occurrence_model)
 
 
-def _array_hc(self, mag, nodal_plane, hypocenter):
+def _array_hc(usd, lsd, mag, dims, nodal_plane, hypocenter):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -150,8 +150,7 @@ def _array_hc(self, mag, nodal_plane, hypocenter):
     array = numpy.zeros((3, 4))
     clon, clat, cdep = (hypocenter.longitude, hypocenter.latitude,
                         hypocenter.depth)
-    rup_length, rup_proj_width, rup_proj_height = _get_rupture_dimensions(
-        self, mag, nodal_plane.rake, nodal_plane.dip)
+    rup_length, rup_proj_width, rup_proj_height = dims
     half_length, half_width, half_height = (
         rup_length/2, rup_proj_width/2, rup_proj_height/2)
     rdip = math.radians(nodal_plane.dip)
@@ -169,13 +168,13 @@ def _array_hc(self, mag, nodal_plane, hypocenter):
     # center and it's upper and lower borders:
     # calculate how much shallower the upper border of the rupture
     # is than the upper seismogenic depth:
-    vshift = self.upper_seismogenic_depth - cdep + half_height
+    vshift = usd - cdep + half_height
     # if it is shallower (vshift > 0) than we need to move the rupture
     # by that value vertically.
     if vshift < 0:
         # the top edge is below upper seismogenic depth. now we need
         # to check that we do not cross the lower border.
-        vshift = self.lower_seismogenic_depth - cdep - half_height
+        vshift = lsd - cdep - half_height
         if vshift > 0:
             # the bottom edge of the rupture is above the lower seismo
             # depth; that means that we don't need to move the rupture
@@ -381,8 +380,12 @@ class PointSource(ParametricSeismicSource):
             self.upper_seismogenic_depth, hypocenter.depth)
         assert self.lower_seismogenic_depth + eps > hypocenter.depth, (
             self.lower_seismogenic_depth, hypocenter.depth)
-        array, hc = _array_hc(self, mag, nodal_plane, hypocenter)
-        surface = PlanarSurface.from_array(
+        dims = _get_rupture_dimensions(
+            self, mag, nodal_plane.rake, nodal_plane.dip)
+        array, hc = _array_hc(self.upper_seismogenic_depth,
+                              self.lower_seismogenic_depth,
+                              mag, dims, nodal_plane, hypocenter)
+        surface = PlanarSurface.from_array(  # shape (3, 4)
             array, nodal_plane.strike, nodal_plane.dip)
         surface.hc = Point(*hc) if shift_hypo else hypocenter
         return surface
