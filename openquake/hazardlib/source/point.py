@@ -50,7 +50,7 @@ def _get_rupture_dimensions(inp):
     Calculate and return the rupture length and width
     for given magnitude surface parameters.
     :returns:
-        array(N, 3) with rupture length, rupture width, rupture height
+        array with rupture length, rupture width, rupture height
 
     The rupture area is calculated using method
     :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
@@ -85,8 +85,8 @@ def _get_surfaces(inp, shift_hypo=False):
         Surface input parameters
     :param shift_hypo:
         If true, change .hc to the shifted hypocenter
-    :returns:
-        a PlanarSurface instance with an attribute .hc
+    :yield:
+        PlanarSurface instances with attribute .hc
     """
     for rec in inp:
         dims = _get_rupture_dimensions(rec)
