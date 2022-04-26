@@ -45,7 +45,7 @@ def _get_rupture_dimensions(src, mag, rake, dip):
     :param dip:
         dip angle
     :returns:
-        (rupture length, rupture width, rupture height)
+        array with rupture length, rupture width, rupture height
 
     The rupture area is calculated using method
     :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
@@ -70,7 +70,8 @@ def _get_rupture_dimensions(src, mag, rake, dip):
     if rup_width > max_width:
         rup_width = max_width
         rup_length = area / rup_width
-    return rup_length, rup_width * math.cos(rdip), rup_width * math.sin(rdip)
+    dims = rup_length, rup_width * math.cos(rdip), rup_width * math.sin(rdip)
+    return numpy.array(dims)
 
 
 def msr_name(src):
@@ -148,9 +149,7 @@ def _array_hc(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
     array = numpy.zeros((3, 4))
-    rup_length, rup_proj_width, rup_proj_height = dims
-    half_length, half_width, half_height = (
-        rup_length/2, rup_proj_width/2, rup_proj_height/2)
+    half_length, half_width, half_height = dims / 2.
     rdip = math.radians(dip)
 
     # precalculated azimuth values for horizontal-only and vertical-only
