@@ -207,7 +207,17 @@ class PlanarSurface(BaseSurface):
         :returns: a :class:`PlanarSurface` instance
         """
         if strike is None or dip is None:  # recompute the angles
-            return cls.from_ucerf(array34.T)
+            # NB: this different from the ucerf order below, bl<->br!
+            tl, tr, bl, br = [Point(*p) for p in array34.T]
+            strike = tl.azimuth(tr)
+            dip = numpy.degrees(
+                numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
+            # this is used in event based calculations
+            # when the planar surface geometry comes from an array
+            # in the datastore, which means it is correct and there is no need
+            # to check it again; also the check would fail because of a bug,
+            # https://github.com/gem/oq-engine/issues/3392
+            return cls(strike, dip, tl, tr, br, bl, check=False)
         self = object.__new__(PlanarSurface)
         self.strike = strike
         self.dip = dip
@@ -258,7 +268,6 @@ class PlanarSurface(BaseSurface):
         width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
         self.width = (width1 + width2) / 2.0
         self.length = (length1 + length2) / 2.0
-
         if check:
             # calculate the imperfect rectangle tolerance
             # relative to surface's area
