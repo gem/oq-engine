@@ -42,6 +42,7 @@ input_dt = numpy.dtype([
     ('lon', float),
     ('lat', float),
     ('dep', float),
+    ('dims', (float, 3)),
 ])
 
 
@@ -77,26 +78,27 @@ def _get_rupture_dimensions(inp):
                         rup_width * math.sin(rdip)])
 
 
-def _get_surfaces(inp, shift_hypo=False):
+def _get_surfaces(inp, hypo, shift_hypo=False):
     """
-    Create and return rupture surface object with given properties.
-
+    :returns: a list of rupture surfaces
     :param inp:
         Surface input parameters
+    :param hypo:
+        Hypocenter
     :param shift_hypo:
         If true, change .hc to the shifted hypocenter
-    :yield:
+    :return:
         PlanarSurface instances with attribute .hc
     """
+    out = []
     for rec in inp:
-        dims = _get_rupture_dimensions(rec)
-        array, hc = _array_hc(rec.usd, rec.lsd, rec.mag, dims,
-                              rec.strike, rec.dip, rec.lon, rec.lat, rec.dep)
+        array, hc = _array_hc(rec.usd, rec.lsd, rec.mag, rec.dims,
+                              rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
         surface = PlanarSurface.from_array(  # shape (3, 4)
             array, rec.strike, rec.dip)
-        surface.hc = Point(*hc) if shift_hypo else Point(
-            rec.lon, rec.lat, rec.dep)
-        yield surface
+        surface.hc = Point(*hc) if shift_hypo else hypo
+        out.append(surface)
+    return out
 
 
 def msr_name(src):
@@ -157,7 +159,7 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 0, np.rake, rate, src.temporal_occurrence_model)
     else:  # regular case
         mags, rates = zip(*mag_rates)
-        surfaces = _get_surfaces(src.get_input(mags, np, hc))
+        surfaces = _get_surfaces(src.get_input(mags, np), hc)
         for mag, rate, surface in zip(mags, rates, surfaces):
             yield ParametricProbabilisticRupture(
                 mag, np.rake, src.tectonic_region_type,
@@ -294,23 +296,23 @@ class PointSource(ParametricSeismicSource):
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
-    def get_input(self, mags, np, hc=None):
+    def get_input(self, mags, np):
         """
-        :yields: quintets (usd, lsd, rar, mag, area)
+        :return: array of dtype input_dt
         """
         msr = self.magnitude_scaling_relationship
-        hc = hc or Point(self.location.x, self.location.y)
-        inp = [(self.upper_seismogenic_depth,
-                self.lower_seismogenic_depth,
-                self.rupture_aspect_ratio,
-                mag,
-                msr.get_median_area(mag, np.rake),
-                np.strike,
-                np.dip,
-                np.rake,
-                hc.x, hc.y, hc.z)
-               for i, mag in enumerate(mags)]
-        return numpy.array(inp, input_dt).view(numpy.recarray)
+        inp = numpy.zeros(len(mags), input_dt).view(numpy.recarray)
+        for mag, rec in zip(mags, inp):
+            rec['usd'] = self.upper_seismogenic_depth
+            rec['lsd'] = self.lower_seismogenic_depth
+            rec['rar'] = self.rupture_aspect_ratio
+            rec['mag'] = mag
+            rec['area'] = msr.get_median_area(mag, np.rake)
+            rec['strike'] = np.strike
+            rec['dip'] = np.dip
+            rec['rake'] = np.rake
+            rec['dims'] = _get_rupture_dimensions(rec)
+        return inp
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """
@@ -354,6 +356,7 @@ class PointSource(ParametricSeismicSource):
             mag_rates = self.get_annual_occurrence_rates()
         mags, rates = zip(*mag_rates)
         for np_prob, np in self.nodal_plane_distribution.data:
+            inp = self.get_input(mags, np)
             for hc_prob, hc_depth in self.hypocenter_distribution.data:
                 hc = Point(latitude=self.location.latitude,
                            longitude=self.location.longitude,
@@ -361,8 +364,7 @@ class PointSource(ParametricSeismicSource):
                 if point_rup:
                     surfaces = numpy.zeros_like(mags)
                 else:
-                    surfaces = _get_surfaces(
-                        self.get_input(mags, np, hc), kwargs.get('shift_hypo'))
+                    surfaces = _get_surfaces(inp, hc, kwargs.get('shift_hypo'))
                 for (mag, rate, surface) in zip(mags, rates, surfaces):
                     occurrence_rate = rate * np_prob * hc_prob
                     if point_rup:
@@ -554,7 +556,7 @@ def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
     ps.upper_seismogenic_depth = seismo[0]
     ps.lower_seismogenic_depth = seismo[1]
     ps.rupture_aspect_ratio = aspect_ratio
-    [surface] = _get_surfaces(ps.get_input([mag], np, hc))
+    [surface] = _get_surfaces(ps.get_input([mag], np), hc)
     rup = ParametricProbabilisticRupture(
         mag, np.rake, trt, surface.hc, surface, occurrence_rate, tom)
     return rup
