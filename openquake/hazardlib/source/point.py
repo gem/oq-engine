@@ -137,7 +137,7 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 surface.hc, surface, rate, src.temporal_occurrence_model)
 
 
-def _array_hc(usd, lsd, mag, dims, nodal_plane, hypocenter):
+def _array_hc(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -148,17 +148,15 @@ def _array_hc(usd, lsd, mag, dims, nodal_plane, hypocenter):
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
     array = numpy.zeros((3, 4))
-    clon, clat, cdep = (hypocenter.longitude, hypocenter.latitude,
-                        hypocenter.depth)
     rup_length, rup_proj_width, rup_proj_height = dims
     half_length, half_width, half_height = (
         rup_length/2, rup_proj_width/2, rup_proj_height/2)
-    rdip = math.radians(nodal_plane.dip)
+    rdip = math.radians(dip)
 
     # precalculated azimuth values for horizontal-only and vertical-only
     # moves from one point to another on the plane defined by strike
     # and dip:
-    azimuth_right = strike = nodal_plane.strike
+    azimuth_right = strike
     azimuth_down = (azimuth_right + 90) % 360
     azimuth_left = (azimuth_down + 90) % 360
     azimuth_up = (azimuth_left + 90) % 360
@@ -375,16 +373,13 @@ class PointSource(ParametricSeismicSource):
         :returns:
             a PlanarSurface instance with an attribute .hc
         """
-        eps = .001  # 1 meter buffer to survive numerical errors
-        assert self.upper_seismogenic_depth < hypocenter.depth + eps, (
-            self.upper_seismogenic_depth, hypocenter.depth)
-        assert self.lower_seismogenic_depth + eps > hypocenter.depth, (
-            self.lower_seismogenic_depth, hypocenter.depth)
         dims = _get_rupture_dimensions(
             self, mag, nodal_plane.rake, nodal_plane.dip)
         array, hc = _array_hc(self.upper_seismogenic_depth,
                               self.lower_seismogenic_depth,
-                              mag, dims, nodal_plane, hypocenter)
+                              mag, dims,
+                              nodal_plane.strike, nodal_plane.dip,
+                              hypocenter.x, hypocenter.y, hypocenter.z)
         surface = PlanarSurface.from_array(  # shape (3, 4)
             array, nodal_plane.strike, nodal_plane.dip)
         surface.hc = Point(*hc) if shift_hypo else hypocenter
