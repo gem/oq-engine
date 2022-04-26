@@ -1101,6 +1101,7 @@ class PmapMaker(object):
                 else self.srcfilter.split)
         cm = self.cmaker
         allctxs = []
+        totlen = 0
         for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
@@ -1109,7 +1110,8 @@ class PmapMaker(object):
             allctxs.extend(ctxs)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            if nsites and sum(len(ctx) for ctx in allctxs) > MAXSIZE:
+            totlen += nsites
+            if nsites and totlen > MAXSIZE:
                 cm.get_pmap(allctxs, pmap)
                 allctxs.clear()
             dt = time.time() - t0
