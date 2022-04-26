@@ -1056,7 +1056,7 @@ class OqParam(valid.ParamSet):
         if ('ps_grid_spacing' in names_vals and
                 'pointsource_distance' not in names_vals):
             self.pointsource_distance = dict(
-                default=float(names_vals['ps_grid_spacing']))
+                default=2 * float(names_vals['ps_grid_spacing']))
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 

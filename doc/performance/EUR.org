@@ -86,7 +86,7 @@ Much better thanks to a faster "computing mean_std".
 Engine 3.15
 -----------
 
-"composing pnes" is much faster.
+Everything is faster thanks to better array sizes and numba.
 
 | calc_45017, maxmem=68.7 GB | time_sec | memory_mb | counts    |
 |----------------------------+----------+-----------+-----------|

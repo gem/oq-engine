@@ -622,7 +622,7 @@ hazard_uhs-std.csv
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
         data = self.calc.datastore.read_df('source_data')
-        self.assertEqual(data.nrupts.sum(), 4138)  # number of ruptures
+        self.assertEqual(data.nrupts.sum(), 5803)  # number of ruptures
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)

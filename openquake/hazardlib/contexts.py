@@ -712,7 +712,7 @@ class ContextMaker(object):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
-        if getattr(src, 'location', None):
+        if getattr(src, 'location', None) and src.count_nphc() > 1:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             for r, s in self._cps_rups(src, sites):
@@ -721,10 +721,6 @@ class ContextMaker(object):
             yield from rups(self._ruptures(src), sites)
 
     def _cps_rups(self, src, sites, point_rup=False):
-        if src.count_nphc() == 1:  # nothing to collapse
-            for rup in src.iruptures(point_rup):
-                yield self._ruptures(src, rup.mag, point_rup), sites
-            return
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         for rup in src.iruptures(point_rup):
