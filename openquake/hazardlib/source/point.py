@@ -45,7 +45,7 @@ def _get_rupture_dimensions(src, mag, rake, dip):
     :param dip:
         dip angle
     :returns:
-        (rupture length, rupture width, rupture height)
+        array with rupture length, rupture width, rupture height
 
     The rupture area is calculated using method
     :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
@@ -70,7 +70,8 @@ def _get_rupture_dimensions(src, mag, rake, dip):
     if rup_width > max_width:
         rup_width = max_width
         rup_length = area / rup_width
-    return rup_length, rup_width * math.cos(rdip), rup_width * math.sin(rdip)
+    dims = rup_length, rup_width * math.cos(rdip), rup_width * math.sin(rdip)
+    return numpy.array(dims)
 
 
 def msr_name(src):
@@ -131,10 +132,74 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 0, np.rake, rate, src.temporal_occurrence_model)
     else:  # regular case
         for mag, rate in mag_rates:
-            surface, nhc = src._get_rupture_surface(mag, np, hc)
+            surface = src._get_rupture_surface(mag, np, hc)
             yield ParametricProbabilisticRupture(
                 mag, np.rake, src.tectonic_region_type,
-                nhc, surface, rate, src.temporal_occurrence_model)
+                surface.hc, surface, rate, src.temporal_occurrence_model)
+
+
+def _array_hc(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
+    # from the rupture center we can now compute the coordinates of the
+    # four coorners by moving along the diagonals of the plane. This seems
+    # to be better then moving along the perimeter, because in this case
+    # errors are accumulated that induce distorsions in the shape with
+    # consequent raise of exceptions when creating PlanarSurface objects
+    # theta is the angle between the diagonal of the surface projection
+    # and the line passing through the rupture center and parallel to the
+    # top and bottom edges. Theta is zero for vertical ruptures (because
+    # rup_proj_width is zero)
+    array = numpy.zeros((3, 4))
+    half_length, half_width, half_height = dims / 2.
+    rdip = math.radians(dip)
+
+    # precalculated azimuth values for horizontal-only and vertical-only
+    # moves from one point to another on the plane defined by strike
+    # and dip:
+    azimuth_right = strike
+    azimuth_down = (azimuth_right + 90) % 360
+    azimuth_left = (azimuth_down + 90) % 360
+    azimuth_up = (azimuth_left + 90) % 360
+
+    # half height of the vertical component of rupture width
+    # is the vertical distance between the rupture geometrical
+    # center and it's upper and lower borders:
+    # calculate how much shallower the upper border of the rupture
+    # is than the upper seismogenic depth:
+    vshift = usd - cdep + half_height
+    # if it is shallower (vshift > 0) than we need to move the rupture
+    # by that value vertically.
+    if vshift < 0:
+        # the top edge is below upper seismogenic depth. now we need
+        # to check that we do not cross the lower border.
+        vshift = lsd - cdep - half_height
+        if vshift > 0:
+            # the bottom edge of the rupture is above the lower seismo
+            # depth; that means that we don't need to move the rupture
+            # as it fits inside seismogenic layer.
+            vshift = 0
+        # if vshift < 0 than we need to move the rupture up.
+
+    # now we need to find the position of rupture's geometrical center.
+    # in any case the hypocenter point must lie on the surface, however
+    # the rupture center might be off (below or above) along the dip.
+    if vshift != 0:
+        # we need to move the rupture center to make the rupture fit
+        # inside the seismogenic layer.
+        hshift = abs(vshift / math.tan(rdip))
+        clon, clat = geodetic.point_at(
+            clon, clat, azimuth_up if vshift < 0 else azimuth_down,
+            hshift)
+        cdep += vshift
+    theta = math.degrees(math.atan(half_width / half_length))
+    hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
+    azimuths = numpy.array([(strike + 180 + theta) % 360,
+                            (strike - theta) % 360,
+                            (strike + 180 - theta) % 360,
+                            (strike + theta) % 360])
+    array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
+    array[2, 0:2] = cdep - half_height
+    array[2, 2:4] = cdep + half_height
+    return array, numpy.array([clon, clat, cdep])
 
 
 class PointSource(ParametricSeismicSource):
@@ -237,27 +302,29 @@ class PointSource(ParametricSeismicSource):
         """
         filtermag = kwargs.get('mag')
         point_rup = kwargs.get('point_rup')
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            if filtermag and mag != filtermag:
-                continue  # yield only ruptures of magnitude filtermag
+        if filtermag:
+            mag_rates = [mr for mr in self.get_annual_occurrence_rates()
+                         if mr[0] == filtermag]
+        else:
+            mag_rates = self.get_annual_occurrence_rates()
+        for mag, rate in mag_rates:
             for np_prob, np in self.nodal_plane_distribution.data:
                 for hc_prob, hc_depth in self.hypocenter_distribution.data:
                     hc = Point(latitude=self.location.latitude,
                                longitude=self.location.longitude,
                                depth=hc_depth)
-                    occurrence_rate = mag_occ_rate * np_prob * hc_prob
+                    occurrence_rate = rate * np_prob * hc_prob
                     if point_rup:
                         yield PointRupture(
                             mag, self.tectonic_region_type, hc,
                             0, np.rake, occurrence_rate,
                             self.temporal_occurrence_model)
                     else:
-                        surface, nhc = self._get_rupture_surface(
+                        surface = self._get_rupture_surface(
                             mag, np, hc, kwargs.get('shift_hypo'))
                         yield ParametricProbabilisticRupture(
                             mag, np.rake, self.tectonic_region_type,
-                            nhc if kwargs.get('shift_hypo') else hc,
-                            surface, occurrence_rate,
+                            surface.hc, surface, occurrence_rate,
                             self.temporal_occurrence_model)
 
     # PointSource
@@ -301,96 +368,21 @@ class PointSource(ParametricSeismicSource):
         :param hypocenter:
             Point representing rupture's hypocenter.
         :param shift_hypo:
-            If true, returns the shifted hypocenter
+            If true, change .hc to the shifted hypocenter
         :returns:
-            Tuple (PlanarSurface, hypocenter)
+            a PlanarSurface instance with an attribute .hc
         """
-        eps = .001  # 1 meter buffer to survive numerical errors
-        assert self.upper_seismogenic_depth < hypocenter.depth + eps, (
-            self.upper_seismogenic_depth, hypocenter.depth)
-        assert self.lower_seismogenic_depth + eps > hypocenter.depth, (
-            self.lower_seismogenic_depth, hypocenter.depth)
-        rdip = math.radians(nodal_plane.dip)
-
-        # precalculated azimuth values for horizontal-only and vertical-only
-        # moves from one point to another on the plane defined by strike
-        # and dip:
-        azimuth_right = nodal_plane.strike
-        azimuth_down = (azimuth_right + 90) % 360
-        azimuth_left = (azimuth_down + 90) % 360
-        azimuth_up = (azimuth_left + 90) % 360
-
-        rup_length, rup_proj_width, rup_proj_height = _get_rupture_dimensions(
+        dims = _get_rupture_dimensions(
             self, mag, nodal_plane.rake, nodal_plane.dip)
-
-        rupture_center = hypocenter
-
-        # half height of the vertical component of rupture width
-        # is the vertical distance between the rupture geometrical
-        # center and it's upper and lower borders:
-        hheight = rup_proj_height / 2.
-        # calculate how much shallower the upper border of the rupture
-        # is than the upper seismogenic depth:
-        vshift = self.upper_seismogenic_depth - hypocenter.depth + hheight
-        # if it is shallower (vshift > 0) than we need to move the rupture
-        # by that value vertically.
-        if vshift < 0:
-            # the top edge is below upper seismogenic depth. now we need
-            # to check that we do not cross the lower border.
-            vshift = (self.lower_seismogenic_depth -
-                      hypocenter.depth - hheight)
-            if vshift > 0:
-                # the bottom edge of the rupture is above the lower seismo
-                # depth. that means that we don't need to move the rupture
-                # as it fits inside seismogenic layer.
-                vshift = 0
-            # if vshift < 0 than we need to move the rupture up.
-
-        # now we need to find the position of rupture's geometrical center.
-        # in any case the hypocenter point must lie on the surface, however
-        # the rupture center might be off (below or above) along the dip.
-        if vshift != 0:
-            # we need to move the rupture center to make the rupture fit
-            # inside the seismogenic layer.
-            hshift = abs(vshift / math.tan(rdip))
-            rupture_center = rupture_center.point_at(
-                horizontal_distance=hshift, vertical_increment=vshift,
-                azimuth=(azimuth_up if vshift < 0 else azimuth_down))
-
-        # from the rupture center we can now compute the coordinates of the
-        # four coorners by moving along the diagonals of the plane. This seems
-        # to be better then moving along the perimeter, because in this case
-        # errors are accumulated that induce distorsions in the shape with
-        # consequent raise of exceptions when creating PlanarSurface objects
-        # theta is the angle between the diagonal of the surface projection
-        # and the line passing through the rupture center and parallel to the
-        # top and bottom edges. Theta is zero for vertical ruptures (because
-        # rup_proj_width is zero)
-        theta = math.degrees(
-            math.atan((rup_proj_width / 2.) / (rup_length / 2.)))
-        hor_dist = math.sqrt(
-            (rup_length / 2.) ** 2 + (rup_proj_width / 2.) ** 2)
-
-        left_top = rupture_center.point_at(
-            horizontal_distance=hor_dist,
-            vertical_increment=-rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike + 180 + theta) % 360)
-        right_top = rupture_center.point_at(
-            horizontal_distance=hor_dist,
-            vertical_increment=-rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike - theta) % 360)
-        left_bottom = rupture_center.point_at(
-            horizontal_distance=hor_dist,
-            vertical_increment=rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike + 180 - theta) % 360)
-        right_bottom = rupture_center.point_at(
-            horizontal_distance=hor_dist,
-            vertical_increment=rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike + theta) % 360)
-        surface = PlanarSurface(
-            nodal_plane.strike, nodal_plane.dip, left_top, right_top,
-            right_bottom, left_bottom, check=False)
-        return surface, rupture_center if shift_hypo else hypocenter
+        array, hc = _array_hc(self.upper_seismogenic_depth,
+                              self.lower_seismogenic_depth,
+                              mag, dims,
+                              nodal_plane.strike, nodal_plane.dip,
+                              hypocenter.x, hypocenter.y, hypocenter.z)
+        surface = PlanarSurface.from_array(  # shape (3, 4)
+            array, nodal_plane.strike, nodal_plane.dip)
+        surface.hc = Point(*hc) if shift_hypo else hypocenter
+        return surface
 
     @property
     def polygon(self):
@@ -542,7 +534,7 @@ def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
     ps.upper_seismogenic_depth = seismo[0]
     ps.lower_seismogenic_depth = seismo[1]
     ps.rupture_aspect_ratio = aspect_ratio
-    surface, nhc = ps._get_rupture_surface(mag, np, hc)
+    surface = ps._get_rupture_surface(mag, np, hc)
     rup = ParametricProbabilisticRupture(
-        mag, np.rake, trt, hc, surface, occurrence_rate, tom)
+        mag, np.rake, trt, surface.hc, surface, occurrence_rate, tom)
     return rup
