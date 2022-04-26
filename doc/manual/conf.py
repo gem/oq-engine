@@ -134,7 +134,75 @@ html_theme = 'pydata_sphinx_theme'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+#html_logo = '_static/oq_logo.png'
+html_logo = None
+
+html_theme_options = {
+    "icon_links": [
+        
+        {
+            # Label for this link
+            "name": "OpenQuake",
+            # URL where the link will redirect
+            "url": "https://www.globalquakemodel.org/openquake",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "_static/oq_logo.png",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "local",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "GitHub",
+            # URL where the link will redirect
+            "url": "https://github.com/gem/oq-engine",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-github-square",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "Twitter",
+            # URL where the link will redirect
+            "url": "https://twitter.com/GEMwrld",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-twitter-square",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "YouTube",
+            # URL where the link will redirect
+            "url": "https://www.youtube.com/channel/UCfvGcHtZYk_kQ_mqz3AYQYQ",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-youtube-square",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "Facebook",
+            # URL where the link will redirect
+            "url": "https://www.facebook.com/GEMwrld/",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-facebook-square",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        },
+        {
+            # Label for this link
+            "name": "LinkedIn",
+            # URL where the link will redirect
+            "url": "https://it.linkedin.com/company/gem-foundation",  # required
+            # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
+            "icon": "fab fa-linkedin",
+            # Whether icon should be a FontAwesome class, or a local file
+            "type": "fontawesome",  # Default is fontawesome
+        }
+
+   ]
+}
 
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
