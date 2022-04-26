@@ -491,9 +491,9 @@ class CollapsedPointSource(PointSource):
         """
         if mag is None:
             mag, _rate = self.get_annual_occurrence_rates()[-1]
-        inp = self.get_input([mag], np, hc)
-        [(rup_length, rup_width, _)] = _get_rupture_dimensions(
-            self, [mag], self.rake, self.dip)
+        [inp] = self.get_input(
+            [mag], NodalPlane(self.strike, self.dip, self.rake))
+        rup_length, rup_width, _ = _get_rupture_dimensions(inp)
         # the projection radius is half of the rupture diagonal
         self.radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius
