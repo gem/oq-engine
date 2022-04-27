@@ -85,6 +85,7 @@ class AreaSource(ParametricSeismicSource):
         The ruptures' occurrence rates are rescaled with respect to number
         of points the polygon discretizes to.
         """
+        shift_hypo = kwargs.get('shift_hypo')
         polygon_mesh = self.polygon.discretize(self.area_discretization)
         scaling_rate_factor = 1. / len(polygon_mesh)
 
@@ -97,15 +98,17 @@ class AreaSource(ParametricSeismicSource):
         # PointSource._get_rupture_surface
         ref_ruptures = []
         mags, rates = zip(*self.get_annual_occurrence_rates())
-        for np_prob, np in self.nodal_plane_distribution.data:
-            surfin = PointSource.get_surfin(self, mags, np)
-            for hc_prob, hc_depth in self.hypocenter_distribution.data:
-                hc = geo.Point(latitude=epicenter0.latitude,
-                               longitude=epicenter0.longitude,
-                               depth=hc_depth)
-                surfaces = build_planar_surfaces(surfin, hc)
-                for mag, mag_occ_rate, surface in zip(mags, rates, surfaces):
-                    occurrence_rate = (mag_occ_rate * np_prob * hc_prob
+        np_probs, nplanes = zip(*self.nodal_plane_distribution.data)
+        hc_probs, depths = zip(*self.hypocenter_distribution.data)
+        surfin = PointSource.get_surfin(self, mags, nplanes)
+        points = [geo.Point(epicenter0.x, epicenter0.y, depth)
+                  for depth in depths]
+        surfaces = build_planar_surfaces(surfin, points, shift_hypo)
+        for m, mag in enumerate(mags):
+            for n, np in enumerate(nplanes):
+                for d, hc_depth in enumerate(depths):
+                    surface = surfaces[m, n, d]
+                    occurrence_rate = (rates[m] * np_probs[n] * hc_probs[d]
                                        * scaling_rate_factor)
                     if kwargs.get('shift_hypo'):
                         hc_depth = surface.hc.depth

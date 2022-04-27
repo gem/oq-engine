@@ -136,8 +136,8 @@ def _rupture_by_mag(src, np, hc, point_rup):
                 0, np.rake, rate, src.temporal_occurrence_model)
     else:  # regular case
         mags, rates = zip(*mag_rates)
-        surfaces = build_planar_surfaces(src.get_surfin(mags, np), hc)
-        for mag, rate, surface in zip(mags, rates, surfaces):
+        surfaces = build_planar_surfaces(src.get_surfin(mags, [np]), [hc])
+        for mag, rate, surface in zip(mags, rates, surfaces[:, 0, 0]):
             yield ParametricProbabilisticRupture(
                 mag, np.rake, src.tectonic_region_type,
                 surface.hc, surface, rate, src.temporal_occurrence_model)
@@ -209,22 +209,25 @@ class PointSource(ParametricSeismicSource):
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
-    def get_surfin(self, mags, np):
+    def get_surfin(self, mags, nplanes):
         """
-        :return: array of dtype surfin_dt
+        :return: array of dtype surfin_dt of shape (num_mags, num_planes)
         """
         msr = self.magnitude_scaling_relationship
-        surfin = numpy.zeros(len(mags), surfin_dt).view(numpy.recarray)
-        for mag, rec in zip(mags, surfin):
-            rec['usd'] = self.upper_seismogenic_depth
-            rec['lsd'] = self.lower_seismogenic_depth
-            rec['rar'] = self.rupture_aspect_ratio
-            rec['mag'] = mag
-            rec['area'] = msr.get_median_area(mag, np.rake)
-            rec['strike'] = np.strike
-            rec['dip'] = np.dip
-            rec['rake'] = np.rake
-            rec['dims'] = _get_rupture_dimensions(rec)
+        surfin = numpy.zeros((len(mags), len(nplanes)), surfin_dt).view(
+            numpy.recarray)
+        for m, mag in enumerate(mags):
+            for n, np in enumerate(nplanes):
+                rec = surfin[m, n]
+                rec['usd'] = self.upper_seismogenic_depth
+                rec['lsd'] = self.lower_seismogenic_depth
+                rec['rar'] = self.rupture_aspect_ratio
+                rec['mag'] = mag
+                rec['area'] = msr.get_median_area(mag, np.rake)
+                rec['strike'] = np.strike
+                rec['dip'] = np.dip
+                rec['rake'] = np.rake
+                rec['dims'] = _get_rupture_dimensions(rec)
         return surfin
 
     def _get_max_rupture_projection_radius(self, mag=None):
@@ -238,8 +241,8 @@ class PointSource(ParametricSeismicSource):
         if mag is None:
             mag, _rate = self.get_annual_occurrence_rates()[-1]
         radius = []
-        for _, np in self.nodal_plane_distribution.data:
-            [surfin] = self.get_surfin([mag], np)
+        _, nplanes = zip(*self.nodal_plane_distribution.data)
+        for surfin in self.get_surfin([mag], nplanes)[0]:
             rup_length, rup_width, _ = _get_rupture_dimensions(surfin)
             # the projection radius is half of the rupture diagonal
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
@@ -250,8 +253,8 @@ class PointSource(ParametricSeismicSource):
         """
         :returns: half of maximum rupture's diagonal surface projection
         """
-        [surfin] = self.get_surfin(
-            [rup.mag], NodalPlane(rup.surface.strike, dip, rup.rake))
+        [[surfin]] = self.get_surfin(
+            [rup.mag], [NodalPlane(rup.surface.strike, dip, rup.rake)])
         rup_length, rup_width, _ = _get_rupture_dimensions(surfin)
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
@@ -260,6 +263,7 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
+        shift_hypo = kwargs.get('shift_hypo')
         filtermag = kwargs.get('mag')
         point_rup = kwargs.get('point_rup')
         if filtermag:
@@ -270,20 +274,24 @@ class PointSource(ParametricSeismicSource):
         if not mag_rates:
             return
         mags, rates = zip(*mag_rates)
-        for np_prob, np in self.nodal_plane_distribution.data:
-            surfin = self.get_surfin(mags, np)
-            for hc_prob, hc_depth in self.hypocenter_distribution.data:
-                hc = Point(latitude=self.location.latitude,
-                           longitude=self.location.longitude,
-                           depth=hc_depth)
-                if point_rup:
-                    surfaces = numpy.zeros_like(mags)
-                else:
-                    surfaces = build_planar_surfaces(
-                        surfin, hc, kwargs.get('shift_hypo'))
-                for (mag, rate, surface) in zip(mags, rates, surfaces):
-                    occurrence_rate = rate * np_prob * hc_prob
+        np_probs, nplanes = zip(*self.nodal_plane_distribution.data)
+        hc_probs, depths = zip(*self.hypocenter_distribution.data)
+        if point_rup:
+            surfaces = numpy.zeros((len(mags), len(nplanes), len(depths)))
+        else:
+            surfin = self.get_surfin(mags, nplanes)
+            points = [Point(self.location.x, self.location.y, depth)
+                      for depth in depths]
+            surfaces = build_planar_surfaces(surfin, points, shift_hypo)
+        for m, mag in enumerate(mags):
+            for n, np in enumerate(nplanes):
+                for d, hc_depth in enumerate(depths):
+                    surface = surfaces[m, n, d]
+                    occurrence_rate = rates[m] * np_probs[n] * hc_probs[d]
                     if point_rup:
+                        hc = Point(latitude=self.location.latitude,
+                                   longitude=self.location.longitude,
+                                   depth=hc_depth)
                         yield PointRupture(
                             mag, self.tectonic_region_type, hc,
                             surface, np.rake, occurrence_rate,
@@ -409,8 +417,8 @@ class CollapsedPointSource(PointSource):
         """
         if mag is None:
             mag, _rate = self.get_annual_occurrence_rates()[-1]
-        [surfin] = self.get_surfin(
-            [mag], NodalPlane(self.strike, self.dip, self.rake))
+        [[surfin]] = self.get_surfin(
+            [mag], [NodalPlane(self.strike, self.dip, self.rake)])
         rup_length, rup_width, _ = _get_rupture_dimensions(surfin)
         # the projection radius is half of the rupture diagonal
         self.radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
@@ -472,7 +480,7 @@ def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
     ps.upper_seismogenic_depth = seismo[0]
     ps.lower_seismogenic_depth = seismo[1]
     ps.rupture_aspect_ratio = aspect_ratio
-    [surface] = build_planar_surfaces(ps.get_surfin([mag], np), hc)
+    [[surface]] = build_planar_surfaces(ps.get_surfin([mag], [np]), hc)
     rup = ParametricProbabilisticRupture(
         mag, np.rake, trt, surface.hc, surface, occurrence_rate, tom)
     return rup

@@ -105,26 +105,27 @@ def _array_hc(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     return array, numpy.array([clon, clat, cdep])
 
 
-def build_planar_surfaces(surfin, hypo, shift_hypo=False):
+def build_planar_surfaces(surfin, hypos, shift_hypo=False):
     """
-    :returns: a list of rupture surfaces
     :param surfin:
-        Surface input parameters
-    :param hypo:
-        Hypocenter
+        Surface input parameters as an array of shape (M, N)
+    :param hypos:
+        A list of hypocenters with different depths
     :param shift_hypo:
         If true, change .hc to the shifted hypocenter
     :return:
-        PlanarSurface instances with attribute .hc
+        an array of PlanarSurfaces of shape (M, N, D)
     """
-    out = []
-    for rec in surfin:
+    out = numpy.zeros(surfin.shape + (len(hypos),), object)  # shape (M, N, D)
+    for (m, n, d), _ in numpy.ndenumerate(out):
+        rec = surfin[m, n]
+        hypo = hypos[d]
         array, hc = _array_hc(rec.usd, rec.lsd, rec.mag, rec.dims,
                               rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
         surface = PlanarSurface.from_array(  # shape (3, 4)
             array, rec.strike, rec.dip)
         surface.hc = Point(*hc) if shift_hypo else hypo
-        out.append(surface)
+        out[m, n, d] = surface
     return out
 
 
