@@ -274,6 +274,15 @@ class PlanarSurface(BaseSurface):
         return cls(strike, dip, ptl, ptr, pbr, pbl)
 
     @classmethod
+    def from_(cls, surfout, strike, dip):
+        self = object.__new__(PlanarSurface)
+        self.strike = strike
+        self.dip = dip
+        for par in surfout.dtype.names:
+            setattr(self, par, surfout[par])
+        return self
+
+    @classmethod
     def from_array(cls, array34):
         """
         :param array34: an array of shape (3, 4) in order tl, tr, bl, br
@@ -290,15 +299,6 @@ class PlanarSurface(BaseSurface):
         # to check it again; also the check would fail because of a bug,
         # https://github.com/gem/oq-engine/issues/3392
         return cls(strike, dip, tl, tr, br, bl, check=False)
-
-    @classmethod
-    def from_(cls, surfout, strike, dip):
-        self = object.__new__(PlanarSurface)
-        self.strike = strike
-        self.dip = dip
-        for par in surfout.dtype.names:
-            setattr(self, par, surfout[par])
-        return self
 
     @classmethod
     def from_ucerf(cls, array43):
@@ -344,8 +344,11 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
-        lons, lats = geodetic.point_at(
-            self.corner_lons, self.corner_lats, azimuth, distance)
+        lons, lats = [], []
+        for lon, lat in zip(self.corner_lons, self.corner_lats):
+            lo, la = geodetic.point_at(lon, lat, azimuth, distance)
+            lons.append(lo)
+            lats.append(la)
         nsurf.corners = numpy.array([lons, lats, self.corner_depths])
         nsurf.dip = self.dip
         nsurf.strike = self.strike

@@ -28,8 +28,6 @@ from openquake.hazardlib.geo.surface.planar import (
     PlanarSurface, build_surfout, surfout_dt)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
-EPS = .01  # used for src.nsites outside the maximum_distance
-
 
 def get_code2cls():
     """
