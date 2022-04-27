@@ -76,7 +76,7 @@ def update_pmap_n(dic, poes, rates, probs_occur, sids, itime):
 
 # numbified below
 def update_pmap_c(dic, poes, rates, probs_occur, allsids, sizes, itime):
-    start = 0 
+    start = 0
     for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
         pne = get_pnes(rate, probs, poe, itime)
         for sid in allsids[start:start + size]:
@@ -726,7 +726,11 @@ class ContextMaker(object):
     def _cps_rups(self, src, sites, point_rup=False):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for rup in src.iruptures():
+        if point_rup:
+            rups = src.iter_ruptures(point_rup=True)
+        else:
+            rups = src.iruptures()
+        for rup in rups:
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
