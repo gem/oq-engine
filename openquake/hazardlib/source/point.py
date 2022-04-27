@@ -125,16 +125,6 @@ def calc_average(pointsources):
     return dic
 
 
-def _pointruptures(src, step=1):
-    avg = calc_average([src])  # over nodal planes and hypocenters
-    hypo = Point(avg['lon'], avg['lat'], avg['dep'])
-    mag_rates = list(src.get_annual_occurrence_rates())
-    for mag, rate in mag_rates[::step]:
-        yield PointRupture(
-            mag, src.tectonic_region_type, hypo,
-            0, avg['rake'], rate, src.temporal_occurrence_model)
-
-
 def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None, shift_hypo=False):
     if filtermag:
         mag_rates = [mr for mr in src.get_annual_occurrence_rates()
@@ -280,13 +270,22 @@ class PointSource(ParametricSeismicSource):
         rup_length, rup_width, _ = _get_rupture_dimensions(surfin)
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
+    def _pointruptures(self, step):
+        avg = calc_average([self])  # over nodal planes and hypocenters
+        hypo = Point(avg['lon'], avg['lat'], avg['dep'])
+        mag_rates = list(self.get_annual_occurrence_rates())
+        for mag, rate in mag_rates[::step]:
+            yield PointRupture(
+                mag, self.tectonic_region_type, hypo,
+                0, avg['rake'], rate, self.temporal_occurrence_model)
+
     def iter_ruptures(self, **kwargs):
         """
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
         if kwargs.get('point_rup'):
-            return _pointruptures(self)
+            return self._pointruptures(step=1)
         return _gen_ruptures(
             self,
             filtermag=kwargs.get('mag'),
@@ -305,7 +304,7 @@ class PointSource(ParametricSeismicSource):
     # called in preclassical
     def few_ruptures(self):
         # generate one pointrupture every 5 magnitudes
-        yield from _pointruptures(self, step=5)
+        yield from self._pointruptures(step=5)
 
     def count_nphc(self):
         """
@@ -379,6 +378,14 @@ class CollapsedPointSource(PointSource):
         :returns: the total number of nodal planes and hypocenters
         """
         return sum(src.count_nphc() for src in self.pointsources)
+
+    # CollapsedPointSource
+    def _pointruptures(self, step):
+        mag_rates = list(self.get_annual_occurrence_rates())
+        for mag, rate in mag_rates[::step]:
+            yield PointRupture(
+                mag, self.tectonic_region_type, self.location,
+                0, self.rake, rate, self.temporal_occurrence_model)
 
     def iter_ruptures(self, **kwargs):
         """

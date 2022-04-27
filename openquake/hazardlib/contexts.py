@@ -727,7 +727,7 @@ class ContextMaker(object):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
         if point_rup:
-            rups = src.iter_ruptures(point_rup=True)
+            rups = src._pointruptures(step=5)
         else:
             rups = src.iruptures()
         for rup in rups:
