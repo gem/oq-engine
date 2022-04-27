@@ -32,6 +32,54 @@ from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
 
 
+def build_surfout(array):
+    surfout = numpy.zeros(4, surfout_dt)
+    tl, tr, bl, br = geo_utils.spherical_to_cartesian(*array)
+    # these two parameters define the plane that contains the surface
+    # (in 3d Cartesian space): a normal unit vector,
+    self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+    # ... and scalar "d" parameter from the plane equation (uses
+    # an equation (3) from http://mathworld.wolfram.com/Plane.html)
+    self.wld = numpy.array([0., 0., - self.normal @ tl])
+    # these two 3d vectors together with a zero point represent surface's
+    # coordinate space (the way to translate 3d Cartesian space with
+    # a center in earth's center to 2d space centered in surface's top
+    # left corner with basis vectors directed to top right and bottom left
+    # corners. see :meth:`_project`.
+    self.uv1 = geo_utils.normalized(tr - tl)
+    self.uv2 = numpy.cross(self.normal, self.uv1)
+    self.tl = tl
+
+    # now we can check surface for validity
+    dists, xx, yy = _project(self, self.mesh.xyz)
+    # "length" of the rupture is measured along the top edge
+    length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
+    # "width" of the rupture is measured along downdip direction
+    width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
+    self.wld[0] = width = (width1 + width2) / 2.0
+    self.wld[1] = length = (length1 + length2) / 2.0
+    return surfout
+
+
+def _project(self, points):
+    """
+    Project points (as an array of shape (N, 3)) to a surface's plane.
+
+    Parameters are lists or numpy arrays of coordinates of points
+    to project.
+
+    :returns:
+        A tuple of three arrays: distances between original points
+        and surface's plane in km, "x" and "y" coordinates of points'
+        projections to the plane (in a surface's coordinate space).
+    """
+    # uses method from http://www.9math.com/book/projection-point-plane
+    dists = points @ self.normal + self.wld[2]
+    # translate projected points to surface coordinate space, shape (N, 3)
+    vectors2d = points - self.normal * dists[:, None] - self.tl
+    return dists, vectors2d @ self.uv1, vectors2d @ self.uv2
+
+
 class PlanarSurface(BaseSurface):
     """
     Planar rectangular surface with two sides parallel to the Earth surface.
@@ -201,12 +249,13 @@ class PlanarSurface(BaseSurface):
         return cls(strike, dip, ptl, ptr, pbr, pbl)
 
     @classmethod
-    def from_array(cls, array34, strike=None, dip=None):
+    def from_array(cls, array34, surfout=None, strike=None, dip=None):
         """
         :param array34: an array of shape (3, 4) in order tl, tr, bl, br
         :returns: a :class:`PlanarSurface` instance
         """
-        if strike is None or dip is None:  # recompute the angles
+        if surfout is None:
+            # recompute the angles, used when reading from the datastore
             # NB: this different from the ucerf order below, bl<->br!
             tl, tr, bl, br = [Point(*p) for p in array34.T]
             strike = tl.azimuth(tr)
@@ -222,7 +271,8 @@ class PlanarSurface(BaseSurface):
         self.strike = strike
         self.dip = dip
         self.corners = array34
-        self._init_plane()
+        for name in surfout.dt.names:
+            setattr(self, name, surfout[name])
         return self
 
     @classmethod
@@ -250,7 +300,7 @@ class PlanarSurface(BaseSurface):
         self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
         # ... and scalar "d" parameter from the plane equation (uses
         # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-        self.d = - self.normal @ tl
+        self.wld = numpy.array([0., 0., - self.normal @ tl])
         # these two 3d vectors together with a zero point represent surface's
         # coordinate space (the way to translate 3d Cartesian space with
         # a center in earth's center to 2d space centered in surface's top
@@ -261,18 +311,17 @@ class PlanarSurface(BaseSurface):
         self.tl = tl
 
         # now we can check surface for validity
-        dists, xx, yy = self._project(self.mesh.xyz)
+        dists, xx, yy = _project(self, self.mesh.xyz)
         # "length" of the rupture is measured along the top edge
         length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
         # "width" of the rupture is measured along downdip direction
         width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
-        self.width = (width1 + width2) / 2.0
-        self.length = (length1 + length2) / 2.0
+        self.wld[0] = width = (width1 + width2) / 2.0
+        self.wld[1] = length = (length1 + length2) / 2.0
         if check:
             # calculate the imperfect rectangle tolerance
             # relative to surface's area
-            tolerance = (self.width * self.length *
-                         self.IMPERFECT_RECTANGLE_TOLERANCE)
+            tolerance = width * length * self.IMPERFECT_RECTANGLE_TOLERANCE
             if numpy.max(numpy.abs(dists)) > tolerance:
                 logging.warning("corner points do not lie on the same plane")
             if length2 < 0:
@@ -308,8 +357,7 @@ class PlanarSurface(BaseSurface):
         nsurf.dip = self.dip
         nsurf.strike = self.strike
         nsurf._init_plane()
-        nsurf.width = self.width
-        nsurf.length = self.length
+        nsurf.wld = self.wld
         return nsurf
 
     @property
@@ -344,24 +392,6 @@ class PlanarSurface(BaseSurface):
         """
         return self.dip
 
-    def _project(self, points):
-        """
-        Project points (as an array of shape (N, 3)) to a surface's plane.
-
-        Parameters are lists or numpy arrays of coordinates of points
-        to project.
-
-        :returns:
-            A tuple of three arrays: distances between original points
-            and surface's plane in km, "x" and "y" coordinates of points'
-            projections to the plane (in a surface's coordinate space).
-        """
-        # uses method from http://www.9math.com/book/projection-point-plane
-        dists = points @ self.normal + self.d
-        # translate projected points to surface coordinate space, shape (N, 3)
-        vectors2d = points - self.normal * dists[:, None] - self.tl
-        return dists, vectors2d @ self.uv1, vectors2d @ self.uv2
-
     def _project_back(self, dists, xx, yy):
         """
         Convert coordinates in plane's Cartesian space back to spherical
@@ -387,11 +417,12 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
+        width, length = self.wld[:2]
         # we project all the points of the mesh on a plane that contains
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
         # plane.
-        dists, xx, yy = self._project(mesh.xyz)
+        dists, xx, yy = _project(self, mesh.xyz)
         # the actual resulting distance is a square root of squares
         # of a distance from a point to a plane that contains the surface
         # and a distance from a projection of that point on that plane
@@ -414,7 +445,7 @@ class PlanarSurface(BaseSurface):
                 # case "I": point on the left hand side from the rectangle
                 xx < 0,
                 # case "II": point is on the right hand side
-                xx > self.length
+                xx > length
                 # default -- case "III": point is in between vertical sides
             ],
             choicelist=[
@@ -423,7 +454,7 @@ class PlanarSurface(BaseSurface):
                 xx,
                 # case "II": considering a distance between a point and
                 # a line containing the right side
-                xx - self.length
+                xx - length
             ],
             # case "III": abscissa doesn't have an effect on a distance
             # to the rectangle
@@ -442,7 +473,7 @@ class PlanarSurface(BaseSurface):
                 # case "I": point is above the rectangle top edge
                 yy < 0,
                 # case "II": point is below the rectangle bottom edge
-                yy > self.width
+                yy > width
                 # default -- case "III": point is in between lines containing
                 # top and bottom edges
             ],
@@ -452,7 +483,7 @@ class PlanarSurface(BaseSurface):
                 yy,
                 # case "II": considering a distance to a line containing
                 # a bottom edge
-                yy - self.width
+                yy - width
             ],
             # case "III": ordinate doesn't affect the distance
             default=0
@@ -468,9 +499,9 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        dists, xx, yy = self._project(mesh.xyz)
-        mxx = xx.clip(0, self.length)
-        myy = yy.clip(0, self.width)
+        dists, xx, yy = _project(self, mesh.xyz)
+        mxx = xx.clip(0, self.wld[1])
+        myy = yy.clip(0, self.wld[0])
         dists.fill(0)
         lons, lats, depths = self._project_back(dists, mxx, myy)
         return Mesh(lons, lats, depths)
@@ -483,8 +514,7 @@ class PlanarSurface(BaseSurface):
         """
         lon, lat = geo_utils.get_middle_point(
             self.corner_lons[0], self.corner_lats[0],
-            self.corner_lons[1], self.corner_lats[1]
-        )
+            self.corner_lons[1], self.corner_lats[1])
         return Point(lon, lat, self.corner_depths[0])
 
     def get_top_edge_depth(self):
@@ -640,14 +670,14 @@ class PlanarSurface(BaseSurface):
         Return surface's width value (in km) as computed in the constructor
         (that is mean value of left and right surface sides).
         """
-        return self.width
+        return self.wld[0]
 
     def get_area(self):
         """
         Return surface's area value (in squared km) obtained as the product
-        of surface lenght and width.
+        of surface length and width.
         """
-        return self.width * self.length
+        return self.wld[0] * self.wld[1]
 
     def get_bounding_box(self):
         """

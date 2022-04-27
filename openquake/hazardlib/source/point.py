@@ -44,14 +44,6 @@ surfin_dt = numpy.dtype([
     ('dims', (float, 3)),
 ])
 
-surfout_dt = numpy.dtype([
-    ('zero', float),
-    ('normal', float),
-    ('uv1', float),
-    ('uv2', float),
-    ('wld', float),
-])
-
 
 def _get_rupture_dimensions(surfin):
     """

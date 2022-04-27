@@ -123,7 +123,7 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
         array, hc = _array_hc(rec.usd, rec.lsd, rec.mag, rec.dims,
                               rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
         surface = PlanarSurface.from_array(  # shape (3, 4)
-            array, rec.strike, rec.dip)
+            array, surfout, rec.strike, rec.dip)
         surface.hc = Point(*hc) if shift_hypo else hypo
         out[m, n, d] = surface
     return out
