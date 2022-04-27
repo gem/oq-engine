@@ -98,12 +98,12 @@ class AreaSource(ParametricSeismicSource):
         ref_ruptures = []
         mags, rates = zip(*self.get_annual_occurrence_rates())
         for np_prob, np in self.nodal_plane_distribution.data:
-            inp = PointSource.get_input(self, mags, np)
+            surfin = PointSource.get_surfin(self, mags, np)
             for hc_prob, hc_depth in self.hypocenter_distribution.data:
                 hc = geo.Point(latitude=epicenter0.latitude,
                                longitude=epicenter0.longitude,
                                depth=hc_depth)
-                surfaces = build_planar_surfaces(inp, hc)
+                surfaces = build_planar_surfaces(surfin, hc)
                 for mag, mag_occ_rate, surface in zip(mags, rates, surfaces):
                     occurrence_rate = (mag_occ_rate * np_prob * hc_prob
                                        * scaling_rate_factor)
