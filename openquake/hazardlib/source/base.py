@@ -105,10 +105,10 @@ def _array_hc(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     return array, numpy.array([clon, clat, cdep])
 
 
-def build_planar_surfaces(inp, hypo, shift_hypo=False):
+def build_planar_surfaces(surfin, hypo, shift_hypo=False):
     """
     :returns: a list of rupture surfaces
-    :param inp:
+    :param surfin:
         Surface input parameters
     :param hypo:
         Hypocenter
@@ -118,7 +118,7 @@ def build_planar_surfaces(inp, hypo, shift_hypo=False):
         PlanarSurface instances with attribute .hc
     """
     out = []
-    for rec in inp:
+    for rec in surfin:
         array, hc = _array_hc(rec.usd, rec.lsd, rec.mag, rec.dims,
                               rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
         surface = PlanarSurface.from_array(  # shape (3, 4)
@@ -278,7 +278,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 hc = Point(latitude=src.location.latitude,
                            longitude=src.location.longitude,
                            depth=hc_depth)
-                [surface] = build_planar_surfaces(src.get_input([mag], np), hc)
+                [surface] = build_planar_surfaces(
+                    src.get_surfin([mag], np), hc)
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)
