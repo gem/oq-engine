@@ -434,6 +434,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
+        self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -703,8 +704,10 @@ class ContextMaker(object):
         return gmv
 
     def _ruptures(self, src, filtermag=None, point_rup=False):
-        return src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag, point_rup=point_rup)
+        with self.ir_mon:
+            return list(src.iter_ruptures(
+                shift_hypo=self.shift_hypo,
+                mag=filtermag, point_rup=point_rup))
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
