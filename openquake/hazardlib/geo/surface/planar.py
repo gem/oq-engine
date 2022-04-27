@@ -114,7 +114,7 @@ class PlanarSurface(BaseSurface):
             bottom_left.latitude, bottom_right.latitude], [
                 top_left.depth, top_right.depth,
                 bottom_left.depth, bottom_right.depth]])  # shape (3, 4)
-        # now set the attributes normal, d, uv1, uv2, zero_zero
+        # now set the attributes normal, d, uv1, uv2, tl
         self._init_plane(check)
 
     @classmethod
@@ -243,8 +243,7 @@ class PlanarSurface(BaseSurface):
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
         """
-        tl, tr, bl, br = geo_utils.spherical_to_cartesian(
-            self.corner_lons, self.corner_lats, self.corner_depths)
+        tl, tr, bl, br = xyz = self.mesh.xyz
         # these two parameters define the plane that contains the surface
         # (in 3d Cartesian space): a normal unit vector,
         self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
@@ -258,10 +257,10 @@ class PlanarSurface(BaseSurface):
         # corners. see :meth:`_project`.
         self.uv1 = geo_utils.normalized(tr - tl)
         self.uv2 = numpy.cross(self.normal, self.uv1)
-        self.zero_zero = tl
+        self.tl = tl
 
         # now we can check surface for validity
-        dists, xx, yy = self._project(self.mesh.xyz)
+        dists, xx, yy = self._project(xyz)
         # "length" of the rupture is measured along the top edge
         length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
         # "width" of the rupture is measured along downdip direction
@@ -359,7 +358,7 @@ class PlanarSurface(BaseSurface):
         # uses method from http://www.9math.com/book/projection-point-plane
         dists = points @ self.normal + self.d
         # translate projected points to surface coordinate space, shape (N, 3)
-        vectors2d = points - self.normal * dists[:, None] - self.zero_zero
+        vectors2d = points - self.normal * dists[:, None] - self.tl
         return dists, vectors2d @ self.uv1, vectors2d @ self.uv2
 
     def _project_back(self, dists, xx, yy):
@@ -373,7 +372,7 @@ class PlanarSurface(BaseSurface):
         :return:
             Tuple of longitudes, latitudes and depths numpy arrays.
         """
-        vectors = (self.zero_zero +
+        vectors = (self.tl +
                    self.uv1 * xx.reshape(xx.shape + (1, )) +
                    self.uv2 * yy.reshape(yy.shape + (1, )) +
                    self.normal * dists.reshape(dists.shape + (1, )))

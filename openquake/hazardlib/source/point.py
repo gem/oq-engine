@@ -21,7 +21,6 @@ from unittest.mock import Mock
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import (
