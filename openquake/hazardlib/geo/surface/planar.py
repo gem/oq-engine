@@ -31,16 +31,23 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
 
+surfout_dt = numpy.dtype([
+    ('tl', float),
+    ('normal', float),
+    ('uv1', float),
+    ('uv2', float),
+    ('wld', float)])
 
-def build_surfout(array):
+
+def build_surface(array):
     surfout = numpy.zeros(4, surfout_dt)
-    tl, tr, bl, br = geo_utils.spherical_to_cartesian(*array)
+    tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(*array)
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
-    self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+    self['normal'] = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
     # ... and scalar "d" parameter from the plane equation (uses
     # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-    self.wld = numpy.array([0., 0., - self.normal @ tl])
+    self.wld = numpy.array([0., 0., - self['normal'] @ tl])
     # these two 3d vectors together with a zero point represent surface's
     # coordinate space (the way to translate 3d Cartesian space with
     # a center in earth's center to 2d space centered in surface's top
@@ -51,7 +58,7 @@ def build_surfout(array):
     self.tl = tl
 
     # now we can check surface for validity
-    dists, xx, yy = _project(self, self.mesh.xyz)
+    dists, xx, yy = _project(self, xyz)
     # "length" of the rupture is measured along the top edge
     length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
     # "width" of the rupture is measured along downdip direction
@@ -271,8 +278,30 @@ class PlanarSurface(BaseSurface):
         self.strike = strike
         self.dip = dip
         self.corners = array34
-        for name in surfout.dt.names:
-            setattr(self, name, surfout[name])
+        tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(*array34)
+        # these two parameters define the plane that contains the surface
+        # (in 3d Cartesian space): a normal unit vector,
+        self['normal'] = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+        # ... and scalar "d" parameter from the plane equation (uses
+        # an equation (3) from http://mathworld.wolfram.com/Plane.html)
+        self.wld = numpy.array([0., 0., - self['normal'] @ tl])
+        # these two 3d vectors together with a zero point represent surface's
+        # coordinate space (the way to translate 3d Cartesian space with
+        # a center in earth's center to 2d space centered in surface's top
+        # left corner with basis vectors directed to top right and bottom left
+        # corners. see :meth:`_project`.
+        self.uv1 = geo_utils.normalized(tr - tl)
+        self.uv2 = numpy.cross(self.normal, self.uv1)
+        self.tl = tl
+
+        # now we can check surface for validity
+        dists, xx, yy = _project(self, xyz)
+        # "length" of the rupture is measured along the top edge
+        length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
+        # "width" of the rupture is measured along downdip direction
+        width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
+        self.wld[0] = (width1 + width2) / 2.0
+        self.wld[1] = (length1 + length2) / 2.0
         return self
 
     @classmethod
