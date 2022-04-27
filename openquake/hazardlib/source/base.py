@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point, geodetic
-from openquake.hazardlib.geo.surface.planar import PlanarSurface
+from openquake.hazardlib.geo.surface.planar import PlanarSurface, build_surfout
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 EPS = .01  # used for src.nsites outside the maximum_distance
@@ -122,8 +122,8 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
         hypo = hypos[d]
         array, hc = _array_hc(rec.usd, rec.lsd, rec.mag, rec.dims,
                               rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
-        surface = PlanarSurface.from_array(  # shape (3, 4)
-            array, surfout, rec.strike, rec.dip)
+        surface = PlanarSurface.from_(
+            build_surfout(array), rec.strike, rec.dip)
         surface.hc = Point(*hc) if shift_hypo else hypo
         out[m, n, d] = surface
     return out

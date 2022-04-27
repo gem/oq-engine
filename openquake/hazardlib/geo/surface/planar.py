@@ -31,40 +31,64 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
 
+# Maximum difference in surface's rectangle side lengths, maximum offset
+# of a bottom right corner from a plane that contains other corners,
+# as well as maximum offset of a bottom left corner from a line drawn
+# downdip perpendicular to top edge from top left corner, expressed
+# as a fraction of the surface's area.
+IMPERFECT_RECTANGLE_TOLERANCE = 0.002
+
 surfout_dt = numpy.dtype([
-    ('tl', float),
+    ('corners', (float, 4)),
+    ('xyz', (float, 4)),
     ('normal', float),
     ('uv1', float),
     ('uv2', float),
     ('wld', float)])
 
 
-def build_surface(array):
-    surfout = numpy.zeros(4, surfout_dt)
+def build_surfout(array, check=False):
+    """
+    :returns: a surfout array of length 3
+    """
+    surfout = numpy.zeros(3, surfout_dt).view(numpy.recarray)
+    surfout['corners'] = array
     tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(*array)
+    surfout['xyz'] = xyz.T
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
-    self['normal'] = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+    surfout['normal'] = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
     # ... and scalar "d" parameter from the plane equation (uses
     # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-    self.wld = numpy.array([0., 0., - self['normal'] @ tl])
+    surfout['wld'] = numpy.array([0., 0., - surfout['normal'] @ tl])
     # these two 3d vectors together with a zero point represent surface's
     # coordinate space (the way to translate 3d Cartesian space with
     # a center in earth's center to 2d space centered in surface's top
     # left corner with basis vectors directed to top right and bottom left
     # corners. see :meth:`_project`.
-    self.uv1 = geo_utils.normalized(tr - tl)
-    self.uv2 = numpy.cross(self.normal, self.uv1)
-    self.tl = tl
+    surfout['uv1'] = geo_utils.normalized(tr - tl)
+    surfout['uv2'] = numpy.cross(surfout['normal'], surfout['uv1'])
 
     # now we can check surface for validity
-    dists, xx, yy = _project(self, xyz)
+    dists, xx, yy = _project(surfout, xyz)
     # "length" of the rupture is measured along the top edge
     length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
     # "width" of the rupture is measured along downdip direction
     width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
-    self.wld[0] = width = (width1 + width2) / 2.0
-    self.wld[1] = length = (length1 + length2) / 2.0
+    width = (width1 + width2) / 2.0
+    length = (length1 + length2) / 2.0
+    surfout['wld'][:2] = [width, length]
+
+    if check:
+        # calculate the imperfect rectangle tolerance
+        # relative to surface's area
+        tolerance = width * length * IMPERFECT_RECTANGLE_TOLERANCE
+        if numpy.max(numpy.abs(dists)) > tolerance:
+            logging.warning("corner points do not lie on the same plane")
+        if length2 < 0:
+            raise ValueError("corners are in the wrong order")
+        if abs(length1 - length2) > tolerance:
+            raise ValueError("top and bottom edges have different lengths")
     return surfout
 
 
@@ -83,7 +107,7 @@ def _project(self, points):
     # uses method from http://www.9math.com/book/projection-point-plane
     dists = points @ self.normal + self.wld[2]
     # translate projected points to surface coordinate space, shape (N, 3)
-    vectors2d = points - self.normal * dists[:, None] - self.tl
+    vectors2d = points - self.normal * dists[:, None] - self.xyz[:, 0]
     return dists, vectors2d @ self.uv1, vectors2d @ self.uv2
 
 
@@ -113,13 +137,6 @@ class PlanarSurface(BaseSurface):
         is not parallel to the bottom edge, if top edge differs in length
         from the bottom one, or if mesh spacing is not positive.
     """
-    #: Maximum difference in surface's rectangle side lengths, maximum offset
-    #: of a bottom right corner from a plane that contains other corners,
-    #: as well as maximum offset of a bottom left corner from a line drawn
-    #: downdip perpendicular to top edge from top left corner, expressed
-    #: as a fraction of the surface's area.
-    IMPERFECT_RECTANGLE_TOLERANCE = 0.002
-
     @property
     def surface_nodes(self):
         """
@@ -137,7 +154,7 @@ class PlanarSurface(BaseSurface):
         """
         :returns: a mesh with the 4 corner points tl, tr, bl, br
         """
-        return Mesh(self.corner_lons, self.corner_lats, self.corner_depths)
+        return Mesh(*self.corners)
 
     @property
     def corner_lons(self):
@@ -256,52 +273,30 @@ class PlanarSurface(BaseSurface):
         return cls(strike, dip, ptl, ptr, pbr, pbl)
 
     @classmethod
-    def from_array(cls, array34, surfout=None, strike=None, dip=None):
+    def from_array(cls, array34):
         """
         :param array34: an array of shape (3, 4) in order tl, tr, bl, br
         :returns: a :class:`PlanarSurface` instance
         """
-        if surfout is None:
-            # recompute the angles, used when reading from the datastore
-            # NB: this different from the ucerf order below, bl<->br!
-            tl, tr, bl, br = [Point(*p) for p in array34.T]
-            strike = tl.azimuth(tr)
-            dip = numpy.degrees(
-                numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
-            # this is used in event based calculations
-            # when the planar surface geometry comes from an array
-            # in the datastore, which means it is correct and there is no need
-            # to check it again; also the check would fail because of a bug,
-            # https://github.com/gem/oq-engine/issues/3392
-            return cls(strike, dip, tl, tr, br, bl, check=False)
+        # NB: this different from the ucerf order below, bl<->br!
+        tl, tr, bl, br = [Point(*p) for p in array34.T]
+        strike = tl.azimuth(tr)
+        dip = numpy.degrees(
+            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
+        # this is used in event based calculations
+        # when the planar surface geometry comes from an array
+        # in the datastore, which means it is correct and there is no need
+        # to check it again; also the check would fail because of a bug,
+        # https://github.com/gem/oq-engine/issues/3392
+        return cls(strike, dip, tl, tr, br, bl, check=False)
+
+    @classmethod
+    def from_(cls, surfout, strike, dip):
         self = object.__new__(PlanarSurface)
         self.strike = strike
         self.dip = dip
-        self.corners = array34
-        tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(*array34)
-        # these two parameters define the plane that contains the surface
-        # (in 3d Cartesian space): a normal unit vector,
-        self['normal'] = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
-        # ... and scalar "d" parameter from the plane equation (uses
-        # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-        self.wld = numpy.array([0., 0., - self['normal'] @ tl])
-        # these two 3d vectors together with a zero point represent surface's
-        # coordinate space (the way to translate 3d Cartesian space with
-        # a center in earth's center to 2d space centered in surface's top
-        # left corner with basis vectors directed to top right and bottom left
-        # corners. see :meth:`_project`.
-        self.uv1 = geo_utils.normalized(tr - tl)
-        self.uv2 = numpy.cross(self.normal, self.uv1)
-        self.tl = tl
-
-        # now we can check surface for validity
-        dists, xx, yy = _project(self, xyz)
-        # "length" of the rupture is measured along the top edge
-        length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
-        # "width" of the rupture is measured along downdip direction
-        width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
-        self.wld[0] = (width1 + width2) / 2.0
-        self.wld[1] = (length1 + length2) / 2.0
+        for par in surfout.dtype.names:
+            setattr(self, par, surfout[par])
         return self
 
     @classmethod
@@ -322,41 +317,9 @@ class PlanarSurface(BaseSurface):
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
         """
-        tl, tr, bl, br = geo_utils.spherical_to_cartesian(
-            self.corner_lons, self.corner_lats, self.corner_depths)
-        # these two parameters define the plane that contains the surface
-        # (in 3d Cartesian space): a normal unit vector,
-        self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
-        # ... and scalar "d" parameter from the plane equation (uses
-        # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-        self.wld = numpy.array([0., 0., - self.normal @ tl])
-        # these two 3d vectors together with a zero point represent surface's
-        # coordinate space (the way to translate 3d Cartesian space with
-        # a center in earth's center to 2d space centered in surface's top
-        # left corner with basis vectors directed to top right and bottom left
-        # corners. see :meth:`_project`.
-        self.uv1 = geo_utils.normalized(tr - tl)
-        self.uv2 = numpy.cross(self.normal, self.uv1)
-        self.tl = tl
-
-        # now we can check surface for validity
-        dists, xx, yy = _project(self, self.mesh.xyz)
-        # "length" of the rupture is measured along the top edge
-        length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
-        # "width" of the rupture is measured along downdip direction
-        width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
-        self.wld[0] = width = (width1 + width2) / 2.0
-        self.wld[1] = length = (length1 + length2) / 2.0
-        if check:
-            # calculate the imperfect rectangle tolerance
-            # relative to surface's area
-            tolerance = width * length * self.IMPERFECT_RECTANGLE_TOLERANCE
-            if numpy.max(numpy.abs(dists)) > tolerance:
-                logging.warning("corner points do not lie on the same plane")
-            if length2 < 0:
-                raise ValueError("corners are in the wrong order")
-            if abs(length1 - length2) > tolerance:
-                raise ValueError("top and bottom edges have different lengths")
+        surfout = build_surfout(self.corners, check)
+        for par in surfout.dtype.names:
+            setattr(self, par, surfout[par])
 
     def translate(self, p1, p2):
         """
@@ -432,7 +395,7 @@ class PlanarSurface(BaseSurface):
         :return:
             Tuple of longitudes, latitudes and depths numpy arrays.
         """
-        vectors = (self.tl +
+        vectors = (self.xyz[:, 0] +
                    self.uv1 * xx.reshape(xx.shape + (1, )) +
                    self.uv2 * yy.reshape(yy.shape + (1, )) +
                    self.normal * dists.reshape(dists.shape + (1, )))
