@@ -746,6 +746,8 @@ class SourceModelLogicTree(object):
                 filters['applyToBranches'] = atb.split()
             bset = BranchSet(utype, ordinal, filters)
             bset.id = bsid
+            shortener_chars = BASE8836 if len(rows) > 94 else BASE94
+            print(f'rows => {len(rows)}')
             for no, row in enumerate(rows):
                 try:
                     uvalue = ast.literal_eval(row['uvalue'])
@@ -754,7 +756,7 @@ class SourceModelLogicTree(object):
                 br = Branch(bsid, row['branch'], row['weight'], uvalue)
                 self.branches[br.branch_id] = br
                 self.shortener[br.branch_id] = keyno(
-                    br.branch_id, ordinal, no, attrs['filename'])
+                    br.branch_id, ordinal, no, attrs['filename'], shortener_chars)
                 bset.branches.append(br)
             bsets.append(bset)
         attach_to_branches(bsets)

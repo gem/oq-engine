@@ -566,6 +566,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('%s', nr)
         if '_poes' in self.datastore:
             self.post_classical()
+            logging.info('post_classical completed')
 
         # sanity check on the rupture IDs
         if 'rup' in self.datastore:
@@ -583,7 +584,9 @@ class ClassicalCalculator(base.HazardCalculator):
             individual_rlzs = (N == 1) * (R > 1)
         else:
             individual_rlzs = oq.individual_rlzs
+        logging.info(f'individual_rlzs: {individual_rlzs}')
         hstats = oq.hazard_stats()
+        logging.info(f'hstats complete')
         # initialize datasets
         P = len(oq.poes)
         M = self.M = len(oq.imtls)
@@ -594,6 +597,8 @@ class ClassicalCalculator(base.HazardCalculator):
             L = oq.imtls.size
         L1 = self.L1 = L // M
         S = len(hstats)
+
+        logging.info(f'hstats complete')
         if R > 1 and individual_rlzs or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_descr(
@@ -619,6 +624,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Store hcurves-rlzs, hcurves-stats, hmaps-rlzs, hmaps-stats
         """
+        logging.info('begin post_classical')
         oq = self.oqparam
         hstats = oq.hazard_stats()
         if not oq.hazard_curves:  # do nothing
@@ -627,12 +633,18 @@ class ClassicalCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks or 1
         if 1 < ct <= 20:  # saving memory on small machines
             ct = 60
+        logging.info(f'ct after adjustment: {ct} from: {oq.concurrent_tasks}')
         self.weights = ws = [rlz.weight for rlz in self.realizations]
         if '_poes' in set(self.datastore):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
+        logging.info(f'dstore: {dstore}')
+        logging.info(f'self.N: {self.N}')
+
         sites_per_task = int(numpy.ceil(self.N / ct))
+        logging.info(f'sites_per_task: {sites_per_task}')
+
         nbytes = len(dstore['_poes/sid']) * 4
         logging.info('Reading %s of _poes/sid', humansize(nbytes))
         # NB: there is a genious idea here, to split in tasks by using
@@ -700,3 +712,4 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(make_hmap_png, allargs)
             for dic in smap:
                 self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
+
