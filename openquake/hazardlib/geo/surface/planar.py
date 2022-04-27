@@ -243,8 +243,7 @@ class PlanarSurface(BaseSurface):
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
         """
-        tl, tr, bl, br = geo_utils.spherical_to_cartesian(
-            self.corner_lons, self.corner_lats, self.corner_depths)
+        tl, tr, bl, br = xyz = self.mesh.xyz
         # these two parameters define the plane that contains the surface
         # (in 3d Cartesian space): a normal unit vector,
         self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
@@ -261,7 +260,7 @@ class PlanarSurface(BaseSurface):
         self.tl = tl
 
         # now we can check surface for validity
-        dists, xx, yy = self._project(self.mesh.xyz)
+        dists, xx, yy = self._project(xyz)
         # "length" of the rupture is measured along the top edge
         length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
         # "width" of the rupture is measured along downdip direction
