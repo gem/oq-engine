@@ -1,0 +1,3129 @@
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg version="1.1" width="1200" height="4592" onload="init(evt)" viewBox="0 0 1200 4592" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:fg="http://github.com/jonhoo/inferno">
+    <!--Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples.-->
+    <!--NOTES: -->
+    <defs>
+        <linearGradient id="background" y1="0" y2="1" x1="0" x2="0">
+            <stop stop-color="#eeeeee" offset="5%"/>
+            <stop stop-color="#eeeeb0" offset="95%"/>
+        </linearGradient>
+    </defs>
+    <style type="text/css">
+text { font-family:"monospace"; font-size:16px; fill:rgb(0,0,0); }
+#title { text-anchor:middle; font-size:21px; }
+#search { opacity:0.1; cursor:pointer; }
+#search:hover, #search.show { opacity:1; }
+#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+#unzoom { cursor:pointer; }
+#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+.hide { display:none; }
+.parent { opacity:0.5; }
+</style>
+    <script type="text/ecmascript"><![CDATA[
+        var nametype = 'Function:';
+        var fontsize = 16;
+        var fontwidth = 0.59;
+        var xpad = 10;
+        var inverted = true;
+        var searchcolor = 'rgb(230,0,230)';
+        var fluiddrawing = true;
+        var truncate_text_right = false;
+    ]]><![CDATA["use strict";
+var details, searchbtn, unzoombtn, matchedtxt, svg, searching, frames;
+function init(evt) {
+    details = document.getElementById("details").firstChild;
+    searchbtn = document.getElementById("search");
+    unzoombtn = document.getElementById("unzoom");
+    matchedtxt = document.getElementById("matched");
+    svg = document.getElementsByTagName("svg")[0];
+    frames = document.getElementById("frames");
+    total_samples = parseInt(frames.attributes.total_samples.value);
+    searching = 0;
+
+    // Use GET parameters to restore a flamegraph's state.
+    var restore_state = function() {
+        var params = get_params();
+        if (params.x && params.y)
+            zoom(find_group(document.querySelector('[*|x="' + params.x + '"][y="' + params.y + '"]')));
+        if (params.s)
+            search(params.s);
+    };
+
+    if (fluiddrawing) {
+        // Make width dynamic so the SVG fits its parent's width.
+        svg.removeAttribute("width");
+        // Edge requires us to have a viewBox that gets updated with size changes.
+        var isEdge = /Edge\/\d./i.test(navigator.userAgent);
+        if (!isEdge) {
+          svg.removeAttribute("viewBox");
+        }
+        var update_for_width_change = function() {
+            if (isEdge) {
+                svg.attributes.viewBox.value = "0 0 " + svg.width.baseVal.value + " " + svg.height.baseVal.value;
+            }
+
+            // Keep consistent padding on left and right of frames container.
+            frames.attributes.width.value = svg.width.baseVal.value - xpad * 2;
+
+            // Text truncation needs to be adjusted for the current width.
+            var el = frames.children;
+            for(var i = 0; i < el.length; i++) {
+                update_text(el[i]);
+            }
+
+            // Keep search elements at a fixed distance from right edge.
+            var svgWidth = svg.width.baseVal.value;
+            searchbtn.attributes.x.value = svgWidth - xpad - 100;
+            matchedtxt.attributes.x.value = svgWidth - xpad - 100;
+        };
+        window.addEventListener('resize', function() {
+            update_for_width_change();
+        });
+        // This needs to be done asynchronously for Safari to work.
+        setTimeout(function() {
+            unzoom();
+            update_for_width_change();
+            restore_state();
+        }, 0);
+    } else {
+        restore_state();
+    }
+}
+// event listeners
+window.addEventListener("click", function(e) {
+    var target = find_group(e.target);
+    if (target) {
+        if (target.nodeName == "a") {
+            if (e.ctrlKey === false) return;
+            e.preventDefault();
+        }
+        if (target.classList.contains("parent")) unzoom();
+        zoom(target);
+
+        // set parameters for zoom state
+        var el = target.querySelector("rect");
+        if (el && el.attributes && el.attributes.y && el.attributes["fg:x"]) {
+            var params = get_params()
+            params.x = el.attributes["fg:x"].value;
+            params.y = el.attributes.y.value;
+            history.replaceState(null, null, parse_params(params));
+        }
+    }
+    else if (e.target.id == "unzoom") {
+        unzoom();
+
+        // remove zoom state
+        var params = get_params();
+        if (params.x) delete params.x;
+        if (params.y) delete params.y;
+        history.replaceState(null, null, parse_params(params));
+    }
+    else if (e.target.id == "search") search_prompt();
+}, false)
+// mouse-over for info
+// show
+window.addEventListener("mouseover", function(e) {
+    var target = find_group(e.target);
+    if (target) details.nodeValue = nametype + " " + g_to_text(target);
+}, false)
+// clear
+window.addEventListener("mouseout", function(e) {
+    var target = find_group(e.target);
+    if (target) details.nodeValue = ' ';
+}, false)
+// ctrl-F for search
+window.addEventListener("keydown",function (e) {
+    if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+        e.preventDefault();
+        search_prompt();
+    }
+}, false)
+// functions
+function get_params() {
+    var params = {};
+    var paramsarr = window.location.search.substr(1).split('&');
+    for (var i = 0; i < paramsarr.length; ++i) {
+        var tmp = paramsarr[i].split("=");
+        if (!tmp[0] || !tmp[1]) continue;
+        params[tmp[0]]  = decodeURIComponent(tmp[1]);
+    }
+    return params;
+}
+function parse_params(params) {
+    var uri = "?";
+    for (var key in params) {
+        uri += key + '=' + encodeURIComponent(params[key]) + '&';
+    }
+    if (uri.slice(-1) == "&")
+        uri = uri.substring(0, uri.length - 1);
+    if (uri == '?')
+        uri = window.location.href.split('?')[0];
+    return uri;
+}
+function find_child(node, selector) {
+    var children = node.querySelectorAll(selector);
+    if (children.length) return children[0];
+    return;
+}
+function find_group(node) {
+    var parent = node.parentElement;
+    if (!parent) return;
+    if (parent.id == "frames") return node;
+    return find_group(parent);
+}
+function orig_save(e, attr, val) {
+    if (e.attributes["fg:orig_" + attr] != undefined) return;
+    if (e.attributes[attr] == undefined) return;
+    if (val == undefined) val = e.attributes[attr].value;
+    e.setAttribute("fg:orig_" + attr, val);
+}
+function orig_load(e, attr) {
+    if (e.attributes["fg:orig_"+attr] == undefined) return;
+    e.attributes[attr].value = e.attributes["fg:orig_" + attr].value;
+    e.removeAttribute("fg:orig_" + attr);
+}
+function g_to_text(e) {
+    var text = find_child(e, "title").firstChild.nodeValue;
+    return (text)
+}
+function g_to_func(e) {
+    var func = g_to_text(e);
+    // if there's any manipulation we want to do to the function
+    // name before it's searched, do it here before returning.
+    return (func);
+}
+function update_text(e) {
+    var r = find_child(e, "rect");
+    var t = find_child(e, "text");
+    var w = parseFloat(r.attributes.width.value) * frames.attributes.width.value / 100 - 3;
+    var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+    t.attributes.x.value = format_percent((parseFloat(r.attributes.x.value) + (100 * 3 / frames.attributes.width.value)));
+    // Smaller than this size won't fit anything
+    if (w < 2 * fontsize * fontwidth) {
+        t.textContent = "";
+        return;
+    }
+    t.textContent = txt;
+    // Fit in full text width
+    if (/^ *\$/.test(txt) || t.getComputedTextLength() < w)
+        return;
+    if (truncate_text_right) {
+        // Truncate the right side of the text.
+        for (var x = txt.length - 2; x > 0; x--) {
+            if (t.getSubStringLength(0, x + 2) <= w) {
+                t.textContent = txt.substring(0, x) + "..";
+                return;
+            }
+        }
+    } else {
+        // Truncate the left side of the text.
+        for (var x = 2; x < txt.length; x++) {
+            if (t.getSubStringLength(x - 2, txt.length) <= w) {
+                t.textContent = ".." + txt.substring(x, txt.length);
+                return;
+            }
+        }
+    }
+    t.textContent = "";
+}
+// zoom
+function zoom_reset(e) {
+    if (e.tagName == "rect") {
+        e.attributes.x.value = format_percent(100 * parseInt(e.attributes["fg:x"].value) / total_samples);
+        e.attributes.width.value = format_percent(100 * parseInt(e.attributes["fg:w"].value) / total_samples);
+    }
+    if (e.childNodes == undefined) return;
+    for(var i = 0, c = e.childNodes; i < c.length; i++) {
+        zoom_reset(c[i]);
+    }
+}
+function zoom_child(e, x, zoomed_width_samples) {
+    if (e.tagName == "text") {
+        var parent_x = parseFloat(find_child(e.parentNode, "rect[x]").attributes.x.value);
+        e.attributes.x.value = format_percent(parent_x + (100 * 3 / frames.attributes.width.value));
+    } else if (e.tagName == "rect") {
+        e.attributes.x.value = format_percent(100 * (parseInt(e.attributes["fg:x"].value) - x) / zoomed_width_samples);
+        e.attributes.width.value = format_percent(100 * parseInt(e.attributes["fg:w"].value) / zoomed_width_samples);
+    }
+    if (e.childNodes == undefined) return;
+    for(var i = 0, c = e.childNodes; i < c.length; i++) {
+        zoom_child(c[i], x, zoomed_width_samples);
+    }
+}
+function zoom_parent(e) {
+    if (e.attributes) {
+        if (e.attributes.x != undefined) {
+            e.attributes.x.value = "0.0%";
+        }
+        if (e.attributes.width != undefined) {
+            e.attributes.width.value = "100.0%";
+        }
+    }
+    if (e.childNodes == undefined) return;
+    for(var i = 0, c = e.childNodes; i < c.length; i++) {
+        zoom_parent(c[i]);
+    }
+}
+function zoom(node) {
+    var attr = find_child(node, "rect").attributes;
+    var width = parseInt(attr["fg:w"].value);
+    var xmin = parseInt(attr["fg:x"].value);
+    var xmax = xmin + width;
+    var ymin = parseFloat(attr.y.value);
+    unzoombtn.classList.remove("hide");
+    var el = frames.children;
+    for (var i = 0; i < el.length; i++) {
+        var e = el[i];
+        var a = find_child(e, "rect").attributes;
+        var ex = parseInt(a["fg:x"].value);
+        var ew = parseInt(a["fg:w"].value);
+        // Is it an ancestor
+        if (!inverted) {
+            var upstack = parseFloat(a.y.value) > ymin;
+        } else {
+            var upstack = parseFloat(a.y.value) < ymin;
+        }
+        if (upstack) {
+            // Direct ancestor
+            if (ex <= xmin && (ex+ew) >= xmax) {
+                e.classList.add("parent");
+                zoom_parent(e);
+                update_text(e);
+            }
+            // not in current path
+            else
+                e.classList.add("hide");
+        }
+        // Children maybe
+        else {
+            // no common path
+            if (ex < xmin || ex >= xmax) {
+                e.classList.add("hide");
+            }
+            else {
+                zoom_child(e, xmin, width);
+                update_text(e);
+            }
+        }
+    }
+}
+function unzoom() {
+    unzoombtn.classList.add("hide");
+    var el = frames.children;
+    for(var i = 0; i < el.length; i++) {
+        el[i].classList.remove("parent");
+        el[i].classList.remove("hide");
+        zoom_reset(el[i]);
+        update_text(el[i]);
+    }
+}
+// search
+function reset_search() {
+    var el = document.querySelectorAll("#frames rect");
+    for (var i = 0; i < el.length; i++) {
+        orig_load(el[i], "fill")
+    }
+    var params = get_params();
+    delete params.s;
+    history.replaceState(null, null, parse_params(params));
+}
+function search_prompt() {
+    if (!searching) {
+        var term = prompt("Enter a search term (regexp " +
+            "allowed, eg: ^ext4_)", "");
+        if (term != null) {
+            search(term)
+        }
+    } else {
+        reset_search();
+        searching = 0;
+        searchbtn.classList.remove("show");
+        searchbtn.firstChild.nodeValue = "Search"
+        matchedtxt.classList.add("hide");
+        matchedtxt.firstChild.nodeValue = ""
+    }
+}
+function search(term) {
+    var re = new RegExp(term);
+    var el = frames.children;
+    var matches = new Object();
+    var maxwidth = 0;
+    for (var i = 0; i < el.length; i++) {
+        var e = el[i];
+        // Skip over frames which are either not visible, or below the zoomed-to frame
+        if (e.classList.contains("hide") || e.classList.contains("parent")) {
+            continue;
+        }
+        var func = g_to_func(e);
+        var rect = find_child(e, "rect");
+        if (func == null || rect == null)
+            continue;
+        // Save max width. Only works as we have a root frame
+        var w = parseInt(rect.attributes["fg:w"].value);
+        if (w > maxwidth)
+            maxwidth = w;
+        if (func.match(re)) {
+            // highlight
+            var x = parseInt(rect.attributes["fg:x"].value);
+            orig_save(rect, "fill");
+            rect.attributes.fill.value = searchcolor;
+            // remember matches
+            if (matches[x] == undefined) {
+                matches[x] = w;
+            } else {
+                if (w > matches[x]) {
+                    // overwrite with parent
+                    matches[x] = w;
+                }
+            }
+            searching = 1;
+        }
+    }
+    if (!searching)
+        return;
+    var params = get_params();
+    params.s = term;
+    history.replaceState(null, null, parse_params(params));
+
+    searchbtn.classList.add("show");
+    searchbtn.firstChild.nodeValue = "Reset Search";
+    // calculate percent matched, excluding vertical overlap
+    var count = 0;
+    var lastx = -1;
+    var lastw = 0;
+    var keys = Array();
+    for (k in matches) {
+        if (matches.hasOwnProperty(k))
+            keys.push(k);
+    }
+    // sort the matched frames by their x location
+    // ascending, then width descending
+    keys.sort(function(a, b){
+        return a - b;
+    });
+    // Step through frames saving only the biggest bottom-up frames
+    // thanks to the sort order. This relies on the tree property
+    // where children are always smaller than their parents.
+    for (var k in keys) {
+        var x = parseInt(keys[k]);
+        var w = matches[keys[k]];
+        if (x >= lastx + lastw) {
+            count += w;
+            lastx = x;
+            lastw = w;
+        }
+    }
+    // display matched percent
+    matchedtxt.classList.remove("hide");
+    var pct = 100 * count / maxwidth;
+    if (pct != 100) pct = pct.toFixed(1);
+    matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+}
+function format_percent(n) {
+    return n.toFixed(4) + "%";
+}
+]]></script>
+    <rect x="0" y="0" width="100%" height="4592" fill="url(#background)"/>
+    <text id="title" x="50.0000%" y="32.00">Peak Tracked Memory Usage (13503.8 MiB)</text>
+    <text id="subtitle" x="50.0000%" y="64.00">Made with the Fil profiler. <a href="https://pythonspeed.com/fil/" style="text-decoration: underline;" target="_parent">Try it on your code!</a></text>
+    <text id="details" x="10" y="84.00"> </text>
+    <text id="unzoom" class="hide" x="10" y="32.00">Reset Zoom</text>
+    <text id="search" x="1090" y="32.00">Search</text>
+    <text id="matched" x="1090" y="4579.00"> </text>
+    <svg id="frames" x="10" width="1180" total_samples="14079939463">
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/__init__.py:27 (&lt;module&gt;) (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="386" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="399.50"></text>
+        </g>
+        <g>
+            <title>import pandas (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="408" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="421.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="430" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="443.50"></text>
+        </g>
+        <g>
+            <title> (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="452" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="465.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="474" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="487.50"></text>
+        </g>
+        <g>
+            <title> (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="496" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="509.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="518" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="531.50"></text>
+        </g>
+        <g>
+            <title> (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="540" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="553.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="562" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="575.50"></text>
+        </g>
+        <g>
+            <title> (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="584" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="597.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="606" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="619.50"></text>
+        </g>
+        <g>
+            <title> (2,645,539 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="628" width="0.0188%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="2645539"/>
+            <text x="0.2511%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/pandas/__init__.py:52 (&lt;module&gt;) (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="650" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="663.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.api import ( (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="672" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="685.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="694" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="707.50"></text>
+        </g>
+        <g>
+            <title> (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="716" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="729.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="738" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="751.50"></text>
+        </g>
+        <g>
+            <title> (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="760" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="773.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="782" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="795.50"></text>
+        </g>
+        <g>
+            <title> (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="804" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="817.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="826" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="839.50"></text>
+        </g>
+        <g>
+            <title> (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="848" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="861.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="870" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="883.50"></text>
+        </g>
+        <g>
+            <title> (1,614,654 bytes, 0.01%)</title>
+            <rect x="0.0084%" y="892" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="1183493" fg:w="1614654"/>
+            <text x="0.2584%" y="905.50"></text>
+        </g>
+        <g>
+            <title>openquake/commands/__main__.py:26 (&lt;module&gt;) (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="122" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="135.50"></text>
+        </g>
+        <g>
+            <title>from openquake.baselib import sap (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="144" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="157.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="166" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="179.50"></text>
+        </g>
+        <g>
+            <title> (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="188" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="201.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="210" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="223.50"></text>
+        </g>
+        <g>
+            <title> (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="232" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="245.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="254" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="267.50"></text>
+        </g>
+        <g>
+            <title> (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="276" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="289.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="298" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="311.50"></text>
+        </g>
+        <g>
+            <title> (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="320" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="333.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="342" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="355.50"></text>
+        </g>
+        <g>
+            <title> (3,173,959 bytes, 0.02%)</title>
+            <rect x="0.0011%" y="364" width="0.0225%" height="21" fill="rgb(255,247,247)" fg:x="152608" fg:w="3173959"/>
+            <text x="0.2511%" y="377.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/performance.py:30 (&lt;module&gt;) (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="1970" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="1983.50"></text>
+        </g>
+        <g>
+            <title>    import numba (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="1992" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2005.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2014" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2027.50"></text>
+        </g>
+        <g>
+            <title> (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2036" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2049.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2058" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2071.50"></text>
+        </g>
+        <g>
+            <title> (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2080" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2093.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2102" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2115.50"></text>
+        </g>
+        <g>
+            <title> (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2124" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2137.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2146" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2159.50"></text>
+        </g>
+        <g>
+            <title> (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2168" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2181.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2190" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2203.50"></text>
+        </g>
+        <g>
+            <title> (4,917,258 bytes, 0.03%)</title>
+            <rect x="0.0408%" y="2212" width="0.0349%" height="21" fill="rgb(255,247,247)" fg:x="5742449" fg:w="4917258"/>
+            <text x="0.2908%" y="2225.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/__init__.py:38 (&lt;module&gt;) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2234" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2247.50"></text>
+        </g>
+        <g>
+            <title>from numba.core.decorators import (cfunc, generated_jit, jit, njit, stencil, (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2256" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2269.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2278" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2291.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2300" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2313.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2322" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2335.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2344" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2357.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2366" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2379.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2388" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2401.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2410" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2423.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2432" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2445.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2454" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2467.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2476" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2489.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/core/decorators.py:12 (&lt;module&gt;) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2498" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2511.50"></text>
+        </g>
+        <g>
+            <title>from numba.stencils.stencil import stencil (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2520" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2533.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2542" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2555.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2564" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2577.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2586" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2599.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2608" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2621.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2630" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2643.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2652" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2665.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2674" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2687.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2696" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2709.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2718" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2731.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2740" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2753.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/stencils/stencil.py:11 (&lt;module&gt;) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2762" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2775.50"></text>
+        </g>
+        <g>
+            <title>from numba.core import types, typing, utils, ir, config, ir_utils, registry (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2784" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2797.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2806" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2819.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2828" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2841.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2850" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2863.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2872" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2885.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2894" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2907.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2916" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2929.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2938" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2951.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2960" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2973.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="2982" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="2995.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="3004" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="3017.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="3026" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="3039.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="3048" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="3061.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="3070" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="3083.50"></text>
+        </g>
+        <g>
+            <title> (3,660,429 bytes, 0.03%)</title>
+            <rect x="0.0497%" y="3092" width="0.0260%" height="21" fill="rgb(255,247,247)" fg:x="6999278" fg:w="3660429"/>
+            <text x="0.2997%" y="3105.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/core/registry.py:4 (&lt;module&gt;) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3114" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3127.50"></text>
+        </g>
+        <g>
+            <title>from numba.core import utils, typing, dispatcher, cpu (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3136" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3149.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3158" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3171.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3180" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3193.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3202" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3215.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3224" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3237.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3246" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3259.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3268" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3281.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3290" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3303.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3312" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3325.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3334" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3347.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3356" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3369.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3378" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3391.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3400" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3413.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3422" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3435.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3444" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3457.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/core/dispatcher.py:13 (&lt;module&gt;) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3466" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3479.50"></text>
+        </g>
+        <g>
+            <title>from numba.core import ( (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3488" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3501.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3510" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3523.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3532" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3545.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3554" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3567.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3576" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3589.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3598" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3611.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3620" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3633.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3642" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3655.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3664" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3677.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3686" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3699.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3708" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3721.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3730" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3743.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3752" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3765.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3774" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3787.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3796" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3809.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/core/compiler.py:6 (&lt;module&gt;) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3818" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3831.50"></text>
+        </g>
+        <g>
+            <title>from numba.core import (utils, errors, typing, interpreter, bytecode, postproc, (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3840" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3853.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3862" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3875.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3884" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3897.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3906" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3919.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3928" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3941.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3950" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3963.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3972" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="3985.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="3994" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="4007.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="4016" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="4029.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="4038" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="4051.50"></text>
+        </g>
+        <g>
+            <title> (3,512,377 bytes, 0.02%)</title>
+            <rect x="0.0508%" y="4060" width="0.0249%" height="21" fill="rgb(255,247,247)" fg:x="7147330" fg:w="3512377"/>
+            <text x="0.3008%" y="4073.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (3,305,162 bytes, 0.02%)</title>
+            <rect x="0.0522%" y="4082" width="0.0235%" height="21" fill="rgb(255,247,247)" fg:x="7354545" fg:w="3305162"/>
+            <text x="0.3022%" y="4095.50"></text>
+        </g>
+        <g>
+            <title> (3,305,162 bytes, 0.02%)</title>
+            <rect x="0.0522%" y="4104" width="0.0235%" height="21" fill="rgb(255,247,247)" fg:x="7354545" fg:w="3305162"/>
+            <text x="0.3022%" y="4117.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,305,162 bytes, 0.02%)</title>
+            <rect x="0.0522%" y="4126" width="0.0235%" height="21" fill="rgb(255,247,247)" fg:x="7354545" fg:w="3305162"/>
+            <text x="0.3022%" y="4139.50"></text>
+        </g>
+        <g>
+            <title> (3,305,162 bytes, 0.02%)</title>
+            <rect x="0.0522%" y="4148" width="0.0235%" height="21" fill="rgb(255,247,247)" fg:x="7354545" fg:w="3305162"/>
+            <text x="0.3022%" y="4161.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/core/cpu.py:19 (&lt;module&gt;) (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4170" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4183.50"></text>
+        </g>
+        <g>
+            <title>from numba.np import ufunc_db (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4192" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4205.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4214" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4227.50"></text>
+        </g>
+        <g>
+            <title> (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4236" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4249.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4258" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4271.50"></text>
+        </g>
+        <g>
+            <title> (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4280" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4293.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4302" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4315.50"></text>
+        </g>
+        <g>
+            <title> (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4324" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4337.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4346" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4359.50"></text>
+        </g>
+        <g>
+            <title> (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4368" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4381.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4390" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4403.50"></text>
+        </g>
+        <g>
+            <title> (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4412" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4425.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:844 (exec_module) (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4434" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4447.50"></text>
+        </g>
+        <g>
+            <title> (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4456" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4469.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:976 (get_code) (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4478" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4491.50"></text>
+        </g>
+        <g>
+            <title> (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4500" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4513.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:640 (_compile_bytecode) (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4522" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4535.50"></text>
+        </g>
+        <g>
+            <title> (2,655,150 bytes, 0.02%)</title>
+            <rect x="0.0569%" y="4544" width="0.0189%" height="21" fill="rgb(255,247,247)" fg:x="8004557" fg:w="2655150"/>
+            <text x="0.3069%" y="4557.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/core/caching.py:645 (load_overload) (1,616,194 bytes, 0.01%)</title>
+            <rect x="0.0793%" y="2102" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="11166069" fg:w="1616194"/>
+            <text x="0.3293%" y="2115.50"></text>
+        </g>
+        <g>
+            <title>        target_context.refresh() (1,616,194 bytes, 0.01%)</title>
+            <rect x="0.0793%" y="2124" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="11166069" fg:w="1616194"/>
+            <text x="0.3293%" y="2137.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/core/base.py:275 (refresh) (1,616,194 bytes, 0.01%)</title>
+            <rect x="0.0793%" y="2146" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="11166069" fg:w="1616194"/>
+            <text x="0.3293%" y="2159.50"></text>
+        </g>
+        <g>
+            <title>        self.load_additional_registries() (1,616,194 bytes, 0.01%)</title>
+            <rect x="0.0793%" y="2168" width="0.0115%" height="21" fill="rgb(255,248,248)" fg:x="11166069" fg:w="1616194"/>
+            <text x="0.3293%" y="2181.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/readinput.py:38 (&lt;module&gt;) (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1354" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1367.50"></text>
+        </g>
+        <g>
+            <title>from openquake.baselib import config, hdf5, parallel, InvalidFile (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1376" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1389.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1398" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1411.50"></text>
+        </g>
+        <g>
+            <title> (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1420" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1433.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1442" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1455.50"></text>
+        </g>
+        <g>
+            <title> (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1464" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1477.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1486" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1499.50"></text>
+        </g>
+        <g>
+            <title> (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1508" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1521.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1530" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1543.50"></text>
+        </g>
+        <g>
+            <title> (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1552" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1565.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1574" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1587.50"></text>
+        </g>
+        <g>
+            <title> (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1596" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1609.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1618" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1631.50"></text>
+        </g>
+        <g>
+            <title> (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1640" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1653.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1662" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1675.50"></text>
+        </g>
+        <g>
+            <title> (7,777,945 bytes, 0.06%)</title>
+            <rect x="0.0380%" y="1684" width="0.0552%" height="21" fill="rgb(255,246,246)" fg:x="5348302" fg:w="7777945"/>
+            <text x="0.2880%" y="1697.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:211 (&lt;module&gt;) (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1706" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1719.50"></text>
+        </g>
+        <g>
+            <title>from openquake.baselib.performance import ( (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1728" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1741.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1750" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1763.50"></text>
+        </g>
+        <g>
+            <title> (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1772" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1785.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1794" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1807.50"></text>
+        </g>
+        <g>
+            <title> (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1816" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1829.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1838" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1851.50"></text>
+        </g>
+        <g>
+            <title> (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1860" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1873.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1882" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1895.50"></text>
+        </g>
+        <g>
+            <title> (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1904" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1917.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1926" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1939.50"></text>
+        </g>
+        <g>
+            <title> (7,383,798 bytes, 0.05%)</title>
+            <rect x="0.0408%" y="1948" width="0.0524%" height="21" fill="rgb(255,246,246)" fg:x="5742449" fg:w="7383798"/>
+            <text x="0.2908%" y="1961.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/performance.py:369 (&lt;module&gt;) (2,466,540 bytes, 0.02%)</title>
+            <rect x="0.0757%" y="1970" width="0.0175%" height="21" fill="rgb(255,248,248)" fg:x="10659707" fg:w="2466540"/>
+            <text x="0.3257%" y="1983.50"></text>
+        </g>
+        <g>
+            <title>def _idx_start_stop(integers): (2,466,540 bytes, 0.02%)</title>
+            <rect x="0.0757%" y="1992" width="0.0175%" height="21" fill="rgb(255,248,248)" fg:x="10659707" fg:w="2466540"/>
+            <text x="0.3257%" y="2005.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/core/decorators.py:219 (wrapper) (1,960,178 bytes, 0.01%)</title>
+            <rect x="0.0793%" y="2014" width="0.0139%" height="21" fill="rgb(255,248,248)" fg:x="11166069" fg:w="1960178"/>
+            <text x="0.3293%" y="2027.50"></text>
+        </g>
+        <g>
+            <title>                    disp.compile(sig) (1,960,178 bytes, 0.01%)</title>
+            <rect x="0.0793%" y="2036" width="0.0139%" height="21" fill="rgb(255,248,248)" fg:x="11166069" fg:w="1960178"/>
+            <text x="0.3293%" y="2049.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numba/core/dispatcher.py:946 (compile) (1,960,178 bytes, 0.01%)</title>
+            <rect x="0.0793%" y="2058" width="0.0139%" height="21" fill="rgb(255,248,248)" fg:x="11166069" fg:w="1960178"/>
+            <text x="0.3293%" y="2071.50"></text>
+        </g>
+        <g>
+            <title>                cres = self._cache.load_overload(sig, self.targetctx) (1,960,178 bytes, 0.01%)</title>
+            <rect x="0.0793%" y="2080" width="0.0139%" height="21" fill="rgb(255,248,248)" fg:x="11166069" fg:w="1960178"/>
+            <text x="0.3293%" y="2093.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/scipy/stats/__init__.py:441 (&lt;module&gt;) (1,435,494 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3598" width="0.0102%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1435494"/>
+            <text x="0.3465%" y="3611.50"></text>
+        </g>
+        <g>
+            <title>from .stats import * (1,435,494 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3620" width="0.0102%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1435494"/>
+            <text x="0.3465%" y="3633.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (1,435,494 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3642" width="0.0102%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1435494"/>
+            <text x="0.3465%" y="3655.50"></text>
+        </g>
+        <g>
+            <title> (1,435,494 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3664" width="0.0102%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1435494"/>
+            <text x="0.3465%" y="3677.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (1,435,494 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3686" width="0.0102%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1435494"/>
+            <text x="0.3465%" y="3699.50"></text>
+        </g>
+        <g>
+            <title> (1,435,494 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3708" width="0.0102%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1435494"/>
+            <text x="0.3465%" y="3721.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (1,435,494 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3730" width="0.0102%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1435494"/>
+            <text x="0.3465%" y="3743.50"></text>
+        </g>
+        <g>
+            <title> (1,435,494 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3752" width="0.0102%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1435494"/>
+            <text x="0.3465%" y="3765.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/stats.py:24 (&lt;module&gt;) (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3334" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3347.50"></text>
+        </g>
+        <g>
+            <title>from scipy.stats import norm (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3356" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3369.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3378" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3391.50"></text>
+        </g>
+        <g>
+            <title> (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3400" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3413.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3422" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3435.50"></text>
+        </g>
+        <g>
+            <title> (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3444" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3457.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3466" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3479.50"></text>
+        </g>
+        <g>
+            <title> (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3488" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3501.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3510" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3523.50"></text>
+        </g>
+        <g>
+            <title> (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3532" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3545.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3554" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3567.50"></text>
+        </g>
+        <g>
+            <title> (1,806,407 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3576" width="0.0128%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="1806407"/>
+            <text x="0.3465%" y="3589.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/gsim/base.py:34 (&lt;module&gt;) (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3070" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3083.50"></text>
+        </g>
+        <g>
+            <title>from openquake.hazardlib.stats import _truncnorm_sf (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3092" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3105.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3114" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3127.50"></text>
+        </g>
+        <g>
+            <title> (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3136" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3149.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3158" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3171.50"></text>
+        </g>
+        <g>
+            <title> (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3180" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3193.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3202" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3215.50"></text>
+        </g>
+        <g>
+            <title> (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3224" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3237.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3246" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3259.50"></text>
+        </g>
+        <g>
+            <title> (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3268" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3281.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3290" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3303.50"></text>
+        </g>
+        <g>
+            <title> (2,014,626 bytes, 0.01%)</title>
+            <rect x="0.0965%" y="3312" width="0.0143%" height="21" fill="rgb(255,248,248)" fg:x="13590148" fg:w="2014626"/>
+            <text x="0.3465%" y="3325.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/gsim/base.py:36 (&lt;module&gt;) (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3070" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3083.50"></text>
+        </g>
+        <g>
+            <title>from openquake.hazardlib.contexts import ( (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3092" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3105.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3114" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3127.50"></text>
+        </g>
+        <g>
+            <title> (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3136" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3149.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3158" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3171.50"></text>
+        </g>
+        <g>
+            <title> (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3180" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3193.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3202" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3215.50"></text>
+        </g>
+        <g>
+            <title> (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3224" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3237.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3246" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3259.50"></text>
+        </g>
+        <g>
+            <title> (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3268" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3281.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3290" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3303.50"></text>
+        </g>
+        <g>
+            <title> (3,355,659 bytes, 0.02%)</title>
+            <rect x="0.1108%" y="3312" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="15604774" fg:w="3355659"/>
+            <text x="0.3608%" y="3325.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/gsim/__init__.py:26 (&lt;module&gt;) (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="2806" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="2819.50"></text>
+        </g>
+        <g>
+            <title>from openquake.hazardlib.gsim.base import registry (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="2828" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="2841.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="2850" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="2863.50"></text>
+        </g>
+        <g>
+            <title> (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="2872" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="2885.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="2894" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="2907.50"></text>
+        </g>
+        <g>
+            <title> (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="2916" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="2929.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="2938" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="2951.50"></text>
+        </g>
+        <g>
+            <title> (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="2960" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="2973.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="2982" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="2995.50"></text>
+        </g>
+        <g>
+            <title> (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="3004" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="3017.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="3026" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="3039.50"></text>
+        </g>
+        <g>
+            <title> (6,101,418 bytes, 0.04%)</title>
+            <rect x="0.0965%" y="3048" width="0.0433%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="6101418"/>
+            <text x="0.3465%" y="3061.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/sap.py:195 (parser) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="254" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="267.50"></text>
+        </g>
+        <g>
+            <title>        funcdict = pkg2dic(funcdict) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="276" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="289.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/sap.py:174 (pkg2dic) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="298" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="311.50"></text>
+        </g>
+        <g>
+            <title>                mod = importlib.import_module(dotname[:-3]) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="320" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="333.50"></text>
+        </g>
+        <g>
+            <title>/usr/lib/python3.8/importlib/__init__.py:127 (import_module) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="342" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="355.50"></text>
+        </g>
+        <g>
+            <title>    return _bootstrap._gcd_import(name[level:], package, level) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="364" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="377.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1014 (_gcd_import) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="386" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="399.50"></text>
+        </g>
+        <g>
+            <title> (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="408" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="421.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="430" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="443.50"></text>
+        </g>
+        <g>
+            <title> (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="452" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="465.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="474" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="487.50"></text>
+        </g>
+        <g>
+            <title> (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="496" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="509.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="518" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="531.50"></text>
+        </g>
+        <g>
+            <title> (17,450,915 bytes, 0.12%)</title>
+            <rect x="0.0236%" y="540" width="0.1239%" height="21" fill="rgb(255,244,244)" fg:x="3326567" fg:w="17450915"/>
+            <text x="0.2736%" y="553.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (17,289,180 bytes, 0.12%)</title>
+            <rect x="0.0248%" y="562" width="0.1228%" height="21" fill="rgb(255,244,244)" fg:x="3488302" fg:w="17289180"/>
+            <text x="0.2748%" y="575.50"></text>
+        </g>
+        <g>
+            <title> (17,289,180 bytes, 0.12%)</title>
+            <rect x="0.0248%" y="584" width="0.1228%" height="21" fill="rgb(255,244,244)" fg:x="3488302" fg:w="17289180"/>
+            <text x="0.2748%" y="597.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (17,289,180 bytes, 0.12%)</title>
+            <rect x="0.0248%" y="606" width="0.1228%" height="21" fill="rgb(255,244,244)" fg:x="3488302" fg:w="17289180"/>
+            <text x="0.2748%" y="619.50"></text>
+        </g>
+        <g>
+            <title> (17,289,180 bytes, 0.12%)</title>
+            <rect x="0.0248%" y="628" width="0.1228%" height="21" fill="rgb(255,244,244)" fg:x="3488302" fg:w="17289180"/>
+            <text x="0.2748%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commands/zip.py:20 (&lt;module&gt;) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="650" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="663.50"></text>
+        </g>
+        <g>
+            <title>from openquake.commonlib import oqzip (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="672" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="685.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="694" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="707.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="716" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="729.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="738" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="751.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="760" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="773.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="782" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="795.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="804" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="817.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="826" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="839.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="848" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="861.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="870" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="883.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="892" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="905.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="914" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="927.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="936" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="949.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="958" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="971.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="980" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="993.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/oqzip.py:22 (&lt;module&gt;) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1002" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1015.50"></text>
+        </g>
+        <g>
+            <title>from openquake.commonlib import readinput, oqvalidation (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1024" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1037.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1046" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1059.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1068" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1081.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1090" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1103.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1112" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1125.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1134" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1147.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1156" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1169.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1178" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1191.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1200" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1213.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1222" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1235.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1244" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1257.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1266" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1279.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1288" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1301.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1310" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1323.50"></text>
+        </g>
+        <g>
+            <title> (16,375,850 bytes, 0.12%)</title>
+            <rect x="0.0313%" y="1332" width="0.1163%" height="21" fill="rgb(255,244,244)" fg:x="4401632" fg:w="16375850"/>
+            <text x="0.2813%" y="1345.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/readinput.py:43 (&lt;module&gt;) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1354" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1367.50"></text>
+        </g>
+        <g>
+            <title>from openquake.hazardlib.const import StdDev (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1376" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1389.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1398" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1411.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1420" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1433.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:961 (_find_and_load_unlocked) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1442" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1455.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1464" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1477.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1486" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1499.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1508" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1521.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1530" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1543.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1552" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1565.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1574" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1587.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1596" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1609.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1618" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1631.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1640" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1653.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1662" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1675.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1684" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1697.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1706" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1719.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1728" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1741.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/__init__.py:30 (&lt;module&gt;) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1750" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1763.50"></text>
+        </g>
+        <g>
+            <title>from openquake.hazardlib import ( (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1772" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1785.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1794" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1807.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1816" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1829.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1838" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1851.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1860" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1873.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1882" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1895.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1904" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1917.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1926" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1939.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1948" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1961.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1970" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="1983.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="1992" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="2005.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="2014" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="2027.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="2036" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="2049.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="2058" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="2071.50"></text>
+        </g>
+        <g>
+            <title> (7,651,235 bytes, 0.05%)</title>
+            <rect x="0.0932%" y="2080" width="0.0543%" height="21" fill="rgb(255,246,246)" fg:x="13126247" fg:w="7651235"/>
+            <text x="0.3432%" y="2093.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/nrml.py:86 (&lt;module&gt;) (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2102" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2115.50"></text>
+        </g>
+        <g>
+            <title>from openquake.hazardlib import valid, sourceconverter, InvalidFile (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2124" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2137.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2146" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2159.50"></text>
+        </g>
+        <g>
+            <title> (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2168" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2181.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2190" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2203.50"></text>
+        </g>
+        <g>
+            <title> (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2212" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2225.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2234" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2247.50"></text>
+        </g>
+        <g>
+            <title> (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2256" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2269.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2278" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2291.50"></text>
+        </g>
+        <g>
+            <title> (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2300" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2313.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2322" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2335.50"></text>
+        </g>
+        <g>
+            <title> (7,352,343 bytes, 0.05%)</title>
+            <rect x="0.0953%" y="2344" width="0.0522%" height="21" fill="rgb(255,246,246)" fg:x="13425139" fg:w="7352343"/>
+            <text x="0.3453%" y="2357.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2366" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2379.50"></text>
+        </g>
+        <g>
+            <title> (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2388" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2401.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2410" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2423.50"></text>
+        </g>
+        <g>
+            <title> (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2432" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2445.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/valid.py:34 (&lt;module&gt;) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2454" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2467.50"></text>
+        </g>
+        <g>
+            <title>from openquake.hazardlib import imt, scalerel, gsim, pmf, site (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2476" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2489.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1042 (_handle_fromlist) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2498" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2511.50"></text>
+        </g>
+        <g>
+            <title> (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2520" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2533.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2542" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2555.50"></text>
+        </g>
+        <g>
+            <title> (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2564" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2577.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:991 (_find_and_load) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2586" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2599.50"></text>
+        </g>
+        <g>
+            <title> (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2608" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2621.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:975 (_find_and_load_unlocked) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2630" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2643.50"></text>
+        </g>
+        <g>
+            <title> (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2652" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2665.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:671 (_load_unlocked) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2674" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2687.50"></text>
+        </g>
+        <g>
+            <title> (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2696" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2709.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:848 (exec_module) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2718" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2731.50"></text>
+        </g>
+        <g>
+            <title> (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2740" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2753.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:219 (_call_with_frames_removed) (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2762" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2775.50"></text>
+        </g>
+        <g>
+            <title> (7,187,334 bytes, 0.05%)</title>
+            <rect x="0.0965%" y="2784" width="0.0510%" height="21" fill="rgb(255,246,246)" fg:x="13590148" fg:w="7187334"/>
+            <text x="0.3465%" y="2797.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:469 (read_inputs) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="606" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="619.50"></text>
+        </g>
+        <g>
+            <title>                self.csm = csm = readinput.get_composite_source_model( (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="628" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/readinput.py:772 (get_composite_source_model) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="650" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="663.50"></text>
+        </g>
+        <g>
+            <title>    full_lt = get_full_lt(oqparam, branchID) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="672" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="685.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/readinput.py:667 (get_full_lt) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="694" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="707.50"></text>
+        </g>
+        <g>
+            <title>    source_model_lt = get_source_model_lt(oqparam, branchID) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="716" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="729.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/readinput.py:649 (get_source_model_lt) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="738" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="751.50"></text>
+        </g>
+        <g>
+            <title>    smlt = logictree.SourceModelLogicTree(*args) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="760" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="773.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/logictree.py:323 (__init__) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="782" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="795.50"></text>
+        </g>
+        <g>
+            <title>        self.parse_tree(tree) #!CBC (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="804" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="817.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/logictree.py:354 (parse_tree) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="826" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="839.50"></text>
+        </g>
+        <g>
+            <title>            self.parse_branchset(bsnode, depth) #!CBC (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="848" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="861.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/logictree.py:390 (parse_branchset) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="870" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="883.50"></text>
+        </g>
+        <g>
+            <title>        self.parse_branches(branchset_node, branchset) #!CBC (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="892" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="905.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/logictree.py:453 (parse_branches) (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="914" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="927.50"></text>
+        </g>
+        <g>
+            <title>                            self.collect_source_model_data( (29,054,219 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="936" width="0.2064%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29054219"/>
+            <text x="0.3976%" y="949.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/logictree.py:663 (collect_source_model_data) (27,689,040 bytes, 0.20%)</title>
+            <rect x="0.1573%" y="958" width="0.1967%" height="21" fill="rgb(255,243,243)" fg:x="22142661" fg:w="27689040"/>
+            <text x="0.4073%" y="971.50"></text>
+        </g>
+        <g>
+            <title>            self.source_ids[src_id].append(branch_id) (27,689,040 bytes, 0.20%)</title>
+            <rect x="0.1573%" y="980" width="0.1967%" height="21" fill="rgb(255,243,243)" fg:x="22142661" fg:w="27689040"/>
+            <text x="0.4073%" y="993.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:231 (run) (29,290,155 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="518" width="0.2080%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29290155"/>
+            <text x="0.3976%" y="531.50"></text>
+        </g>
+        <g>
+            <title>                    self.pre_execute() (29,290,155 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="540" width="0.2080%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29290155"/>
+            <text x="0.3976%" y="553.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:612 (pre_execute) (29,290,155 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="562" width="0.2080%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29290155"/>
+            <text x="0.3976%" y="575.50"></text>
+        </g>
+        <g>
+            <title>                self.read_inputs() (29,290,155 bytes, 0.21%)</title>
+            <rect x="0.1476%" y="584" width="0.2080%" height="21" fill="rgb(255,243,243)" fg:x="20777482" fg:w="29290155"/>
+            <text x="0.3976%" y="597.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:556 (_iter) (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="782" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="795.50"></text>
+        </g>
+        <g>
+            <title>        for result in self.iresults: (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="804" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="817.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:910 (_loop) (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="826" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="839.50"></text>
+        </g>
+        <g>
+            <title>            res = next(isocket) (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="848" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="861.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/zeromq.py:140 (__iter__) (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="870" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="883.50"></text>
+        </g>
+        <g>
+            <title>                    yield self.zsocket.recv_pyobj() (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="892" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="905.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/zmq/sugar/socket.py:632 (recv_pyobj) (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="914" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="927.50"></text>
+        </g>
+        <g>
+            <title>        return self._deserialize(msg, pickle.loads) (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="936" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="949.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/zmq/sugar/socket.py:499 (_deserialize) (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="958" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="971.50"></text>
+        </g>
+        <g>
+            <title>        return load(recvd) (6,024,680 bytes, 0.04%)</title>
+            <rect x="0.3556%" y="980" width="0.0428%" height="21" fill="rgb(255,246,246)" fg:x="50067637" fg:w="6024680"/>
+            <text x="0.6056%" y="993.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numpy/core/numeric.py:1862 (_frombuffer) (1,006,053,792 bytes, 7.15%)</title>
+            <rect x="23.2160%" y="914" width="7.1453%" height="21" fill="rgb(255,209,209)" fg:x="3268794260" fg:w="1006053792"/>
+            <text x="23.4660%" y="927.50">/home/c..</text>
+        </g>
+        <g>
+            <title>    return frombuffer(buf, dtype=dtype).reshape(shape, order=order) (1,006,053,792 bytes, 7.15%)</title>
+            <rect x="23.2160%" y="936" width="7.1453%" height="21" fill="rgb(255,209,209)" fg:x="3268794260" fg:w="1006053792"/>
+            <text x="23.4660%" y="949.50">    re..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:607 (reduce) (4,228,832,007 bytes, 30.03%)</title>
+            <rect x="0.3556%" y="694" width="30.0344%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4228832007"/>
+            <text x="0.6056%" y="707.50">/home/chrisbc/DEV/GNS/opensha-modula..</text>
+        </g>
+        <g>
+            <title>        for result in self: (4,228,832,007 bytes, 30.03%)</title>
+            <rect x="0.3556%" y="716" width="30.0344%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4228832007"/>
+            <text x="0.6056%" y="729.50">        for result in self:..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:595 (__iter__) (4,228,832,007 bytes, 30.03%)</title>
+            <rect x="0.3556%" y="738" width="30.0344%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4228832007"/>
+            <text x="0.6056%" y="751.50">/home/chrisbc/DEV/GNS/opensha-modula..</text>
+        </g>
+        <g>
+            <title>            yield from self._iter() (4,228,832,007 bytes, 30.03%)</title>
+            <rect x="0.3556%" y="760" width="30.0344%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4228832007"/>
+            <text x="0.6056%" y="773.50">            yield from self._iter()..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:566 (_iter) (4,222,807,327 bytes, 29.99%)</title>
+            <rect x="0.3984%" y="782" width="29.9917%" height="21" fill="rgb(255,167,167)" fg:x="56092317" fg:w="4222807327"/>
+            <text x="0.6484%" y="795.50">/home/chrisbc/DEV/GNS/opensha-modula..</text>
+        </g>
+        <g>
+            <title>                val = result.get() (4,222,807,327 bytes, 29.99%)</title>
+            <rect x="0.3984%" y="804" width="29.9917%" height="21" fill="rgb(255,167,167)" fg:x="56092317" fg:w="4222807327"/>
+            <text x="0.6484%" y="817.50">                val = result.get()..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:397 (get) (4,222,807,327 bytes, 29.99%)</title>
+            <rect x="0.3984%" y="826" width="29.9917%" height="21" fill="rgb(255,167,167)" fg:x="56092317" fg:w="4222807327"/>
+            <text x="0.6484%" y="839.50">/home/chrisbc/DEV/GNS/opensha-modula..</text>
+        </g>
+        <g>
+            <title>        val = self.pik.unpickle() (4,222,807,327 bytes, 29.99%)</title>
+            <rect x="0.3984%" y="848" width="29.9917%" height="21" fill="rgb(255,167,167)" fg:x="56092317" fg:w="4222807327"/>
+            <text x="0.6484%" y="861.50">        val = self.pik.unpickle()..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:307 (unpickle) (4,222,807,327 bytes, 29.99%)</title>
+            <rect x="0.3984%" y="870" width="29.9917%" height="21" fill="rgb(255,167,167)" fg:x="56092317" fg:w="4222807327"/>
+            <text x="0.6484%" y="883.50">/home/chrisbc/DEV/GNS/opensha-modula..</text>
+        </g>
+        <g>
+            <title>        return pickle.loads(self.pik) (4,222,807,327 bytes, 29.99%)</title>
+            <rect x="0.3984%" y="892" width="29.9917%" height="21" fill="rgb(255,167,167)" fg:x="56092317" fg:w="4222807327"/>
+            <text x="0.6484%" y="905.50">        return pickle.loads(self.pi..</text>
+        </g>
+        <g>
+            <title>&lt;string&gt;:1 (__new__) (4,051,592 bytes, 0.03%)</title>
+            <rect x="30.3613%" y="914" width="0.0288%" height="21" fill="rgb(255,247,247)" fg:x="4274848052" fg:w="4051592"/>
+            <text x="30.6113%" y="927.50"></text>
+        </g>
+        <g>
+            <title> (4,051,592 bytes, 0.03%)</title>
+            <rect x="30.3613%" y="936" width="0.0288%" height="21" fill="rgb(255,247,247)" fg:x="4274848052" fg:w="4051592"/>
+            <text x="30.6113%" y="949.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/preclassical.py:148 (run_preclassical) (4,229,046,975 bytes, 30.04%)</title>
+            <rect x="0.3556%" y="606" width="30.0360%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4229046975"/>
+            <text x="0.6056%" y="619.50">/home/chrisbc/DEV/GNS/opensha-modula..</text>
+        </g>
+        <g>
+            <title>    normal = smap.reduce() (4,229,046,975 bytes, 30.04%)</title>
+            <rect x="0.3556%" y="628" width="30.0360%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4229046975"/>
+            <text x="0.6056%" y="641.50">    normal = smap.reduce()..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:877 (reduce) (4,229,046,975 bytes, 30.04%)</title>
+            <rect x="0.3556%" y="650" width="30.0360%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4229046975"/>
+            <text x="0.6056%" y="663.50">/home/chrisbc/DEV/GNS/opensha-modula..</text>
+        </g>
+        <g>
+            <title>        return self.submit_all().reduce(agg, acc) (4,229,046,975 bytes, 30.04%)</title>
+            <rect x="0.3556%" y="672" width="30.0360%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4229046975"/>
+            <text x="0.6056%" y="685.50">        return self.submit_all().re..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/source_reader.py:62 (create_source_info) (1,587,776 bytes, 0.01%)</title>
+            <rect x="30.4014%" y="694" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="4280503286" fg:w="1587776"/>
+            <text x="30.6514%" y="707.50"></text>
+        </g>
+        <g>
+            <title>            row = [srcid, src.grp_id, code, 0, 0, 0, trti, 0] (1,587,776 bytes, 0.01%)</title>
+            <rect x="30.4014%" y="716" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="4280503286" fg:w="1587776"/>
+            <text x="30.6514%" y="729.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:232 (run) (4,234,021,961 bytes, 30.07%)</title>
+            <rect x="0.3556%" y="518" width="30.0713%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4234021961"/>
+            <text x="0.6056%" y="531.50">/home/chrisbc/DEV/GNS/opensha-modula..</text>
+        </g>
+        <g>
+            <title>                self.result = self.execute() (4,234,021,961 bytes, 30.07%)</title>
+            <rect x="0.3556%" y="540" width="30.0713%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4234021961"/>
+            <text x="0.6056%" y="553.50">                self.result = self...</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/preclassical.py:220 (execute) (4,234,021,961 bytes, 30.07%)</title>
+            <rect x="0.3556%" y="562" width="30.0713%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4234021961"/>
+            <text x="0.6056%" y="575.50">/home/chrisbc/DEV/GNS/opensha-modula..</text>
+        </g>
+        <g>
+            <title>        run_preclassical(self) (4,234,021,961 bytes, 30.07%)</title>
+            <rect x="0.3556%" y="584" width="30.0713%" height="21" fill="rgb(255,167,167)" fg:x="50067637" fg:w="4234021961"/>
+            <text x="0.6056%" y="597.50">        run_preclassical(self)..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/preclassical.py:184 (run_preclassical) (4,974,986 bytes, 0.04%)</title>
+            <rect x="30.3916%" y="606" width="0.0353%" height="21" fill="rgb(255,247,247)" fg:x="4279114612" fg:w="4974986"/>
+            <text x="30.6416%" y="619.50"></text>
+        </g>
+        <g>
+            <title>    calc.store_source_info(source_data(csm.get_sources())) (4,974,986 bytes, 0.04%)</title>
+            <rect x="30.3916%" y="628" width="0.0353%" height="21" fill="rgb(255,247,247)" fg:x="4279114612" fg:w="4974986"/>
+            <text x="30.6416%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:939 (store_source_info) (4,974,986 bytes, 0.04%)</title>
+            <rect x="30.3916%" y="650" width="0.0353%" height="21" fill="rgb(255,247,247)" fg:x="4279114612" fg:w="4974986"/>
+            <text x="30.6416%" y="663.50"></text>
+        </g>
+        <g>
+            <title>            source_reader.create_source_info(self.csm, self.datastore.hdf5) (4,974,986 bytes, 0.04%)</title>
+            <rect x="30.3916%" y="672" width="0.0353%" height="21" fill="rgb(255,247,247)" fg:x="4279114612" fg:w="4974986"/>
+            <text x="30.6416%" y="685.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:231 (run) (4,580,901,140 bytes, 32.53%)</title>
+            <rect x="0.1476%" y="430" width="32.5349%" height="21" fill="rgb(255,164,164)" fg:x="20777482" fg:w="4580901140"/>
+            <text x="0.3976%" y="443.50">/home/chrisbc/DEV/GNS/opensha-modular/G..</text>
+        </g>
+        <g>
+            <title>                    self.pre_execute() (4,580,901,140 bytes, 32.53%)</title>
+            <rect x="0.1476%" y="452" width="32.5349%" height="21" fill="rgb(255,164,164)" fg:x="20777482" fg:w="4580901140"/>
+            <text x="0.3976%" y="465.50">                    self.pre_execute()..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:602 (pre_execute) (4,580,901,140 bytes, 32.53%)</title>
+            <rect x="0.1476%" y="474" width="32.5349%" height="21" fill="rgb(255,164,164)" fg:x="20777482" fg:w="4580901140"/>
+            <text x="0.3976%" y="487.50">/home/chrisbc/DEV/GNS/opensha-modular/G..</text>
+        </g>
+        <g>
+            <title>            calc.run(remove=False) (4,580,901,140 bytes, 32.53%)</title>
+            <rect x="0.1476%" y="496" width="32.5349%" height="21" fill="rgb(255,164,164)" fg:x="20777482" fg:w="4580901140"/>
+            <text x="0.3976%" y="509.50">            calc.run(remove=False)..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:234 (run) (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="518" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="531.50"></text>
+        </g>
+        <g>
+            <title>                    self.post_execute(self.result) (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="540" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="553.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/preclassical.py:228 (post_execute) (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="562" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="575.50"></text>
+        </g>
+        <g>
+            <title>        self.datastore[&apos;_csm&apos;] = csm (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="584" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="597.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/datastore.py:496 (__setitem__) (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="606" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="619.50"></text>
+        </g>
+        <g>
+            <title>            self.hdf5[key] = val (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="628" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/hdf5.py:444 (__setitem__) (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="650" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="663.50"></text>
+        </g>
+        <g>
+            <title>            obj, attrs = obj.__toh5__() (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="672" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="685.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/source_reader.py:483 (__toh5__) (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="694" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="707.50"></text>
+        </g>
+        <g>
+            <title>        data = gzip.compress(pickle.dumps(self, pickle.HIGHEST_PROTOCOL)) (317,589,024 bytes, 2.26%)</title>
+            <rect x="30.4269%" y="716" width="2.2556%" height="21" fill="rgb(255,227,227)" fg:x="4284089598" fg:w="317589024"/>
+            <text x="30.6769%" y="729.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:432 (execute) (1,998,200 bytes, 0.01%)</title>
+            <rect x="32.6825%" y="474" width="0.0142%" height="21" fill="rgb(255,248,248)" fg:x="4601678622" fg:w="1998200"/>
+            <text x="32.9325%" y="487.50"></text>
+        </g>
+        <g>
+            <title>        srcidx = { (1,998,200 bytes, 0.01%)</title>
+            <rect x="32.6825%" y="496" width="0.0142%" height="21" fill="rgb(255,248,248)" fg:x="4601678622" fg:w="1998200"/>
+            <text x="32.9325%" y="509.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:434 (execute) (13,579,889 bytes, 0.10%)</title>
+            <rect x="32.6967%" y="474" width="0.0964%" height="21" fill="rgb(255,245,245)" fg:x="4603676822" fg:w="13579889"/>
+            <text x="32.9467%" y="487.50"></text>
+        </g>
+        <g>
+            <title>        self.haz = Hazard(self.datastore, self.full_lt, srcidx) (13,579,889 bytes, 0.10%)</title>
+            <rect x="32.6967%" y="496" width="0.0964%" height="21" fill="rgb(255,245,245)" fg:x="4603676822" fg:w="13579889"/>
+            <text x="32.9467%" y="509.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:200 (__init__) (13,579,889 bytes, 0.10%)</title>
+            <rect x="32.6967%" y="518" width="0.0964%" height="21" fill="rgb(255,245,245)" fg:x="4603676822" fg:w="13579889"/>
+            <text x="32.9467%" y="531.50"></text>
+        </g>
+        <g>
+            <title>        self.cmakers = read_cmakers(dstore, full_lt) (13,579,889 bytes, 0.10%)</title>
+            <rect x="32.6967%" y="540" width="0.0964%" height="21" fill="rgb(255,245,245)" fg:x="4603676822" fg:w="13579889"/>
+            <text x="32.9467%" y="553.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/contexts.py:1493 (read_cmakers) (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="562" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="575.50"></text>
+        </g>
+        <g>
+            <title>        cmaker = ContextMaker(trt, rlzs_by_gsim, oq) (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="584" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="597.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/contexts.py:418 (__init__) (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="606" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="619.50"></text>
+        </g>
+        <g>
+            <title>        self.collapser = Collapser( (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="628" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/contexts.py:144 (__init__) (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="650" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="663.50"></text>
+        </g>
+        <g>
+            <title>        self.vs30_bins = numpy.linspace(0, 32767, 65536) (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="672" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="685.50"></text>
+        </g>
+        <g>
+            <title>&lt;__array_function__ internals&gt;:5 (linspace) (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="694" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="707.50"></text>
+        </g>
+        <g>
+            <title> (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="716" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="729.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numpy/core/function_base.py:135 (linspace) (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="738" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="751.50"></text>
+        </g>
+        <g>
+            <title>    y = _nx.arange(0, num, dtype=dt).reshape((-1,) + (1,) * ndim(delta)) (12,587,520 bytes, 0.09%)</title>
+            <rect x="32.7038%" y="760" width="0.0894%" height="21" fill="rgb(255,245,245)" fg:x="4604669191" fg:w="12587520"/>
+            <text x="32.9538%" y="773.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:454 (execute) (4,052,757 bytes, 0.03%)</title>
+            <rect x="32.7969%" y="474" width="0.0288%" height="21" fill="rgb(255,247,247)" fg:x="4617785019" fg:w="4052757"/>
+            <text x="33.0469%" y="487.50"></text>
+        </g>
+        <g>
+            <title>            smap.reduce(self.agg_dicts, acc) (4,052,757 bytes, 0.03%)</title>
+            <rect x="32.7969%" y="496" width="0.0288%" height="21" fill="rgb(255,247,247)" fg:x="4617785019" fg:w="4052757"/>
+            <text x="33.0469%" y="509.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:877 (reduce) (4,052,757 bytes, 0.03%)</title>
+            <rect x="32.7969%" y="518" width="0.0288%" height="21" fill="rgb(255,247,247)" fg:x="4617785019" fg:w="4052757"/>
+            <text x="33.0469%" y="531.50"></text>
+        </g>
+        <g>
+            <title>        return self.submit_all().reduce(agg, acc) (4,052,757 bytes, 0.03%)</title>
+            <rect x="32.7969%" y="540" width="0.0288%" height="21" fill="rgb(255,247,247)" fg:x="4617785019" fg:w="4052757"/>
+            <text x="33.0469%" y="553.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/parallel.py:608 (reduce) (3,637,320 bytes, 0.03%)</title>
+            <rect x="32.7999%" y="562" width="0.0258%" height="21" fill="rgb(255,247,247)" fg:x="4618200456" fg:w="3637320"/>
+            <text x="33.0499%" y="575.50"></text>
+        </g>
+        <g>
+            <title>            acc = agg(acc, result) (3,637,320 bytes, 0.03%)</title>
+            <rect x="32.7999%" y="584" width="0.0258%" height="21" fill="rgb(255,247,247)" fg:x="4618200456" fg:w="3637320"/>
+            <text x="33.0499%" y="597.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:295 (agg_dicts) (3,637,320 bytes, 0.03%)</title>
+            <rect x="32.7999%" y="606" width="0.0258%" height="21" fill="rgb(255,247,247)" fg:x="4618200456" fg:w="3637320"/>
+            <text x="33.0499%" y="619.50"></text>
+        </g>
+        <g>
+            <title>                store_ctxs(self.datastore, dic[&apos;rup_data&apos;], grp_id) (3,637,320 bytes, 0.03%)</title>
+            <rect x="32.7999%" y="628" width="0.0258%" height="21" fill="rgb(255,247,247)" fg:x="4618200456" fg:w="3637320"/>
+            <text x="33.0499%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:78 (store_ctxs) (3,178,568 bytes, 0.02%)</title>
+            <rect x="32.8031%" y="650" width="0.0226%" height="21" fill="rgb(255,247,247)" fg:x="4618659208" fg:w="3178568"/>
+            <text x="33.0531%" y="663.50"></text>
+        </g>
+        <g>
+            <title>                dstore.hdf5.save_vlen(n, rupdata[par]) (3,178,568 bytes, 0.02%)</title>
+            <rect x="32.8031%" y="672" width="0.0226%" height="21" fill="rgb(255,247,247)" fg:x="4618659208" fg:w="3178568"/>
+            <text x="33.0531%" y="685.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/hdf5.py:428 (save_vlen) (3,178,568 bytes, 0.02%)</title>
+            <rect x="32.8031%" y="694" width="0.0226%" height="21" fill="rgb(255,247,247)" fg:x="4618659208" fg:w="3178568"/>
+            <text x="33.0531%" y="707.50"></text>
+        </g>
+        <g>
+            <title>        dset[length:length + len(data)] = data (3,178,568 bytes, 0.02%)</title>
+            <rect x="32.8031%" y="716" width="0.0226%" height="21" fill="rgb(255,247,247)" fg:x="4618659208" fg:w="3178568"/>
+            <text x="33.0531%" y="729.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/h5py/_hl/dataset.py:945 (__setitem__) (3,178,568 bytes, 0.02%)</title>
+            <rect x="32.8031%" y="738" width="0.0226%" height="21" fill="rgb(255,247,247)" fg:x="4618659208" fg:w="3178568"/>
+            <text x="33.0531%" y="751.50"></text>
+        </g>
+        <g>
+            <title>            self.id.write(mspace, fspace, val, mtype, dxpl=self._dxpl) (3,178,568 bytes, 0.02%)</title>
+            <rect x="32.8031%" y="760" width="0.0226%" height="21" fill="rgb(255,247,247)" fg:x="4618659208" fg:w="3178568"/>
+            <text x="33.0531%" y="773.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:897 (store_rlz_info) (2,715,568 bytes, 0.02%)</title>
+            <rect x="32.8257%" y="562" width="0.0193%" height="21" fill="rgb(255,247,247)" fg:x="4621837776" fg:w="2715568"/>
+            <text x="33.0757%" y="575.50"></text>
+        </g>
+        <g>
+            <title>            self.realizations = self.full_lt.get_realizations() (2,715,568 bytes, 0.02%)</title>
+            <rect x="32.8257%" y="584" width="0.0193%" height="21" fill="rgb(255,247,247)" fg:x="4621837776" fg:w="2715568"/>
+            <text x="33.0757%" y="597.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/logictree.py:959 (get_realizations) (1,976,848 bytes, 0.01%)</title>
+            <rect x="32.8309%" y="606" width="0.0140%" height="21" fill="rgb(255,248,248)" fg:x="4622576496" fg:w="1976848"/>
+            <text x="33.0809%" y="619.50"></text>
+        </g>
+        <g>
+            <title>                                        sm_rlz.weight * gsim_rlz.weight) (1,976,848 bytes, 0.01%)</title>
+            <rect x="32.8309%" y="628" width="0.0140%" height="21" fill="rgb(255,248,248)" fg:x="4622576496" fg:w="1976848"/>
+            <text x="33.0809%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/hazardlib/gsim_lt.py:94 (__mul__) (1,743,568 bytes, 0.01%)</title>
+            <rect x="32.8326%" y="650" width="0.0124%" height="21" fill="rgb(255,248,248)" fg:x="4622809776" fg:w="1743568"/>
+            <text x="33.0826%" y="663.50"></text>
+        </g>
+        <g>
+            <title>            new.dic = {k: self.dic[k] * other for k in self.dic} (1,743,568 bytes, 0.01%)</title>
+            <rect x="32.8326%" y="672" width="0.0124%" height="21" fill="rgb(255,248,248)" fg:x="4622809776" fg:w="1743568"/>
+            <text x="33.0826%" y="685.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:470 (store_info) (2,879,930 bytes, 0.02%)</title>
+            <rect x="32.8257%" y="518" width="0.0205%" height="21" fill="rgb(255,247,247)" fg:x="4621837776" fg:w="2879930"/>
+            <text x="33.0757%" y="531.50"></text>
+        </g>
+        <g>
+            <title>        self.store_rlz_info(self.rel_ruptures) (2,879,930 bytes, 0.02%)</title>
+            <rect x="32.8257%" y="540" width="0.0205%" height="21" fill="rgb(255,247,247)" fg:x="4621837776" fg:w="2879930"/>
+            <text x="33.0757%" y="553.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:471 (store_info) (4,054,918 bytes, 0.03%)</title>
+            <rect x="32.8461%" y="518" width="0.0288%" height="21" fill="rgb(255,247,247)" fg:x="4624717706" fg:w="4054918"/>
+            <text x="33.0961%" y="531.50"></text>
+        </g>
+        <g>
+            <title>        self.store_source_info(self.source_data) (4,054,918 bytes, 0.03%)</title>
+            <rect x="32.8461%" y="540" width="0.0288%" height="21" fill="rgb(255,247,247)" fg:x="4624717706" fg:w="4054918"/>
+            <text x="33.0961%" y="553.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:942 (store_source_info) (2,920,998 bytes, 0.02%)</title>
+            <rect x="32.8542%" y="562" width="0.0207%" height="21" fill="rgb(255,247,247)" fg:x="4625851626" fg:w="2920998"/>
+            <text x="33.1042%" y="575.50"></text>
+        </g>
+        <g>
+            <title>        self.datastore[&apos;source_info&apos;][:] = numpy.array( (2,920,998 bytes, 0.02%)</title>
+            <rect x="32.8542%" y="584" width="0.0207%" height="21" fill="rgb(255,247,247)" fg:x="4625851626" fg:w="2920998"/>
+            <text x="33.1042%" y="597.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/h5py/_hl/dataset.py:945 (__setitem__) (2,920,998 bytes, 0.02%)</title>
+            <rect x="32.8542%" y="606" width="0.0207%" height="21" fill="rgb(255,247,247)" fg:x="4625851626" fg:w="2920998"/>
+            <text x="33.1042%" y="619.50"></text>
+        </g>
+        <g>
+            <title>            self.id.write(mspace, fspace, val, mtype, dxpl=self._dxpl) (2,920,998 bytes, 0.02%)</title>
+            <rect x="32.8542%" y="628" width="0.0207%" height="21" fill="rgb(255,247,247)" fg:x="4625851626" fg:w="2920998"/>
+            <text x="33.1042%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:232 (run) (29,120,370 bytes, 0.21%)</title>
+            <rect x="32.6825%" y="430" width="0.2068%" height="21" fill="rgb(255,243,243)" fg:x="4601678622" fg:w="29120370"/>
+            <text x="32.9325%" y="443.50"></text>
+        </g>
+        <g>
+            <title>                self.result = self.execute() (29,120,370 bytes, 0.21%)</title>
+            <rect x="32.6825%" y="452" width="0.2068%" height="21" fill="rgb(255,243,243)" fg:x="4601678622" fg:w="29120370"/>
+            <text x="32.9325%" y="465.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:457 (execute) (8,961,216 bytes, 0.06%)</title>
+            <rect x="32.8257%" y="474" width="0.0636%" height="21" fill="rgb(255,246,246)" fg:x="4621837776" fg:w="8961216"/>
+            <text x="33.0757%" y="487.50"></text>
+        </g>
+        <g>
+            <title>        self.store_info() (8,961,216 bytes, 0.06%)</title>
+            <rect x="32.8257%" y="496" width="0.0636%" height="21" fill="rgb(255,246,246)" fg:x="4621837776" fg:w="8961216"/>
+            <text x="33.0757%" y="509.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:480 (store_info) (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="518" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="531.50"></text>
+        </g>
+        <g>
+            <title>        self.datastore.create_df(&apos;source_data&apos;, df) (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="540" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="553.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/datastore.py:320 (create_df) (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="562" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="575.50"></text>
+        </g>
+        <g>
+            <title>        return self.hdf5.create_df(key, nametypes, compression, **kw) (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="584" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="597.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/hdf5.py:364 (create_df) (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="606" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="619.50"></text>
+        </g>
+        <g>
+            <title>                extend(dset, value) (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="628" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/hdf5.py:113 (extend) (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="650" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="663.50"></text>
+        </g>
+        <g>
+            <title>    dset[length:newlength] = array (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="672" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="685.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/h5py/_hl/dataset.py:945 (__setitem__) (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="694" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="707.50"></text>
+        </g>
+        <g>
+            <title>            self.id.write(mspace, fspace, val, mtype, dxpl=self._dxpl) (2,026,368 bytes, 0.01%)</title>
+            <rect x="32.8749%" y="716" width="0.0144%" height="21" fill="rgb(255,248,248)" fg:x="4628772624" fg:w="2026368"/>
+            <text x="33.1249%" y="729.50"></text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/hdf5.py:497 (__getitem__) (474,716,351 bytes, 3.37%)</title>
+            <rect x="32.8910%" y="694" width="3.3716%" height="21" fill="rgb(255,222,222)" fg:x="4631028576" fg:w="474716351"/>
+            <text x="33.1410%" y="707.50">/h..</text>
+        </g>
+        <g>
+            <title>                h5obj = h5obj[()] (474,716,351 bytes, 3.37%)</title>
+            <rect x="32.8910%" y="716" width="3.3716%" height="21" fill="rgb(255,222,222)" fg:x="4631028576" fg:w="474716351"/>
+            <text x="33.1410%" y="729.50"> ..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/h5py/_hl/dataset.py:771 (__getitem__) (474,716,351 bytes, 3.37%)</title>
+            <rect x="32.8910%" y="738" width="3.3716%" height="21" fill="rgb(255,222,222)" fg:x="4631028576" fg:w="474716351"/>
+            <text x="33.1410%" y="751.50">/h..</text>
+        </g>
+        <g>
+            <title>                return arr[()] (474,716,351 bytes, 3.37%)</title>
+            <rect x="32.8910%" y="760" width="3.3716%" height="21" fill="rgb(255,222,222)" fg:x="4631028576" fg:w="474716351"/>
+            <text x="33.1410%" y="773.50"> ..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/openquake/lib/python3.8/site-packages/numpy/core/numeric.py:1862 (_frombuffer) (1,584,782,744 bytes, 11.26%)</title>
+            <rect x="80.6045%" y="782" width="11.2556%" height="21" fill="rgb(255,199,199)" fg:x="11349067641" fg:w="1584782744"/>
+            <text x="80.8545%" y="795.50">/home/chrisb..</text>
+        </g>
+        <g>
+            <title>    return frombuffer(buf, dtype=dtype).reshape(shape, order=order) (1,584,782,744 bytes, 11.26%)</title>
+            <rect x="80.6045%" y="804" width="11.2556%" height="21" fill="rgb(255,199,199)" fg:x="11349067641" fg:w="1584782744"/>
+            <text x="80.8545%" y="817.50">    return ..</text>
+        </g>
+        <g>
+            <title>/usr/lib/python3.8/gzip.py:548 (decompress) (1,139,209,910 bytes, 8.09%)</title>
+            <rect x="91.8601%" y="782" width="8.0910%" height="21" fill="rgb(255,207,207)" fg:x="12933850385" fg:w="1139209910"/>
+            <text x="92.1101%" y="795.50">/usr/lib..</text>
+        </g>
+        <g>
+            <title>        return f.read() (1,139,209,910 bytes, 8.09%)</title>
+            <rect x="91.8601%" y="804" width="8.0910%" height="21" fill="rgb(255,207,207)" fg:x="12933850385" fg:w="1139209910"/>
+            <text x="92.1101%" y="817.50">       ..</text>
+        </g>
+        <g>
+            <title>/usr/lib/python3.8/gzip.py:292 (read) (1,139,209,910 bytes, 8.09%)</title>
+            <rect x="91.8601%" y="826" width="8.0910%" height="21" fill="rgb(255,207,207)" fg:x="12933850385" fg:w="1139209910"/>
+            <text x="92.1101%" y="839.50">/usr/lib..</text>
+        </g>
+        <g>
+            <title>        return self._buffer.read(size) (1,139,209,910 bytes, 8.09%)</title>
+            <rect x="91.8601%" y="848" width="8.0910%" height="21" fill="rgb(255,207,207)" fg:x="12933850385" fg:w="1139209910"/>
+            <text x="92.1101%" y="861.50">       ..</text>
+        </g>
+        <g>
+            <title>all (14,079,939,463 bytes, 100%)</title>
+            <rect x="0.0000%" y="100" width="100.0000%" height="21" fill="rgb(255,100,100)" fg:x="0" fg:w="14079939463"/>
+            <text x="0.2500%" y="113.50"></text>
+        </g>
+        <g>
+            <title>openquake/commands/__main__.py:57 (&lt;module&gt;) (14,076,612,896 bytes, 99.98%)</title>
+            <rect x="0.0236%" y="122" width="99.9764%" height="21" fill="rgb(255,100,100)" fg:x="3326567" fg:w="14076612896"/>
+            <text x="0.2736%" y="135.50">openquake/commands/__main__.py:57 (&lt;module&gt;)</text>
+        </g>
+        <g>
+            <title>    oq() (14,076,612,896 bytes, 99.98%)</title>
+            <rect x="0.0236%" y="144" width="99.9764%" height="21" fill="rgb(255,100,100)" fg:x="3326567" fg:w="14076612896"/>
+            <text x="0.2736%" y="157.50">    oq()</text>
+        </g>
+        <g>
+            <title>openquake/commands/__main__.py:53 (oq) (14,076,612,896 bytes, 99.98%)</title>
+            <rect x="0.0236%" y="166" width="99.9764%" height="21" fill="rgb(255,100,100)" fg:x="3326567" fg:w="14076612896"/>
+            <text x="0.2736%" y="179.50">openquake/commands/__main__.py:53 (oq)</text>
+        </g>
+        <g>
+            <title>    sap.run(commands, prog=&apos;oq&apos;) (14,076,612,896 bytes, 99.98%)</title>
+            <rect x="0.0236%" y="188" width="99.9764%" height="21" fill="rgb(255,100,100)" fg:x="3326567" fg:w="14076612896"/>
+            <text x="0.2736%" y="201.50">    sap.run(commands, prog=&apos;oq&apos;)</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/sap.py:225 (run) (14,076,612,896 bytes, 99.98%)</title>
+            <rect x="0.0236%" y="210" width="99.9764%" height="21" fill="rgb(255,100,100)" fg:x="3326567" fg:w="14076612896"/>
+            <text x="0.2736%" y="223.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/sap.py:225 (run)</text>
+        </g>
+        <g>
+            <title>    return _run(parser(funcdict, **parserkw), argv) (14,076,612,896 bytes, 99.98%)</title>
+            <rect x="0.0236%" y="232" width="99.9764%" height="21" fill="rgb(255,100,100)" fg:x="3326567" fg:w="14076612896"/>
+            <text x="0.2736%" y="245.50">    return _run(parser(funcdict, **parserkw), argv)</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/sap.py:216 (_run) (14,059,161,981 bytes, 99.85%)</title>
+            <rect x="0.1476%" y="254" width="99.8524%" height="21" fill="rgb(255,100,100)" fg:x="20777482" fg:w="14059161981"/>
+            <text x="0.3976%" y="267.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/sap.py:216 (_run)</text>
+        </g>
+        <g>
+            <title>    return func(**dic) (14,059,161,981 bytes, 99.85%)</title>
+            <rect x="0.1476%" y="276" width="99.8524%" height="21" fill="rgb(255,100,100)" fg:x="20777482" fg:w="14059161981"/>
+            <text x="0.3976%" y="289.50">    return func(**dic)</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commands/engine.py:175 (main) (14,059,161,981 bytes, 99.85%)</title>
+            <rect x="0.1476%" y="298" width="99.8524%" height="21" fill="rgb(255,100,100)" fg:x="20777482" fg:w="14059161981"/>
+            <text x="0.3976%" y="311.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commands/engine.py:175 (main)</text>
+        </g>
+        <g>
+            <title>        run_jobs(jobs) (14,059,161,981 bytes, 99.85%)</title>
+            <rect x="0.1476%" y="320" width="99.8524%" height="21" fill="rgb(255,100,100)" fg:x="20777482" fg:w="14059161981"/>
+            <text x="0.3976%" y="333.50">        run_jobs(jobs)</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/engine/engine.py:374 (run_jobs) (14,059,161,981 bytes, 99.85%)</title>
+            <rect x="0.1476%" y="342" width="99.8524%" height="21" fill="rgb(255,100,100)" fg:x="20777482" fg:w="14059161981"/>
+            <text x="0.3976%" y="355.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/engine/engine.py:374 (run_jobs)</text>
+        </g>
+        <g>
+            <title>                run_calc(job) (14,059,161,981 bytes, 99.85%)</title>
+            <rect x="0.1476%" y="364" width="99.8524%" height="21" fill="rgb(255,100,100)" fg:x="20777482" fg:w="14059161981"/>
+            <text x="0.3976%" y="377.50">                run_calc(job)</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/engine/engine.py:274 (run_calc) (14,059,161,981 bytes, 99.85%)</title>
+            <rect x="0.1476%" y="386" width="99.8524%" height="21" fill="rgb(255,100,100)" fg:x="20777482" fg:w="14059161981"/>
+            <text x="0.3976%" y="399.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/engine/engine.py:274 (run_calc)</text>
+        </g>
+        <g>
+            <title>        calc.run(shutdown=True) (14,059,161,981 bytes, 99.85%)</title>
+            <rect x="0.1476%" y="408" width="99.8524%" height="21" fill="rgb(255,100,100)" fg:x="20777482" fg:w="14059161981"/>
+            <text x="0.3976%" y="421.50">        calc.run(shutdown=True)</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:234 (run) (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="430" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="443.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/base.py:2..</text>
+        </g>
+        <g>
+            <title>                    self.post_execute(self.result) (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="452" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="465.50">                    self.post_execute(self.result)..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:585 (post_execute) (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="474" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="487.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical..</text>
+        </g>
+        <g>
+            <title>            evil_memory_allocation() (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="496" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="509.50">            evil_memory_allocation()</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:575 (evil_memory_allocation) (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="518" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="531.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical..</text>
+        </g>
+        <g>
+            <title>            nr = {name: len(dset[&apos;mag&apos;]) for name, dset in self.datastore.items() (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="540" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="553.50">            nr = {name: len(dset[&apos;mag&apos;]) for name, dset in self.datastore.items()..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical.py:575 (&lt;dictcomp&gt;) (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="562" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="575.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/calculators/classical..</text>
+        </g>
+        <g>
+            <title>            nr = {name: len(dset[&apos;mag&apos;]) for name, dset in self.datastore.items() (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="584" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="597.50">            nr = {name: len(dset[&apos;mag&apos;]) for name, dset in self.datastore.items()..</text>
+        </g>
+        <g>
+            <title>/usr/lib/python3.8/_collections_abc.py:744 (__iter__) (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="606" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="619.50">/usr/lib/python3.8/_collections_abc.py:744 (__iter__)</text>
+        </g>
+        <g>
+            <title>            yield (key, self._mapping[key]) (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="628" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="641.50">            yield (key, self._mapping[key])</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/datastore.py:476 (__getitem__) (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="650" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="663.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/datastore.p..</text>
+        </g>
+        <g>
+            <title>            val = self.hdf5[key] (9,449,140,471 bytes, 67.11%)</title>
+            <rect x="32.8893%" y="672" width="67.1107%" height="21" fill="rgb(255,127,127)" fg:x="4630798992" fg:w="9449140471"/>
+            <text x="33.1393%" y="685.50">            val = self.hdf5[key]</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/hdf5.py:499 (__getitem__) (8,974,194,536 bytes, 63.74%)</title>
+            <rect x="36.2625%" y="694" width="63.7375%" height="21" fill="rgb(255,130,130)" fg:x="5105744927" fg:w="8974194536"/>
+            <text x="36.5125%" y="707.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/baselib/hdf5.py:4..</text>
+        </g>
+        <g>
+            <title>                obj.__fromh5__(h5obj, h5attrs) (8,974,194,536 bytes, 63.74%)</title>
+            <rect x="36.2625%" y="716" width="63.7375%" height="21" fill="rgb(255,130,130)" fg:x="5105744927" fg:w="8974194536"/>
+            <text x="36.5125%" y="729.50">                obj.__fromh5__(h5obj, h5attrs)..</text>
+        </g>
+        <g>
+            <title>/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/source_reader.py:489 (__fromh5__) (8,974,194,536 bytes, 63.74%)</title>
+            <rect x="36.2625%" y="738" width="63.7375%" height="21" fill="rgb(255,130,130)" fg:x="5105744927" fg:w="8974194536"/>
+            <text x="36.5125%" y="751.50">/home/chrisbc/DEV/GNS/opensha-modular/GEM/oq-engine/openquake/commonlib/source_..</text>
+        </g>
+        <g>
+            <title>        other = pickle.loads(gzip.decompress(blob)) (8,974,194,536 bytes, 63.74%)</title>
+            <rect x="36.2625%" y="760" width="63.7375%" height="21" fill="rgb(255,130,130)" fg:x="5105744927" fg:w="8974194536"/>
+            <text x="36.5125%" y="773.50">        other = pickle.loads(gzip.decompress(blob))</text>
+        </g>
+        <g>
+            <title>&lt;string&gt;:1 (__new__) (6,879,168 bytes, 0.05%)</title>
+            <rect x="99.9511%" y="782" width="0.0489%" height="21" fill="rgb(255,246,246)" fg:x="14073060295" fg:w="6879168"/>
+            <text x="100.2011%" y="795.50"></text>
+        </g>
+        <g>
+            <title> (6,879,168 bytes, 0.05%)</title>
+            <rect x="99.9511%" y="804" width="0.0489%" height="21" fill="rgb(255,246,246)" fg:x="14073060295" fg:w="6879168"/>
+            <text x="100.2011%" y="817.50"></text>
+        </g>
+    </svg>
+</svg>

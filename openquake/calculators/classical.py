@@ -24,6 +24,8 @@ import logging
 import operator
 import numpy
 import pandas
+import psutil
+
 try:
     from PIL import Image
 except ImportError:
@@ -560,10 +562,28 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
-        nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
-              if name.startswith('rup_')}
-        if nr:  # few sites, log the number of ruptures per magnitude
-            logging.info('%s', nr)
+
+        def log_memory(id):
+            mem_now = psutil.Process().memory_info().rss / (1024*1024*1024)
+            logging.info(f'report resident memory @ {id}: {round(mem_now, 6)} GB')
+
+        def evil_memory_allocation():
+            """
+            log memory reports resident memory which is clearly observable, but doesn't look that bad.
+            fil-profile however shows the massive memory allocation that's attempted here ...
+            """
+            nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
+                  if name.startswith('rup_')}
+            if nr:  # few sites, log the number of ruptures per magnitude
+                logging.info('%s', nr)
+            log_memory('post_execute.2')
+
+        log_memory('post_execute.1')
+
+        I_WANNA_CHEW_MEMORY = True
+        if I_WANNA_CHEW_MEMORY:
+            evil_memory_allocation()
+
         if '_poes' in self.datastore:
             self.post_classical()
             logging.info('post_classical completed')
@@ -575,6 +595,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if 0 < tot < 1_000_000:
                 uniq = len(numpy.unique(rup_id[:]))
                 assert tot == uniq, (tot, uniq)
+        logging.info('end post_execute')
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -586,7 +607,7 @@ class ClassicalCalculator(base.HazardCalculator):
             individual_rlzs = oq.individual_rlzs
         logging.info(f'individual_rlzs: {individual_rlzs}')
         hstats = oq.hazard_stats()
-        logging.info(f'hstats complete')
+        logging.info(f'hstats 1 complete')
         # initialize datasets
         P = len(oq.poes)
         M = self.M = len(oq.imtls)
@@ -598,7 +619,7 @@ class ClassicalCalculator(base.HazardCalculator):
         L1 = self.L1 = L // M
         S = len(hstats)
 
-        logging.info(f'hstats complete')
+        logging.info(f'hstats 2 complete')
         if R > 1 and individual_rlzs or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_descr(
