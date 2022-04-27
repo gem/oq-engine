@@ -21,7 +21,6 @@ from unittest.mock import Mock
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import (
@@ -43,6 +42,14 @@ surfin_dt = numpy.dtype([
     ('lat', float),
     ('dep', float),
     ('dims', (float, 3)),
+])
+
+surfout_dt = numpy.dtype([
+    ('zero', float),
+    ('normal', float),
+    ('uv1', float),
+    ('uv2', float),
+    ('wld', float),
 ])
 
 
