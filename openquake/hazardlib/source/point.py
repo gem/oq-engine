@@ -267,6 +267,8 @@ class PointSource(ParametricSeismicSource):
                          if mr[0] == filtermag]
         else:
             mag_rates = self.get_annual_occurrence_rates()
+        if not mag_rates:
+            return
         mags, rates = zip(*mag_rates)
         for np_prob, np in self.nodal_plane_distribution.data:
             inp = self.get_input(mags, np)
@@ -277,7 +279,8 @@ class PointSource(ParametricSeismicSource):
                 if point_rup:
                     surfaces = numpy.zeros_like(mags)
                 else:
-                    surfaces = build_planar_surfaces(inp, hc, kwargs.get('shift_hypo'))
+                    surfaces = build_planar_surfaces(
+                        inp, hc, kwargs.get('shift_hypo'))
                 for (mag, rate, surface) in zip(mags, rates, surfaces):
                     occurrence_rate = rate * np_prob * hc_prob
                     if point_rup:
