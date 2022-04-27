@@ -467,20 +467,3 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
         else:  # there is a single source
             out.append(ps[idxs[0]])
     return {grp_id: out}
-
-
-# used in the tests
-def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
-                 nodal_plane_tup=(0, 90, 0), hc_tup=(0, 0, 20),
-                 occurrence_rate=1, tom=None):
-    hc = Point(*hc_tup)
-    np = NodalPlane(*nodal_plane_tup)
-    ps = object.__new__(PointSource)
-    ps.magnitude_scaling_relationship = msr
-    ps.upper_seismogenic_depth = seismo[0]
-    ps.lower_seismogenic_depth = seismo[1]
-    ps.rupture_aspect_ratio = aspect_ratio
-    [[surface]] = build_planar_surfaces(ps.get_surfin([mag], [np]), hc)
-    rup = ParametricProbabilisticRupture(
-        mag, np.rake, trt, surface.hc, surface, occurrence_rate, tom)
-    return rup
