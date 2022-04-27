@@ -31,7 +31,7 @@ import numpy
 import pandas
 from scipy.interpolate import interp1d
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, gen_slices, kmean)
+    AccumDict, DictArray, RecordBuilder, gen_slices, kmean, groupby)
 from openquake.baselib.performance import Monitor, split_array, compile, numba
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -702,9 +702,10 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
-    def _ruptures(self, src, filtermag=None, point_rup=False):
-        return src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag, point_rup=point_rup)
+    def _ruptures_by_mag(self, src, point_rup=False):
+        return groupby(src.iter_ruptures(
+            shift_hypo=self.shift_hypo, point_rup=point_rup),
+                       operator.attrgetter('mag'))
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
@@ -718,11 +719,13 @@ class ContextMaker(object):
             for r, s in self._cps_rups(src, sites):
                 yield from rups(r, s)
         else:  # just add the ruptures
-            yield from rups(self._ruptures(src), sites)
+            for values in self._ruptures_by_mag(src).values():
+                yield from rups(values, sites)
 
     def _cps_rups(self, src, sites, point_rup=False):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
+        rups = self._ruptures_by_mag(src, point_rup)
         for rup in src.iruptures(point_rup):
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
@@ -731,15 +734,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [rup], sites
                 else:  # something is close
-                    yield self._ruptures(src, rup.mag, point_rup), sites
+                    yield rups[rup.mag], sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [rup], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, rup.mag, point_rup), close
+                    yield rups[rup.mag], close
                 else:  # some sites are far, some are close
                     yield [rup], far
-                    yield self._ruptures(src, rup.mag, point_rup), close
+                    yield rups[rup.mag], close
 
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
@@ -1132,7 +1135,8 @@ class PmapMaker(object):
         for src, sites in self.srcfilter.filter(self.group):
             t0 = time.time()
             pm = ProbabilityMap(cm.imtls.size, len(cm.gsims))
-            ctxs = self._get_ctxs(cm._ruptures(src), sites, src.id)
+            rups = sum(cm._ruptures_by_mag(src).values(), [])
+            ctxs = self._get_ctxs(rups, sites, src.id)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
             if nsites:

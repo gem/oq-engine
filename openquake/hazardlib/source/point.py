@@ -260,16 +260,8 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        filtermag = kwargs.get('mag')
         point_rup = kwargs.get('point_rup')
-        if filtermag:
-            mag_rates = [mr for mr in self.get_annual_occurrence_rates()
-                         if mr[0] == filtermag]
-        else:
-            mag_rates = self.get_annual_occurrence_rates()
-        if not mag_rates:
-            return
-        mags, rates = zip(*mag_rates)
+        mags, rates = zip(*self.get_annual_occurrence_rates())
         for np_prob, np in self.nodal_plane_distribution.data:
             surfin = self.get_surfin(mags, np)
             for hc_prob, hc_depth in self.hypocenter_distribution.data:
