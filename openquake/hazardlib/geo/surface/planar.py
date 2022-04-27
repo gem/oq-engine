@@ -349,7 +349,6 @@ class PlanarSurface(BaseSurface):
         nsurf.dip = self.dip
         nsurf.strike = self.strike
         nsurf._init_plane()
-        nsurf.wld = self.wld
         return nsurf
 
     @property

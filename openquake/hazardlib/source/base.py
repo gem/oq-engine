@@ -41,7 +41,7 @@ def get_code2cls():
     return dic
 
 
-def _array_hc(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
+def _surfout_hc(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -102,7 +102,7 @@ def _array_hc(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
     array[2, 0:2] = cdep - half_height
     array[2, 2:4] = cdep + half_height
-    return array, numpy.array([clon, clat, cdep])
+    return build_surfout(array), numpy.array([clon, clat, cdep])
 
 
 def build_planar_surfaces(surfin, hypos, shift_hypo=False):
@@ -120,10 +120,9 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
     for (m, n, d), _ in numpy.ndenumerate(out):
         rec = surfin[m, n]
         hypo = hypos[d]
-        array, hc = _array_hc(rec.usd, rec.lsd, rec.mag, rec.dims,
-                              rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
-        surface = PlanarSurface.from_(
-            build_surfout(array), rec.strike, rec.dip)
+        surfout, hc = _surfout_hc(rec.usd, rec.lsd, rec.mag, rec.dims,
+                                  rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
+        surface = PlanarSurface.from_(surfout, rec.strike, rec.dip)
         surface.hc = Point(*hc) if shift_hypo else hypo
         out[m, n, d] = surface
     return out
