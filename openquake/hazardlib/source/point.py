@@ -125,22 +125,26 @@ def calc_average(pointsources):
     return dic
 
 
-def _rupture_by_mag(src, np, hc, point_rup):
-    # generate one rupture for each magnitude and one point rupture
-    # every 5 magnitudes
+def _iruptures(src, nplanes, hypos, point_rup):
     mag_rates = list(src.get_annual_occurrence_rates())
-    if point_rup:  # fast
+    if point_rup:  # fast, generate one point rupture every 5 magnitudes
         for mag, rate in mag_rates[::5]:
-            yield PointRupture(
-                mag, src.tectonic_region_type, hc,
-                0, np.rake, rate, src.temporal_occurrence_model)
+            for np in nplanes:
+                for hypo in hypos:
+                    yield PointRupture(
+                        mag, src.tectonic_region_type, hypo,
+                        0, np.rake, rate, src.temporal_occurrence_model)
     else:  # regular case
         mags, rates = zip(*mag_rates)
-        surfaces = build_planar_surfaces(src.get_surfin(mags, [np]), [hc])
-        for mag, rate, surface in zip(mags, rates, surfaces[:, 0, 0]):
-            yield ParametricProbabilisticRupture(
-                mag, np.rake, src.tectonic_region_type,
-                surface.hc, surface, rate, src.temporal_occurrence_model)
+        surfaces = build_planar_surfaces(src.get_surfin(mags, nplanes), hypos)
+        for m, mag in enumerate(mags):
+            for n, np in enumerate(nplanes):
+                for d, hypo in enumerate(hypos):
+                    surface = surfaces[m, n, d]
+                    yield ParametricProbabilisticRupture(
+                        mag, np.rake, src.tectonic_region_type,
+                        surface.hc, surface, rates[m],
+                        src.temporal_occurrence_model)
 
 
 class PointSource(ParametricSeismicSource):
@@ -310,8 +314,9 @@ class PointSource(ParametricSeismicSource):
         avg = calc_average([self])  # over nodal planes and hypocenters
         np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
-        yield from _rupture_by_mag(self, np, hc, point_rup)
+        yield from _iruptures(self, [np], [hc], point_rup)
 
+    # called in preclassical
     def few_ruptures(self):
         yield from self.iruptures(point_rup=True)
 
@@ -400,7 +405,8 @@ class CollapsedPointSource(PointSource):
         """
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
-        yield from _rupture_by_mag(self, self, self.location, point_rup)
+        np = NodalPlane(self.strike, self.dip, self.rake)
+        yield from _iruptures(self, [np], [self.location], point_rup)
 
     def few_ruptures(self):
         for i, src in enumerate(self.pointsources):
