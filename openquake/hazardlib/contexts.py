@@ -723,10 +723,10 @@ class ContextMaker(object):
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
 
-    def _cps_rups(self, src, sites, point_rup=False):
+    def _cps_rups(self, src, sites, fast=False):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        if point_rup:
+        if fast:  # in preclassical
             rups = src._pointruptures(step=5)
         else:
             rups = src.iruptures()
@@ -738,15 +738,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [rup], sites
                 else:  # something is close
-                    yield self._ruptures(src, rup.mag, point_rup), sites
+                    yield self._ruptures(src, rup.mag, fast), sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [rup], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, rup.mag, point_rup), close
+                    yield self._ruptures(src, rup.mag, fast), close
                 else:  # some sites are far, some are close
                     yield [rup], far
-                    yield self._ruptures(src, rup.mag, point_rup), close
+                    yield self._ruptures(src, rup.mag, fast), close
 
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
@@ -992,7 +992,7 @@ class ContextMaker(object):
         src.nsites = len(sites)
         if src.code in b'pP':
             allrups = []
-            for irups, r_sites in self._cps_rups(src, sites, point_rup=True):
+            for irups, r_sites in self._cps_rups(src, sites, fast=True):
                 for rup in irups:
                     rup.sites = r_sites
                     allrups.append(rup)
