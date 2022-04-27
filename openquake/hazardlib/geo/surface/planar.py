@@ -44,7 +44,8 @@ surfout_dt = numpy.dtype([
     ('normal', float),
     ('uv1', float),
     ('uv2', float),
-    ('wld', float)])
+    ('wld', float),
+    ('hypo', float)])
 
 
 def build_surfout(array, check=False):
