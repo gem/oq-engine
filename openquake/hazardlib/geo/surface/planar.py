@@ -48,20 +48,19 @@ surfout_dt = numpy.dtype([
     ('hypo', float)])
 
 
-def build_surfout(array, check=False):
+def build_surfout(array, hypo=None, check=False):
     """
     :returns: a surfout array of length 3
     """
     surfout = numpy.zeros(3, surfout_dt).view(numpy.recarray)
     surfout['corners'] = array
+    if isinstance(hypo, numpy.ndarray):
+        surfout['hypo'] = hypo
     tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(*array)
     surfout['xyz'] = xyz.T
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
     surfout['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
-    # ... and scalar "d" parameter from the plane equation (uses
-    # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-    d =  - n @ tl
     # these two 3d vectors together with a zero point represent surface's
     # coordinate space (the way to translate 3d Cartesian space with
     # a center in earth's center to 2d space centered in surface's top
@@ -79,12 +78,12 @@ def build_surfout(array, check=False):
     width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
     width = (width1 + width2) / 2.0
     length = (length1 + length2) / 2.0
-    surfout['wld'] = [width, length, d]
+    surfout['wld'] = [width, length, - n @ tl]
 
     if check:
         # calculate the imperfect rectangle tolerance
         # relative to surface's area
-        dists = xyz @ n + d
+        dists = (xyz - tl) @ n
         tolerance = width * length * IMPERFECT_RECTANGLE_TOLERANCE
         if numpy.abs(dists).max() > tolerance:
             logging.warning("corner points do not lie on the same plane")

@@ -101,8 +101,7 @@ def _surfout(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
     array[2, 0:2] = cdep - half_height
     array[2, 2:4] = cdep + half_height
-    out = build_surfout(array)
-    out['hypo'] = numpy.array([clon, clat, cdep])
+    out = build_surfout(array, numpy.array([clon, clat, cdep]))
     return out
 
 
