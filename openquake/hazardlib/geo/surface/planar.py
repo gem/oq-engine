@@ -58,37 +58,39 @@ def build_surfout(array, check=False):
     surfout['xyz'] = xyz.T
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
-    surfout['normal'] = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+    surfout['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
     # ... and scalar "d" parameter from the plane equation (uses
     # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-    surfout['wld'] = numpy.array([0., 0., - surfout['normal'] @ tl])
+    d =  - n @ tl
     # these two 3d vectors together with a zero point represent surface's
     # coordinate space (the way to translate 3d Cartesian space with
     # a center in earth's center to 2d space centered in surface's top
     # left corner with basis vectors directed to top right and bottom left
     # corners. see :meth:`_project`.
-    surfout['uv1'] = geo_utils.normalized(tr - tl)
-    surfout['uv2'] = numpy.cross(surfout['normal'], surfout['uv1'])
+    surfout['uv1'] = uv1 = geo_utils.normalized(tr - tl)
+    surfout['uv2'] = uv2 = numpy.cross(surfout['normal'], surfout['uv1'])
 
-    # now we can check surface for validity
-    dists, xx, yy = _project(surfout, xyz)
+    # translate projected points to surface coordinate space, shape (N, 3)
+    mat = xyz - tl
+    xx, yy = mat @ uv1, mat @ uv2
     # "length" of the rupture is measured along the top edge
     length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
     # "width" of the rupture is measured along downdip direction
     width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
     width = (width1 + width2) / 2.0
     length = (length1 + length2) / 2.0
-    surfout['wld'][:2] = [width, length]
+    surfout['wld'] = [width, length, d]
 
     if check:
         # calculate the imperfect rectangle tolerance
         # relative to surface's area
+        dists = xyz @ n + d
         tolerance = width * length * IMPERFECT_RECTANGLE_TOLERANCE
-        if numpy.max(numpy.abs(dists)) > tolerance:
+        if numpy.abs(dists).max() > tolerance:
             logging.warning("corner points do not lie on the same plane")
         if length2 < 0:
             raise ValueError("corners are in the wrong order")
-        if abs(length1 - length2) > tolerance:
+        if numpy.abs(length1 - length2).max() > tolerance:
             raise ValueError("top and bottom edges have different lengths")
     return surfout
 
@@ -108,8 +110,8 @@ def _project(self, points):
     # uses method from http://www.9math.com/book/projection-point-plane
     dists = points @ self.normal + self.wld[2]
     # translate projected points to surface coordinate space, shape (N, 3)
-    vectors2d = points - self.normal * dists[:, None] - self.xyz[:, 0]
-    return dists, vectors2d @ self.uv1, vectors2d @ self.uv2
+    mat = points - self.xyz[:, 0]
+    return dists, mat @ self.uv1, mat @ self.uv2
 
 
 class PlanarSurface(BaseSurface):
