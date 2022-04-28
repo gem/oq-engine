@@ -74,7 +74,7 @@ def build_surfout(array, hypo=(), check=False):
 
     # translate projected points to surface coordinate space, shape (N, 3)
     dists = xyz @ n + d
-    mat = xyz - n * dists[:, None] - tl
+    mat = xyz - tl
     xx, yy = mat @ uv1, mat @ uv2
 
     # "length" of the rupture is measured along the top edge
@@ -388,7 +388,7 @@ class PlanarSurface(BaseSurface):
         # uses method from http://www.9math.com/book/projection-point-plane
         dists = points @ self.normal + self.wld[2]
         # translate projected points to surface coordinate space, shape (N, 3)
-        mat = points - self.normal * dists[:, None] - self.xyz[:, 0]
+        mat = points - self.xyz[:, 0]
         return dists, mat @ self.uv1, mat @ self.uv2
 
     def _project_back(self, dists, xx, yy):
