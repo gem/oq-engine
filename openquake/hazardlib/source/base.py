@@ -51,7 +51,8 @@ def _surfout(surfin, clon, clat, cdepths):
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
     M, N, D = surfin.shape + (len(cdepths),)
-    out = numpy.zeros((M, N, D, 3), surfout_dt)
+    out = numpy.zeros((4, M, N, D, 3))
+    hypo = numpy.zeros((M, N, D, 3))
     for m in range(M):
         for n in range(N):
             rec = surfin[m, n]
@@ -61,7 +62,7 @@ def _surfout(surfin, clon, clat, cdepths):
             dip = rec.dip
             strike = rec.strike
             for d in range(D):
-                array = numpy.zeros((3, 4))
+                array = numpy.zeros((4, 3))
                 half_length, half_width, half_height = dims / 2.
                 rdip = math.radians(dip)
                 cdep = cdepths[d]
@@ -106,16 +107,17 @@ def _surfout(surfin, clon, clat, cdepths):
                     cdep += vshift
                 theta = math.degrees(math.atan(half_width / half_length))
                 hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-                azimuths = numpy.array([(strike + 180 + theta) % 360,
-                                        (strike - theta) % 360,
-                                        (strike + 180 - theta) % 360,
-                                        (strike + theta) % 360])
-                array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
-                array[2, 0:2] = cdep - half_height
-                array[2, 2:4] = cdep + half_height
-                hypo = numpy.array([clon, clat, cdep])
-                out[m, n, d] = build_surfout(array, hypo, check=False)
-    return out
+                azimuths = [(strike + 180 + theta) % 360,
+                            (strike - theta) % 360,
+                            (strike + 180 - theta) % 360,
+                            (strike + theta) % 360]
+                for i, az in enumerate(azimuths):
+                    array[i, :2] = geodetic.point_at(clon, clat, az, hor_dist)
+                array[0:2, 2] = cdep - half_height
+                array[2:4, 2] = cdep + half_height
+                out[:, m, n, d] = array
+                hypo[m, n, d] = numpy.array([clon, clat, cdep])
+    return build_surfout(out, hypo, check=False)
 
 
 def build_planar_surfaces(surfin, lon, lat, depths, shift_hypo=False):

@@ -48,22 +48,32 @@ surfout_dt = numpy.dtype([
     ('hypo', float)])
 
 
-def build_surfout(array, hypo=(), check=False):
+def dot(a, b):
+    return (a[..., 0] * b[..., 0] +
+            a[..., 1] * b[..., 1] +
+            a[..., 2] * b[..., 2])
+
+
+def build_surfout(array, hypo=None, check=False):
     """
-    :returns: a surfout array of length 3
+    :param array: array of shape (4, M, N, D, 3)
+    :returns: a surfout array of shape (M, N, D, 3)
     """
-    surfout = numpy.zeros(array.shape[:-1], surfout_dt).view(numpy.recarray)
-    surfout['corners'] = array
+    shape = array.shape[:-1]  # (3, M, N, D)
+    surfout = numpy.zeros(array.shape[1:], surfout_dt).view(numpy.recarray)
     if isinstance(hypo, numpy.ndarray):
         surfout['hypo'] = hypo
-    tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(*array)
-    surfout['xyz'] = xyz.T
+    tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(
+        array[..., 0], array[..., 1], array[..., 2])
+    for i, arr in enumerate(array):
+        surfout['corners'][..., i] = arr
+        surfout['xyz'][..., i] = xyz[i]
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
     surfout['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
     # ... and scalar "d" parameter from the plane equation (uses
     # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-    d = - n @ tl
+    d = - dot(n, tl)
     # these two 3d vectors together with a zero point represent surface's
     # coordinate space (the way to translate 3d Cartesian space with
     # a center in earth's center to 2d space centered in surface's top
@@ -73,9 +83,11 @@ def build_surfout(array, hypo=(), check=False):
     surfout['uv2'] = uv2 = numpy.cross(n, uv1)
 
     # translate projected points to surface coordinate space, shape (N, 3)
-    dists = xyz @ n + d
-    mat = xyz - tl
-    xx, yy = mat @ uv1, mat @ uv2
+    dists = dot(xyz, n) + d
+    xx, yy = numpy.zeros(shape), numpy.zeros(shape)
+    for i in range(4):
+        mat = xyz[i] - tl
+        xx[i], yy[i] = dot(mat, uv1), dot(mat, uv2)
 
     # "length" of the rupture is measured along the top edge
     length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
@@ -83,7 +95,10 @@ def build_surfout(array, hypo=(), check=False):
     width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
     width = (width1 + width2) / 2.0
     length = (length1 + length2) / 2.0
-    surfout['wld'] = [width, length, d]
+    wld = surfout['wld']
+    wld[..., 0] = width
+    wld[..., 1] = length
+    wld[..., 2] = d
 
     if check:
         # calculate the imperfect rectangle tolerance
@@ -172,7 +187,7 @@ class PlanarSurface(BaseSurface):
         ], [top_left.latitude, top_right.latitude,
             bottom_left.latitude, bottom_right.latitude], [
                 top_left.depth, top_right.depth,
-                bottom_left.depth, bottom_right.depth]])  # shape (3, 4)
+                bottom_left.depth, bottom_right.depth]]).T  # shape (4, 3)
         # now set the attributes normal, d, uv1, uv2, tl
         self._init_plane(check)
 
@@ -330,12 +345,13 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
-        lons, lats = [], []
-        for lon, lat in zip(self.corner_lons, self.corner_lats):
+        nsurf.corners = numpy.zeros((4, 3))
+        for i, (lon, lat) in enumerate(
+                zip(self.corner_lons, self.corner_lats)):
             lo, la = geodetic.point_at(lon, lat, azimuth, distance)
-            lons.append(lo)
-            lats.append(la)
-        nsurf.corners = numpy.array([lons, lats, self.corner_depths])
+            nsurf.corners[i, 0] = lo
+            nsurf.corners[i, 1] = la
+            nsurf.corners[i, 2] = self.corner_depths[i]
         nsurf.dip = self.dip
         nsurf.strike = self.strike
         nsurf._init_plane()
@@ -388,7 +404,7 @@ class PlanarSurface(BaseSurface):
         # uses method from http://www.9math.com/book/projection-point-plane
         dists = points @ self.normal + self.wld[2]
         # translate projected points to surface coordinate space, shape (N, 3)
-        mat = points - self.xyz[:, 0]
+        mat = points - self.normal * dists[:, None] - self.xyz[:, 0]
         return dists, mat @ self.uv1, mat @ self.uv2
 
     def _project_back(self, dists, xx, yy):
