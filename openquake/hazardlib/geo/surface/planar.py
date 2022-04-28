@@ -54,20 +54,20 @@ def dot(a, b):
             a[..., 2] * b[..., 2])
 
 
-def build_surfout(array5, check=False):
+def build_surfout(corners, hypo=None, check=False):
     """
-    :param array: array of shape (5, M, N, D, 3)
-    :returns: a surfout array of shape (M, N, D, 3)
+    :param corners: array of shape (4, M, N, D, 3)
+    :param hypo: None or array of shapee (M, N, D, 3)
     :returns: a surfout array of length (M, N, D)
     """
-    array = array5[:4]  # shape (4, M, N, D, 3)
-    shape = array.shape[:-1]  # (4, M, N, D)
-    surfout = numpy.zeros(array.shape[1:], surfout_dt).view(numpy.recarray)
-    surfout['hypo'] = array5[4]
+    shape = corners.shape[:-1]  # (4, M, N, D)
+    surfout = numpy.zeros(corners.shape[1:], surfout_dt).view(numpy.recarray)
+    if hypo is not None:
+        surfout['hypo'] = hypo
     tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(
-        array[..., 0], array[..., 1], array[..., 2])
-    for i, arr in enumerate(array):
-        surfout['corners'][..., i] = arr
+        corners[..., 0], corners[..., 1], corners[..., 2])
+    for i, corner in enumerate(corners):
+        surfout['corners'][..., i] = corner
         surfout['xyz'][..., i] = xyz[i]
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
@@ -208,7 +208,7 @@ class PlanarSurface(BaseSurface):
         ], [top_left.latitude, top_right.latitude,
             bottom_left.latitude, bottom_right.latitude], [
                 top_left.depth, top_right.depth,
-                bottom_left.depth, bottom_right.depth]])  # shape (3, 4)
+                bottom_left.depth, bottom_right.depth]]).T  # shape (4, 3)
         # now set the attributes normal, d, uv1, uv2, tl
         self._init_plane(check)
 
@@ -366,12 +366,13 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
-        lons, lats = [], []
-        for lon, lat in zip(self.corner_lons, self.corner_lats):
+        nsurf.corners = numpy.zeros((4, 3))
+        for i, (lon, lat) in enumerate(
+                zip(self.corner_lons, self.corner_lats)):
             lo, la = geodetic.point_at(lon, lat, azimuth, distance)
-            lons.append(lo)
-            lats.append(la)
-        nsurf.corners = numpy.array([lons, lats, self.corner_depths])
+            nsurf.corners[i, 0] = lo
+            nsurf.corners[i, 1] = la
+            nsurf.corners[i, 2] = self.corner_depths[i]
         nsurf.dip = self.dip
         nsurf.strike = self.strike
         nsurf._init_plane()

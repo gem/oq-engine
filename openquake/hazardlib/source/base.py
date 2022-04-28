@@ -40,7 +40,7 @@ def get_code2cls():
     return dic
 
 
-def _array35(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
+def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -50,7 +50,7 @@ def _array35(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # and the line passing through the rupture center and parallel to the
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
-    array = numpy.zeros((3, 5))
+    array = numpy.zeros((3, 4))
     half_length, half_width, half_height = dims / 2.
     rdip = math.radians(dip)
 
@@ -101,8 +101,7 @@ def _array35(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     array[:2, :4] = geodetic.point_at(clon, clat, azimuths, hor_dist)
     array[2, 0:2] = cdep - half_height
     array[2, 2:4] = cdep + half_height
-    array[:, 4] = [clon, clat, cdep]
-    return array
+    return array, [clon, clat, cdep]
 
 
 def build_planar_surfaces(surfin, hypos, shift_hypo=False):
@@ -119,18 +118,21 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
     out = numpy.zeros(surfin.shape + (len(hypos),), object)  # shape (M, N, D)
     M, N, D = out.shape
 
-    # populating array5 is fast enough
-    array5 = numpy.zeros((5, M, N, D, 3))
+    # populating the arrays is fast enough
+    corners = numpy.zeros((4, M, N, D, 3))
+    shifted_hypo = numpy.zeros((M, N, D, 3))
     for m in range(M):
         for n in range(N):
             rec = surfin[m, n]
             for d, hypo in enumerate(hypos):
-                array5[:, m, n, d] = _array35(
+                corn34, shypo = _build(
                     rec.usd, rec.lsd, rec.mag, rec.dims,
-                    rec.strike, rec.dip, hypo.x, hypo.y, hypo.z).T
+                    rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
+                corners[:, m, n, d] = corn34.T
+                shifted_hypo[m, n, d] = shypo
 
     # building surfout is slow
-    surfout = build_surfout(array5)
+    surfout = build_surfout(corners, shifted_hypo)
     for m in range(M):
         for n in range(N):
             rec = surfin[m, n]
@@ -138,7 +140,7 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
                 surface = PlanarSurface.from_(
                     surfout[m, n, d], rec.strike, rec.dip)
                 if shift_hypo:
-                    surface.hc = Point(*array5[4, m, n, d])
+                    surface.hc = Point(*shifted_hypo[m, n, d])
                 else:
                     surface.hc = hypos[d]
                 out[m, n, d] = surface
