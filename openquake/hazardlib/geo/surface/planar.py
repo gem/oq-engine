@@ -48,12 +48,14 @@ surfout_dt = numpy.dtype([
     ('hypo', float)])
 
 
-def build_surfout(array, check=False):
+def build_surfout(array, hypo=(), check=False):
     """
     :returns: a surfout array of length 3
     """
     surfout = numpy.zeros(3, surfout_dt).view(numpy.recarray)
     surfout['corners'] = array
+    if len(hypo):
+        surfout['hypo'] = hypo
     tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(*array)
     surfout['xyz'] = xyz.T
     # these two parameters define the plane that contains the surface
@@ -302,7 +304,7 @@ class PlanarSurface(BaseSurface):
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
         """
-        surfout = build_surfout(self.corners, check)
+        surfout = build_surfout(self.corners, check=check)
         for par in surfout.dtype.names:
             setattr(self, par, surfout[par])
 

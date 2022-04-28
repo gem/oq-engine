@@ -40,7 +40,7 @@ def get_code2cls():
     return dic
 
 
-def _surfout(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
+def _surfout(surfin, clon, clat, cdepths):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -50,59 +50,70 @@ def _surfout(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # and the line passing through the rupture center and parallel to the
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
-    array = numpy.zeros((3, 4))
-    half_length, half_width, half_height = dims / 2.
-    rdip = math.radians(dip)
+    M, N, D = surfin.shape + (len(cdepths),)
+    out = numpy.zeros((M, N, D, 3), surfout_dt)
+    for m in range(M):
+        for n in range(N):
+            rec = surfin[m, n]
+            usd = rec.usd
+            lsd = rec.lsd
+            dims = rec.dims
+            dip = rec.dip
+            strike = rec.strike
+            for d in range(D):
+                array = numpy.zeros((3, 4))
+                half_length, half_width, half_height = dims / 2.
+                rdip = math.radians(dip)
+                cdep = cdepths[d]
 
-    # precalculated azimuth values for horizontal-only and vertical-only
-    # moves from one point to another on the plane defined by strike
-    # and dip:
-    azimuth_right = strike
-    azimuth_down = (azimuth_right + 90) % 360
-    azimuth_left = (azimuth_down + 90) % 360
-    azimuth_up = (azimuth_left + 90) % 360
+                # precalculated azimuth values for horizontal-only and vertical-only
+                # moves from one point to another on the plane defined by strike
+                # and dip:
+                azimuth_right = strike
+                azimuth_down = (azimuth_right + 90) % 360
+                azimuth_left = (azimuth_down + 90) % 360
+                azimuth_up = (azimuth_left + 90) % 360
 
-    # half height of the vertical component of rupture width
-    # is the vertical distance between the rupture geometrical
-    # center and it's upper and lower borders:
-    # calculate how much shallower the upper border of the rupture
-    # is than the upper seismogenic depth:
-    vshift = usd - cdep + half_height
-    # if it is shallower (vshift > 0) than we need to move the rupture
-    # by that value vertically.
-    if vshift < 0:
-        # the top edge is below upper seismogenic depth. now we need
-        # to check that we do not cross the lower border.
-        vshift = lsd - cdep - half_height
-        if vshift > 0:
-            # the bottom edge of the rupture is above the lower seismo
-            # depth; that means that we don't need to move the rupture
-            # as it fits inside seismogenic layer.
-            vshift = 0
-        # if vshift < 0 than we need to move the rupture up.
+                # half height of the vertical component of rupture width
+                # is the vertical distance between the rupture geometrical
+                # center and it's upper and lower borders:
+                # calculate how much shallower the upper border of the rupture
+                # is than the upper seismogenic depth:
+                vshift = usd - cdep + half_height
+                # if it is shallower (vshift > 0) than we need to move the rupture
+                # by that value vertically.
+                if vshift < 0:
+                    # the top edge is below upper seismogenic depth. now we need
+                    # to check that we do not cross the lower border.
+                    vshift = lsd - cdep - half_height
+                    if vshift > 0:
+                        # the bottom edge of the rupture is above the lower seismo
+                        # depth; that means that we don't need to move the rupture
+                        # as it fits inside seismogenic layer.
+                        vshift = 0
+                    # if vshift < 0 than we need to move the rupture up.
 
-    # now we need to find the position of rupture's geometrical center.
-    # in any case the hypocenter point must lie on the surface, however
-    # the rupture center might be off (below or above) along the dip.
-    if vshift != 0:
-        # we need to move the rupture center to make the rupture fit
-        # inside the seismogenic layer.
-        hshift = abs(vshift / math.tan(rdip))
-        clon, clat = geodetic.point_at(
-            clon, clat, azimuth_up if vshift < 0 else azimuth_down,
-            hshift)
-        cdep += vshift
-    theta = math.degrees(math.atan(half_width / half_length))
-    hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    azimuths = numpy.array([(strike + 180 + theta) % 360,
-                            (strike - theta) % 360,
-                            (strike + 180 - theta) % 360,
-                            (strike + theta) % 360])
-    array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
-    array[2, 0:2] = cdep - half_height
-    array[2, 2:4] = cdep + half_height
-    out = build_surfout(array)
-    out['hypo'] = numpy.array([clon, clat, cdep])
+                # now we need to find the position of rupture's geometrical center.
+                # in any case the hypocenter point must lie on the surface, however
+                # the rupture center might be off (below or above) along the dip.
+                if vshift != 0:
+                    # we need to move the rupture center to make the rupture fit
+                    # inside the seismogenic layer.
+                    hshift = abs(vshift / math.tan(rdip))
+                    clon, clat = geodetic.point_at(
+                        clon, clat, azimuth_up if vshift < 0 else azimuth_down,
+                        hshift)
+                    cdep += vshift
+                theta = math.degrees(math.atan(half_width / half_length))
+                hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
+                azimuths = numpy.array([(strike + 180 + theta) % 360,
+                                        (strike - theta) % 360,
+                                        (strike + 180 - theta) % 360,
+                                        (strike + theta) % 360])
+                array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
+                array[2, 0:2] = cdep - half_height
+                array[2, 2:4] = cdep + half_height
+                out[m, n, d] = build_surfout(array, [clon, clat, cdep])
     return out
 
 
@@ -122,16 +133,17 @@ def build_planar_surfaces(surfin, lon, lat, depths, shift_hypo=False):
         an array of PlanarSurfaces of shape (M, N, D)
     """
     out = numpy.zeros(surfin.shape + (len(depths),), object)  # shape (M, N, D)
+    surfout = _surfout(surfin, lon, lat, depths)  # the expensive line
     M, N, D = out.shape
+    # the triple loop down here is really fast
     for m in range(M):
         for n in range(N):
+            rec = surfin[m, n]
             for d, dep in enumerate(depths):
-                rec = surfin[m, n]
-                surfout = _surfout(rec.usd, rec.lsd, rec.mag, rec.dims,
-                                   rec.strike, rec.dip, lon, lat, dep)
-                surface = PlanarSurface.from_(surfout, rec.strike, rec.dip)
+                surf = surfout[m, n, d]
+                surface = PlanarSurface.from_(surf, rec.strike, rec.dip)
                 if shift_hypo:
-                    surface.hc = Point(*surfout['hypo'])
+                    surface.hc = Point(*surf['hypo'])
                 else:
                     surface.hc = Point(lon, lat, dep)
                 out[m, n, d] = surface
