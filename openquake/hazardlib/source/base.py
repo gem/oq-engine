@@ -298,14 +298,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         for num_occ, args, rate in zip(occurs, rup_args, rates):
             if num_occ:
                 mag_occ_rate, np_prob, hc_prob, mag, np, hc_depth, src = args
-                hc = Point(latitude=src.location.latitude,
-                           longitude=src.location.longitude,
-                           depth=hc_depth)
+                lon, lat = src.location.x, src.location.y
                 [[[surface]]] = build_planar_surfaces(
-                    src.get_surfin([mag], [np]), [hc])
+                    src.get_surfin([mag], [np]), lon, lat, [hc_depth])
                 rup = ParametricProbabilisticRupture(
-                    mag, np.rake, src.tectonic_region_type, hc,
-                    surface, rate, tom)
+                    mag, np.rake, src.tectonic_region_type,
+                    surface.hc, surface, rate, tom)
                 yield rup, num_occ
 
     @abc.abstractmethod
