@@ -106,31 +106,34 @@ def _surfout(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     return out
 
 
-def build_planar_surfaces(surfin, hypos, shift_hypo=False):
+def build_planar_surfaces(surfin, lon, lat, depths, shift_hypo=False):
     """
     :param surfin:
         Surface input parameters as an array of shape (M, N)
-    :param hypos:
-        A list of hypocenters with different depths
+    :param lon:
+        Hypocenter longitude
+    :param lat:
+        Hypocenter latitude
+    :param depths:
+        An array of hypocentral depths
     :param shift_hypo:
         If true, change .hc to the shifted hypocenter
     :return:
         an array of PlanarSurfaces of shape (M, N, D)
     """
-    out = numpy.zeros(surfin.shape + (len(hypos),), object)  # shape (M, N, D)
-    hypo_arr = numpy.array([(h.x, h.y, h.z) for h in hypos])  # shape (D, 3)
+    out = numpy.zeros(surfin.shape + (len(depths),), object)  # shape (M, N, D)
     M, N, D = out.shape
     for m in range(M):
         for n in range(N):
-            for d in range(D):
+            for d, dep in enumerate(depths):
                 rec = surfin[m, n]
                 surfout = _surfout(rec.usd, rec.lsd, rec.mag, rec.dims,
-                                   rec.strike, rec.dip, *hypo_arr[d])
+                                   rec.strike, rec.dip, lon, lat, dep)
                 surface = PlanarSurface.from_(surfout, rec.strike, rec.dip)
                 if shift_hypo:
                     surface.hc = Point(*surfout['hypo'])
                 else:
-                    surface.hc = hypos[d]
+                    surface.hc = Point(lon, lat, dep)
                 out[m, n, d] = surface
     return out
 

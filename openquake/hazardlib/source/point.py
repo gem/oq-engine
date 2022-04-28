@@ -139,18 +139,18 @@ def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None, shift_hypo=False):
         np_probs = [1.]
     if not hypos:
         hc_probs, depths = zip(*src.hypocenter_distribution.data)
-        hypos = [Point(src.location.x, src.location.y, dep) for dep in depths]
     else:
-        hc_probs = [1.]
+        hc_probs, depths = [1.], [h.z for h in hypos]
     surfin = src.get_surfin(mags, nplanes)
-    surfaces = build_planar_surfaces(surfin, hypos, shift_hypo)
+    x, y = src.location.x, src.location.y
+    surfaces = build_planar_surfaces(surfin, x, y, depths, shift_hypo)
     for m, mag in enumerate(mags):
         for n, np in enumerate(nplanes):
-            for d, hypo in enumerate(hypos):
+            for d, hc_prob in enumerate(hc_probs):
                 surface = surfaces[m, n, d]
                 yield ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type,
-                    surface.hc, surface, rates[m] * np_probs[n] * hc_probs[d],
+                    surface.hc, surface, rates[m] * np_probs[n] * hc_prob,
                     src.temporal_occurrence_model)
 
 
