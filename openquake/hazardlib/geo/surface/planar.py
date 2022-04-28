@@ -104,11 +104,11 @@ def build_surfout(array, hypo=None, check=False):
         # calculate the imperfect rectangle tolerance
         # relative to surface's area
         tolerance = width * length * IMPERFECT_RECTANGLE_TOLERANCE
-        if numpy.max(numpy.abs(dists)) > tolerance:
+        if numpy.abs(dists).max() > tolerance:
             logging.warning("corner points do not lie on the same plane")
         if length2 < 0:
             raise ValueError("corners are in the wrong order")
-        if abs(length1 - length2) > tolerance:
+        if numpy.abs(length1 - length2).max() > tolerance:
             raise ValueError("top and bottom edges have different lengths")
     return surfout
 
