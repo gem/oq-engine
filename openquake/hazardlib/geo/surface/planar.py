@@ -310,16 +310,16 @@ class PlanarSurface(BaseSurface):
         :param array34: an array of shape (3, 4) in order tl, tr, bl, br
         :returns: a :class:`PlanarSurface` instance
         """
-        # NB: this different from the ucerf order below, bl<->br!
-        tl, tr, bl, br = [Point(*p) for p in array34.T]
-        strike = tl.azimuth(tr)
-        dip = numpy.degrees(
-            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
         # this is used in event based calculations
         # when the planar surface geometry comes from an array
         # in the datastore, which means it is correct and there is no need
         # to check it again; also the check would fail because of a bug,
         # https://github.com/gem/oq-engine/issues/3392
+        # NB: this different from the ucerf order below, bl<->br!
+        tl, tr, bl, br = [Point(*p) for p in array34.T]
+        strike = tl.azimuth(tr)
+        dip = numpy.degrees(
+            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
         return cls(strike, dip, tl, tr, br, bl, check=False)
 
     @classmethod
@@ -340,7 +340,7 @@ class PlanarSurface(BaseSurface):
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
         """
-        surfout = build_surfout(self.corners, check)
+        surfout = build_surfout(self.corners, check=check)
         for par in surfout.dtype.names:
             setattr(self, par, surfout[par])
 
