@@ -113,7 +113,8 @@ def _surfout(surfin, clon, clat, cdepths):
                 array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
                 array[2, 0:2] = cdep - half_height
                 array[2, 2:4] = cdep + half_height
-                out[m, n, d] = build_surfout(array, [clon, clat, cdep])
+                hypo = numpy.array([clon, clat, cdep])
+                out[m, n, d] = build_surfout(array, hypo, check=False)
     return out
 
 

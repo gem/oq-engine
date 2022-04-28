@@ -52,9 +52,9 @@ def build_surfout(array, hypo=(), check=False):
     """
     :returns: a surfout array of length 3
     """
-    surfout = numpy.zeros(3, surfout_dt).view(numpy.recarray)
+    surfout = numpy.zeros(array.shape[:-1], surfout_dt).view(numpy.recarray)
     surfout['corners'] = array
-    if len(hypo):
+    if isinstance(hypo, numpy.ndarray):
         surfout['hypo'] = hypo
     tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(*array)
     surfout['xyz'] = xyz.T
