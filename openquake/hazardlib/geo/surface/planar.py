@@ -38,7 +38,7 @@ from openquake.hazardlib.geo import utils as geo_utils
 # as a fraction of the surface's area.
 IMPERFECT_RECTANGLE_TOLERANCE = 0.002
 
-surfout_dt = numpy.dtype([
+planar_array_dt = numpy.dtype([
     ('corners', (float, 4)),
     ('xyz', (float, 4)),
     ('normal', float),
@@ -48,43 +48,63 @@ surfout_dt = numpy.dtype([
     ('hypo', float)])
 
 
-def build_surfout(array, check=False):
+def dot(a, b):
+    return (a[..., 0] * b[..., 0] +
+            a[..., 1] * b[..., 1] +
+            a[..., 2] * b[..., 2])
+
+
+def build_planar_array(corners, hypo=None, check=False):
     """
-    :returns: a surfout array of length 3
+    :param corners: array of shape (4, M, N, D, 3)
+    :param hypo: None or array of shapee (M, N, D, 3)
+    :returns: a planar_array array of length (M, N, D)
     """
-    surfout = numpy.zeros(3, surfout_dt).view(numpy.recarray)
-    surfout['corners'] = array
-    tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(*array)
-    surfout['xyz'] = xyz.T
+    shape = corners.shape[:-1]  # (4, M, N, D)
+    planar_array = numpy.zeros(corners.shape[1:], planar_array_dt).view(numpy.recarray)
+    if hypo is not None:
+        planar_array['hypo'] = hypo
+    tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(
+        corners[..., 0], corners[..., 1], corners[..., 2])
+    for i, corner in enumerate(corners):
+        planar_array['corners'][..., i] = corner
+        planar_array['xyz'][..., i] = xyz[i]
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
-    surfout['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+    planar_array['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
     # ... and scalar "d" parameter from the plane equation (uses
     # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-    d =  - n @ tl
+    d = - dot(n, tl)
     # these two 3d vectors together with a zero point represent surface's
     # coordinate space (the way to translate 3d Cartesian space with
     # a center in earth's center to 2d space centered in surface's top
     # left corner with basis vectors directed to top right and bottom left
     # corners. see :meth:`_project`.
-    surfout['uv1'] = uv1 = geo_utils.normalized(tr - tl)
-    surfout['uv2'] = uv2 = numpy.cross(surfout['normal'], surfout['uv1'])
+    planar_array['uv1'] = uv1 = geo_utils.normalized(tr - tl)
+    planar_array['uv2'] = uv2 = numpy.cross(n, uv1)
 
     # translate projected points to surface coordinate space, shape (N, 3)
-    mat = xyz - tl
-    xx, yy = mat @ uv1, mat @ uv2
+    dists = dot(xyz, n) + d
+    xx, yy = numpy.zeros(shape), numpy.zeros(shape)
+    for i in range(4):
+        mat = xyz[i] - tl
+        xx[i], yy[i] = dot(mat, uv1), dot(mat, uv2)
+
     # "length" of the rupture is measured along the top edge
     length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
     # "width" of the rupture is measured along downdip direction
     width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
     width = (width1 + width2) / 2.0
     length = (length1 + length2) / 2.0
-    surfout['wld'] = [width, length, d]
+    wld = planar_array['wld']
+    wld[..., 0] = width
+    wld[..., 1] = length
+    wld[..., 2] = d
 
     if check:
         # calculate the imperfect rectangle tolerance
         # relative to surface's area
-        dists = xyz @ n + d
+        dists = (xyz - tl) @ n
         tolerance = width * length * IMPERFECT_RECTANGLE_TOLERANCE
         if numpy.abs(dists).max() > tolerance:
             logging.warning("corner points do not lie on the same plane")
@@ -92,7 +112,7 @@ def build_surfout(array, check=False):
             raise ValueError("corners are in the wrong order")
         if numpy.abs(length1 - length2).max() > tolerance:
             raise ValueError("top and bottom edges have different lengths")
-    return surfout
+    return planar_array
 
 
 def _project(self, points):
@@ -188,7 +208,7 @@ class PlanarSurface(BaseSurface):
         ], [top_left.latitude, top_right.latitude,
             bottom_left.latitude, bottom_right.latitude], [
                 top_left.depth, top_right.depth,
-                bottom_left.depth, bottom_right.depth]])  # shape (3, 4)
+                bottom_left.depth, bottom_right.depth]]).T  # shape (4, 3)
         # now set the attributes normal, d, uv1, uv2, tl
         self._init_plane(check)
 
@@ -276,12 +296,12 @@ class PlanarSurface(BaseSurface):
         return cls(strike, dip, ptl, ptr, pbr, pbl)
 
     @classmethod
-    def from_(cls, surfout, strike, dip):
+    def from_(cls, planar_array, strike, dip):
         self = object.__new__(PlanarSurface)
         self.strike = strike
         self.dip = dip
-        for par in surfout.dtype.names:
-            setattr(self, par, surfout[par])
+        for par in planar_array.dtype.names:
+            setattr(self, par, planar_array[par])
         return self
 
     @classmethod
@@ -290,16 +310,16 @@ class PlanarSurface(BaseSurface):
         :param array34: an array of shape (3, 4) in order tl, tr, bl, br
         :returns: a :class:`PlanarSurface` instance
         """
-        # NB: this different from the ucerf order below, bl<->br!
-        tl, tr, bl, br = [Point(*p) for p in array34.T]
-        strike = tl.azimuth(tr)
-        dip = numpy.degrees(
-            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
         # this is used in event based calculations
         # when the planar surface geometry comes from an array
         # in the datastore, which means it is correct and there is no need
         # to check it again; also the check would fail because of a bug,
         # https://github.com/gem/oq-engine/issues/3392
+        # NB: this different from the ucerf order below, bl<->br!
+        tl, tr, bl, br = [Point(*p) for p in array34.T]
+        strike = tl.azimuth(tr)
+        dip = numpy.degrees(
+            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
         return cls(strike, dip, tl, tr, br, bl, check=False)
 
     @classmethod
@@ -320,9 +340,9 @@ class PlanarSurface(BaseSurface):
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
         """
-        surfout = build_surfout(self.corners, check)
-        for par in surfout.dtype.names:
-            setattr(self, par, surfout[par])
+        planar_array = build_planar_array(self.corners, check=check)
+        for par in planar_array.dtype.names:
+            setattr(self, par, planar_array[par])
 
     def translate(self, p1, p2):
         """
@@ -346,12 +366,13 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
-        lons, lats = [], []
-        for lon, lat in zip(self.corner_lons, self.corner_lats):
+        nsurf.corners = numpy.zeros((4, 3))
+        for i, (lon, lat) in enumerate(
+                zip(self.corner_lons, self.corner_lats)):
             lo, la = geodetic.point_at(lon, lat, azimuth, distance)
-            lons.append(lo)
-            lats.append(la)
-        nsurf.corners = numpy.array([lons, lats, self.corner_depths])
+            nsurf.corners[i, 0] = lo
+            nsurf.corners[i, 1] = la
+            nsurf.corners[i, 2] = self.corner_depths[i]
         nsurf.dip = self.dip
         nsurf.strike = self.strike
         nsurf._init_plane()

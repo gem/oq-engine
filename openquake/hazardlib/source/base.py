@@ -25,7 +25,7 @@ from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, build_surfout, surfout_dt)
+    PlanarSurface, build_planar_array)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
@@ -40,7 +40,7 @@ def get_code2cls():
     return dic
 
 
-def _surfout(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
+def _build(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -98,36 +98,10 @@ def _surfout(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
                             (strike - theta) % 360,
                             (strike + 180 - theta) % 360,
                             (strike + theta) % 360])
-    array[:2] = geodetic.point_at(clon, clat, azimuths, hor_dist)
+    array[:2, :4] = geodetic.point_at(clon, clat, azimuths, hor_dist)
     array[2, 0:2] = cdep - half_height
     array[2, 2:4] = cdep + half_height
-    out = build_surfout(array)
-    out['hypo'] = numpy.array([clon, clat, cdep])
-    return out
-
-
-def build_planar_array(surfin, hypos, shift_hypo=False):
-    """
-    :param surfin:
-        Surface input parameters as an array of shape (M, N)
-    :param hypos:
-        A list of hypocenters with different depths
-    :param shift_hypo:
-        If true, change .hc to the shifted hypocenter
-    :return:
-        a surfout array of shape (M, N, D)
-    """
-    out = numpy.zeros(surfin.shape + (len(hypos), 3), surfout_dt)  # MND3
-    M, N, D = out.shape[:-1]
-    for m in range(M):
-        for n in range(N):
-            rec = surfin[m, n]
-            for d in range(D):
-                hypo = hypos[d]
-                out[m, n, d] = _surfout(rec.usd, rec.lsd, rec.mag, rec.dims,
-                                        rec.strike, rec.dip,
-                                        hypo.x, hypo.y, hypo.z)
-    return out
+    return array, [clon, clat, cdep]
 
 
 def build_planar_surfaces(surfin, hypos, shift_hypo=False):
@@ -142,16 +116,31 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
         an array of PlanarSurfaces of shape (M, N, D)
     """
     out = numpy.zeros(surfin.shape + (len(hypos),), object)  # shape (M, N, D)
-    surfout = build_planar_array(surfin, hypos, shift_hypo)
-    M, N, D = surfout.shape[:-1]
+    M, N, D = out.shape
+
+    # populating the arrays is fast enough
+    corners = numpy.zeros((4, M, N, D, 3))
+    shifted_hypo = numpy.zeros((M, N, D, 3))
     for m in range(M):
         for n in range(N):
+            rec = surfin[m, n]
+            for d, hypo in enumerate(hypos):
+                corn34, shypo = _build(
+                    rec.usd, rec.lsd, rec.mag, rec.dims,
+                    rec.strike, rec.dip, hypo.x, hypo.y, hypo.z)
+                corners[:, m, n, d] = corn34.T
+                shifted_hypo[m, n, d] = shypo
+
+    # building planar_array is slow
+    planar_array = build_planar_array(corners, shifted_hypo)
+    for m in range(M):
+        for n in range(N):
+            rec = surfin[m, n]
             for d in range(D):
-                rec = surfin[m, n]
                 surface = PlanarSurface.from_(
-                    surfout[m, n, d], rec.strike, rec.dip)
+                    planar_array[m, n, d], rec.strike, rec.dip)
                 if shift_hypo:
-                    surface.hc = Point(*surfout[m, n, d]['hypo'])
+                    surface.hc = Point(*shifted_hypo[m, n, d])
                 else:
                     surface.hc = hypos[d]
                 out[m, n, d] = surface
