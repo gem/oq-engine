@@ -106,28 +106,6 @@ def _surfout(usd, lsd, mag, dims, strike, dip, clon, clat, cdep):
     return out
 
 
-def build_planar_array(surfin, hypos, shift_hypo):
-    """
-    :param surfin:
-        Surface input parameters as an array of shape (M, N)
-    :param hypos:
-        Array of hypocenters with shape (D, 3)
-    :param shift_hypo:
-        If true, change .hc to the shifted hypocenter
-    :return:
-        a surfout array of shape (M, N, D)
-    """
-    out = numpy.zeros(surfin.shape + (len(hypos), 3), surfout_dt)  # MND3
-    M, N, D = out.shape[:-1]
-    for m in range(M):
-        for n in range(N):
-            rec = surfin[m, n]
-            for d in range(D):
-                out[m, n, d] = _surfout(rec.usd, rec.lsd, rec.mag, rec.dims,
-                                        rec.strike, rec.dip, *hypos[d])
-    return out
-
-
 def build_planar_surfaces(surfin, hypos, shift_hypo=False):
     """
     :param surfin:
@@ -141,16 +119,16 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
     """
     out = numpy.zeros(surfin.shape + (len(hypos),), object)  # shape (M, N, D)
     hypo_arr = numpy.array([(h.x, h.y, h.z) for h in hypos])  # shape (D, 3)
-    surfout = build_planar_array(surfin, hypo_arr, shift_hypo)
-    M, N, D = surfout.shape[:-1]
+    M, N, D = out.shape
     for m in range(M):
         for n in range(N):
             for d in range(D):
                 rec = surfin[m, n]
-                surface = PlanarSurface.from_(
-                    surfout[m, n, d], rec.strike, rec.dip)
+                surfout = _surfout(rec.usd, rec.lsd, rec.mag, rec.dims,
+                                   rec.strike, rec.dip, *hypo_arr[d])
+                surface = PlanarSurface.from_(surfout, rec.strike, rec.dip)
                 if shift_hypo:
-                    surface.hc = Point(*surfout[m, n, d]['hypo'])
+                    surface.hc = Point(*surfout['hypo'])
                 else:
                     surface.hc = hypos[d]
                 out[m, n, d] = surface
