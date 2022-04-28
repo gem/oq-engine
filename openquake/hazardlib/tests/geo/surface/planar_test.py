@@ -19,7 +19,7 @@ import numpy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.surface.planar import PlanarSurface, _project
+from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tests.geo.surface import _planar_test_data as tdata
 from openquake.hazardlib.scalerel import WC1994
 
@@ -183,7 +183,7 @@ class PlanarSurfaceProjectTestCase(unittest.TestCase):
         xyz = numpy.array([[60, -10, -10], [59, 0, 0], [70, -11, -10]])
         plons, plats, pdepths = geo_utils.cartesian_to_spherical(xyz)
 
-        dists, xx, yy = _project(surface, xyz)
+        dists, xx, yy = surface._project(xyz)
         aaae(xx, [0, 10, 0])
         aaae(yy, [0, 10, -1])
         aaae(dists, [0, 1, -10])
@@ -201,7 +201,7 @@ class PlanarSurfaceProjectTestCase(unittest.TestCase):
         plons, plats, pdepths = [[4., 4.3, 3.1], [1.5, 1.7, 3.5],
                                  [11., 12., 13.]]
         xyz = geo_utils.spherical_to_cartesian(plons, plats, pdepths)
-        dists, xx, yy = _project(surface, xyz)
+        dists, xx, yy = surface._project(xyz)
         lons, lats, depths = surface._project_back(dists, xx, yy)
         aaae = numpy.testing.assert_array_almost_equal
         aaae(lons, plons)

@@ -58,27 +58,30 @@ def build_surfout(array, check=False):
     surfout['xyz'] = xyz.T
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
-    surfout['normal'] = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+    surfout['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
     # ... and scalar "d" parameter from the plane equation (uses
     # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-    surfout['wld'] = numpy.array([0., 0., - surfout['normal'] @ tl])
+    d = - n @ tl
     # these two 3d vectors together with a zero point represent surface's
     # coordinate space (the way to translate 3d Cartesian space with
     # a center in earth's center to 2d space centered in surface's top
     # left corner with basis vectors directed to top right and bottom left
     # corners. see :meth:`_project`.
-    surfout['uv1'] = geo_utils.normalized(tr - tl)
-    surfout['uv2'] = numpy.cross(surfout['normal'], surfout['uv1'])
+    surfout['uv1'] = uv1 = geo_utils.normalized(tr - tl)
+    surfout['uv2'] = uv2 = numpy.cross(n, uv1)
 
-    # now we can check surface for validity
-    dists, xx, yy = _project(surfout, xyz)
+    # translate projected points to surface coordinate space, shape (N, 3)
+    dists = xyz @ n + d
+    mat = xyz - n * dists[:, None] - tl
+    xx, yy = mat @ uv1, mat @ uv2
+
     # "length" of the rupture is measured along the top edge
     length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
     # "width" of the rupture is measured along downdip direction
     width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
     width = (width1 + width2) / 2.0
     length = (length1 + length2) / 2.0
-    surfout['wld'][:2] = [width, length]
+    surfout['wld'] = [width, length, d]
 
     if check:
         # calculate the imperfect rectangle tolerance
@@ -91,25 +94,6 @@ def build_surfout(array, check=False):
         if abs(length1 - length2) > tolerance:
             raise ValueError("top and bottom edges have different lengths")
     return surfout
-
-
-def _project(self, points):
-    """
-    Project points (as an array of shape (N, 3)) to a surface's plane.
-
-    Parameters are lists or numpy arrays of coordinates of points
-    to project.
-
-    :returns:
-        A tuple of three arrays: distances between original points
-        and surface's plane in km, "x" and "y" coordinates of points'
-        projections to the plane (in a surface's coordinate space).
-    """
-    # uses method from http://www.9math.com/book/projection-point-plane
-    dists = points @ self.normal + self.wld[2]
-    # translate projected points to surface coordinate space, shape (N, 3)
-    vectors2d = points - self.normal * dists[:, None] - self.xyz[:, 0]
-    return dists, vectors2d @ self.uv1, vectors2d @ self.uv2
 
 
 class PlanarSurface(BaseSurface):
@@ -387,6 +371,24 @@ class PlanarSurface(BaseSurface):
         """
         return self.dip
 
+    def _project(self, points):
+        """
+        Project points (as an array of shape (N, 3)) to a surface's plane.
+
+        Parameters are lists or numpy arrays of coordinates of points
+        to project.
+
+        :returns:
+            A tuple of three arrays: distances between original points
+            and surface's plane in km, "x" and "y" coordinates of points'
+            projections to the plane (in a surface's coordinate space).
+        """
+        # uses method from http://www.9math.com/book/projection-point-plane
+        dists = points @ self.normal + self.wld[2]
+        # translate projected points to surface coordinate space, shape (N, 3)
+        mat = points - self.normal * dists[:, None] - self.xyz[:, 0]
+        return dists, mat @ self.uv1, mat @ self.uv2
+
     def _project_back(self, dists, xx, yy):
         """
         Convert coordinates in plane's Cartesian space back to spherical
@@ -417,7 +419,7 @@ class PlanarSurface(BaseSurface):
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
         # plane.
-        dists, xx, yy = _project(self, mesh.xyz)
+        dists, xx, yy = self._project(mesh.xyz)
         # the actual resulting distance is a square root of squares
         # of a distance from a point to a plane that contains the surface
         # and a distance from a projection of that point on that plane
@@ -494,7 +496,7 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        dists, xx, yy = _project(self, mesh.xyz)
+        dists, xx, yy = self._project(mesh.xyz)
         mxx = xx.clip(0, self.wld[1])
         myy = yy.clip(0, self.wld[0])
         dists.fill(0)
