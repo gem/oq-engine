@@ -38,7 +38,7 @@ from openquake.hazardlib.geo import utils as geo_utils
 # as a fraction of the surface's area.
 IMPERFECT_RECTANGLE_TOLERANCE = 0.002
 
-surfout_dt = numpy.dtype([
+planar_array_dt = numpy.dtype([
     ('corners', (float, 4)),
     ('xyz', (float, 4)),
     ('normal', float),
@@ -54,24 +54,24 @@ def dot(a, b):
             a[..., 2] * b[..., 2])
 
 
-def build_surfout(corners, hypo=None, check=False):
+def build_planar_array(corners, hypo=None, check=False):
     """
     :param corners: array of shape (4, M, N, D, 3)
     :param hypo: None or array of shapee (M, N, D, 3)
-    :returns: a surfout array of length (M, N, D)
+    :returns: a planar_array array of length (M, N, D)
     """
     shape = corners.shape[:-1]  # (4, M, N, D)
-    surfout = numpy.zeros(corners.shape[1:], surfout_dt).view(numpy.recarray)
+    planar_array = numpy.zeros(corners.shape[1:], planar_array_dt).view(numpy.recarray)
     if hypo is not None:
-        surfout['hypo'] = hypo
+        planar_array['hypo'] = hypo
     tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(
         corners[..., 0], corners[..., 1], corners[..., 2])
     for i, corner in enumerate(corners):
-        surfout['corners'][..., i] = corner
-        surfout['xyz'][..., i] = xyz[i]
+        planar_array['corners'][..., i] = corner
+        planar_array['xyz'][..., i] = xyz[i]
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
-    surfout['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+    planar_array['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
     # ... and scalar "d" parameter from the plane equation (uses
     # an equation (3) from http://mathworld.wolfram.com/Plane.html)
     d = - dot(n, tl)
@@ -80,8 +80,8 @@ def build_surfout(corners, hypo=None, check=False):
     # a center in earth's center to 2d space centered in surface's top
     # left corner with basis vectors directed to top right and bottom left
     # corners. see :meth:`_project`.
-    surfout['uv1'] = uv1 = geo_utils.normalized(tr - tl)
-    surfout['uv2'] = uv2 = numpy.cross(n, uv1)
+    planar_array['uv1'] = uv1 = geo_utils.normalized(tr - tl)
+    planar_array['uv2'] = uv2 = numpy.cross(n, uv1)
 
     # translate projected points to surface coordinate space, shape (N, 3)
     dists = dot(xyz, n) + d
@@ -96,7 +96,7 @@ def build_surfout(corners, hypo=None, check=False):
     width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
     width = (width1 + width2) / 2.0
     length = (length1 + length2) / 2.0
-    wld = surfout['wld']
+    wld = planar_array['wld']
     wld[..., 0] = width
     wld[..., 1] = length
     wld[..., 2] = d
@@ -112,7 +112,7 @@ def build_surfout(corners, hypo=None, check=False):
             raise ValueError("corners are in the wrong order")
         if numpy.abs(length1 - length2).max() > tolerance:
             raise ValueError("top and bottom edges have different lengths")
-    return surfout
+    return planar_array
 
 
 def _project(self, points):
@@ -296,12 +296,12 @@ class PlanarSurface(BaseSurface):
         return cls(strike, dip, ptl, ptr, pbr, pbl)
 
     @classmethod
-    def from_(cls, surfout, strike, dip):
+    def from_(cls, planar_array, strike, dip):
         self = object.__new__(PlanarSurface)
         self.strike = strike
         self.dip = dip
-        for par in surfout.dtype.names:
-            setattr(self, par, surfout[par])
+        for par in planar_array.dtype.names:
+            setattr(self, par, planar_array[par])
         return self
 
     @classmethod
@@ -340,9 +340,9 @@ class PlanarSurface(BaseSurface):
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
         """
-        surfout = build_surfout(self.corners, check=check)
-        for par in surfout.dtype.names:
-            setattr(self, par, surfout[par])
+        planar_array = build_planar_array(self.corners, check=check)
+        for par in planar_array.dtype.names:
+            setattr(self, par, planar_array[par])
 
     def translate(self, p1, p2):
         """

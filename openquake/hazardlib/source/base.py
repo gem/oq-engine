@@ -25,7 +25,7 @@ from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import (
-    PlanarSurface, build_surfout)
+    PlanarSurface, build_planar_array)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
@@ -131,14 +131,14 @@ def build_planar_surfaces(surfin, hypos, shift_hypo=False):
                 corners[:, m, n, d] = corn34.T
                 shifted_hypo[m, n, d] = shypo
 
-    # building surfout is slow
-    surfout = build_surfout(corners, shifted_hypo)
+    # building planar_array is slow
+    planar_array = build_planar_array(corners, shifted_hypo)
     for m in range(M):
         for n in range(N):
             rec = surfin[m, n]
             for d in range(D):
                 surface = PlanarSurface.from_(
-                    surfout[m, n, d], rec.strike, rec.dip)
+                    planar_array[m, n, d], rec.strike, rec.dip)
                 if shift_hypo:
                     surface.hc = Point(*shifted_hypo[m, n, d])
                 else:
