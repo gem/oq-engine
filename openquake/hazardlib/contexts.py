@@ -76,7 +76,7 @@ def update_pmap_n(dic, poes, rates, probs_occur, sids, itime):
 
 # numbified below
 def update_pmap_c(dic, poes, rates, probs_occur, allsids, sizes, itime):
-    start = 0 
+    start = 0
     for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
         pne = get_pnes(rate, probs, poe, itime)
         for sid in allsids[start:start + size]:
@@ -434,6 +434,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
+        self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
 
@@ -703,8 +704,10 @@ class ContextMaker(object):
         return gmv
 
     def _ruptures(self, src, filtermag=None, point_rup=False):
-        return src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag, point_rup=point_rup)
+        with self.ir_mon:
+            return list(src.iter_ruptures(
+                shift_hypo=self.shift_hypo,
+                mag=filtermag, point_rup=point_rup))
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
@@ -720,10 +723,14 @@ class ContextMaker(object):
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
 
-    def _cps_rups(self, src, sites, point_rup=False):
+    def _cps_rups(self, src, sites, fast=False):
         fewsites = len(sites) <= self.max_sites_disagg
         cdist = sites.get_cdist(src.location)
-        for rup in src.iruptures(point_rup):
+        if fast:  # in preclassical
+            rups = src._pointruptures(step=5)
+        else:
+            rups = src.iruptures()
+        for rup in rups:
             psdist = self.pointsource_distance + src.get_radius(rup)
             close = sites.filter(cdist <= psdist)
             far = sites.filter(cdist > psdist)
@@ -731,15 +738,15 @@ class ContextMaker(object):
                 if close is None:  # all is far, common for small mag
                     yield [rup], sites
                 else:  # something is close
-                    yield self._ruptures(src, rup.mag, point_rup), sites
+                    yield self._ruptures(src, rup.mag, fast), sites
             else:  # many sites
                 if close is None:  # all is far
                     yield [rup], far
                 elif far is None:  # all is close
-                    yield self._ruptures(src, rup.mag, point_rup), close
+                    yield self._ruptures(src, rup.mag, fast), close
                 else:  # some sites are far, some are close
                     yield [rup], far
-                    yield self._ruptures(src, rup.mag, point_rup), close
+                    yield self._ruptures(src, rup.mag, fast), close
 
     # not used by the engine, is is meant for notebooks
     def get_poes(self, srcs, sitecol, collapse_level=-1):
@@ -985,7 +992,7 @@ class ContextMaker(object):
         src.nsites = len(sites)
         if src.code in b'pP':
             allrups = []
-            for irups, r_sites in self._cps_rups(src, sites, point_rup=True):
+            for irups, r_sites in self._cps_rups(src, sites, fast=True):
                 for rup in irups:
                     rup.sites = r_sites
                     allrups.append(rup)
@@ -1101,6 +1108,7 @@ class PmapMaker(object):
                 else self.srcfilter.split)
         cm = self.cmaker
         allctxs = []
+        totlen = 0
         for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
@@ -1109,7 +1117,8 @@ class PmapMaker(object):
             allctxs.extend(ctxs)
             nctxs = len(ctxs)
             nsites = sum(len(ctx) for ctx in ctxs)
-            if nsites and sum(len(ctx) for ctx in allctxs) > MAXSIZE:
+            totlen += nsites
+            if nsites and totlen > MAXSIZE:
                 cm.get_pmap(allctxs, pmap)
                 allctxs.clear()
             dt = time.time() - t0

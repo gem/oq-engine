@@ -31,6 +31,108 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
 
+# Maximum difference in surface's rectangle side lengths, maximum offset
+# of a bottom right corner from a plane that contains other corners,
+# as well as maximum offset of a bottom left corner from a line drawn
+# downdip perpendicular to top edge from top left corner, expressed
+# as a fraction of the surface's area.
+IMPERFECT_RECTANGLE_TOLERANCE = 0.002
+
+planar_array_dt = numpy.dtype([
+    ('corners', (float, 4)),
+    ('xyz', (float, 4)),
+    ('normal', float),
+    ('uv1', float),
+    ('uv2', float),
+    ('wld', float),
+    ('hypo', float)])
+
+
+def dot(a, b):
+    return (a[..., 0] * b[..., 0] +
+            a[..., 1] * b[..., 1] +
+            a[..., 2] * b[..., 2])
+
+
+def build_planar_array(corners, hypo=None, check=False):
+    """
+    :param corners: array of shape (4, M, N, D, 3)
+    :param hypo: None or array of shapee (M, N, D, 3)
+    :returns: a planar_array array of length (M, N, D)
+    """
+    shape = corners.shape[:-1]  # (4, M, N, D)
+    planar_array = numpy.zeros(corners.shape[1:], planar_array_dt).view(numpy.recarray)
+    if hypo is not None:
+        planar_array['hypo'] = hypo
+    tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(
+        corners[..., 0], corners[..., 1], corners[..., 2])
+    for i, corner in enumerate(corners):
+        planar_array['corners'][..., i] = corner
+        planar_array['xyz'][..., i] = xyz[i]
+    # these two parameters define the plane that contains the surface
+    # (in 3d Cartesian space): a normal unit vector,
+    planar_array['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+    # ... and scalar "d" parameter from the plane equation (uses
+    # an equation (3) from http://mathworld.wolfram.com/Plane.html)
+    d = - dot(n, tl)
+    # these two 3d vectors together with a zero point represent surface's
+    # coordinate space (the way to translate 3d Cartesian space with
+    # a center in earth's center to 2d space centered in surface's top
+    # left corner with basis vectors directed to top right and bottom left
+    # corners. see :meth:`_project`.
+    planar_array['uv1'] = uv1 = geo_utils.normalized(tr - tl)
+    planar_array['uv2'] = uv2 = numpy.cross(n, uv1)
+
+    # translate projected points to surface coordinate space, shape (N, 3)
+    dists = dot(xyz, n) + d
+    xx, yy = numpy.zeros(shape), numpy.zeros(shape)
+    for i in range(4):
+        mat = xyz[i] - tl
+        xx[i], yy[i] = dot(mat, uv1), dot(mat, uv2)
+
+    # "length" of the rupture is measured along the top edge
+    length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
+    # "width" of the rupture is measured along downdip direction
+    width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
+    width = (width1 + width2) / 2.0
+    length = (length1 + length2) / 2.0
+    wld = planar_array['wld']
+    wld[..., 0] = width
+    wld[..., 1] = length
+    wld[..., 2] = d
+
+    if check:
+        # calculate the imperfect rectangle tolerance
+        # relative to surface's area
+        dists = (xyz - tl) @ n
+        tolerance = width * length * IMPERFECT_RECTANGLE_TOLERANCE
+        if numpy.abs(dists).max() > tolerance:
+            logging.warning("corner points do not lie on the same plane")
+        if length2 < 0:
+            raise ValueError("corners are in the wrong order")
+        if numpy.abs(length1 - length2).max() > tolerance:
+            raise ValueError("top and bottom edges have different lengths")
+    return planar_array
+
+
+def _project(self, points):
+    """
+    Project points (as an array of shape (N, 3)) to a surface's plane.
+
+    Parameters are lists or numpy arrays of coordinates of points
+    to project.
+
+    :returns:
+        A tuple of three arrays: distances between original points
+        and surface's plane in km, "x" and "y" coordinates of points'
+        projections to the plane (in a surface's coordinate space).
+    """
+    # uses method from http://www.9math.com/book/projection-point-plane
+    dists = points @ self.normal + self.wld[2]
+    # translate projected points to surface coordinate space, shape (N, 3)
+    mat = points - self.xyz[:, 0]
+    return dists, mat @ self.uv1, mat @ self.uv2
+
 
 class PlanarSurface(BaseSurface):
     """
@@ -58,13 +160,6 @@ class PlanarSurface(BaseSurface):
         is not parallel to the bottom edge, if top edge differs in length
         from the bottom one, or if mesh spacing is not positive.
     """
-    #: Maximum difference in surface's rectangle side lengths, maximum offset
-    #: of a bottom right corner from a plane that contains other corners,
-    #: as well as maximum offset of a bottom left corner from a line drawn
-    #: downdip perpendicular to top edge from top left corner, expressed
-    #: as a fraction of the surface's area.
-    IMPERFECT_RECTANGLE_TOLERANCE = 0.002
-
     @property
     def surface_nodes(self):
         """
@@ -82,7 +177,19 @@ class PlanarSurface(BaseSurface):
         """
         :returns: a mesh with the 4 corner points tl, tr, bl, br
         """
-        return Mesh(self.corner_lons, self.corner_lats, self.corner_depths)
+        return Mesh(*self.corners)
+
+    @property
+    def corner_lons(self):
+        return self.corners[0]
+
+    @property
+    def corner_lats(self):
+        return self.corners[1]
+
+    @property
+    def corner_depths(self):
+        return self.corners[2]
 
     def __init__(self, strike, dip,
                  top_left, top_right, bottom_right, bottom_left, check=True):
@@ -95,42 +202,15 @@ class PlanarSurface(BaseSurface):
             NodalPlane.check_strike(strike)
         self.dip = dip
         self.strike = strike
-
-        self.corner_lons = numpy.array([
+        self.corners = numpy.array([[
             top_left.longitude, top_right.longitude,
             bottom_left.longitude, bottom_right.longitude
-        ])
-        self.corner_lats = numpy.array([
-            top_left.latitude, top_right.latitude,
-            bottom_left.latitude, bottom_right.latitude
-        ])
-        self.corner_depths = numpy.array([
-            top_left.depth, top_right.depth,
-            bottom_left.depth, bottom_right.depth
-        ])
-        # now set the attributes normal, d, uv1, uv2, zero_zero
-        self._init_plane()
-
-        # now we can check surface for validity
-        dists, xx, yy = self._project(self.mesh.xyz)
-        # "length" of the rupture is measured along the top edge
-        length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
-        # "width" of the rupture is measured along downdip direction
-        width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
-        self.width = (width1 + width2) / 2.0
-        self.length = (length1 + length2) / 2.0
-
-        if check:
-            # calculate the imperfect rectangle tolerance
-            # relative to surface's area
-            tolerance = (self.width * self.length *
-                         self.IMPERFECT_RECTANGLE_TOLERANCE)
-            if numpy.max(numpy.abs(dists)) > tolerance:
-                logging.warning("corner points do not lie on the same plane")
-            if length2 < 0:
-                raise ValueError("corners are in the wrong order")
-            if abs(length1 - length2) > tolerance:
-                raise ValueError("top and bottom edges have different lengths")
+        ], [top_left.latitude, top_right.latitude,
+            bottom_left.latitude, bottom_right.latitude], [
+                top_left.depth, top_right.depth,
+                bottom_left.depth, bottom_right.depth]]).T  # shape (4, 3)
+        # now set the attributes normal, d, uv1, uv2, tl
+        self._init_plane(check)
 
     @classmethod
     def from_corner_points(cls, top_left, top_right,
@@ -213,7 +293,15 @@ class PlanarSurface(BaseSurface):
         ptl = Point(top_left[0], top_left[1], hei)
         ptr = Point(top_right[0], top_right[1], hei)
 
-        self = cls(strike, dip, ptl, ptr, pbr, pbl)
+        return cls(strike, dip, ptl, ptr, pbr, pbl)
+
+    @classmethod
+    def from_(cls, planar_array, strike, dip):
+        self = object.__new__(PlanarSurface)
+        self.strike = strike
+        self.dip = dip
+        for par in planar_array.dtype.names:
+            setattr(self, par, planar_array[par])
         return self
 
     @classmethod
@@ -222,16 +310,17 @@ class PlanarSurface(BaseSurface):
         :param array34: an array of shape (3, 4) in order tl, tr, bl, br
         :returns: a :class:`PlanarSurface` instance
         """
+        # this is used in event based calculations
+        # when the planar surface geometry comes from an array
+        # in the datastore, which means it is correct and there is no need
+        # to check it again; also the check would fail because of a bug,
+        # https://github.com/gem/oq-engine/issues/3392
+        # NB: this different from the ucerf order below, bl<->br!
         tl, tr, bl, br = [Point(*p) for p in array34.T]
         strike = tl.azimuth(tr)
         dip = numpy.degrees(
             numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
-        # this is used when the planar surface geometry comes from an array
-        # in the datastore, which means it is correct and there is no need to
-        # check it again; also the check would fail because of a bug, see
-        # https://github.com/gem/oq-engine/issues/3392
-        self = cls(strike, dip, tl, tr, br, bl, check=False)
-        return self
+        return cls(strike, dip, tl, tr, br, bl, check=False)
 
     @classmethod
     def from_ucerf(cls, array43):
@@ -246,27 +335,14 @@ class PlanarSurface(BaseSurface):
         self = cls(strike, dip, tl, tr, br, bl, check=False)
         return self
 
-    def _init_plane(self):
+    def _init_plane(self, check=False):
         """
         Prepare everything needed for projecting arbitrary points on a plane
         containing the surface.
         """
-        tl, tr, bl, br = geo_utils.spherical_to_cartesian(
-            self.corner_lons, self.corner_lats, self.corner_depths)
-        # these two parameters define the plane that contains the surface
-        # (in 3d Cartesian space): a normal unit vector,
-        self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
-        # ... and scalar "d" parameter from the plane equation (uses
-        # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-        self.d = - self.normal @ tl
-        # these two 3d vectors together with a zero point represent surface's
-        # coordinate space (the way to translate 3d Cartesian space with
-        # a center in earth's center to 2d space centered in surface's top
-        # left corner with basis vectors directed to top right and bottom left
-        # corners. see :meth:`_project`.
-        self.uv1 = geo_utils.normalized(tr - tl)
-        self.uv2 = numpy.cross(self.normal, self.uv1)
-        self.zero_zero = tl
+        planar_array = build_planar_array(self.corners, check=check)
+        for par in planar_array.dtype.names:
+            setattr(self, par, planar_array[par])
 
     def translate(self, p1, p2):
         """
@@ -290,14 +366,16 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
+        nsurf.corners = numpy.zeros((4, 3))
+        for i, (lon, lat) in enumerate(
+                zip(self.corner_lons, self.corner_lats)):
+            lo, la = geodetic.point_at(lon, lat, azimuth, distance)
+            nsurf.corners[i, 0] = lo
+            nsurf.corners[i, 1] = la
+            nsurf.corners[i, 2] = self.corner_depths[i]
         nsurf.dip = self.dip
         nsurf.strike = self.strike
-        nsurf.corner_lons, nsurf.corner_lats = geodetic.point_at(
-            self.corner_lons, self.corner_lats, azimuth, distance)
-        nsurf.corner_depths = self.corner_depths.copy()
         nsurf._init_plane()
-        nsurf.width = self.width
-        nsurf.length = self.length
         return nsurf
 
     @property
@@ -332,24 +410,6 @@ class PlanarSurface(BaseSurface):
         """
         return self.dip
 
-    def _project(self, points):
-        """
-        Project points (as an array of shape (N, 3)) to a surface's plane.
-
-        Parameters are lists or numpy arrays of coordinates of points
-        to project.
-
-        :returns:
-            A tuple of three arrays: distances between original points
-            and surface's plane in km, "x" and "y" coordinates of points'
-            projections to the plane (in a surface's coordinate space).
-        """
-        # uses method from http://www.9math.com/book/projection-point-plane
-        dists = points @ self.normal + self.d
-        # translate projected points to surface coordinate space, shape (N, 3)
-        vectors2d = points - self.normal * dists[:, None] - self.zero_zero
-        return dists, vectors2d @ self.uv1, vectors2d @ self.uv2
-
     def _project_back(self, dists, xx, yy):
         """
         Convert coordinates in plane's Cartesian space back to spherical
@@ -361,7 +421,7 @@ class PlanarSurface(BaseSurface):
         :return:
             Tuple of longitudes, latitudes and depths numpy arrays.
         """
-        vectors = (self.zero_zero +
+        vectors = (self.xyz[:, 0] +
                    self.uv1 * xx.reshape(xx.shape + (1, )) +
                    self.uv2 * yy.reshape(yy.shape + (1, )) +
                    self.normal * dists.reshape(dists.shape + (1, )))
@@ -375,11 +435,12 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
+        width, length = self.wld[:2]
         # we project all the points of the mesh on a plane that contains
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
         # plane.
-        dists, xx, yy = self._project(mesh.xyz)
+        dists, xx, yy = _project(self, mesh.xyz)
         # the actual resulting distance is a square root of squares
         # of a distance from a point to a plane that contains the surface
         # and a distance from a projection of that point on that plane
@@ -402,7 +463,7 @@ class PlanarSurface(BaseSurface):
                 # case "I": point on the left hand side from the rectangle
                 xx < 0,
                 # case "II": point is on the right hand side
-                xx > self.length
+                xx > length
                 # default -- case "III": point is in between vertical sides
             ],
             choicelist=[
@@ -411,7 +472,7 @@ class PlanarSurface(BaseSurface):
                 xx,
                 # case "II": considering a distance between a point and
                 # a line containing the right side
-                xx - self.length
+                xx - length
             ],
             # case "III": abscissa doesn't have an effect on a distance
             # to the rectangle
@@ -430,7 +491,7 @@ class PlanarSurface(BaseSurface):
                 # case "I": point is above the rectangle top edge
                 yy < 0,
                 # case "II": point is below the rectangle bottom edge
-                yy > self.width
+                yy > width
                 # default -- case "III": point is in between lines containing
                 # top and bottom edges
             ],
@@ -440,7 +501,7 @@ class PlanarSurface(BaseSurface):
                 yy,
                 # case "II": considering a distance to a line containing
                 # a bottom edge
-                yy - self.width
+                yy - width
             ],
             # case "III": ordinate doesn't affect the distance
             default=0
@@ -456,9 +517,9 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        dists, xx, yy = self._project(mesh.xyz)
-        mxx = xx.clip(0, self.length)
-        myy = yy.clip(0, self.width)
+        dists, xx, yy = _project(self, mesh.xyz)
+        mxx = xx.clip(0, self.wld[1])
+        myy = yy.clip(0, self.wld[0])
         dists.fill(0)
         lons, lats, depths = self._project_back(dists, mxx, myy)
         return Mesh(lons, lats, depths)
@@ -471,8 +532,7 @@ class PlanarSurface(BaseSurface):
         """
         lon, lat = geo_utils.get_middle_point(
             self.corner_lons[0], self.corner_lats[0],
-            self.corner_lons[1], self.corner_lats[1]
-        )
+            self.corner_lons[1], self.corner_lats[1])
         return Point(lon, lat, self.corner_depths[0])
 
     def get_top_edge_depth(self):
@@ -628,14 +688,14 @@ class PlanarSurface(BaseSurface):
         Return surface's width value (in km) as computed in the constructor
         (that is mean value of left and right surface sides).
         """
-        return self.width
+        return self.wld[0]
 
     def get_area(self):
         """
         Return surface's area value (in squared km) obtained as the product
-        of surface lenght and width.
+        of surface length and width.
         """
-        return self.width * self.length
+        return self.wld[0] * self.wld[1]
 
     def get_bounding_box(self):
         """
