@@ -291,23 +291,22 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         rup_args = []
         rates = []
         for src in self:
+            lon, lat = src.location.x, src.location.y
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
                 if mag < self.min_mag:
                     continue
                 for np_prob, np in src.nodal_plane_distribution.data:
                     for hc_prob, hc_depth in src.hypocenter_distribution.data:
                         args = (mag_occ_rate, np_prob, hc_prob,
-                                mag, np, hc_depth, src)
+                                mag, np, lon, lat, hc_depth, src)
                         rup_args.append(args)
                         rates.append(mag_occ_rate * np_prob * hc_prob)
         eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
         occurs = numpy.random.poisson(eff_rates)
         for num_occ, args, rate in zip(occurs, rup_args, rates):
             if num_occ:
-                mag_occ_rate, np_prob, hc_prob, mag, np, hc_depth, src = args
-                hc = Point(latitude=src.location.latitude,
-                           longitude=src.location.longitude,
-                           depth=hc_depth)
+                _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, src = args
+                hc = Point(lon, lat, hc_depth)
                 [[[surface]]] = build_planar_surfaces(
                     src.get_surfin([mag], [np]), [hc])
                 rup = ParametricProbabilisticRupture(
