@@ -336,6 +336,7 @@ class SourceModelLogicTree(object):
         dicts = list(self.bsetdict.values())[1:]
         if not dicts:
             self.is_source_specific = False
+            self.num_paths = count_paths(self.root_branchset)
             return
         src_ids = set()
         for dic in dicts:
