@@ -61,7 +61,8 @@ def build_planar_array(corners, hypo=None, check=False):
     :returns: a planar_array array of length (M, N, D)
     """
     shape = corners.shape[:-1]  # (4, M, N, D)
-    planar_array = numpy.zeros(corners.shape[1:], planar_array_dt).view(numpy.recarray)
+    planar_array = numpy.zeros(corners.shape[1:], planar_array_dt).view(
+        numpy.recarray)
     if hypo is not None:
         planar_array['hypo'] = hypo
     tl, tr, bl, br = xyz = geo_utils.spherical_to_cartesian(
@@ -71,7 +72,8 @@ def build_planar_array(corners, hypo=None, check=False):
         planar_array['xyz'][..., i] = xyz[i]
     # these two parameters define the plane that contains the surface
     # (in 3d Cartesian space): a normal unit vector,
-    planar_array['normal'] = n = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+    planar_array['normal'] = n = geo_utils.normalized(
+        numpy.cross(tl - tr, tl - bl))
     # ... and scalar "d" parameter from the plane equation (uses
     # an equation (3) from http://mathworld.wolfram.com/Plane.html)
     d = - dot(n, tl)
