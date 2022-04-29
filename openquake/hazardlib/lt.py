@@ -688,6 +688,15 @@ class BranchSet(object):
         return '<%s(%d)>' % (self.uncertainty_type, len(self))
 
 
+def count_paths(bset):
+    """
+    :returns: the number of paths in the branchset
+    """
+    if bset is None:
+        return 1
+    return sum(count_paths(br.bset) for br in bset.branches)
+
+
 dummy_counter = itertools.count(1)
 
 
