@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a logging statement that could run out of memory in large calculations
   * Optimized `iter_ruptures` for point sources by vectorizing the generation of
     planar surfaces by magnitude, nodal plane and hypocenter
 
