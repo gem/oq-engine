@@ -688,9 +688,12 @@ class BranchSet(object):
         return '<%s(%d)>' % (self.uncertainty_type, len(self))
 
 
+# NB: this function cannot be used with monster logic trees like the one for
+# South Africa (ZAF), since it is too slow; the engine use a trick instead
 def count_paths(bset):
     """
-    :returns: the number of paths in the branchset
+    :param bset: a BranchSet instance
+    :returns: the number of paths in the branchset (slow)
     """
     if bset is None:
         return 1

@@ -82,6 +82,16 @@ branch_dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
 
 
+def prod(iterator):
+    """
+    Replacement of math.prod for Python < 3.8
+    """
+    res = 1
+    for el in iterator:
+        res *= el
+    return res
+
+
 def unique(objects, key=None):
     """
     Raise a ValueError if there is a duplicated object, otherwise
@@ -254,7 +264,7 @@ def reduce_full(full_lt, rlz_clusters):
     f2, *p2 = reducible(full_lt.gsim_lt, gsrlz_clusters)
     before = (full_lt.source_model_lt.get_num_paths() *
               full_lt.gsim_lt.get_num_paths())
-    after = before / numpy.prod([len(p[1]) for p in p1 + p2])
+    after = before / prod(len(p[1]) for p in p1 + p2)
     return {f1: dict(p1), f2: dict(p2), 'size_before_after': (before, after)}
 
 
@@ -340,6 +350,12 @@ class SourceModelLogicTree(object):
         # to be source-specific applyToBranches must be trivial
         self.is_source_specific = all(
             bset.applied is None for bset in self.branchsets)
+        if self.is_source_specific:
+            # fast algorithm, otherwise models like ZAF would hang
+            self.num_paths = prod(
+                sslt.num_paths for sslt in self.decompose().values())
+        else:  # slow algorithm
+            self.num_paths = count_paths(self.root_branchset)
 
     def parse_tree(self, tree_node):
         """
@@ -354,7 +370,6 @@ class SourceModelLogicTree(object):
             self.parse_branchset(bsnode, depth)
         dt = time.time() - t0
         bname = os.path.basename(self.filename)
-        self.num_paths = count_paths(self.root_branchset)
         logging.info('Validated %s in %.2f seconds', bname, dt)
 
     def parse_branchset(self, branchset_node, depth):
