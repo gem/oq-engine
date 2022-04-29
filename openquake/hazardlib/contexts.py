@@ -1103,13 +1103,10 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         pmap = ProbabilityMap(size(self.imtls), len(self.gsims))
-        # split the sources only if there is more than 1 site
-        filt = (self.srcfilter.filter if not self.split_sources or self.N == 1
-                else self.srcfilter.split)
         cm = self.cmaker
         allctxs = []
         totlen = 0
-        for src, sites in filt(self.group):
+        for src, sites in self.srcfilter.split(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
@@ -1163,7 +1160,6 @@ class PmapMaker(object):
         dic = {'src_id': []}  # par -> array
         if not ctxs:
             return dic
-        ctx = ctxs[0]
         z0 = numpy.zeros(0)
         for par in self.cmaker.get_ctx_params():
             pa = par[:-1] if par.endswith('_') else par
