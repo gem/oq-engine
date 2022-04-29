@@ -1,3 +1,6 @@
+  [Prajakta Jadhav, Dharma Wijewickreme]
+  * Added GMPE for Zhang and Zhao(2005)
+    
   [Tom Son]
   * Implemented a missing piece in Chiou & Youngs (2014) model
   Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
