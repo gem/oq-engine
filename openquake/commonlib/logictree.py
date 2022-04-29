@@ -343,9 +343,11 @@ class SourceModelLogicTree(object):
             ats = dic.get('applyToSources')
             if not ats:
                 self.is_source_specific = False
+                self.num_paths = count_paths(self.root_branchset)
                 return
             elif len(ats.split()) != 1:
                 self.is_source_specific = False
+                self.num_paths = count_paths(self.root_branchset)
                 return
             src_ids.add(ats)
         # to be source-specific applyToBranches must be trivial
