@@ -167,6 +167,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])
+        self.assertEqual(lt.count_paths(bs0), 5)
         self.assertEqual(clt.get_all_paths(),
                          ['AAA', 'AAB', 'ABA', 'ABB', 'B..'])
         self.assertEqual(clt.basepaths,

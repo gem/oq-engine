@@ -692,10 +692,9 @@ def count_paths(bset):
     """
     :returns: the number of paths in the branchset
     """
-    if hasattr(bset, 'bset'):  # is actually a branch
-        return 1 if bset.bset is None else count_paths(bset.bset)
-    else:  # is a real branchset
-        return sum(count_paths(br) for br in bset.branches)
+    if bset is None:
+        return 1
+    return sum(count_paths(br.bset) for br in bset.branches)
 
 
 dummy_counter = itertools.count(1)
