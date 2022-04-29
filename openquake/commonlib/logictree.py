@@ -45,8 +45,9 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, Realization, CompositeLogicTree, dummy_branchset,
-    LogicTreeError, parse_uncertainty, random, attach_to_branches)
+    Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
+    dummy_branchset, LogicTreeError, parse_uncertainty, random,
+    attach_to_branches)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
@@ -353,6 +354,7 @@ class SourceModelLogicTree(object):
             self.parse_branchset(bsnode, depth)
         dt = time.time() - t0
         bname = os.path.basename(self.filename)
+        self.num_paths = count_paths(self.root_branchset)
         logging.info('Validated %s in %.2f seconds', bname, dt)
 
     def parse_branchset(self, branchset_node, depth):
@@ -389,7 +391,6 @@ class SourceModelLogicTree(object):
         self.parse_branches(branchset_node, branchset)
         dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
-            self.num_paths = 1
             self.root_branchset = branchset
         else:
             prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
@@ -407,7 +408,6 @@ class SourceModelLogicTree(object):
                 for branch in self.previous_branches:
                     branch.bset = branchset
         self.previous_branches = branchset.branches + dummies
-        self.num_paths *= len(branchset)
         self.branchsets.append(branchset)
 
     def get_num_paths(self):
