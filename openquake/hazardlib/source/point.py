@@ -25,7 +25,8 @@ from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import (
     ParametricSeismicSource, build_planar_surfaces)
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import (
+    ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 surfin_dt = numpy.dtype([
@@ -142,16 +143,23 @@ def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None,
         hypos = [Point(src.location.x, src.location.y, dep) for dep in depths]
     else:
         hc_probs = [1.]
-    surfin = src.get_surfin(mags, nplanes)
-    surfaces = build_planar_surfaces(surfin, hypos, shift_hypo)
+    if step == 1:  # regular case
+        surfin = src.get_surfin(mags, nplanes)
+        surfaces = build_planar_surfaces(surfin, hypos, shift_hypo)
     for m, mag in enumerate(mags[::step]):
         for n, np in enumerate(nplanes[::step]):
             for d, hypo in enumerate(hypos[::step]):
-                surface = surfaces[m, n, d]
-                yield ParametricProbabilisticRupture(
-                    mag, np.rake, src.tectonic_region_type,
-                    surface.hc, surface, rates[m] * np_probs[n] * hc_probs[d],
-                    src.temporal_occurrence_model)
+                rate = rates[m] * np_probs[n] * hc_probs[d]
+                if step > 1:  # in preclassical, fast
+                    yield PointRupture(
+                        mag, src.tectonic_region_type, hypo, np.strike,
+                        np.rake, rate, src.temporal_occurrence_model)
+                else:  # regular case
+                    surface = surfaces[m, n, d]
+                    yield ParametricProbabilisticRupture(
+                        mag, np.rake, src.tectonic_region_type,
+                        surface.hc, surface, rate,
+                        src.temporal_occurrence_model)
 
 
 class PointSource(ParametricSeismicSource):
