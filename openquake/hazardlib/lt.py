@@ -786,3 +786,15 @@ class CompositeLogicTree(object):
 
     def __repr__(self):
         return '<%s>' % self.branchsets
+
+
+def build(*bslists):
+    bsets = []
+    for i, (utype, applyto, *brlists) in enumerate(bslists):
+        branches = []
+        for brid, value, weight in brlists:
+            branches.append(Branch('bs%02d' % i, brid, weight, value))
+        bset = BranchSet(utype, i, dict(applyToBranches=applyto))
+        bset.branches = branches
+        bsets.append(bset)
+    return CompositeLogicTree(bsets)

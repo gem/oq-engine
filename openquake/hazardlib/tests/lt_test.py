@@ -172,3 +172,31 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                          ['AAA', 'AAB', 'ABA', 'ABB', 'B..'])
         self.assertEqual(clt.basepaths,
                          ['A**', 'B**', '*A*', '*B*', '**A', '**B'])
+
+    def test_build(self):
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', '',
+                        ['C', 'extra1', 0.6],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra2', 0.2]])
+        print(clt.get_all_paths())
+
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'AB',
+                        ['C', 'extra1', 0.6],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra2', 0.2]])
+        print(clt.get_all_paths())
+
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['extendModel', 'A',
+                        ['C', 'extra1', 0.6],
+                        ['D', 'extra2', 0.2],
+                        ['E', 'extra2', 0.2]])
+        print(clt.get_all_paths())
