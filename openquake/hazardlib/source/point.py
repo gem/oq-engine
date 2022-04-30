@@ -269,22 +269,11 @@ class PointSource(ParametricSeismicSource):
         rup_length, rup_width, _ = _get_rupture_dimensions(surfin)
         return math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
 
-    def _pointruptures(self, step):
-        avg = calc_average([self])  # over nodal planes and hypocenters
-        hypo = Point(avg['lon'], avg['lat'], avg['dep'])
-        mag_rates = list(self.get_annual_occurrence_rates())
-        for mag, rate in mag_rates[::step]:
-            yield PointRupture(
-                mag, self.tectonic_region_type, hypo,
-                0, avg['rake'], rate, self.temporal_occurrence_model)
-
     def iter_ruptures(self, **kwargs):
         """
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        if kwargs.get('point_rup'):
-            return self._pointruptures(step=1)
         return _gen_ruptures(
             self,
             filtermag=kwargs.get('mag'),
@@ -299,11 +288,6 @@ class PointSource(ParametricSeismicSource):
         np = Mock(strike=avg['strike'], dip=avg['dip'], rake=avg['rake'])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
         yield from _gen_ruptures(self, [np], [hc])
-
-    # called in preclassical
-    def few_ruptures(self):
-        # generate one pointrupture every 5 magnitudes
-        yield from self._pointruptures(step=5)
 
     def count_nphc(self):
         """
@@ -378,14 +362,6 @@ class CollapsedPointSource(PointSource):
         """
         return sum(src.count_nphc() for src in self.pointsources)
 
-    # CollapsedPointSource
-    def _pointruptures(self, step):
-        mag_rates = list(self.get_annual_occurrence_rates())
-        for mag, rate in mag_rates[::step]:
-            yield PointRupture(
-                mag, self.tectonic_region_type, self.location,
-                0, self.rake, rate, self.temporal_occurrence_model)
-
     def iter_ruptures(self, **kwargs):
         """
         :returns: an iterator over the underlying ruptures
@@ -400,11 +376,6 @@ class CollapsedPointSource(PointSource):
         """
         np = NodalPlane(self.strike, self.dip, self.rake)
         yield from _gen_ruptures(self, [np], [self.location])
-
-    def few_ruptures(self):
-        for i, src in enumerate(self.pointsources):
-            if i % 10 == 0:
-                yield from src.few_ruptures()
 
     def _get_max_rupture_projection_radius(self, mag=None):
         """
