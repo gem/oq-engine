@@ -539,15 +539,9 @@ class ContextMaker(object):
         :returns: a list RuptureContexts
         """
         allctxs = []
-        cnt = 0
         for i, src in enumerate(srcs):
             src.id = i
-            rctxs = []
-            for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                rup.rup_id = cnt
-                rctxs.append(self.make_rctx(rup))
-                cnt += 1
-            allctxs.extend(self.get_ctxs(rctxs, sitecol, src.id))
+            allctxs.extend(self.get_ctxs(src, sitecol))
         allctxs.sort(key=operator.attrgetter('mag'))
         return allctxs
 
@@ -608,19 +602,19 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         return ctx
 
-    def get_ctxs(self, src, sitecol, src_id=None):
+    def get_ctxs(self, src, sitecol, step=1):
         """
         :param src:
             a source object (already split) or a list of ruptures
         :param sitecol:
             a (filtered) SiteCollection
-        :param src_id:
-            the numeric ID of the source (to be assigned to the ruptures)
+        :param step:
+            > 1 only in preclassical
         :returns:
             fat RuptureContexts sorted by mag
         """
-        if isinstance(src, list):  # in estimate_weight
-            ruptures = src
+        if step > 1:  # in estimate_weight
+            ruptures = list(src.few_ruptures())[::step]
         else:
             ruptures = self._gen_rups(src, sitecol)
         ctxs = []
@@ -990,23 +984,13 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        if src.code in b'pP':
-            allrups = []
-            for irups, r_sites in self._cps_rups(src, sites, fast=True):
-                for rup in irups:
-                    rup.sites = r_sites
-                    allrups.append(rup)
-            rups = allrups[::25]
-            nrups = len(allrups)
-            # print(nrups, len(rups))
-        else:
-            rups = list(src.few_ruptures())
-            nrups = src.num_ruptures
+        step = 25 if src.code == b'p' else 5
         try:
-            ctxs = self.get_ctxs(rups, sites)
+            ctxs = self.get_ctxs(src, sites, step)
         except ValueError:
             sys.stderr.write('In source %s\n' % src.source_id)
             raise
+        nrups = src.num_ruptures  # total number
         if not ctxs:
             return nrups if N == 1 else 0
         nsites = numpy.array([len(ctx) for ctx in ctxs])
