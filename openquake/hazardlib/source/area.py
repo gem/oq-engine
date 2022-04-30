@@ -86,6 +86,7 @@ class AreaSource(ParametricSeismicSource):
         of points the polygon discretizes to.
         """
         shift_hypo = kwargs.get('shift_hypo')
+        step = kwargs.get('step', 1)
         polygon_mesh = self.polygon.discretize(self.area_discretization)
         scaling_rate_factor = 1. / len(polygon_mesh)
 
@@ -118,7 +119,7 @@ class AreaSource(ParametricSeismicSource):
         # for each of the epicenter positions generate as many ruptures
         # as we generated "reference" ones: new ruptures differ only
         # in hypocenter and surface location
-        for epicenter in polygon_mesh:
+        for epicenter in polygon_mesh[::step]:
             for mag, rake, hc_depth, surface, occ_rate in ref_ruptures:
                 # translate the surface from first epicenter position
                 # to the target one preserving it's geometry

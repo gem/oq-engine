@@ -25,8 +25,7 @@ from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import (
     ParametricSeismicSource, build_planar_surfaces)
-from openquake.hazardlib.source.rupture import (
-    ParametricProbabilisticRupture, PointRupture)
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 surfin_dt = numpy.dtype([
@@ -124,7 +123,8 @@ def calc_average(pointsources):
     return dic
 
 
-def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None, shift_hypo=False):
+def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None,
+                  shift_hypo=False, step=1):
     if filtermag:
         mag_rates = [mr for mr in src.get_annual_occurrence_rates()
                      if mr[0] == filtermag]
@@ -144,9 +144,9 @@ def _gen_ruptures(src, nplanes=(), hypos=(), filtermag=None, shift_hypo=False):
         hc_probs = [1.]
     surfin = src.get_surfin(mags, nplanes)
     surfaces = build_planar_surfaces(surfin, hypos, shift_hypo)
-    for m, mag in enumerate(mags):
-        for n, np in enumerate(nplanes):
-            for d, hypo in enumerate(hypos):
+    for m, mag in enumerate(mags[::step]):
+        for n, np in enumerate(nplanes[::step]):
+            for d, hypo in enumerate(hypos[::step]):
                 surface = surfaces[m, n, d]
                 yield ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type,
@@ -277,7 +277,8 @@ class PointSource(ParametricSeismicSource):
         return _gen_ruptures(
             self,
             filtermag=kwargs.get('mag'),
-            shift_hypo=kwargs.get('shift_hypo'))
+            shift_hypo=kwargs.get('shift_hypo'),
+            step=kwargs.get('step', 1))
 
     # PointSource
     def iruptures(self):
@@ -366,7 +367,8 @@ class CollapsedPointSource(PointSource):
         """
         :returns: an iterator over the underlying ruptures
         """
-        for src in self.pointsources:
+        step = kwargs.get('step', 1)
+        for src in self.pointsources[::step]:
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource

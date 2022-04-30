@@ -92,7 +92,8 @@ class MultiPointSource(ParametricSeismicSource):
         """
         Yield the ruptures of the underlying point sources
         """
-        for ps in self:
+        step = kwargs.get('step', 1)
+        for ps in list(self)[::step]:
             for rupture in ps.iter_ruptures(**kwargs):
                 yield rupture
 
