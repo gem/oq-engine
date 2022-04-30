@@ -605,9 +605,11 @@ class ContextMaker(object):
     def get_ctxs(self, src, sitecol, src_id=None, step=1):
         """
         :param src:
-            a source object (already split) or a rupture in event based
+            a source object (already split) or a list of ruptures
         :param sitecol:
             a (filtered) SiteCollection
+        :param src_id:
+            integer source ID used where src is actually a list
         :param step:
             > 1 only in preclassical
         :returns:
@@ -615,11 +617,11 @@ class ContextMaker(object):
         """
         ctxs = []
         fewsites = len(sitecol.complete) <= self.max_sites_disagg
-        if hasattr(src, 'source_id'):
+        if hasattr(src, 'source_id'):  # is a real source
             rups = self._gen_rups(src, sitecol, step)
             src_id = src.id
-        else:
-            rups = src  # in event based a list with a single rupture
+        else:  # in event based we get a list with a single rupture
+            rups = src
 
         # Create the distance cache. A dictionary of dictionaries
         dcache = {}
@@ -700,8 +702,17 @@ class ContextMaker(object):
 
     def _ruptures(self, src, filtermag=None, step=1):
         with self.ir_mon:
-            return list(src.iter_ruptures(
-                shift_hypo=self.shift_hypo, mag=filtermag))[::step]
+            if step > 1:  # in preclassical
+                if hasattr(src, 'few_ruptures'):
+                    irups = src.few_ruptures()
+                else:
+                    rups = list(src.iter_ruptures(
+                        shift_hypo=self.shift_hypo, mag=filtermag))
+                    irups = rups[::step]
+            else:  # regular case
+                irups = src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, mag=filtermag)
+            return list(irups)
 
     def _gen_rups(self, src, sites, step):
         # yield ruptures, each one with a .sites attribute
@@ -715,7 +726,7 @@ class ContextMaker(object):
             for r, s in self._cps_rups(src, sites, step):
                 yield from rups(r, s)
         else:  # just add the ruptures
-            yield from rups(self._ruptures(src, step), sites)
+            yield from rups(self._ruptures(src, step=step), sites)
 
     def _cps_rups(self, src, sites, step):
         fewsites = len(sites) <= self.max_sites_disagg
@@ -974,17 +985,13 @@ class ContextMaker(object):
                 yield poes, ctxt, slcsids
 
     def estimate_weight(self, src, srcfilter):
-        N = len(srcfilter.sitecol.complete)
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
             return 0
         src.nsites = len(sites)
-        try:
-            ctxs = self.get_ctxs(src, sites, step=5)
-        except ValueError:
-            sys.stderr.write('In source %s\n' % src.source_id)
-            raise
+        N = len(srcfilter.sitecol.complete)  # total sites
+        ctxs = self.get_ctxs(src, sites, step=5)  # reduced number
         nrups = src.num_ruptures  # total number
         if not ctxs:
             return nrups if N == 1 else 0
